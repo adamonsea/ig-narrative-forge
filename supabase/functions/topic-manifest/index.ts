@@ -25,11 +25,11 @@ serve(async (req) => {
       throw new Error('Topic slug is required');
     }
 
-    // Fetch topic with branding (case-insensitive slug match)
+    // Fetch topic with branding
     const { data: topic, error: topicError } = await supabase
       .from('topics')
       .select('id, name, description, slug, branding_config')
-      .ilike('slug', slug)
+      .eq('slug', slug)
       .eq('is_active', true)
       .single();
 

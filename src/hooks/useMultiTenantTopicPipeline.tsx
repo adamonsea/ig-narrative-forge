@@ -120,18 +120,6 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const [newArrivals, setNewArrivals] = useState(false);
   const [newPublished, setNewPublished] = useState(false);
 
-  // Refs to avoid re-subscribing realtime channels on every list update
-  const storiesRef = useRef<MultiTenantStory[]>([]);
-  const queueItemsRef = useRef<MultiTenantQueueItem[]>([]);
-
-  useEffect(() => {
-    storiesRef.current = stories;
-  }, [stories]);
-
-  useEffect(() => {
-    queueItemsRef.current = queueItems;
-  }, [queueItems]);
-
   // Cache for topic article associations to prevent redundant DB queries
   const topicArticleCacheRef = useRef<{
     topicArticleIds: Set<string>;
@@ -939,8 +927,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Check cache first
       if (
         topicArticleCacheRef.current.topicArticleIds.has(topicArticleId) ||
-        storiesRef.current.some(story => story.topic_article_id === topicArticleId) ||
-        queueItemsRef.current.some(item => item.topic_article_id === topicArticleId)
+        stories.some(story => story.topic_article_id === topicArticleId) ||
+        queueItems.some(item => item.topic_article_id === topicArticleId)
       ) {
         return true;
       }
@@ -994,7 +982,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
 
     return false;
-  }, [selectedTopicId]);
+  }, [queueItems, selectedTopicId, stories]);
 
   // Story ownership checker
   const doesStoryBelongToTopic = useCallback(async (storyRecord: any) => {
@@ -1007,7 +995,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     // Check legacy articles
     if (storyRecord.article_id) {
-      if (storiesRef.current.some(story => story.article_id === storyRecord.article_id)) {
+      if (stories.some(story => story.article_id === storyRecord.article_id)) {
         return true;
       }
 
@@ -1026,7 +1014,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
 
     return false;
-  }, [isTopicArticleForSelectedTopic, selectedTopicId]);
+  }, [isTopicArticleForSelectedTopic, selectedTopicId, stories]);
 
   // Load content when topic changes
   useEffect(() => {
@@ -1082,7 +1070,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           const storyRecord = (payload.new || payload.old) as any;
 
           // Optimistic check: if story is already in our list, it belongs to us
-          if (storyRecord.id && storiesRef.current.some(s => s.id === storyRecord.id)) {
+          if (storyRecord.id && stories.some(s => s.id === storyRecord.id)) {
             console.log('✅ Story already in topic list (optimistic), refreshing...');
             
             // Debounced refresh
@@ -1200,7 +1188,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     selectedTopicId,
     loadTopicContent,
     doesStoryBelongToTopic,
-    isTopicArticleForSelectedTopic
+    isTopicArticleForSelectedTopic,
+    stories
   ]);
 
   // Fallback polling as safety net (every 30 seconds)

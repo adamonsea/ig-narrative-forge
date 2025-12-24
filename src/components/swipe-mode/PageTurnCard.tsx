@@ -103,9 +103,9 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
     }
   };
 
-  // Optimized image URL - resize for mobile viewport, WebP
+  // Optimized image URL - resize for mobile viewport, WebP, 75% quality
   const optimizedCoverUrl = useMemo(() => 
-    optimizeImageUrl(story.cover_illustration_url, { width: 400, height: 300, quality: 75, format: 'webp' }),
+    optimizeImageUrl(story.cover_illustration_url, { width: 400, quality: 75, format: 'webp' }),
     [story.cover_illustration_url]
   );
 
@@ -205,7 +205,6 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
               alt={story.title}
               className="w-full h-full object-cover sepia-card-image"
               loading="eager"
-              fetchPriority="high"
               draggable={false}
               decoding="async"
             />

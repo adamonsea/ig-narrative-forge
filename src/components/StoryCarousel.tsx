@@ -909,25 +909,32 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   loop
                   muted
                   playsInline
-                  poster={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 600, quality: 70 }) || story.cover_illustration_url}
+                  poster={story.cover_illustration_url}
                   className="w-full h-full object-cover"
                   preload="none"
                 >
                   <source src={story.animated_illustration_url} type="video/mp4" />
                   {/* Fallback to static image if video fails */}
                   <img
-                    src={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 600, quality: 80 }) || story.cover_illustration_url}
+                    src={optimizeImageUrl(story.cover_illustration_url, { 
+                      width: 800, 
+                      height: 600, 
+                      quality: 85 
+                    }) || story.cover_illustration_url}
                     alt={`Cover illustration for ${story.title}`}
                     className="w-full h-full object-cover"
                   />
                 </video>
               ) : (
                 <img
-                  src={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 600, quality: 80 }) || story.cover_illustration_url}
+                  src={optimizeImageUrl(story.cover_illustration_url, { 
+                    width: 800, 
+                    height: 600, 
+                    quality: 85 
+                  }) || story.cover_illustration_url}
                   alt={`Cover illustration for ${story.title}`}
                   className="w-full h-full object-cover"
-                  loading={storyIndex === 0 ? 'eager' : 'lazy'}
-                  fetchPriority={storyIndex === 0 ? 'high' : 'auto'}
+                  loading="lazy"
                 />
               )}
             </div>
