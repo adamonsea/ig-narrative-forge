@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
-import { optimizeImageUrl, generateResponsiveSrcSet, getResponsiveSizes, optimizeVideoPosterUrl } from '@/lib/imageOptimization';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
 // Force cache refresh
@@ -909,33 +909,21 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   loop
                   muted
                   playsInline
-                  poster={optimizeVideoPosterUrl(story.cover_illustration_url) || story.cover_illustration_url}
+                  poster={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 600, quality: 70 }) || story.cover_illustration_url}
                   className="w-full h-full object-cover"
                   preload="none"
                 >
                   <source src={story.animated_illustration_url} type="video/mp4" />
                   {/* Fallback to static image if video fails */}
                   <img
-                    src={optimizeImageUrl(story.cover_illustration_url, { 
-                      width: 800, 
-                      height: 600, 
-                      quality: 80 
-                    }) || story.cover_illustration_url}
-                    srcSet={generateResponsiveSrcSet(story.cover_illustration_url, { aspectRatio: 0.75, quality: 75 })}
-                    sizes={getResponsiveSizes('carousel')}
+                    src={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 600, quality: 80 }) || story.cover_illustration_url}
                     alt={`Cover illustration for ${story.title}`}
                     className="w-full h-full object-cover"
                   />
                 </video>
               ) : (
                 <img
-                  src={optimizeImageUrl(story.cover_illustration_url, { 
-                    width: 800, 
-                    height: 600, 
-                    quality: 80 
-                  }) || story.cover_illustration_url}
-                  srcSet={generateResponsiveSrcSet(story.cover_illustration_url, { aspectRatio: 0.75, quality: 75 })}
-                  sizes={getResponsiveSizes('carousel')}
+                  src={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 600, quality: 80 }) || story.cover_illustration_url}
                   alt={`Cover illustration for ${story.title}`}
                   className="w-full h-full object-cover"
                   loading={storyIndex === 0 ? 'eager' : 'lazy'}

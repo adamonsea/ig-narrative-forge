@@ -71,9 +71,6 @@ export function optimizeImageUrl(
     format = 'webp'
   } = options;
 
-  // Apply adaptive quality based on device/network
-  const adaptiveQuality = getAdaptiveQuality(quality);
-
   // Check if it's a Supabase Storage URL
   const isSupabaseStorage = url.includes('supabase.co/storage/v1/object/public/');
   
@@ -86,7 +83,7 @@ export function optimizeImageUrl(
   const transformParams = new URLSearchParams({
     width: width.toString(),
     height: height.toString(),
-    quality: adaptiveQuality.toString(),
+    quality: quality.toString(),
     resize: 'cover', // Crop to fit dimensions
   });
 
@@ -96,8 +93,6 @@ export function optimizeImageUrl(
   }
 
   // Insert transformations into the URL
-  // Supabase Storage transformation format:
-  // /storage/v1/object/public/{bucket}/{path}?transform=...
   const transformedUrl = `${url}${url.includes('?') ? '&' : '?'}${transformParams.toString()}`;
 
   return transformedUrl;
