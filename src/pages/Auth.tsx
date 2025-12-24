@@ -25,15 +25,19 @@ const Auth = () => {
   usePageFavicon();
 
   // Check Supabase connectivity on mount
+  // Any response (even 401/400) means the server IS reachable
+  // Only network errors (fetch throws) mean disconnected
   useEffect(() => {
     const checkConnectivity = async () => {
       try {
-        const response = await fetch('https://fpoywkjgdapgjtdeooak.supabase.co/auth/v1/health', {
-          method: 'GET',
-          headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwb3l3a2pnZGFwZ2p0ZGVvb2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1MTUzNDksImV4cCI6MjA3MTA5MTM0OX0.DHpoCA8Pn6YGy5JJBaRby937OikqvcB826H8gZXUtcI' }
+        await fetch('https://fpoywkjgdapgjtdeooak.supabase.co/auth/v1/', {
+          method: 'HEAD',
+          mode: 'cors',
         });
-        setIsConnected(response.ok);
+        // If we get here, the server responded (regardless of status code)
+        setIsConnected(true);
       } catch {
+        // Network error — server is unreachable
         setIsConnected(false);
       }
     };
