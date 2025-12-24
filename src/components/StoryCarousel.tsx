@@ -949,21 +949,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   )} />
                 </div>
                 
-                {/* Arrow below content - show on all slides except the last */}
-                {!isLast && validSlides.length > 1 && (
-                  <div className="flex justify-center mt-8">
-                    <div 
-                      className="cursor-pointer animate-pulse"
-                      onClick={nextSlide}
-                    >
-                      <img 
-                        src={arrowRightSvg} 
-                        alt="Next slide" 
-                        className="w-[125px] h-[28px]"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -996,21 +981,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   )}
                  </div>
                  
-                 {/* Arrow below content - show on all slides except the last */}
-                 {!isLast && validSlides.length > 1 && (
-                   <div className="flex justify-center mt-8">
-                     <div 
-                       className="cursor-pointer animate-pulse"
-                       onClick={nextSlide}
-                     >
-                        <img 
-                          src={arrowRightSvg} 
-                          alt="Next slide" 
-                          className="w-[125px] h-[28px]"
-                        />
-                     </div>
-                   </div>
-                 )}
              </div>
            </div>
         )}
@@ -1046,9 +1016,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     </div>
                   </div>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {currentSlideIndex + 1} of {validSlides.length}
-                </span>
               </div>
             </div>
           </div>
@@ -1062,7 +1029,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
               slides={slideComponents}
               height="100%"
               initialIndex={currentSlideIndex}
-              showDots={false}
+              showDots={true}
+              dotStyle="instagram"
               onSlideChange={setCurrentSlideIndex}
               ariaLabel={`${story.title} story slides`}
               storyId={story.id}

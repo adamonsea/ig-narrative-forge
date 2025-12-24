@@ -9,6 +9,7 @@ export type EmblaSlideCarouselProps = {
   height?: number | string;
   initialIndex?: number;
   showDots?: boolean;
+  dotStyle?: "default" | "instagram";
   onSlideChange?: (index: number) => void;
   ariaLabel?: string;
   storyId?: string;
@@ -24,6 +25,7 @@ export function EmblaSlideCarousel({
   height = 360,
   initialIndex = 0,
   showDots = true,
+  dotStyle = "default",
   onSlideChange,
   ariaLabel = "Carousel",
   storyId,
@@ -161,20 +163,37 @@ export function EmblaSlideCarousel({
 
       {/* Dot navigation */}
       {showDots && count > 1 && (
-        <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">
-          {Array.from({ length: count }).map((_, i) => (
-            <button
-              key={i}
-              aria-label={`Go to slide ${i + 1}`}
-              onClick={() => goTo(i)}
-              className={`h-2.5 w-2.5 rounded-full transition-all duration-200 p-[19px] -m-[19px] ${
-                i === selectedIndex
-                  ? "scale-110 bg-primary shadow"
-                  : "bg-muted-foreground/60 hover:bg-muted-foreground"
-              }`}
-            />
-          ))}
-        </div>
+        dotStyle === "instagram" ? (
+          <div className="absolute bottom-4 left-6 right-6 flex items-center gap-1">
+            {Array.from({ length: count }).map((_, i) => (
+              <button
+                key={i}
+                aria-label={`Go to slide ${i + 1}`}
+                onClick={() => goTo(i)}
+                className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                  i === selectedIndex
+                    ? "bg-primary"
+                    : "bg-muted-foreground/30"
+                }`}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">
+            {Array.from({ length: count }).map((_, i) => (
+              <button
+                key={i}
+                aria-label={`Go to slide ${i + 1}`}
+                onClick={() => goTo(i)}
+                className={`h-2.5 w-2.5 rounded-full transition-all duration-200 p-[19px] -m-[19px] ${
+                  i === selectedIndex
+                    ? "scale-110 bg-primary shadow"
+                    : "bg-muted-foreground/60 hover:bg-muted-foreground"
+                }`}
+              />
+            ))}
+          </div>
+        )
       )}
     </div>
   );
