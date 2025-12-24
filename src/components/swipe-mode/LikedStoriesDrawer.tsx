@@ -5,6 +5,7 @@ import { Heart, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import { buildShareUrl } from '@/lib/urlUtils';
 
 interface Story {
   id: string;
@@ -89,7 +90,7 @@ export const LikedStoriesDrawer = ({
             <Button
               onClick={() => {
                 const shareText = `Check out my favourite stories from ${topicSlug}!`;
-                const shareUrl = `${window.location.origin}/feed/${topicSlug}`;
+                const shareUrl = buildShareUrl(`/feed/${topicSlug}`);
                 
                 if (navigator.share) {
                   navigator.share({

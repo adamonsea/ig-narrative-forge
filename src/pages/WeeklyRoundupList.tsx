@@ -11,6 +11,7 @@ import { FilterModal } from "@/components/FilterModal";
 import { FeedFilters } from "@/components/FeedFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
+import { buildShareUrl } from "@/lib/urlUtils";
 
 interface Topic {
   id: string;
@@ -511,7 +512,7 @@ export default function WeeklyRoundupList() {
               variant="outline"
               size="sm"
               onClick={() => {
-                const shareUrl = `${window.location.origin}/feed/${slug}/weekly/${weekStart}`;
+                const shareUrl = buildShareUrl(`/feed/${slug}/weekly/${weekStart}`);
                 const shareText = `${topic.name} Weekly Briefing - ${formattedDateRange}`;
                 if (navigator.share) {
                   navigator.share({
