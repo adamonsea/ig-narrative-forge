@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Heart, ThumbsDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { getAnimationPresets, triggerHaptic } from '@/lib/deviceUtils';
-import { optimizeImageUrl, generateResponsiveSrcSet, getResponsiveSizes } from '@/lib/imageOptimization';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 
 interface Story {
   id: string;
@@ -103,15 +103,9 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
     }
   };
 
-  // Optimized image URL - resize for mobile viewport, WebP, adaptive quality
+  // Optimized image URL - resize for mobile viewport, WebP
   const optimizedCoverUrl = useMemo(() => 
-    optimizeImageUrl(story.cover_illustration_url, { width: 400, quality: 75, format: 'webp' }),
-    [story.cover_illustration_url]
-  );
-
-  // Responsive srcset for the cover image
-  const coverSrcSet = useMemo(() => 
-    generateResponsiveSrcSet(story.cover_illustration_url, { aspectRatio: 0.75, quality: 70 }),
+    optimizeImageUrl(story.cover_illustration_url, { width: 400, height: 300, quality: 75, format: 'webp' }),
     [story.cover_illustration_url]
   );
 
@@ -208,8 +202,6 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
           >
             <img
               src={optimizedCoverUrl}
-              srcSet={coverSrcSet}
-              sizes={getResponsiveSizes('carousel')}
               alt={story.title}
               className="w-full h-full object-cover sepia-card-image"
               loading="eager"

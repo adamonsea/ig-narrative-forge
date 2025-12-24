@@ -1,6 +1,6 @@
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { useState, useRef, useCallback, memo, useEffect } from 'react';
-import { optimizeThumbnailUrl, generateResponsiveSrcSet, getResponsiveSizes } from '@/lib/imageOptimization';
+import { optimizeThumbnailUrl } from '@/lib/imageOptimization';
 import { triggerHaptic, getDevicePerformanceTier } from '@/lib/deviceUtils';
 
 interface Story {
@@ -92,8 +92,6 @@ const PhotoCardComponent = ({
   // Progressive image URLs - tiny blur placeholder, then thumbnail
   const placeholderUrl = optimizeThumbnailUrl(story.cover_illustration_url)?.replace('width=200', 'width=20')?.replace('height=150', 'height=15') || '';
   const thumbnailUrl = optimizeThumbnailUrl(story.cover_illustration_url);
-  const thumbnailSrcSet = generateResponsiveSrcSet(story.cover_illustration_url, { aspectRatio: 0.75, quality: 60 });
-  const thumbnailSizes = getResponsiveSizes('thumbnail');
   const entryDelay = isLegacy ? 0 : index * 0.015;
 
   const clearPressTimer = useCallback(() => {
@@ -380,8 +378,6 @@ const PhotoCardComponent = ({
             {/* Full thumbnail - swaps in when loaded */}
             <img
               src={thumbnailUrl || story.cover_illustration_url}
-              srcSet={thumbnailSrcSet}
-              sizes={thumbnailSizes}
               alt=""
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
                 thumbnailLoaded ? 'opacity-100' : 'opacity-0'
