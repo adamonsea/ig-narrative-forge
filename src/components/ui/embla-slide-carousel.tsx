@@ -164,13 +164,13 @@ export function EmblaSlideCarousel({
       {/* Dot navigation */}
       {showDots && count > 1 && (
         dotStyle === "instagram" ? (
-          <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-2">
+          <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-2 pointer-events-none">
             {Array.from({ length: count }).map((_, i) => (
               <button
                 key={i}
                 aria-label={`Go to slide ${i + 1}`}
                 onClick={() => goTo(i)}
-                className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                className={`h-1.5 w-1.5 rounded-full pointer-events-auto ${
                   i === selectedIndex
                     ? "bg-primary"
                     : "bg-muted-foreground/25"
