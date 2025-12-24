@@ -1,7 +1,7 @@
 import * as React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import { triggerHaptic } from "@/lib/deviceUtils";
+import { triggerHaptic, getDevicePerformanceTier } from "@/lib/deviceUtils";
 
 export type EmblaSlideCarouselProps = {
   slides: React.ReactNode[];
@@ -39,7 +39,21 @@ export function EmblaSlideCarousel({
   );
   const hasTrackedSwipe = useRef(false);
 
-  // Embla with mobile-optimized options - balanced for smoothness
+  // Get device-specific settings for optimal performance
+  const emblaSettings = useMemo(() => {
+    const tier = getDevicePerformanceTier();
+    
+    // Modern devices get snappier animations, legacy gets gentler ones
+    const isModern = tier === 'modern-ios' || tier === 'modern-android' || tier === 'desktop';
+    const isMidRange = tier === 'mid-range-ios' || tier === 'mid-range-android';
+    
+    return {
+      duration: isModern ? 20 : isMidRange ? 25 : 35,
+      useGpuAcceleration: isModern,
+    };
+  }, []);
+
+  // Embla with device-optimized settings
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     containScroll: "trimSnaps",
@@ -47,7 +61,7 @@ export function EmblaSlideCarousel({
     skipSnaps: false,
     startIndex: initialIndex,
     watchDrag: true,
-    duration: 30, // Smooth snap animation - not too fast, not sluggish
+    duration: emblaSettings.duration,
   });
 
   // Sync selected index with Embla
@@ -137,8 +151,14 @@ export function EmblaSlideCarousel({
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {/* Embla container */}
-        <div className="flex h-full touch-pan-y">
+        {/* Embla container - GPU accelerated on modern devices */}
+        <div 
+          className="flex h-full touch-pan-y"
+          style={emblaSettings.useGpuAcceleration ? {
+            willChange: "transform",
+            transform: "translate3d(0, 0, 0)",
+          } : undefined}
+        >
           {slides.map((slide, i) => (
             <div
               key={i}
