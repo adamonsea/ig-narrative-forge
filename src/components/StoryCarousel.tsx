@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
-import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { optimizeImageUrl, generateResponsiveSrcSet, getResponsiveSizes, optimizeVideoPosterUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
 // Force cache refresh
@@ -909,7 +909,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   loop
                   muted
                   playsInline
-                  poster={story.cover_illustration_url}
+                  poster={optimizeVideoPosterUrl(story.cover_illustration_url) || story.cover_illustration_url}
                   className="w-full h-full object-cover"
                   preload="none"
                 >
@@ -919,8 +919,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     src={optimizeImageUrl(story.cover_illustration_url, { 
                       width: 800, 
                       height: 600, 
-                      quality: 85 
+                      quality: 80 
                     }) || story.cover_illustration_url}
+                    srcSet={generateResponsiveSrcSet(story.cover_illustration_url, { aspectRatio: 0.75, quality: 75 })}
+                    sizes={getResponsiveSizes('carousel')}
                     alt={`Cover illustration for ${story.title}`}
                     className="w-full h-full object-cover"
                   />
@@ -930,11 +932,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   src={optimizeImageUrl(story.cover_illustration_url, { 
                     width: 800, 
                     height: 600, 
-                    quality: 85 
+                    quality: 80 
                   }) || story.cover_illustration_url}
+                  srcSet={generateResponsiveSrcSet(story.cover_illustration_url, { aspectRatio: 0.75, quality: 75 })}
+                  sizes={getResponsiveSizes('carousel')}
                   alt={`Cover illustration for ${story.title}`}
                   className="w-full h-full object-cover"
-                  loading="lazy"
+                  loading={storyIndex === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={storyIndex === 0 ? 'high' : 'auto'}
                 />
               )}
             </div>
