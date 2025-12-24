@@ -164,7 +164,7 @@ export function EmblaSlideCarousel({
       {/* Dot navigation */}
       {showDots && count > 1 && (
         dotStyle === "instagram" ? (
-          <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-2 pointer-events-none">
+          <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-2 pointer-events-none">
             {Array.from({ length: count }).map((_, i) => (
               <button
                 key={i}
