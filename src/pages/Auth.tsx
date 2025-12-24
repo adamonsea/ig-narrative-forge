@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -16,11 +17,43 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   
   // Set Curatr favicon for auth page
   usePageFavicon();
+
+  // Check Supabase connectivity on mount
+  useEffect(() => {
+    const checkConnectivity = async () => {
+      try {
+        const response = await fetch('https://fpoywkjgdapgjtdeooak.supabase.co/auth/v1/health', {
+          method: 'GET',
+          headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwb3l3a2pnZGFwZ2p0ZGVvb2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1MTUzNDksImV4cCI6MjA3MTA5MTM0OX0.DHpoCA8Pn6YGy5JJBaRby937OikqvcB826H8gZXUtcI' }
+        });
+        setIsConnected(response.ok);
+      } catch {
+        setIsConnected(false);
+      }
+    };
+    checkConnectivity();
+  }, []);
+
+  const handleResetSession = () => {
+    try {
+      (supabase.auth as any).stopAutoRefresh?.();
+    } catch {
+      // ignore
+    }
+    clearSupabaseAuthStorage();
+    toast({
+      title: "Session cleared",
+      description: "Please try signing in again.",
+    });
+    window.location.reload();
+  };
+
 
   useEffect(() => {
     // Check if user is already logged in
@@ -152,7 +185,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2 mb-1">
@@ -233,6 +266,33 @@ const Auth = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Connection status & Reset Session */}
+      <div className="mt-4 flex flex-col items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          {isConnected === null ? (
+            <span className="text-muted-foreground">Checking connection...</span>
+          ) : isConnected ? (
+            <>
+              <Wifi className="h-4 w-4 text-green-500" />
+              <span className="text-green-600">Connected to auth server</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-4 w-4 text-destructive" />
+              <span className="text-destructive">Cannot reach auth server</span>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleResetSession}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Having trouble? Reset session
+        </button>
+      </div>
     </div>
   );
 };
