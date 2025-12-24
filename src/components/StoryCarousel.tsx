@@ -940,7 +940,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
             </div>
             
             {/* Content below image */}
-            <div className="flex-1 flex items-center justify-center p-6 md:p-8">
+            <div className="flex-1 flex items-center justify-center p-6 pb-14 md:p-8 md:pb-16">
               <div className="w-full max-w-lg mx-auto text-center flex flex-col h-full justify-center">
                 <div className={`leading-relaxed ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-balance`}>
                   <div dangerouslySetInnerHTML={createSafeHTML(
@@ -954,7 +954,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           </div>
         ) : (
           // Slides without image - use grid for perfect centering and fit-to-height on last slide
-          <div className="h-full flex items-center justify-center p-6 md:p-8 overflow-hidden">
+          <div className="h-full flex items-center justify-center p-6 pb-14 md:p-8 md:pb-16 overflow-hidden">
             <div className="w-full max-w-lg mx-auto text-center">
                  <div className={`leading-relaxed ${
                   index === 0 

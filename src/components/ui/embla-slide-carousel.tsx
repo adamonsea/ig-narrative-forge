@@ -137,20 +137,12 @@ export function EmblaSlideCarousel({
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {/* Embla container - GPU accelerated for smooth swiping */}
-        <div 
-          className="flex h-full touch-pan-y"
-          style={{
-            willChange: "transform",
-            backfaceVisibility: "hidden",
-            transform: "translate3d(0, 0, 0)",
-          }}
-        >
+        {/* Embla container */}
+        <div className="flex h-full touch-pan-y">
           {slides.map((slide, i) => (
             <div
               key={i}
               className="flex-[0_0_100%] min-w-0 h-full"
-              style={{ backfaceVisibility: "hidden" }}
               role="group"
               aria-roledescription="slide"
               aria-label={`Slide ${i + 1} of ${count}`}
@@ -164,7 +156,7 @@ export function EmblaSlideCarousel({
       {/* Dot navigation */}
       {showDots && count > 1 && (
         dotStyle === "instagram" ? (
-          <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-2 pointer-events-none">
+          <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2 pointer-events-none">
             {Array.from({ length: count }).map((_, i) => (
               <button
                 key={i}
