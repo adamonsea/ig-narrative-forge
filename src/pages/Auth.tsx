@@ -9,7 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
-import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
+
+const SUPABASE_URL = 'https://fpoywkjgdapgjtdeooak.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwb3l3a2pnZGFwZ2p0ZGVvb2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1MTUzNDksImV4cCI6MjA3MTA5MTM0OX0.DHpoCA8Pn6YGy5JJBaRby937OikqvcB826H8gZXUtcI';
+
+type ConnectionStatus = 'checking' | 'connected' | 'cors_blocked' | 'unreachable';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -17,28 +22,43 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistLoading, setWaitlistLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('checking');
   const navigate = useNavigate();
   const { toast } = useToast();
   
   // Set Curatr favicon for auth page
   usePageFavicon();
 
-  // Check Supabase connectivity on mount
-  // Any response (even 401/400) means the server IS reachable
-  // Only network errors (fetch throws) mean disconnected
+  // 3-state connectivity diagnostic
   useEffect(() => {
     const checkConnectivity = async () => {
+      // Step 1: Check basic reachability with no-cors (bypasses CORS, just checks if host responds)
+      let hostReachable = false;
       try {
-        await fetch('https://fpoywkjgdapgjtdeooak.supabase.co/auth/v1/', {
+        await fetch(`${SUPABASE_URL}/auth/v1/`, { method: 'HEAD', mode: 'no-cors' });
+        hostReachable = true;
+      } catch {
+        // Host completely unreachable (DNS/network issue)
+        setConnectionStatus('unreachable');
+        return;
+      }
+
+      // Step 2: Check CORS + API access with proper headers
+      try {
+        await fetch(`${SUPABASE_URL}/auth/v1/`, {
           method: 'HEAD',
           mode: 'cors',
+          headers: { 'apikey': SUPABASE_ANON_KEY }
         });
-        // If we get here, the server responded (regardless of status code)
-        setIsConnected(true);
+        // Got a response with CORS headers — fully connected
+        setConnectionStatus('connected');
       } catch {
-        // Network error — server is unreachable
-        setIsConnected(false);
+        // Host is reachable but CORS is blocked (extension/proxy issue)
+        if (hostReachable) {
+          setConnectionStatus('cors_blocked');
+        } else {
+          setConnectionStatus('unreachable');
+        }
       }
     };
     checkConnectivity();
@@ -175,12 +195,22 @@ const Auth = () => {
       }
     } catch (error: any) {
       const msg = typeof error?.message === 'string' ? error.message : 'Unknown error';
+      
+      // Provide specific error messages based on connection status
+      let description = msg;
+      if (msg === 'Failed to fetch') {
+        if (connectionStatus === 'cors_blocked') {
+          description = 'Request blocked by browser (CORS/extension). Try incognito mode or disable ad-blockers.';
+        } else if (connectionStatus === 'unreachable') {
+          description = 'Cannot reach Supabase servers. Check your network connection or firewall.';
+        } else {
+          description = 'Network error. Please check your connection and try again.';
+        }
+      }
+      
       toast({
         title: "Sign in failed",
-        description:
-          msg === 'Failed to fetch'
-            ? 'Network error reaching Supabase auth. Please disable ad-block/VPN and try again.'
-            : msg,
+        description,
         variant: "destructive",
       });
     } finally {
@@ -274,20 +304,33 @@ const Auth = () => {
       {/* Connection status & Reset Session */}
       <div className="mt-4 flex flex-col items-center gap-2 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          {isConnected === null ? (
+          {connectionStatus === 'checking' && (
             <span className="text-muted-foreground">Checking connection...</span>
-          ) : isConnected ? (
+          )}
+          {connectionStatus === 'connected' && (
             <>
               <Wifi className="h-4 w-4 text-green-500" />
               <span className="text-green-600">Connected to auth server</span>
             </>
-          ) : (
+          )}
+          {connectionStatus === 'cors_blocked' && (
+            <>
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <span className="text-yellow-600">Blocked by browser extension or proxy</span>
+            </>
+          )}
+          {connectionStatus === 'unreachable' && (
             <>
               <WifiOff className="h-4 w-4 text-destructive" />
               <span className="text-destructive">Cannot reach auth server</span>
             </>
           )}
         </div>
+        {connectionStatus === 'cors_blocked' && (
+          <p className="text-xs text-yellow-600 text-center max-w-xs">
+            Try disabling ad-blockers or using incognito mode
+          </p>
+        )}
         <button
           type="button"
           onClick={handleResetSession}
