@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
+import { clearSupabaseAuthStorage } from '@/lib/authStorage';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -190,22 +190,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const cleanupAuthState = () => {
-    // Remove standard auth tokens
-    localStorage.removeItem('supabase.auth.token');
-    
-    // Remove all Supabase auth keys from localStorage
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Remove from sessionStorage if in use
-    Object.keys(sessionStorage || {}).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        sessionStorage.removeItem(key);
-      }
-    });
+    clearSupabaseAuthStorage();
   };
 
   const signOut = async () => {

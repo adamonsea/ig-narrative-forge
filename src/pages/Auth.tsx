@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { clearSupabaseAuthStorage } from '@/lib/authStorage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +35,12 @@ const Auth = () => {
       } catch (err) {
         // If refresh token is corrupted or the auth endpoint is unreachable,
         // avoid breaking the auth page; user can still sign in.
+        try {
+          (supabase.auth as any).stopAutoRefresh?.();
+        } catch {
+          // ignore
+        }
+        clearSupabaseAuthStorage();
         console.warn('[Auth] getSession failed on /auth', err);
       }
     };
