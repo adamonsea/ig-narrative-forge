@@ -14,16 +14,22 @@ import { RefreshCw, Wifi, WifiOff, AlertTriangle, Copy } from 'lucide-react';
 
 type ConnectionStatus = 'checking' | 'connected' | 'cors_blocked' | 'unreachable';
 
+type CheckResult = 'pending' | 'pass' | 'fail';
+
 type AuthDiagnostics = {
   origin: string;
   supabaseUrl: string;
-  lastConnectivityError?: string;
+  reachability: CheckResult;
+  corsNoHeaders: CheckResult;
+  corsWithApikey: CheckResult;
+  reachabilityError?: string;
+  corsNoHeadersError?: string;
+  corsWithApikeyError?: string;
 };
 
 const getSupabaseUrl = (): string => {
   const s = supabase as any;
   if (typeof s?.supabaseUrl === 'string' && s.supabaseUrl.length > 0) return s.supabaseUrl;
-  // Fallback (should normally never be used)
   return 'https://fpoywkjgdapgjtdeooak.supabase.co';
 };
 
@@ -43,6 +49,9 @@ const Auth = () => {
   const [diagnostics, setDiagnostics] = useState<AuthDiagnostics>({
     origin: typeof window !== 'undefined' ? window.location.origin : '',
     supabaseUrl: getSupabaseUrl(),
+    reachability: 'pending',
+    corsNoHeaders: 'pending',
+    corsWithApikey: 'pending',
   });
 
   const navigate = useNavigate();
@@ -51,7 +60,7 @@ const Auth = () => {
   // Set Curatr favicon for auth page
   usePageFavicon();
 
-  // 3-state connectivity diagnostic
+  // 3-check connectivity diagnostic
   useEffect(() => {
     const checkConnectivity = async () => {
       const supabaseUrl = getSupabaseUrl();
@@ -61,24 +70,49 @@ const Auth = () => {
         ...d,
         origin: typeof window !== 'undefined' ? window.location.origin : d.origin,
         supabaseUrl,
-        lastConnectivityError: undefined,
+        reachability: 'pending',
+        corsNoHeaders: 'pending',
+        corsWithApikey: 'pending',
+        reachabilityError: undefined,
+        corsNoHeadersError: undefined,
+        corsWithApikeyError: undefined,
       }));
 
-      // Step 1: Check basic reachability with no-cors (bypasses CORS, just checks if host responds)
+      // Check A: Reachability (no-cors mode — just checks if host responds)
       let hostReachable = false;
       try {
         await fetch(`${supabaseUrl}/auth/v1/`, { method: 'GET', mode: 'no-cors', cache: 'no-store' });
         hostReachable = true;
+        setDiagnostics((d) => ({ ...d, reachability: 'pass' }));
       } catch (err) {
         setDiagnostics((d) => ({
           ...d,
-          lastConnectivityError: err instanceof Error ? err.message : String(err),
+          reachability: 'fail',
+          reachabilityError: err instanceof Error ? err.message : String(err),
         }));
         setConnectionStatus('unreachable');
         return;
       }
 
-      // Step 2: Check CORS + API access with proper headers
+      // Check B: CORS without apikey header (tests if origin is allowed at all)
+      let corsNoHeadersOk = false;
+      try {
+        await fetch(`${supabaseUrl}/auth/v1/`, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-store',
+        });
+        corsNoHeadersOk = true;
+        setDiagnostics((d) => ({ ...d, corsNoHeaders: 'pass' }));
+      } catch (err) {
+        setDiagnostics((d) => ({
+          ...d,
+          corsNoHeaders: 'fail',
+          corsNoHeadersError: err instanceof Error ? err.message : String(err),
+        }));
+      }
+
+      // Check C: CORS with apikey header (tests preflight/allowed headers)
       try {
         await fetch(`${supabaseUrl}/auth/v1/`, {
           method: 'GET',
@@ -86,20 +120,20 @@ const Auth = () => {
           cache: 'no-store',
           headers: anonKey ? { apikey: anonKey } : undefined,
         });
-
-        // Got a response with CORS headers — fully connected
+        setDiagnostics((d) => ({ ...d, corsWithApikey: 'pass' }));
         setConnectionStatus('connected');
       } catch (err) {
         setDiagnostics((d) => ({
           ...d,
-          lastConnectivityError: err instanceof Error ? err.message : String(err),
+          corsWithApikey: 'fail',
+          corsWithApikeyError: err instanceof Error ? err.message : String(err),
         }));
-
-        // Host is reachable but CORS is blocked (extension/proxy/allowed-origins issue)
-        if (hostReachable) {
+        // Determine final status
+        if (!corsNoHeadersOk) {
           setConnectionStatus('cors_blocked');
         } else {
-          setConnectionStatus('unreachable');
+          // CORS works without headers but fails with apikey → preflight issue
+          setConnectionStatus('cors_blocked');
         }
       }
     };
@@ -350,8 +384,8 @@ const Auth = () => {
         </CardContent>
       </Card>
 
-      {/* Connection status & Reset Session */}
-      <div className="mt-4 flex flex-col items-center gap-2 text-sm text-muted-foreground">
+      {/* Connection diagnostics */}
+      <div className="mt-4 flex flex-col items-center gap-3 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
           {connectionStatus === 'checking' && (
             <span className="text-muted-foreground">Checking connection...</span>
@@ -365,7 +399,7 @@ const Auth = () => {
           {connectionStatus === 'cors_blocked' && (
             <>
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              <span className="text-yellow-600">Blocked by browser extension or proxy</span>
+              <span className="text-yellow-600">CORS blocked</span>
             </>
           )}
           {connectionStatus === 'unreachable' && (
@@ -376,13 +410,57 @@ const Auth = () => {
           )}
         </div>
 
-        <div className="text-xs text-muted-foreground text-center max-w-md space-y-1">
-          <div className="truncate">Origin: <span className="font-mono">{diagnostics.origin || '—'}</span></div>
-          <div className="truncate">Supabase: <span className="font-mono">{diagnostics.supabaseUrl}</span></div>
-          {(connectionStatus === 'cors_blocked' || connectionStatus === 'unreachable') && diagnostics.lastConnectivityError && (
-            <div className="truncate">Error: <span className="font-mono">{diagnostics.lastConnectivityError}</span></div>
+        {/* Three-check breakdown */}
+        <div className="text-xs font-mono bg-muted/50 rounded-md p-3 space-y-1 w-full max-w-md">
+          <div className="flex justify-between">
+            <span>Origin:</span>
+            <span className="truncate ml-2">{diagnostics.origin || '—'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Supabase:</span>
+            <span className="truncate ml-2">{diagnostics.supabaseUrl}</span>
+          </div>
+          <hr className="border-border my-2" />
+          <div className="flex justify-between items-center">
+            <span>A) Reachability:</span>
+            <span className={diagnostics.reachability === 'pass' ? 'text-green-600' : diagnostics.reachability === 'fail' ? 'text-destructive' : 'text-muted-foreground'}>
+              {diagnostics.reachability === 'pending' ? '...' : diagnostics.reachability.toUpperCase()}
+            </span>
+          </div>
+          {diagnostics.reachabilityError && (
+            <div className="text-destructive text-[10px] break-all">↳ {diagnostics.reachabilityError}</div>
+          )}
+          <div className="flex justify-between items-center">
+            <span>B) CORS (no headers):</span>
+            <span className={diagnostics.corsNoHeaders === 'pass' ? 'text-green-600' : diagnostics.corsNoHeaders === 'fail' ? 'text-destructive' : 'text-muted-foreground'}>
+              {diagnostics.corsNoHeaders === 'pending' ? '...' : diagnostics.corsNoHeaders.toUpperCase()}
+            </span>
+          </div>
+          {diagnostics.corsNoHeadersError && (
+            <div className="text-destructive text-[10px] break-all">↳ {diagnostics.corsNoHeadersError}</div>
+          )}
+          <div className="flex justify-between items-center">
+            <span>C) CORS (with apikey):</span>
+            <span className={diagnostics.corsWithApikey === 'pass' ? 'text-green-600' : diagnostics.corsWithApikey === 'fail' ? 'text-destructive' : 'text-muted-foreground'}>
+              {diagnostics.corsWithApikey === 'pending' ? '...' : diagnostics.corsWithApikey.toUpperCase()}
+            </span>
+          </div>
+          {diagnostics.corsWithApikeyError && (
+            <div className="text-destructive text-[10px] break-all">↳ {diagnostics.corsWithApikeyError}</div>
           )}
         </div>
+
+        {/* Interpretation */}
+        {connectionStatus === 'cors_blocked' && diagnostics.corsNoHeaders === 'fail' && (
+          <p className="text-xs text-yellow-600 text-center max-w-xs">
+            <strong>Origin blocked:</strong> Your origin is not in Supabase's allowed list. Check <strong>Authentication → URL Configuration</strong> in Supabase Dashboard.
+          </p>
+        )}
+        {connectionStatus === 'cors_blocked' && diagnostics.corsNoHeaders === 'pass' && diagnostics.corsWithApikey === 'fail' && (
+          <p className="text-xs text-yellow-600 text-center max-w-xs">
+            <strong>Preflight issue:</strong> Origin is allowed, but the <code>apikey</code> header is being rejected. Check custom domain/gateway settings.
+          </p>
+        )}
 
         <div className="flex items-center gap-2">
           <Button
@@ -394,17 +472,22 @@ const Auth = () => {
                 origin: diagnostics.origin,
                 supabaseUrl: diagnostics.supabaseUrl,
                 status: connectionStatus,
-                error: diagnostics.lastConnectivityError,
+                checks: {
+                  reachability: diagnostics.reachability,
+                  corsNoHeaders: diagnostics.corsNoHeaders,
+                  corsWithApikey: diagnostics.corsWithApikey,
+                },
+                errors: {
+                  reachability: diagnostics.reachabilityError,
+                  corsNoHeaders: diagnostics.corsNoHeadersError,
+                  corsWithApikey: diagnostics.corsWithApikeyError,
+                },
               };
               try {
                 await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-                toast({ title: 'Copied diagnostics', description: 'Paste this into chat or keep for reference.' });
+                toast({ title: 'Copied diagnostics', description: 'Paste this into chat.' });
               } catch {
-                toast({
-                  title: 'Copy failed',
-                  description: 'Clipboard permission denied — please copy manually from the text above.',
-                  variant: 'destructive',
-                });
+                toast({ title: 'Copy failed', variant: 'destructive' });
               }
             }}
           >
@@ -421,12 +504,6 @@ const Auth = () => {
             Reset session
           </button>
         </div>
-
-        {connectionStatus === 'cors_blocked' && (
-          <p className="text-xs text-yellow-600 text-center max-w-xs">
-            If this happens even in incognito, it’s usually a Supabase project restriction (custom domain/DNS, network restrictions) rather than an extension.
-          </p>
-        )}
       </div>
     </div>
   );
