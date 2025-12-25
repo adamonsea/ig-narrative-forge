@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { clearSupabaseAuthStorage } from '@/lib/authStorage';
 import { Button } from '@/components/ui/button';
@@ -9,12 +10,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
-import { RefreshCw, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
-
-const SUPABASE_URL = 'https://fpoywkjgdapgjtdeooak.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwb3l3a2pnZGFwZ2p0ZGVvb2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1MTUzNDksImV4cCI6MjA3MTA5MTM0OX0.DHpoCA8Pn6YGy5JJBaRby937OikqvcB826H8gZXUtcI';
+import { RefreshCw, Wifi, WifiOff, AlertTriangle, Copy } from 'lucide-react';
 
 type ConnectionStatus = 'checking' | 'connected' | 'cors_blocked' | 'unreachable';
+
+type AuthDiagnostics = {
+  origin: string;
+  supabaseUrl: string;
+  lastConnectivityError?: string;
+};
+
+const getSupabaseUrl = (): string => {
+  const s = supabase as any;
+  if (typeof s?.supabaseUrl === 'string' && s.supabaseUrl.length > 0) return s.supabaseUrl;
+  // Fallback (should normally never be used)
+  return 'https://fpoywkjgdapgjtdeooak.supabase.co';
+};
+
+const getSupabaseAnonKey = (): string | undefined => {
+  const s = supabase as any;
+  if (typeof s?.supabaseKey === 'string' && s.supabaseKey.length > 0) return s.supabaseKey;
+  return undefined;
+};
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -23,6 +40,11 @@ const Auth = () => {
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('checking');
+  const [diagnostics, setDiagnostics] = useState<AuthDiagnostics>({
+    origin: typeof window !== 'undefined' ? window.location.origin : '',
+    supabaseUrl: getSupabaseUrl(),
+  });
+
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -32,28 +54,48 @@ const Auth = () => {
   // 3-state connectivity diagnostic
   useEffect(() => {
     const checkConnectivity = async () => {
+      const supabaseUrl = getSupabaseUrl();
+      const anonKey = getSupabaseAnonKey();
+
+      setDiagnostics((d) => ({
+        ...d,
+        origin: typeof window !== 'undefined' ? window.location.origin : d.origin,
+        supabaseUrl,
+        lastConnectivityError: undefined,
+      }));
+
       // Step 1: Check basic reachability with no-cors (bypasses CORS, just checks if host responds)
       let hostReachable = false;
       try {
-        await fetch(`${SUPABASE_URL}/auth/v1/`, { method: 'HEAD', mode: 'no-cors' });
+        await fetch(`${supabaseUrl}/auth/v1/`, { method: 'GET', mode: 'no-cors', cache: 'no-store' });
         hostReachable = true;
-      } catch {
-        // Host completely unreachable (DNS/network issue)
+      } catch (err) {
+        setDiagnostics((d) => ({
+          ...d,
+          lastConnectivityError: err instanceof Error ? err.message : String(err),
+        }));
         setConnectionStatus('unreachable');
         return;
       }
 
       // Step 2: Check CORS + API access with proper headers
       try {
-        await fetch(`${SUPABASE_URL}/auth/v1/`, {
-          method: 'HEAD',
+        await fetch(`${supabaseUrl}/auth/v1/`, {
+          method: 'GET',
           mode: 'cors',
-          headers: { 'apikey': SUPABASE_ANON_KEY }
+          cache: 'no-store',
+          headers: anonKey ? { apikey: anonKey } : undefined,
         });
+
         // Got a response with CORS headers — fully connected
         setConnectionStatus('connected');
-      } catch {
-        // Host is reachable but CORS is blocked (extension/proxy issue)
+      } catch (err) {
+        setDiagnostics((d) => ({
+          ...d,
+          lastConnectivityError: err instanceof Error ? err.message : String(err),
+        }));
+
+        // Host is reachable but CORS is blocked (extension/proxy/allowed-origins issue)
         if (hostReachable) {
           setConnectionStatus('cors_blocked');
         } else {
@@ -61,6 +103,7 @@ const Auth = () => {
         }
       }
     };
+
     checkConnectivity();
   }, []);
 
@@ -220,6 +263,12 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      <Helmet>
+        <title>Sign In | Curatr</title>
+        <meta name="description" content="Sign in to Curatr to access your personalized editorial dashboard and curated feeds." />
+        <link rel="canonical" href={`${typeof window !== 'undefined' ? window.location.origin : ''}/auth`} />
+      </Helmet>
+
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2 mb-1">
@@ -326,19 +375,58 @@ const Auth = () => {
             </>
           )}
         </div>
+
+        <div className="text-xs text-muted-foreground text-center max-w-md space-y-1">
+          <div className="truncate">Origin: <span className="font-mono">{diagnostics.origin || '—'}</span></div>
+          <div className="truncate">Supabase: <span className="font-mono">{diagnostics.supabaseUrl}</span></div>
+          {(connectionStatus === 'cors_blocked' || connectionStatus === 'unreachable') && diagnostics.lastConnectivityError && (
+            <div className="truncate">Error: <span className="font-mono">{diagnostics.lastConnectivityError}</span></div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const payload = {
+                origin: diagnostics.origin,
+                supabaseUrl: diagnostics.supabaseUrl,
+                status: connectionStatus,
+                error: diagnostics.lastConnectivityError,
+              };
+              try {
+                await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+                toast({ title: 'Copied diagnostics', description: 'Paste this into chat or keep for reference.' });
+              } catch {
+                toast({
+                  title: 'Copy failed',
+                  description: 'Clipboard permission denied — please copy manually from the text above.',
+                  variant: 'destructive',
+                });
+              }
+            }}
+          >
+            <Copy className="h-4 w-4" />
+            Copy diagnostics
+          </Button>
+
+          <button
+            type="button"
+            onClick={handleResetSession}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Reset session
+          </button>
+        </div>
+
         {connectionStatus === 'cors_blocked' && (
           <p className="text-xs text-yellow-600 text-center max-w-xs">
-            Try disabling ad-blockers or using incognito mode
+            If this happens even in incognito, it’s usually a Supabase project restriction (custom domain/DNS, network restrictions) rather than an extension.
           </p>
         )}
-        <button
-          type="button"
-          onClick={handleResetSession}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <RefreshCw className="h-3 w-3" />
-          Having trouble? Reset session
-        </button>
       </div>
     </div>
   );
