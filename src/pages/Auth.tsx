@@ -30,7 +30,7 @@ type AuthDiagnostics = {
 const getSupabaseUrl = (): string => {
   const s = supabase as any;
   if (typeof s?.supabaseUrl === 'string' && s.supabaseUrl.length > 0) return s.supabaseUrl;
-  return 'https://share.curatr.pro';
+  return 'https://fpoywkjgdapgjtdeooak.supabase.co';
 };
 
 const getSupabaseAnonKey = (): string | undefined => {
