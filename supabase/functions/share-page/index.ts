@@ -165,7 +165,7 @@ serve(async (req) => {
     console.log('🔍 Fetching topic data for:', topic);
     const { data: topicData, error: topicError } = await supabaseClient
       .from('topics')
-      .select('name, description, logo_url, primary_color, secondary_color')
+      .select('name, description, branding_config, illustration_primary_color, illustration_accent_color')
       .eq('slug', topic)
       .single();
     
@@ -177,9 +177,11 @@ serve(async (req) => {
 
     if (topicData) {
       topicName = topicData.name || '';
-      topicLogo = topicData.logo_url || '';
-      primaryColor = topicData.primary_color || primaryColor;
-      secondaryColor = topicData.secondary_color || secondaryColor;
+      // Extract branding from config or illustration colors
+      const brandingConfig = topicData.branding_config || {};
+      topicLogo = brandingConfig.logo_url || '';
+      primaryColor = topicData.illustration_primary_color || brandingConfig.primary_color || primaryColor;
+      secondaryColor = topicData.illustration_accent_color || brandingConfig.secondary_color || secondaryColor;
     }
 
     if (type === 'story' && id) {
@@ -227,11 +229,35 @@ serve(async (req) => {
           ogTitle = storyData.title;
         }
         
-        // Prioritize article cover image, fallback to generated OG image
+        // Try to use cover illustration, but validate it exists first
+        let useGeneratedOG = true;
+        
         if (storyData.cover_illustration_url) {
-          ogImage = storyData.cover_illustration_url;
-          console.log('Using story cover illustration:', ogImage);
-        } else {
+          // Quick HEAD request to check if the image actually exists and is valid
+          try {
+            const imageCheck = await fetch(storyData.cover_illustration_url, { method: 'HEAD' });
+            const contentLength = imageCheck.headers.get('content-length');
+            const contentType = imageCheck.headers.get('content-type');
+            
+            // Check if image exists, has content (> 1KB to filter out empty/placeholder images), and is actually an image
+            if (imageCheck.ok && contentType?.startsWith('image/') && parseInt(contentLength || '0') > 1024) {
+              ogImage = storyData.cover_illustration_url;
+              useGeneratedOG = false;
+              console.log('Using story cover illustration:', ogImage, '(size:', contentLength, 'bytes)');
+            } else {
+              console.log('Cover illustration invalid or too small:', {
+                url: storyData.cover_illustration_url,
+                status: imageCheck.status,
+                contentType,
+                contentLength
+              });
+            }
+          } catch (imgError) {
+            console.error('Failed to validate cover illustration:', imgError.message);
+          }
+        }
+        
+        if (useGeneratedOG) {
           // Fallback to generated OG image with topic branding
           const ogParams = new URLSearchParams({
             title: ogTitle,
@@ -243,7 +269,7 @@ serve(async (req) => {
           if (topicLogo) ogParams.set('logo_url', topicLogo);
           
           ogImage = `https://fpoywkjgdapgjtdeooak.functions.supabase.co/generate-og-image?${ogParams.toString()}`;
-          console.log('Using generated OG image:', ogImage);
+          console.log('Using generated OG image (fallback):', ogImage);
         }
 
         redirectUrl = `https://curatr.pro/feed/${topic}/story/${id}`;
