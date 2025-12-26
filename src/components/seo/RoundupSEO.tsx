@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { format, parseISO } from 'date-fns';
+import { BRAND } from '@/lib/constants/branding';
 
 interface RoundupSEOProps {
   roundup: {
@@ -81,10 +82,10 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
     },
     "publisher": {
       "@type": "Organization",
-      "name": "Breefly",
+      "name": BRAND.organizationName,
       "logo": {
         "@type": "ImageObject",
-        "url": "https://curatr.pro/placeholder.svg"
+        "url": BRAND.logoUrl
       }
     },
     "about": {
@@ -131,7 +132,7 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={url} />
-      <meta property="og:site_name" content="Breefly" />
+      <meta property="og:site_name" content={BRAND.siteName} />
       <meta property="og:locale" content="en_GB" />
       <meta property="article:published_time" content={roundup.period_start} />
       <meta property="article:section" content={topicName} />

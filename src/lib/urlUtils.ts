@@ -3,32 +3,15 @@
  * iOS WhatsApp requires explicit https:// prefix for links to be recognized as clickable.
  */
 
+import { BRAND, getProductionUrl } from './constants/branding';
+
 /**
  * Get the production base URL with guaranteed https:// prefix.
  * This is essential for iOS WhatsApp compatibility.
  */
 export const getShareBaseUrl = (): string => {
-  // In production, always use https
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    
-    // If already https, return as-is
-    if (origin.startsWith('https://')) {
-      return origin;
-    }
-    
-    // If http (localhost/dev), convert to https for production domain
-    // or keep as-is for local development
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      return origin; // Keep local URLs as-is for development
-    }
-    
-    // For any other http URL, ensure https
-    return origin.replace('http://', 'https://');
-  }
-  
-  // Fallback for SSR or non-browser environments
-  return 'https://curatr.io';
+  // Use the centralized production URL getter
+  return getProductionUrl();
 };
 
 /**
