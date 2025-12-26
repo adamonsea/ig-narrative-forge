@@ -27,6 +27,7 @@ import AboutFeed from "./pages/AboutFeed";
 import ExplorePile from "./pages/ExplorePile";
 import VerifySubscription from "./pages/VerifySubscription";
 import WidgetsPage from "./pages/dashboard/Widgets";
+import Health from "./pages/Health";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -66,6 +67,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/health" element={<Health />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
