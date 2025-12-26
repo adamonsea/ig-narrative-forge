@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Filter, MapPin, X, Hash, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getStorageKey } from "@/lib/constants/branding";
 
 interface FeedFiltersProps {
   slideCount: number;
@@ -42,12 +43,12 @@ export function FeedFilters({
   const [showTip, setShowTip] = useState(false);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
+    const dismissed = localStorage.getItem(getStorageKey('filter_tip_dismissed'));
     setShowTip(!dismissed);
   }, []);
 
   const handleFilterClick = () => {
-    localStorage.setItem('eezee_filter_tip_dismissed', '1');
+    localStorage.setItem(getStorageKey('filter_tip_dismissed'), '1');
     setShowTip(false);
     onFilterClick?.();
   };

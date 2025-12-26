@@ -203,7 +203,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Welcome to the waitlist!",
-          description: "We'll notify you when Breefly is ready for you.",
+          description: "We'll notify you when Curatr is ready for you.",
         });
         setWaitlistEmail('');
       }
@@ -376,7 +376,7 @@ const Auth = () => {
                   {waitlistLoading ? 'Joining waitlist...' : 'Join Waitlist'}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  Be the first to know when Breefly opens up
+                  Be the first to know when Curatr opens up
                 </p>
               </form>
             </TabsContent>

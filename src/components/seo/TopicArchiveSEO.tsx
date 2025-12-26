@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { BRAND } from '@/lib/constants/branding';
 
 interface TopicArchiveSEOProps {
   topicName: string;
@@ -39,7 +40,7 @@ export const TopicArchiveSEO = ({
     "inLanguage": "en",
     "isPartOf": {
       "@type": "WebSite",
-      "name": "Breefly",
+      "name": BRAND.siteName,
       "url": baseUrl
     },
     "about": {
@@ -76,7 +77,7 @@ export const TopicArchiveSEO = ({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={currentUrl} />
-      <meta property="og:site_name" content="Breefly" />
+      <meta property="og:site_name" content={BRAND.siteName} />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
