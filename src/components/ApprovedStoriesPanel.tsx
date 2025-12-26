@@ -8,6 +8,9 @@ import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/hooks/useAuth';
 import { CreditService } from '@/lib/creditService';
 import { ImageModelSelector, ImageModel } from '@/components/ImageModelSelector';
+import { CarouselExportButton } from '@/components/CarouselExportButton';
+import { useCarouselExport } from '@/hooks/useCarouselExport';
+import { ExportableSlideRenderer } from '@/components/ExportableSlideRenderer';
 import { 
   CheckCircle2,
   X, 
@@ -101,6 +104,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
+  const { exportStory, isExporting, exportingStoryId, progress } = useCarouselExport();
 
   useEffect(() => {
     loadApprovedStories();
@@ -760,7 +764,24 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                         </div>
                         
                         
-                        <div className="flex gap-2 pt-2 border-t">
+                        <div className="flex gap-2 pt-2 border-t flex-wrap">
+                          {/* Carousel Export Button */}
+                          <CarouselExportButton
+                            isExporting={isExporting && exportingStoryId === story.id}
+                            progress={exportingStoryId === story.id ? progress : 0}
+                            onClick={() => exportStory(
+                              {
+                                ...story,
+                                article: story.article ? {
+                                  source_url: story.article.source_url,
+                                  region: story.article.region,
+                                  published_at: story.article.published_at
+                                } : undefined
+                              },
+                              ExportableSlideRenderer,
+                              'Local News'
+                            )}
+                          />
                           {/* Source Link Button */}
                           {story.article?.source_url && story.article.source_url !== '#' && (
                             <Button
