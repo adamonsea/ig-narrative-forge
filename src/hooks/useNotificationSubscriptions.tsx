@@ -6,7 +6,7 @@ interface SubscriptionState {
   weekly: boolean;
 }
 
-export const useNotificationSubscriptions = (topicId: string) => {
+export const useNotificationSubscriptions = (topicId: string, enabled: boolean = true) => {
   const [emailSubscriptions, setEmailSubscriptions] = useState<SubscriptionState>({
     daily: false,
     weekly: false
@@ -14,8 +14,15 @@ export const useNotificationSubscriptions = (topicId: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const checkSubscriptions = useCallback(async () => {
+    // Avoid blocking UI (and avoid extra requests) when the modal isn't open.
+    if (!enabled || !topicId) {
+      setEmailSubscriptions({ daily: false, weekly: false });
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
-    
+
     try {
       const { data, error } = await supabase
         .from('topic_newsletter_signups')
@@ -46,15 +53,16 @@ export const useNotificationSubscriptions = (topicId: string) => {
       console.error('Error checking subscriptions:', error);
       setIsLoading(false);
     }
-  }, [topicId]);
+  }, [topicId, enabled]);
 
   useEffect(() => {
     checkSubscriptions();
   }, [checkSubscriptions]);
 
-  return { 
+  return {
     emailSubscriptions,
     isLoading,
-    refresh: checkSubscriptions 
+    refresh: checkSubscriptions
   };
 };
+
