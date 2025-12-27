@@ -48,7 +48,7 @@ export const NotificationPreferencesModal = ({
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -56,54 +56,66 @@ export const NotificationPreferencesModal = ({
     setSubscribingType(type);
 
     try {
-      const { data: existing } = await supabase
-        .from('topic_newsletter_signups')
-        .select('id')
-        .eq('topic_id', topicId)
-        .eq('email', emailInput.toLowerCase())
-        .eq('notification_type', type)
-        .eq('is_active', true)
-        .maybeSingle();
+      const { data, error, response } = await supabase.functions.invoke('secure-newsletter-signup', {
+        body: {
+          email: emailInput.toLowerCase().trim(),
+          name: nameInput.trim() || undefined,
+          topicId,
+          notificationType: type,
+        },
+      });
 
-      if (existing) {
+      if (error) {
+        let description = error.message || 'Failed to subscribe. Please try again.';
+
+        // Best-effort parse of function error body (e.g. { error: "..." })
+        try {
+          if (response) {
+            const contentType = response.headers.get('Content-Type') || '';
+            if (contentType.includes('application/json')) {
+              const body = await response.json();
+              description = body?.error || body?.message || description;
+            } else {
+              const text = await response.text();
+              if (text) description = text;
+            }
+          }
+        } catch {
+          // ignore parsing errors
+        }
+
         toast({
-          title: "Already Subscribed",
-          description: `This email is already subscribed to ${type} updates`,
+          title: "Error",
+          description,
+          variant: "destructive",
         });
-        setActiveInput(null);
-        setEmailInput('');
         return;
       }
 
-      const { error } = await supabase
-        .from('topic_newsletter_signups')
-        .insert({
-          topic_id: topicId,
-          email: emailInput.toLowerCase().trim(),
-          name: nameInput.trim() || null,
-          notification_type: type,
-          frequency: type,
-          is_active: true
+      if (data?.alreadySubscribed) {
+        toast({
+          title: "Already subscribed",
+          description: `This email is already subscribed to ${type} updates.`,
         });
-
-      if (error) throw error;
-
-      toast({
-        title: "You're subscribed!",
-        description: `${type === 'daily' ? 'Daily' : 'Weekly'} briefing will be sent to ${emailInput}`,
-        duration: 5000,
-      });
+      } else {
+        toast({
+          title: "Check your email",
+          description:
+            data?.message || `We sent a confirmation link to ${emailInput}. Please confirm to start receiving updates.`,
+          duration: 7000,
+        });
+      }
 
       setActiveInput(null);
       setEmailInput('');
       setNameInput('');
       await refresh();
-    } catch (error) {
-      console.error('Error subscribing:', error);
+    } catch (err) {
+      console.error('Error subscribing:', err);
       toast({
         title: "Error",
         description: "Failed to subscribe. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setSubscribingType(null);
