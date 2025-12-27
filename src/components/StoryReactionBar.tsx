@@ -8,28 +8,15 @@ interface StoryReactionBarProps {
   storyId: string;
   topicId: string;
   className?: string;
+  onMoreLikeThis?: (storyId: string) => void;
 }
 
-// Boost low counts with a believable offset for new feeds (stable + tapered)
-const getDisplayCount = (count: number, hasVoted: boolean, seed: string): string | null => {
-  if (!hasVoted) return null; // Hide until user votes
-
-  // Taper fake boost as organic engagement grows; stop completely around ~50 votes/story.
-  const maxBoost = count >= 50 ? 0 : Math.min(15, Math.max(2, Math.round((50 - count) * 0.15) + 2));
-  if (maxBoost === 0) return String(count);
-
-  // Stable pseudo-random boost (prevents numbers changing on re-render)
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  const boost = 1 + (h % maxBoost);
-
-  return String(count + boost);
-};
-
-export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionBarProps) => {
+export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }: StoryReactionBarProps) => {
   const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
   const disabled = isReacting;
   const hasVoted = counts.userReaction !== null;
+  const isLiked = counts.userReaction === 'like';
+  const isDisliked = counts.userReaction === 'discard';
 
   // Show counts immediately after interaction (even if server state lags).
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -37,17 +24,9 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
     if (hasVoted) setHasInteracted(true);
   }, [hasVoted]);
 
-  const thumbsUpDisplay = hasVoted
-    ? getDisplayCount(counts.thumbsUp, true, `${storyId}:like`)
-    : hasInteracted
-      ? String(counts.thumbsUp)
-      : null;
-
-  const thumbsDownDisplay = hasVoted
-    ? getDisplayCount(counts.thumbsDown, true, `${storyId}:discard`)
-    : hasInteracted
-      ? String(counts.thumbsDown)
-      : null;
+  const showCounts = hasInteracted || hasVoted || counts.thumbsUp > 0 || counts.thumbsDown > 0;
+  const thumbsUpDisplay = showCounts ? String(counts.thumbsUp) : null;
+  const thumbsDownDisplay = showCounts ? String(counts.thumbsDown) : null;
 
   return (
     <div
@@ -67,16 +46,22 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
           react('like');
         }}
         disabled={disabled}
+        aria-pressed={isLiked}
         className={cn(
           'flex items-center gap-1 px-2 py-1 rounded-full transition-colors cursor-pointer',
           'hover:bg-primary/10 active:bg-primary/20',
           'disabled:opacity-50 disabled:cursor-not-allowed',
-          counts.userReaction === 'like' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+          isLiked ? 'text-primary bg-primary/10' : 'text-muted-foreground'
         )}
         aria-label="Like this story"
       >
-        <ThumbsUp className={cn('w-4 h-4 transition-all', counts.userReaction === 'like' && 'fill-current')} />
-        {thumbsUpDisplay && <span className="text-xs font-medium tabular-nums">{thumbsUpDisplay}</span>}
+        <ThumbsUp
+          className="w-4 h-4"
+          fill={isLiked ? 'currentColor' : 'none'}
+        />
+        {thumbsUpDisplay !== null && (
+          <span className="text-xs font-medium tabular-nums">{thumbsUpDisplay}</span>
+        )}
       </motion.button>
 
       {/* Thumbs Down */}
@@ -92,17 +77,42 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
           react('discard');
         }}
         disabled={disabled}
+        aria-pressed={isDisliked}
         className={cn(
           'flex items-center gap-1 px-2 py-1 rounded-full transition-colors cursor-pointer',
           'hover:bg-destructive/10 active:bg-destructive/20',
           'disabled:opacity-50 disabled:cursor-not-allowed',
-          counts.userReaction === 'discard' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'
+          isDisliked ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'
         )}
         aria-label="Dislike this story"
       >
-        <ThumbsDown className={cn('w-4 h-4 transition-all', counts.userReaction === 'discard' && 'fill-current')} />
-        {thumbsDownDisplay && <span className="text-xs font-medium tabular-nums">{thumbsDownDisplay}</span>}
+        <ThumbsDown
+          className="w-4 h-4"
+          fill={isDisliked ? 'currentColor' : 'none'}
+        />
+        {thumbsDownDisplay !== null && (
+          <span className="text-xs font-medium tabular-nums">{thumbsDownDisplay}</span>
+        )}
       </motion.button>
+
+      {isLiked && onMoreLikeThis && (
+        <button
+          type="button"
+          onPointerDownCapture={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onMoreLikeThis(storyId);
+          }}
+          className={cn(
+            'text-xs font-medium px-2 py-1 rounded-full transition-colors',
+            'text-primary hover:bg-primary/10'
+          )}
+        >
+          More like this
+        </button>
+      )}
+
     </div>
   );
 };
