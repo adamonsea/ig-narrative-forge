@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, ChevronDown, ChevronRight, Mail, Bell, Smartphone } from 'lucide-react';
+import { Users, ChevronDown, ChevronRight, Mail, Smartphone } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { NewsletterSignupsManager } from './NewsletterSignupsManager';
@@ -11,7 +11,7 @@ interface CollapsibleSubscribersCardProps {
   registrantsThisWeek: number | null;
   registrantsTotal: number | null;
   emailSubscribers?: number;
-  pushSubscribers?: number;
+  pushSubscribers?: number; // deprecated but kept for backwards compat
 }
 
 export const CollapsibleSubscribersCard = ({
@@ -21,11 +21,10 @@ export const CollapsibleSubscribersCard = ({
   registrantsThisWeek,
   registrantsTotal,
   emailSubscribers = 0,
-  pushSubscribers = 0
 }: CollapsibleSubscribersCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const totalSubscribers = (installsTotal || 0) + (registrantsTotal || 0) + emailSubscribers + pushSubscribers;
+  const totalSubscribers = (installsTotal || 0) + (registrantsTotal || 0) + emailSubscribers;
 
   return (
     <TooltipProvider>
@@ -108,26 +107,18 @@ export const CollapsibleSubscribersCard = ({
               </Tooltip>
             </div>
 
-            {/* Quick counts for email/push */}
-            {(emailSubscribers > 0 || pushSubscribers > 0) && (
+            {/* Quick counts for email */}
+            {emailSubscribers > 0 && (
               <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                {emailSubscribers > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Mail className="w-3 h-3" />
-                    <span>{emailSubscribers} email</span>
-                  </div>
-                )}
-                {pushSubscribers > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Bell className="w-3 h-3" />
-                    <span>{pushSubscribers} push</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1">
+                  <Mail className="w-3 h-3" />
+                  <span>{emailSubscribers} email</span>
+                </div>
                 <span className="text-muted-foreground/60">• Click to view list</span>
               </div>
             )}
             
-            {!isOpen && emailSubscribers === 0 && pushSubscribers === 0 && (
+            {!isOpen && emailSubscribers === 0 && (
               <div className="text-xs text-muted-foreground/60 mt-2">
                 Click to view subscriber details
               </div>
