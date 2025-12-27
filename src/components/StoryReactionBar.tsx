@@ -3,6 +3,7 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useStoryReactions } from '@/hooks/useStoryReactions';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+
 interface StoryReactionBarProps {
   storyId: string;
   topicId: string;
@@ -30,7 +31,7 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
   const disabled = isReacting;
   const hasVoted = counts.userReaction !== null;
 
-  // Ensure counts appear immediately after the user interacts (even if server state lags).
+  // Show counts immediately after interaction (even if server state lags).
   const [hasInteracted, setHasInteracted] = useState(false);
   useEffect(() => {
     if (hasVoted) setHasInteracted(true);
@@ -52,13 +53,12 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
     <div
       className={cn('flex items-center gap-2 relative z-50 pointer-events-auto', className)}
       aria-busy={isLoading || isReacting}
-      onPointerDownCapture={(e) => e.stopPropagation()}
-      onClickCapture={(e) => e.stopPropagation()}
     >
       {/* Thumbs Up */}
       <motion.button
         type="button"
         whileTap={{ scale: 0.9 }}
+        onPointerDownCapture={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.preventDefault();
@@ -75,18 +75,15 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
         )}
         aria-label="Like this story"
       >
-        <ThumbsUp
-          className={cn('w-4 h-4 transition-all', counts.userReaction === 'like' && 'fill-current')}
-        />
-        {thumbsUpDisplay && (
-          <span className="text-xs font-medium tabular-nums">{thumbsUpDisplay}</span>
-        )}
+        <ThumbsUp className={cn('w-4 h-4 transition-all', counts.userReaction === 'like' && 'fill-current')} />
+        {thumbsUpDisplay && <span className="text-xs font-medium tabular-nums">{thumbsUpDisplay}</span>}
       </motion.button>
 
       {/* Thumbs Down */}
       <motion.button
         type="button"
         whileTap={{ scale: 0.9 }}
+        onPointerDownCapture={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.preventDefault();
@@ -99,18 +96,12 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
           'flex items-center gap-1 px-2 py-1 rounded-full transition-colors cursor-pointer',
           'hover:bg-destructive/10 active:bg-destructive/20',
           'disabled:opacity-50 disabled:cursor-not-allowed',
-          counts.userReaction === 'discard'
-            ? 'text-destructive bg-destructive/10'
-            : 'text-muted-foreground'
+          counts.userReaction === 'discard' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'
         )}
         aria-label="Dislike this story"
       >
-        <ThumbsDown
-          className={cn('w-4 h-4 transition-all', counts.userReaction === 'discard' && 'fill-current')}
-        />
-        {thumbsDownDisplay && (
-          <span className="text-xs font-medium tabular-nums">{thumbsDownDisplay}</span>
-        )}
+        <ThumbsDown className={cn('w-4 h-4 transition-all', counts.userReaction === 'discard' && 'fill-current')} />
+        {thumbsDownDisplay && <span className="text-xs font-medium tabular-nums">{thumbsDownDisplay}</span>}
       </motion.button>
     </div>
   );
