@@ -11,35 +11,25 @@ interface StoryReactionBarProps {
 
 export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionBarProps) => {
   const { counts, react, isLoading } = useStoryReactions(storyId, topicId);
-
-  if (isLoading) {
-    return (
-      <div className={cn('flex items-center gap-4 text-muted-foreground', className)}>
-        <span className="text-sm opacity-50">Loading...</span>
-      </div>
-    );
-  }
+  const disabled = isLoading;
 
   return (
-    <div className={cn('flex items-center gap-4', className)}>
+    <div className={cn('flex items-center gap-4', className)} aria-busy={isLoading}>
       {/* Thumbs Up */}
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={() => react('like')}
+        disabled={disabled}
         className={cn(
           'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors',
           'hover:bg-primary/10',
-          counts.userReaction === 'like'
-            ? 'text-primary bg-primary/10'
-            : 'text-muted-foreground'
+          'disabled:opacity-50 disabled:pointer-events-none',
+          counts.userReaction === 'like' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
         )}
         aria-label="Like this story"
       >
         <ThumbsUp
-          className={cn(
-            'w-4 h-4 transition-all',
-            counts.userReaction === 'like' && 'fill-current'
-          )}
+          className={cn('w-4 h-4 transition-all', counts.userReaction === 'like' && 'fill-current')}
         />
         <span className="text-sm font-medium tabular-nums">{counts.thumbsUp}</span>
       </motion.button>
@@ -48,9 +38,11 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={() => react('discard')}
+        disabled={disabled}
         className={cn(
           'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors',
           'hover:bg-destructive/10',
+          'disabled:opacity-50 disabled:pointer-events-none',
           counts.userReaction === 'discard'
             ? 'text-destructive bg-destructive/10'
             : 'text-muted-foreground'
@@ -58,10 +50,7 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
         aria-label="Dislike this story"
       >
         <ThumbsDown
-          className={cn(
-            'w-4 h-4 transition-all',
-            counts.userReaction === 'discard' && 'fill-current'
-          )}
+          className={cn('w-4 h-4 transition-all', counts.userReaction === 'discard' && 'fill-current')}
         />
         <span className="text-sm font-medium tabular-nums">{counts.thumbsDown}</span>
       </motion.button>

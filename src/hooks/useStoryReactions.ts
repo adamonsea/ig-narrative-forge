@@ -9,12 +9,23 @@ interface ReactionCounts {
 
 const getVisitorId = (): string => {
   const key = 'curatr_visitor_id';
-  let visitorId = localStorage.getItem(key);
-  if (!visitorId) {
-    visitorId = crypto.randomUUID();
-    localStorage.setItem(key, visitorId);
+
+  const fallback = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  try {
+    let visitorId = localStorage.getItem(key);
+    if (!visitorId) {
+      const uuid = globalThis.crypto && 'randomUUID' in globalThis.crypto
+        ? globalThis.crypto.randomUUID()
+        : fallback();
+      visitorId = uuid;
+      localStorage.setItem(key, visitorId);
+    }
+    return visitorId;
+  } catch {
+    // localStorage can be blocked (e.g. private mode). Still return a stable-ish id.
+    return fallback();
   }
-  return visitorId;
 };
 
 export const useStoryReactions = (storyId: string, topicId: string) => {
@@ -27,6 +38,14 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
 
   // Fetch initial counts
   useEffect(() => {
+    if (!storyId || !topicId) {
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoading(true);
+
     const fetchCounts = async () => {
       try {
         const visitorId = getVisitorId();
@@ -54,13 +73,15 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
       } catch (err) {
         console.error('Error in fetchCounts:', err);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    if (storyId && topicId) {
-      fetchCounts();
-    }
+    fetchCounts();
+
+    return () => {
+      isMounted = false;
+    };
   }, [storyId, topicId]);
 
   const react = useCallback(
