@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useStoryReactions } from '@/hooks/useStoryReactions';
 import { cn } from '@/lib/utils';
@@ -14,19 +14,12 @@ interface StoryReactionBarProps {
 export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }: StoryReactionBarProps) => {
   const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
   const disabled = isReacting;
-  const hasVoted = counts.userReaction !== null;
+  
   const isLiked = counts.userReaction === 'like';
   const isDisliked = counts.userReaction === 'discard';
 
-  // Show counts immediately after interaction (even if server state lags).
-  const [hasInteracted, setHasInteracted] = useState(false);
-  useEffect(() => {
-    if (hasVoted) setHasInteracted(true);
-  }, [hasVoted]);
-
-  const showCounts = hasInteracted || hasVoted || counts.thumbsUp > 0 || counts.thumbsDown > 0;
-  const thumbsUpDisplay = showCounts ? String(counts.thumbsUp) : null;
-  const thumbsDownDisplay = showCounts ? String(counts.thumbsDown) : null;
+  const thumbsUpDisplay = String(counts.thumbsUp);
+  const thumbsDownDisplay = String(counts.thumbsDown);
 
   return (
     <div
@@ -42,7 +35,6 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setHasInteracted(true);
           react('like');
         }}
         disabled={disabled}
@@ -59,9 +51,7 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
           className="w-4 h-4"
           fill={isLiked ? 'currentColor' : 'none'}
         />
-        {thumbsUpDisplay !== null && (
-          <span className="text-xs font-medium tabular-nums">{thumbsUpDisplay}</span>
-        )}
+        <span className="text-xs font-medium tabular-nums">{thumbsUpDisplay}</span>
       </motion.button>
 
       {/* Thumbs Down */}
@@ -73,7 +63,6 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setHasInteracted(true);
           react('discard');
         }}
         disabled={disabled}
@@ -90,9 +79,7 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
           className="w-4 h-4"
           fill={isDisliked ? 'currentColor' : 'none'}
         />
-        {thumbsDownDisplay !== null && (
-          <span className="text-xs font-medium tabular-nums">{thumbsDownDisplay}</span>
-        )}
+        <span className="text-xs font-medium tabular-nums">{thumbsDownDisplay}</span>
       </motion.button>
 
       {isLiked && onMoreLikeThis && (
