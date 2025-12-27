@@ -23,6 +23,7 @@ import { useStoryImpressionTracking } from "@/hooks/useStoryImpressionTracking";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { useStoryNotifications } from "@/hooks/useStoryNotifications";
 import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
 import { CookieConsent } from "@/components/CookieConsent";
@@ -73,6 +74,7 @@ if (import.meta.env.DEV) {
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
+  const { toast } = useToast();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -154,11 +156,12 @@ const TopicFeed = () => {
       const candidates = [
         { type: 'landmark' as const, items: topic.landmarks || [] },
         { type: 'organization' as const, items: topic.organizations || [] },
-        { type: 'keyword' as const, items: topic.keywords || [] }
+        { type: 'keyword' as const, items: topic.keywords || [] },
       ];
 
       let match: { type: 'landmark' | 'organization' | 'keyword'; value: string } | null = null;
 
+      // Pass 1: word-boundary match (best quality)
       for (const group of candidates) {
         for (const raw of group.items) {
           const value = String(raw || '').trim();
@@ -174,15 +177,43 @@ const TopicFeed = () => {
         if (match) break;
       }
 
-      if (!match) return;
+      // Pass 2: looser substring match (fallback so the button feels responsive)
+      if (!match) {
+        for (const group of candidates) {
+          for (const raw of group.items) {
+            const value = String(raw || '').trim();
+            if (value.length <= 2) continue;
+            if (combinedText.includes(value.toLowerCase())) {
+              match = { type: group.type, value };
+              break;
+            }
+          }
+          if (match) break;
+        }
+      }
+
+      if (!match) {
+        setIsModalOpen(true);
+        toast({
+          title: 'No match found',
+          description: 'Open filters to pick a keyword, landmark, or organization.',
+        });
+        return;
+      }
 
       clearAllFilters();
 
       if (match.type === 'landmark') toggleLandmark(match.value);
       else if (match.type === 'organization') toggleOrganization(match.value);
       else toggleKeyword(match.value);
+
+      setIsModalOpen(true);
+      toast({
+        title: 'More like this',
+        description: `Filtering by ${match.value}`,
+      });
     },
-    [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword]
+    [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword, setIsModalOpen, toast]
   );
 
   // Debug helper for resetting collections hint

@@ -37,6 +37,10 @@ export const CollapsibleEngagementCard = ({
   const approvalRate = totalPlayActions > 0 ? Math.round((articlesLiked / totalPlayActions) * 100) : 0;
   const totalFeedEngagement = shareClicks + sourceClicks + quizResponsesCount;
 
+  // Hide tiny sample sizes to avoid misleading ratios
+  const MIN_PLAY_ACTIONS_FOR_DISPLAY = 25;
+  const hasReliablePlaySample = totalPlayActions >= MIN_PLAY_ACTIONS_FOR_DISPLAY;
+
   return (
     <TooltipProvider>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -58,7 +62,7 @@ export const CollapsibleEngagementCard = ({
             
             {/* Summary line - always visible */}
             <div className="mt-2 flex items-center gap-3 text-sm flex-wrap">
-              {totalPlayActions > 0 && (
+              {hasReliablePlaySample ? (
                 <>
                   <span className="flex items-center gap-1">
                     <Heart className="w-3 h-3 text-pink-500" />
@@ -67,7 +71,15 @@ export const CollapsibleEngagementCard = ({
                   </span>
                   <span className="text-muted-foreground">•</span>
                 </>
-              )}
+              ) : totalPlayActions > 0 ? (
+                <>
+                  <span className="text-xs text-muted-foreground">
+                    Collecting ratings ({totalPlayActions} so far)
+                  </span>
+                  <span className="text-muted-foreground">•</span>
+                </>
+              ) : null}
+
               <span className="flex items-center gap-1">
                 <span className="font-bold" style={{ color: engagementColors.engaged }}>{avgStoriesEngaged}</span>
                 <span className="text-muted-foreground text-xs">avg engaged</span>
@@ -93,7 +105,7 @@ export const CollapsibleEngagementCard = ({
                         <div className="bg-pink-500/10 rounded-lg p-2 border border-pink-500/30 cursor-help text-center">
                           <div className="text-lg font-bold text-pink-500 flex items-center justify-center gap-1">
                             <Heart className="w-3 h-3" />
-                            {articlesLiked}
+                            {hasReliablePlaySample ? articlesLiked : '—'}
                           </div>
                           <div className="text-[10px] text-muted-foreground">Liked</div>
                         </div>
@@ -108,7 +120,7 @@ export const CollapsibleEngagementCard = ({
                         <div className="bg-orange-500/10 rounded-lg p-2 border border-orange-500/30 cursor-help text-center">
                           <div className="text-lg font-bold text-orange-500 flex items-center justify-center gap-1">
                             <ThumbsDown className="w-3 h-3" />
-                            {articlesDisliked}
+                            {hasReliablePlaySample ? articlesDisliked : '—'}
                           </div>
                           <div className="text-[10px] text-muted-foreground">Skipped</div>
                         </div>
