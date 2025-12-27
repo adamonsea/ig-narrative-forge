@@ -14,7 +14,16 @@ interface NewsletterSignupRequest {
   clientIP?: string;
 }
 
-// Simple hash function for rate limiting
+// SHA-256 hash function using Web Crypto API
+const sha256Hash = async (str: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str.toLowerCase().trim());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+// Simple hash for IP (doesn't need crypto strength)
 const simpleHash = (str: string): string => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -82,12 +91,13 @@ serve(async (req) => {
       );
     }
 
-    // Check rate limits
+    // Hash email and IP for rate limiting (hashing done here, not in DB)
+    const emailHash = await sha256Hash(email);
     const ipHash = clientIP ? simpleHash(clientIP) : null;
     
     const { data: rateLimitCheck, error: rateLimitError } = await supabase
       .rpc('check_newsletter_signup_rate_limit', {
-        p_email: email,
+        p_email_hash: emailHash,
         p_ip_hash: ipHash
       });
 
@@ -111,7 +121,7 @@ serve(async (req) => {
 
     // Record the signup attempt
     await supabase.rpc('record_newsletter_signup_attempt', {
-      p_email: email,
+      p_email_hash: emailHash,
       p_ip_hash: ipHash
     });
 

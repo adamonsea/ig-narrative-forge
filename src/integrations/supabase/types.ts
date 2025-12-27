@@ -4298,7 +4298,7 @@ export type Database = {
         Returns: boolean
       }
       check_newsletter_signup_rate_limit: {
-        Args: { p_email: string; p_ip_hash?: string }
+        Args: { p_email_hash: string; p_ip_hash?: string }
         Returns: boolean
       }
       cleanup_diane_abbott_stories_eastbourne: { Args: never; Returns: Json }
@@ -4994,7 +4994,7 @@ export type Database = {
         Returns: undefined
       }
       record_newsletter_signup_attempt: {
-        Args: { p_email: string; p_ip_hash?: string }
+        Args: { p_email_hash: string; p_ip_hash?: string }
         Returns: undefined
       }
       record_story_interaction: {
