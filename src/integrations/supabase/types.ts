@@ -3489,9 +3489,12 @@ export type Database = {
       }
       topic_newsletter_signups: {
         Row: {
+          consent_given_at: string | null
+          consent_ip_hash: string | null
           created_at: string
           email: string | null
           email_verified: boolean | null
+          first_name: string | null
           frequency: string
           id: string
           is_active: boolean
@@ -3505,9 +3508,12 @@ export type Database = {
           verified_at: string | null
         }
         Insert: {
+          consent_given_at?: string | null
+          consent_ip_hash?: string | null
           created_at?: string
           email?: string | null
           email_verified?: boolean | null
+          first_name?: string | null
           frequency?: string
           id?: string
           is_active?: boolean
@@ -3521,9 +3527,12 @@ export type Database = {
           verified_at?: string | null
         }
         Update: {
+          consent_given_at?: string | null
+          consent_ip_hash?: string | null
           created_at?: string
           email?: string | null
           email_verified?: boolean | null
+          first_name?: string | null
           frequency?: string
           id?: string
           is_active?: boolean

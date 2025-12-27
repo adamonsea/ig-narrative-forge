@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryNotifications } from "@/hooks/useStoryNotifications";
 import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
+import { CookieConsent } from "@/components/CookieConsent";
 import { NotificationPreferencesModal } from "@/components/NotificationPreferencesModal";
 import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
 import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
@@ -1199,6 +1200,7 @@ const TopicFeed = () => {
         topicId={topic?.id || ''}
         isFirstTimePrompt={shouldShowNotificationPrompt}
       />
+      <CookieConsent variant="feed" />
     </div>
   );
 };

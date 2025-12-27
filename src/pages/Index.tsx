@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Filter, Sparkles, Gamepad2, Brain, Users, Image, Mail, Share2, TrendingUp, Rss, BarChart3, Globe, Zap, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { CookieConsent } from '@/components/CookieConsent';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -397,6 +398,7 @@ const Index = () => {
           <div className="h-12" />
         </main>
       </div>
+      <CookieConsent variant="home" />
     </div>
   );
 };
