@@ -1,5 +1,4 @@
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useStoryReactions } from '@/hooks/useStoryReactions';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
