@@ -75,32 +75,33 @@ export const TopicManager = () => {
 
   const loadTopics = async () => {
     try {
-      // Load topics and stats in parallel with a single consolidated RPC
-      const [topicsRes, statsRes] = await Promise.all([
-        supabase
-          .from('topics')
-          .select('*')
-          .eq('created_by', user?.id)
-          .eq('is_archived', false)
-          .order('created_at', { ascending: false }),
-        supabase.rpc('get_user_dashboard_stats', { p_user_id: user?.id })
-      ]);
+      // Load topics first to get IDs
+      const topicsRes = await supabase
+        .from('topics')
+        .select('*')
+        .eq('created_by', user?.id)
+        .eq('is_archived', false)
+        .order('created_at', { ascending: false });
 
       if (topicsRes.error) throw topicsRes.error;
+      
+      const topicIds = (topicsRes.data || []).map(t => t.id);
+      
+      // Load stats and subscribers in parallel
+      const [statsRes, subscribersRes] = await Promise.all([
+        supabase.rpc('get_user_dashboard_stats', { p_user_id: user?.id }),
+        topicIds.length > 0 ? supabase
+          .from('topic_newsletter_signups')
+          .select('topic_id, notification_type, push_subscription')
+          .in('topic_id', topicIds)
+          .eq('is_active', true) : Promise.resolve({ data: [] })
+      ]);
       
       // Create a map of topic_id -> stats for O(1) lookup
       const statsMap = new Map<string, any>();
       (statsRes.data || []).forEach((stat: any) => {
         statsMap.set(stat.topic_id, stat);
       });
-
-      // Get subscriber counts for all topics
-      const topicIds = (topicsRes.data || []).map(t => t.id);
-      const subscribersRes = topicIds.length > 0 ? await supabase
-        .from('topic_newsletter_signups')
-        .select('topic_id, notification_type, push_subscription')
-        .in('topic_id', topicIds)
-        .eq('is_active', true) : { data: [] };
 
       // Count subscribers per topic
       const emailCounts = new Map<string, number>();
