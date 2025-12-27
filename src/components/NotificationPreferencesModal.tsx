@@ -153,7 +153,7 @@ export const NotificationPreferencesModal = ({
       type: 'daily' as NotificationType,
       icon: Calendar,
       title: 'Daily Briefing',
-      description: 'Top stories delivered at 5 PM',
+      description: 'Top stories delivered at 9 AM',
       color: 'text-blue-500'
     },
     {
