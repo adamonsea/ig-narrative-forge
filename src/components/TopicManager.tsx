@@ -13,6 +13,7 @@ import { EngagementSparkline } from "@/components/EngagementSparkline";
 import { SourceHealthBadge } from "@/components/SourceHealthBadge";
 import { CollapsibleAudienceCard } from "@/components/CollapsibleAudienceCard";
 import { CollapsibleEngagementCard } from "@/components/CollapsibleEngagementCard";
+import { CollapsibleSubscribersCard } from "@/components/CollapsibleSubscribersCard";
 import { TrafficHealthAlert } from "@/components/TrafficHealthAlert";
 
 interface Topic {
@@ -46,6 +47,8 @@ interface Topic {
   installs_total?: number;
   registrants_this_week?: number;
   registrants_total?: number;
+  email_subscribers?: number;
+  push_subscribers?: number;
   avg_stories_engaged?: number;
   avg_carousel_swipes?: number;
   avg_final_slides_seen?: number;
@@ -91,6 +94,27 @@ export const TopicManager = () => {
         statsMap.set(stat.topic_id, stat);
       });
 
+      // Get subscriber counts for all topics
+      const topicIds = (topicsRes.data || []).map(t => t.id);
+      const subscribersRes = topicIds.length > 0 ? await supabase
+        .from('topic_newsletter_signups')
+        .select('topic_id, notification_type, push_subscription')
+        .in('topic_id', topicIds)
+        .eq('is_active', true) : { data: [] };
+
+      // Count subscribers per topic
+      const emailCounts = new Map<string, number>();
+      const pushCounts = new Map<string, number>();
+      ((subscribersRes as any).data || []).forEach((sub: any) => {
+        // Has push subscription = push subscriber
+        if (sub.push_subscription) {
+          pushCounts.set(sub.topic_id, (pushCounts.get(sub.topic_id) || 0) + 1);
+        } else {
+          // No push subscription = email subscriber  
+          emailCounts.set(sub.topic_id, (emailCounts.get(sub.topic_id) || 0) + 1);
+        }
+      });
+
       // Merge topics with their stats
       const topicsWithStats = (topicsRes.data || []).map((topic) => {
         const stats = statsMap.get(topic.id) || {};
@@ -114,7 +138,9 @@ export const TopicManager = () => {
           registrants_total: Number(stats.registrants_total) || 0,
           avg_stories_engaged: Number(stats.avg_stories_engaged) || 0,
           avg_carousel_swipes: Number(stats.avg_carousel_swipes) || 0,
-          avg_final_slides_seen: Number(stats.avg_final_slides_seen) || 0
+          avg_final_slides_seen: Number(stats.avg_final_slides_seen) || 0,
+          email_subscribers: emailCounts.get(topic.id) || 0,
+          push_subscribers: pushCounts.get(topic.id) || 0
         };
       });
       
@@ -382,67 +408,16 @@ export const TopicManager = () => {
                         <EngagementSparkline topicId={topic.id} />
                       </div>
 
-                      {/* Subscribers Section - Always visible, shows "—" when zero */}
-                      <div className="bg-background/30 rounded-xl p-4 border border-border/30">
-                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <Users className="w-3 h-3" />
-                          Subscribers
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="bg-pop/10 rounded-lg p-3 border border-pop/30 cursor-help">
-                                <div className="text-xl font-bold text-pop-foreground">
-                                  {topic.installs_this_week || '—'}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground">Homescreen (Week)</div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Users who added this feed to their phone this week</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="bg-pop/10 rounded-lg p-3 border border-pop/30 cursor-help">
-                                <div className="text-xl font-bold text-pop-foreground">
-                                  {topic.installs_total || '—'}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground">Homescreen (Total)</div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Total users with this feed on their home screen</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="bg-[hsl(155,100%,67%)]/10 rounded-lg p-3 border border-[hsl(155,100%,67%)]/30 cursor-help">
-                                <div className="text-xl font-bold text-[hsl(155,100%,67%)]">
-                                  {topic.registrants_this_week || '—'}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground">Registrants (Week)</div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>New Play Mode users who signed up this week</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="bg-[hsl(155,100%,67%)]/10 rounded-lg p-3 border border-[hsl(155,100%,67%)]/30 cursor-help">
-                                <div className="text-xl font-bold text-[hsl(155,100%,67%)]">
-                                  {topic.registrants_total || '—'}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground">Registrants (Total)</div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Total Play Mode users for this feed</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </div>
+                      {/* Subscribers Section - Collapsible with email list */}
+                      <CollapsibleSubscribersCard
+                        topicId={topic.id}
+                        installsThisWeek={topic.installs_this_week}
+                        installsTotal={topic.installs_total}
+                        registrantsThisWeek={topic.registrants_this_week}
+                        registrantsTotal={topic.registrants_total}
+                        emailSubscribers={topic.email_subscribers || 0}
+                        pushSubscribers={topic.push_subscribers || 0}
+                      />
                     </TooltipProvider>
 
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-4 border-t border-border/20 mt-2">
