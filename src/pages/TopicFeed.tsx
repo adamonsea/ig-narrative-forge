@@ -144,6 +144,47 @@ const TopicFeed = () => {
     }
   }, [isModalOpen, ensureFilterStoryIndexLoaded]);
 
+  const handleMoreLikeThis = useCallback(
+    (story: any) => {
+      if (!topic) return;
+
+      const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const combinedText = `${story?.title ?? ''} ${(story?.slides ?? []).map((s: any) => s?.content ?? '').join(' ')}`.toLowerCase();
+
+      const candidates = [
+        { type: 'landmark' as const, items: topic.landmarks || [] },
+        { type: 'organization' as const, items: topic.organizations || [] },
+        { type: 'keyword' as const, items: topic.keywords || [] }
+      ];
+
+      let match: { type: 'landmark' | 'organization' | 'keyword'; value: string } | null = null;
+
+      for (const group of candidates) {
+        for (const raw of group.items) {
+          const value = String(raw || '').trim();
+          if (value.length <= 2) continue;
+
+          const escaped = escapeRegExp(value.toLowerCase());
+          const wordBoundaryRegex = new RegExp(`\\b${escaped}\\b`, 'i');
+          if (wordBoundaryRegex.test(combinedText)) {
+            match = { type: group.type, value };
+            break;
+          }
+        }
+        if (match) break;
+      }
+
+      if (!match) return;
+
+      clearAllFilters();
+
+      if (match.type === 'landmark') toggleLandmark(match.value);
+      else if (match.type === 'organization') toggleOrganization(match.value);
+      else toggleKeyword(match.value);
+    },
+    [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword]
+  );
+
   // Debug helper for resetting collections hint
   useEffect(() => {
     (window as any).resetCollectionsHint = () => {
@@ -953,6 +994,7 @@ const TopicFeed = () => {
                       topicSlug={slug}
                       onStorySwipe={handleStorySwipe}
                       onStoryScrolledPast={handleStoryScrolledPast}
+                      onMoreLikeThis={handleMoreLikeThis}
                     />
                   </div>
                 );
