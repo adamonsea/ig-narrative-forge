@@ -246,15 +246,15 @@ serve(async (req) => {
     });
 
     // Get subscribers (or use test email)
-    let recipients: { email: string }[] = [];
+    let recipients: { email: string; name?: string | null }[] = [];
     
     if (testEmail) {
-      recipients = [{ email: testEmail }];
+      recipients = [{ email: testEmail, name: null }];
       console.log(`🧪 Test mode: sending to ${testEmail}`);
     } else {
       const { data: subscribers, error: subError } = await supabase
         .from('topic_newsletter_signups')
-        .select('email')
+        .select('email, name')
         .eq('topic_id', topicId)
         .eq('is_active', true)
         .eq('notification_type', notificationType)
@@ -324,9 +324,24 @@ serve(async (req) => {
 
     for (const recipient of recipients) {
       try {
-        const subject = notificationType === 'daily'
-          ? `${topic.name} Daily Briefing`
-          : `${topic.name} Weekly Briefing`;
+        // Dynamic subject line with personalization
+        const storyCount = stories.length;
+        const firstName = recipient.name?.split(' ')[0];
+        
+        let subject: string;
+        if (notificationType === 'daily') {
+          if (firstName) {
+            subject = `Hey ${firstName}, ${storyCount} ${storyCount === 1 ? 'story' : 'stories'} from ${topic.name}`;
+          } else {
+            subject = `Your ${topic.name} update: ${storyCount} new ${storyCount === 1 ? 'story' : 'stories'}`;
+          }
+        } else {
+          if (firstName) {
+            subject = `${firstName}, your week in ${topic.name} (${storyCount} stories)`;
+          } else {
+            subject = `${topic.name} Weekly: ${storyCount} stories you might have missed`;
+          }
+        }
 
         const { error: sendError } = await resend.emails.send({
           from: `${topic.name} <noreply@curatr.pro>`,

@@ -116,13 +116,19 @@ export const StoryStructuredData = ({
       "@id": "https://curatr.pro/#organization"
     },
     "publisher": {
-      "@type": "Organization",
+      "@type": ["Organization", "NewsMediaOrganization"],
       "name": "Curatr",
       "@id": "https://curatr.pro/#organization",
       "logo": {
         "@type": "ImageObject",
         "url": "https://curatr.pro/curatr-icon.png"
-      }
+      },
+      "publishingPrinciples": "https://curatr.pro/about"
+    },
+    "copyrightHolder": {
+      "@type": "Organization",
+      "name": "Curatr",
+      "@id": "https://curatr.pro/#organization"
     },
     "mainEntityOfPage": {
       "@type": "WebPage",

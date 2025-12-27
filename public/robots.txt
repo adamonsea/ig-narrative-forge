@@ -27,6 +27,10 @@ Allow: /
 User-agent: Googlebot
 Allow: /
 
+# Google News crawler
+User-agent: Googlebot-News
+Allow: /
+
 User-agent: Bingbot
 Allow: /
 

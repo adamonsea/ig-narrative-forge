@@ -33,9 +33,10 @@ export const GlobalSEO = () => {
     }
   };
 
+  // NewsMediaOrganization for Google News eligibility
   const organizationSchema = {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": ["Organization", "NewsMediaOrganization"],
     "@id": "https://curatr.pro/#organization",
     "name": "Curatr",
     "alternateName": "Curatr Pro",
@@ -60,7 +61,12 @@ export const GlobalSEO = () => {
     "areaServed": {
       "@type": "Country",
       "name": "United Kingdom"
-    }
+    },
+    // Google News specific properties
+    "publishingPrinciples": "https://curatr.pro/about",
+    "ethicsPolicy": "https://curatr.pro/about",
+    "masthead": "https://curatr.pro/about",
+    "actionableFeedbackPolicy": "https://curatr.pro/about"
   };
 
   // Speakable specification for AI voice assistants
