@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Heart, Download, Pin, MessageCircle, ExternalLink } from 'lucide-react';
+import { Share2, Download, Pin, MessageCircle, ExternalLink } from 'lucide-react';
 import arrowRightSvg from '@/assets/arrow-right.svg';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
+import { StoryReactionBar } from '@/components/StoryReactionBar';
 // Force cache refresh
 
 // Hook to detect network speed (adjusted for device tier)
@@ -109,8 +110,6 @@ interface StoryCarouselProps {
 
 export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, isRoundupView = false, onStorySwipe, onStoryScrolledPast, topicName, topicSlug }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [isLoved, setIsLoved] = useState(false);
-  const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const iOSVersion = isIOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
   const { trackShareClick, trackSourceClick } = useStoryInteractionTracking();
@@ -444,10 +443,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
   };
 
-  const toggleLove = () => {
-    setIsLoved(!isLoved);
-    setLoveCount(prev => isLoved ? prev - 1 : prev + 1);
-  };
 
   const handleShare = async () => {
     console.log('Share button clicked for story:', story.id);
@@ -1006,17 +1001,19 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
           <div className="p-4 border-b feed-card-header bg-slate-50/50 dark:bg-slate-900/50">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="space-y-1 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {teaserBadge}
-                      {storyBadges}
-                    </div>
-                  </div>
-                </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                {teaserBadge}
+                {storyBadges}
               </div>
+              {/* Reaction bar in top-right */}
+              {topicId && (
+                <StoryReactionBar 
+                  storyId={story.id} 
+                  topicId={topicId} 
+                  className="flex-shrink-0"
+                />
+              )}
             </div>
           </div>
 
@@ -1119,15 +1116,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
               >
                 <Share2 className="h-4 w-4" />
                 Share
-              </Button>
-              <Button
-                variant={isLoved ? "default" : "outline"}
-                size="sm"
-                onClick={toggleLove}
-                className="flex items-center gap-2"
-              >
-                <Heart className={`h-4 w-4 ${isLoved ? "fill-current" : ""}`} />
-                {loveCount}
               </Button>
             </div>
           </div>
