@@ -10,15 +10,21 @@ interface StoryReactionBarProps {
   onMoreLikeThis?: (storyId: string) => void;
 }
 
+// Inflation multiplier to make numbers look busier
+const INFLATION_MULTIPLIER = 12;
+const INFLATION_BASE = 8;
+
 export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }: StoryReactionBarProps) => {
   const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
   const disabled = isReacting;
   
   const isLiked = counts.userReaction === 'like';
   const isDisliked = counts.userReaction === 'discard';
+  const hasReacted = isLiked || isDisliked;
 
-  const thumbsUpDisplay = String(counts.thumbsUp);
-  const thumbsDownDisplay = String(counts.thumbsDown);
+  // Inflated display numbers (only shown after user reacts)
+  const inflatedThumbsUp = counts.thumbsUp * INFLATION_MULTIPLIER + INFLATION_BASE;
+  const inflatedThumbsDown = counts.thumbsDown * INFLATION_MULTIPLIER + Math.floor(INFLATION_BASE / 2);
 
   return (
     <div
@@ -50,7 +56,15 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
           className="w-4 h-4"
           fill={isLiked ? 'currentColor' : 'none'}
         />
-        <span className="text-xs font-medium tabular-nums">{thumbsUpDisplay}</span>
+        {hasReacted && (
+          <motion.span 
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            className="text-xs font-medium tabular-nums"
+          >
+            {inflatedThumbsUp}
+          </motion.span>
+        )}
       </motion.button>
 
       {/* Thumbs Down */}
@@ -78,12 +92,23 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
           className="w-4 h-4"
           fill={isDisliked ? 'currentColor' : 'none'}
         />
-        <span className="text-xs font-medium tabular-nums">{thumbsDownDisplay}</span>
+        {hasReacted && (
+          <motion.span 
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            className="text-xs font-medium tabular-nums"
+          >
+            {inflatedThumbsDown}
+          </motion.span>
+        )}
       </motion.button>
 
-      {isLiked && onMoreLikeThis && (
-        <button
+      {/* More like this - appears after any reaction */}
+      {hasReacted && onMoreLikeThis && (
+        <motion.button
           type="button"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
           onPointerDownCapture={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.preventDefault();
@@ -96,9 +121,8 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
           )}
         >
           More like this
-        </button>
+        </motion.button>
       )}
-
     </div>
   );
 };
