@@ -34,6 +34,7 @@ export const NotificationPreferencesModal = ({
   const { emailSubscriptions, isLoading: checkingSubscriptions, refresh } = useNotificationSubscriptions(topicId, isOpen);
   const [subscribingType, setSubscribingType] = useState<NotificationType | null>(null);
   const [emailInput, setEmailInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
   const [activeInput, setActiveInput] = useState<NotificationType | null>(null);
 
   const handleSubscribe = async (type: NotificationType) => {
@@ -79,6 +80,7 @@ export const NotificationPreferencesModal = ({
         .insert({
           topic_id: topicId,
           email: emailInput.toLowerCase().trim(),
+          name: nameInput.trim() || null,
           notification_type: type,
           frequency: type,
           is_active: true
@@ -94,6 +96,7 @@ export const NotificationPreferencesModal = ({
 
       setActiveInput(null);
       setEmailInput('');
+      setNameInput('');
       await refresh();
     } catch (error) {
       console.error('Error subscribing:', error);
@@ -210,31 +213,43 @@ export const NotificationPreferencesModal = ({
                         Subscribed
                       </Button>
                     ) : activeInput === option.type ? (
-                      <div className="flex gap-2">
+                      <div className="space-y-2">
                         <Input
-                          type="email"
-                          placeholder="your@email.com"
-                          value={emailInput}
-                          onChange={(e) => setEmailInput(e.target.value)}
+                          type="text"
+                          placeholder="First name (optional)"
+                          value={nameInput}
+                          onChange={(e) => setNameInput(e.target.value)}
                           className="h-8 text-sm"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSubscribe(option.type);
-                            if (e.key === 'Escape') setActiveInput(null);
-                          }}
                         />
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubscribe(option.type)}
-                          disabled={!emailInput.trim() || isProcessing}
-                          className="h-8"
-                        >
-                          {isProcessing ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            'Subscribe'
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Input
+                            type="email"
+                            placeholder="your@email.com"
+                            value={emailInput}
+                            onChange={(e) => setEmailInput(e.target.value)}
+                            className="h-8 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSubscribe(option.type);
+                              if (e.key === 'Escape') {
+                                setActiveInput(null);
+                                setNameInput('');
+                              }
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleSubscribe(option.type)}
+                            disabled={!emailInput.trim() || isProcessing}
+                            className="h-8"
+                          >
+                            {isProcessing ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              'Subscribe'
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <Button
