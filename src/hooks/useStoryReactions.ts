@@ -35,6 +35,7 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
     userReaction: null,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isReacting, setIsReacting] = useState(false);
 
   // Fetch initial counts
   useEffect(() => {
@@ -86,6 +87,7 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
 
   const react = useCallback(
     async (type: 'like' | 'discard') => {
+      setIsReacting(true);
       const visitorId = getVisitorId();
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
@@ -152,10 +154,12 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
         }
       } catch (err) {
         console.error('Error in react:', err);
+      } finally {
+        setIsReacting(false);
       }
     },
     [storyId, topicId]
   );
 
-  return { counts, react, isLoading };
+  return { counts, react, isLoading, isReacting };
 };
