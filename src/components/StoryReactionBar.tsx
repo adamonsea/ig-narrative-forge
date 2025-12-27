@@ -1,8 +1,8 @@
+import { useEffect, useState } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useStoryReactions } from '@/hooks/useStoryReactions';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-
 interface StoryReactionBarProps {
   storyId: string;
   topicId: string;
@@ -29,14 +29,31 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
   const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
   const disabled = isReacting;
   const hasVoted = counts.userReaction !== null;
-  
-  const thumbsUpDisplay = getDisplayCount(counts.thumbsUp, hasVoted, `${storyId}:like`);
-  const thumbsDownDisplay = getDisplayCount(counts.thumbsDown, hasVoted, `${storyId}:discard`);
+
+  // Ensure counts appear immediately after the user interacts (even if server state lags).
+  const [hasInteracted, setHasInteracted] = useState(false);
+  useEffect(() => {
+    if (hasVoted) setHasInteracted(true);
+  }, [hasVoted]);
+
+  const thumbsUpDisplay = hasVoted
+    ? getDisplayCount(counts.thumbsUp, true, `${storyId}:like`)
+    : hasInteracted
+      ? String(counts.thumbsUp)
+      : null;
+
+  const thumbsDownDisplay = hasVoted
+    ? getDisplayCount(counts.thumbsDown, true, `${storyId}:discard`)
+    : hasInteracted
+      ? String(counts.thumbsDown)
+      : null;
 
   return (
     <div
       className={cn('flex items-center gap-2 relative z-50 pointer-events-auto', className)}
       aria-busy={isLoading || isReacting}
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      onClickCapture={(e) => e.stopPropagation()}
     >
       {/* Thumbs Up */}
       <motion.button
@@ -46,6 +63,7 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          setHasInteracted(true);
           react('like');
         }}
         disabled={disabled}
@@ -73,6 +91,7 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          setHasInteracted(true);
           react('discard');
         }}
         disabled={disabled}
