@@ -26,8 +26,8 @@ const getDisplayCount = (count: number, hasVoted: boolean, seed: string): string
 };
 
 export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionBarProps) => {
-  const { counts, react, isLoading } = useStoryReactions(storyId, topicId);
-  const disabled = isLoading;
+  const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
+  const disabled = isReacting;
   const hasVoted = counts.userReaction !== null;
   
   const thumbsUpDisplay = getDisplayCount(counts.thumbsUp, hasVoted, `${storyId}:like`);
@@ -36,7 +36,7 @@ export const StoryReactionBar = ({ storyId, topicId, className }: StoryReactionB
   return (
     <div
       className={cn('flex items-center gap-2 relative z-50 pointer-events-auto', className)}
-      aria-busy={isLoading}
+      aria-busy={isLoading || isReacting}
     >
       {/* Thumbs Up */}
       <motion.button
