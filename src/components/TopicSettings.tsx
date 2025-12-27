@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, HelpCircle, Users, Bot, Clock, Building2, Calendar, X, Plus, MapPin } from "lucide-react";
+import { Settings, HelpCircle, Users, Bot, Clock, Building2, Calendar, X, Plus, MapPin, Rss, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
@@ -36,6 +36,8 @@ interface TopicSettingsProps {
   currentEventsEnabled?: boolean;
   currentAutomatedInsightsEnabled?: boolean;
   currentIllustrationStyle?: IllustrationStyle;
+  currentRssEnabled?: boolean;
+  currentEmailSubscriptionsEnabled?: boolean;
   topicType?: string;
   region?: string;
   onUpdate?: () => void;
@@ -55,6 +57,8 @@ export const TopicSettings = ({
   currentEventsEnabled,
   currentAutomatedInsightsEnabled,
   currentIllustrationStyle,
+  currentRssEnabled,
+  currentEmailSubscriptionsEnabled,
   topicType,
   region,
   onUpdate 
@@ -72,6 +76,8 @@ export const TopicSettings = ({
   const [automatedInsightsEnabled, setAutomatedInsightsEnabled] = useState<boolean>(currentAutomatedInsightsEnabled !== false); // Default true
   const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
+  const [rssEnabled, setRssEnabled] = useState<boolean>(currentRssEnabled || false);
+  const [emailSubscriptionsEnabled, setEmailSubscriptionsEnabled] = useState<boolean>(currentEmailSubscriptionsEnabled || false);
   // Parliamentary tracking only available for regional topics
   const [parliamentaryTrackingEnabled, setParliamentaryTrackingEnabled] = useState<boolean>(
     topicType === 'regional' ? (currentParliamentaryTrackingEnabled || false) : false
@@ -93,11 +99,13 @@ export const TopicSettings = ({
     if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
     if (currentEventsEnabled !== undefined) setEventsEnabled(currentEventsEnabled);
     if (currentAutomatedInsightsEnabled !== undefined) setAutomatedInsightsEnabled(currentAutomatedInsightsEnabled);
+    if (currentRssEnabled !== undefined) setRssEnabled(currentRssEnabled);
+    if (currentEmailSubscriptionsEnabled !== undefined) setEmailSubscriptionsEnabled(currentEmailSubscriptionsEnabled);
     // Only allow parliamentary tracking for regional topics
     if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
       setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
     }
-  }, [currentExpertise, currentTone, currentWritingStyle, currentIllustrationStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentAutomatedInsightsEnabled, currentParliamentaryTrackingEnabled]);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentIllustrationStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentAutomatedInsightsEnabled, currentParliamentaryTrackingEnabled, currentRssEnabled, currentEmailSubscriptionsEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -590,6 +598,75 @@ export const TopicSettings = ({
               </div>
             </div>
           )}
+        </div>
+
+        <Separator />
+
+        {/* Distribution Settings - RSS & Email Subscriptions */}
+        <div className="space-y-4">
+          <Label className="text-base font-medium">Distribution Channels</Label>
+          
+          {/* RSS Feed Toggle */}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-2">
+                <Rss className="w-4 h-4" />
+                RSS Feed
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Allow subscribers to access this feed via RSS
+              </p>
+            </div>
+            <Switch
+              checked={rssEnabled}
+              onCheckedChange={async (checked) => {
+                setRssEnabled(checked);
+                try {
+                  const { error } = await supabase
+                    .from('topics')
+                    .update({ rss_enabled: checked, updated_at: new Date().toISOString() })
+                    .eq('id', topicId);
+                  if (error) throw error;
+                  toast({ title: checked ? "RSS Enabled" : "RSS Disabled" });
+                  onUpdate?.();
+                } catch (error) {
+                  setRssEnabled(!checked);
+                  toast({ title: "Error", description: "Failed to update", variant: "destructive" });
+                }
+              }}
+            />
+          </div>
+
+          {/* Email Subscriptions Toggle */}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email Subscriptions
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Allow readers to subscribe to email newsletters
+              </p>
+            </div>
+            <Switch
+              checked={emailSubscriptionsEnabled}
+              onCheckedChange={async (checked) => {
+                setEmailSubscriptionsEnabled(checked);
+                try {
+                  const { error } = await supabase
+                    .from('topics')
+                    .update({ email_subscriptions_enabled: checked, updated_at: new Date().toISOString() })
+                    .eq('id', topicId);
+                  if (error) throw error;
+                  toast({ title: checked ? "Email Subscriptions Enabled" : "Email Subscriptions Disabled" });
+                  onUpdate?.();
+                } catch (error) {
+                  setEmailSubscriptionsEnabled(!checked);
+                  toast({ title: "Error", description: "Failed to update", variant: "destructive" });
+                }
+              }}
+            />
+          </div>
         </div>
 
         <Separator />

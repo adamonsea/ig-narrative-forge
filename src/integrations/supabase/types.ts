@@ -3811,6 +3811,7 @@ export type Database = {
           drip_release_interval_hours: number | null
           drip_start_hour: number | null
           drip_stories_per_release: number | null
+          email_subscriptions_enabled: boolean | null
           events_enabled: boolean | null
           id: string
           illustration_accent_color: string | null
@@ -3830,6 +3831,7 @@ export type Database = {
           parliamentary_tracking_enabled: boolean | null
           postcodes: string[] | null
           region: string | null
+          rss_enabled: boolean | null
           slug: string | null
           topic_type: string
           updated_at: string | null
@@ -3861,6 +3863,7 @@ export type Database = {
           drip_release_interval_hours?: number | null
           drip_start_hour?: number | null
           drip_stories_per_release?: number | null
+          email_subscriptions_enabled?: boolean | null
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null
@@ -3880,6 +3883,7 @@ export type Database = {
           parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
           region?: string | null
+          rss_enabled?: boolean | null
           slug?: string | null
           topic_type?: string
           updated_at?: string | null
@@ -3911,6 +3915,7 @@ export type Database = {
           drip_release_interval_hours?: number | null
           drip_start_hour?: number | null
           drip_stories_per_release?: number | null
+          email_subscriptions_enabled?: boolean | null
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null
@@ -3930,6 +3935,7 @@ export type Database = {
           parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
           region?: string | null
+          rss_enabled?: boolean | null
           slug?: string | null
           topic_type?: string
           updated_at?: string | null

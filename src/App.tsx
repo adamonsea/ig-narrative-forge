@@ -27,6 +27,7 @@ import AboutFeed from "./pages/AboutFeed";
 import ExplorePile from "./pages/ExplorePile";
 import VerifySubscription from "./pages/VerifySubscription";
 import WidgetsPage from "./pages/dashboard/Widgets";
+import WidgetTestPage from "./pages/dashboard/WidgetTest";
 import Health from "./pages/Health";
 
 // Redirect component for old feed URLs
@@ -72,6 +73,7 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
                 <Route path="/dashboard/widgets" element={<WidgetsPage />} />
+                <Route path="/dashboard/widgets/test" element={<WidgetTestPage />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/admin/ai-costs" element={<AICostDashboardPage />} />
                 
