@@ -167,13 +167,14 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId }: N
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="name">Name (optional)</Label>
+            <Label htmlFor="name">First name (optional)</Label>
             <Input
               id="name"
               type="text"
-              placeholder="Your name"
+              placeholder="First name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
