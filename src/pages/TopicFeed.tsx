@@ -159,40 +159,46 @@ const TopicFeed = () => {
         { type: 'keyword' as const, items: topic.keywords || [] },
       ];
 
-      let match: { type: 'landmark' | 'organization' | 'keyword'; value: string } | null = null;
+      const matches: { type: 'landmark' | 'organization' | 'keyword'; value: string }[] = [];
 
-      // Pass 1: word-boundary match (best quality)
+      // Pass 1: word-boundary matches (best quality) - collect up to 2
       for (const group of candidates) {
         for (const raw of group.items) {
           const value = String(raw || '').trim();
           if (value.length <= 2) continue;
+          // Skip the topic name itself (too generic)
+          if (value.toLowerCase() === topic.name?.toLowerCase()) continue;
 
           const escaped = escapeRegExp(value.toLowerCase());
           const wordBoundaryRegex = new RegExp(`\\b${escaped}\\b`, 'i');
           if (wordBoundaryRegex.test(combinedText)) {
-            match = { type: group.type, value };
-            break;
+            matches.push({ type: group.type, value });
+            if (matches.length >= 2) break;
           }
         }
-        if (match) break;
+        if (matches.length >= 2) break;
       }
 
-      // Pass 2: looser substring match (fallback so the button feels responsive)
-      if (!match) {
+      // Pass 2: looser substring match if we need more matches
+      if (matches.length < 2) {
         for (const group of candidates) {
           for (const raw of group.items) {
             const value = String(raw || '').trim();
             if (value.length <= 2) continue;
+            if (value.toLowerCase() === topic.name?.toLowerCase()) continue;
+            // Skip if already matched
+            if (matches.some(m => m.value.toLowerCase() === value.toLowerCase())) continue;
+
             if (combinedText.includes(value.toLowerCase())) {
-              match = { type: group.type, value };
-              break;
+              matches.push({ type: group.type, value });
+              if (matches.length >= 2) break;
             }
           }
-          if (match) break;
+          if (matches.length >= 2) break;
         }
       }
 
-      if (!match) {
+      if (matches.length === 0) {
         setIsModalOpen(true);
         toast({
           title: 'No match found',
@@ -203,14 +209,18 @@ const TopicFeed = () => {
 
       clearAllFilters();
 
-      if (match.type === 'landmark') toggleLandmark(match.value);
-      else if (match.type === 'organization') toggleOrganization(match.value);
-      else toggleKeyword(match.value);
+      // Apply all matches (OR logic - each toggle adds to the filter)
+      for (const match of matches) {
+        if (match.type === 'landmark') toggleLandmark(match.value);
+        else if (match.type === 'organization') toggleOrganization(match.value);
+        else toggleKeyword(match.value);
+      }
 
       setIsModalOpen(true);
+      const filterDescription = matches.map(m => m.value).join(' or ');
       toast({
         title: 'More like this',
-        description: `Filtering by ${match.value}`,
+        description: `Filtering by ${filterDescription}`,
       });
     },
     [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword, setIsModalOpen, toast]
