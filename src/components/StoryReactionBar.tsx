@@ -2,6 +2,7 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useStoryReactions } from '@/hooks/useStoryReactions';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useRef, useMemo } from 'react';
 
 interface StoryReactionBarProps {
   storyId: string;
@@ -10,9 +11,9 @@ interface StoryReactionBarProps {
   onMoreLikeThis?: (storyId: string) => void;
 }
 
-// Inflation multiplier to make numbers look busier
-const INFLATION_MULTIPLIER = 12;
-const INFLATION_BASE = 8;
+// Inflation adds a fixed base to make numbers look busier
+const INFLATION_BASE_UP = 47;
+const INFLATION_BASE_DOWN = 23;
 
 export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }: StoryReactionBarProps) => {
   const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
@@ -22,9 +23,37 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
   const isDisliked = counts.userReaction === 'discard';
   const hasReacted = isLiked || isDisliked;
 
-  // Inflated display numbers (only shown after user reacts)
-  const inflatedThumbsUp = counts.thumbsUp * INFLATION_MULTIPLIER + INFLATION_BASE;
-  const inflatedThumbsDown = counts.thumbsDown * INFLATION_MULTIPLIER + Math.floor(INFLATION_BASE / 2);
+  // Capture the initial counts when user first reacts to use as baseline
+  const baselineRef = useRef<{ thumbsUp: number; thumbsDown: number } | null>(null);
+  
+  // Set baseline on first reaction
+  if (hasReacted && !baselineRef.current) {
+    baselineRef.current = {
+      thumbsUp: counts.thumbsUp,
+      thumbsDown: counts.thumbsDown,
+    };
+  }
+  
+  // Reset baseline if user un-reacts completely
+  if (!hasReacted) {
+    baselineRef.current = null;
+  }
+
+  // Calculate displayed numbers: base inflation + relative change from baseline
+  const displayNumbers = useMemo(() => {
+    if (!hasReacted || !baselineRef.current) {
+      return { thumbsUp: 0, thumbsDown: 0 };
+    }
+    
+    const baseline = baselineRef.current;
+    const deltaUp = counts.thumbsUp - baseline.thumbsUp;
+    const deltaDown = counts.thumbsDown - baseline.thumbsDown;
+    
+    return {
+      thumbsUp: INFLATION_BASE_UP + deltaUp,
+      thumbsDown: INFLATION_BASE_DOWN + deltaDown,
+    };
+  }, [hasReacted, counts.thumbsUp, counts.thumbsDown]);
 
   return (
     <div
@@ -62,7 +91,7 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
             animate={{ opacity: 1, width: 'auto' }}
             className="text-xs font-medium tabular-nums"
           >
-            {inflatedThumbsUp}
+            {displayNumbers.thumbsUp}
           </motion.span>
         )}
       </motion.button>
@@ -98,7 +127,7 @@ export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }
             animate={{ opacity: 1, width: 'auto' }}
             className="text-xs font-medium tabular-nums"
           >
-            {inflatedThumbsDown}
+            {displayNumbers.thumbsDown}
           </motion.span>
         )}
       </motion.button>
