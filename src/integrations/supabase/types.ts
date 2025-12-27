@@ -2974,26 +2974,32 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_reaction: boolean | null
           story_id: string
           swipe_type: string
           topic_id: string | null
-          user_id: string
+          user_id: string | null
+          visitor_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          is_reaction?: boolean | null
           story_id: string
           swipe_type: string
           topic_id?: string | null
-          user_id: string
+          user_id?: string | null
+          visitor_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          is_reaction?: boolean | null
           story_id?: string
           swipe_type?: string
           topic_id?: string | null
-          user_id?: string
+          user_id?: string | null
+          visitor_id?: string | null
         }
         Relationships: [
           {
@@ -4616,6 +4622,14 @@ export type Database = {
               word_count: number
             }[]
           }
+      get_story_reaction_counts: {
+        Args: { p_story_id: string; p_user_id?: string; p_visitor_id?: string }
+        Returns: {
+          thumbs_down: number
+          thumbs_up: number
+          user_reaction: string
+        }[]
+      }
       get_story_swipe_stats: {
         Args: { p_story_id: string }
         Returns: {
@@ -5029,6 +5043,20 @@ export type Database = {
           p_success: boolean
         }
         Returns: undefined
+      }
+      upsert_story_reaction: {
+        Args: {
+          p_story_id: string
+          p_swipe_type: string
+          p_topic_id: string
+          p_user_id?: string
+          p_visitor_id: string
+        }
+        Returns: {
+          thumbs_down: number
+          thumbs_up: number
+          user_reaction: string
+        }[]
       }
       user_has_region_access: {
         Args: { check_region: string }
