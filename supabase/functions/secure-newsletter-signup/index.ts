@@ -175,12 +175,14 @@ serve(async (req) => {
       .insert({
         topic_id: topicId,
         email: email.trim().toLowerCase(),
-        name: name?.trim() || null,
+        first_name: name?.trim() || null,
         notification_type: notificationType,
         email_verified: false,
         is_active: false, // Will be activated upon verification
         verification_token: verificationToken,
-        verification_sent_at: new Date().toISOString()
+        verification_sent_at: new Date().toISOString(),
+        consent_given_at: new Date().toISOString(),
+        consent_ip_hash: ipHash
       })
       .select()
       .single();
