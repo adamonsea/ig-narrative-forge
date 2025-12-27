@@ -1630,17 +1630,30 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [allContent, selectedKeywords, selectedLandmarks, selectedOrganizations, applyClientSideFiltering, triggerServerFiltering]);
 
   const clearAllFilters = useCallback(() => {
+    const wasServerFiltering = isServerFilteringRef.current;
+    
     setSelectedKeywords([]);
     setSelectedLandmarks([]);
     setSelectedOrganizations([]);
     setSelectedSources([]);
-    setFilteredContent(allContent);
     serverFilteredRef.current = false;
+    setIsServerFiltering(false);
 
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-  }, [allContent]);
+
+    // If we were server filtering, we need to refetch unfiltered content
+    if (wasServerFiltering && topic) {
+      // Reset and reload fresh unfiltered content
+      setPage(1);
+      setHasMore(true);
+      loadStories(topic.slug, 1, false);
+    } else {
+      // Just reset to unfiltered view of current content
+      setFilteredContent(allContent);
+    }
+  }, [allContent, topic, loadStories]);
 
   const removeKeyword = useCallback((keyword: string) => {
     toggleKeyword(keyword); // This will remove it since it's already selected
