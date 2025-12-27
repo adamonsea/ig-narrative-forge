@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 interface EmailSubscriber {
   id: string;
   email: string;
+  first_name: string | null;
   notification_type: 'daily' | 'weekly';
   created_at: string;
   is_active: boolean;
@@ -94,6 +95,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         .select(`
           id,
           email,
+          first_name,
           notification_type,
           created_at,
           is_active,
@@ -117,6 +119,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
       const transformedEmailData = (emailData || []).map(signup => ({
         id: signup.id,
         email: signup.email!,
+        first_name: (signup as any).first_name || null,
         notification_type: signup.notification_type as 'daily' | 'weekly',
         created_at: signup.created_at,
         is_active: signup.is_active,
@@ -213,11 +216,12 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         return;
       }
 
-      const headers = ['Email', 'Frequency', 'Topic', 'Verified', 'Subscribed Date'];
+      const headers = ['First Name', 'Email', 'Frequency', 'Topic', 'Verified', 'Subscribed Date'];
       const csvContent = [
         headers.join(','),
         ...emailSubscribers.map(sub => {
           return [
+            `"${sub.first_name || ''}"`,
             `"${sub.email}"`,
             `"${sub.notification_type}"`,
             `"${sub.topic.name}"`,
@@ -353,7 +357,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Email</TableHead>
+                <TableHead>Subscriber</TableHead>
                 <TableHead>Frequency</TableHead>
                 {!topicId && <TableHead>Topic</TableHead>}
                 <TableHead>Status</TableHead>
@@ -366,9 +370,18 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Mail className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-semibold text-primary uppercase">
+                          {sub.first_name ? sub.first_name.charAt(0) : sub.email.charAt(0)}
+                        </span>
                       </div>
-                      <div className="font-medium truncate max-w-[180px]">{sub.email}</div>
+                      <div>
+                        {sub.first_name && (
+                          <div className="font-medium text-sm">{sub.first_name}</div>
+                        )}
+                        <div className={`truncate max-w-[180px] ${sub.first_name ? 'text-xs text-muted-foreground' : 'font-medium'}`}>
+                          {sub.email}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
