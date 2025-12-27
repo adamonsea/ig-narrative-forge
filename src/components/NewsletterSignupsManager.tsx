@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Calendar, Mail, Smartphone, Monitor, TrendingUp, Users } from 'lucide-react';
+import { Download, Calendar, Mail, TrendingUp, Users } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface EmailSubscriber {
@@ -16,18 +16,6 @@ interface EmailSubscriber {
   created_at: string;
   is_active: boolean;
   is_verified: boolean;
-  topic: {
-    id: string;
-    name: string;
-  };
-}
-
-interface PushSubscriber {
-  id: string;
-  notification_type: 'instant' | 'daily' | 'weekly';
-  push_endpoint: string;
-  created_at: string;
-  is_active: boolean;
   topic: {
     id: string;
     name: string;
@@ -46,20 +34,6 @@ interface NewsletterSignupsManagerProps {
   topicId?: string;
 }
 
-// Detect device/browser from push endpoint
-const getDeviceInfo = (endpoint: string): { icon: typeof Smartphone; label: string } => {
-  if (endpoint.includes('apple.com')) {
-    return { icon: Smartphone, label: 'Safari/iOS' };
-  }
-  if (endpoint.includes('fcm.googleapis.com')) {
-    return { icon: Monitor, label: 'Chrome/Android' };
-  }
-  if (endpoint.includes('mozilla.com')) {
-    return { icon: Monitor, label: 'Firefox' };
-  }
-  return { icon: Monitor, label: 'Browser' };
-};
-
 const getNotificationBadge = (type: string) => {
   switch (type) {
     case 'instant':
@@ -75,7 +49,6 @@ const getNotificationBadge = (type: string) => {
 
 export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerProps) => {
   const [emailSubscribers, setEmailSubscribers] = useState<EmailSubscriber[]>([]);
-  const [pushSubscribers, setPushSubscribers] = useState<PushSubscriber[]>([]);
   const [stats, setStats] = useState<SubscriberStats>({ daily: 0, weekly: 0, total: 0, signupsToday: 0, signupsWeek: 0 });
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -131,46 +104,6 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
       }));
 
       setEmailSubscribers(transformedEmailData);
-
-      // Load push subscribers (those with push_subscription but no email)
-      let pushQuery = supabase
-        .from('topic_newsletter_signups')
-        .select(`
-          id,
-          notification_type,
-          push_subscription,
-          created_at,
-          is_active,
-          topics!inner (
-            id,
-            name
-          )
-        `)
-        .eq('is_active', true)
-        .not('push_subscription', 'is', null)
-        .order('created_at', { ascending: false });
-
-      if (topicId) {
-        pushQuery = pushQuery.eq('topic_id', topicId);
-      }
-
-      const { data: pushData, error: pushError } = await pushQuery;
-
-      if (pushError) throw pushError;
-
-      const transformedPushData = (pushData || []).map(signup => ({
-        id: signup.id,
-        notification_type: signup.notification_type as 'instant' | 'daily' | 'weekly',
-        push_endpoint: (signup.push_subscription as any)?.endpoint || '',
-        created_at: signup.created_at,
-        is_active: signup.is_active,
-        topic: {
-          id: (signup.topics as any).id,
-          name: (signup.topics as any).name
-        }
-      }));
-
-      setPushSubscribers(transformedPushData);
 
       // Calculate stats
       const today = new Date();
@@ -421,69 +354,6 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         </div>
       )}
 
-      {/* Push Subscribers Section */}
-      {pushSubscribers.length > 0 && (
-        <div className="pt-4 border-t">
-          <h4 className="text-sm font-medium mb-3 text-muted-foreground">Push Notification Subscribers ({pushSubscribers.length})</h4>
-          <div className="rounded-lg border bg-background/50 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Device</TableHead>
-                  <TableHead>Type</TableHead>
-                  {!topicId && <TableHead>Topic</TableHead>}
-                  <TableHead>Subscribed</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pushSubscribers.map((sub, index) => {
-                  const device = getDeviceInfo(sub.push_endpoint);
-                  const DeviceIcon = device.icon;
-                  
-                  return (
-                    <TableRow key={sub.id} className={index % 2 === 0 ? "bg-muted/20" : ""}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <DeviceIcon className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{device.label}</div>
-                            <div className="text-xs text-muted-foreground">Push notifications</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getNotificationBadge(sub.notification_type)}
-                      </TableCell>
-                      {!topicId && (
-                        <TableCell>
-                          <Badge variant="secondary" className="font-medium">
-                            {sub.topic.name}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <div className="font-medium">
-                              {format(new Date(sub.created_at), 'MMM d, yyyy')}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {format(new Date(sub.created_at), 'HH:mm')}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
