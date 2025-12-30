@@ -32,18 +32,23 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch topic/feed data
+    // Fetch topic/feed data (PUBLIC ONLY)
+    // Accepts either:
+    // - topic.slug (preferred)
+    // - exact region match (case-insensitive)
+    // - exact name match (case-insensitive)
     const { data: topic, error: topicError } = await supabase
       .from('topics')
       .select('id, name, slug, region, branding_config')
-      .eq('slug', feedSlug)
-      .eq('is_active', true)
-      .single();
+      .eq('is_public', true)
+      .eq('is_archived', false)
+      .or(`slug.eq.${feedSlug},region.ilike.${feedSlug},name.ilike.${feedSlug}`)
+      .maybeSingle();
 
     if (topicError || !topic) {
-      console.error('Topic not found:', topicError);
+      console.error('Public feed not found:', { feedSlug, topicError });
       return new Response(
-        JSON.stringify({ error: 'Feed not found' }),
+        JSON.stringify({ error: 'Feed not found', feed: feedSlug }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
