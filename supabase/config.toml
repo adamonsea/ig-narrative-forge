@@ -502,3 +502,10 @@ verify_jwt = false
 [functions.rss-feed]
 verify_jwt = false
 
+# ========================================
+# FIRECRAWL INTEGRATION (Fallback Scraper)
+# ========================================
+
+[functions.firecrawl-scraper]
+verify_jwt = false
+
