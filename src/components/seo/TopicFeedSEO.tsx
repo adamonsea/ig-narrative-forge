@@ -1,5 +1,11 @@
 import { Helmet } from 'react-helmet-async';
 
+interface StoryForSEO {
+  id: string;
+  title: string;
+  created_at?: string;
+}
+
 interface TopicFeedSEOProps {
   topicName: string;
   topicDescription?: string;
@@ -7,6 +13,7 @@ interface TopicFeedSEOProps {
   topicType?: string;
   region?: string;
   logoUrl?: string;
+  stories?: StoryForSEO[];
 }
 
 export const TopicFeedSEO = ({
@@ -15,7 +22,8 @@ export const TopicFeedSEO = ({
   topicSlug,
   topicType,
   region,
-  logoUrl
+  logoUrl,
+  stories = []
 }: TopicFeedSEOProps) => {
   const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
   
@@ -41,7 +49,7 @@ export const TopicFeedSEO = ({
   
   const siteName = `Curated ${topicName}`;
 
-  // ItemList structured data for the feed
+  // ItemList structured data for the feed - populated with actual stories
   const itemListData = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -49,8 +57,14 @@ export const TopicFeedSEO = ({
     "name": topicName,
     "description": description,
     "url": feedUrl,
-    "numberOfItems": 0, // Will be populated dynamically
-    "itemListElement": []
+    "numberOfItems": stories.length,
+    "itemListElement": stories.slice(0, 20).map((story, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": story.title,
+      "url": `https://curatr.pro/feed/${topicSlug}/story/${story.id}`,
+      ...(story.created_at && { "datePublished": story.created_at })
+    }))
   };
 
   // Breadcrumb structured data
