@@ -62,14 +62,19 @@ serve(async (req) => {
       brand_color: branding.primary_color || branding.brand_color || '#3b82f6',
     };
 
-    // Fetch published stories
+    // Fetch published stories via topic_articles
     const { data: stories, error: storiesError } = await supabase
       .from('stories')
-      .select('id, headline, published_at')
-      .eq('topic_id', topic.id)
+      .select(`
+        id, 
+        title, 
+        created_at,
+        topic_articles!inner(topic_id)
+      `)
+      .eq('topic_articles.topic_id', topic.id)
       .eq('is_published', true)
       .eq('status', 'published')
-      .order('published_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(maxStories);
 
     if (storiesError) {
@@ -83,9 +88,9 @@ serve(async (req) => {
     // Build story URLs
     const baseUrl = `https://eezeenews.lovable.app`;
     const formattedStories = (stories || []).map(story => ({
-      title: story.headline,
+      title: story.title,
       url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
-      published_at: story.published_at,
+      published_at: story.created_at,
     }));
 
     console.log(`✅ Returning ${formattedStories.length} stories for widget`);

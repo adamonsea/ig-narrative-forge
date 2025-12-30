@@ -117,13 +117,14 @@ serve(async (req) => {
 
     // Log to system_logs
     await supabase.from('system_logs').insert({
-      log_type: 'cleanup',
+      level: 'info',
       message: `Cleaned up ${filesToDelete.length} temp uploads (${spaceInMB.toFixed(2)} MB)`,
-      metadata: {
+      context: {
         filesDeleted: filesToDelete.length,
-        spaceFreed: spaceInMB,
+        spaceFreedMB: spaceInMB,
         maxAgeHours
-      }
+      },
+      function_name: 'cleanup-temp-uploads'
     });
 
     return new Response(
