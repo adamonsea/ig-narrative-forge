@@ -543,6 +543,7 @@ const TopicFeed = () => {
         topicType={topic.topic_type}
         region={topic.region}
         logoUrl={topic.branding_config?.logo_url}
+        stories={filteredContent.slice(0, 20).map(item => ({ id: item.data.id, title: item.data.title, created_at: item.data.created_at }))}
       />
 
       {/* Onboarding Orchestrator */}
