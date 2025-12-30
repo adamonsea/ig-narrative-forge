@@ -705,19 +705,103 @@ serve(async (req) => {
                 e.includes('Network error')
               );
               
-              // Check for anti-bot responses (403, 429) to avoid loops
+              // Check for anti-bot responses (403, 429, 404) to avoid Beautiful Soup loops
               const hasAntiBotBlock = scrapeResult.errors.some(e =>
-                e.includes('403') || e.includes('429') || e.includes('Forbidden') || e.includes('Too Many Requests')
+                e.includes('403') || e.includes('429') || e.includes('404') || 
+                e.includes('Forbidden') || e.includes('Too Many Requests') ||
+                e.includes('full-block') || e.includes('blocked')
               );
               
               // Trigger fallback if:
               // 1. RSS returns 0 articles (empty or network issues - we'll try HTML)
               // 2. Found many articles (≥10) but scraped very few (<3)
               // 3. High rate of INVALID_CONTENT errors
-              // BUT: Skip if anti-bot detected (to prevent loops)
+              // BUT: Skip Beautiful Soup if anti-bot detected (use Firecrawl directly instead)
               const invalidContentErrors = scrapeResult.errors.filter(e => 
                 e.includes('INVALID_CONTENT') || e.includes('insufficient content')
               ).length;
+              
+              // If anti-bot blocked, skip directly to Firecrawl (not Beautiful Soup)
+              if (hasAntiBotBlock) {
+                console.log(`🛡️ Anti-bot block detected for ${source.source_name} - skipping to Firecrawl fallback`);
+                const scrapingConfig = source.scraping_config || {};
+                const skipFirecrawl = scrapingConfig.skip_firecrawl === true;
+                const requiresJs = scrapingConfig.requires_js === true;
+                
+                if (!skipFirecrawl) {
+                  console.log(`🔥 Attempting Firecrawl direct fallback for ${source.source_name} (blocked: true, requiresJs: ${requiresJs})`);
+                  
+                  try {
+                    const firecrawlResult = await supabase.functions.invoke('firecrawl-scraper', {
+                      body: {
+                        url: source.feed_url,
+                        sourceId: source.source_id,
+                        topicId: topicId,
+                        options: {
+                          formats: ['markdown', 'links'],
+                          onlyMainContent: true,
+                          waitFor: 3000
+                        }
+                      }
+                    });
+                    
+                    if (firecrawlResult.data?.success && firecrawlResult.data?.articles?.length > 0) {
+                      console.log(`✅ Firecrawl recovered ${firecrawlResult.data.articles.length} articles from ${source.source_name}`);
+                      
+                      // Store Firecrawl-extracted articles
+                      const firecrawlArticles = firecrawlResult.data.articles;
+                      let firecrawlStored = 0;
+                      
+                      for (const article of firecrawlArticles) {
+                        try {
+                          await dbOps.storeArticle(
+                            supabase,
+                            {
+                              title: article.title,
+                              source_url: article.url,
+                              body: article.content,
+                              author: article.author || null,
+                              published_at: article.publishedAt || null,
+                              word_count: article.wordCount
+                            },
+                            source.source_id,
+                            source.source_name,
+                            topicId,
+                            { 
+                              maxAgeDays: effectiveMaxAgeDays, 
+                              isTrustedSource: source.is_whitelisted 
+                            }
+                          );
+                          firecrawlStored++;
+                        } catch (storeError) {
+                          console.log(`   ⚠️ Firecrawl article storage skipped: ${storeError instanceof Error ? storeError.message : String(storeError)}`);
+                        }
+                      }
+                      
+                      // Auto-learn domain profile on Firecrawl success
+                      await autoLearnDomainProfile(supabase, source.normalizedUrl, topicId, {
+                        preferredMethod: 'firecrawl',
+                        successRate: 1,
+                        avgArticlesPerScrape: firecrawlStored
+                      });
+                      
+                      return {
+                        sourceId: source.source_id,
+                        sourceName: source.source_name,
+                        success: true,
+                        articlesFound: firecrawlArticles.length,
+                        articlesScraped: firecrawlStored,
+                        executionTimeMs: Date.now() - startTime,
+                        fallbackMethod: 'firecrawl-direct'
+                      } as ScraperSourceResult;
+                    } else {
+                      console.log(`❌ Firecrawl direct fallback failed for ${source.source_name}: ${firecrawlResult.data?.error || 'No articles found'}`);
+                    }
+                  } catch (firecrawlError) {
+                    console.log(`❌ Firecrawl direct fallback error for ${source.source_name}: ${firecrawlError instanceof Error ? firecrawlError.message : String(firecrawlError)}`);
+                  }
+                }
+              }
               
               const shouldUseFallback = !hasAntiBotBlock && (
                 // Auto-trigger for empty RSS (including network issues)
