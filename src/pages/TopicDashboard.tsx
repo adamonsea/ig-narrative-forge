@@ -37,7 +37,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles, Code } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 
@@ -98,6 +99,7 @@ interface Topic {
   donation_enabled?: boolean;
   donation_config?: any;
   drip_feed_enabled?: boolean;
+  public_widget_builder_enabled?: boolean;
 }
 
 const SCRAPING_WINDOW_OPTIONS = new Set([7, 30, 60, 100]);
@@ -869,14 +871,14 @@ const TopicDashboard = () => {
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Presentation - moved up after Content & Voice */}
+              {/* Presentation & Reach */}
               <AccordionItem value="presentation" className="rounded-lg border bg-card">
                 <AccordionTrigger className="px-4 py-3 hover:no-underline">
                   <div className="flex items-center gap-3 text-left">
                     <Palette className="h-4 w-4 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium">Presentation</p>
-                      <p className="text-xs text-muted-foreground truncate">Branding, onboarding, donations</p>
+                      <p className="text-sm font-medium">Presentation & Reach</p>
+                      <p className="text-xs text-muted-foreground truncate">Branding, widgets, onboarding, donations</p>
                     </div>
                   </div>
                 </AccordionTrigger>
@@ -885,6 +887,43 @@ const TopicDashboard = () => {
                     topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config }}
                     onUpdate={() => loadTopicAndStats()}
                   />
+                  
+                  {/* Widget Builder Toggle */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-2 text-sm font-medium">
+                          <Code className="w-4 h-4" />
+                          Public Widget Builder
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Allow anyone to create embed widgets for this feed</p>
+                      </div>
+                      <Switch
+                        checked={topic.public_widget_builder_enabled || false}
+                        onCheckedChange={async (checked) => {
+                          const { error } = await supabase
+                            .from('topics')
+                            .update({ public_widget_builder_enabled: checked })
+                            .eq('id', topic.id);
+                          if (!error) {
+                            loadTopicAndStats();
+                            toast({ title: checked ? "Widget builder enabled" : "Widget builder disabled" });
+                          }
+                        }}
+                      />
+                    </div>
+                    {topic.public_widget_builder_enabled && (
+                      <div className="mt-3">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/feed/${topic.slug}/widget`} target="_blank">
+                            <ExternalLink className="w-3 h-3 mr-2" />
+                            Open Widget Builder
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="border-t pt-4">
                     <OnboardingSettings
                       topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
