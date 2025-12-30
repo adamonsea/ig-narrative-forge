@@ -3845,6 +3845,7 @@ export type Database = {
           parliamentary_last_weekly_roundup_at: string | null
           parliamentary_tracking_enabled: boolean | null
           postcodes: string[] | null
+          public_widget_builder_enabled: boolean | null
           region: string | null
           rss_enabled: boolean | null
           slug: string | null
@@ -3897,6 +3898,7 @@ export type Database = {
           parliamentary_last_weekly_roundup_at?: string | null
           parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
+          public_widget_builder_enabled?: boolean | null
           region?: string | null
           rss_enabled?: boolean | null
           slug?: string | null
@@ -3949,6 +3951,7 @@ export type Database = {
           parliamentary_last_weekly_roundup_at?: string | null
           parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
+          public_widget_builder_enabled?: boolean | null
           region?: string | null
           rss_enabled?: boolean | null
           slug?: string | null

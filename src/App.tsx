@@ -28,6 +28,7 @@ import SwipeMode from "./pages/SwipeMode";
 import Pricing from "./pages/Pricing";
 import AboutFeed from "./pages/AboutFeed";
 import ExplorePile from "./pages/ExplorePile";
+import PublicWidgetBuilder from "./pages/PublicWidgetBuilder";
 import VerifySubscription from "./pages/VerifySubscription";
 import WidgetsPage from "./pages/dashboard/Widgets";
 import WidgetTestPage from "./pages/dashboard/WidgetTest";
@@ -92,6 +93,7 @@ const App = () => {
               <Route path="/feed/:slug/archive" element={<TopicArchive />} />
               <Route path="/feed/:slug/briefings" element={<BriefingsArchive />} />
               <Route path="/feed/:slug/about" element={<AboutFeed />} />
+              <Route path="/feed/:slug/widget" element={<PublicWidgetBuilder />} />
               <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
               <Route path="/feed/:slug/daily/:date" element={<DailyRoundupList />} />
               <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundupList />} />
