@@ -149,6 +149,10 @@ export const TopicFeedSEO = ({
       <meta name="description" content={description} />
       <link rel="canonical" href={feedUrl} />
 
+      {/* AI Search Engine & Robots Directives */}
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+      <meta name="googlebot" content="index, follow" />
+
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="website" />
       <meta property="og:url" content={feedUrl} />
