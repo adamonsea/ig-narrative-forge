@@ -801,8 +801,89 @@ serve(async (req) => {
                       executionTimeMs: Date.now() - startTime,
                       fallbackMethod: 'beautiful-soup-scraper'
                     } as ScraperSourceResult;
-                  } else {
+              } else {
                     console.log(`❌ Beautiful Soup fallback also failed for ${source.source_name}`);
+                    
+                    // TERTIARY FALLBACK: Firecrawl for blocked/JS-heavy sites
+                    const scrapingConfig = source.scraping_config || {};
+                    const skipFirecrawl = scrapingConfig.skip_firecrawl === true;
+                    const requiresJs = scrapingConfig.requires_js === true;
+                    const wasBlocked = fallbackResult.data?.httpStatus === 403 || fallbackResult.data?.httpStatus === 429;
+                    const lowContent = (fallbackResult.data?.wordCount || 0) < 50;
+                    
+                    if (!skipFirecrawl && (wasBlocked || lowContent || requiresJs)) {
+                      console.log(`🔥 Attempting Firecrawl tertiary fallback for ${source.source_name} (blocked: ${wasBlocked}, lowContent: ${lowContent}, requiresJs: ${requiresJs})`);
+                      
+                      try {
+                        const firecrawlResult = await supabase.functions.invoke('firecrawl-scraper', {
+                          body: {
+                            url: source.feed_url,
+                            sourceId: source.source_id,
+                            topicId: topicId,
+                            options: {
+                              formats: ['markdown', 'links'],
+                              onlyMainContent: true,
+                              waitFor: 3000
+                            }
+                          }
+                        });
+                        
+                        if (firecrawlResult.data?.success && firecrawlResult.data?.articles?.length > 0) {
+                          console.log(`✅ Firecrawl recovered ${firecrawlResult.data.articles.length} articles from ${source.source_name}`);
+                          
+                          // Store Firecrawl-extracted articles
+                          const firecrawlArticles = firecrawlResult.data.articles;
+                          let firecrawlStored = 0;
+                          
+                          for (const article of firecrawlArticles) {
+                            try {
+                              await dbOps.storeArticle(
+                                supabase,
+                                {
+                                  title: article.title,
+                                  source_url: article.url,
+                                  body: article.content,
+                                  author: article.author || null,
+                                  published_at: article.publishedAt || null,
+                                  word_count: article.wordCount
+                                },
+                                source.source_id,
+                                source.source_name,
+                                topicId,
+                                { 
+                                  maxAgeDays: effectiveMaxAgeDays, 
+                                  isTrustedSource: source.is_whitelisted 
+                                }
+                              );
+                              firecrawlStored++;
+                            } catch (storeError) {
+                              console.log(`   ⚠️ Firecrawl article storage skipped: ${storeError instanceof Error ? storeError.message : String(storeError)}`);
+                            }
+                          }
+                          
+                          // Auto-learn domain profile on Firecrawl success
+                          await autoLearnDomainProfile(supabase, source.normalizedUrl, topicId, {
+                            preferredMethod: 'firecrawl',
+                            successRate: 1,
+                            avgArticlesPerScrape: firecrawlStored
+                          });
+                          
+                          return {
+                            sourceId: source.source_id,
+                            sourceName: source.source_name,
+                            success: true,
+                            articlesFound: firecrawlArticles.length,
+                            articlesScraped: firecrawlStored,
+                            executionTimeMs: Date.now() - startTime,
+                            fallbackMethod: 'firecrawl'
+                          } as ScraperSourceResult;
+                        } else {
+                          console.log(`❌ Firecrawl fallback also failed for ${source.source_name}: ${firecrawlResult.data?.error || 'No articles found'}`);
+                        }
+                      } catch (firecrawlError) {
+                        console.log(`❌ Firecrawl fallback error for ${source.source_name}: ${firecrawlError instanceof Error ? firecrawlError.message : String(firecrawlError)}`);
+                      }
+                    }
                   }
                 } catch (fallbackError) {
                   console.log(`❌ Beautiful Soup fallback error for ${source.source_name}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
