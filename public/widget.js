@@ -93,12 +93,23 @@
       ? `<img src="${feed.logo_url}" alt="${feed.name}" class="widget-logo" />`
       : `<span class="widget-logo-text" style="background: ${accent}">${feed.name.charAt(0)}</span>`;
 
-    const storiesHTML = stories.map(story => `
-      <a href="${story.url}" target="_blank" rel="noopener" class="story-item">
-        <span class="story-bullet" style="background: ${accent}"></span>
-        <span class="story-title">${escapeHTML(story.title)}</span>
-      </a>
-    `).join('');
+    const storiesHTML = stories.map(story => {
+      const sourceHTML = story.source_name && story.source_url 
+        ? `<a href="${story.source_url}" target="_blank" rel="noopener" class="story-source" onclick="event.stopPropagation();">${escapeHTML(story.source_name)}</a>`
+        : story.source_name 
+          ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
+          : '';
+      
+      return `
+        <a href="${story.url}" target="_blank" rel="noopener" class="story-item">
+          <span class="story-bullet" style="background: ${accent}"></span>
+          <div class="story-content">
+            <span class="story-title">${escapeHTML(story.title)}</span>
+            ${sourceHTML}
+          </div>
+        </a>
+      `;
+    }).join('');
 
     return `
       <div class="widget-header">
@@ -206,13 +217,35 @@
         margin-top: 7px;
       }
 
-      .story-title {
+      .story-content {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .story-title {
         font-weight: 500;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+      }
+
+      .story-source {
+        font-size: 11px;
+        color: ${textMuted};
+        background: ${isDark ? '#2a2a2a' : '#f3f4f6'};
+        padding: 2px 6px;
+        border-radius: 4px;
+        align-self: flex-start;
+        text-decoration: none;
+        transition: opacity 0.15s ease;
+      }
+
+      .story-source:hover {
+        opacity: 0.8;
       }
 
       .widget-footer {
