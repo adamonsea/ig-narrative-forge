@@ -125,6 +125,10 @@ export const StoryPageSEO = ({
       <meta name="description" content={description} />
       <link rel="canonical" href={canonicalUrl} />
 
+      {/* AI Search Engine & Robots Directives */}
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+      <meta name="googlebot" content="index, follow" />
+
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="article" />
       <meta property="og:url" content={storyUrl} />
