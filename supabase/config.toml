@@ -117,9 +117,14 @@ verify_jwt = false
 [functions.screenshot-ai-scraper]
 verify_jwt = false
 
+# Firecrawl fallback wrapper (must be callable without JWT)
+[functions.firecrawl-scraper]
+verify_jwt = false
+
 # Content processing
 [functions.enhanced-content-generator]
 verify_jwt = false
+
 
 [functions.content-quality-analyzer]
 verify_jwt = false
