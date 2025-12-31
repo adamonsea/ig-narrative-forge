@@ -705,10 +705,13 @@ serve(async (req) => {
                 e.includes('Network error')
               );
               
-              // Check for anti-bot responses (403, 429, 404) to avoid Beautiful Soup loops
+              // Check for anti-bot responses OR service unavailable (403, 429, 404, 502, 503) 
+              // to skip Beautiful Soup and go directly to Firecrawl
               const hasAntiBotBlock = scrapeResult.errors.some(e =>
                 e.includes('403') || e.includes('429') || e.includes('404') || 
+                e.includes('502') || e.includes('503') ||
                 e.includes('Forbidden') || e.includes('Too Many Requests') ||
+                e.includes('Service unavailable') || e.includes('Bad Gateway') ||
                 e.includes('full-block') || e.includes('blocked')
               );
               
