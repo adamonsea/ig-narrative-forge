@@ -281,23 +281,33 @@ const TopicDashboard = () => {
       }
 
       // Get IDs of articles already published or queued
-      const newArticleIds = allNewArticles.map(a => a.id);
+      const newArticleIds = allNewArticles.map(a => a.id).filter(id => id && id.length > 0);
       
-      const { data: allPublishedStories } = await supabase
-        .from('stories')
-        .select('topic_article_id')
-        .in('status', ['published', 'ready'])
-        .in('topic_article_id', newArticleIds);
+      let publishedIds = new Set<string>();
+      let queuedIds = new Set<string>();
       
-      const publishedIds = new Set((allPublishedStories || []).map(s => s.topic_article_id!));
-      
-      const { data: queuedItems } = await supabase
-        .from('content_generation_queue')
-        .select('topic_article_id')
-        .in('status', ['pending', 'processing'])
-        .in('topic_article_id', newArticleIds);
-      
-      const queuedIds = new Set((queuedItems || []).map(q => q.topic_article_id!));
+      // Only query if we have valid article IDs
+      if (newArticleIds.length > 0) {
+        const { data: allPublishedStories } = await supabase
+          .from('stories')
+          .select('topic_article_id')
+          .in('status', ['published', 'ready'])
+          .in('topic_article_id', newArticleIds);
+        
+        publishedIds = new Set((allPublishedStories || [])
+          .map(s => s.topic_article_id)
+          .filter((id): id is string => !!id));
+        
+        const { data: queuedItems } = await supabase
+          .from('content_generation_queue')
+          .select('topic_article_id')
+          .in('status', ['pending', 'processing'])
+          .in('topic_article_id', newArticleIds);
+        
+        queuedIds = new Set((queuedItems || [])
+          .map(q => q.topic_article_id)
+          .filter((id): id is string => !!id));
+      }
       
       // Filter out parliamentary, published, and queued articles
       const availableArticles = allNewArticles.filter(article => {
