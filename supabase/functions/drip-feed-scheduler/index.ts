@@ -237,39 +237,73 @@ serve(async (req) => {
       const intervalHours = topic.drip_release_interval_hours ?? 4;
       const storiesPerRelease = topic.drip_stories_per_release ?? 2;
       
+      // Find the next available slot by checking already scheduled stories
+      const { data: existingScheduled } = await supabase
+        .from('stories')
+        .select('scheduled_publish_at')
+        .eq('status', 'ready')
+        .not('scheduled_publish_at', 'is', null)
+        .gte('scheduled_publish_at', now.toISOString());
+      
+      // Count stories per existing time slot
+      const slotCounts = new Map<string, number>();
+      for (const s of existingScheduled || []) {
+        // Check if this story belongs to current topic (need to verify)
+        const timeKey = s.scheduled_publish_at;
+        slotCounts.set(timeKey, (slotCounts.get(timeKey) || 0) + 1);
+      }
+      
       // Calculate remaining slots today
       const hoursRemaining = endHour - currentHour;
       const slotsRemaining = Math.ceil(hoursRemaining / intervalHours);
       
-      // Distribute stories across remaining slots
-      const storiesToSchedule = topicStories.slice(0, slotsRemaining * storiesPerRelease);
-      
-      log(`Scheduling ${storiesToSchedule.length} stories across ${slotsRemaining} slots (${intervalHours}h intervals, ${storiesPerRelease} per slot)`);
+      log(`Scheduling up to ${storiesPerRelease} stories per slot, ${intervalHours}h intervals, ${slotsRemaining} slots remaining today`);
 
       let scheduledCount = 0;
-      let slotIndex = 0;
+      
+      // Calculate first available slot time (next interval boundary from now)
+      const firstSlotTime = new Date(now);
+      firstSlotTime.setUTCMinutes(0, 0, 0);
+      // Round up to next interval
+      const currentSlotHour = Math.ceil((currentHour + 1) / intervalHours) * intervalHours;
+      firstSlotTime.setUTCHours(currentSlotHour > endHour ? startHour : currentSlotHour);
+      
+      // If we've passed today's window, schedule for tomorrow
+      if (currentSlotHour > endHour) {
+        firstSlotTime.setUTCDate(firstSlotTime.getUTCDate() + 1);
+      }
 
-      for (let i = 0; i < storiesToSchedule.length; i++) {
-        const story = storiesToSchedule[i];
-        
-        // Calculate which slot this story belongs to
-        if (i > 0 && i % storiesPerRelease === 0) {
-          slotIndex++;
+      let currentSlotTime = new Date(firstSlotTime);
+      let storiesInCurrentSlot = 0;
+
+      for (const story of topicStories) {
+        // Check if current slot is within release window
+        const slotHour = currentSlotTime.getUTCHours();
+        if (slotHour >= endHour) {
+          log(`⏰ Reached end of release window (${endHour}:00), stopping scheduling`);
+          break;
         }
-
-        // Calculate the scheduled time for this slot
-        const scheduledTime = new Date(now);
-        scheduledTime.setUTCHours(currentHour + (slotIndex * intervalHours), 0, 0, 0);
         
-        // If first slot is current hour, schedule for next interval
-        if (slotIndex === 0 && scheduledTime.getTime() <= now.getTime()) {
-          scheduledTime.setUTCHours(scheduledTime.getUTCHours() + intervalHours);
+        // Check how many stories already exist in this slot
+        const slotKey = currentSlotTime.toISOString();
+        const existingInSlot = slotCounts.get(slotKey) || 0;
+        
+        // If slot is full, move to next slot
+        if (storiesInCurrentSlot + existingInSlot >= storiesPerRelease) {
+          currentSlotTime.setUTCHours(currentSlotTime.getUTCHours() + intervalHours);
+          storiesInCurrentSlot = 0;
+          
+          // Re-check window after advancing
+          if (currentSlotTime.getUTCHours() >= endHour) {
+            log(`⏰ Next slot would be outside release window, stopping`);
+            break;
+          }
         }
 
         const { error: updateError } = await supabase
           .from('stories')
           .update({ 
-            scheduled_publish_at: scheduledTime.toISOString(),
+            scheduled_publish_at: currentSlotTime.toISOString(),
             drip_queued_at: now.toISOString()
           })
           .eq('id', story.id);
@@ -286,13 +320,14 @@ serve(async (req) => {
           p_story_id: story.id,
           p_details: {
             title: story.title,
-            scheduled_for: scheduledTime.toISOString(),
-            slot_index: slotIndex
+            scheduled_for: currentSlotTime.toISOString(),
+            stories_in_slot: storiesInCurrentSlot + 1
           }
         });
 
-        log(`📅 Scheduled "${story.title?.substring(0, 40)}..." for ${scheduledTime.toISOString()}`);
+        log(`📅 Scheduled "${story.title?.substring(0, 40)}..." for ${currentSlotTime.toISOString()} (slot has ${storiesInCurrentSlot + 1}/${storiesPerRelease})`);
         scheduledCount++;
+        storiesInCurrentSlot++;
       }
 
       results.push({ topic: topic.name, scheduled: scheduledCount, skipped: '' });
