@@ -42,7 +42,7 @@ export const useSwipeMode = (topicId: string) => {
     totalSwipes: 0
   });
 
-  // Fetch stories - works for both authenticated and anonymous users
+  // Fetch stories via single RPC call - works for both authenticated and anonymous users
   const fetchUnswipedStories = useCallback(async () => {
     if (!topicId || topicId.trim() === '') {
       setLoading(false);
@@ -52,94 +52,48 @@ export const useSwipeMode = (topicId: string) => {
     try {
       setLoading(true);
 
-      // PARALLEL FETCH: Get stories and user swipes simultaneously
-      // This eliminates sequential waiting - major performance improvement
-      
-      const [storiesResult, swipesResult] = await Promise.all([
-        // Fetch published stories with images for this topic (single query with join)
-        supabase
-          .from('stories')
-          .select(`
-            id, title, author, cover_illustration_url, created_at, shared_content_id, topic_article_id,
-            topic_articles!inner(topic_id),
-            shared_article_content:shared_content_id(id, url, published_at)
-          `)
-          .eq('topic_articles.topic_id', topicId)
-          .eq('status', 'published')
-          .not('cover_illustration_url', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(500),
-        
-        // Fetch user's swipes for this topic (if authenticated)
-        user 
-          ? supabase
-              .from('story_swipes')
-              .select('story_id')
-              .eq('user_id', user.id)
-              .eq('topic_id', topicId)
-          : Promise.resolve({ data: [], error: null })
-      ]);
+      // Single RPC call replaces 3 separate queries (stories + swipes + slides)
+      const { data, error } = await supabase.rpc('get_swipe_mode_stories', {
+        p_topic_id: topicId,
+        p_user_id: user?.id || null,
+        p_limit: 100
+      });
 
-      if (storiesResult.error) throw storiesResult.error;
-      
-      const allStories = storiesResult.data || [];
-      const swipedIds = new Set((swipesResult.data || []).map((s: any) => s.story_id));
+      if (error) throw error;
 
-      // Filter out already swiped stories
-      const unswipedStories = allStories.filter((s: any) => !swipedIds.has(s.id));
-      
-      if (unswipedStories.length === 0) {
+      if (!data || data.length === 0) {
         setStories([]);
         setStats(prev => ({ ...prev, remainingCount: 0 }));
         setLoading(false);
         return;
       }
 
-      // Fetch slides for unswiped stories only (smaller payload)
-      const storyIds = unswipedStories.map((s: any) => s.id);
-      const slidesResult = await supabase
-        .from('slides')
-        .select('story_id, slide_number, content')
-        .in('story_id', storyIds)
-        .order('slide_number', { ascending: true });
-
-      const allSlides = slidesResult.data || [];
-      
-      // Combine data
-      const enrichedStories = unswipedStories
-        .map((story: any) => {
-          const sharedContent = story.shared_article_content;
-          const slides = allSlides.filter((s: any) => s.story_id === story.id);
-          
-          return {
-            id: story.id,
-            title: story.title,
-            author: story.author,
-            cover_illustration_url: story.cover_illustration_url,
-            created_at: story.created_at,
-            shared_content_id: story.shared_content_id,
-            article: sharedContent ? {
-              source_url: sharedContent.url,
-              published_at: sharedContent.published_at
-            } : null,
-            slides
-          };
-        })
-        // Filter out stories with no slides - they can't be displayed properly
-        .filter((story: any) => story.slides && story.slides.length > 0);
+      // Transform RPC result to Story format
+      const enrichedStories: Story[] = data.map((row: any) => ({
+        id: row.story_id,
+        title: row.title,
+        author: row.author,
+        cover_illustration_url: row.cover_illustration_url,
+        created_at: row.created_at,
+        article: row.source_url ? {
+          source_url: row.source_url,
+          published_at: row.published_at
+        } : null,
+        slides: row.slides || []
+      }));
 
       // Separate into recent (last 7 days) and older stories
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const getStoryDate = (story: any) => 
+      const getStoryDate = (story: Story) => 
         story.article?.published_at ? new Date(story.article.published_at) : new Date(story.created_at);
 
-      const recentStories = enrichedStories.filter((s: any) => getStoryDate(s) >= oneWeekAgo);
-      const olderStories = enrichedStories.filter((s: any) => getStoryDate(s) < oneWeekAgo);
+      const recentStories = enrichedStories.filter(s => getStoryDate(s) >= oneWeekAgo);
+      const olderStories = enrichedStories.filter(s => getStoryDate(s) < oneWeekAgo);
 
       // Sort recent by date (newest first)
-      recentStories.sort((a: any, b: any) => getStoryDate(b).getTime() - getStoryDate(a).getTime());
+      recentStories.sort((a, b) => getStoryDate(b).getTime() - getStoryDate(a).getTime());
 
       // Shuffle older stories (Fisher-Yates algorithm)
       for (let i = olderStories.length - 1; i > 0; i--) {

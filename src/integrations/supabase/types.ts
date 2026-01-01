@@ -4661,6 +4661,19 @@ export type Database = {
           total_readers: number
         }[]
       }
+      get_swipe_mode_stories: {
+        Args: { p_limit?: number; p_topic_id: string; p_user_id?: string }
+        Returns: {
+          author: string
+          cover_illustration_url: string
+          created_at: string
+          published_at: string
+          slides: Json
+          source_url: string
+          story_id: string
+          title: string
+        }[]
+      }
       get_topic_articles_multi_tenant: {
         Args: {
           p_limit?: number
