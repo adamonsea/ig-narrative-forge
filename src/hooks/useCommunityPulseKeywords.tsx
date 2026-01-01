@@ -29,6 +29,13 @@ export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // Guard: don't query with empty or invalid topicId
+    if (!topicId || topicId.trim() === '') {
+      setData({ keywords: [] });
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     async function fetchPulseKeywords() {
