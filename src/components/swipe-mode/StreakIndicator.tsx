@@ -30,14 +30,16 @@ export const StreakIndicator = ({ streak, previousStreak }: StreakIndicatorProps
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ scale: 0, y: -20, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-        className="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border-2 border-orange-500/30 shadow-lg backdrop-blur-sm"
+        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -10, scale: 0.9 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
       >
-        <Flame className="w-5 h-5 text-orange-500 fill-orange-500 animate-pulse" />
-        <span className="text-base font-bold text-orange-500">{streak} in a row!</span>
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-card border shadow-lg">
+          <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
+          <span className="text-sm font-semibold">{streak} in a row!</span>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
