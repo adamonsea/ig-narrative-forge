@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy } from 'lucide-react';
 
 interface MilestoneCelebrationProps {
   swipeCount: number;
@@ -29,18 +30,15 @@ export const MilestoneCelebration = ({ swipeCount }: MilestoneCelebrationProps) 
     <AnimatePresence>
       {showCelebration && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: -20 }}
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.9 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
         >
-          <div className="bg-primary text-primary-foreground px-6 py-4 rounded-xl shadow-xl flex items-center gap-3">
-            <span className="text-3xl">🎉</span>
-            <div>
-              <p className="text-sm font-semibold">{swipeCount} stories!</p>
-              <p className="text-xs opacity-90">Keep going!</p>
-            </div>
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-card border shadow-lg">
+            <Trophy className="w-5 h-5 text-primary" />
+            <span className="text-sm font-semibold">{swipeCount} stories!</span>
           </div>
         </motion.div>
       )}
