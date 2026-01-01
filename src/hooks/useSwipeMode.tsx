@@ -53,7 +53,7 @@ export const useSwipeMode = (topicId: string) => {
       setLoading(true);
 
       // Single RPC call replaces 3 separate queries (stories + swipes + slides)
-      const { data, error } = await supabase.rpc('get_swipe_mode_stories', {
+      const { data, error } = await (supabase.rpc as any)('get_swipe_mode_stories', {
         p_topic_id: topicId,
         p_user_id: user?.id || null,
         p_limit: 100
