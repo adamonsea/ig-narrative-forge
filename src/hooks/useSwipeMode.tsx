@@ -44,7 +44,7 @@ export const useSwipeMode = (topicId: string) => {
 
   // Fetch stories - works for both authenticated and anonymous users
   const fetchUnswipedStories = useCallback(async () => {
-    if (!topicId) {
+    if (!topicId || topicId.trim() === '') {
       setLoading(false);
       return;
     }
@@ -52,113 +52,72 @@ export const useSwipeMode = (topicId: string) => {
     try {
       setLoading(true);
 
-      // Get ALL topic_article IDs for this topic (paginated to bypass 1000 row default limit)
-      let topicArticleIds: string[] = [];
-      let from = 0;
-      const pageSize = 1000;
-      let hasMore = true;
-
-      while (hasMore) {
-        const topicArticlesQuery = await (supabase as any)
-          .from('topic_articles')
-          .select('id')
-          .eq('topic_id', topicId)
-          .range(from, from + pageSize - 1);
-
-        if (topicArticlesQuery.error) throw topicArticlesQuery.error;
-
-        const pageIds = (topicArticlesQuery.data || []).map((ta: any) => ta.id);
-        topicArticleIds = [...topicArticleIds, ...pageIds];
-        
-        hasMore = pageIds.length === pageSize;
-        from += pageSize;
-      }
+      // PARALLEL FETCH: Get stories and user swipes simultaneously
+      // This eliminates sequential waiting - major performance improvement
       
-      if (topicArticleIds.length === 0) {
+      const [storiesResult, swipesResult] = await Promise.all([
+        // Fetch published stories with images for this topic (single query with join)
+        supabase
+          .from('stories')
+          .select(`
+            id, title, author, cover_illustration_url, created_at, shared_content_id, topic_article_id,
+            topic_articles!inner(topic_id),
+            shared_article_content:shared_content_id(id, url, published_at)
+          `)
+          .eq('topic_articles.topic_id', topicId)
+          .eq('status', 'published')
+          .not('cover_illustration_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(500),
+        
+        // Fetch user's swipes for this topic (if authenticated)
+        user 
+          ? supabase
+              .from('story_swipes')
+              .select('story_id')
+              .eq('user_id', user.id)
+              .eq('topic_id', topicId)
+          : Promise.resolve({ data: [], error: null })
+      ]);
+
+      if (storiesResult.error) throw storiesResult.error;
+      
+      const allStories = storiesResult.data || [];
+      const swipedIds = new Set((swipesResult.data || []).map((s: any) => s.story_id));
+
+      // Filter out already swiped stories
+      const unswipedStories = allStories.filter((s: any) => !swipedIds.has(s.id));
+      
+      if (unswipedStories.length === 0) {
         setStories([]);
         setStats(prev => ({ ...prev, remainingCount: 0 }));
         setLoading(false);
         return;
       }
 
-      // Get ALL stories for these topic_articles, only with images (no limit)
-      // Process in batches if needed due to PostgreSQL IN clause limits
-      const batchSize = 500;
-      let allStories: any[] = [];
+      // Fetch slides for unswiped stories only (smaller payload)
+      const storyIds = unswipedStories.map((s: any) => s.id);
+      const slidesResult = await supabase
+        .from('slides')
+        .select('story_id, slide_number, content')
+        .in('story_id', storyIds)
+        .order('slide_number', { ascending: true });
+
+      const allSlides = slidesResult.data || [];
       
-      for (let i = 0; i < topicArticleIds.length; i += batchSize) {
-        const batch = topicArticleIds.slice(i, i + batchSize);
-        const storiesQuery = await (supabase as any)
-          .from('stories')
-          .select('id, title, author, cover_illustration_url, created_at, shared_content_id, topic_article_id')
-          .in('topic_article_id', batch)
-          .eq('status', 'published')
-          .not('cover_illustration_url', 'is', null)
-          .order('created_at', { ascending: false });
-
-        if (storiesQuery.error) throw storiesQuery.error;
-        allStories = [...allStories, ...(storiesQuery.data || [])];
-      }
-
-      // Get article data for source URLs from shared_article_content (batch if needed)
-      const sharedContentIds = allStories.map((s: any) => s.shared_content_id).filter(Boolean);
-      let allSharedContent: any[] = [];
-      
-      for (let i = 0; i < sharedContentIds.length; i += batchSize) {
-        const batch = sharedContentIds.slice(i, i + batchSize);
-        const sharedContentQuery: any = await (supabase as any)
-          .from('shared_article_content')
-          .select('id, url, published_at')
-          .in('id', batch);
-        
-        if (sharedContentQuery.data) {
-          allSharedContent = [...allSharedContent, ...sharedContentQuery.data];
-        }
-      }
-
-      // Get slides data (batch if needed) with error handling
-      const storyIds = allStories.map((s: any) => s.id);
-      let allSlides: any[] = [];
-      
-      for (let i = 0; i < storyIds.length; i += batchSize) {
-        const batch = storyIds.slice(i, i + batchSize);
-        const slidesQuery: any = await (supabase as any)
-          .from('slides')
-          .select('story_id, slide_number, content')
-          .in('story_id', batch);
-        
-        // Add error handling - log and continue with other batches
-        if (slidesQuery.error) {
-          console.error(`⚠️ Slides batch ${i}-${i + batchSize} failed:`, slidesQuery.error);
-          continue;
-        }
-        
-        if (slidesQuery.data) {
-          allSlides = [...allSlides, ...slidesQuery.data];
-        }
-      }
-
-      // Filter out already swiped stories (only if user is authenticated)
-      let swipedIds = new Set<string>();
-      if (user) {
-        const swipesQuery: any = await (supabase as any)
-          .from('story_swipes')
-          .select('story_id')
-          .eq('user_id', user.id)
-          .eq('topic_id', topicId);
-
-        swipedIds = new Set((swipesQuery.data || []).map((s: any) => s.story_id));
-      }
-      
-      // Combine data (already filtered for images in query)
-      const enrichedStories = allStories
-        .filter((s: any) => !swipedIds.has(s.id))
+      // Combine data
+      const enrichedStories = unswipedStories
         .map((story: any) => {
-          const sharedContent = allSharedContent.find((sc: any) => sc.id === story.shared_content_id);
+          const sharedContent = story.shared_article_content;
           const slides = allSlides.filter((s: any) => s.story_id === story.id);
           
           return {
-            ...story,
+            id: story.id,
+            title: story.title,
+            author: story.author,
+            cover_illustration_url: story.cover_illustration_url,
+            created_at: story.created_at,
+            shared_content_id: story.shared_content_id,
             article: sharedContent ? {
               source_url: sharedContent.url,
               published_at: sharedContent.published_at
@@ -191,15 +150,6 @@ export const useSwipeMode = (topicId: string) => {
       // Combine: recent first, then randomized older
       const finalStories = [...recentStories, ...olderStories];
       
-      // Defensive logging for stories that had no slides
-      const storiesWithNoSlides = allStories.filter((s: any) => 
-        !swipedIds.has(s.id) && !allSlides.some((sl: any) => sl.story_id === s.id)
-      );
-      if (storiesWithNoSlides.length > 0) {
-        console.warn(`⚠️ ${storiesWithNoSlides.length} stories filtered out (no slides):`, 
-          storiesWithNoSlides.map((s: any) => s.id));
-      }
-
       setStories(finalStories);
       setStats(prev => ({ ...prev, remainingCount: finalStories.length }));
     } catch (error) {
