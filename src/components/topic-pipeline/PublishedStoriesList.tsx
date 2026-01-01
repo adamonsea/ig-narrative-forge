@@ -669,29 +669,55 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             </div>
           )}
           
-          {/* Ready/queued indicator bar */}
+          {/* Ready/queued indicator bar - awaiting schedule assignment */}
           {isReady && (
             <div className="bg-blue-50 dark:bg-blue-950/30 border-b border-blue-200 dark:border-blue-800 px-3 py-1.5 sm:px-4 rounded-t-lg">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-blue-700 dark:text-blue-400">
-                  Queued for next release
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 text-[10px] text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-1.5"
-                  onClick={() => handlePublishNow(story.id, story.title || story.headline || 'Untitled')}
-                  disabled={publishingNow.has(story.id)}
-                >
-                  {publishingNow.has(story.id) ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <>
-                      <Zap className="h-2.5 w-2.5 mr-0.5" />
-                      Publish Now
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                  <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                  <span className="text-xs">
+                    Awaiting schedule assignment
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 text-[10px] text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-1.5"
+                    onClick={async () => {
+                      if (!topicId) return;
+                      try {
+                        await supabase.functions.invoke('drip-feed-scheduler', {
+                          body: { topic_id: topicId }
+                        });
+                        toast({ title: 'Scheduler triggered', description: 'Schedule times are being assigned.' });
+                        setTimeout(onRefresh, 1500);
+                      } catch (e) {
+                        console.error('Error triggering scheduler:', e);
+                      }
+                    }}
+                    title="Trigger scheduler to assign a publish time"
+                  >
+                    <Clock className="h-2.5 w-2.5 mr-0.5" />
+                    Assign Time
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 text-[10px] text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-1.5"
+                    onClick={() => handlePublishNow(story.id, story.title || story.headline || 'Untitled')}
+                    disabled={publishingNow.has(story.id)}
+                  >
+                    {publishingNow.has(story.id) ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Zap className="h-2.5 w-2.5 mr-0.5" />
+                        Publish Now
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -745,13 +771,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             {/* Action buttons - mobile optimized */}
             <div className="flex items-center gap-1.5 flex-wrap pl-5">
               <Button
-                variant="outline"
+                variant={expanded.has(story.id) ? "default" : "outline"}
                 size="sm"
                 onClick={() => toggleExpanded(story.id)}
                 className="h-7 text-xs px-2"
               >
                 <Eye className="h-3 w-3 sm:mr-1" />
-                <span className="hidden sm:inline">{expanded.has(story.id) ? 'Hide' : 'Edit'}</span>
+                <span className="hidden sm:inline">{expanded.has(story.id) ? 'Hide Slides' : 'Preview & Edit'}</span>
+                <span className="sm:hidden">{expanded.has(story.id) ? 'Hide' : 'Preview'}</span>
               </Button>
 
               <ImageModelSelector

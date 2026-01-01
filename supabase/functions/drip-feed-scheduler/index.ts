@@ -159,7 +159,7 @@ serve(async (req) => {
 
     const now = new Date();
     const currentHour = now.getUTCHours();
-    const results: Array<{ topic: string; scheduled: number; skipped: string }> = [];
+    const results: Array<{ topic: string; scheduled: number; skipped: string; next_slot?: string }> = [];
 
     for (const topic of topics as DripFeedTopic[]) {
       log(`\n📰 Processing topic: ${topic.name}`);
@@ -170,12 +170,6 @@ serve(async (req) => {
       
       const withinReleaseWindow = currentHour >= startHour && currentHour < endHour;
       
-      if (!withinReleaseWindow) {
-        log(`⏰ Outside release window (${startHour}:00 - ${endHour}:00 UTC), current: ${currentHour}:00`);
-        results.push({ topic: topic.name, scheduled: 0, skipped: 'outside_release_window' });
-        continue;
-      }
-
       // Get ready stories for this topic that don't have scheduled_publish_at set
       const { data: readyStories, error: storiesError } = await supabase
         .from('stories')
@@ -233,7 +227,7 @@ serve(async (req) => {
 
       log(`Found ${topicStories.length} unscheduled ready stories`);
 
-      // Calculate release slots for today
+      // Calculate release slots
       const intervalHours = topic.drip_release_interval_hours ?? 4;
       const storiesPerRelease = topic.drip_stories_per_release ?? 2;
       
@@ -248,40 +242,65 @@ serve(async (req) => {
       // Count stories per existing time slot
       const slotCounts = new Map<string, number>();
       for (const s of existingScheduled || []) {
-        // Check if this story belongs to current topic (need to verify)
         const timeKey = s.scheduled_publish_at;
         slotCounts.set(timeKey, (slotCounts.get(timeKey) || 0) + 1);
       }
-      
-      // Calculate remaining slots today
-      const hoursRemaining = endHour - currentHour;
-      const slotsRemaining = Math.ceil(hoursRemaining / intervalHours);
-      
-      log(`Scheduling up to ${storiesPerRelease} stories per slot, ${intervalHours}h intervals, ${slotsRemaining} slots remaining today`);
 
       let scheduledCount = 0;
+      let firstSlotTime: Date;
       
-      // Calculate first available slot time (next interval boundary from now)
-      const firstSlotTime = new Date(now);
-      firstSlotTime.setUTCMinutes(0, 0, 0);
-      // Round up to next interval
-      const currentSlotHour = Math.ceil((currentHour + 1) / intervalHours) * intervalHours;
-      firstSlotTime.setUTCHours(currentSlotHour > endHour ? startHour : currentSlotHour);
-      
-      // If we've passed today's window, schedule for tomorrow
-      if (currentSlotHour > endHour) {
-        firstSlotTime.setUTCDate(firstSlotTime.getUTCDate() + 1);
+      if (withinReleaseWindow) {
+        // WITHIN WINDOW: Schedule for next interval today
+        log(`⏰ Within release window (${startHour}:00 - ${endHour}:00 UTC), scheduling now`);
+        
+        firstSlotTime = new Date(now);
+        firstSlotTime.setUTCMinutes(0, 0, 0);
+        // Round up to next interval
+        const currentSlotHour = Math.ceil((currentHour + 1) / intervalHours) * intervalHours;
+        
+        if (currentSlotHour >= endHour) {
+          // If we've passed today's last slot, schedule for tomorrow
+          firstSlotTime.setUTCDate(firstSlotTime.getUTCDate() + 1);
+          firstSlotTime.setUTCHours(startHour);
+          log(`📅 Today's window full, scheduling for tomorrow at ${startHour}:00 UTC`);
+        } else {
+          firstSlotTime.setUTCHours(currentSlotHour);
+        }
+      } else {
+        // OUTSIDE WINDOW: Schedule for next window (tomorrow if after endHour, today if before startHour)
+        firstSlotTime = new Date(now);
+        firstSlotTime.setUTCMinutes(0, 0, 0);
+        
+        if (currentHour >= endHour) {
+          // After today's window - schedule for tomorrow
+          firstSlotTime.setUTCDate(firstSlotTime.getUTCDate() + 1);
+          firstSlotTime.setUTCHours(startHour);
+          log(`⏰ After release window, scheduling for tomorrow at ${startHour}:00 UTC`);
+        } else {
+          // Before today's window - schedule for today's start
+          firstSlotTime.setUTCHours(startHour);
+          log(`⏰ Before release window, scheduling for today at ${startHour}:00 UTC`);
+        }
       }
+
+      log(`Scheduling up to ${storiesPerRelease} stories per slot, ${intervalHours}h intervals`);
+      log(`First slot: ${firstSlotTime.toISOString()}`);
 
       let currentSlotTime = new Date(firstSlotTime);
       let storiesInCurrentSlot = 0;
+      const firstScheduledSlot = firstSlotTime.toISOString();
 
       for (const story of topicStories) {
-        // Check if current slot is within release window
-        const slotHour = currentSlotTime.getUTCHours();
-        if (slotHour >= endHour) {
-          log(`⏰ Reached end of release window (${endHour}:00), stopping scheduling`);
-          break;
+        // Calculate the effective end hour for this slot's day
+        const slotDate = new Date(currentSlotTime);
+        slotDate.setUTCHours(endHour, 0, 0, 0);
+        
+        // If current slot exceeds today's window, move to next day's window
+        if (currentSlotTime >= slotDate) {
+          currentSlotTime.setUTCDate(currentSlotTime.getUTCDate() + 1);
+          currentSlotTime.setUTCHours(startHour, 0, 0, 0);
+          storiesInCurrentSlot = 0;
+          log(`📅 Moving to next day: ${currentSlotTime.toISOString()}`);
         }
         
         // Check how many stories already exist in this slot
@@ -293,10 +312,13 @@ serve(async (req) => {
           currentSlotTime.setUTCHours(currentSlotTime.getUTCHours() + intervalHours);
           storiesInCurrentSlot = 0;
           
-          // Re-check window after advancing
-          if (currentSlotTime.getUTCHours() >= endHour) {
-            log(`⏰ Next slot would be outside release window, stopping`);
-            break;
+          // Re-check if we've exceeded the day's window
+          const newSlotDate = new Date(currentSlotTime);
+          newSlotDate.setUTCHours(endHour, 0, 0, 0);
+          if (currentSlotTime >= newSlotDate) {
+            currentSlotTime.setUTCDate(currentSlotTime.getUTCDate() + 1);
+            currentSlotTime.setUTCHours(startHour, 0, 0, 0);
+            log(`📅 Slot overflow, moving to next day: ${currentSlotTime.toISOString()}`);
           }
         }
 
@@ -321,7 +343,8 @@ serve(async (req) => {
           p_details: {
             title: story.title,
             scheduled_for: currentSlotTime.toISOString(),
-            stories_in_slot: storiesInCurrentSlot + 1
+            stories_in_slot: storiesInCurrentSlot + 1,
+            was_outside_window: !withinReleaseWindow
           }
         });
 
@@ -330,7 +353,12 @@ serve(async (req) => {
         storiesInCurrentSlot++;
       }
 
-      results.push({ topic: topic.name, scheduled: scheduledCount, skipped: '' });
+      results.push({ 
+        topic: topic.name, 
+        scheduled: scheduledCount, 
+        skipped: '',
+        next_slot: scheduledCount > 0 ? firstScheduledSlot : undefined
+      });
       log(`✅ Scheduled ${scheduledCount} stories for ${topic.name}`);
     }
 
