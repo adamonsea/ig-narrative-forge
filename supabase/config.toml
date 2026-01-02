@@ -514,3 +514,6 @@ verify_jwt = false
 [functions.firecrawl-scraper]
 verify_jwt = false
 
+[functions.deactivate-sources]
+verify_jwt = false
+
