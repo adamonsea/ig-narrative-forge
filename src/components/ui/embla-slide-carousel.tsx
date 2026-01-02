@@ -47,13 +47,15 @@ export function EmblaSlideCarousel({
     const isModern = tier === 'modern-ios' || tier === 'modern-android' || tier === 'desktop';
     const isMidRange = tier === 'mid-range-ios' || tier === 'mid-range-android';
     
+    // Higher duration = smoother, more frames. 25-30 feels more fluid than 20
     return {
-      duration: isModern ? 20 : isMidRange ? 25 : 35,
+      duration: isModern ? 28 : isMidRange ? 32 : 40,
       useGpuAcceleration: isModern,
+      dragThreshold: isModern ? 6 : isMidRange ? 8 : 12,
     };
   }, []);
 
-  // Embla with device-optimized settings
+  // Embla with device-optimized settings for smoother animation
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     containScroll: "trimSnaps",
@@ -62,6 +64,7 @@ export function EmblaSlideCarousel({
     startIndex: initialIndex,
     watchDrag: true,
     duration: emblaSettings.duration,
+    dragThreshold: emblaSettings.dragThreshold,
   });
 
   // Sync selected index with Embla
