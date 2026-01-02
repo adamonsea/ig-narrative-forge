@@ -122,18 +122,28 @@ ${storyText.slice(0, 2000)}`
 
 /**
  * Builds illustrative editorial cartoon prompt with print-made aesthetic
+ * Enhanced with place-specific accuracy for regional topics
  */
 export function buildIllustrativePrompt(
   tone: string,
   subject: string,
   publicationName?: string,
-  primaryColor: string = '#10B981'
+  primaryColor: string = '#10B981',
+  region?: string
 ): string {
   const expressionGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
     ? 'subtle expressions, thoughtful demeanor'
     : tone.includes('uplifting') || tone.includes('hopeful') || tone.includes('positive')
     ? 'warm expressions, engaged demeanor'
     : 'neutral expressions, professional demeanor';
+
+  // Build place-accurate architecture guidance for regional topics (even in illustrative style)
+  const placeGuidance = region ? `
+PLACE-SPECIFIC ELEMENTS (${region}):
+- Architectural shapes must reflect ${region}'s actual building styles (Victorian, Georgian, Art Deco, or local vernacular)
+- If depicting seafront/coastal location, include appropriate seaside elements simplified to geometric forms
+- Landmarks and street scenes should be recognizable as authentically British/local to ${region}
+` : '';
 
   return `PRINT-MADE EDITORIAL ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
 
@@ -143,7 +153,7 @@ CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
 - LIMITED PALETTE: Black, white, accent color (${primaryColor}) - printed ink aesthetic
 - PAPER TEXTURE visible throughout (like printed on newsprint or art paper)
 - Slight registration shifts and imperfections (authentic print quality)
-
+${placeGuidance}
 COMPOSITION STYLE - Jon McNaught / Edward Hopper Influence:
 - Architectural, modernist composition with LARGE SIMPLE SHAPES
 - Bold geometric forms filling the frame (buildings, landscapes, objects)
@@ -179,12 +189,14 @@ QUALITY BENCHMARK: Think mid-century editorial illustration meets contemporary s
 
 /**
  * Builds photographic documentary prompt (new photographic style)
+ * Enhanced with place-specific accuracy for regional topics
  */
 export function buildPhotographicPrompt(
   tone: string,
   subject: string,
   publicationName?: string,
-  primaryColor?: string
+  primaryColor?: string,
+  region?: string
 ): string {
   // Determine lighting guidance based on tone
   const lightingGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
@@ -200,10 +212,23 @@ export function buildPhotographicPrompt(
     ? 'quiet contemplative moment with cinematic framing, environmental storytelling through gritty textures and weathered details'
     : 'candid authentic moment with dramatic composition, documentary-style environmental storytelling emphasizing raw reality';
 
+  // Build place-accurate architecture guidance for regional topics
+  const placeAccuracyGuidance = region ? `
+
+PLACE-SPECIFIC ACCURACY (${region}):
+- Architecture must be AUTHENTIC to ${region}—use only building styles, materials, and facades actually found in ${region}
+- Street layouts, signage, shop fronts, and urban furniture must be consistent with real UK locations like ${region}
+- If ${region} is a coastal town, include seaside context: promenades, Victorian/Edwardian architecture, pebble beaches if appropriate
+- Landmarks must be ACCURATE—do NOT invent fictional landmarks or mix architectural styles from other regions
+- If depicting specific streets or locations, research actual appearances—Georgian terraces, flint walls, Art Deco, whatever is authentic to ${region}
+- Weather and light must be consistent with UK climate—overcast skies, soft light, occasional dramatic coastal light
+- CRITICAL: If the image shows recognizable architecture, it MUST look like it could actually be in ${region}. When in doubt, keep architecture generic but authentically British
+` : '';
+
   return `Cinematic editorial photography for ${publicationName || 'news publication'}. Subject: ${subject}.
 
 PHOTOREALISTIC MANDATE: Absolutely NO illustration, cartoon, CGI, digital art, or stylized rendering. Must be authentic photojournalism with documentary grit.
-
+${placeAccuracyGuidance}
 CINEMATIC DOCUMENTARY STYLE: 
 ${lightingGuidance}. Embrace dramatic natural light, strong shadows, and atmospheric depth. Think gritty documentary realism with cinematic composition—not polished studio work. Raw, textured, authentic with visual drama.
 
@@ -237,6 +262,7 @@ QUALITY CONTROL CHECKLIST:
 ✓ Documentary candid moment with visual tension
 ✓ Cinematic photojournalism aesthetic
 ✓ Dramatic yet completely realistic
+${region ? `✓ Architecture and setting authentic to ${region}` : ''}
 
 CRITICAL: Must look like it was captured by a master photojournalist seeking the decisive dramatic moment—cinematic composition with documentary authenticity. Gritty realism with visual drama, never losing believability.`;
 }

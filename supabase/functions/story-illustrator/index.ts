@@ -199,11 +199,12 @@ serve(async (req) => {
     // Fetch topic's illustration_style and primary color
     let illustrationStyle: IllustrationStyle = 'editorial_illustrative' // default
     let primaryColor: string = '#10B981' // default mint green
+    let topicRegion: string | undefined = undefined // for place-accurate prompts
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style, illustration_primary_color')
+        .select('illustration_style, illustration_primary_color, region')
         .eq('id', topicId)
         .single()
       
@@ -220,6 +221,12 @@ serve(async (req) => {
       if (topicData?.illustration_primary_color) {
         primaryColor = topicData.illustration_primary_color
         console.log(`Using topic primary color: ${primaryColor}`)
+      }
+      
+      // Capture region for place-accurate image prompts
+      if (topicData?.region) {
+        topicRegion = topicData.region
+        console.log(`Using topic region for place accuracy: ${topicRegion}`)
       }
     }
 
@@ -342,10 +349,10 @@ serve(async (req) => {
       story.title
     )
 
-    // Build appropriate prompt based on illustration style
+    // Build appropriate prompt based on illustration style, passing region for place accuracy
     const illustrationPrompt = illustrationStyle === 'editorial_photographic'
-      ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor)
-      : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor)
+      ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion)
+      : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion)
 
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
