@@ -27,7 +27,7 @@ interface Topic {
   keywords?: string[];
   landmarks?: string[];
   organizations?: string[];
-  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   auto_simplify_enabled?: boolean;
   automation_quality_threshold?: number;
@@ -42,7 +42,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [topicSlug, setTopicSlug] = useState<string>('');
   const [slideQuantities, setSlideQuantities] = useState<Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>>({});
-  const [toneOverrides, setToneOverrides] = useState<Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | undefined>>({});
+  const [toneOverrides, setToneOverrides] = useState<Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined>>({});
   const [writingStyleOverrides, setWritingStyleOverrides] = useState<Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined>>({});
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [processingApproval, setProcessingApproval] = useState<Set<string>>(new Set());
@@ -224,7 +224,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
   };
 
-  const handleToneOverrideChange = (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | undefined) => {
+  const handleToneOverrideChange = (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined) => {
     setToneOverrides(prev => ({ ...prev, [articleId]: tone }));
   };
 

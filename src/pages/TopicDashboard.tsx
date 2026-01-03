@@ -81,7 +81,7 @@ interface Topic {
   created_by: string;
   created_at: string;
   audience_expertise?: 'beginner' | 'intermediate' | 'expert';
-  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   illustration_style?: IllustrationStyle;
   illustration_primary_color?: string;

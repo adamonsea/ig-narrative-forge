@@ -4,7 +4,7 @@
  */
 
 export interface ContentGenerationSettings {
-  tone: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   audienceExpertise: 'beginner' | 'intermediate' | 'expert';
   slideCount: number;
@@ -21,7 +21,8 @@ export const enhancePromptWithSettings = (
     formal: "Use formal, professional language with precise terminology. Maintain an authoritative and objective tone throughout.",
     conversational: "Write in a friendly, approachable tone as if speaking directly to the reader. Use natural language and relatable examples.",
     engaging: "Use dynamic, compelling language that captures attention. Include rhetorical questions, vivid descriptions, and emotional hooks.",
-    satirical: "Write with wit, irony, and gentle mockery inspired by British satirical journalism (Private Eye, The Day Today). Use understated humor, clever wordplay, and subtle absurdist observations. Channel the spirit of Blackadder's sardonic wit and Monty Python's intelligent absurdism. Mock institutions, bureaucracy, and pretension—not individuals or vulnerable groups. Balance genuine information delivery with humorous commentary that exposes absurdity. Use British cultural references where appropriate (parliamentary terminology, class observations, understatement). Maintain journalistic accuracy while presenting information through a satirical lens."
+    satirical: "Write with wit, irony, and gentle mockery inspired by British satirical journalism (Private Eye, The Day Today). Use understated humor, clever wordplay, and subtle absurdist observations. Channel the spirit of Blackadder's sardonic wit and Monty Python's intelligent absurdism. Mock institutions, bureaucracy, and pretension—not individuals or vulnerable groups. Balance genuine information delivery with humorous commentary that exposes absurdity. Use British cultural references where appropriate (parliamentary terminology, class observations, understatement). Maintain journalistic accuracy while presenting information through a satirical lens.",
+    rhyming_couplet: "Write EVERY slide as a rhyming couplet—two lines that rhyme at the end. Channel the wit of Hilaire Belloc, Ogden Nash, and Dr. Seuss. Each couplet must be clever, memorable, and deliver genuine news information. Use iambic rhythm where possible. The humor comes from cramming serious news into playful verse. Headlines should be punchy couplets. Maintain factual accuracy while making the format delightfully absurd."
   };
 
   const styleInstructions = {

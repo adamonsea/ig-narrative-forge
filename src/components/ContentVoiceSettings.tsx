@@ -11,7 +11,7 @@ import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, ILLUSTRATION_STYLE_DESC
 interface ContentVoiceSettingsProps {
   topicId: string;
   currentExpertise?: 'beginner' | 'intermediate' | 'expert';
-  currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   currentIllustrationStyle?: IllustrationStyle;
   onUpdate?: () => void;
@@ -26,7 +26,7 @@ export const ContentVoiceSettings = ({
   onUpdate
 }: ContentVoiceSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
-  const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging' | 'satirical'>(currentTone || 'conversational');
+  const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(currentIllustrationStyle || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE);
   const [saving, setSaving] = useState(false);
@@ -99,7 +99,7 @@ export const ContentVoiceSettings = ({
 
         <div className="space-y-2">
           <Label>Content Tone</Label>
-          <Select value={tone} onValueChange={(v: 'formal' | 'conversational' | 'engaging' | 'satirical') => setTone(v)}>
+          <Select value={tone} onValueChange={(v: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => setTone(v)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -108,6 +108,7 @@ export const ContentVoiceSettings = ({
               <SelectItem value="conversational">Conversational</SelectItem>
               <SelectItem value="engaging">Engaging</SelectItem>
               <SelectItem value="satirical">Satirical ⚡</SelectItem>
+              <SelectItem value="rhyming_couplet">Rhyming Couplet 🎭</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">Voice and personality</p>

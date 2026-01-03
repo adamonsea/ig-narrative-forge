@@ -31,7 +31,7 @@ interface Topic {
   is_public: boolean;
   created_at: string;
   audience_expertise?: 'beginner' | 'intermediate' | 'expert';
-  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   articles_in_arrivals?: number;
   stories_published_this_week?: number;
   visits_today?: number;

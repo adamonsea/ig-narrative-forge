@@ -21,7 +21,7 @@ import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, ILLUSTRATION_STYLE_DESC
 interface TopicSettingsProps {
   topicId: string;
   currentExpertise?: 'beginner' | 'intermediate' | 'expert';
-  currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   currentCommunityEnabled?: boolean;
   currentCommunityPulseFrequency?: number;
@@ -64,7 +64,7 @@ export const TopicSettings = ({
   onUpdate 
 }: TopicSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
-  const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging' | 'satirical'>(currentTone || 'conversational');
+  const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(currentIllustrationStyle || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE);
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
@@ -290,7 +290,7 @@ export const TopicSettings = ({
             <Label htmlFor="tone">
               Default Content Tone
             </Label>
-            <Select value={tone} onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical') => setTone(value)}>
+            <Select value={tone} onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => setTone(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -317,6 +317,12 @@ export const TopicSettings = ({
                   <div>
                     <div className="font-medium">Satirical ⚡</div>
                     <div className="text-xs text-muted-foreground">Witty, ironic British humor</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="rhyming_couplet">
+                  <div>
+                    <div className="font-medium">Rhyming Couplet 🎭</div>
+                    <div className="text-xs text-muted-foreground">Every slide in verse form</div>
                   </div>
                 </SelectItem>
               </SelectContent>

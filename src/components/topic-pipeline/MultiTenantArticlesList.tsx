@@ -17,20 +17,20 @@ interface MultiTenantArticlesListProps {
   
   // Configuration defaults (from topic settings)
   defaultSlideQuantity?: 'short' | 'tabloid' | 'indepth' | 'extensive';
-  defaultTone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  defaultTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   defaultWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   
   // Individual overrides (user selections per article)
   slideQuantityOverrides?: Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>;
-  toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical'>;  
+  toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet'>;  
   writingStyleOverrides?: Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven'>;
   
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
-  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical') => void;
+  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => void;
   onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   
   onPreview?: (article: MultiTenantArticle) => void;
-  onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
+  onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete?: (articleIds: string[]) => void;
@@ -317,7 +317,7 @@ export default function MultiTenantArticlesList({
               {/* Tone */}
               <Select
                 value={toneOverride}
-                onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical') => 
+                onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => 
                   onToneOverrideChange(article.id, value)
                 }
               >
@@ -329,6 +329,7 @@ export default function MultiTenantArticlesList({
                   <SelectItem value="conversational">Conversational</SelectItem>
                   <SelectItem value="engaging">Engaging</SelectItem>
                   <SelectItem value="satirical">Satirical ⚡</SelectItem>
+                  <SelectItem value="rhyming_couplet">Rhyming 🎭</SelectItem>
                 </SelectContent>
               </Select>
 
