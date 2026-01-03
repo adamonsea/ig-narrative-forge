@@ -1118,6 +1118,39 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_clicks: {
+        Row: {
+          click_date: string
+          created_at: string
+          id: string
+          page_type: string | null
+          referrer: string | null
+          topic_id: string
+          user_agent: string | null
+          visitor_id: string
+        }
+        Insert: {
+          click_date?: string
+          created_at?: string
+          id?: string
+          page_type?: string | null
+          referrer?: string | null
+          topic_id: string
+          user_agent?: string | null
+          visitor_id: string
+        }
+        Update: {
+          click_date?: string
+          created_at?: string
+          id?: string
+          page_type?: string | null
+          referrer?: string | null
+          topic_id?: string
+          user_agent?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       feed_cta_configs: {
         Row: {
           attribution_cta: string | null
