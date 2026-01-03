@@ -831,24 +831,25 @@ Return in JSON format:
     
     const targetSlideCount = slideTypeMapping[finalSlideType as keyof typeof slideTypeMapping] || 6;
     
-    // Safety filter for satirical and rhyming_couplet tones - check if content is appropriate
-    if (effectiveTone === 'satirical' || effectiveTone === 'rhyming_couplet') {
-      const inappropriateKeywords = [
-        'death', 'died', 'killed', 'accident', 'injured', 'victim', 
-        'abuse', 'assault', 'tragedy', 'funeral', 'memorial',
-        'hospital', 'emergency', 'rescue', 'missing person'
+    // Safety filter for satirical tone only - rhyming_couplet can handle most topics
+    // Only block satirical/humorous tones for truly tragic content
+    if (effectiveTone === 'satirical') {
+      const tragicKeywords = [
+        'death', 'died', 'killed', 'murder', 'victim', 
+        'abuse', 'assault', 'tragedy', 'funeral'
       ];
       
       const contentLower = `${article.title} ${article.body}`.toLowerCase();
-      const hasInappropriateContent = inappropriateKeywords.some(
+      const hasTragicContent = tragicKeywords.some(
         keyword => contentLower.includes(keyword)
       );
       
-      if (hasInappropriateContent) {
-        console.log(`⚠️ ${effectiveTone} tone inappropriate for sensitive content, falling back to conversational`);
+      if (hasTragicContent) {
+        console.log(`⚠️ ${effectiveTone} tone inappropriate for tragic content, falling back to conversational`);
         effectiveTone = 'conversational';
       }
     }
+    // Note: rhyming_couplet is allowed for all content - it can be serious or light
     
     // Generate slides with DeepSeek only
     let slides: SlideContent[];
