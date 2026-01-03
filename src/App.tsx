@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-
 import { AuthProvider } from "@/hooks/useAuth";
 import { SystemErrorBoundary } from "@/components/SystemErrorBoundary";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
+import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -46,7 +47,11 @@ const StoryRedirect = () => {
   return <Navigate to={`/feed/${slug}/story/${storyId}`} replace />;
 };
 
-// Create QueryClient with stable configuration
+// Google Analytics tracker component (must be inside BrowserRouter)
+const GoogleAnalyticsTracker = () => {
+  useGoogleAnalytics();
+  return null;
+};
 const createQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
@@ -69,6 +74,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <GoogleAnalyticsTracker />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/pricing" element={<Pricing />} />
