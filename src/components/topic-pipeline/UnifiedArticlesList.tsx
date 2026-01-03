@@ -16,17 +16,17 @@ interface UnifiedArticlesListProps {
   deletingArticles: Set<string>;
   animatingArticles: Set<string>;
   slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' };
-  toneOverrides: { [key: string]: 'formal' | 'conversational' | 'engaging' | 'satirical' };
+  toneOverrides: { [key: string]: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' };
   writingStyleOverrides: { [key: string]: 'journalistic' | 'educational' | 'listicle' | 'story_driven' };
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
-  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical') => void;
+  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => void;
   onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onPreview: (article: MultiTenantArticle) => void;
-  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', tone: 'formal' | 'conversational' | 'engaging' | 'satirical', writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
+  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete: (articleIds: string[]) => void;
-  defaultTone: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  defaultTone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   defaultWritingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   topicKeywords?: string[];
   topicLandmarks?: string[];
@@ -310,7 +310,7 @@ export const UnifiedArticlesList: React.FC<UnifiedArticlesListProps> = ({
                 <div className="text-xs">
                   <Select
                     value={toneOverride}
-                    onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical') => 
+                    onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => 
                       onToneOverrideChange(article.id, value)
                     }
                   >
@@ -322,6 +322,7 @@ export const UnifiedArticlesList: React.FC<UnifiedArticlesListProps> = ({
                       <SelectItem value="conversational">Conversational</SelectItem>
                       <SelectItem value="engaging">Engaging</SelectItem>
                       <SelectItem value="satirical">Satirical ⚡</SelectItem>
+                      <SelectItem value="rhyming_couplet">Rhyming 🎭</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -5132,7 +5132,12 @@ export type Database = {
         | "editorial_illustrative"
         | "editorial_photographic"
       mp_detection_confidence: "high" | "medium" | "low"
-      tone_type: "formal" | "conversational" | "engaging" | "satirical"
+      tone_type:
+        | "formal"
+        | "conversational"
+        | "engaging"
+        | "satirical"
+        | "rhyming_couplet"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5267,7 +5272,13 @@ export const Constants = {
         "editorial_photographic",
       ],
       mp_detection_confidence: ["high", "medium", "low"],
-      tone_type: ["formal", "conversational", "engaging", "satirical"],
+      tone_type: [
+        "formal",
+        "conversational",
+        "engaging",
+        "satirical",
+        "rhyming_couplet",
+      ],
     },
   },
 } as const

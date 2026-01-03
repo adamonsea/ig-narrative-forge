@@ -34,7 +34,8 @@ const toneGuidance: Record<string, string> = {
   formal: 'Use precise, objective language with strong sourcing and avoid colloquialisms.',
   conversational: 'Use approachable, plain-language explanations that still respect the facts.',
   engaging: 'Use vivid, energetic language while keeping statements grounded in verified facts.',
-  satirical: 'Use witty, ironic language that gently mocks while informing. Channel British satirical journalism—think Private Eye meets Blackadder. Employ understatement, clever wordplay, and observational absurdity. Mock institutions and pretension, not vulnerable individuals. Balance humor with factual accuracy.'
+  satirical: 'Use witty, ironic language that gently mocks while informing. Channel British satirical journalism—think Private Eye meets Blackadder. Employ understatement, clever wordplay, and observational absurdity. Mock institutions and pretension, not vulnerable individuals. Balance humor with factual accuracy.',
+  rhyming_couplet: 'Write EVERY slide as a rhyming couplet—exactly two lines that rhyme at the end. Channel Hilaire Belloc, Ogden Nash, and Dr. Seuss. Each couplet must be clever, memorable, and deliver genuine news information. The humor comes from cramming serious news into playful verse while maintaining factual accuracy.'
 };
 
 const writingStyleGuidance: Record<string, string> = {
@@ -336,6 +337,57 @@ QUALITY CHECKS:
 • Does the humor expose real absurdity rather than invent it? ✅
 • Is the factual information still clearly communicated? ✅
 • Would Private Eye or The Day Today publish this? ✅
+` : ''}
+
+${tone === 'rhyming_couplet' ? `RHYMING COUPLET TONE DIRECTIVES:
+CRITICAL: Every slide MUST be written as a rhyming couplet—exactly two lines where the final words rhyme.
+
+FORMAT REQUIREMENTS:
+• Each slide = exactly 2 lines (the couplet)
+• Lines should be roughly equal length for rhythm
+• End-rhyme is mandatory (moon/soon, town/down, say/day)
+• Near-rhymes are acceptable when perfect rhymes are impossible
+• Aim for iambic rhythm where natural
+
+STYLE INSPIRATIONS:
+• Hilaire Belloc's cautionary wit: "The chief defect of Henry King / Was chewing little bits of string"
+• Ogden Nash's playful absurdity: "Candy is dandy / But liquor is quicker"
+• Dr. Seuss's energetic momentum
+• Newspaper verse tradition (light verse columnists)
+
+EXAMPLE TRANSFORMATIONS:
+Standard: "Council approves new housing development despite local opposition"
+Couplet: "The council gave its blessing to a hundred homes today,
+While residents who live nearby had quite a lot to say."
+
+Standard: "Road works will cause traffic delays for three weeks"
+Couplet: "The roadworks start on Monday, lasting twenty days or more,
+So leave an hour early or you'll be stuck, that's for sure."
+
+Standard: "Mayor announces new community centre opening"
+Couplet: "The mayor cut the ribbon on the new community hall,
+Where locals soon can gather, young and old and one and all."
+
+HEADLINE SLIDE (Slide 1):
+• Lead with the punchiest, most memorable couplet
+• Capture the essence of the story in two rhyming lines
+• Example: "The budget's short, the tempers hot, the councillors all frown,
+As cuts are made to services across this seaside town."
+
+STRICT BOUNDARIES:
+✅ DO: Prioritize clarity of information within the verse form
+✅ DO: Use humor that arises naturally from the rhyme constraints
+✅ DO: Maintain factual accuracy—the verse is the vehicle, not the destination
+❌ DON'T: Force awkward rhymes that obscure meaning
+❌ DON'T: Sacrifice essential facts for a rhyme
+❌ DON'T: Use tragic or sensitive stories for this tone (auto-fallback to conversational)
+❌ DON'T: Write more than 2 lines per slide
+
+QUALITY CHECKS:
+• Does each slide have exactly 2 rhyming lines? ✅
+• Is the news information clearly communicated? ✅
+• Does the rhyme feel natural, not forced? ✅
+• Would this bring a smile while informing? ✅
 ` : ''}
 
 FACT vs OPINION HANDLING:
@@ -777,8 +829,8 @@ Return in JSON format:
     
     const targetSlideCount = slideTypeMapping[finalSlideType as keyof typeof slideTypeMapping] || 6;
     
-    // Safety filter for satirical tone - check if content is appropriate
-    if (effectiveTone === 'satirical') {
+    // Safety filter for satirical and rhyming_couplet tones - check if content is appropriate
+    if (effectiveTone === 'satirical' || effectiveTone === 'rhyming_couplet') {
       const inappropriateKeywords = [
         'death', 'died', 'killed', 'accident', 'injured', 'victim', 
         'abuse', 'assault', 'tragedy', 'funeral', 'memorial',
@@ -791,7 +843,7 @@ Return in JSON format:
       );
       
       if (hasInappropriateContent) {
-        console.log('⚠️ Satirical tone inappropriate for sensitive content, falling back to conversational');
+        console.log(`⚠️ ${effectiveTone} tone inappropriate for sensitive content, falling back to conversational`);
         effectiveTone = 'conversational';
       }
     }

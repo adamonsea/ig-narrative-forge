@@ -16,7 +16,7 @@ export const useMultiTenantActions = () => {
   const approveMultiTenantArticle = async (
     article: MultiTenantArticle,
     slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid',
-    tone: 'formal' | 'conversational' | 'engaging' | 'satirical' = 'conversational',
+    tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' = 'conversational',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
   ) => {
     if (processingArticle) return;
