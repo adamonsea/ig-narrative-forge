@@ -35,7 +35,7 @@ const toneGuidance: Record<string, string> = {
   conversational: 'Use approachable, plain-language explanations that still respect the facts.',
   engaging: 'Use vivid, energetic language while keeping statements grounded in verified facts.',
   satirical: 'Use witty, ironic language that gently mocks while informing. Channel British satirical journalism—think Private Eye meets Blackadder. Employ understatement, clever wordplay, and observational absurdity. Mock institutions and pretension, not vulnerable individuals. Balance humor with factual accuracy.',
-  rhyming_couplet: 'Write EVERY slide as a rhyming couplet—exactly two lines that rhyme at the end. Channel Hilaire Belloc, Ogden Nash, and Dr. Seuss. Each couplet must be clever, memorable, and deliver genuine news information. The humor comes from cramming serious news into playful verse while maintaining factual accuracy.'
+  rhyming_couplet: 'Write EVERY slide as a heroic couplet—exactly two lines in iambic pentameter that rhyme at the end. Channel Shakespeare\'s closing couplets, Alexander Pope\'s satirical wit, John Dryden\'s polish, Hilaire Belloc\'s cautionary tales, and Ogden Nash\'s clever brevity. Each couplet must be elegant, memorable, and deliver genuine news while maintaining factual accuracy.'
 };
 
 const writingStyleGuidance: Record<string, string> = {
@@ -343,17 +343,19 @@ ${tone === 'rhyming_couplet' ? `RHYMING COUPLET TONE DIRECTIVES:
 CRITICAL: Every slide MUST be written as a rhyming couplet—exactly two lines where the final words rhyme.
 
 FORMAT REQUIREMENTS:
-• Each slide = exactly 2 lines (the couplet)
+• Each slide = exactly 2 lines (the heroic couplet)
+• Use iambic pentameter where natural (10 syllables, da-DUM rhythm)
 • Lines should be roughly equal length for rhythm
 • End-rhyme is mandatory (moon/soon, town/down, say/day)
-• Near-rhymes are acceptable when perfect rhymes are impossible
-• Aim for iambic rhythm where natural
+• Near-rhymes acceptable when perfect rhymes are impossible
 
-STYLE INSPIRATIONS:
+CLASSIC STYLE INSPIRATIONS:
+• Shakespeare's closing couplets: "The play is done, the curtain drops, / Slow falling to the prompter's bell"
+• Alexander Pope's satirical heroic couplets: "To err is human, to forgive divine"
+• John Dryden's polished wit and political commentary
 • Hilaire Belloc's cautionary wit: "The chief defect of Henry King / Was chewing little bits of string"
-• Ogden Nash's playful absurdity: "Candy is dandy / But liquor is quicker"
-• Dr. Seuss's energetic momentum
-• Newspaper verse tradition (light verse columnists)
+• Ogden Nash's playful brevity: "Candy is dandy / But liquor is quicker"
+• The Augustan tradition of using verse for social commentary
 
 EXAMPLE TRANSFORMATIONS:
 Standard: "Council approves new housing development despite local opposition"
