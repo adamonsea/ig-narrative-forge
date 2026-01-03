@@ -17,7 +17,8 @@ const INFLATION_BASE_DOWN = 23;
 
 export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }: StoryReactionBarProps) => {
   const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
-  const disabled = isReacting;
+  // Disable during initial load AND during active reaction to prevent race conditions
+  const disabled = isLoading || isReacting;
   
   const isLiked = counts.userReaction === 'like';
   const isDisliked = counts.userReaction === 'discard';
