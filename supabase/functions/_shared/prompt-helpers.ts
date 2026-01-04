@@ -122,7 +122,7 @@ ${storyText.slice(0, 2000)}`
 
 /**
  * Builds illustrative editorial cartoon prompt with print-made aesthetic
- * Enhanced with place-specific accuracy for regional topics
+ * Place-specific accuracy only when story content warrants it
  */
 export function buildIllustrativePrompt(
   tone: string,
@@ -137,8 +137,25 @@ export function buildIllustrativePrompt(
     ? 'warm expressions, engaged demeanor'
     : 'neutral expressions, professional demeanor';
 
-  // Build place-accurate architecture guidance for regional topics (even in illustrative style)
-  const placeGuidance = region ? `
+  // Only add regional guidance if the subject actually mentions local/place elements
+  // This prevents e.g. zoo stories getting seaside backgrounds
+  const subjectLower = subject.toLowerCase();
+  const mentionsLocalPlace = region && (
+    subjectLower.includes('seafront') ||
+    subjectLower.includes('promenade') ||
+    subjectLower.includes('pier') ||
+    subjectLower.includes('beach') ||
+    subjectLower.includes('high street') ||
+    subjectLower.includes('town centre') ||
+    subjectLower.includes('town hall') ||
+    subjectLower.includes(region.toLowerCase()) ||
+    subjectLower.includes('local street') ||
+    subjectLower.includes('bandstand') ||
+    subjectLower.includes('harbour') ||
+    subjectLower.includes('marina')
+  );
+
+  const placeGuidance = mentionsLocalPlace ? `
 PLACE-SPECIFIC ELEMENTS (${region}):
 - Architectural shapes must reflect ${region}'s actual building styles (Victorian, Georgian, Art Deco, or local vernacular)
 - If depicting seafront/coastal location, include appropriate seaside elements simplified to geometric forms
@@ -189,7 +206,7 @@ QUALITY BENCHMARK: Think mid-century editorial illustration meets contemporary s
 
 /**
  * Builds photographic documentary prompt (new photographic style)
- * Enhanced with place-specific accuracy for regional topics
+ * Place-specific accuracy only when story content warrants it
  */
 export function buildPhotographicPrompt(
   tone: string,
@@ -212,8 +229,25 @@ export function buildPhotographicPrompt(
     ? 'quiet contemplative moment with cinematic framing, environmental storytelling through gritty textures and weathered details'
     : 'candid authentic moment with dramatic composition, documentary-style environmental storytelling emphasizing raw reality';
 
-  // Build place-accurate architecture guidance for regional topics
-  const placeAccuracyGuidance = region ? `
+  // Only add regional guidance if the subject actually mentions local/place elements
+  // This prevents e.g. zoo stories getting seaside backgrounds when the zoo is inland
+  const subjectLower = subject.toLowerCase();
+  const mentionsLocalPlace = region && (
+    subjectLower.includes('seafront') ||
+    subjectLower.includes('promenade') ||
+    subjectLower.includes('pier') ||
+    subjectLower.includes('beach') ||
+    subjectLower.includes('high street') ||
+    subjectLower.includes('town centre') ||
+    subjectLower.includes('town hall') ||
+    subjectLower.includes(region.toLowerCase()) ||
+    subjectLower.includes('local street') ||
+    subjectLower.includes('bandstand') ||
+    subjectLower.includes('harbour') ||
+    subjectLower.includes('marina')
+  );
+
+  const placeAccuracyGuidance = mentionsLocalPlace ? `
 
 PLACE-SPECIFIC ACCURACY (${region}):
 - Architecture must be AUTHENTIC to ${region}—use only building styles, materials, and facades actually found in ${region}
@@ -262,7 +296,7 @@ QUALITY CONTROL CHECKLIST:
 ✓ Documentary candid moment with visual tension
 ✓ Cinematic photojournalism aesthetic
 ✓ Dramatic yet completely realistic
-${region ? `✓ Architecture and setting authentic to ${region}` : ''}
+${mentionsLocalPlace ? `✓ Architecture and setting authentic to ${region}` : ''}
 
 CRITICAL: Must look like it was captured by a master photojournalist seeking the decisive dramatic moment—cinematic composition with documentary authenticity. Gritty realism with visual drama, never losing believability.`;
 }
