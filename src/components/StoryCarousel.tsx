@@ -93,7 +93,7 @@ interface Story {
   mp_name?: string;
   mp_party?: string; // Party affiliation for parliamentary stories
   constituency?: string;
-  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
 }
 
 interface StoryCarouselProps {
@@ -338,6 +338,19 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           className="text-xs px-2 py-1 scale-80 origin-left bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800"
         >
           🤔
+        </Badge>
+      );
+    }
+    
+    // Add rhyming couplet indicator
+    if (story.tone === 'rhyming_couplet') {
+      badges.push(
+        <Badge
+          key="rhyming"
+          variant="outline"
+          className="text-xs px-2 py-1 scale-80 origin-left bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+        >
+          ✒️
         </Badge>
       );
     }
