@@ -63,7 +63,7 @@ export const ConfirmationEmail = ({
           </Text>
           
           <Section style={ctaSection}>
-            <Link href={verificationUrl} style={ctaButton}>
+            <Link href={verificationUrl} target="_blank" style={ctaButton}>
               Confirm Subscription ✓
             </Link>
           </Section>
@@ -85,10 +85,10 @@ export const ConfirmationEmail = ({
           </Text>
           <Text style={footerTextSmall}>
             Button not working? Copy this link:<br/>
-            <Link href={verificationUrl} style={footerLink}>{verificationUrl}</Link>
+            <Link href={verificationUrl} target="_blank" style={footerLink}>{verificationUrl}</Link>
           </Text>
           <Text style={poweredBy}>
-            <Link href="https://curatr.pro" style={poweredByLink}>curatr.pro</Link>
+            <Link href={baseUrl} target="_blank" style={poweredByLink}>curatr.pro</Link>
           </Text>
         </Section>
       </Container>

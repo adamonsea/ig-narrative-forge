@@ -72,7 +72,7 @@ export const WeeklyRoundupEmail = ({
         {stories.length > 0 ? (
           <Section style={storiesSection}>
             {stories.map((story) => (
-              <Link key={story.id} href={story.story_url} style={storyLink}>
+              <Link key={story.id} href={story.story_url} target="_blank" style={storyLink}>
                 <Section style={storyCard}>
                   <Row>
                     <Column style={thumbnailColumn}>
@@ -106,21 +106,21 @@ export const WeeklyRoundupEmail = ({
         <Hr style={hr} />
 
         <Section style={ctaSection}>
-          <Link href={`${baseUrl}/feed/${topicSlug}/weekly/latest`} style={ctaButtonPrimary}>
+          <Link href={`${baseUrl}/feed/${topicSlug}/briefings`} target="_blank" style={ctaButtonPrimary}>
             View Weekly Briefing →
           </Link>
-          <Link href={`${baseUrl}/feed/${topicSlug}`} style={ctaButtonSecondary}>
+          <Link href={`${baseUrl}/feed/${topicSlug}`} target="_blank" style={ctaButtonSecondary}>
             Visit Feed
           </Link>
         </Section>
 
         <Section style={footer}>
           <Text style={footerText}>You're receiving this because you subscribed to weekly briefing updates.</Text>
-          <Link href={unsubscribeUrl || `${baseUrl}/feed/${topicSlug}?unsubscribe=weekly`} style={footerLink}>
+          <Link href={unsubscribeUrl || `${baseUrl}/feed/${topicSlug}?unsubscribe=weekly`} target="_blank" style={footerLink}>
             Unsubscribe
           </Link>
           <Text style={poweredBy}>
-            <Link href="https://curatr.pro" style={poweredByLink}>curatr.pro</Link>
+            <Link href={baseUrl} target="_blank" style={poweredByLink}>curatr.pro</Link>
           </Text>
         </Section>
       </Container>
