@@ -34,13 +34,13 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
     thumbsDown: 0,
     userReaction: null,
   });
-  const [isLoading, setIsLoading] = useState(true);
+  // Start with isLoading=false - only show as loading if we actually start fetching
+  const [isLoading, setIsLoading] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
 
   // Fetch initial counts
   useEffect(() => {
     if (!storyId || !topicId) {
-      setIsLoading(false);
       return;
     }
 
@@ -64,7 +64,7 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
           return;
         }
 
-        if (data && data.length > 0) {
+        if (isMounted && data && data.length > 0) {
           setCounts({
             thumbsUp: Number(data[0].thumbs_up) || 0,
             thumbsDown: Number(data[0].thumbs_down) || 0,
@@ -78,10 +78,16 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
       }
     };
 
+    // Add timeout to prevent infinite loading state
+    const timeoutId = setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 5000);
+
     fetchCounts();
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, [storyId, topicId]);
 
