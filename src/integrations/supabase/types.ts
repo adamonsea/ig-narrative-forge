@@ -4311,6 +4311,13 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
+      archive_title_duplicates: {
+        Args: never
+        Returns: {
+          archived_count: number
+          topic_slug: string
+        }[]
+      }
       article_is_public: { Args: { p_article_id: string }; Returns: boolean }
       auto_generate_missing_schedules: { Args: never; Returns: Json }
       bulk_cleanup_topic_content: {
