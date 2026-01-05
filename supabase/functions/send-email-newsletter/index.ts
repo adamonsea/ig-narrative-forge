@@ -288,6 +288,10 @@ serve(async (req) => {
       month: 'long' 
     });
     
+    // Date param for URL (YYYY-MM-DD format)
+    const dateParam = dateEnd.toISOString().split('T')[0];
+    const weekStartParam = dateStart.toISOString().split('T')[0];
+    
     if (notificationType === 'daily') {
       emailHtml = await renderAsync(
         React.createElement(DailyRoundupEmail, {
@@ -295,6 +299,7 @@ serve(async (req) => {
           topicSlug: topic.slug,
           topicLogoUrl,
           date: displayDate,
+          dateParam,
           stories,
           baseUrl: BASE_URL,
           isSlowNewsDay
@@ -311,6 +316,7 @@ serve(async (req) => {
           topicLogoUrl,
           weekStart: weekStartDisplay,
           weekEnd: weekEndDisplay,
+          weekStartParam,
           stories,
           baseUrl: BASE_URL
         })
