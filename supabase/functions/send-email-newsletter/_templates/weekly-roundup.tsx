@@ -29,6 +29,7 @@ interface WeeklyRoundupEmailProps {
   topicLogoUrl?: string;
   weekStart: string;
   weekEnd: string;
+  weekStartParam: string; // YYYY-MM-DD format for URL
   stories: EmailStory[];
   baseUrl: string;
   unsubscribeUrl?: string;
@@ -40,6 +41,7 @@ export const WeeklyRoundupEmail = ({
   topicLogoUrl,
   weekStart = 'Dec 15',
   weekEnd = 'Dec 21',
+  weekStartParam = new Date().toISOString().split('T')[0],
   stories = [],
   baseUrl = 'https://curatr.pro',
   unsubscribeUrl,
@@ -106,7 +108,7 @@ export const WeeklyRoundupEmail = ({
         <Hr style={hr} />
 
         <Section style={ctaSection}>
-          <Link href={`${baseUrl}/feed/${topicSlug}/briefings`} target="_blank" style={ctaButtonPrimary}>
+          <Link href={`${baseUrl}/feed/${topicSlug}/weekly/${weekStartParam}`} target="_blank" style={ctaButtonPrimary}>
             View Weekly Briefing →
           </Link>
           <Link href={`${baseUrl}/feed/${topicSlug}`} target="_blank" style={ctaButtonSecondary}>

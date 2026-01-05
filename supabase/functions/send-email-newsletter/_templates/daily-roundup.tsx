@@ -28,6 +28,7 @@ interface DailyRoundupEmailProps {
   topicSlug: string;
   topicLogoUrl?: string;
   date: string;
+  dateParam: string; // YYYY-MM-DD format for URL
   stories: EmailStory[];
   baseUrl: string;
   unsubscribeUrl?: string;
@@ -39,6 +40,7 @@ export const DailyRoundupEmail = ({
   topicSlug = 'topic',
   topicLogoUrl,
   date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+  dateParam = new Date().toISOString().split('T')[0],
   stories = [],
   baseUrl = 'https://curatr.pro',
   unsubscribeUrl,
@@ -114,7 +116,7 @@ export const DailyRoundupEmail = ({
         <Hr style={hr} />
 
         <Section style={ctaSection}>
-          <Link href={`${baseUrl}/feed/${topicSlug}/briefings`} target="_blank" style={ctaButtonPrimary}>
+          <Link href={`${baseUrl}/feed/${topicSlug}/daily/${dateParam}`} target="_blank" style={ctaButtonPrimary}>
             View Daily Briefing →
           </Link>
           <Link href={`${baseUrl}/feed/${topicSlug}`} target="_blank" style={ctaButtonSecondary}>
