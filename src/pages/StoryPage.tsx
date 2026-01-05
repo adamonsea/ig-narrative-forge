@@ -100,11 +100,13 @@ const StoryPage = () => {
         // Parse the JSONB result
         const data = storyData as any;
         
-        // Look up the canonical (original) story if this content exists in multiple topics
+        // Look up the canonical (original) story for duplicate content
+        // This handles: 1) Same content in multiple topics, 2) Same title scraped twice in same topic
         let canonicalStoryId: string | undefined;
         let canonicalTopicSlug: string | undefined;
         
         if (data.shared_content_id) {
+          // Find the oldest story with the same shared_content_id (cross-topic duplicates)
           const { data: canonicalData } = await supabase
             .from('stories')
             .select(`
@@ -123,6 +125,23 @@ const StoryPage = () => {
           if (canonicalData && canonicalData.id !== storyId) {
             canonicalStoryId = canonicalData.id;
             canonicalTopicSlug = (canonicalData.topic_article as any)?.topic?.slug;
+          }
+        }
+        
+        // If no canonical found via shared_content_id, check for title duplicates in same topic
+        if (!canonicalStoryId && data.title) {
+          const { data: titleDuplicates } = await supabase
+            .from('stories')
+            .select('id')
+            .eq('title', data.title)
+            .eq('status', 'published')
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          
+          if (titleDuplicates && titleDuplicates.id !== storyId) {
+            canonicalStoryId = titleDuplicates.id;
+            canonicalTopicSlug = slug; // Same topic
           }
         }
         
