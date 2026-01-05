@@ -1195,14 +1195,17 @@ export class FastTrackScraper {
     }
 
     // Validate date for all domains
+    // Use trusted_max_age_days from source config if available (for backfills)
+    const maxAgeDays = this.sourceConfig?.trusted_max_age_days || 7;
+    
     try {
       const pubDate = new Date(content.published_at);
       if (!isNaN(pubDate.getTime())) {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        if (pubDate < sevenDaysAgo) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+        if (pubDate < cutoffDate) {
           const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
-          console.log(`🚫 REJECT (${daysOld}d old): "${titlePreview}"`);
+          console.log(`🚫 REJECT (${daysOld}d old, max ${maxAgeDays}d): "${titlePreview}"`);
           return false;
         }
       } else {
