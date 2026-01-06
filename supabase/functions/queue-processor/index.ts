@@ -198,7 +198,8 @@ serve(async (req) => {
 
         const storyId = generationResult.storyId || generationResult.story_id;
         
-        // Auto-approve high-quality stories (respecting drip feed status)
+        // Auto-approve high-quality stories ONLY if auto_simplify_enabled is true
+        // If auto_simplify is off, the story stays at 'draft' for editorial review
         try {
           // Get the story's quality score, current status, and topic threshold
           const { data: story, error: storyError } = await supabase
@@ -208,11 +209,9 @@ serve(async (req) => {
             .single();
           
           if (story && !storyError) {
-            // Get topic's quality threshold (default 60)
-            let qualityThreshold = 60;
+            // Get topic_id from either legacy or multi-tenant path
             let topicId = null;
             
-            // Get topic_id from either legacy or multi-tenant path
             if (story.article_id) {
               const { data: article } = await supabase
                 .from('articles')
@@ -229,8 +228,20 @@ serve(async (req) => {
               topicId = topicArticle?.topic_id;
             }
             
-            // Get automation threshold if we have a topic
+            // Get topic settings including auto_simplify_enabled
+            let autoSimplifyEnabled = false;
+            let qualityThreshold = 60;
+            
             if (topicId) {
+              // Get topic's auto_simplify setting
+              const { data: topicData } = await supabase
+                .from('topics')
+                .select('auto_simplify_enabled')
+                .eq('id', topicId)
+                .single();
+              autoSimplifyEnabled = topicData?.auto_simplify_enabled || false;
+              
+              // Get automation threshold if we have one
               const { data: automation } = await supabase
                 .from('topic_automation_settings')
                 .select('quality_threshold')
@@ -241,29 +252,34 @@ serve(async (req) => {
               }
             }
             
-            // Check quality and respect the status set by enhanced-content-generator
-            // The generator sets 'ready' for drip-fed topics, 'published' for non-drip-fed
-            if (story.quality_score && story.quality_score >= qualityThreshold) {
-              // Quality is good - keep the status as set by the generator
-              // 'ready' for drip-fed topics (let drip scheduler handle publishing)
-              // 'published' for non-drip-fed topics
-              console.log(`🎯 Story ${storyId} auto-approved - quality score ${story.quality_score} >= threshold ${qualityThreshold}, keeping status '${story.status}'`);
-            } else {
-              // Quality below threshold - downgrade to 'pending_review' for manual review
-              const { error: reviewError } = await supabase
-                .from('stories')
-                .update({ 
-                  status: 'pending_review',
-                  is_published: false,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', storyId);
-              
-              if (!reviewError) {
-                console.log(`📝 Story ${storyId} needs review - quality score ${story.quality_score || 'unknown'} < threshold ${qualityThreshold}`);
+            // Only apply auto-approval logic if auto_simplify is enabled
+            // If auto_simplify is off, the story was created with 'draft' status
+            // and should stay there for editorial review
+            if (autoSimplifyEnabled) {
+              if (story.quality_score && story.quality_score >= qualityThreshold) {
+                // Quality is good - keep the status as set by the generator
+                // 'ready' for drip-fed topics, 'published' for non-drip-fed
+                console.log(`🎯 Story ${storyId} auto-approved - quality score ${story.quality_score} >= threshold ${qualityThreshold}, keeping status '${story.status}'`);
               } else {
-                console.warn('⚠️ Failed to mark story for review:', reviewError);
+                // Quality below threshold - downgrade to 'pending_review' for manual review
+                const { error: reviewError } = await supabase
+                  .from('stories')
+                  .update({ 
+                    status: 'pending_review',
+                    is_published: false,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', storyId);
+                
+                if (!reviewError) {
+                  console.log(`📝 Story ${storyId} needs review - quality score ${story.quality_score || 'unknown'} < threshold ${qualityThreshold}`);
+                } else {
+                  console.warn('⚠️ Failed to mark story for review:', reviewError);
+                }
               }
+            } else {
+              // Auto-simplify is OFF - story stays at 'draft' for editorial review
+              console.log(`📋 Story ${storyId} created with 'draft' status - auto_simplify is disabled, awaiting editorial review`);
             }
           }
         } catch (autoApproveError) {
