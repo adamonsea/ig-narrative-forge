@@ -1,16 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface AutoIllustrateRequest {
-  topicId?: string;
-  storyIds?: string[];
-  dryRun?: boolean;
-  maxIllustrations?: number;
-}
+// Zod schema for request validation
+const requestSchema = z.object({
+  topicId: z.string().uuid().optional(),
+  storyIds: z.array(z.string().uuid()).max(50).optional(),
+  dryRun: z.boolean().optional().default(false),
+  maxIllustrations: z.number().int().min(1).max(20).optional().default(5),
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,7 +25,27 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { topicId, storyIds, dryRun = false, maxIllustrations = 5 } = await req.json() as AutoIllustrateRequest;
+    // Parse and validate request body
+    let body = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body is acceptable, use defaults
+    }
+
+    const validated = requestSchema.safeParse(body);
+    if (!validated.success) {
+      console.error('Validation error:', validated.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request parameters',
+          details: validated.error.errors.map(e => ({ path: e.path.join('.'), message: e.message }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { topicId, storyIds, dryRun, maxIllustrations } = validated.data;
 
     console.log('Auto-illustrate request:', { topicId, storyIds, dryRun, maxIllustrations });
 

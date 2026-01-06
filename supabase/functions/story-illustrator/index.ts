@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 import { 
   analyzeStoryTone, 
   extractSubjectMatter, 
@@ -25,6 +26,12 @@ function isValidIllustrationStyle(value: unknown): value is IllustrationStyle {
     VALID_ILLUSTRATION_STYLES.includes(value as IllustrationStyle)
 }
 
+// Zod schema for request validation
+const requestSchema = z.object({
+  storyId: z.string().uuid(),
+  model: z.string().max(100).optional().default('gpt-image-1.5-medium'),
+});
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -32,6 +39,23 @@ serve(async (req) => {
   }
 
   try {
+    // Parse and validate request body
+    const body = await req.json();
+    const validated = requestSchema.safeParse(body);
+    
+    if (!validated.success) {
+      console.error('Validation error:', validated.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request parameters',
+          details: validated.error.errors.map(e => ({ path: e.path.join('.'), message: e.message }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { storyId, model } = validated.data;
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -45,8 +69,6 @@ serve(async (req) => {
         },
       }
     )
-
-    const { storyId, model = 'gpt-image-1.5-medium' } = await req.json()
     
     // Model configuration mapping
     interface ModelConfig {
