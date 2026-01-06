@@ -223,7 +223,7 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
 
           {/* Headline - newspaper style */}
           <h2 
-            className="text-xl font-bold leading-tight uppercase tracking-tight"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight uppercase tracking-tight"
             style={{
               color: '#2c2416',
               fontFamily: 'Georgia, "Times New Roman", serif',
