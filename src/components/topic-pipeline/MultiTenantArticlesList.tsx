@@ -274,8 +274,17 @@ export default function MultiTenantArticlesList({
             {article.title}
           </h3>
           
-          {/* Currentness Tag */}
-          <div className="mb-2">
+          {/* Published Date & Currentness Tag */}
+          <div className="mb-2 flex items-center gap-2">
+            {article.published_at && (
+              <span className="text-xs text-muted-foreground">
+                {new Date(article.published_at).toLocaleDateString('en-GB', { 
+                  day: 'numeric', 
+                  month: 'short', 
+                  year: 'numeric' 
+                })}
+              </span>
+            )}
             <div 
               className={`inline-flex px-2 py-1 rounded text-xs font-medium border ${getCurrentnessColor(article.published_at, article.created_at)}`}
             >
