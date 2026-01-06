@@ -772,11 +772,12 @@ Return in JSON format:
     let effectiveTone = tone;
     let effectiveWritingStyle = writingStyle;
     let dripFeedEnabled = false;
+    let autoSimplifyEnabled = false; // Controls whether stories skip editorial review
     
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled')
+        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled')
         .eq('id', article.topic_id)
         .maybeSingle();
       
@@ -785,7 +786,8 @@ Return in JSON format:
         effectiveTone = tone || topicData.default_tone;
         effectiveWritingStyle = writingStyle || topicData.default_writing_style;
         dripFeedEnabled = topicData.drip_feed_enabled || false;
-        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}`);
+        autoSimplifyEnabled = topicData.auto_simplify_enabled || false;
+        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}, autoSimplify=${autoSimplifyEnabled}`);
       }
     }
 
@@ -953,9 +955,28 @@ Return in JSON format:
     if (existingStory?.id) {
       storyId = existingStory.id;
       
-      // Determine story status based on drip feed settings
-      const storyStatus = dripFeedEnabled ? 'ready' : 'published';
-      const isPublished = !dripFeedEnabled;
+      // Determine story status based on auto_simplify and drip feed settings
+      // If auto_simplify is OFF, stories go to 'draft' for editorial review
+      // If auto_simplify is ON: drip_feed ON = 'ready', drip_feed OFF = 'published'
+      let storyStatus: string;
+      let isPublished: boolean;
+      
+      if (!autoSimplifyEnabled) {
+        // Editorial review required - story goes to 'draft' (arrivals)
+        storyStatus = 'draft';
+        isPublished = false;
+        console.log(`📝 Auto-simplify disabled - story will go to 'draft' for editorial review`);
+      } else if (dripFeedEnabled) {
+        // Auto-simplify ON + drip feed ON = 'ready' for scheduling
+        storyStatus = 'ready';
+        isPublished = false;
+        console.log(`💧 Drip feed enabled - setting story to 'ready' status for scheduling`);
+      } else {
+        // Auto-simplify ON + drip feed OFF = immediate publish
+        storyStatus = 'published';
+        isPublished = true;
+        console.log(`🚀 Auto-simplify enabled, no drip feed - story will be published immediately`);
+      }
       
       // Update story with multi-tenant linkage
       const updateData: any = { 
@@ -969,10 +990,6 @@ Return in JSON format:
         quality_score: article.content_quality_score,
         updated_at: new Date().toISOString()
       };
-      
-      if (dripFeedEnabled) {
-        console.log(`💧 Drip feed enabled - setting story to 'ready' status for scheduling`);
-      }
       
       // Preserve article image for social sharing if story doesn't have one
       if (article.image_url && !existingStory.cover_illustration_url) {
@@ -1002,9 +1019,28 @@ Return in JSON format:
         console.log(`📝 Updated existing story ${storyId} with multi-tenant linkage`);
       }
     } else {
-      // Determine story status based on drip feed settings
-      const storyStatus = dripFeedEnabled ? 'ready' : 'published';
-      const isPublished = !dripFeedEnabled;
+      // Determine story status based on auto_simplify and drip feed settings
+      // If auto_simplify is OFF, stories go to 'draft' for editorial review
+      // If auto_simplify is ON: drip_feed ON = 'ready', drip_feed OFF = 'published'
+      let storyStatus: string;
+      let isPublished: boolean;
+      
+      if (!autoSimplifyEnabled) {
+        // Editorial review required - story goes to 'draft' (arrivals)
+        storyStatus = 'draft';
+        isPublished = false;
+        console.log(`📝 Auto-simplify disabled - creating story with 'draft' status for editorial review`);
+      } else if (dripFeedEnabled) {
+        // Auto-simplify ON + drip feed ON = 'ready' for scheduling
+        storyStatus = 'ready';
+        isPublished = false;
+        console.log(`💧 Drip feed enabled - creating story with 'ready' status for scheduling`);
+      } else {
+        // Auto-simplify ON + drip feed OFF = immediate publish
+        storyStatus = 'published';
+        isPublished = true;
+        console.log(`🚀 Auto-simplify enabled, no drip feed - creating story as published`);
+      }
       
       // Create new story with full multi-tenant support
       const insertData: any = {
@@ -1018,10 +1054,6 @@ Return in JSON format:
         quality_score: article.content_quality_score,
         cover_illustration_url: article.image_url || null
       };
-      
-      if (dripFeedEnabled) {
-        console.log(`💧 Drip feed enabled - creating story with 'ready' status for scheduling`);
-      }
       
       // Set appropriate IDs based on context - mutually exclusive
       if (isMultiTenant) {
