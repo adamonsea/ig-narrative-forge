@@ -37,7 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles, Code } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles, Code, Rss, Mail } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
@@ -100,6 +100,8 @@ interface Topic {
   donation_config?: any;
   drip_feed_enabled?: boolean;
   public_widget_builder_enabled?: boolean;
+  rss_enabled?: boolean;
+  email_subscriptions_enabled?: boolean;
 }
 
 const SCRAPING_WINDOW_OPTIONS = new Set([7, 30, 60, 100]);
@@ -187,7 +189,7 @@ const TopicDashboard = () => {
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color, drip_feed_enabled')
+        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color, drip_feed_enabled, rss_enabled, email_subscriptions_enabled')
         .eq('slug', slug)
         .single();
 
@@ -932,6 +934,59 @@ const TopicDashboard = () => {
                         </Button>
                       </div>
                     )}
+                  </div>
+
+                  {/* Distribution Channels - RSS & Email */}
+                  <div className="border-t pt-4 space-y-4">
+                    <Label className="text-sm font-medium">Distribution Channels</Label>
+                    
+                    {/* RSS Feed Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-2 text-sm">
+                          <Rss className="w-4 h-4" />
+                          RSS Feed
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Allow subscribers to access this feed via RSS</p>
+                      </div>
+                      <Switch
+                        checked={topic.rss_enabled || false}
+                        onCheckedChange={async (checked) => {
+                          const { error } = await supabase
+                            .from('topics')
+                            .update({ rss_enabled: checked })
+                            .eq('id', topic.id);
+                          if (!error) {
+                            loadTopicAndStats();
+                            toast({ title: checked ? "RSS feed enabled" : "RSS feed disabled" });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* Email Subscriptions Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-2 text-sm">
+                          <Mail className="w-4 h-4" />
+                          Email Subscriptions
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Allow readers to subscribe to email newsletters</p>
+                      </div>
+                      <Switch
+                        checked={topic.email_subscriptions_enabled || false}
+                        onCheckedChange={async (checked) => {
+                          const { error } = await supabase
+                            .from('topics')
+                            .update({ email_subscriptions_enabled: checked })
+                            .eq('id', topic.id);
+                          if (!error) {
+                            loadTopicAndStats();
+                            toast({ title: checked ? "Email subscriptions enabled" : "Email subscriptions disabled" });
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                   
                   <div className="border-t pt-4">
