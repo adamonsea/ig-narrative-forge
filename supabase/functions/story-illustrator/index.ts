@@ -844,8 +844,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           model: openaiModelName,
           size: '1536x1024',
           quality: modelConfig.quality || 'medium',
-          output_format: 'webp',
-          output_compression: compressionLevel
+          output_format: 'png'
         }));
         
         // Try to parse error details
