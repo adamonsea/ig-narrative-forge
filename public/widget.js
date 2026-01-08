@@ -15,7 +15,8 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.1.0';
+  const WIDGET_VERSION = '1.2.0';
+  const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Generate a simple visitor hash for deduplication
   function getVisitorHash() {
@@ -75,6 +76,7 @@
     const accentColor = container.dataset.accent;
     const width = container.dataset.width || 'responsive';
     const layout = width === 'wide' ? 'wide' : 'compact';
+    const customTitle = container.dataset.title || ''; // Custom title support
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -96,24 +98,80 @@
     // Create widget container
     const wrapper = document.createElement('div');
     wrapper.className = 'eezee-widget';
-    wrapper.innerHTML = getLoadingHTML();
+    
+    // Try to show cached data immediately while fetching fresh data
+    const cached = getCachedData(feedSlug);
+    if (cached) {
+      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle);
+      attachClickHandlers(shadow, feedSlug);
+    } else {
+      wrapper.innerHTML = getLoadingHTML();
+    }
     shadow.appendChild(wrapper);
 
-    // Fetch data and render
+    // Fetch fresh data
     fetchFeedData(feedSlug, maxStories)
       .then(data => {
-        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, feedSlug);
+        // Cache the successful response
+        setCachedData(feedSlug, data);
         
-        // Track impression after successful render
-        trackEvent(feedSlug, 'impression');
+        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle);
+        
+        // Track impression after successful render (only if not cached initially)
+        if (!cached) {
+          trackEvent(feedSlug, 'impression');
+        }
         
         // Attach click handlers for story tracking
         attachClickHandlers(shadow, feedSlug);
       })
       .catch(error => {
         console.error('Curatr Widget Error:', error);
-        wrapper.innerHTML = getErrorHTML();
+        
+        // If we have cached data, keep showing it (graceful degradation)
+        if (cached) {
+          console.log('Curatr Widget: Using cached data due to fetch error');
+          // Already showing cached data, no need to update
+        } else {
+          // No cache available, show minimal error state
+          wrapper.innerHTML = getGracefulErrorHTML(feedSlug);
+        }
       });
+  }
+
+  // Cache management for graceful degradation
+  function getCacheKey(feedSlug) {
+    return `curatr_widget_cache_${feedSlug}`;
+  }
+
+  function getCachedData(feedSlug) {
+    try {
+      const cached = localStorage.getItem(getCacheKey(feedSlug));
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      
+      // Check if cache is still valid
+      if (Date.now() - timestamp > CACHE_TTL_MS) {
+        localStorage.removeItem(getCacheKey(feedSlug));
+        return null;
+      }
+      
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setCachedData(feedSlug, data) {
+    try {
+      localStorage.setItem(getCacheKey(feedSlug), JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // localStorage full or unavailable - ignore
+    }
   }
 
   // Attach click handlers to track story clicks
@@ -140,9 +198,10 @@
     return response.json();
   }
 
-  function renderWidget(data, isDark, accentOverride, layout = 'compact') {
+  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '') {
     const { feed, stories } = data;
     const accent = accentOverride || feed.brand_color || '#3b82f6';
+    const displayName = customTitle || feed.name;
 
     if (!stories || stories.length === 0) {
       return `
@@ -155,8 +214,8 @@
     // Prefer icon_url (favicon) for circular avatar, fallback to logo_url
     const avatarUrl = feed.icon_url || feed.logo_url;
     const logoHTML = avatarUrl 
-      ? `<img src="${avatarUrl}" alt="${feed.name}" class="widget-logo" />`
-      : `<span class="widget-logo-text" style="background: ${accent}">${feed.name.charAt(0)}</span>`;
+      ? `<img src="${avatarUrl}" alt="${escapeHTML(displayName)}" class="widget-logo" />`
+      : `<span class="widget-logo-text" style="background: ${accent}">${displayName.charAt(0)}</span>`;
 
     // Wide layout with featured story + list
     if (layout === 'wide' && stories.length > 0) {
@@ -192,7 +251,7 @@
       return `
         <div class="widget-header">
           ${logoHTML}
-          <span class="widget-name">${escapeHTML(feed.name)}</span>
+          <span class="widget-name">${escapeHTML(displayName)}</span>
         </div>
         <div class="widget-grid">
           <a href="${featured.url}" target="_blank" rel="noopener" class="featured-story" data-story-id="${featured.id || ''}">
@@ -237,7 +296,7 @@
     return `
       <div class="widget-header">
         ${logoHTML}
-        <span class="widget-name">${escapeHTML(feed.name)}</span>
+        <span class="widget-name">${escapeHTML(displayName)}</span>
       </div>
       <div class="widget-stories">
         ${storiesHTML}
@@ -552,6 +611,18 @@
     return `
       <div class="widget-error">
         <p>Unable to load feed</p>
+      </div>
+    `;
+  }
+
+  // Graceful error that shows a link to the feed instead of breaking
+  function getGracefulErrorHTML(feedSlug) {
+    return `
+      <div class="widget-error">
+        <p>Headlines temporarily unavailable</p>
+        <a href="https://curatr.pro/feed/${feedSlug}" target="_blank" rel="noopener" style="color: #3b82f6; font-size: 12px;">
+          View feed →
+        </a>
       </div>
     `;
   }
