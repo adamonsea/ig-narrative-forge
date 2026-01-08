@@ -92,15 +92,27 @@ serve(async (req) => {
 
     // Build story URLs with source attribution and images
     const baseUrl = `https://eezeenews.lovable.app`;
-    const formattedStories = (stories || []).map(story => ({
-      id: story.id,
-      title: story.title,
-      url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
-      published_at: story.created_at,
-      source_name: story.publication_name || null,
-      source_url: story.articles?.source_url || null,
-      image_url: story.cover_illustration_url || story.articles?.image_url || null,
-    }));
+    const formattedStories = (stories || []).map(story => {
+      const sourceUrl = story.articles?.source_url || null;
+      let fallbackSourceName: string | null = null;
+      if (sourceUrl) {
+        try {
+          fallbackSourceName = new URL(sourceUrl).hostname.replace(/^www\./, '');
+        } catch {
+          // ignore invalid URLs
+        }
+      }
+
+      return {
+        id: story.id,
+        title: story.title,
+        url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
+        published_at: story.created_at,
+        source_name: story.publication_name || fallbackSourceName,
+        source_url: sourceUrl,
+        image_url: story.cover_illustration_url || story.articles?.image_url || null,
+      };
+    });
 
     console.log(`✅ Returning ${formattedStories.length} stories for widget`);
 

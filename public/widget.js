@@ -15,7 +15,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.2.0';
+  const WIDGET_VERSION = '1.2.1';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Generate a simple visitor hash for deduplication
