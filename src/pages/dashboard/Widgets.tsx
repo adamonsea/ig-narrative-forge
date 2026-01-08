@@ -341,15 +341,15 @@ function WidgetPreview({
         className="flex items-center gap-2.5 pb-3 mb-3"
         style={{ borderBottom: `1px solid ${border}` }}
       >
-        {data.feed.logo_url ? (
+        {(data.feed.icon_url || data.feed.logo_url) ? (
           <img 
-            src={data.feed.logo_url} 
+            src={data.feed.icon_url || data.feed.logo_url} 
             alt={data.feed.name}
-            className="w-7 h-7 rounded-md object-cover"
+            className="w-7 h-7 rounded-full object-cover"
           />
         ) : (
           <div 
-            className="w-7 h-7 rounded-md flex items-center justify-center text-white font-semibold text-sm"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white font-semibold text-sm"
             style={{ background: accent }}
           >
             {data.feed.name.charAt(0)}
@@ -363,7 +363,7 @@ function WidgetPreview({
         {data.stories.map((story: any, idx: number) => (
           <div 
             key={idx}
-            className="flex items-start gap-2.5 p-2 rounded-lg transition-colors cursor-pointer"
+            className="flex items-start gap-2.5 p-2 rounded-lg transition-colors"
             style={{ 
               marginLeft: "-8px", 
               marginRight: "-8px",
@@ -373,7 +373,25 @@ function WidgetPreview({
               className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
               style={{ background: accent }}
             />
-            <span className="font-medium line-clamp-2">{story.title}</span>
+            <div className="flex-1 min-w-0">
+              <a 
+                href={story.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium line-clamp-2 hover:underline block"
+                style={{ color: text }}
+              >
+                {story.title}
+              </a>
+              {story.source_name && (
+                <span 
+                  className="inline-block text-xs px-1.5 py-0.5 rounded mt-1"
+                  style={{ background: isDark ? '#2a2a2a' : '#f3f4f6', color: textMuted }}
+                >
+                  {story.source_name}
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -384,14 +402,25 @@ function WidgetPreview({
         style={{ borderTop: `1px solid ${border}` }}
       >
         <a 
-          href="#" 
-          className="font-medium text-sm no-underline"
+          href={`https://curatr.pro/feed/${data.feed.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-sm no-underline hover:underline"
           style={{ color: accent }}
         >
           View all stories →
         </a>
         <span className="text-xs" style={{ color: textMuted }}>
-          Powered by Curatr
+          Powered by{' '}
+          <a 
+            href="https://curatr.pro" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:underline"
+            style={{ color: textMuted }}
+          >
+            Curatr
+          </a>
         </span>
       </div>
     </div>

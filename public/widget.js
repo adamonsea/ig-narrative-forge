@@ -89,8 +89,10 @@
       `;
     }
 
-    const logoHTML = feed.logo_url 
-      ? `<img src="${feed.logo_url}" alt="${feed.name}" class="widget-logo" />`
+    // Prefer icon_url (favicon) for circular avatar, fallback to logo_url
+    const avatarUrl = feed.icon_url || feed.logo_url;
+    const logoHTML = avatarUrl 
+      ? `<img src="${avatarUrl}" alt="${feed.name}" class="widget-logo" />`
       : `<span class="widget-logo-text" style="background: ${accent}">${feed.name.charAt(0)}</span>`;
 
     const storiesHTML = stories.map(story => {
