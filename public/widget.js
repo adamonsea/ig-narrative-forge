@@ -15,7 +15,52 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.0.0';
+  const WIDGET_VERSION = '1.1.0';
+
+  // Generate a simple visitor hash for deduplication
+  function getVisitorHash() {
+    const stored = localStorage.getItem('curatr_visitor_hash');
+    if (stored) return stored;
+    
+    const hash = 'v_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    try {
+      localStorage.setItem('curatr_visitor_hash', hash);
+    } catch (e) {
+      // localStorage not available
+    }
+    return hash;
+  }
+
+  // Track analytics event
+  function trackEvent(feedSlug, eventType, storyId = null) {
+    try {
+      const payload = {
+        feedSlug,
+        eventType,
+        storyId,
+        visitorHash: getVisitorHash(),
+        referrerUrl: window.location.href
+      };
+
+      // Use sendBeacon for reliable tracking (doesn't block navigation)
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(
+          `${API_BASE}/widget-analytics`,
+          JSON.stringify(payload)
+        );
+      } else {
+        // Fallback to fetch
+        fetch(`${API_BASE}/widget-analytics`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(() => {});
+      }
+    } catch (e) {
+      // Silently fail analytics
+    }
+  }
 
   // Find all widget containers
   function initWidgets() {
@@ -57,12 +102,29 @@
     // Fetch data and render
     fetchFeedData(feedSlug, maxStories)
       .then(data => {
-        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout);
+        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, feedSlug);
+        
+        // Track impression after successful render
+        trackEvent(feedSlug, 'impression');
+        
+        // Attach click handlers for story tracking
+        attachClickHandlers(shadow, feedSlug);
       })
       .catch(error => {
         console.error('Curatr Widget Error:', error);
         wrapper.innerHTML = getErrorHTML();
       });
+  }
+
+  // Attach click handlers to track story clicks
+  function attachClickHandlers(shadow, feedSlug) {
+    const storyLinks = shadow.querySelectorAll('[data-story-id]');
+    storyLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        const storyId = link.dataset.storyId;
+        trackEvent(feedSlug, 'click', storyId);
+      });
+    });
   }
 
   async function fetchFeedData(feedSlug, maxStories) {
@@ -113,7 +175,7 @@
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
         return `
-          <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact">
+          <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
             ${thumbHTML}
             <div class="story-content">
               <span class="story-title">${escapeHTML(story.title)}</span>
@@ -133,7 +195,7 @@
           <span class="widget-name">${escapeHTML(feed.name)}</span>
         </div>
         <div class="widget-grid">
-          <a href="${featured.url}" target="_blank" rel="noopener" class="featured-story">
+          <a href="${featured.url}" target="_blank" rel="noopener" class="featured-story" data-story-id="${featured.id || ''}">
             ${featuredImageHTML}
             <h3 class="featured-title">${escapeHTML(featured.title)}</h3>
             ${featuredSourceHTML}
@@ -162,7 +224,7 @@
           : '';
       
       return `
-        <a href="${story.url}" target="_blank" rel="noopener" class="story-item">
+        <a href="${story.url}" target="_blank" rel="noopener" class="story-item" data-story-id="${story.id || ''}">
           <span class="story-bullet" style="background: ${accent}"></span>
           <div class="story-content">
             <span class="story-title">${escapeHTML(story.title)}</span>

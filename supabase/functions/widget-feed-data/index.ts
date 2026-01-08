@@ -93,6 +93,7 @@ serve(async (req) => {
     // Build story URLs with source attribution and images
     const baseUrl = `https://eezeenews.lovable.app`;
     const formattedStories = (stories || []).map(story => ({
+      id: story.id,
       title: story.title,
       url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
       published_at: story.created_at,
