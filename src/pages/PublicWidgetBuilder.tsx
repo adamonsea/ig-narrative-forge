@@ -27,6 +27,7 @@ interface WidgetConfig {
   theme: 'auto' | 'light' | 'dark';
   accent: string;
   width: string;
+  customTitle: string;
 }
 
 interface PreviewStory {
@@ -60,6 +61,7 @@ export default function PublicWidgetBuilder() {
     theme: 'auto',
     accent: '',
     width: 'responsive',
+    customTitle: '',
   });
 
   // Load topic data
@@ -141,6 +143,9 @@ export default function PublicWidgetBuilder() {
     }
     if (config.width !== 'responsive') {
       code += ` data-width="${config.width}"`;
+    }
+    if (config.customTitle) {
+      code += ` data-title="${config.customTitle.replace(/"/g, '&quot;')}"`;
     }
     
     code += `></div>\n<script src="${window.location.origin}/widget.js" async></script>`;
@@ -264,6 +269,21 @@ export default function PublicWidgetBuilder() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Widget title</Label>
+                  <input
+                    type="text"
+                    value={config.customTitle}
+                    onChange={(e) => setConfig(prev => ({ ...prev, customTitle: e.target.value }))}
+                    placeholder={topic.name}
+                    className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+                    maxLength={100}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to use "{topic.name}"
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Headlines to show</Label>
                   <Select
@@ -397,7 +417,7 @@ export default function PublicWidgetBuilder() {
                     data={previewData} 
                     theme="light" 
                     accent={accentColor}
-                    topicName={topic.name}
+                    topicName={config.customTitle || topic.name}
                     wideLayout={isWideLayout}
                   />
                 </div>
@@ -409,7 +429,7 @@ export default function PublicWidgetBuilder() {
                     data={previewData} 
                     theme="dark" 
                     accent={accentColor}
-                    topicName={topic.name}
+                    topicName={config.customTitle || topic.name}
                     wideLayout={isWideLayout}
                   />
                 </div>
