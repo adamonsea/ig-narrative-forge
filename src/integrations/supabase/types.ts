@@ -4187,6 +4187,58 @@ export type Database = {
           },
         ]
       }
+      widget_analytics: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          referrer_url: string | null
+          story_id: string | null
+          topic_id: string
+          visitor_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          referrer_url?: string | null
+          story_id?: string | null
+          topic_id: string
+          visitor_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          referrer_url?: string | null
+          story_id?: string | null
+          topic_id?: string
+          visitor_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "widget_analytics_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "widget_analytics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "widget_analytics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       content_sources_basic: {

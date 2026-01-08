@@ -504,6 +504,9 @@ verify_jwt = false
 [functions.widget-feed-data]
 verify_jwt = false
 
+[functions.widget-analytics]
+verify_jwt = false
+
 [functions.rss-feed]
 verify_jwt = false
 
@@ -516,4 +519,3 @@ verify_jwt = false
 
 [functions.deactivate-sources]
 verify_jwt = false
-
