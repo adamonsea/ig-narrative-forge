@@ -127,6 +127,8 @@ export default function PublicWidgetBuilder() {
     fetchPreview();
   }, [slug, config.maxHeadlines]);
 
+  const WIDGET_JS_VERSION = '1.2.1';
+
   const generateEmbedCode = () => {
     if (!slug) return '';
     
@@ -148,7 +150,7 @@ export default function PublicWidgetBuilder() {
       code += ` data-title="${config.customTitle.replace(/"/g, '&quot;')}"`;
     }
     
-    code += `></div>\n<script src="${window.location.origin}/widget.js" async></script>`;
+    code += `></div>\n<script src="${window.location.origin}/widget.js?v=${WIDGET_JS_VERSION}" async></script>`;
     
     return code;
   };
