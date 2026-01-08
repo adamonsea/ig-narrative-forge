@@ -33,6 +33,7 @@ interface PreviewStory {
   title: string;
   url: string;
   source_name?: string;
+  image_url?: string;
 }
 
 export default function PublicWidgetBuilder() {
@@ -140,13 +141,17 @@ export default function PublicWidgetBuilder() {
 
   const getPreviewWidth = () => {
     if (config.width === 'responsive') return '100%';
+    if (config.width === 'wide') return '100%';
     return config.width;
   };
 
   const getPreviewMaxWidth = () => {
     if (config.width === 'responsive') return '480px';
+    if (config.width === 'wide') return '1000px';
     return config.width === '100%' ? 'none' : config.width;
   };
+
+  const isWideLayout = config.width === 'wide';
 
   const handleCopy = async () => {
     try {
@@ -294,6 +299,7 @@ export default function PublicWidgetBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="wide">Wide (max 1000px) — with images</SelectItem>
                       <SelectItem value="responsive">Responsive (max 480px)</SelectItem>
                       <SelectItem value="100%">Full width</SelectItem>
                       <SelectItem value="400px">400px</SelectItem>
@@ -302,7 +308,7 @@ export default function PublicWidgetBuilder() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Responsive adapts to container but stays readable
+                    Wide layout shows featured story with image
                   </p>
                 </div>
 
@@ -383,6 +389,7 @@ export default function PublicWidgetBuilder() {
                     theme="light" 
                     accent={accentColor}
                     topicName={topic.name}
+                    wideLayout={isWideLayout}
                   />
                 </div>
               </TabsContent>
@@ -394,6 +401,7 @@ export default function PublicWidgetBuilder() {
                     theme="dark" 
                     accent={accentColor}
                     topicName={topic.name}
+                    wideLayout={isWideLayout}
                   />
                 </div>
               </TabsContent>
@@ -410,12 +418,14 @@ function WidgetPreview({
   data, 
   theme, 
   accent, 
-  topicName 
+  topicName,
+  wideLayout = false
 }: { 
   data: { feed: TopicData | null; stories: PreviewStory[] } | null; 
   theme: 'light' | 'dark'; 
   accent: string;
   topicName: string;
+  wideLayout?: boolean;
 }) {
   const isDark = theme === 'dark';
   const textColor = isDark ? '#f3f4f6' : '#1f2937';
@@ -423,6 +433,7 @@ function WidgetPreview({
   const bgColor = isDark ? '#18181b' : '#ffffff';
   const borderColor = isDark ? '#27272a' : '#e5e7eb';
   const sourceBg = isDark ? '#27272a' : '#f3f4f6';
+  const hoverBg = isDark ? '#252525' : '#f9fafb';
 
   if (!data) {
     return (
@@ -432,6 +443,154 @@ function WidgetPreview({
     );
   }
 
+  const featuredStory = data.stories[0];
+  const remainingStories = data.stories.slice(1);
+
+  // Wide layout with featured story + list
+  if (wideLayout && featuredStory) {
+    return (
+      <div 
+        className="rounded-lg border overflow-hidden"
+        style={{ 
+          background: bgColor, 
+          borderColor: borderColor,
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}
+      >
+        {/* Header */}
+        <div className="p-4 border-b flex items-center gap-3" style={{ borderColor }}>
+          {(data.feed?.branding_config?.icon_url || data.feed?.branding_config?.logo_url) ? (
+            <img 
+              src={data.feed.branding_config.icon_url || data.feed.branding_config.logo_url} 
+              alt="" 
+              className="w-8 h-8 rounded-full object-cover" 
+            />
+          ) : (
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
+              style={{ background: accent }}
+            >
+              {topicName.charAt(0)}
+            </div>
+          )}
+          <span className="font-semibold" style={{ color: textColor }}>
+            {topicName}
+          </span>
+        </div>
+
+        {/* Featured story + list grid */}
+        <div className="grid md:grid-cols-2 gap-0">
+          {/* Featured story with image */}
+          <a 
+            href={featuredStory.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block p-4 border-b md:border-b-0 md:border-r transition-colors"
+            style={{ borderColor }}
+            onMouseEnter={(e) => e.currentTarget.style.background = hoverBg}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            {featuredStory.image_url && (
+              <div className="aspect-video rounded-lg overflow-hidden mb-3 bg-muted">
+                <img 
+                  src={featuredStory.image_url} 
+                  alt="" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <h3 
+              className="font-semibold text-lg leading-snug mb-2 hover:underline"
+              style={{ color: textColor }}
+            >
+              {featuredStory.title}
+            </h3>
+            {featuredStory.source_name && (
+              <span 
+                className="inline-block text-xs px-2 py-0.5 rounded"
+                style={{ background: sourceBg, color: mutedColor }}
+              >
+                {featuredStory.source_name}
+              </span>
+            )}
+          </a>
+
+          {/* Remaining stories as compact list */}
+          <div className="divide-y" style={{ borderColor }}>
+            {remainingStories.map((story, i) => (
+              <a 
+                key={i}
+                href={story.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-3 transition-colors"
+                onMouseEnter={(e) => e.currentTarget.style.background = hoverBg}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <div className="flex gap-3">
+                  {story.image_url && (
+                    <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-muted">
+                      <img 
+                        src={story.image_url} 
+                        alt="" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h4 
+                      className="font-medium text-sm leading-snug line-clamp-2 hover:underline"
+                      style={{ color: textColor }}
+                    >
+                      {story.title}
+                    </h4>
+                    {story.source_name && (
+                      <span 
+                        className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded"
+                        style={{ background: sourceBg, color: mutedColor }}
+                      >
+                        {story.source_name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div 
+          className="px-4 py-3 border-t text-sm flex justify-between items-center"
+          style={{ borderColor, color: mutedColor }}
+        >
+          <a 
+            href={`https://curatr.pro/feed/${data.feed?.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:underline"
+            style={{ color: accent }}
+          >
+            View all stories →
+          </a>
+          <span>
+            Powered by{' '}
+            <a 
+              href="https://curatr.pro" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:underline"
+              style={{ color: accent }}
+            >
+              curatr.pro
+            </a>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Default compact list layout
   return (
     <div 
       className="rounded-lg border overflow-hidden"
