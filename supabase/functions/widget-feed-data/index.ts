@@ -59,6 +59,7 @@ serve(async (req) => {
       name: topic.name,
       slug: topic.slug,
       logo_url: branding.logo_url || null,
+      icon_url: branding.icon_url || null,
       brand_color: branding.primary_color || branding.brand_color || '#3b82f6',
     };
 

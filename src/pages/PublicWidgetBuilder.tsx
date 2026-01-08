@@ -18,6 +18,7 @@ interface TopicData {
   branding_config?: {
     primary_color?: string;
     logo_url?: string;
+    icon_url?: string;
   } | null;
 }
 
@@ -428,8 +429,12 @@ function WidgetPreview({
     >
       {/* Header */}
       <div className="p-3 border-b flex items-center gap-2" style={{ borderColor }}>
-        {data.feed?.branding_config?.logo_url ? (
-          <img src={data.feed.branding_config.logo_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+        {(data.feed?.branding_config?.icon_url || data.feed?.branding_config?.logo_url) ? (
+          <img 
+            src={data.feed.branding_config.icon_url || data.feed.branding_config.logo_url} 
+            alt="" 
+            className="w-6 h-6 rounded-full object-cover" 
+          />
         ) : (
           <div 
             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
@@ -452,12 +457,15 @@ function WidgetPreview({
               style={{ background: accent }}
             />
             <div className="flex-1 min-w-0">
-              <div 
-                className="text-sm font-medium leading-snug"
+              <a 
+                href={story.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium leading-snug hover:underline block"
                 style={{ color: textColor }}
               >
                 {story.title}
-              </div>
+              </a>
               {story.source_name && (
                 <span 
                   className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded"
@@ -476,10 +484,30 @@ function WidgetPreview({
 
       {/* Footer */}
       <div 
-        className="px-3 py-2 border-t text-xs text-center"
+        className="px-3 py-2 border-t text-xs flex justify-between items-center"
         style={{ borderColor, color: mutedColor }}
       >
-        Powered by <span style={{ color: accent }}>curatr.pro</span>
+        <a 
+          href={`https://curatr.pro/feed/${data.feed?.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium hover:underline"
+          style={{ color: accent }}
+        >
+          View all stories →
+        </a>
+        <span>
+          Powered by{' '}
+          <a 
+            href="https://curatr.pro" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:underline"
+            style={{ color: accent }}
+          >
+            curatr.pro
+          </a>
+        </span>
       </div>
     </div>
   );
