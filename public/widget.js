@@ -227,15 +227,12 @@
         : '';
 
       const remainingHTML = remaining.map(story => {
-        const thumbHTML = story.image_url 
-          ? `<div class="story-thumb"><img src="${story.image_url}" alt="" /></div>`
-          : '';
         const sourceHTML = story.source_name 
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
         return `
           <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
-            ${thumbHTML}
+            <span class="story-bullet" style="background: ${accent}"></span>
             <div class="story-content">
               <span class="story-title">${escapeHTML(story.title)}</span>
               ${sourceHTML}
