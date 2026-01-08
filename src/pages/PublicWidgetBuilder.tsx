@@ -36,6 +36,15 @@ interface PreviewStory {
   image_url?: string;
 }
 
+// Feed data returned from edge function (different from TopicData)
+interface PreviewFeed {
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  icon_url?: string | null;
+  brand_color?: string;
+}
+
 export default function PublicWidgetBuilder() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -44,7 +53,7 @@ export default function PublicWidgetBuilder() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [previewData, setPreviewData] = useState<{ feed: TopicData | null; stories: PreviewStory[] } | null>(null);
+  const [previewData, setPreviewData] = useState<{ feed: PreviewFeed | null; stories: PreviewStory[] } | null>(null);
   
   const [config, setConfig] = useState<WidgetConfig>({
     maxHeadlines: 5,
@@ -421,7 +430,7 @@ function WidgetPreview({
   topicName,
   wideLayout = false
 }: { 
-  data: { feed: TopicData | null; stories: PreviewStory[] } | null; 
+  data: { feed: PreviewFeed | null; stories: PreviewStory[] } | null;
   theme: 'light' | 'dark'; 
   accent: string;
   topicName: string;
@@ -459,9 +468,9 @@ function WidgetPreview({
       >
         {/* Header */}
         <div className="p-4 border-b flex items-center gap-3" style={{ borderColor }}>
-          {(data.feed?.branding_config?.icon_url || data.feed?.branding_config?.logo_url) ? (
+          {(data.feed?.icon_url || data.feed?.logo_url) ? (
             <img 
-              src={data.feed.branding_config.icon_url || data.feed.branding_config.logo_url} 
+              src={data.feed.icon_url || data.feed.logo_url} 
               alt="" 
               className="w-8 h-8 rounded-full object-cover" 
             />
@@ -602,9 +611,9 @@ function WidgetPreview({
     >
       {/* Header */}
       <div className="p-3 border-b flex items-center gap-2" style={{ borderColor }}>
-        {(data.feed?.branding_config?.icon_url || data.feed?.branding_config?.logo_url) ? (
+        {(data.feed?.icon_url || data.feed?.logo_url) ? (
           <img 
-            src={data.feed.branding_config.icon_url || data.feed.branding_config.logo_url} 
+            src={data.feed.icon_url || data.feed.logo_url} 
             alt="" 
             className="w-6 h-6 rounded-full object-cover" 
           />
