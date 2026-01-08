@@ -91,7 +91,7 @@ serve(async (req) => {
     }
 
     // Build story URLs with source attribution and images
-    const baseUrl = `https://eezeenews.lovable.app`;
+    const baseUrl = `https://curatr.pro`;
     const formattedStories = (stories || []).map(story => {
       const sourceUrl = story.articles?.source_url || null;
       let fallbackSourceName: string | null = null;
