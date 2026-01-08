@@ -139,10 +139,16 @@
     const border = isDark ? '#333333' : '#e5e7eb';
     const hoverBg = isDark ? '#252525' : '#f9fafb';
 
+    // Handle responsive width (default behavior)
+    const isResponsive = !width || width === 'responsive' || width === '100%';
+    const widthStyle = isResponsive ? '100%' : width;
+    const maxWidthStyle = width === 'responsive' || !width ? '480px' : (width === '100%' ? 'none' : width);
+
     return `
       :host {
         display: block;
-        width: ${width};
+        width: ${widthStyle};
+        max-width: ${maxWidthStyle};
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         font-size: 14px;
         line-height: 1.5;
