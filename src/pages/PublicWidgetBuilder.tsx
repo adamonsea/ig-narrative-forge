@@ -556,16 +556,11 @@ function WidgetPreview({
                 onMouseEnter={(e) => e.currentTarget.style.background = hoverBg}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <div className="flex gap-3">
-                  {story.image_url && (
-                    <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-muted">
-                      <img 
-                        src={story.image_url} 
-                        alt="" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
+                <div className="flex gap-2 items-start">
+                  <div 
+                    className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" 
+                    style={{ background: accent }}
+                  />
                   <div className="flex-1 min-w-0">
                     <h4 
                       className="font-medium text-sm leading-snug line-clamp-2 hover:underline"
