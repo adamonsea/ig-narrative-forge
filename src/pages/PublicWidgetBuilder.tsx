@@ -49,7 +49,7 @@ export default function PublicWidgetBuilder() {
     maxHeadlines: 5,
     theme: 'auto',
     accent: '',
-    width: '100%',
+    width: 'responsive',
   });
 
   // Load topic data
@@ -129,13 +129,23 @@ export default function PublicWidgetBuilder() {
     if (config.accent) {
       code += ` data-accent="${config.accent}"`;
     }
-    if (config.width !== '100%') {
+    if (config.width !== 'responsive') {
       code += ` data-width="${config.width}"`;
     }
     
     code += `></div>\n<script src="${window.location.origin}/widget.js" async></script>`;
     
     return code;
+  };
+
+  const getPreviewWidth = () => {
+    if (config.width === 'responsive') return '100%';
+    return config.width;
+  };
+
+  const getPreviewMaxWidth = () => {
+    if (config.width === 'responsive') return '480px';
+    return config.width === '100%' ? 'none' : config.width;
   };
 
   const handleCopy = async () => {
@@ -284,12 +294,16 @@ export default function PublicWidgetBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="responsive">Responsive (max 480px)</SelectItem>
                       <SelectItem value="100%">Full width</SelectItem>
                       <SelectItem value="400px">400px</SelectItem>
                       <SelectItem value="350px">350px</SelectItem>
                       <SelectItem value="300px">300px</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Responsive adapts to container but stays readable
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -363,7 +377,7 @@ export default function PublicWidgetBuilder() {
               </TabsList>
               
               <TabsContent value="light">
-                <div className="p-6 bg-white rounded-lg border" style={{ maxWidth: config.width }}>
+                <div className="p-6 bg-white rounded-lg border" style={{ width: getPreviewWidth(), maxWidth: getPreviewMaxWidth() }}>
                   <WidgetPreview 
                     data={previewData} 
                     theme="light" 
@@ -374,7 +388,7 @@ export default function PublicWidgetBuilder() {
               </TabsContent>
               
               <TabsContent value="dark">
-                <div className="p-6 bg-zinc-900 rounded-lg border border-zinc-700" style={{ maxWidth: config.width }}>
+                <div className="p-6 bg-zinc-900 rounded-lg border border-zinc-700" style={{ width: getPreviewWidth(), maxWidth: getPreviewMaxWidth() }}>
                   <WidgetPreview 
                     data={previewData} 
                     theme="dark" 
