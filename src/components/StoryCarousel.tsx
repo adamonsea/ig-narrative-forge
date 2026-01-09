@@ -107,9 +107,30 @@ interface StoryCarouselProps {
   topicName?: string; // Topic name for branded WhatsApp share
   topicSlug?: string; // Topic slug for branded WhatsApp share
   onMoreLikeThis?: (story: Story) => void;
+  /** Pre-fetched reaction counts from batch hook */
+  prefetchedReactionCounts?: {
+    thumbsUp: number;
+    thumbsDown: number;
+    userReaction: 'like' | 'discard' | null;
+  };
+  /** Callback to update batch counts after reaction */
+  onReactionCountsChange?: (storyId: string, counts: { thumbsUp: number; thumbsDown: number; userReaction: 'like' | 'discard' | null }) => void;
 }
 
-export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, isRoundupView = false, onStorySwipe, onStoryScrolledPast, topicName, topicSlug, onMoreLikeThis }: StoryCarouselProps) {
+export default function StoryCarousel({ 
+  story, 
+  storyUrl, 
+  topicId, 
+  storyIndex = 0, 
+  isRoundupView = false, 
+  onStorySwipe, 
+  onStoryScrolledPast, 
+  topicName, 
+  topicSlug, 
+  onMoreLikeThis,
+  prefetchedReactionCounts,
+  onReactionCountsChange
+}: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const iOSVersion = isIOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
@@ -1027,6 +1048,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   topicId={topicId}
                   className="flex-shrink-0"
                   onMoreLikeThis={onMoreLikeThis ? (_storyId) => onMoreLikeThis(story) : undefined}
+                  prefetchedCounts={prefetchedReactionCounts}
+                  onCountsChange={onReactionCountsChange}
                 />
               )}
             </div>

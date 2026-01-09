@@ -44,6 +44,7 @@ import { useParliamentaryDigestCards } from "@/hooks/useParliamentaryDigestCards
 import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
 import { ParliamentaryDigestCard } from "@/components/ParliamentaryDigestCard";
 import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
+import { useStoriesReactionsBatch } from "@/hooks/useStoriesReactionsBatch";
 import { 
   FEED_CARD_POSITIONS, 
   shouldShowCard, 
@@ -139,6 +140,19 @@ const TopicFeed = () => {
   const latestDaily = topicMetadata.latestDailyRoundup;
   const latestWeekly = topicMetadata.latestWeeklyRoundup;
   const quizCardsEnabled = topicMetadata.quizCardsEnabled;
+
+  // OPTIMIZED: Batch fetch reaction counts for all visible stories in single RPC call
+  const visibleStoryIds = useMemo(() => {
+    return filteredContent
+      .filter(item => item.type === 'story')
+      .map(item => item.id)
+      .filter(Boolean);
+  }, [filteredContent]);
+  
+  const { countsMap: reactionCountsMap, updateCounts: updateReactionCounts } = useStoriesReactionsBatch(
+    visibleStoryIds,
+    topic?.id || ''
+  );
 
   useEffect(() => {
     if (isModalOpen) {
@@ -1037,6 +1051,8 @@ const TopicFeed = () => {
                       onStorySwipe={handleStorySwipe}
                       onStoryScrolledPast={handleStoryScrolledPast}
                       onMoreLikeThis={handleMoreLikeThis}
+                      prefetchedReactionCounts={reactionCountsMap.get(story.id)}
+                      onReactionCountsChange={updateReactionCounts}
                     />
                   </div>
                 );

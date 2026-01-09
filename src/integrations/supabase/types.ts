@@ -4734,6 +4734,19 @@ export type Database = {
           user_reaction: string
         }[]
       }
+      get_story_reaction_counts_batch: {
+        Args: {
+          p_story_ids: string[]
+          p_user_id?: string
+          p_visitor_id: string
+        }
+        Returns: {
+          story_id: string
+          thumbs_down: number
+          thumbs_up: number
+          user_reaction: string
+        }[]
+      }
       get_story_swipe_stats: {
         Args: { p_story_id: string }
         Returns: {
