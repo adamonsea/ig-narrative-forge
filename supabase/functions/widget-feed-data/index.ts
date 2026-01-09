@@ -63,7 +63,9 @@ serve(async (req) => {
       brand_color: branding.primary_color || branding.brand_color || '#3b82f6',
     };
 
-    // Fetch published stories via topic_articles, including source info and images from articles
+    // Fetch more stories than needed to filter for those with images
+    const fetchLimit = maxStories * 3; // Fetch 3x to ensure we get enough with images
+    
     const { data: stories, error: storiesError } = await supabase
       .from('stories')
       .select(`
@@ -80,7 +82,7 @@ serve(async (req) => {
       .eq('is_published', true)
       .eq('status', 'published')
       .order('created_at', { ascending: false })
-      .limit(maxStories);
+      .limit(fetchLimit);
 
     if (storiesError) {
       console.error('Error fetching stories:', storiesError);
@@ -90,29 +92,37 @@ serve(async (req) => {
       );
     }
 
-    // Build story URLs with source attribution and images
+    // Build story URLs with source attribution and images - filter to only stories with images
     const baseUrl = `https://curatr.pro`;
-    const formattedStories = (stories || []).map(story => {
-      const sourceUrl = story.articles?.source_url || null;
-      let fallbackSourceName: string | null = null;
-      if (sourceUrl) {
-        try {
-          fallbackSourceName = new URL(sourceUrl).hostname.replace(/^www\./, '');
-        } catch {
-          // ignore invalid URLs
+    const formattedStories = (stories || [])
+      .map(story => {
+        const imageUrl = story.cover_illustration_url || story.articles?.image_url || null;
+        
+        // Skip stories without images
+        if (!imageUrl) return null;
+        
+        const sourceUrl = story.articles?.source_url || null;
+        let fallbackSourceName: string | null = null;
+        if (sourceUrl) {
+          try {
+            fallbackSourceName = new URL(sourceUrl).hostname.replace(/^www\./, '');
+          } catch {
+            // ignore invalid URLs
+          }
         }
-      }
 
-      return {
-        id: story.id,
-        title: story.title,
-        url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
-        published_at: story.created_at,
-        source_name: story.publication_name || fallbackSourceName,
-        source_url: sourceUrl,
-        image_url: story.cover_illustration_url || story.articles?.image_url || null,
-      };
-    });
+        return {
+          id: story.id,
+          title: story.title,
+          url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
+          published_at: story.created_at,
+          source_name: story.publication_name || fallbackSourceName,
+          source_url: sourceUrl,
+          image_url: imageUrl,
+        };
+      })
+      .filter(Boolean) // Remove nulls (stories without images)
+      .slice(0, maxStories); // Limit to requested count
 
     console.log(`✅ Returning ${formattedStories.length} stories for widget`);
 
