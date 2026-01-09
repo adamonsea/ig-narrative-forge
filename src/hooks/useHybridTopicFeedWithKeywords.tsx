@@ -796,57 +796,70 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const uniqueStories = Array.from(storyMap.values());
       const pageUniqueStories = uniqueStories;
 
-      // Fetch popularity data for all stories
+      // PARALLELIZED: Fetch popularity and parliamentary metadata concurrently
       const storyIdsForPopularity = Array.from(storyMap.keys());
       let popularityMap = new Map();
-      if (storyIdsForPopularity.length > 0) {
-        try {
-          const { data: popularityData, error: popularityError } = await supabase
-            .rpc('get_popular_stories_by_period', {
-              p_topic_id: topicData.id
-            });
-          
-          if (!popularityError && popularityData) {
-            popularityData.forEach((item: any) => {
-              popularityMap.set(item.story_id, {
-                period_type: item.period_type,
-                swipe_count: item.swipe_count,
-                rank_position: item.rank_position
-              });
-            });
-          }
-        } catch (error) {
-          console.warn('⚠️ Failed to load popularity data:', error);
-        }
-      }
-
-      // Defensive backfill: enrich with parliamentary metadata from stories table
       let parliamentaryMetaMap = new Map<string, any>();
+      
       if (storyIdsForPopularity.length > 0) {
-        try {
-          const { data: metaData, error: metaError } = await supabase
+        // Wrap in Promise.resolve to ensure .catch is available
+        const popularityPromise = Promise.resolve(
+          supabase.rpc('get_popular_stories_by_period', {
+            p_topic_id: topicData.id
+          })
+        ).then(({ data, error }) => {
+          if (error) {
+            console.warn('⚠️ Failed to load popularity data:', error);
+            return [];
+          }
+          return data || [];
+        }).catch(error => {
+          console.warn('⚠️ Failed to load popularity data:', error);
+          return [] as any[];
+        });
+        
+        const metaPromise = Promise.resolve(
+          supabase
             .from('stories')
             .select('id, slug, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
-            .in('id', storyIdsForPopularity);
-          
-          if (!metaError && metaData) {
-            metaData.forEach((meta: any) => {
-              parliamentaryMetaMap.set(meta.id, {
-                slug: meta.slug,
-                is_parliamentary: meta.is_parliamentary,
-                mp_name: meta.mp_name,
-                mp_party: meta.mp_party,
-                constituency: meta.constituency,
-                tone: meta.tone,
-                cover_illustration_url: meta.cover_illustration_url,
-                animated_illustration_url: meta.animated_illustration_url
-              });
-            });
-            console.debug('🏛️ Primary RPC: Enriched', metaData.length, 'stories with parliamentary metadata');
+            .in('id', storyIdsForPopularity)
+        ).then(({ data, error }) => {
+          if (error) {
+            console.warn('⚠️ Primary RPC: Failed to enrich parliamentary metadata:', error);
+            return [];
           }
-        } catch (error) {
+          return data || [];
+        }).catch(error => {
           console.warn('⚠️ Primary RPC: Failed to enrich parliamentary metadata:', error);
-        }
+          return [] as any[];
+        });
+        
+        const [popularityResult, metaResult] = await Promise.all([popularityPromise, metaPromise]);
+        
+        // Process popularity data
+        popularityResult.forEach((item: any) => {
+          popularityMap.set(item.story_id, {
+            period_type: item.period_type,
+            swipe_count: item.swipe_count,
+            rank_position: item.rank_position
+          });
+        });
+        
+        // Process parliamentary metadata
+        metaResult.forEach((meta: any) => {
+          parliamentaryMetaMap.set(meta.id, {
+            slug: meta.slug,
+            is_parliamentary: meta.is_parliamentary,
+            mp_name: meta.mp_name,
+            mp_party: meta.mp_party,
+            constituency: meta.constituency,
+            tone: meta.tone,
+            cover_illustration_url: meta.cover_illustration_url,
+            animated_illustration_url: meta.animated_illustration_url
+          });
+        });
+        
+        console.debug('🚀 Parallelized enrichment: popularity +', metaResult.length, 'stories with metadata');
       }
 
       // Transform stories with slides data and popularity

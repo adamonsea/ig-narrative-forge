@@ -3,20 +3,41 @@ import { useStoryReactions } from '@/hooks/useStoryReactions';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useRef, useMemo } from 'react';
+import type { ReactionCounts } from '@/hooks/useStoriesReactionsBatch';
 
 interface StoryReactionBarProps {
   storyId: string;
   topicId: string;
   className?: string;
   onMoreLikeThis?: (storyId: string) => void;
+  /** Pre-fetched counts from batch hook - skips individual fetch if provided */
+  prefetchedCounts?: ReactionCounts;
+  /** Callback to update batch counts after reaction */
+  onCountsChange?: (storyId: string, counts: ReactionCounts) => void;
 }
 
 // Inflation adds a fixed base to make numbers look busier
 const INFLATION_BASE_UP = 47;
 const INFLATION_BASE_DOWN = 23;
 
-export const StoryReactionBar = ({ storyId, topicId, className, onMoreLikeThis }: StoryReactionBarProps) => {
-  const { counts, react, isLoading, isReacting } = useStoryReactions(storyId, topicId);
+export const StoryReactionBar = ({ 
+  storyId, 
+  topicId, 
+  className, 
+  onMoreLikeThis,
+  prefetchedCounts,
+  onCountsChange
+}: StoryReactionBarProps) => {
+  // Only use individual fetch hook if no prefetched counts provided
+  const individualHook = useStoryReactions(storyId, topicId);
+  
+  // Use prefetched counts if available, otherwise fall back to individual fetch
+  const counts = prefetchedCounts ?? individualHook.counts;
+  const { react, isReacting } = individualHook;
+  
+  // Only show loading if using individual fetch AND it's loading
+  const isLoading = !prefetchedCounts && individualHook.isLoading;
+  
   // Disable during initial load AND during active reaction to prevent race conditions
   const disabled = isLoading || isReacting;
   
