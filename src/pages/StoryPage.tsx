@@ -61,18 +61,35 @@ const StoryPage = () => {
       }
       
       try {
-        // Load topic (branding_config is accessible for public topics)
-        const { data: topicData, error: topicError } = await supabase
-          .from('topics')
-          .select('id, name, slug, topic_type, branding_config')
-          .eq('slug', slug.toLowerCase())
-          .eq('is_public', true)
-          .eq('is_active', true)
-          .maybeSingle();
+        // Parallel fetch: topic and story data simultaneously
+        const [topicResult, storyResult] = await Promise.all([
+          supabase
+            .from('topics')
+            .select('id, name, slug, topic_type, branding_config')
+            .eq('slug', slug.toLowerCase())
+            .eq('is_public', true)
+            .eq('is_active', true)
+            .maybeSingle(),
+          supabase
+            .rpc('get_public_story_by_slug_and_id', {
+              p_slug: slug,
+              p_story_id: storyId
+            })
+        ]);
+
+        const { data: topicData, error: topicError } = topicResult;
+        const { data: storyData, error: storyError } = storyResult;
 
         if (topicError || !topicData) {
           console.error('Topic error:', topicError);
           setTopic(null);
+          setLoading(false);
+          return;
+        }
+
+        if (storyError || !storyData) {
+          console.error('Story error:', storyError);
+          setStory(null);
           setLoading(false);
           return;
         }
@@ -82,20 +99,6 @@ const StoryPage = () => {
           topic_type: topicData.topic_type as 'regional' | 'keyword',
           branding_config: topicData.branding_config as Topic['branding_config']
         });
-
-        // Use the secure RPC function to fetch story data
-        const { data: storyData, error: storyError } = await supabase
-          .rpc('get_public_story_by_slug_and_id', {
-            p_slug: slug,
-            p_story_id: storyId
-          });
-
-        if (storyError || !storyData) {
-          console.error('Story error:', storyError);
-          setStory(null);
-          setLoading(false);
-          return;
-        }
 
         // Parse the JSONB result
         const data = storyData as any;
