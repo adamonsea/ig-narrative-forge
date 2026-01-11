@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Eye, ChevronDown, ChevronRight, UserPlus, UserCheck, TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react';
+import { Eye, ChevronDown, ChevronRight, UserPlus, UserCheck, TrendingUp, TrendingDown, Minus, AlertTriangle, Globe, MapPin } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { useGeographicRelevance, getCountryName } from '@/hooks/useGeographicRelevance';
 
 interface CollapsibleAudienceCardProps {
   topicId: string;
@@ -33,6 +34,9 @@ export const CollapsibleAudienceCard = ({ topicId, visitsToday, visitsThisWeek }
   const [breakdown, setBreakdown] = useState<VisitorBreakdown | null>(null);
   const [weekComparison, setWeekComparison] = useState<WeekComparison | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Geographic relevance data
+  const { data: geoData, loading: geoLoading } = useGeographicRelevance(topicId, 30);
 
   useEffect(() => {
     if (isOpen && !breakdown) {
@@ -143,6 +147,13 @@ export const CollapsibleAudienceCard = ({ topicId, visitsToday, visitsThisWeek }
 
   const isSignificantDrop = weekComparison && weekComparison.change_pct <= -50;
 
+  // Geographic relevance color based on percentage
+  const getGeoRelevanceColor = (percent: number) => {
+    if (percent >= 70) return 'text-green-500';
+    if (percent >= 40) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
   return (
     <TooltipProvider>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -210,6 +221,24 @@ export const CollapsibleAudienceCard = ({ topicId, visitsToday, visitsThisWeek }
                   <span className={`text-xs font-medium ${returnRateColor}`}>
                     {breakdown.return_rate_pct}% return
                   </span>
+                </>
+              )}
+              
+              {/* Geographic relevance in summary */}
+              {geoData && geoData.totalVisitors > 0 && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className={`flex items-center gap-1 text-xs font-medium ${getGeoRelevanceColor(geoData.relevancePercent)} cursor-help`}>
+                        <Globe className="w-3 h-3" />
+                        <span>{geoData.relevancePercent}% {getCountryName(geoData.targetCountryCode)}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{geoData.targetRegionVisitors} of {geoData.totalVisitors} visitors from target region</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </>
               )}
             </div>
@@ -346,6 +375,83 @@ export const CollapsibleAudienceCard = ({ topicId, visitsToday, visitsThisWeek }
                       </TooltipContent>
                     </Tooltip>
                   </div>
+
+                  {/* Geographic Relevance section */}
+                  {geoData && geoData.totalVisitors > 0 && (
+                    <div className="pt-2 border-t border-[hsl(270,100%,68%)]/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Geographic Relevance</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`text-sm font-bold ${getGeoRelevanceColor(geoData.relevancePercent)} cursor-help`}>
+                              {geoData.relevancePercent}% from {getCountryName(geoData.targetCountryCode)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{geoData.targetRegionVisitors} of {geoData.totalVisitors} visitors from target region</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              70%+ = Excellent, 40-69% = Good, &lt;40% = Review audience targeting
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <Progress 
+                              value={Math.min(geoData.relevancePercent, 100)} 
+                              className="h-2"
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Target: 70%+ visitors from target region</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      {/* Top countries breakdown */}
+                      {geoData.topCountries.length > 1 && (
+                        <div className="mt-3 space-y-1">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
+                            Top Countries (30 days)
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {geoData.topCountries.map((country) => (
+                              <Tooltip key={country.code}>
+                                <TooltipTrigger asChild>
+                                  <div 
+                                    className={`text-xs px-2 py-1 rounded-full border cursor-help ${
+                                      country.code === geoData.targetCountryCode 
+                                        ? 'bg-green-500/10 border-green-500/30 text-green-600' 
+                                        : 'bg-muted/50 border-border text-muted-foreground'
+                                    }`}
+                                  >
+                                    {getCountryName(country.code)} {country.percent}%
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{country.count} unique visitors from {getCountryName(country.code)}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {geoLoading && (
+                    <div className="pt-2 border-t border-[hsl(270,100%,68%)]/10">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Loading geographic data...
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-xs text-muted-foreground text-center py-4">

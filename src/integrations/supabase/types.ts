@@ -2573,6 +2573,7 @@ export type Database = {
       }
       site_visits: {
         Row: {
+          country_code: string | null
           created_at: string | null
           id: string
           page_path: string
@@ -2584,6 +2585,7 @@ export type Database = {
           visitor_id: string
         }
         Insert: {
+          country_code?: string | null
           created_at?: string | null
           id?: string
           page_path: string
@@ -2595,6 +2597,7 @@ export type Database = {
           visitor_id: string
         }
         Update: {
+          country_code?: string | null
           created_at?: string | null
           id?: string
           page_path?: string

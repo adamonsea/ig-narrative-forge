@@ -29,6 +29,37 @@ const generateVisitorId = (): string => {
   return 'sv_' + Math.abs(hash).toString(36);
 };
 
+// Cache country code to avoid repeated API calls
+let cachedCountryCode: string | null = null;
+
+/**
+ * Fetch visitor's country code using free IP geolocation API
+ * Uses ipapi.co which provides 1000 free requests/day
+ */
+const getCountryCode = async (): Promise<string | null> => {
+  if (cachedCountryCode) return cachedCountryCode;
+  
+  try {
+    const response = await fetch('https://ipapi.co/country/', {
+      signal: AbortSignal.timeout(3000) // 3 second timeout
+    });
+    
+    if (response.ok) {
+      const countryCode = await response.text();
+      // Validate it's a 2-letter code
+      if (/^[A-Z]{2}$/.test(countryCode.trim())) {
+        cachedCountryCode = countryCode.trim();
+        return cachedCountryCode;
+      }
+    }
+  } catch (error) {
+    // Silently fail - geolocation is optional
+    console.debug('Country detection failed:', error);
+  }
+  
+  return null;
+};
+
 interface PageClassification {
   pageType: string;
   topicSlug: string | null;
@@ -110,26 +141,11 @@ export const useSiteVisitorTracking = () => {
       try {
         const { pageType, topicSlug } = classifyPage(pagePath);
         
-        // Resolve topic ID if we have a slug
-        let topicId: string | null = null;
-        if (topicSlug) {
-          // Check cache first
-          if (topicIdCache.has(topicSlug)) {
-            topicId = topicIdCache.get(topicSlug) || null;
-          } else {
-            // Look up topic ID from slug
-            const { data: topic } = await supabase
-              .from('topics')
-              .select('id')
-              .eq('slug', topicSlug)
-              .maybeSingle();
-            
-            if (topic?.id) {
-              topicId = topic.id;
-              topicIdCache.set(topicSlug, topic.id);
-            }
-          }
-        }
+        // Fetch country code and topic ID in parallel
+        const [countryCode, topicId] = await Promise.all([
+          getCountryCode(),
+          resolveTopicId(topicSlug)
+        ]);
 
         // Insert the visit record
         await supabase
@@ -141,7 +157,8 @@ export const useSiteVisitorTracking = () => {
             topic_id: topicId,
             user_agent: navigator.userAgent,
             referrer: document.referrer || null,
-            visit_date: today
+            visit_date: today,
+            country_code: countryCode
           }, {
             onConflict: 'visitor_id,page_path,visit_date',
             ignoreDuplicates: true
@@ -150,6 +167,30 @@ export const useSiteVisitorTracking = () => {
         console.debug('Site visit tracking failed:', error);
       }
     };
+    
+    // Helper to resolve topic slug to ID
+    async function resolveTopicId(topicSlug: string | null): Promise<string | null> {
+      if (!topicSlug) return null;
+      
+      // Check cache first
+      if (topicIdCache.has(topicSlug)) {
+        return topicIdCache.get(topicSlug) || null;
+      }
+      
+      // Look up topic ID from slug
+      const { data: topic } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('slug', topicSlug)
+        .maybeSingle();
+      
+      if (topic?.id) {
+        topicIdCache.set(topicSlug, topic.id);
+        return topic.id;
+      }
+      
+      return null;
+    }
 
     // Track after a brief delay to ensure page is loaded
     const timer = setTimeout(trackVisit, 150);
