@@ -2571,6 +2571,57 @@ export type Database = {
         }
         Relationships: []
       }
+      site_visits: {
+        Row: {
+          created_at: string | null
+          id: string
+          page_path: string
+          page_type: string
+          referrer: string | null
+          topic_id: string | null
+          user_agent: string | null
+          visit_date: string
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          page_path: string
+          page_type: string
+          referrer?: string | null
+          topic_id?: string | null
+          user_agent?: string | null
+          visit_date?: string
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          page_path?: string
+          page_type?: string
+          referrer?: string | null
+          topic_id?: string | null
+          user_agent?: string | null
+          visit_date?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_visits_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_visits_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       slides: {
         Row: {
           alt_text: string | null
@@ -4647,6 +4698,15 @@ export type Database = {
           region: string
           slug: string
           topic_type: string
+        }[]
+      }
+      get_site_visitor_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          today_visitors: number
+          topic_id: string
+          total_pageviews: number
+          week_visitors: number
         }[]
       }
       get_source_health_stats: {
