@@ -18,9 +18,15 @@ export const useGoogleAnalytics = () => {
   useEffect(() => {
     if (typeof window.gtag !== 'function') return;
 
-    window.gtag('config', GA_MEASUREMENT_ID, {
-      page_path: location.pathname + location.search,
-    });
+    // Wait for React Helmet to update the document title before sending to GA
+    const timeoutId = setTimeout(() => {
+      window.gtag('config', GA_MEASUREMENT_ID, {
+        page_path: location.pathname + location.search,
+        page_title: document.title, // Explicitly pass the updated title
+      });
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [location]);
 };
 

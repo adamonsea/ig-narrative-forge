@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SystemErrorBoundary } from "@/components/SystemErrorBoundary";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
+import { useSiteVisitorTracking } from "@/hooks/useSiteVisitorTracking";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -47,9 +48,10 @@ const StoryRedirect = () => {
   return <Navigate to={`/feed/${slug}/story/${storyId}`} replace />;
 };
 
-// Google Analytics tracker component (must be inside BrowserRouter)
-const GoogleAnalyticsTracker = () => {
-  useGoogleAnalytics();
+// Site-wide analytics tracker component (must be inside BrowserRouter)
+const SiteAnalyticsTracker = () => {
+  useSiteVisitorTracking(); // Tracks all pages in Supabase
+  useGoogleAnalytics();     // Tracks to Google Analytics
   return null;
 };
 const createQueryClient = () => new QueryClient({
@@ -74,7 +76,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <GoogleAnalyticsTracker />
+              <SiteAnalyticsTracker />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/pricing" element={<Pricing />} />
