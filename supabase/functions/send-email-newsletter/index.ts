@@ -28,6 +28,34 @@ interface EmailStory {
   story_url: string;
 }
 
+/**
+ * Optimizes a Supabase Storage image URL for email thumbnails
+ * Uses Supabase's built-in image transformation for faster loading
+ */
+function optimizeEmailThumbnail(url: string | null): string | null {
+  if (!url) return null;
+
+  // Check if it's a Supabase Storage URL
+  const isSupabaseStorage = url.includes('supabase.co/storage/v1/object/public/');
+  
+  if (!isSupabaseStorage) {
+    return url; // Return original URL for non-Supabase images
+  }
+
+  // Build transformation parameters for email thumbnails (80x80)
+  const transformParams = new URLSearchParams({
+    width: '160',  // 2x for retina displays
+    height: '160',
+    quality: '70',
+    resize: 'cover',
+    format: 'webp'
+  });
+
+  // Append transformations to URL
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}${transformParams.toString()}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -239,7 +267,7 @@ serve(async (req) => {
       return {
         id: story.id,
         title: headline,
-        thumbnail_url: story.cover_illustration_url,
+        thumbnail_url: optimizeEmailThumbnail(story.cover_illustration_url),
         source_name: sourceName,
         story_url: `${BASE_URL}/feed/${topic.slug}/story/${story.id}`,
       };
