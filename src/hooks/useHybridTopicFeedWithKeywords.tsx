@@ -118,6 +118,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const queryClient = useQueryClient();
   const [isLive, setIsLive] = useState(false);
   const hasSetupRealtimeRef = useRef(false);
@@ -550,12 +552,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         from
       });
 
-      // PHASE 2: Circuit breaker - 15 second timeout with AbortController (increased for iOS Safari)
+      // PHASE 2: Circuit breaker with device-aware timeout
+      // Mobile networks (especially in-app browsers like email clients) need longer timeouts
+      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isInAppBrowser = /FBAN|FBAV|Instagram|Twitter|LinkedIn/i.test(navigator.userAgent);
+      const timeoutMs = isInAppBrowser ? 30000 : isMobileDevice ? 25000 : 15000;
+      
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.warn('⚠️ Phase 2: RPC timeout after 15 seconds, aborting...');
+        console.warn(`⚠️ Phase 2: RPC timeout after ${timeoutMs/1000} seconds, aborting...`);
         controller.abort();
-      }, 15000);
+      }, timeoutMs);
 
       let storiesData: any[] | null = null;
       let rpcError: any = null;
@@ -1091,7 +1098,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const errorMessage = error instanceof Error ? error.message : "Failed to load stories";
       const isTimeoutFallback = errorMessage.includes('cached content');
       
+      // Track error for mobile retry UI
       if (!isTimeoutFallback) {
+        setLoadError(errorMessage);
+        setRetryCount(prev => prev + 1);
+        
         toast({
           title: "Error Loading Stories",
           description: `${errorMessage}. Please refresh the page.`,
@@ -2019,6 +2030,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     };
   }, []);
 
+  // Create a retry function that clears error state
+  const retryLoad = useCallback(() => {
+    setLoadError(null);
+    refresh();
+  }, [refresh]);
+
   return {
     // Story data
     stories: filteredStories,
@@ -2030,6 +2047,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     loadMore,
     refresh,
     isLive,
+    
+    // Error state for mobile retry UI
+    loadError,
+    retryCount,
+    retryLoad,
     
     // New stories notification
     hasNewStories,
