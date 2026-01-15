@@ -30,13 +30,18 @@ export function optimizeImageUrl(
     format = 'webp'
   } = options;
 
-  // Check if it's a Supabase Storage URL
+  // Check if it's a Supabase Storage URL that can be transformed
+  // Must use /render/image/ endpoint, not /object/ endpoint
   const isSupabaseStorage = url.includes('supabase.co/storage/v1/object/public/');
   
   if (!isSupabaseStorage) {
     // Return original URL if not Supabase Storage
     return url;
   }
+
+  // Convert to render/image endpoint for transformations
+  // /storage/v1/object/public/{bucket}/{path} → /storage/v1/render/image/public/{bucket}/{path}
+  const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
 
   // Build transformation parameters
   const transformParams = new URLSearchParams({
@@ -46,15 +51,13 @@ export function optimizeImageUrl(
     resize: 'cover', // Crop to fit dimensions
   });
 
-  // Add format if not origin
+  // Add format if not origin (webp is much smaller than png)
   if (format !== 'origin') {
     transformParams.append('format', format);
   }
 
-  // Insert transformations into the URL
-  // Supabase Storage transformation format:
-  // /storage/v1/object/public/{bucket}/{path}?transform=...
-  const transformedUrl = `${url}${url.includes('?') ? '&' : '?'}${transformParams.toString()}`;
+  // Append transformations to the render URL
+  const transformedUrl = `${renderUrl}?${transformParams.toString()}`;
 
   return transformedUrl;
 }
