@@ -31,7 +31,6 @@ export function optimizeImageUrl(
   } = options;
 
   // Check if it's a Supabase Storage URL that can be transformed
-  // Must use /render/image/ endpoint, not /object/ endpoint
   const isSupabaseStorage = url.includes('supabase.co/storage/v1/object/public/');
   
   if (!isSupabaseStorage) {
@@ -39,27 +38,29 @@ export function optimizeImageUrl(
     return url;
   }
 
+  // Note: Supabase Image Transformations require Pro Plan or above.
+  // The /render/image/ endpoint is only available on paid plans.
+  // For now, return original URL until Pro plan is confirmed.
+  // To enable optimization: uncomment the transformation code below
+  // and ensure the Supabase project is on Pro plan or above.
+  
+  // TODO: Enable when Pro plan is active
   // Convert to render/image endpoint for transformations
   // /storage/v1/object/public/{bucket}/{path} → /storage/v1/render/image/public/{bucket}/{path}
-  const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-
-  // Build transformation parameters
-  const transformParams = new URLSearchParams({
-    width: width.toString(),
-    height: height.toString(),
-    quality: quality.toString(),
-    resize: 'cover', // Crop to fit dimensions
-  });
-
-  // Add format if not origin (webp is much smaller than png)
-  if (format !== 'origin') {
-    transformParams.append('format', format);
-  }
-
-  // Append transformations to the render URL
-  const transformedUrl = `${renderUrl}?${transformParams.toString()}`;
-
-  return transformedUrl;
+  // const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  // const transformParams = new URLSearchParams({
+  //   width: width.toString(),
+  //   height: height.toString(),
+  //   quality: quality.toString(),
+  //   resize: 'cover',
+  // });
+  // if (format !== 'origin') {
+  //   transformParams.append('format', format);
+  // }
+  // return `${renderUrl}?${transformParams.toString()}`;
+  
+  // Return original URL (no transformation on Free plan)
+  return url;
 }
 
 /**
