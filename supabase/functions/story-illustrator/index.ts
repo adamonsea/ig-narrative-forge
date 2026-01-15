@@ -833,7 +833,8 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           n: 1,
           size: '1536x1024', // Landscape aspect ratio for feed UI
           quality: modelConfig.quality || 'medium',
-          output_format: 'png'
+          output_format: 'webp', // WebP is ~70% smaller than PNG
+          output_compression: 85 // Balance quality vs size
         }),
       });
 
@@ -1212,69 +1213,32 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       console.error('API usage logging failed (this is non-critical):', error)
     }
 
-    // Upload to Supabase Storage - optimize image before upload
-    // Validate base64 data before processing
+    // Upload to Supabase Storage
+    // OpenAI now returns WebP (85% compression) so images are already optimized
+    // Gemini/FLUX return PNG but are typically smaller
     if (!imageBase64) {
       throw new Error('No image data to upload')
     }
     
-    let optimizedImageData: Uint8Array
-    let finalContentType = 'image/png'
-    let fileExtension = 'png'
+    // Determine content type based on provider
+    // OpenAI with webp output_format returns WebP, others return PNG
+    const isWebP = modelConfig.provider === 'openai'
+    const finalContentType = isWebP ? 'image/webp' : 'image/png'
+    const fileExtension = isWebP ? 'webp' : 'png'
+    
+    let imageData: Uint8Array
     
     try {
       // Convert base64 to Uint8Array
       const binaryString = atob(imageBase64)
-      const originalUint8Array = new Uint8Array(binaryString.length)
+      imageData = new Uint8Array(binaryString.length)
       for (let i = 0; i < binaryString.length; i++) {
-        originalUint8Array[i] = binaryString.charCodeAt(i)
+        imageData[i] = binaryString.charCodeAt(i)
       }
       
-      const originalSizeMB = (originalUint8Array.length / 1024 / 1024).toFixed(2)
-      console.log(`📊 Original image size: ${originalSizeMB} MB`)
-      
-      // Try to optimize using Photon (Rust-based image processing for Deno)
-      try {
-        // Dynamic import of photon-deno for image optimization
-        const { PhotonImage, SamplingFilter, resize } = await import('https://esm.sh/@aspect-build/photon-deno@0.0.2')
-        
-        // Load the PNG image
-        const photonImage = PhotonImage.new_from_byteslice(originalUint8Array)
-        
-        // Get original dimensions
-        const origWidth = photonImage.get_width()
-        const origHeight = photonImage.get_height()
-        console.log(`📐 Original dimensions: ${origWidth}x${origHeight}`)
-        
-        // Target dimensions: max 1200px wide while maintaining aspect ratio
-        const maxWidth = 1200
-        let newWidth = origWidth
-        let newHeight = origHeight
-        
-        if (origWidth > maxWidth) {
-          newWidth = maxWidth
-          newHeight = Math.round((origHeight / origWidth) * maxWidth)
-          console.log(`📐 Resizing to: ${newWidth}x${newHeight}`)
-          
-          // Resize the image using Lanczos3 filter for quality
-          resize(photonImage, newWidth, newHeight, SamplingFilter.Lanczos3)
-        }
-        
-        // Export as JPEG with 85% quality for smaller file size
-        const jpegBytes = photonImage.get_bytes_jpeg(85)
-        optimizedImageData = jpegBytes
-        finalContentType = 'image/jpeg'
-        fileExtension = 'jpg'
-        
-        const optimizedSizeMB = (optimizedImageData.length / 1024 / 1024).toFixed(2)
-        const reduction = ((1 - (optimizedImageData.length / originalUint8Array.length)) * 100).toFixed(1)
-        console.log(`✅ Optimized image: ${optimizedSizeMB} MB (${reduction}% reduction)`)
-        
-      } catch (photonError) {
-        // Fallback: if Photon fails, upload original PNG
-        console.warn('⚠️ Photon optimization failed, using original PNG:', photonError)
-        optimizedImageData = originalUint8Array
-      }
+      const sizeMB = (imageData.length / 1024 / 1024).toFixed(2)
+      const sizeKB = Math.round(imageData.length / 1024)
+      console.log(`📊 Image size: ${sizeMB} MB (${sizeKB} KB) - format: ${fileExtension.toUpperCase()}`)
       
     } catch (decodeError) {
       console.error('Base64 decode error:', decodeError)
@@ -1286,7 +1250,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
     try {
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('visuals')
-        .upload(fileName, optimizedImageData, {
+        .upload(fileName, imageData, {
           contentType: finalContentType,
           upsert: false
         })
@@ -1294,6 +1258,8 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       if (uploadError) {
         throw new Error(`Upload error: ${uploadError.message}`)
       }
+      
+      console.log(`✅ Uploaded to storage: ${fileName}`)
     } catch (uploadError) {
       console.error('Storage upload error:', uploadError)
       throw new Error(`Failed to upload image: ${uploadError instanceof Error ? uploadError.message : String(uploadError)}`)
