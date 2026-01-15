@@ -45,6 +45,7 @@ import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard"
 import { ParliamentaryDigestCard } from "@/components/ParliamentaryDigestCard";
 import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
 import { useStoriesReactionsBatch } from "@/hooks/useStoriesReactionsBatch";
+import { MobileLoadErrorOverlay } from "@/components/MobileLoadErrorOverlay";
 import { 
   FEED_CARD_POSITIONS, 
   shouldShowCard, 
@@ -129,7 +130,11 @@ const TopicFeed = () => {
     hasNewStories,
     newStoryCount,
     refreshFromNewStories,
-    ensureFilterStoryIndexLoaded
+    ensureFilterStoryIndexLoaded,
+    // Error handling for mobile
+    loadError,
+    retryCount,
+    retryLoad
   } = useHybridTopicFeedWithKeywords(slug || '');
 
   // OPTIMIZED: Fetch all secondary metadata in parallel via cached React Query
@@ -528,6 +533,20 @@ const TopicFeed = () => {
             ))}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show mobile-friendly error overlay when load fails
+  if (loadError && !topic && !loading) {
+    return (
+      <div className="min-h-screen feed-background">
+        <MobileLoadErrorOverlay 
+          error={loadError}
+          onRetry={retryLoad}
+          retryCount={retryCount}
+          isRetrying={loading}
+        />
       </div>
     );
   }
