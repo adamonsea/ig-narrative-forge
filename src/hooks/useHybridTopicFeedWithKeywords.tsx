@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
 
 interface Story {
   id: string;
@@ -120,6 +121,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [page, setPage] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [autoRetryCount, setAutoRetryCount] = useState(0);
+  const autoRetryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const queryClient = useQueryClient();
   const [isLive, setIsLive] = useState(false);
   const hasSetupRealtimeRef = useRef(false);
@@ -553,14 +556,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       });
 
       // PHASE 2: Circuit breaker with device-aware timeout
-      // Mobile networks (especially in-app browsers like email clients) need longer timeouts
-      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const isInAppBrowser = /FBAN|FBAV|Instagram|Twitter|LinkedIn/i.test(navigator.userAgent);
-      const timeoutMs = isInAppBrowser ? 30000 : isMobileDevice ? 25000 : 15000;
+      // Uses centralized detection from deviceUtils for consistent in-app browser handling
+      const timeoutMs = getContextAwareTimeout();
+      const browserType = isGmailWebView() ? 'Gmail' : isInAppBrowser() ? 'in-app' : 'standard';
+      
+      console.log(`⏱️ Using ${timeoutMs/1000}s timeout for ${browserType} browser`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.warn(`⚠️ Phase 2: RPC timeout after ${timeoutMs/1000} seconds, aborting...`);
+        console.warn(`⚠️ Phase 2: RPC timeout after ${timeoutMs/1000} seconds (${browserType}), aborting...`);
         controller.abort();
       }, timeoutMs);
 
@@ -1825,11 +1829,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     }
   }, [topic?.id, topic?.keywords, topic?.landmarks, topic?.organizations, loadFilterStoryIndex]);
 
-  // Initialize feed
+  // Initialize feed with auto-retry for transient failures
+  const MAX_AUTO_RETRIES = 2;
+  const RETRY_DELAYS = [2000, 4000]; // 2s, 4s backoff
+  
   useEffect(() => {
-    const initialize = async () => {
+    const initialize = async (retryAttempt: number = 0) => {
       try {
-        console.log('🚀 Initializing feed for slug:', slug);
+        console.log(`🚀 Initializing feed for slug: ${slug}${retryAttempt > 0 ? ` (retry ${retryAttempt}/${MAX_AUTO_RETRIES})` : ''}`);
+        setLoadError(null);
+        
         const topicData = await loadTopic();
         console.log('✅ Topic loaded:', topicData?.name);
         setPage(0);
@@ -1837,15 +1846,52 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         await loadStories(topicData, 0, false, null, null);
         console.log('✅ Stories loaded successfully');
         
-      } catch (error) {
+        // Reset auto-retry count on success
+        setAutoRetryCount(0);
+        
+      } catch (error: any) {
         console.error('Error initializing hybrid feed:', error);
+        
+        // Auto-retry for transient failures (timeouts, network errors)
+        const isTransientError = 
+          error?.message?.includes('timeout') ||
+          error?.message?.includes('abort') ||
+          error?.message?.includes('fetch') ||
+          error?.message?.includes('network') ||
+          error?.code === '544' ||
+          error?.name === 'AbortError';
+        
+        if (isTransientError && retryAttempt < MAX_AUTO_RETRIES) {
+          const delay = RETRY_DELAYS[retryAttempt] || 4000;
+          console.log(`🔄 Auto-retry ${retryAttempt + 1}/${MAX_AUTO_RETRIES} in ${delay/1000}s...`);
+          setAutoRetryCount(retryAttempt + 1);
+          
+          autoRetryRef.current = setTimeout(() => {
+            initialize(retryAttempt + 1);
+          }, delay);
+          return;
+        }
+        
+        // All retries exhausted or non-transient error
+        setLoadError(error?.message || 'Failed to load feed');
+        setRetryCount(retryAttempt);
         setLoading(false);
       }
     };
 
     if (slug) {
-      initialize();
+      // Clear any pending retry
+      if (autoRetryRef.current) {
+        clearTimeout(autoRetryRef.current);
+      }
+      initialize(0);
     }
+    
+    return () => {
+      if (autoRetryRef.current) {
+        clearTimeout(autoRetryRef.current);
+      }
+    };
   }, [slug, loadTopic, loadStories]);
 
   // Real-time subscription for new stories and slide updates
