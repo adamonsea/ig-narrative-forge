@@ -229,27 +229,54 @@ serve(async (req) => {
           ogTitle = storyData.title;
         }
         
-        // Try to use cover illustration, but validate it exists first
+        // Try to use cover illustration with WhatsApp-optimized transformation
+        // WhatsApp requires images under 600KB - use Supabase Storage transform API
         let useGeneratedOG = true;
         
         if (storyData.cover_illustration_url) {
-          // Quick HEAD request to check if the image actually exists and is valid
           try {
+            // Check if the original image exists
             const imageCheck = await fetch(storyData.cover_illustration_url, { method: 'HEAD' });
-            const contentLength = imageCheck.headers.get('content-length');
             const contentType = imageCheck.headers.get('content-type');
+            const originalSize = parseInt(imageCheck.headers.get('content-length') || '0');
             
-            // Check if image exists, has content (> 1KB to filter out empty/placeholder images), and is actually an image
-            if (imageCheck.ok && contentType?.startsWith('image/') && parseInt(contentLength || '0') > 1024) {
-              ogImage = storyData.cover_illustration_url;
+            if (imageCheck.ok && contentType?.startsWith('image/') && originalSize > 1024) {
+              // Use Supabase Storage image transformation for WhatsApp-optimized version
+              // Target: 1200x630 (OG standard), quality 70%, format webp for compression
+              // This ensures the image is under WhatsApp's 600KB limit
+              const originalUrl = storyData.cover_illustration_url;
+              
+              // Check if this is a Supabase Storage URL that supports transformations
+              if (originalUrl.includes('/storage/v1/object/public/')) {
+                // Transform: /storage/v1/object/public/bucket/path → /storage/v1/render/image/public/bucket/path
+                const transformedUrl = originalUrl
+                  .replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')
+                  + '?width=1200&height=630&resize=cover&quality=70';
+                
+                ogImage = transformedUrl;
+                console.log('Using optimized cover illustration for WhatsApp:', {
+                  original: originalUrl,
+                  transformed: transformedUrl,
+                  originalSize: `${(originalSize / 1024 / 1024).toFixed(2)} MB`
+                });
+              } else {
+                // Non-Supabase URL - use as-is but log warning if too large
+                ogImage = originalUrl;
+                if (originalSize > 600 * 1024) {
+                  console.warn('Cover illustration may be too large for WhatsApp:', {
+                    url: originalUrl,
+                    size: `${(originalSize / 1024 / 1024).toFixed(2)} MB`,
+                    limit: '600 KB'
+                  });
+                }
+              }
               useGeneratedOG = false;
-              console.log('Using story cover illustration:', ogImage, '(size:', contentLength, 'bytes)');
             } else {
               console.log('Cover illustration invalid or too small:', {
                 url: storyData.cover_illustration_url,
                 status: imageCheck.status,
                 contentType,
-                contentLength
+                originalSize
               });
             }
           } catch (imgError) {
