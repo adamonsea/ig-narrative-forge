@@ -36,6 +36,87 @@ export interface AnimationPresets {
   swipeVelocityMultiplier: number;
 }
 
+// ============================================================================
+// IN-APP BROWSER DETECTION
+// ============================================================================
+
+/**
+ * Known in-app browser patterns for detection
+ * Gmail, Facebook, Instagram, Twitter, LinkedIn, etc.
+ */
+const IN_APP_BROWSER_PATTERNS = [
+  'FBAN', 'FBAV',              // Facebook
+  'Instagram',                 // Instagram  
+  'Twitter',                   // Twitter
+  'LinkedIn',                  // LinkedIn
+  'GSA',                       // Google Search App
+  'Gmail', 'com.google.Gmail', // Gmail app
+  'gzip(gfe)',                 // Gmail feed fetcher
+  'GoogleAppEngine',           // Google prefetch
+  'Line/',                     // Line app
+  'KAKAOTALK',                 // KakaoTalk
+  'Snapchat',                  // Snapchat
+  'Pinterest',                 // Pinterest app
+  'Slack',                     // Slack
+];
+
+/**
+ * Detects if running in an in-app browser WebView
+ * Includes Gmail, Facebook, Instagram, Twitter, LinkedIn, etc.
+ */
+export function isInAppBrowser(): boolean {
+  const ua = navigator.userAgent;
+  
+  // Check known in-app browser patterns
+  if (IN_APP_BROWSER_PATTERNS.some(p => ua.includes(p))) {
+    return true;
+  }
+  
+  // Fallback: WebView capability detection for ambiguous user agents
+  // Gmail iOS WebView and some others lack getUserMedia
+  if (isIOSDevice() && !navigator.mediaDevices?.getUserMedia) {
+    return true;
+  }
+  
+  // Android WebView detection
+  if (isAndroidDevice() && ua.includes('wv')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Detects specifically if running in Gmail's WebView
+ * Used for extra-long timeouts due to Gmail's particularly slow behavior
+ */
+export function isGmailWebView(): boolean {
+  const ua = navigator.userAgent;
+  return /Gmail|com\.google\.Gmail|gzip\(gfe\)/i.test(ua);
+}
+
+/**
+ * Gets appropriate timeout for current browser context
+ * Gmail gets the longest timeout due to consistently slow performance
+ */
+export function getContextAwareTimeout(): number {
+  if (isGmailWebView()) return 45000;       // 45s for Gmail (extra slow)
+  if (isInAppBrowser()) return 35000;       // 35s for other in-app browsers
+  if (isMobileDevice()) return 25000;       // 25s for mobile browsers
+  return 15000;                              // 15s for desktop
+}
+
+/**
+ * Detects if device is mobile (iOS or Android)
+ */
+export function isMobileDevice(): boolean {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+// ============================================================================
+// DEVICE VERSION DETECTION
+// ============================================================================
+
 /**
  * Detects iOS version from user agent
  */

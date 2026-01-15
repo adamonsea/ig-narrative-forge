@@ -53,6 +53,7 @@ import {
   logCollisionReport 
 } from "@/lib/feedCardPositions";
 import { buildShareUrl } from "@/lib/urlUtils";
+import { isInAppBrowser } from "@/lib/deviceUtils";
 
 // Helper functions using centralized position system
 const shouldShowSentiment = (idx: number) => shouldShowCard('sentiment', idx);
@@ -96,7 +97,24 @@ const TopicFeed = () => {
   // Track story views for PWA prompt trigger
   const { incrementStoriesViewed } = useStoryViewTracker(slug || '');
 
-
+  // Connection warmup for in-app browsers (Gmail, etc.)
+  // Primes the Supabase connection to reduce cold-start latency
+  useEffect(() => {
+    if (isInAppBrowser()) {
+      console.log('🔌 Warming up Supabase connection for in-app browser...');
+      const warmupConnection = async () => {
+        try {
+          // Simple query to establish connection before main feed loads
+          await supabase.from('topics').select('id').limit(1);
+          console.log('✅ Connection warmup complete');
+        } catch {
+          // Ignore warmup errors - the main load will handle retries
+          console.log('⚠️ Connection warmup failed (non-critical)');
+        }
+      };
+      warmupConnection();
+    }
+  }, []);
   const {
     stories: filteredStories,
     content: filteredContent,
