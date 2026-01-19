@@ -15,8 +15,14 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.2.1';
+  const WIDGET_VERSION = '1.3.0';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
+
+  // Validate URL to prevent XSS (only allow http/https)
+  function isValidUrl(url) {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
 
   // Generate a simple visitor hash for deduplication
   function getVisitorHash() {
@@ -76,7 +82,9 @@
     const accentColor = container.dataset.accent;
     const width = container.dataset.width || 'responsive';
     const layout = width === 'wide' ? 'wide' : 'compact';
-    const customTitle = container.dataset.title || ''; // Custom title support
+    const customTitle = container.dataset.title || '';
+    // Custom avatar URL with XSS validation
+    const customAvatar = isValidUrl(container.dataset.avatar) ? container.dataset.avatar : '';
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -102,7 +110,7 @@
     // Try to show cached data immediately while fetching fresh data
     const cached = getCachedData(feedSlug);
     if (cached) {
-      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle);
+      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar);
       attachClickHandlers(shadow, feedSlug);
     } else {
       wrapper.innerHTML = getLoadingHTML();
@@ -115,7 +123,7 @@
         // Cache the successful response
         setCachedData(feedSlug, data);
         
-        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle);
+        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar);
         
         // Track impression after successful render (only if not cached initially)
         if (!cached) {
@@ -198,7 +206,7 @@
     return response.json();
   }
 
-  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '') {
+  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '') {
     const { feed, stories } = data;
     const accent = accentOverride || feed.brand_color || '#3b82f6';
     const displayName = customTitle || feed.name;
@@ -211,10 +219,10 @@
       `;
     }
 
-    // Prefer icon_url (favicon) for circular avatar, fallback to logo_url
-    const avatarUrl = feed.icon_url || feed.logo_url;
+    // Priority: customAvatar > icon_url > logo_url > text fallback
+    const avatarUrl = customAvatar || feed.icon_url || feed.logo_url;
     const logoHTML = avatarUrl 
-      ? `<img src="${avatarUrl}" alt="${escapeHTML(displayName)}" class="widget-logo" />`
+      ? `<img src="${escapeHTML(avatarUrl)}" alt="${escapeHTML(displayName)}" class="widget-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span class="widget-logo-text" style="background: ${accent}; display: none;">${displayName.charAt(0)}</span>`
       : `<span class="widget-logo-text" style="background: ${accent}">${displayName.charAt(0)}</span>`;
 
     // Wide layout with featured story + list

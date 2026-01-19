@@ -28,6 +28,7 @@ interface WidgetConfig {
   accent: string;
   width: string;
   customTitle: string;
+  customAvatar: string;
 }
 
 interface PreviewStory {
@@ -62,6 +63,7 @@ export default function PublicWidgetBuilder() {
     accent: '',
     width: 'responsive',
     customTitle: '',
+    customAvatar: '',
   });
 
   // Load topic data
@@ -127,7 +129,13 @@ export default function PublicWidgetBuilder() {
     fetchPreview();
   }, [slug, config.maxHeadlines]);
 
-  const WIDGET_JS_VERSION = '1.2.1';
+  const WIDGET_JS_VERSION = '1.3.0';
+
+  // Validate avatar URL (must be http/https to prevent XSS)
+  const isValidAvatarUrl = (url: string) => {
+    if (!url) return true;
+    return url.startsWith('http://') || url.startsWith('https://');
+  };
 
   const generateEmbedCode = () => {
     if (!slug) return '';
@@ -148,6 +156,9 @@ export default function PublicWidgetBuilder() {
     }
     if (config.customTitle) {
       code += ` data-title="${config.customTitle.replace(/"/g, '&quot;')}"`;
+    }
+    if (config.customAvatar && isValidAvatarUrl(config.customAvatar)) {
+      code += ` data-avatar="${config.customAvatar.replace(/"/g, '&quot;')}"`;
     }
     
     code += `></div>\n<script src="${window.location.origin}/widget.js?v=${WIDGET_JS_VERSION}" async></script>`;
@@ -361,6 +372,37 @@ export default function PublicWidgetBuilder() {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Custom avatar URL (optional)</Label>
+                  <div className="flex gap-2 items-center">
+                    {config.customAvatar && isValidAvatarUrl(config.customAvatar) && (
+                      <img 
+                        src={config.customAvatar} 
+                        alt="Avatar preview" 
+                        className="w-10 h-10 rounded-full object-cover border"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <input
+                      type="url"
+                      value={config.customAvatar}
+                      onChange={(e) => setConfig(prev => ({ ...prev, customAvatar: e.target.value }))}
+                      placeholder="https://example.com/avatar.png"
+                      className="flex-1 px-3 py-2 border rounded-md bg-background text-sm"
+                    />
+                  </div>
+                  {config.customAvatar && !isValidAvatarUrl(config.customAvatar) && (
+                    <p className="text-xs text-destructive">
+                      URL must start with http:// or https://
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Override the default feed avatar with your own image
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
@@ -421,6 +463,7 @@ export default function PublicWidgetBuilder() {
                     accent={accentColor}
                     topicName={config.customTitle || topic.name}
                     wideLayout={isWideLayout}
+                    customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ''}
                   />
                 </div>
               </TabsContent>
@@ -433,6 +476,7 @@ export default function PublicWidgetBuilder() {
                     accent={accentColor}
                     topicName={config.customTitle || topic.name}
                     wideLayout={isWideLayout}
+                    customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ''}
                   />
                 </div>
               </TabsContent>
@@ -450,13 +494,15 @@ function WidgetPreview({
   theme, 
   accent, 
   topicName,
-  wideLayout = false
+  wideLayout = false,
+  customAvatar = ''
 }: { 
   data: { feed: PreviewFeed | null; stories: PreviewStory[] } | null;
   theme: 'light' | 'dark'; 
   accent: string;
   topicName: string;
   wideLayout?: boolean;
+  customAvatar?: string;
 }) {
   const isDark = theme === 'dark';
   const textColor = isDark ? '#f3f4f6' : '#1f2937';
@@ -490,9 +536,9 @@ function WidgetPreview({
       >
         {/* Header */}
         <div className="p-4 border-b flex items-center gap-3" style={{ borderColor }}>
-          {(data.feed?.icon_url || data.feed?.logo_url) ? (
+          {(customAvatar || data.feed?.icon_url || data.feed?.logo_url) ? (
             <img 
-              src={data.feed.icon_url || data.feed.logo_url} 
+              src={customAvatar || data.feed?.icon_url || data.feed?.logo_url} 
               alt="" 
               className="w-8 h-8 rounded-full object-cover" 
             />
@@ -628,9 +674,9 @@ function WidgetPreview({
     >
       {/* Header */}
       <div className="p-3 border-b flex items-center gap-2" style={{ borderColor }}>
-        {(data.feed?.icon_url || data.feed?.logo_url) ? (
+        {(customAvatar || data.feed?.icon_url || data.feed?.logo_url) ? (
           <img 
-            src={data.feed.icon_url || data.feed.logo_url} 
+            src={customAvatar || data.feed?.icon_url || data.feed?.logo_url} 
             alt="" 
             className="w-6 h-6 rounded-full object-cover" 
           />
