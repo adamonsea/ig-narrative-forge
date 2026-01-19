@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Check, Code, Eye, ArrowLeft } from "lucide-react";
+import { Copy, Check, Code, Eye, ArrowLeft, Upload, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicData {
@@ -56,6 +56,9 @@ export default function PublicWidgetBuilder() {
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
   const [previewData, setPreviewData] = useState<{ feed: PreviewFeed | null; stories: PreviewStory[] } | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [config, setConfig] = useState<WidgetConfig>({
     maxHeadlines: 5,
@@ -129,12 +132,102 @@ export default function PublicWidgetBuilder() {
     fetchPreview();
   }, [slug, config.maxHeadlines]);
 
-  const WIDGET_JS_VERSION = '1.3.0';
+  const WIDGET_JS_VERSION = '1.4.0';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
     if (!url) return true;
     return url.startsWith('http://') || url.startsWith('https://');
+  };
+
+  // Handle avatar file upload
+  const handleAvatarUpload = async (file: File) => {
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PNG, JPEG, or WebP image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (500KB max)
+    if (file.size > 500 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 500KB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAvatarUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('feedSlug', slug || 'custom');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1/widget-avatar-upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      setConfig(prev => ({ ...prev, customAvatar: result.url }));
+      setAvatarFileName(file.name);
+      
+      toast({
+        title: "Avatar uploaded",
+        description: "Your custom avatar has been uploaded successfully.",
+      });
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload avatar. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleAvatarUpload(file);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleAvatarUpload(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const removeAvatar = () => {
+    setConfig(prev => ({ ...prev, customAvatar: '' }));
+    setAvatarFileName(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const generateEmbedCode = () => {
@@ -374,33 +467,69 @@ export default function PublicWidgetBuilder() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Custom avatar URL (optional)</Label>
-                  <div className="flex gap-2 items-center">
-                    {config.customAvatar && isValidAvatarUrl(config.customAvatar) && (
+                  <Label>Custom avatar (optional)</Label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  
+                  {config.customAvatar && isValidAvatarUrl(config.customAvatar) ? (
+                    <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/50">
                       <img 
                         src={config.customAvatar} 
                         alt="Avatar preview" 
-                        className="w-10 h-10 rounded-full object-cover border"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-background shadow-sm"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).src = '';
                         }}
                       />
-                    )}
-                    <input
-                      type="url"
-                      value={config.customAvatar}
-                      onChange={(e) => setConfig(prev => ({ ...prev, customAvatar: e.target.value }))}
-                      placeholder="https://example.com/avatar.png"
-                      className="flex-1 px-3 py-2 border rounded-md bg-background text-sm"
-                    />
-                  </div>
-                  {config.customAvatar && !isValidAvatarUrl(config.customAvatar) && (
-                    <p className="text-xs text-destructive">
-                      URL must start with http:// or https://
-                    </p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {avatarFileName || 'Custom avatar'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Click × to remove
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={removeAvatar}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                    >
+                      {avatarUploading ? (
+                        <>
+                          <Loader2 className="w-8 h-8 text-muted-foreground animate-spin mb-2" />
+                          <p className="text-sm text-muted-foreground">Uploading...</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                          <p className="text-sm font-medium">Upload image</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            or drag and drop
+                          </p>
+                        </>
+                      )}
+                    </div>
                   )}
+                  
                   <p className="text-xs text-muted-foreground">
-                    Override the default feed avatar with your own image
+                    Ideal size: <strong>128×128px</strong> (square). Max 500KB. PNG, JPG, or WebP.
                   </p>
                 </div>
               </CardContent>

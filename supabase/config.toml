@@ -507,6 +507,9 @@ verify_jwt = false
 [functions.widget-analytics]
 verify_jwt = false
 
+[functions.widget-avatar-upload]
+verify_jwt = false
+
 [functions.rss-feed]
 verify_jwt = false
 
