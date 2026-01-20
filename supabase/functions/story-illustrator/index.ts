@@ -56,6 +56,16 @@ serve(async (req) => {
 
     const { storyId, model } = validated.data;
 
+    // Get authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authorization header required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // User-authenticated client for auth checks
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -66,7 +76,7 @@ serve(async (req) => {
           persistSession: false,
         },
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     )
@@ -191,15 +201,21 @@ serve(async (req) => {
 
     // Get the authenticated user (use auth client with user token)
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
-    if (authError || !user) {
+    if (authError) {
+      console.error('Auth error:', authError.message);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        JSON.stringify({ error: 'Unauthorized', details: authError.message }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    if (!user) {
+      console.error('No user found from token');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    console.log(`Authenticated user: ${user.id}`);
 
     // Check feature flag for photographic mode
     const { data: featureFlag } = await supabase
