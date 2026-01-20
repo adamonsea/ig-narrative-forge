@@ -56,7 +56,8 @@ serve(async (req) => {
 
     const { storyId, model } = validated.data;
 
-    const supabase = createClient(
+    // User-authenticated client for auth checks
+    const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -66,6 +67,21 @@ serve(async (req) => {
         },
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    )
+    
+    // Service role client for database operations (bypasses RLS for performance)
+    // The RLS policies on stories table have complex EXISTS subqueries that cause
+    // statement timeouts when evaluated per-row. Using service role is safe here
+    // because we verify user auth above and this is a system-level operation.
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
         },
       }
     )
@@ -173,8 +189,8 @@ serve(async (req) => {
       )
     }
 
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get the authenticated user (use auth client with user token)
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
