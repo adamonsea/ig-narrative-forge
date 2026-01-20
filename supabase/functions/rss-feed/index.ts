@@ -55,7 +55,7 @@ serve(async (req: Request) => {
       });
     }
 
-    // Fetch last 20 published stories
+    // Fetch last 20 published stories via topic_articles join
     const { data: stories, error: storiesError } = await supabase
       .from("stories")
       .select(`
@@ -63,13 +63,16 @@ serve(async (req: Request) => {
         created_at,
         published_at,
         slides,
-        articles!inner (
-          source_url,
-          author,
-          published_at
+        topic_articles!inner (
+          topic_id,
+          articles!inner (
+            source_url,
+            author,
+            published_at
+          )
         )
       `)
-      .eq("topic_id", topic.id)
+      .eq("topic_articles.topic_id", topic.id)
       .eq("status", "published")
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(20);
@@ -95,7 +98,8 @@ serve(async (req: Request) => {
       const description = slides[1]?.text || slides[0]?.text || "";
       const pubDate = new Date(story.published_at || story.created_at).toUTCString();
       const link = `${baseUrl}/feed/${topic.slug}/story/${story.id}`;
-      const sourceUrl = story.articles?.source_url || link;
+      const topicArticle = story.topic_articles as any;
+      const sourceUrl = topicArticle?.articles?.source_url || link;
       
       // Escape XML entities
       const escapeXml = (str: string) => str
