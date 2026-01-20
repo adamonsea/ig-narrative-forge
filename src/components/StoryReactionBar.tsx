@@ -54,6 +54,7 @@ export const StoryReactionBar = ({
   
   // Wrap react to track when we're reacting
   const handleReaction = (type: 'like' | 'discard') => {
+    console.log('[StoryReactionBar] handleReaction called:', { type, storyId, topicId, disabled, isLoading, isReacting });
     justReactedRef.current = true;
     react(type);
   };
@@ -63,6 +64,9 @@ export const StoryReactionBar = ({
   
   // Disable during initial load AND during active reaction to prevent race conditions
   const disabled = isLoading || isReacting;
+  
+  // Debug logging
+  console.log('[StoryReactionBar] render:', { storyId, disabled, isLoading, isReacting, prefetchedCounts: !!prefetchedCounts, hookIsLoading: individualHook.isLoading });
   
   const isLiked = counts.userReaction === 'like';
   const isDisliked = counts.userReaction === 'discard';
