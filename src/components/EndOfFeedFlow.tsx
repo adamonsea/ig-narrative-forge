@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NotificationPreferencesModal } from './NotificationPreferencesModal';
 import { IOSInstallModal } from './IOSInstallModal';
-import { Bell, Sparkles, Plus, ArrowRight } from 'lucide-react';
+import { Mail, Sparkles, Plus, ArrowRight, Bell } from 'lucide-react';
 
 interface EndOfFeedFlowProps {
   topicName: string;
@@ -217,7 +217,7 @@ export const EndOfFeedFlow = ({ topicName, topicId, topicSlug, topicIcon }: EndO
       <Card className="p-8 text-center bg-gradient-to-br from-background to-muted/30 border-dashed">
         <div className="space-y-4">
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            <Bell className="w-8 h-8 text-primary" />
+            <Mail className="w-8 h-8 text-primary" />
           </div>
           
           <div className="space-y-2">
@@ -233,7 +233,7 @@ export const EndOfFeedFlow = ({ topicName, topicId, topicSlug, topicIcon }: EndO
               size="lg"
               className="gap-2"
             >
-              <Bell className="w-4 h-4" />
+              <Mail className="w-4 h-4" />
               Setup Notifications
             </Button>
           </div>

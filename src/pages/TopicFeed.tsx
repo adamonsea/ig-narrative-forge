@@ -11,7 +11,7 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, HelpCircle } from "lucide-react";
+import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, HelpCircle, Mail } from "lucide-react";
 import { PlayModeMenu } from "@/components/feed/PlayModeMenu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -649,7 +649,7 @@ const TopicFeed = () => {
                   className="relative flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   aria-label="Manage notifications"
                 >
-                  <Bell className="w-4 h-4" />
+                  <Mail className="w-4 h-4" />
                   <span className="hidden sm:inline text-sm font-medium">Notify Me</span>
                   {shouldShowNotificationPrompt && (
                     <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
@@ -922,7 +922,7 @@ const TopicFeed = () => {
                 className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                 aria-label="Manage notifications"
               >
-                <Bell className="w-4 h-4" />
+                <Mail className="w-4 h-4" />
                 {shouldShowNotificationPrompt && (
                   <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>

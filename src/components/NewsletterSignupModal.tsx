@@ -141,7 +141,7 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId }: N
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Bell className="w-5 h-5 text-primary" />
+            <Mail className="w-5 h-5 text-primary" />
             Stay Updated
           </DialogTitle>
           <DialogDescription>
