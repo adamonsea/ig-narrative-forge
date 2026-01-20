@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getVisitorId } from '@/lib/visitorId';
 
 export interface ReactionCounts {
   thumbsUp: number;
@@ -8,26 +9,6 @@ export interface ReactionCounts {
 }
 
 export type ReactionCountsMap = Map<string, ReactionCounts>;
-
-const getVisitorId = (): string => {
-  const key = 'curatr_visitor_id';
-
-  const fallback = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-  try {
-    let visitorId = localStorage.getItem(key);
-    if (!visitorId) {
-      const uuid = globalThis.crypto && 'randomUUID' in globalThis.crypto
-        ? globalThis.crypto.randomUUID()
-        : fallback();
-      visitorId = uuid;
-      localStorage.setItem(key, visitorId);
-    }
-    return visitorId;
-  } catch {
-    return fallback();
-  }
-};
 
 /**
  * Batch fetch reaction counts for multiple stories in a single RPC call.
