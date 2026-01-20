@@ -2,7 +2,7 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useStoryReactions } from '@/hooks/useStoryReactions';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import type { ReactionCounts } from '@/hooks/useStoriesReactionsBatch';
 
 interface StoryReactionBarProps {
@@ -28,12 +28,35 @@ export const StoryReactionBar = ({
   prefetchedCounts,
   onCountsChange
 }: StoryReactionBarProps) => {
-  // Only use individual fetch hook if no prefetched counts provided
+  // Always use individual hook for reaction logic
   const individualHook = useStoryReactions(storyId, topicId);
+  const { react, isReacting, counts: hookCounts } = individualHook;
   
-  // Use prefetched counts if available, otherwise fall back to individual fetch
-  const counts = prefetchedCounts ?? individualHook.counts;
-  const { react, isReacting } = individualHook;
+  // Track if we just reacted to sync counts to parent
+  const justReactedRef = useRef(false);
+  
+  // Use prefetched counts initially, but switch to hook counts after any reaction
+  const hasReactedEver = useRef(false);
+  if (hookCounts.userReaction !== null || justReactedRef.current) {
+    hasReactedEver.current = true;
+  }
+  
+  // After a reaction, prefer hook counts (they're updated optimistically)
+  const counts = hasReactedEver.current ? hookCounts : (prefetchedCounts ?? hookCounts);
+  
+  // Sync counts to parent batch map after reaction completes
+  useEffect(() => {
+    if (justReactedRef.current && !isReacting && onCountsChange) {
+      onCountsChange(storyId, hookCounts);
+      justReactedRef.current = false;
+    }
+  }, [hookCounts, isReacting, onCountsChange, storyId]);
+  
+  // Wrap react to track when we're reacting
+  const handleReaction = (type: 'like' | 'discard') => {
+    justReactedRef.current = true;
+    react(type);
+  };
   
   // Only show loading if using individual fetch AND it's loading
   const isLoading = !prefetchedCounts && individualHook.isLoading;
@@ -91,7 +114,7 @@ export const StoryReactionBar = ({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          react('like');
+          handleReaction('like');
         }}
         disabled={disabled}
         aria-pressed={isLiked}
@@ -127,7 +150,7 @@ export const StoryReactionBar = ({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          react('discard');
+          handleReaction('discard');
         }}
         disabled={disabled}
         aria-pressed={isDisliked}

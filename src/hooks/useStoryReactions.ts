@@ -1,32 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getVisitorId } from '@/lib/visitorId';
 
-interface ReactionCounts {
+export interface ReactionCounts {
   thumbsUp: number;
   thumbsDown: number;
   userReaction: 'like' | 'discard' | null;
 }
-
-const getVisitorId = (): string => {
-  const key = 'curatr_visitor_id';
-
-  const fallback = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-  try {
-    let visitorId = localStorage.getItem(key);
-    if (!visitorId) {
-      const uuid = globalThis.crypto && 'randomUUID' in globalThis.crypto
-        ? globalThis.crypto.randomUUID()
-        : fallback();
-      visitorId = uuid;
-      localStorage.setItem(key, visitorId);
-    }
-    return visitorId;
-  } catch {
-    // localStorage can be blocked (e.g. private mode). Still return a stable-ish id.
-    return fallback();
-  }
-};
 
 export const useStoryReactions = (storyId: string, topicId: string) => {
   const [counts, setCounts] = useState<ReactionCounts>({
