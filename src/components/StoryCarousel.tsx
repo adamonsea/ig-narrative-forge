@@ -435,8 +435,7 @@ export default function StoryCarousel({
   const isFirstSlide = safeSlideIndex === 0;
   const isLastSlide = safeSlideIndex === validSlides.length - 1;
 
-  // Check if this is a placeholder slide from cache (loading state)
-  const isPlaceholderLoading = currentSlide?.id?.startsWith('placeholder-') || currentSlide?.content === 'Loading...';
+  // Note: Placeholder slides are now ghosted at the feed level in TopicFeed.tsx
   
 
 
@@ -1067,7 +1066,7 @@ export default function StoryCarousel({
               slides={slidesForEmbla}
               height="100%"
               initialIndex={currentSlideIndex}
-              showDots={slidesForEmbla.length > 1 && !isPlaceholderLoading}
+              showDots={slidesForEmbla.length > 1}
               dotStyle="instagram"
               onSlideChange={setCurrentSlideIndex}
               ariaLabel={`${story.title} story slides`}

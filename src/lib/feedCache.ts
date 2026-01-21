@@ -223,7 +223,12 @@ export const setCachedFeed = (
       timestamp: Date.now(),
       topicSlug: slug.toLowerCase(),
       topic: toCachedTopic(topic),
-      stories: stories.slice(0, MAX_STORIES_PER_TOPIC).map(toCachedStory),
+      // Only cache stories with real slides (not placeholders)
+      stories: stories
+        .filter(story => story.slides?.length > 0 && 
+          !story.slides[0]?.id?.startsWith('placeholder-'))
+        .slice(0, MAX_STORIES_PER_TOPIC)
+        .map(toCachedStory),
     };
     
     const key = getCacheKey(slug);
@@ -244,7 +249,11 @@ export const setCachedFeed = (
           timestamp: Date.now(),
           topicSlug: slug.toLowerCase(),
           topic: toCachedTopic(topic),
-          stories: stories.slice(0, MAX_STORIES_PER_TOPIC).map(toCachedStory),
+          stories: stories
+            .filter(story => story.slides?.length > 0 && 
+              !story.slides[0]?.id?.startsWith('placeholder-'))
+            .slice(0, MAX_STORIES_PER_TOPIC)
+            .map(toCachedStory),
         };
         localStorage.setItem(getCacheKey(slug), JSON.stringify(entry));
       } catch {
