@@ -1184,14 +1184,18 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     });
   }, [formatSourceName]);
 
-  const loadFilterStoryIndex = useCallback(async (topicData: Topic | null) => {
-    if (!topicData?.id || filterIndexLoadingRef.current) return;
+  const loadFilterStoryIndex = useCallback(async (topicData: Topic | null, forceReload: boolean = false) => {
+    if (!topicData?.id) return;
+    
+    // Skip if already loading, unless force reload requested
+    if (filterIndexLoadingRef.current && !forceReload) return;
 
     filterIndexLoadingRef.current = true;
     console.log('🔍 [FILTER INDEX] Starting load for topic:', {
       topicId: topicData.id,
       topicSlug: topicData.slug,
       topicName: topicData.name,
+      forceReload,
       timestamp: new Date().toISOString()
     });
 
@@ -1466,8 +1470,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
     });
 
+    // Always show all topic keywords, even with count=0, when no keyword filters are active
+    const noActiveKeywordFilters = activeKeywordSet.size === 0;
+    
     const keywordResults: KeywordCount[] = Array.from(keywordCounts.entries())
-      .filter(([keyword, count]) => count > 0 || activeKeywordSet.has(keyword))
+      .filter(([keyword, count]) => count > 0 || activeKeywordSet.has(keyword) || noActiveKeywordFilters)
       .map(([keyword, count]) => ({
         keyword: keywordLookup.get(keyword) || keyword,
         count
@@ -1479,8 +1486,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         return b.count - a.count;
       });
 
+    // Always show all topic landmarks when no landmark filters are active
+    const noActiveLandmarkFilters = activeLandmarkSet.size === 0;
+    
     const landmarkResults: KeywordCount[] = Array.from(landmarkCounts.entries())
-      .filter(([landmark, count]) => count > 0 || activeLandmarkSet.has(landmark))
+      .filter(([landmark, count]) => count > 0 || activeLandmarkSet.has(landmark) || noActiveLandmarkFilters)
       .map(([landmark, count]) => ({
         keyword: landmarkLookup.get(landmark) || landmark,
         count
@@ -1492,8 +1502,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         return b.count - a.count;
       });
 
+    // Always show all topic organizations when no organization filters are active
+    const noActiveOrganizationFilters = activeOrganizationSet.size === 0;
+
     const organizationResults: KeywordCount[] = Array.from(organizationCounts.entries())
-      .filter(([org, count]) => count > 0 || activeOrganizationSet.has(org))
+      .filter(([org, count]) => count > 0 || activeOrganizationSet.has(org) || noActiveOrganizationFilters)
       .map(([org, count]) => ({
         keyword: organizationLookup.get(org) || org,
         count
@@ -1839,9 +1852,20 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     };
   }, [filterStoryIndex, selectedKeywords, selectedLandmarks, selectedOrganizations, selectedSources, topic?.keywords, topic?.landmarks, topic?.organizations, computeFilterOptionsFromIndex]);
 
+  // Track previous keywords length to detect when fresh topic data arrives
+  const prevKeywordsLengthRef = useRef<number>(0);
+  
   useEffect(() => {
     if (topic) {
-      loadFilterStoryIndex(topic);
+      const currentKeywordsLength = (topic.keywords?.length || 0) + 
+        (topic.landmarks?.length || 0) + 
+        (topic.organizations?.length || 0);
+      
+      // Force reload if we went from no keywords to having keywords (fresh topic loaded)
+      const forceReload = prevKeywordsLengthRef.current === 0 && currentKeywordsLength > 0;
+      prevKeywordsLengthRef.current = currentKeywordsLength;
+      
+      loadFilterStoryIndex(topic, forceReload);
     }
   }, [topic?.id, topic?.keywords, topic?.landmarks, topic?.organizations, loadFilterStoryIndex]);
 
@@ -1875,9 +1899,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             topic_type: cachedTopic.topic_type || 'regional',
             region: cachedTopic.region || '',
             description: '',
-            keywords: [],
-            landmarks: [],
-            organizations: [],
+            keywords: cachedTopic.keywords || [],
+            landmarks: cachedTopic.landmarks || [],
+            organizations: cachedTopic.organizations || [],
             is_public: true,
             created_by: '',
             branding_config: cachedTopic.branding_config || undefined,
