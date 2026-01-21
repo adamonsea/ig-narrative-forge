@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowRight, ArrowLeft, Search, X, HelpCircle, Loader2, Plus } from "lucide-react";
+import { ArrowRight, ArrowLeft, Search, X, Loader2, Plus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface GeneratedKeyword {
   keyword: string;
@@ -127,6 +125,18 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
       }
     }
   }, [currentStep, topicName, topicType, region]);
+
+  // Lock body scroll when open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
   const generateKeywords = async () => {
     if (!topicName) return;
@@ -290,13 +300,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     onOpenChange(false);
   };
 
-  const progress = (currentStep / 3) * 100;
-
-  // Filter keywords by search
-  const filteredKeywords = generatedKeywords;
-
   // Group keywords by category
-  const groupedKeywords = filteredKeywords.reduce((acc, kw) => {
+  const groupedKeywords = generatedKeywords.reduce((acc, kw) => {
     if (!acc[kw.category]) acc[kw.category] = [];
     acc[kw.category].push(kw);
     return acc;
@@ -309,260 +314,353 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     discovery: 'Discovery'
   };
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10">
-        {/* Minimal Progress - just dots */}
-        <div className="flex justify-center gap-3 mb-10">
-          {[1, 2, 3].map((step) => (
-            <div
-              key={step}
-              className={cn(
-                "h-2 rounded-full transition-all duration-300",
-                currentStep === step 
-                  ? "bg-foreground w-10" 
-                  : currentStep > step 
-                    ? "bg-foreground/40 w-4" 
-                    : "bg-muted w-4"
-              )}
-            />
-          ))}
-        </div>
+  const stepTitles = {
+    1: "Name your feed",
+    2: "Describe your feed",
+    3: "Select keywords"
+  };
 
-        {/* Step Content */}
-        <div className="py-6">
-          {/* Step 1: Name */}
-          {currentStep === 1 && (
-            <div className="space-y-10 animate-in fade-in duration-300">
-              <div className="max-w-lg mx-auto space-y-6">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-3xl font-semibold text-foreground">Topic title</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>Choose a clear, descriptive name. This becomes your feed's identity and helps AI generate relevant keywords.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Input
-                  value={topicName}
-                  onChange={(e) => setTopicName(e.target.value)}
-                  placeholder={EXAMPLE_NAMES[placeholderIndex]}
-                  className="text-2xl h-20 text-center font-medium border-2 border-[hsl(270,100%,68%)]/50 focus:border-[hsl(270,100%,68%)] focus:ring-4 focus:ring-[hsl(270,100%,68%)]/20 rounded-xl transition-all placeholder:text-muted-foreground/40 bg-background"
-                  autoFocus
-                />
+  if (!open) return null;
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 bg-background"
+        >
+          {/* Close button */}
+          <button
+            onClick={handleClose}
+            className="absolute top-6 right-6 z-10 p-2 rounded-full hover:bg-muted transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-6 h-6 text-muted-foreground" />
+          </button>
+
+          {/* Main container */}
+          <div className="h-full flex flex-col">
+            {/* Header with progress */}
+            <div className="flex-shrink-0 pt-16 pb-8 px-6">
+              {/* Step indicator */}
+              <div className="flex justify-center gap-2 mb-8">
+                {[1, 2, 3].map((step) => (
+                  <div
+                    key={step}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-500",
+                      currentStep === step 
+                        ? "bg-primary w-12" 
+                        : currentStep > step 
+                          ? "bg-primary/40 w-6" 
+                          : "bg-muted w-6"
+                    )}
+                  />
+                ))}
+              </div>
+
+              {/* Step title */}
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="text-center"
+              >
+                <p className="text-sm text-muted-foreground mb-2">Step {currentStep} of 3</p>
+                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
+                  {stepTitles[currentStep as keyof typeof stepTitles]}
+                </h1>
+              </motion.div>
+            </div>
+
+            {/* Content area */}
+            <div className="flex-1 overflow-y-auto px-6">
+              <div className="max-w-lg mx-auto pb-32">
+                <AnimatePresence mode="wait">
+                  {/* Step 1: Name */}
+                  {currentStep === 1 && (
+                    <motion.div
+                      key="step1"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6 pt-8"
+                    >
+                      <div className="space-y-3">
+                        <Input
+                          value={topicName}
+                          onChange={(e) => setTopicName(e.target.value)}
+                          placeholder={EXAMPLE_NAMES[placeholderIndex]}
+                          className="text-xl md:text-2xl h-16 text-center font-medium border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl transition-all placeholder:text-muted-foreground/40"
+                          autoFocus
+                        />
+                        <p className="text-center text-sm text-muted-foreground">
+                          Choose a clear, memorable name for your feed
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 2: Details */}
+                  {currentStep === 2 && (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6 pt-8"
+                    >
+                      {/* Feed type selection */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => setTopicType('keyword')}
+                          className={cn(
+                            "p-4 rounded-xl border-2 transition-all text-left",
+                            topicType === 'keyword'
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-muted-foreground/30"
+                          )}
+                        >
+                          <p className="font-medium">Interest-based</p>
+                          <p className="text-sm text-muted-foreground">Topic or theme</p>
+                        </button>
+                        <button
+                          onClick={() => setTopicType('regional')}
+                          className={cn(
+                            "p-4 rounded-xl border-2 transition-all text-left",
+                            topicType === 'regional'
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-muted-foreground/30"
+                          )}
+                        >
+                          <p className="font-medium">Regional</p>
+                          <p className="text-sm text-muted-foreground">Local area news</p>
+                        </button>
+                      </div>
+
+                      {/* Region input for regional type */}
+                      {topicType === 'regional' && (
+                        <Input
+                          value={region}
+                          onChange={(e) => setRegion(e.target.value)}
+                          placeholder="Enter region name (e.g., Brighton, East Sussex)"
+                          className="h-12"
+                        />
+                      )}
+
+                      {/* Audience selector */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Audience level</label>
+                        <Select value={audienceExpertise} onValueChange={setAudienceExpertise}>
+                          <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Select audience" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background border shadow-lg">
+                            <SelectItem value="general">General audience</SelectItem>
+                            <SelectItem value="informed">Informed readers</SelectItem>
+                            <SelectItem value="expert">Expert level</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Description</label>
+                        <Textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Describe your feed to improve keyword accuracy..."
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+
+                      {/* Keyword generation */}
+                      {isGeneratingKeywords ? (
+                        <div className="p-8 border rounded-xl bg-muted/30 text-center space-y-4">
+                          <div className="flex items-center justify-center gap-3">
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                            <span className="font-medium">Generating keywords...</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground animate-pulse" key={loadingMessageIndex}>
+                            {LOADING_MESSAGES[loadingMessageIndex]}
+                          </p>
+                          <div className="flex flex-wrap justify-center gap-2">
+                            {[...Array(6)].map((_, i) => (
+                              <Skeleton key={i} className="h-7 w-16 rounded-full" />
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={generateKeywords}
+                          disabled={!topicName}
+                          size="lg"
+                          className="w-full h-14 text-base"
+                        >
+                          <Sparkles className="w-5 h-5 mr-2" />
+                          Generate Keywords
+                        </Button>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* Step 3: Keywords */}
+                  {currentStep === 3 && (
+                    <motion.div
+                      key="step3"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6 pt-8"
+                    >
+                      {/* Selection count */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-semibold text-foreground">{selectedKeywords.size}</span> keywords selected
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleBulkAction('deselectAll')}
+                            className="text-xs"
+                          >
+                            Clear
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleBulkAction('selectAll')}
+                            className="text-xs"
+                          >
+                            Select all
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Keyword categories */}
+                      <div className="space-y-5 max-h-[40vh] overflow-y-auto pr-1">
+                        {Object.entries(groupedKeywords).map(([category, keywords]) => (
+                          <div key={category} className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              {categoryLabels[category] || category}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {keywords.map((kw) => {
+                                const isSelected = selectedKeywords.has(kw.keyword);
+                                return (
+                                  <button
+                                    key={kw.keyword}
+                                    onClick={() => handleToggleKeyword(kw.keyword)}
+                                    className={cn(
+                                      "px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                                      isSelected
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    )}
+                                    title={kw.rationale}
+                                  >
+                                    {kw.keyword}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Manual keyword input */}
+                      <div className="flex gap-2">
+                        <Input
+                          value={manualKeyword}
+                          onChange={(e) => setManualKeyword(e.target.value)}
+                          placeholder="Add custom keyword"
+                          className="flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && manualKeyword.trim()) {
+                              setSelectedKeywords(prev => new Set([...prev, manualKeyword.trim()]));
+                              setManualKeyword("");
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            if (manualKeyword.trim()) {
+                              setSelectedKeywords(prev => new Set([...prev, manualKeyword.trim()]));
+                              setManualKeyword("");
+                            }
+                          }}
+                          disabled={!manualKeyword.trim()}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
-          )}
 
-          {/* Step 2: Details */}
-          {currentStep === 2 && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="text-center">
-                <h2 className="text-3xl font-semibold text-foreground">Refine your feed</h2>
-              </div>
-
-              <div className="space-y-4 max-w-lg mx-auto">
-                <div className="grid grid-cols-2 gap-4">
-                  <Select value={topicType} onValueChange={(v: any) => setTopicType(v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="regional">Regional</SelectItem>
-                      <SelectItem value="keyword">Interest</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {topicType === 'regional' ? (
-                    <Input
-                      value={region}
-                      onChange={(e) => setRegion(e.target.value)}
-                      placeholder="Region name"
-                    />
-                  ) : (
-                    <Select value={audienceExpertise} onValueChange={setAudienceExpertise}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Audience" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General audience</SelectItem>
-                        <SelectItem value="informed">Informed readers</SelectItem>
-                        <SelectItem value="expert">Expert level</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-
-                {topicType === 'regional' && (
-                  <Select value={audienceExpertise} onValueChange={setAudienceExpertise}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Audience" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General audience</SelectItem>
-                      <SelectItem value="informed">Informed readers</SelectItem>
-                      <SelectItem value="expert">Expert level</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Refine this to improve keyword accuracy — the more specific, the better your matches"
-                  rows={2}
-                />
-
-                {/* Keyword generation trigger */}
-                {isGeneratingKeywords ? (
-                  <div className="p-8 border rounded-xl bg-muted/30 text-center space-y-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <Loader2 className="w-6 h-6 animate-spin text-[hsl(270,100%,68%)]" />
-                      <span className="text-lg font-medium text-foreground">Finding keywords...</span>
-                    </div>
-                    <p className="text-base text-muted-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
-                      {LOADING_MESSAGES[loadingMessageIndex]}
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {[...Array(8)].map((_, i) => (
-                        <Skeleton key={i} className="h-7 w-20 rounded-full" />
-                      ))}
-                    </div>
-                  </div>
+            {/* Footer navigation - fixed at bottom */}
+            <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div className="max-w-lg mx-auto px-6 py-4 flex items-center justify-between">
+                {currentStep > 1 ? (
+                  <Button
+                    variant="ghost"
+                    onClick={handleBack}
+                    className="gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                  </Button>
                 ) : (
                   <Button
-                    onClick={generateKeywords}
-                    disabled={!topicName}
-                    className="w-full h-14 text-lg bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white"
+                    variant="ghost"
+                    onClick={handleClose}
                   >
-                    <Search className="w-5 h-5 mr-2" />
-                    Generate Keywords
+                    Cancel
+                  </Button>
+                )}
+
+                {currentStep < 3 ? (
+                  <Button
+                    onClick={handleNext}
+                    disabled={!canProceed()}
+                    className="gap-2"
+                  >
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleCreate}
+                    disabled={!canProceed() || isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Feed"
+                    )}
                   </Button>
                 )}
               </div>
             </div>
-          )}
-
-          {/* Step 3: Refine Keywords */}
-          {currentStep === 3 && (
-            <div className="space-y-5 animate-in fade-in duration-300">
-              <div className="text-center space-y-1">
-                <h2 className="text-3xl font-semibold text-foreground">Curate your keywords</h2>
-                <p className="text-muted-foreground">Tap to toggle • {selectedKeywords.size} selected</p>
-              </div>
-
-              {/* Quick actions row */}
-              <div className="flex items-center justify-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkAction('deselectAll')}
-                >
-                  Clear
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkAction('selectAll')}
-                >
-                  All
-                </Button>
-              </div>
-
-              {/* Keyword pills by category */}
-              <div className="space-y-4 max-h-[240px] overflow-y-auto px-1">
-                {Object.entries(groupedKeywords).map(([category, keywords]) => (
-                  <div key={category} className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      {categoryLabels[category] || category}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {keywords.map((kw) => {
-                        const isSelected = selectedKeywords.has(kw.keyword);
-                        return (
-                          <button
-                            key={kw.keyword}
-                            onClick={() => handleToggleKeyword(kw.keyword)}
-                            className={cn(
-                              "px-2.5 py-1 rounded-full text-sm transition-all",
-                              isSelected
-                                ? "bg-[hsl(270,100%,68%)] text-white"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                            )}
-                            title={kw.rationale}
-                          >
-                            {kw.keyword}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Manual add */}
-              <div className="flex gap-2 max-w-sm mx-auto">
-                <Input
-                  value={manualKeyword}
-                  onChange={(e) => setManualKeyword(e.target.value)}
-                  placeholder="Add your own keyword"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && manualKeyword.trim()) {
-                      setSelectedKeywords(prev => new Set([...prev, manualKeyword.trim()]));
-                      setManualKeyword("");
-                    }
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    if (manualKeyword.trim()) {
-                      setSelectedKeywords(prev => new Set([...prev, manualKeyword.trim()]));
-                      setManualKeyword("");
-                    }
-                  }}
-                  disabled={!manualKeyword.trim()}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <div className="flex justify-end items-center pt-6">
-          {currentStep > 1 && (
-            <Button
-              variant="ghost"
-              onClick={handleBack}
-              className="mr-auto"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          )}
-
-          {currentStep === 1 && (
-            <Button onClick={handleNext} disabled={!canProceed()} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white">
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          )}
-
-          {currentStep === 3 && (
-            <Button onClick={handleCreate} disabled={!canProceed() || isLoading} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white">
-              {isLoading ? "Creating..." : "Create Feed"}
-            </Button>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
