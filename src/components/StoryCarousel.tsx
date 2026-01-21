@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Download, Pin, MessageCircle, ExternalLink } from 'lucide-react';
+import { Share2, Download, Pin, MessageCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import arrowRightSvg from '@/assets/arrow-right.svg';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -435,6 +435,9 @@ export default function StoryCarousel({
   const isFirstSlide = safeSlideIndex === 0;
   const isLastSlide = safeSlideIndex === validSlides.length - 1;
 
+  // Check if this is a placeholder slide from cache (loading state)
+  const isPlaceholderLoading = currentSlide?.id?.startsWith('placeholder-') || currentSlide?.content === 'Loading...';
+  
   // Early return if no valid slides
   if (!currentSlide || validSlides.length === 0) {
     console.error('StoryCarousel: No valid slides found for story', story.id);
@@ -443,6 +446,35 @@ export default function StoryCarousel({
         <Card className="w-full overflow-hidden shadow-lg">
           <div className="p-6 text-center text-muted-foreground">
             <p>Story content is not available</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+  
+  // Show compact loading state for cached placeholder stories
+  if (isPlaceholderLoading) {
+    return (
+      <div className="w-full">
+        <Card className="w-full overflow-hidden shadow-lg">
+          <div className="p-4">
+            {/* Show cover image if available */}
+            {story.cover_illustration_url && (
+              <div className="w-full h-48 rounded-lg overflow-hidden mb-3">
+                <img 
+                  src={optimizeImageUrl(story.cover_illustration_url, { width: 400, height: 192 })}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            {/* Title */}
+            <h3 className="font-semibold text-lg mb-2 line-clamp-2">{story.title}</h3>
+            {/* Loading indicator */}
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <span>Loading content...</span>
+            </div>
           </div>
         </Card>
       </div>
