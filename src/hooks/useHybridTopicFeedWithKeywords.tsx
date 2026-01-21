@@ -95,7 +95,7 @@ interface FilterStoryIndexEntry {
 }
 
 const STORIES_PER_PAGE = 20; // Increased to load more stories per page
-const DEBOUNCE_DELAY_MS = 0;
+const DEBOUNCE_DELAY_MS = 300; // Debounce to prevent rapid server calls and race conditions
 
 // Feed content interface - stories only (parliamentary content moved to insight cards)
 interface FeedContent {
@@ -165,6 +165,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const allContentRef = useRef<FeedContent[]>([]);
   const isServerFilteringRef = useRef(false);
   const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
+  
+  // Filter version tracking to prevent stale server responses from overwriting active filters
+  const filterVersionRef = useRef(0);
   
   // Derived filtered stories for backward compatibility
   const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
@@ -1075,9 +1078,56 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         // For initial load, use the sorted content with proper chronological order
         setAllContent(sortedContent);
         allContentRef.current = sortedContent;
+        
+        // Check if user has active filters - don't overwrite their filtered view with unfiltered data
+        const hasActiveFilters = selectedKeywords.length > 0 || 
+          selectedLandmarks.length > 0 || 
+          selectedOrganizations.length > 0 || 
+          selectedSources.length > 0;
+        
         if (!keywords && !sources) {
-          setFilteredContent(sortedContent);
-          console.log('🔍 [INITIAL] FilteredContent set to', sortedContent.length, 'items (no filters)');
+          // This is an unfiltered background refresh
+          if (hasActiveFilters) {
+            // Re-apply active filters to the new base content instead of overwriting
+            // Inline the filtering logic since applyClientSideFiltering isn't defined yet
+            const combined = [...selectedKeywords, ...selectedLandmarks, ...selectedOrganizations];
+            const refiltered = sortedContent.filter(item => {
+              if (item.type === 'story') {
+                const story = item.data as Story;
+                
+                // Check keyword filter (OR logic)
+                const keywordMatch = combined.length === 0 || (() => {
+                  const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
+                  return combined.some(keyword => {
+                    const escapedKeyword = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const wordBoundaryRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
+                    return wordBoundaryRegex.test(text);
+                  });
+                })();
+                
+                // Check source filter
+                const sourceMatch = selectedSources.length === 0 || (() => {
+                  if (!story.article?.source_url) return false;
+                  try {
+                    const url = new URL(story.article.source_url);
+                    const domain = url.hostname.replace(/^www\./, '');
+                    return selectedSources.includes(domain);
+                  } catch (e) {
+                    return false;
+                  }
+                })();
+                
+                return keywordMatch && sourceMatch;
+              }
+              return false;
+            }).sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
+            
+            setFilteredContent(refiltered);
+            console.log('🔍 [INITIAL] Re-applied active filters to refreshed content:', refiltered.length, 'items');
+          } else {
+            setFilteredContent(sortedContent);
+            console.log('🔍 [INITIAL] FilteredContent set to', sortedContent.length, 'items (no filters)');
+          }
         } else {
           // For filtering, only include stories for now
           setFilteredContent(storyContent);
@@ -1135,7 +1185,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       setIsServerFiltering(false);
       isServerFilteringRef.current = false;
     }
-  }, [slug, loadStoriesFromPublicFeed, normalizeMPName]);
+  }, [slug, loadStoriesFromPublicFeed, normalizeMPName, selectedKeywords, selectedLandmarks, selectedOrganizations, selectedSources]);
 
   const extractDomain = useCallback((url?: string | null) => {
     if (!url) return null;
@@ -1438,10 +1488,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     const activeOrganizationSet = new Set(activeOrganizations.map(o => o.toLowerCase()));
     const activeSourceSet = new Set(activeSources);
 
+    // Use OR logic (.some) for multi-select: show stories matching ANY selected keyword/landmark/org
     const matchingStories = index.filter(story => {
-      const matchesKeywords = activeKeywordSet.size === 0 || Array.from(activeKeywordSet).every(keyword => story.keywordMatches.includes(keyword));
-      const matchesLandmarks = activeLandmarkSet.size === 0 || Array.from(activeLandmarkSet).every(landmark => story.keywordMatches.includes(landmark));
-      const matchesOrganizations = activeOrganizationSet.size === 0 || Array.from(activeOrganizationSet).every(org => story.keywordMatches.includes(org));
+      const matchesKeywords = activeKeywordSet.size === 0 || Array.from(activeKeywordSet).some(keyword => story.keywordMatches.includes(keyword));
+      const matchesLandmarks = activeLandmarkSet.size === 0 || Array.from(activeLandmarkSet).some(landmark => story.keywordMatches.includes(landmark));
+      const matchesOrganizations = activeOrganizationSet.size === 0 || Array.from(activeOrganizationSet).some(org => story.keywordMatches.includes(org));
       const matchesSources = activeSourceSet.size === 0 || (story.sourceDomain && activeSourceSet.has(story.sourceDomain));
       return matchesKeywords && matchesLandmarks && matchesOrganizations && matchesSources;
     });
@@ -1624,7 +1675,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [normalizeMPName]);
 
   // Debounced server-side filtering with sources (Phase 2)
-  const triggerServerFiltering = useCallback(async (keywords: string[], sources: string[]) => {
+  const triggerServerFiltering = useCallback(async (keywords: string[], sources: string[], expectedVersion: number) => {
     if (!topic) return;
 
     setIsServerFiltering(true);
@@ -1641,6 +1692,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         keywords.length > 0 ? keywords : null,
         sources.length > 0 ? sources : null // PHASE 2: Pass sources to RPC
       );
+      
+      // Check if filters changed during the request - discard stale response
+      if (filterVersionRef.current !== expectedVersion) {
+        console.log('Discarding stale server filter response - filters changed during request');
+        return;
+      }
+      
+      serverFilteredRef.current = true;
     } catch (error) {
       console.error('Phase 2: Server filtering failed:', error);
       setIsServerFiltering(false);
@@ -1650,6 +1709,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   // Handle keyword selection with hybrid filtering (Phase 2: includes sources)
   const toggleKeyword = useCallback((keyword: string) => {
+    // Increment filter version to track this change
+    filterVersionRef.current++;
+    const capturedVersion = filterVersionRef.current;
+    
     setSelectedKeywords(prev => {
       const newKeywords = prev.includes(keyword)
         ? prev.filter(k => k !== keyword)
@@ -1662,26 +1725,24 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         clearTimeout(debounceRef.current);
       }
 
-      // Apply immediate client-side filtering if we have server-filtered data
-      if (serverFilteredRef.current || combinedKeywords.length === 0) {
-        const baseContent = combinedKeywords.length === 0 ? allContent : filteredContent;
-        setFilteredContent(applyClientSideFiltering(baseContent, combinedKeywords, selectedSources));
-      } else {
-        // Apply client-side filtering immediately for responsiveness
-        setFilteredContent(applyClientSideFiltering(allContent, combinedKeywords, selectedSources));
-      }
+      // Always filter from complete dataset (allContent) for consistent behavior
+      setFilteredContent(applyClientSideFiltering(allContent, combinedKeywords, selectedSources));
 
       // Debounce server-side filtering (PHASE 2: now includes sources)
       debounceRef.current = setTimeout(() => {
-        triggerServerFiltering(combinedKeywords, selectedSources);
+        triggerServerFiltering(combinedKeywords, selectedSources, capturedVersion);
       }, DEBOUNCE_DELAY_MS);
 
       return newKeywords;
     });
-  }, [allContent, filteredContent, selectedSources, selectedLandmarks, selectedOrganizations, applyClientSideFiltering, triggerServerFiltering]);
+  }, [allContent, selectedSources, selectedLandmarks, selectedOrganizations, applyClientSideFiltering, triggerServerFiltering]);
 
   // Handle source selection (Phase 2: with server-side filtering)
   const toggleSource = useCallback((sourceDomain: string) => {
+    // Increment filter version to track this change
+    filterVersionRef.current++;
+    const capturedVersion = filterVersionRef.current;
+    
     setSelectedSources(prev => {
       const newSources = prev.includes(sourceDomain)
         ? prev.filter(s => s !== sourceDomain)
@@ -1699,7 +1760,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // PHASE 2: Debounce server-side filtering for sources too
       debounceRef.current = setTimeout(() => {
-        triggerServerFiltering(combinedKeywords, newSources);
+        triggerServerFiltering(combinedKeywords, newSources, capturedVersion);
       }, DEBOUNCE_DELAY_MS);
 
       return newSources;
@@ -1741,6 +1802,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [toggleSource]);
 
   const toggleLandmark = useCallback((landmark: string) => {
+    // Increment filter version to track this change
+    filterVersionRef.current++;
+    const capturedVersion = filterVersionRef.current;
+    
     setSelectedLandmarks(prev => {
       const newLandmarks = prev.includes(landmark)
         ? prev.filter(l => l !== landmark)
@@ -1758,7 +1823,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // Debounce server-side filtering (combine all filters)
       debounceRef.current = setTimeout(() => {
-        triggerServerFiltering(combinedKeywords, selectedSources);
+        triggerServerFiltering(combinedKeywords, selectedSources, capturedVersion);
       }, DEBOUNCE_DELAY_MS);
 
       return newLandmarks;
@@ -1770,6 +1835,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [toggleLandmark]);
 
   const toggleOrganization = useCallback((organization: string) => {
+    // Increment filter version to track this change
+    filterVersionRef.current++;
+    const capturedVersion = filterVersionRef.current;
+    
     setSelectedOrganizations(prev => {
       const newOrganizations = prev.includes(organization)
         ? prev.filter(o => o !== organization)
@@ -1787,7 +1856,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // Debounce server-side filtering (combine all filters)
       debounceRef.current = setTimeout(() => {
-        triggerServerFiltering(combinedKeywords, selectedSources);
+        triggerServerFiltering(combinedKeywords, selectedSources, capturedVersion);
       }, DEBOUNCE_DELAY_MS);
 
       return newOrganizations;
