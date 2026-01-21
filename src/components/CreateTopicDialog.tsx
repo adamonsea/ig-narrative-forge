@@ -191,14 +191,26 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   const handleBulkAction = (action: 'selectAll' | 'deselectAll' | 'selectHighConfidence') => {
     if (action === 'selectAll') {
-      setSelectedKeywords(new Set(generatedKeywords.map(k => k.keyword)));
+      // Include all generated keywords plus any manually added ones
+      const allGeneratedKeywords = generatedKeywords.map(k => k.keyword);
+      setSelectedKeywords(prev => {
+        // Get manually added keywords (those in selectedKeywords but not in generatedKeywords)
+        const generatedSet = new Set(allGeneratedKeywords);
+        const manualKeywords = Array.from(prev).filter(k => !generatedSet.has(k));
+        return new Set([...allGeneratedKeywords, ...manualKeywords]);
+      });
     } else if (action === 'deselectAll') {
       setSelectedKeywords(new Set());
     } else if (action === 'selectHighConfidence') {
       const highConfidence = generatedKeywords
         .filter(k => k.confidence >= 0.85)
         .map(k => k.keyword);
-      setSelectedKeywords(new Set(highConfidence));
+      // Keep any manually added keywords when selecting high confidence
+      setSelectedKeywords(prev => {
+        const generatedSet = new Set(generatedKeywords.map(k => k.keyword));
+        const manualKeywords = Array.from(prev).filter(k => !generatedSet.has(k));
+        return new Set([...highConfidence, ...manualKeywords]);
+      });
     }
   };
 
@@ -575,6 +587,32 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                             </div>
                           </div>
                         ))}
+
+                        {/* Custom/Manual keywords section */}
+                        {(() => {
+                          const generatedSet = new Set(generatedKeywords.map(k => k.keyword));
+                          const manualKeywords = Array.from(selectedKeywords).filter(k => !generatedSet.has(k));
+                          if (manualKeywords.length === 0) return null;
+                          return (
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                Custom
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {manualKeywords.map((keyword) => (
+                                  <button
+                                    key={keyword}
+                                    onClick={() => handleToggleKeyword(keyword)}
+                                    className="px-3 py-1.5 rounded-full text-sm font-medium transition-all bg-primary text-primary-foreground"
+                                  >
+                                    {keyword}
+                                    <X className="w-3 h-3 ml-1.5 inline-block" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Manual keyword input */}
