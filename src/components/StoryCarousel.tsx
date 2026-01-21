@@ -438,48 +438,6 @@ export default function StoryCarousel({
   // Check if this is a placeholder slide from cache (loading state)
   const isPlaceholderLoading = currentSlide?.id?.startsWith('placeholder-') || currentSlide?.content === 'Loading...';
   
-  // Early return if no valid slides
-  if (!currentSlide || validSlides.length === 0) {
-    console.error('StoryCarousel: No valid slides found for story', story.id);
-    return (
-      <div className="w-full">
-        <Card className="w-full overflow-hidden shadow-lg">
-          <div className="p-6 text-center text-muted-foreground">
-            <p>Story content is not available</p>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-  
-  // Show compact loading state for cached placeholder stories
-  if (isPlaceholderLoading) {
-    return (
-      <div className="w-full">
-        <Card className="w-full overflow-hidden shadow-lg">
-          <div className="p-4">
-            {/* Show cover image if available */}
-            {story.cover_illustration_url && (
-              <div className="w-full h-48 rounded-lg overflow-hidden mb-3">
-                <img 
-                  src={optimizeImageUrl(story.cover_illustration_url, { width: 400, height: 192 })}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-            {/* Title */}
-            <h3 className="font-semibold text-lg mb-2 line-clamp-2">{story.title}</h3>
-            {/* Loading indicator */}
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span>Loading content...</span>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  }
 
 
   const nextSlide = () => {
@@ -945,6 +903,33 @@ export default function StoryCarousel({
   
   // Memoize slide components to prevent re-renders during swipe
   const slideComponents = useMemo(() => sortedSlides.map((slide, index) => {
+    const isPlaceholderSlide = slide?.id?.startsWith('placeholder-') || slide?.content === 'Loading...';
+    if (isPlaceholderSlide) {
+      return (
+        <div key={slide.id} className="h-full w-full flex items-center justify-center p-6 pb-14 md:p-8 md:pb-16">
+          <div className="w-full max-w-lg">
+            {story.cover_illustration_url && (
+              <div className="w-full h-48 rounded-lg overflow-hidden mb-4">
+                <img
+                  src={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 384, quality: 85 }) || story.cover_illustration_url}
+                  alt={`Cover illustration for ${story.title}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+            )}
+            <h3 className="font-lexend font-semibold uppercase text-lg md:text-xl text-balance mb-3">
+              {story.title}
+            </h3>
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>Loading content…</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Check if this is a parliamentary story and render accordingly
     if (isParliamentaryStory) {
       const parliamentaryContent = renderParliamentarySlide(slide, index);
@@ -1050,6 +1035,19 @@ export default function StoryCarousel({
     );
   }), [sortedSlides, story, validSlides.length, isParliamentaryStory, isFastConnection, partyColors]);
 
+  const slidesForEmbla = slideComponents.length
+    ? slideComponents
+    : [
+        <div
+          key="no-content"
+          className="h-full w-full flex items-center justify-center p-8 text-center text-muted-foreground"
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Story content is not available</p>
+          </div>
+        </div>,
+      ];
+
   return (
     <article 
       itemScope 
@@ -1093,10 +1091,10 @@ export default function StoryCarousel({
             {storyIndex === 0 && topicSlug && <HandSwipeHint topicSlug={topicSlug} />}
             
             <EmblaSlideCarousel
-              slides={slideComponents}
+              slides={slidesForEmbla}
               height="100%"
               initialIndex={currentSlideIndex}
-              showDots={true}
+              showDots={slidesForEmbla.length > 1 && !isPlaceholderLoading}
               dotStyle="instagram"
               onSlideChange={setCurrentSlideIndex}
               ariaLabel={`${story.title} story slides`}
