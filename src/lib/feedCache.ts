@@ -53,6 +53,9 @@ export interface CachedTopic {
     icon_url?: string;
   };
   donation_enabled?: boolean;
+  keywords?: string[];
+  landmarks?: string[];
+  organizations?: string[];
 }
 
 export interface FeedCacheEntry {
@@ -197,7 +200,7 @@ export const toCachedStory = (story: any): CachedStory => ({
 });
 
 /**
- * Transform full topic to cached topic (lightweight)
+ * Transform full topic to cached topic (includes keywords for filtering)
  */
 export const toCachedTopic = (topic: any): CachedTopic => ({
   id: topic.id,
@@ -207,6 +210,9 @@ export const toCachedTopic = (topic: any): CachedTopic => ({
   region: topic.region,
   branding_config: topic.branding_config,
   donation_enabled: topic.donation_enabled,
+  keywords: topic.keywords || [],
+  landmarks: topic.landmarks || [],
+  organizations: topic.organizations || [],
 });
 
 /**
