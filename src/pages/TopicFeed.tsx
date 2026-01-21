@@ -1057,231 +1057,234 @@ const TopicFeed = () => {
                 console.warn(`⚠️ DUPLICATE CONTENT IDs IN FEED: ${duplicates.join(', ')}...`);
               }
               
-              return filteredContent;
-            })()
-            // Ghost stories that only have placeholder slides - don't render until real content arrives
-            .filter(contentItem => {
-              if (contentItem.type !== 'story') return true;
-              const story = contentItem.data as any;
-              const hasRealSlides = story.slides?.length > 0 && 
-                !story.slides[0]?.id?.startsWith('placeholder-') &&
-                story.slides[0]?.content !== 'Loading...';
-              return hasRealSlides;
-            })
-            .map((contentItem, index) => {
-              const items = [];
-              
-              if (contentItem.type === 'story') {
+              // Apply ghost filter FIRST to create displayable content array
+              // This ensures storyIndex is calculated from the same array used for rendering
+              const displayableContent = filteredContent.filter(contentItem => {
+                if (contentItem.type !== 'story') return true;
                 const story = contentItem.data as any;
-                // Generate universal story URL
-                const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
+                const hasRealSlides = story.slides?.length > 0 && 
+                  !story.slides[0]?.id?.startsWith('placeholder-') &&
+                  story.slides[0]?.content !== 'Loading...';
+                return hasRealSlides;
+              });
+              
+              const lastDisplayableStoryIndex = displayableContent.length > 0 
+                ? displayableContent.map(item => item.type).lastIndexOf('story')
+                : -1;
+              
+              // Map over displayable content with correct indices
+              return displayableContent.map((contentItem, index) => {
+                const items = [];
                 
-                items.push(
-                  <div
-                    key={`story-${story.id}`}
-                    className="w-full max-w-2xl"
-                    ref={(node) => {
-                      if (index === lastStoryContentIndex) {
-                        lastStoryElementRef(node);
-                      }
-                      // Track story view when it enters viewport
-                      if (node && 'IntersectionObserver' in window) {
-                        const observer = new IntersectionObserver(
-                          (entries) => {
-                            entries.forEach((entry) => {
-                              if (entry.isIntersecting) {
-                                incrementStoriesViewed();
-                                observer.disconnect();
-                              }
-                            });
-                          },
-                          { threshold: 0.5 }
-                        );
-                        observer.observe(node);
-                      }
-                    }}
-                  >
-                    <StoryCarousel 
-                      story={story} 
-                      storyUrl={storyShareUrl}
-                      topicId={topic?.id}
-                      storyIndex={index}
-                      topicName={topic?.name}
-                      topicSlug={slug}
-                      onStorySwipe={handleStorySwipe}
-                      onStoryScrolledPast={handleStoryScrolledPast}
-                      onMoreLikeThis={handleMoreLikeThis}
-                      prefetchedReactionCounts={reactionCountsMap.get(story.id)}
-                      onReactionCountsChange={updateReactionCounts}
-                    />
-                  </div>
-                );
-
-                {/* Inline PWA Card - appears after 5th story */}
-                if (index === 4) {
+                // Calculate story index from displayableContent (same array as index)
+                const storyIndex = displayableContent.slice(0, index + 1).filter(item => item.type === 'story').length;
+                
+                if (contentItem.type === 'story') {
+                  const story = contentItem.data as any;
+                  // Generate universal story URL
+                  const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
+                  
                   items.push(
-                    <div key="inline-pwa-card" className="w-full max-w-2xl">
-                      <InlinePWACard
-                        topicName={topic?.name || ''}
-                        topicSlug={slug || ''}
-                        topicIcon={topic?.branding_config?.icon_url || topic?.branding_config?.logo_url}
-                        storiesScrolledPast={storiesScrolledPast}
-                      />
-                    </div>
-                  );
-                }
-              }
-
-              // Render parliamentary mention is now handled via ParliamentaryInsightCard (non-chronological)
-              // at fixed intervals, not in chronological feed
-
-              // Calculate story index for position-based card rendering
-              const storyIndex = filteredContent.slice(0, index + 1).filter(item => item.type === 'story').length;
-
-              // ═══════════════════════════════════════════════════════════════════
-              // FEED CARD POSITIONS - Using centralized registry from feedCardPositions.ts
-              // ═══════════════════════════════════════════════════════════════════
-
-              // Community pulse cards (positions 4, 19, 34...)
-              if (shouldShowCommunityPulseCard(storyIndex) && shouldShowCommunityPulse && topic && pulseData) {
-                items.push(
-                  <div key={`community-pulse-${storyIndex}`} className="w-full max-w-2xl">
-                    <CommunityPulseSlides
-                      keywords={pulseData.keywords}
-                      timeframe="48h"
-                      mostActiveThreadUrl={pulseData.mostActiveThread?.url}
-                      mostActiveThreadTitle={pulseData.mostActiveThread?.title}
-                    />
-                  </div>
-                );
-              }
-
-              // Sentiment cards (positions 6, 12, 18, 24...)
-              if (shouldShowSentiment(storyIndex) && sentimentCards.length > 0) {
-                const keywordCards = sentimentCards.filter(card => card.card_type !== 'comparison');
-                const comparisonCards = sentimentCards.filter(card => card.card_type === 'comparison');
-                const totalSentimentCardsShown = getSentimentIndex(storyIndex);
-                
-                // Every 4th sentiment card slot is a comparison card
-                const showComparison = (totalSentimentCardsShown + 1) % 4 === 0 && comparisonCards.length > 0;
-                
-                let sentimentCard;
-                if (showComparison) {
-                  const comparisonIndex = Math.floor(totalSentimentCardsShown / 4) % comparisonCards.length;
-                  sentimentCard = comparisonCards[comparisonIndex];
-                } else {
-                  const keywordSlotsUsed = totalSentimentCardsShown - Math.floor(totalSentimentCardsShown / 4);
-                  const keywordIndex = keywordSlotsUsed % keywordCards.length;
-                  sentimentCard = keywordCards[keywordIndex];
-                }
-                
-                if (sentimentCard) {
-                  items.push(
-                    <div key={`sentiment-${sentimentCard.id}-${index}`} className="w-full max-w-2xl">
-                      <SentimentCard
-                        id={sentimentCard.id}
-                        keywordPhrase={sentimentCard.keyword_phrase}
-                        content={sentimentCard.content}
-                        sources={sentimentCard.sources}
-                        sentimentScore={sentimentCard.sentiment_score}
-                        confidenceScore={sentimentCard.confidence_score}
-                        analysisDate={sentimentCard.analysis_date}
-                        cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
-                        createdAt={sentimentCard.created_at}
-                        updatedAt={sentimentCard.updated_at}
-                      />
-                    </div>
-                  );
-                }
-              }
-
-              // Automated insight cards (positions 3, 10, 17, 24...)
-              if (shouldShowAutomatedInsight(storyIndex) && insightCards.length > 0 && topic?.automated_insights_enabled) {
-                const cardIndex = getAutomatedInsightIndex(storyIndex) % insightCards.length;
-                const insightCard = insightCards[cardIndex];
-                
-                items.push(
-                  <div key={`insight-${insightCard.id}-${index}`} className="w-full max-w-2xl">
-                    <AutomatedInsightCard 
-                      card={insightCard} 
-                      topicSlug={slug}
-                    />
-                  </div>
-                );
-                trackInsightCardDisplay(insightCard.id);
-              }
-
-              // Events accordion (positions 11, 22, 33...)
-              if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled) {
-                items.push(
-                  <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
-                    <EventsAccordion 
-                      topicId={topic.id} 
-                      isOwner={false}
-                    />
-                  </div>
-                );
-              }
-
-              // Quiz cards (positions 5, 14, 23, 32...)
-              if (shouldShowQuiz(storyIndex) && quizQuestions.length > 0 && quizCardsEnabled) {
-                const quizIndex = getQuizIndex(storyIndex) % quizQuestions.length;
-                const quizQuestion = quizQuestions[quizIndex];
-                
-                if (quizQuestion) {
-                  items.push(
-                    <div key={`quiz-${quizQuestion.id}-${storyIndex}`} className="w-full max-w-2xl">
-                      <QuizCard
-                        question={quizQuestion}
-                        visitorId={quizVisitorId}
-                        userId={user?.id}
+                    <div
+                      key={`story-${story.id}`}
+                      className="w-full max-w-2xl"
+                      ref={(node) => {
+                        if (index === lastDisplayableStoryIndex) {
+                          lastStoryElementRef(node);
+                        }
+                        // Track story view when it enters viewport
+                        if (node && 'IntersectionObserver' in window) {
+                          const observer = new IntersectionObserver(
+                            (entries) => {
+                              entries.forEach((entry) => {
+                                if (entry.isIntersecting) {
+                                  incrementStoriesViewed();
+                                  observer.disconnect();
+                                }
+                              });
+                            },
+                            { threshold: 0.5 }
+                          );
+                          observer.observe(node);
+                        }
+                      }}
+                    >
+                      <StoryCarousel 
+                        story={story} 
+                        storyUrl={storyShareUrl}
+                        topicId={topic?.id}
+                        storyIndex={index}
+                        topicName={topic?.name}
                         topicSlug={slug}
-                        onAnswered={markAsAnswered}
+                        onStorySwipe={handleStorySwipe}
+                        onStoryScrolledPast={handleStoryScrolledPast}
+                        onMoreLikeThis={handleMoreLikeThis}
+                        prefetchedReactionCounts={reactionCountsMap.get(story.id)}
+                        onReactionCountsChange={updateReactionCounts}
+                      />
+                    </div>
+                  );
+
+                  {/* Inline PWA Card - appears after 5th story */}
+                  if (index === 4) {
+                    items.push(
+                      <div key="inline-pwa-card" className="w-full max-w-2xl">
+                        <InlinePWACard
+                          topicName={topic?.name || ''}
+                          topicSlug={slug || ''}
+                          topicIcon={topic?.branding_config?.icon_url || topic?.branding_config?.logo_url}
+                          storiesScrolledPast={storiesScrolledPast}
+                        />
+                      </div>
+                    );
+                  }
+                }
+
+                // ═══════════════════════════════════════════════════════════════════
+                // FEED CARD POSITIONS - Using centralized registry from feedCardPositions.ts
+                // ═══════════════════════════════════════════════════════════════════
+
+                // Community pulse cards (positions 4, 19, 34...)
+                if (shouldShowCommunityPulseCard(storyIndex) && shouldShowCommunityPulse && topic && pulseData) {
+                  items.push(
+                    <div key={`community-pulse-${storyIndex}`} className="w-full max-w-2xl">
+                      <CommunityPulseSlides
+                        keywords={pulseData.keywords}
+                        timeframe="48h"
+                        mostActiveThreadUrl={pulseData.mostActiveThread?.url}
+                        mostActiveThreadTitle={pulseData.mostActiveThread?.title}
                       />
                     </div>
                   );
                 }
-              }
 
-              // Parliamentary insight cards for MAJOR votes (positions 8, 21, 34...)
-              if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0) {
-                items.push(
-                  <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
-                    <ParliamentaryInsightCard
-                      votes={parliamentaryVotes}
-                      topicSlug={slug}
-                    />
-                  </div>
-                );
-              }
+                // Sentiment cards (positions 6, 12, 18, 24...)
+                if (shouldShowSentiment(storyIndex) && sentimentCards.length > 0) {
+                  const keywordCards = sentimentCards.filter(card => card.card_type !== 'comparison');
+                  const comparisonCards = sentimentCards.filter(card => card.card_type === 'comparison');
+                  const totalSentimentCardsShown = getSentimentIndex(storyIndex);
+                  
+                  // Every 4th sentiment card slot is a comparison card
+                  const showComparison = (totalSentimentCardsShown + 1) % 4 === 0 && comparisonCards.length > 0;
+                  
+                  let sentimentCard;
+                  if (showComparison) {
+                    const comparisonIndex = Math.floor(totalSentimentCardsShown / 4) % comparisonCards.length;
+                    sentimentCard = comparisonCards[comparisonIndex];
+                  } else {
+                    const keywordSlotsUsed = totalSentimentCardsShown - Math.floor(totalSentimentCardsShown / 4);
+                    const keywordIndex = keywordSlotsUsed % keywordCards.length;
+                    sentimentCard = keywordCards[keywordIndex];
+                  }
+                  
+                  if (sentimentCard) {
+                    items.push(
+                      <div key={`sentiment-${sentimentCard.id}-${index}`} className="w-full max-w-2xl">
+                        <SentimentCard
+                          id={sentimentCard.id}
+                          keywordPhrase={sentimentCard.keyword_phrase}
+                          content={sentimentCard.content}
+                          sources={sentimentCard.sources}
+                          sentimentScore={sentimentCard.sentiment_score}
+                          confidenceScore={sentimentCard.confidence_score}
+                          analysisDate={sentimentCard.analysis_date}
+                          cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
+                          createdAt={sentimentCard.created_at}
+                          updatedAt={sentimentCard.updated_at}
+                        />
+                      </div>
+                    );
+                  }
+                }
 
-              // Parliamentary weekly digest for MINOR votes (position 25, once)
-              if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0) {
-                items.push(
-                  <div key={`parliamentary-digest-${storyIndex}`} className="w-full max-w-2xl">
-                    <ParliamentaryDigestCard
-                      votes={parliamentaryDigestVotes}
-                      topicSlug={slug}
-                    />
-                  </div>
-                );
-              }
+                // Automated insight cards (positions 3, 10, 17, 24...)
+                if (shouldShowAutomatedInsight(storyIndex) && insightCards.length > 0 && topic?.automated_insights_enabled) {
+                  const cardIndex = getAutomatedInsightIndex(storyIndex) % insightCards.length;
+                  const insightCard = insightCards[cardIndex];
+                  
+                  items.push(
+                    <div key={`insight-${insightCard.id}-${index}`} className="w-full max-w-2xl">
+                      <AutomatedInsightCard 
+                        card={insightCard} 
+                        topicSlug={slug}
+                      />
+                    </div>
+                  );
+                  trackInsightCardDisplay(insightCard.id);
+                }
 
-              // Flashback "This time last month" card (position 16, once)
-              // Only shows if this_time_last_month_enabled is true in topic settings
-              if (shouldShowFlashback(storyIndex) && topic?.id && topicMetadata?.this_time_last_month_enabled) {
-                items.push(
-                  <div key="flashback-insight" className="w-full max-w-2xl">
-                    <FlashbackInsightsPanel
-                      topicId={topic.id}
-                      topicSlug={slug}
-                    />
-                  </div>
-                );
-              }
+                // Events accordion (positions 11, 22, 33...)
+                if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled) {
+                  items.push(
+                    <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
+                      <EventsAccordion 
+                        topicId={topic.id} 
+                        isOwner={false}
+                      />
+                    </div>
+                  );
+                }
 
-              return items;
-            }).flat()}
+                // Quiz cards (positions 5, 14, 23, 32...)
+                if (shouldShowQuiz(storyIndex) && quizQuestions.length > 0 && quizCardsEnabled) {
+                  const quizIndex = getQuizIndex(storyIndex) % quizQuestions.length;
+                  const quizQuestion = quizQuestions[quizIndex];
+                  
+                  if (quizQuestion) {
+                    items.push(
+                      <div key={`quiz-${quizQuestion.id}-${storyIndex}`} className="w-full max-w-2xl">
+                        <QuizCard
+                          question={quizQuestion}
+                          visitorId={quizVisitorId}
+                          userId={user?.id}
+                          topicSlug={slug}
+                          onAnswered={markAsAnswered}
+                        />
+                      </div>
+                    );
+                  }
+                }
+
+                // Parliamentary insight cards for MAJOR votes (positions 8, 21, 34...)
+                if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0) {
+                  items.push(
+                    <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
+                      <ParliamentaryInsightCard
+                        votes={parliamentaryVotes}
+                        topicSlug={slug}
+                      />
+                    </div>
+                  );
+                }
+
+                // Parliamentary weekly digest for MINOR votes (position 25, once)
+                if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0) {
+                  items.push(
+                    <div key={`parliamentary-digest-${storyIndex}`} className="w-full max-w-2xl">
+                      <ParliamentaryDigestCard
+                        votes={parliamentaryDigestVotes}
+                        topicSlug={slug}
+                      />
+                    </div>
+                  );
+                }
+
+                // Flashback "This time last month" card (position 16, once)
+                // Only shows if this_time_last_month_enabled is true in topic settings
+                if (shouldShowFlashback(storyIndex) && topic?.id && topicMetadata?.this_time_last_month_enabled) {
+                  items.push(
+                    <div key="flashback-insight" className="w-full max-w-2xl">
+                      <FlashbackInsightsPanel
+                        topicId={topic.id}
+                        topicSlug={slug}
+                      />
+                    </div>
+                  );
+                }
+
+                return items;
+              });
+            })().flat()}
             
             {/* Universal bottom sentinel for infinite scroll */}
             {hasMore && (
