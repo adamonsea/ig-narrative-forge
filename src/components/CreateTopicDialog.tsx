@@ -60,6 +60,10 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
   const [manualKeyword, setManualKeyword] = useState("");
   
+  // Name validation
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isValidatingName, setIsValidatingName] = useState(false);
+  
   // Animation states
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -111,6 +115,46 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         }
       }
     }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [topicName]);
+
+  // Real-time name validation (check for duplicates)
+  useEffect(() => {
+    if (!topicName || topicName.length < 3) {
+      setNameError(null);
+      return;
+    }
+
+    const slug = topicName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const timeoutId = setTimeout(async () => {
+      setIsValidatingName(true);
+      try {
+        const { data, error } = await supabase
+          .from('topics')
+          .select('id, name')
+          .eq('slug', slug)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error checking name:', error);
+          setNameError(null);
+        } else if (data) {
+          setNameError(`A feed called "${data.name}" already exists`);
+        } else {
+          setNameError(null);
+        }
+      } catch (err) {
+        console.error('Error validating name:', err);
+        setNameError(null);
+      } finally {
+        setIsValidatingName(false);
+      }
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [topicName]);
@@ -215,7 +259,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   };
 
   const canProceed = () => {
-    if (currentStep === 1) return topicName.length >= 3;
+    if (currentStep === 1) return topicName.length >= 3 && !nameError && !isValidatingName;
     if (currentStep === 2) return true;
     if (currentStep === 3) return selectedKeywords.size >= 3;
     return false;
@@ -305,6 +349,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setGeneratedKeywords([]);
     setSelectedKeywords(new Set());
     setManualKeyword("");
+    setNameError(null);
+    setIsValidatingName(false);
   };
 
   const handleClose = () => {
@@ -404,16 +450,34 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                       className="space-y-6 pt-8"
                     >
                       <div className="space-y-3">
-                        <Input
-                          value={topicName}
-                          onChange={(e) => setTopicName(e.target.value)}
-                          placeholder={EXAMPLE_NAMES[placeholderIndex]}
-                          className="text-xl md:text-2xl h-16 text-center font-medium border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl transition-all placeholder:text-muted-foreground/40"
-                          autoFocus
-                        />
-                        <p className="text-center text-sm text-muted-foreground">
-                          Choose a clear, memorable name for your feed
-                        </p>
+                        <div className="relative">
+                          <Input
+                            value={topicName}
+                            onChange={(e) => setTopicName(e.target.value)}
+                            placeholder={EXAMPLE_NAMES[placeholderIndex]}
+                            className={cn(
+                              "text-xl md:text-2xl h-16 text-center font-medium border-2 focus:ring-4 rounded-xl transition-all placeholder:text-muted-foreground/40",
+                              nameError 
+                                ? "border-destructive focus:border-destructive focus:ring-destructive/10" 
+                                : "border-border focus:border-primary focus:ring-primary/10"
+                            )}
+                            autoFocus
+                          />
+                          {isValidatingName && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        {nameError ? (
+                          <p className="text-center text-sm text-destructive animate-fade-in">
+                            {nameError}
+                          </p>
+                        ) : (
+                          <p className="text-center text-sm text-muted-foreground">
+                            Choose a clear, memorable name for your feed
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                   )}
