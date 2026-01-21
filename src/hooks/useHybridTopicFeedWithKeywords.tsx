@@ -1856,53 +1856,74 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         setLoadError(null);
         
         // PHASE 1: Try to load from cache immediately for instant display
-        const cachedEntry = getCachedFeed(slug);
-        if (cachedEntry && cachedEntry.stories.length > 0) {
+        let cachedEntry = null;
+        try {
+          cachedEntry = getCachedFeed(slug);
+        } catch (cacheError) {
+          console.warn('⚠️ Feed cache read failed:', cacheError);
+        }
+        
+        if (cachedEntry && cachedEntry.topic && cachedEntry.stories && cachedEntry.stories.length > 0) {
           console.log('⚡ Found cached feed, displaying instantly');
           
-          // Set topic from cache for instant header
+          // Set topic from cache for instant header - ensure all required fields
+          const cachedTopic = cachedEntry.topic;
           setTopic({
-            ...cachedEntry.topic,
+            id: cachedTopic.id || '',
+            name: cachedTopic.name || '',
+            slug: cachedTopic.slug || slug,
+            topic_type: cachedTopic.topic_type || 'regional',
+            region: cachedTopic.region || '',
             description: '',
             keywords: [],
             landmarks: [],
             organizations: [],
             is_public: true,
             created_by: '',
-          } as Topic);
+            branding_config: cachedTopic.branding_config || undefined,
+            donation_enabled: cachedTopic.donation_enabled || false,
+          });
           setTopicLoading(false);
           
-          // Convert cached stories to full format
-          const cachedStoryContent: FeedContent[] = cachedEntry.stories.map(story => ({
-            type: 'story' as const,
-            id: story.id,
-            content_date: story.created_at,
-            data: {
+          // Convert cached stories to full format with placeholder slides
+          const cachedStoryContent: FeedContent[] = cachedEntry.stories
+            .filter(story => story && story.id) // Filter out any invalid entries
+            .map(story => ({
+              type: 'story' as const,
               id: story.id,
-              title: story.title,
-              author: '',
-              publication_name: story.publication_name,
-              created_at: story.created_at,
-              updated_at: story.created_at,
-              cover_illustration_url: story.cover_illustration_url,
-              slides: [], // Slides will be loaded with fresh data
-              article: { source_url: '#', published_at: story.created_at, region: '' },
-              is_parliamentary: story.is_parliamentary,
-            } as Story
-          }));
+              content_date: story.created_at || new Date().toISOString(),
+              data: {
+                id: story.id,
+                title: story.title || '',
+                author: '',
+                publication_name: story.publication_name || '',
+                created_at: story.created_at || new Date().toISOString(),
+                updated_at: story.created_at || new Date().toISOString(),
+                cover_illustration_url: story.cover_illustration_url,
+                // Provide a placeholder slide so StoryCarousel can render
+                slides: [{
+                  id: `placeholder-${story.id}`,
+                  slide_number: 1,
+                  content: 'Loading...',
+                  word_count: 0
+                }],
+                article: { 
+                  source_url: '#', 
+                  published_at: story.created_at || new Date().toISOString(), 
+                  region: cachedTopic.region || '' 
+                },
+                is_parliamentary: story.is_parliamentary || false,
+              } as Story
+            }));
           
-          setAllContent(cachedStoryContent);
-          allContentRef.current = cachedStoryContent;
-          setFilteredContent(cachedStoryContent);
-          setUsingCachedContent(true);
-          
-          // If cache is fresh, we can skip loading indicator
-          if (isCacheFresh(cachedEntry)) {
-            console.log('✅ Cache is fresh, showing content immediately');
-            setStoriesLoading(false);
-          } else {
-            // Cache is stale, show refreshing indicator
-            console.log('🔄 Cache is stale, refreshing in background...');
+          if (cachedStoryContent.length > 0) {
+            setAllContent(cachedStoryContent);
+            allContentRef.current = cachedStoryContent;
+            setFilteredContent(cachedStoryContent);
+            setUsingCachedContent(true);
+            
+            // Cache is stale or fresh - always show content immediately, refresh in background
+            console.log('🔄 Showing cached content, refreshing in background...');
             setStoriesLoading(false);
             setIsRefreshing(true);
           }
