@@ -903,41 +903,6 @@ export default function StoryCarousel({
   
   // Memoize slide components to prevent re-renders during swipe
   const slideComponents = useMemo(() => sortedSlides.map((slide, index) => {
-    const isPlaceholderSlide = slide?.id?.startsWith('placeholder-') || slide?.content === 'Loading...';
-    if (isPlaceholderSlide) {
-      // Match the exact layout of a real first slide with image
-      return (
-        <div key={slide.id} className="h-full w-full">
-          <div className="h-full flex flex-col">
-            {/* Cover Illustration - same height as real slides */}
-            {story.cover_illustration_url && (
-              <div className="relative w-full h-80 md:h-96 overflow-hidden">
-                <img
-                  src={optimizeImageUrl(story.cover_illustration_url, { width: 800, height: 600, quality: 85 }) || story.cover_illustration_url}
-                  alt={`Cover illustration for ${story.title}`}
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                />
-              </div>
-            )}
-            
-            {/* Content below image - same padding as real slides */}
-            <div className="flex-1 flex items-center justify-center p-6 pb-14 md:p-8 md:pb-16">
-              <div className="w-full max-w-lg mx-auto text-center flex flex-col h-full justify-center">
-                <h3 className="leading-relaxed text-2xl md:text-3xl lg:text-4xl font-lexend font-semibold uppercase text-balance mb-4">
-                  {story.title}
-                </h3>
-                <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
-                  <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  <span>Loading content…</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     // Check if this is a parliamentary story and render accordingly
     if (isParliamentaryStory) {
       const parliamentaryContent = renderParliamentarySlide(slide, index);

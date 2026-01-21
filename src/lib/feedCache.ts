@@ -17,14 +17,27 @@ const MAX_STORIES_PER_TOPIC = 20;
 const CACHE_KEY_PREFIX = 'feed_cache_';
 const CACHE_INDEX_KEY = 'feed_cache_index';
 
+export interface CachedSlide {
+  id: string;
+  slide_number: number;
+  content: string;
+  word_count: number;
+  links?: Array<{ text: string; url: string }>;
+}
+
 export interface CachedStory {
   id: string;
   title: string;
   cover_illustration_url?: string;
   publication_name: string;
   created_at: string;
-  slide_count: number;
+  slides: CachedSlide[];
   is_parliamentary?: boolean;
+  article?: {
+    source_url?: string;
+    published_at?: string;
+    region?: string;
+  };
 }
 
 export interface CachedTopic {
@@ -160,7 +173,7 @@ export const getCachedFeed = (slug: string): FeedCacheEntry | null => {
 };
 
 /**
- * Transform full story to cached story (lightweight)
+ * Transform full story to cached story (includes full slides for instant render)
  */
 export const toCachedStory = (story: any): CachedStory => ({
   id: story.id,
@@ -168,8 +181,19 @@ export const toCachedStory = (story: any): CachedStory => ({
   cover_illustration_url: story.cover_illustration_url,
   publication_name: story.publication_name || '',
   created_at: story.created_at,
-  slide_count: story.slides?.length || 0,
+  slides: (story.slides || []).map((slide: any) => ({
+    id: slide.id,
+    slide_number: slide.slide_number,
+    content: slide.content || '',
+    word_count: slide.word_count || 0,
+    links: slide.links,
+  })),
   is_parliamentary: story.is_parliamentary,
+  article: story.article ? {
+    source_url: story.article.source_url,
+    published_at: story.article.published_at,
+    region: story.article.region,
+  } : undefined,
 });
 
 /**

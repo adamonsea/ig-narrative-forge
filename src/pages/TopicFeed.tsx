@@ -636,13 +636,7 @@ const TopicFeed = () => {
                     <span className="font-semibold text-lg">{topic.name}</span>
                   </div>
                 )}
-                {/* Refreshing indicator */}
-                {isRefreshing && (
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                    <span className="hidden sm:inline">Refreshing...</span>
-                  </div>
-                )}
+              {/* Background refresh is invisible - no indicator shown */}
               </div>
               <div className="flex items-center gap-2">
                 {/* Play Mode - First when enabled */}
@@ -1064,7 +1058,17 @@ const TopicFeed = () => {
               }
               
               return filteredContent;
-            })().map((contentItem, index) => {
+            })()
+            // Ghost stories that only have placeholder slides - don't render until real content arrives
+            .filter(contentItem => {
+              if (contentItem.type !== 'story') return true;
+              const story = contentItem.data as any;
+              const hasRealSlides = story.slides?.length > 0 && 
+                !story.slides[0]?.id?.startsWith('placeholder-') &&
+                story.slides[0]?.content !== 'Loading...';
+              return hasRealSlides;
+            })
+            .map((contentItem, index) => {
               const items = [];
               
               if (contentItem.type === 'story') {

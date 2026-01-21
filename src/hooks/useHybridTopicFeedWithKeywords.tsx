@@ -1885,9 +1885,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           });
           setTopicLoading(false);
           
-          // Convert cached stories to full format with placeholder slides
+          // Convert cached stories to full format with cached slides (not placeholders)
           const cachedStoryContent: FeedContent[] = cachedEntry.stories
-            .filter(story => story && story.id) // Filter out any invalid entries
+            .filter(story => story && story.id && story.slides && story.slides.length > 0)
             .map(story => ({
               type: 'story' as const,
               id: story.id,
@@ -1900,14 +1900,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
                 created_at: story.created_at || new Date().toISOString(),
                 updated_at: story.created_at || new Date().toISOString(),
                 cover_illustration_url: story.cover_illustration_url,
-                // Provide a placeholder slide so StoryCarousel can render
-                slides: [{
-                  id: `placeholder-${story.id}`,
-                  slide_number: 1,
-                  content: 'Loading...',
-                  word_count: 0
-                }],
-                article: { 
+                // Use cached slides directly for instant render
+                slides: story.slides,
+                article: story.article || { 
                   source_url: '#', 
                   published_at: story.created_at || new Date().toISOString(), 
                   region: cachedTopic.region || '' 
