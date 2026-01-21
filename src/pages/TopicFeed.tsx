@@ -149,6 +149,11 @@ const TopicFeed = () => {
     newStoryCount,
     refreshFromNewStories,
     ensureFilterStoryIndexLoaded,
+    // Split loading states for instant header
+    topicLoading,
+    storiesLoading,
+    isRefreshing,
+    usingCachedContent,
     // Error handling for mobile
     loadError,
     retryCount,
@@ -610,7 +615,6 @@ const TopicFeed = () => {
         }}
       />
 
-      {/* Sticky header for scrollers */}
       {isScrolled && topic && (
         <div className="fixed top-0 left-0 right-0 z-50 feed-header backdrop-blur-sm border-b border-border">
           <div className="container mx-auto px-4 py-3">
@@ -625,11 +629,18 @@ const TopicFeed = () => {
                 ) : (
                   <div className="flex items-center gap-2">
                     {topic.topic_type === 'regional' ? (
-                      <MapPin className="w-4 h-4 text-blue-500" />
+                      <MapPin className="w-4 h-4 text-primary" />
                     ) : (
-                      <Hash className="w-4 h-4 text-green-500" />
+                      <Hash className="w-4 h-4 text-primary" />
                     )}
                     <span className="font-semibold text-lg">{topic.name}</span>
+                  </div>
+                )}
+                {/* Refreshing indicator */}
+                {isRefreshing && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span className="hidden sm:inline">Refreshing...</span>
                   </div>
                 )}
               </div>
@@ -820,13 +831,21 @@ const TopicFeed = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   {topic.topic_type === 'regional' ? (
-                    <MapPin className="w-6 h-6 text-blue-500" />
+                    <MapPin className="w-6 h-6 text-primary" />
                   ) : (
-                    <Hash className="w-6 h-6 text-green-500" />
+                    <Hash className="w-6 h-6 text-primary" />
                   )}
                   <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                     {topic.name}
                   </h1>
+                </div>
+              )}
+              
+              {/* Refreshing indicator next to header */}
+              {isRefreshing && (
+                <div className="ml-3 flex items-center gap-1.5 text-muted-foreground text-sm animate-fade-in">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span className="hidden sm:inline">Updating...</span>
                 </div>
               )}
               
