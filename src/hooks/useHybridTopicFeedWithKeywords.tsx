@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
-
+import { getCachedFeed, setCachedFeed, isCacheFresh, CachedStory, CachedTopic } from '@/lib/feedCache';
 interface Story {
   id: string;
   title: string;
@@ -115,7 +115,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [hasNewStories, setHasNewStories] = useState(false);
   const [newStoryCount, setNewStoryCount] = useState(0);
   const [topic, setTopic] = useState<Topic | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // Split loading states for instant header rendering
+  const [topicLoading, setTopicLoading] = useState(true);
+  const [storiesLoading, setStoriesLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Background refresh indicator
+  
+  // Legacy combined loading for backward compatibility
+  const loading = topicLoading || (storiesLoading && allContent.length === 0);
+  
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
@@ -125,6 +133,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const autoRetryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const queryClient = useQueryClient();
   const [isLive, setIsLive] = useState(false);
+  
+  // Cache state
+  const [usingCachedContent, setUsingCachedContent] = useState(false);
   const hasSetupRealtimeRef = useRef(false);
   
   // Keyword filtering state
@@ -535,8 +546,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   ) => {
     try {
       if (pageNum === 0) {
-        if (isServerFilteringRef.current) setLoadingMore(true);
-        else setLoading(true);
+        if (isServerFilteringRef.current) {
+          setLoadingMore(true);
+          setIsRefreshing(true);
+        } else {
+          setStoriesLoading(true);
+        }
       } else {
         setLoadingMore(true);
       }
@@ -1114,7 +1129,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         });
       }
     } finally {
-      setLoading(false);
+      setStoriesLoading(false);
+      setIsRefreshing(false);
       setLoadingMore(false);
       setIsServerFiltering(false);
       isServerFilteringRef.current = false;
@@ -1839,15 +1855,83 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         console.log(`🚀 Initializing feed for slug: ${slug}${retryAttempt > 0 ? ` (retry ${retryAttempt}/${MAX_AUTO_RETRIES})` : ''}`);
         setLoadError(null);
         
+        // PHASE 1: Try to load from cache immediately for instant display
+        const cachedEntry = getCachedFeed(slug);
+        if (cachedEntry && cachedEntry.stories.length > 0) {
+          console.log('⚡ Found cached feed, displaying instantly');
+          
+          // Set topic from cache for instant header
+          setTopic({
+            ...cachedEntry.topic,
+            description: '',
+            keywords: [],
+            landmarks: [],
+            organizations: [],
+            is_public: true,
+            created_by: '',
+          } as Topic);
+          setTopicLoading(false);
+          
+          // Convert cached stories to full format
+          const cachedStoryContent: FeedContent[] = cachedEntry.stories.map(story => ({
+            type: 'story' as const,
+            id: story.id,
+            content_date: story.created_at,
+            data: {
+              id: story.id,
+              title: story.title,
+              author: '',
+              publication_name: story.publication_name,
+              created_at: story.created_at,
+              updated_at: story.created_at,
+              cover_illustration_url: story.cover_illustration_url,
+              slides: [], // Slides will be loaded with fresh data
+              article: { source_url: '#', published_at: story.created_at, region: '' },
+              is_parliamentary: story.is_parliamentary,
+            } as Story
+          }));
+          
+          setAllContent(cachedStoryContent);
+          allContentRef.current = cachedStoryContent;
+          setFilteredContent(cachedStoryContent);
+          setUsingCachedContent(true);
+          
+          // If cache is fresh, we can skip loading indicator
+          if (isCacheFresh(cachedEntry)) {
+            console.log('✅ Cache is fresh, showing content immediately');
+            setStoriesLoading(false);
+          } else {
+            // Cache is stale, show refreshing indicator
+            console.log('🔄 Cache is stale, refreshing in background...');
+            setStoriesLoading(false);
+            setIsRefreshing(true);
+          }
+        }
+        
+        // PHASE 2: Load fresh data (always, to ensure latest content)
         const topicData = await loadTopic();
         console.log('✅ Topic loaded:', topicData?.name);
+        setTopicLoading(false);
+        
         setPage(0);
         console.log('📚 Loading stories for topic:', topicData?.id);
         await loadStories(topicData, 0, false, null, null);
         console.log('✅ Stories loaded successfully');
         
-        // Reset auto-retry count on success
+        // Reset states
         setAutoRetryCount(0);
+        setUsingCachedContent(false);
+        setIsRefreshing(false);
+        
+        // PHASE 3: Update cache with fresh data
+        const currentStories = allContentRef.current
+          .filter(item => item.type === 'story')
+          .map(item => item.data);
+        
+        if (topicData && currentStories.length > 0) {
+          setCachedFeed(slug, topicData, currentStories);
+          console.log('💾 Feed cached for instant loading');
+        }
         
       } catch (error: any) {
         console.error('Error initializing hybrid feed:', error);
@@ -1875,7 +1959,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         // All retries exhausted or non-transient error
         setLoadError(error?.message || 'Failed to load feed');
         setRetryCount(retryAttempt);
-        setLoading(false);
+        setTopicLoading(false);
+        setStoriesLoading(false);
+        setIsRefreshing(false);
       }
     };
 
@@ -2093,6 +2179,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     loadMore,
     refresh,
     isLive,
+    
+    // Split loading states for instant header rendering
+    topicLoading,
+    storiesLoading,
+    isRefreshing,
+    usingCachedContent,
     
     // Error state for mobile retry UI
     loadError,
