@@ -1200,12 +1200,31 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     });
 
     try {
+      const normalizeTerm = (term: unknown): string | null => {
+        if (term == null) return null;
+        const s = String(term)
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!s) return null;
+        return s.toLowerCase();
+      };
+
       const keywords = topicData.keywords || [];
       const landmarks = topicData.landmarks || [];
       const organizations = topicData.organizations || [];
+
       const allTerms = [...keywords, ...landmarks, ...organizations];
-      const keywordsLower = allTerms.map(keyword => keyword.toLowerCase());
-      console.log('📋 Tracking terms:', { keywords: keywords.length, landmarks: landmarks.length, organizations: organizations.length });
+      // Normalize + de-dupe to avoid silent mismatches from whitespace/case variations
+      const keywordsLower = Array.from(
+        new Set(allTerms.map(normalizeTerm).filter(Boolean) as string[])
+      );
+
+      console.log('📋 Tracking terms:', {
+        keywords: keywords.length,
+        landmarks: landmarks.length,
+        organizations: organizations.length,
+        normalizedTracked: keywordsLower.length,
+      });
 
       const limit = 400;
       let offset = 0;
@@ -1328,7 +1347,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           keywordsLower.forEach(keyword => {
             if (keyword) {
               const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const wordBoundaryRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
+              // Use non-word boundaries so phrases and punctuation still match reliably
+              const wordBoundaryRegex = new RegExp(`(?:^|\\W)${escapedKeyword}(?:$|\\W)`, 'i');
               if (wordBoundaryRegex.test(combinedText)) {
                 matches.add(keyword);
               }
