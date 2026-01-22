@@ -666,10 +666,15 @@ const TopicFeed = () => {
 
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                  disabled={filteredContent.length === 0}
+                  className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg transition-colors ${
+                    filteredContent.length === 0 
+                      ? 'bg-muted/50 cursor-not-allowed' 
+                      : 'bg-muted hover:bg-muted/80'
+                  }`}
                 >
-                  <Filter className="w-4 h-4" />
-                  <span className="hidden sm:inline text-sm font-medium">Curate</span>
+                  <Filter className={`w-4 h-4 ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
+                  <span className={`hidden sm:inline text-sm font-medium ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
                   {hasActiveFilters && (
                     <span className="w-2 h-2 bg-primary rounded-full" />
                   )}
@@ -763,24 +768,32 @@ const TopicFeed = () => {
             {isLive && avgDailyStories > 1 ? (
               <span 
                 data-onboarding="live-badge"
-                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+                className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border transition-colors duration-300 ${
+                  isRefreshing 
+                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' 
+                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20'
+                }`}
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isRefreshing ? 'bg-blue-400' : 'bg-green-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isRefreshing ? 'bg-blue-500' : 'bg-green-500'}`}></span>
                 </span>
-                Live • {Math.round(avgDailyStories)}/day
+                {isRefreshing ? 'Updating...' : `Live • ${Math.round(avgDailyStories)}/day`}
               </span>
             ) : isLive ? (
               <span 
                 data-onboarding="live-badge"
-                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+                className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border transition-colors duration-300 ${
+                  isRefreshing 
+                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' 
+                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20'
+                }`}
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isRefreshing ? 'bg-blue-400' : 'bg-green-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isRefreshing ? 'bg-blue-500' : 'bg-green-500'}`}></span>
                 </span>
-                Live
+                {isRefreshing ? 'Updating...' : 'Live'}
               </span>
             ) : null}
           </div>
@@ -835,13 +848,7 @@ const TopicFeed = () => {
                 </div>
               )}
               
-              {/* Refreshing indicator next to header */}
-              {isRefreshing && (
-                <div className="ml-3 flex items-center gap-1.5 text-muted-foreground text-sm animate-fade-in">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span className="hidden sm:inline">Updating...</span>
-                </div>
-              )}
+              {/* Refreshing state is now shown in the Live pill */}
               
               {/* Beta pill top right - only show if no branding logo */}
               {!topic.branding_config?.logo_url && (
@@ -879,11 +886,16 @@ const TopicFeed = () => {
               <button
                 onClick={() => setIsModalOpen(true)}
                 data-onboarding="filter-button"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                disabled={filteredContent.length === 0}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  filteredContent.length === 0 
+                    ? 'bg-muted/50 cursor-not-allowed' 
+                    : 'bg-muted hover:bg-muted/80'
+                }`}
                 aria-label="Open filters"
               >
-                <Filter className="w-4 h-4" />
-                <span className="text-sm font-medium">Curate</span>
+                <Filter className={`w-4 h-4 ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
+                <span className={`text-sm font-medium ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
                 {hasActiveFilters && (
                   <span className="w-2 h-2 bg-primary rounded-full" />
                 )}
