@@ -25,9 +25,8 @@ const AboutFeed = () => {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Update favicon based on topic branding - must be called unconditionally
-  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
-  useTopicFavicon(faviconUrl);
+  // Update favicon based on topic branding (pass full branding config for optimized variants)
+  useTopicFavicon(topic?.branding_config as any);
 
   useEffect(() => {
     const fetchTopic = async () => {

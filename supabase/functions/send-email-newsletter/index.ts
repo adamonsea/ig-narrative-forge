@@ -95,7 +95,10 @@ serve(async (req) => {
       throw new Error(`Topic not found: ${topicError?.message}`);
     }
 
-    const topicLogoUrl = topic.branding_config?.logo_url || topic.branding_config?.icon_url;
+    // Use optimized email variant or fallback
+    const branding = topic.branding_config || {};
+    const logoVariants = branding.logo_variants || {};
+    const topicLogoUrl = logoVariants['email'] || logoVariants['header'] || branding.logo_url || branding.icon_url;
 
     // Determine date range based on notification type
     // Daily briefings cover YESTERDAY's news (sent in the morning)

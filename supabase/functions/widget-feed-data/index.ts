@@ -68,13 +68,17 @@ serve(async (req) => {
         );
       }
 
-      // Extract branding from config
+      // Extract branding from config with optimized variants
       const branding = topic.branding_config || {};
+      const iconVariants = branding.icon_variants || {};
+      const logoVariants = branding.logo_variants || {};
+      
       const feedData = {
         name: topic.name,
         slug: topic.slug,
-        logo_url: branding.logo_url || null,
-        icon_url: branding.icon_url || null,
+        // Use optimized widget-sized images when available
+        logo_url: logoVariants['thumbnail'] || branding.logo_url || null,
+        icon_url: iconVariants['widget'] || iconVariants['favicon'] || branding.icon_url || null,
         brand_color: branding.primary_color || branding.brand_color || '#3b82f6',
       };
 

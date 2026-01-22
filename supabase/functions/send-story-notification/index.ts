@@ -181,12 +181,20 @@ serve(async (req: Request) => {
 
     console.log(`📬 Found ${matchedSignups.length} active ${notificationFilter} subscriptions (from ${signups.length} total push signups)`);
 
-    // Prepare notification payload with icon/badge from branding
+    // Get optimized icon variants for notifications
+    const branding = topic.branding_config || {};
+    const iconVariants = branding.icon_variants || {};
+    
+    // Use notification-optimized icon (96px) or fallback
+    const notificationIcon = iconVariants['notification'] || iconVariants['pwa-192'] || branding.icon_url || branding.logo_url || '/placeholder.svg';
+    const badgeIcon = iconVariants['favicon'] || iconVariants['widget'] || branding.icon_url || '/placeholder.svg';
+
+    // Prepare notification payload with optimized icon/badge from branding
     const notificationPayload = {
       title,
       body,
-      icon: topic.branding_config?.icon_url || topic.branding_config?.logo_url || '/placeholder.svg',
-      badge: topic.branding_config?.icon_url || '/placeholder.svg',
+      icon: notificationIcon,
+      badge: badgeIcon,
       url,
       topic: topic.name,
       timestamp: Date.now(),

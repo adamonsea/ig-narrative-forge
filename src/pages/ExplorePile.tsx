@@ -36,8 +36,8 @@ export default function ExplorePile() {
   const [modalOpen, setModalOpen] = useState(false);
   const [weekLabel, setWeekLabel] = useState<string | null>(null);
 
-  const faviconUrl = topicBranding?.icon_url || topicBranding?.logo_url;
-  useTopicFavicon(faviconUrl);
+  // Update favicon based on topic branding (pass full branding config for optimized variants)
+  useTopicFavicon(topicBranding as any);
 
   useEffect(() => {
     const fetchData = async () => {

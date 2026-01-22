@@ -37,6 +37,14 @@ serve(async (req) => {
       throw new Error(`Topic not found: ${slug}`);
     }
 
+    // Get optimized icon variants or fallback to original
+    const branding = topic.branding_config || {};
+    const iconVariants = branding.icon_variants || {};
+    
+    // Use optimized variants if available, otherwise use original
+    const icon192 = iconVariants['pwa-192'] || branding.icon_url || '/placeholder.svg';
+    const icon512 = iconVariants['pwa-512'] || branding.icon_url || '/placeholder.svg';
+
     // Build dynamic manifest
     const manifest = {
       name: topic.name,
@@ -45,19 +53,19 @@ serve(async (req) => {
       start_url: `/feed/${topic.slug}`,
       display: 'standalone',
       background_color: '#ffffff',
-      theme_color: '#000000',
+      theme_color: branding.primary_color || '#000000',
       orientation: 'portrait-primary',
       icons: [
         {
-          src: topic.branding_config?.icon_url || '/placeholder.svg',
+          src: icon192,
           sizes: '192x192',
-          type: 'image/png',
+          type: 'image/webp',
           purpose: 'any maskable'
         },
         {
-          src: topic.branding_config?.icon_url || '/placeholder.svg',
+          src: icon512,
           sizes: '512x512',
-          type: 'image/png',
+          type: 'image/webp',
           purpose: 'any maskable'
         }
       ]
