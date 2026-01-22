@@ -25,16 +25,44 @@ serve(async (req) => {
       throw new Error('Topic slug is required');
     }
 
-    // Fetch topic with branding
-    const { data: topic, error: topicError } = await supabase
+    // Fetch topic with branding - try slug first, then name as fallback
+    let { data: topic, error: topicError } = await supabase
       .from('topics')
       .select('id, name, description, slug, branding_config')
       .eq('slug', slug)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (topicError || !topic) {
-      throw new Error(`Topic not found: ${slug}`);
+    // Fallback: try matching by name (case-insensitive) if slug lookup fails
+    if (!topic) {
+      const { data: topicByName } = await supabase
+        .from('topics')
+        .select('id, name, description, slug, branding_config')
+        .ilike('name', slug)
+        .eq('is_active', true)
+        .maybeSingle();
+      topic = topicByName;
+    }
+
+    if (!topic) {
+      // Return a basic fallback manifest instead of error
+      const fallbackManifest = {
+        name: slug,
+        short_name: slug,
+        description: `Stay updated with ${slug}`,
+        start_url: `/feed/${slug}`,
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#000000',
+        orientation: 'portrait-primary',
+        icons: [
+          { src: '/placeholder.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/placeholder.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
+        ]
+      };
+      return new Response(JSON.stringify(fallbackManifest), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+      });
     }
 
     // Get optimized icon variants or fallback to original
