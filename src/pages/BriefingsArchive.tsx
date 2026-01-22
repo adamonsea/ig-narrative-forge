@@ -39,9 +39,8 @@ export default function BriefingsArchive() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>('daily');
 
-  // Update favicon based on topic branding
-  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
-  useTopicFavicon(faviconUrl);
+  // Update favicon based on topic branding (pass full branding config for optimized variants)
+  useTopicFavicon(topic?.branding_config as any);
 
   useEffect(() => {
     const fetchData = async () => {

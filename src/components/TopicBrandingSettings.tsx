@@ -121,60 +121,56 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
     }
   };
 
-  const uploadLogo = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${topic.id}/logo.${fileExt}`;
+  const uploadAndOptimizeImage = async (file: File, imageType: 'logo' | 'icon'): Promise<string> => {
+    console.log(`Uploading and optimizing ${imageType}:`, { 
+      fileName: file.name, 
+      fileSize: file.size, 
+      fileType: file.type, 
+      topicId: topic.id 
+    });
 
-    console.log('Uploading logo:', { fileName, fileSize: file.size, fileType: file.type, topicId: topic.id });
+    // Convert file to base64
+    const base64Data = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-    const { data, error } = await supabase.storage
-      .from('topic-logos')
-      .upload(fileName, file, {
-        upsert: true,
-        contentType: file.type
-      });
+    // Call the optimization edge function
+    const { data, error } = await supabase.functions.invoke('optimize-branding-image', {
+      body: {
+        topicId: topic.id,
+        imageType,
+        base64Data,
+        mimeType: file.type,
+        originalFileName: file.name,
+      }
+    });
 
     if (error) {
-      console.error('Storage upload error:', error);
-      throw new Error(`Storage upload failed: ${error.message} (Path: ${fileName})`);
+      console.error(`${imageType} optimization error:`, error);
+      throw new Error(`${imageType} optimization failed: ${error.message}`);
     }
 
-    console.log('Upload successful:', data);
+    if (!data?.success) {
+      throw new Error(`${imageType} optimization failed: ${data?.error || 'Unknown error'}`);
+    }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('topic-logos')
-      .getPublicUrl(fileName);
+    console.log(`${imageType} optimized successfully:`, {
+      originalUrl: data.originalUrl,
+      variants: Object.keys(data.variants || {}),
+    });
 
-    console.log('Generated public URL:', publicUrl);
-    return publicUrl;
+    return data.originalUrl;
+  };
+
+  const uploadLogo = async (file: File): Promise<string> => {
+    return uploadAndOptimizeImage(file, 'logo');
   };
 
   const uploadIcon = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${topic.id}/icon.${fileExt}`;
-
-    console.log('Uploading icon:', { fileName, fileSize: file.size, fileType: file.type, topicId: topic.id });
-
-    const { data, error } = await supabase.storage
-      .from('topic-icons')
-      .upload(fileName, file, {
-        upsert: true,
-        contentType: file.type
-      });
-
-    if (error) {
-      console.error('Icon upload error:', error);
-      throw new Error(`Icon upload failed: ${error.message} (Path: ${fileName})`);
-    }
-
-    console.log('Icon upload successful:', data);
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('topic-icons')
-      .getPublicUrl(fileName);
-
-    console.log('Generated icon public URL:', publicUrl);
-    return publicUrl;
+    return uploadAndOptimizeImage(file, 'icon');
   };
 
   const handleSave = async () => {

@@ -53,9 +53,8 @@ export default function SwipeMode() {
   const optimizations = useDeviceOptimizations();
   const [previousStreak, setPreviousStreak] = useState(0);
   
-  // Apply topic favicon
-  const faviconUrl = topicBranding?.icon_url || topicBranding?.logo_url;
-  useTopicFavicon(faviconUrl);
+  // Apply topic favicon (pass full branding config for optimized variants)
+  useTopicFavicon(topicBranding as any);
   
   // Track Play Mode visitor (even anonymous)
   usePlayModeVisitorTracking(topicId || undefined);

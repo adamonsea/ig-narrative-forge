@@ -399,10 +399,9 @@ const TopicFeed = () => {
     }
   }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id, storiesScrolledPast, showCollectionsHint, slug]);
 
-  // Update favicon based on topic branding
+  // Update favicon based on topic branding (pass full branding config for optimized variants)
   const branding = topic?.branding_config as any;
-  const faviconUrl = branding?.icon_url || branding?.logo_url;
-  useTopicFavicon(faviconUrl);
+  useTopicFavicon(branding);
 
   // Update manifest dynamically based on topic
   useEffect(() => {

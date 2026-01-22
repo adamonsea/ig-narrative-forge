@@ -54,9 +54,8 @@ const TopicArchive = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Update favicon based on topic branding
-  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
-  useTopicFavicon(faviconUrl);
+  // Update favicon based on topic branding (pass full branding config for optimized variants)
+  useTopicFavicon(topic?.branding_config as any);
 
   const totalPages = Math.ceil(totalCount / STORIES_PER_PAGE);
 

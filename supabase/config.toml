@@ -522,3 +522,13 @@ verify_jwt = false
 
 [functions.deactivate-sources]
 verify_jwt = false
+
+# ========================================
+# BRANDING IMAGE OPTIMIZATION
+# ========================================
+
+[functions.optimize-branding-image]
+verify_jwt = false
+
+[functions.optimize-existing-images]
+verify_jwt = false

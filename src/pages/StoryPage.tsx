@@ -178,9 +178,8 @@ const StoryPage = () => {
     loadStoryAndTopic();
   }, [slug, storyId, navigate]);
 
-  // Update favicon based on topic branding
-  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
-  useTopicFavicon(faviconUrl);
+  // Update favicon based on topic branding (pass full branding config for optimized variants)
+  useTopicFavicon(topic?.branding_config as any);
 
   if (loading) {
     return (
