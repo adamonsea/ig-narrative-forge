@@ -2349,13 +2349,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     (!topic?.landmarks?.length) && 
     (!topic?.organizations?.length);
 
+  // Only ready when at least one filter has count > 0 (not just array length)
+  const hasUsableFilters = 
+    availableKeywords.some(k => k.count > 0) || 
+    availableLandmarks.some(l => l.count > 0) || 
+    availableOrganizations.some(o => o.count > 0) || 
+    availableSources.some(s => s.count > 0);
+
   const filterOptionsReady = 
     filterIndexTimedOut ||
     hasNoFilterTermsConfigured ||
-    availableKeywords.length > 0 || 
-    availableLandmarks.length > 0 || 
-    availableOrganizations.length > 0 || 
-    availableSources.length > 0;
+    hasUsableFilters;
 
   return {
     // Story data
