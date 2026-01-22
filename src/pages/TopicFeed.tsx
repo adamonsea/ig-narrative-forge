@@ -665,15 +665,15 @@ const TopicFeed = () => {
 
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  disabled={filteredContent.length === 0}
+                  disabled={loading || filteredContent.length === 0}
                   className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg transition-colors ${
-                    filteredContent.length === 0 
+                    loading || filteredContent.length === 0 
                       ? 'bg-muted/50 cursor-not-allowed' 
                       : 'bg-muted hover:bg-muted/80'
                   }`}
                 >
-                  <Filter className={`w-4 h-4 ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
-                  <span className={`hidden sm:inline text-sm font-medium ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
+                  <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
+                  <span className={`hidden sm:inline text-sm font-medium ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
                   {hasActiveFilters && (
                     <span className="w-2 h-2 bg-primary rounded-full" />
                   )}
@@ -885,16 +885,16 @@ const TopicFeed = () => {
               <button
                 onClick={() => setIsModalOpen(true)}
                 data-onboarding="filter-button"
-                disabled={filteredContent.length === 0}
+                disabled={loading || filteredContent.length === 0}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                  filteredContent.length === 0 
+                  loading || filteredContent.length === 0 
                     ? 'bg-muted/50 cursor-not-allowed' 
                     : 'bg-muted hover:bg-muted/80'
                 }`}
                 aria-label="Open filters"
               >
-                <Filter className={`w-4 h-4 ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
-                <span className={`text-sm font-medium ${filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
+                <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
+                <span className={`text-sm font-medium ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
                 {hasActiveFilters && (
                   <span className="w-2 h-2 bg-primary rounded-full" />
                 )}
