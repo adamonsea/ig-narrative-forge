@@ -2,6 +2,13 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { calculateRegionalRelevance, TopicRegionalConfig } from './region-config.ts'
 import { calculateTopicRelevance, TopicConfig } from './hybrid-content-scoring.ts'
 
+// UUID validation helper to prevent "invalid input syntax for type uuid" errors
+const isValidUUID = (str: string | undefined | null): boolean => {
+  if (!str || str.trim() === '') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 export interface ArticleData {
   title: string
   body?: string
@@ -202,15 +209,22 @@ export class MultiTenantDatabaseOperations {
       try {
         result.articlesProcessed++
 
-        // Get source data for credibility and source type
-        const { data: sourceData } = await this.supabase
-          .from('content_sources')
-          .select('credibility_score, source_type')
-          .eq('id', sourceId || '')
-          .single()
+        // Get source data for credibility and source type (with UUID validation)
+        let credibilityScore = 50;
+        let sourceType = 'national';
         
-        const credibilityScore = sourceData?.credibility_score || 50
-        const sourceType = sourceData?.source_type || 'national'
+        if (isValidUUID(sourceId)) {
+          const { data: sourceData } = await this.supabase
+            .from('content_sources')
+            .select('credibility_score, source_type')
+            .eq('id', sourceId)
+            .single();
+          
+          credibilityScore = sourceData?.credibility_score || 50;
+          sourceType = sourceData?.source_type || 'national';
+        } else {
+          console.warn(`⚠️ Invalid/missing sourceId "${sourceId}", using defaults (credibility: 50, type: national)`);
+        }
 
         // Phase 1: Apply topic-specific filtering with competing region detection
         console.log(`\n🔍 EVALUATING: "${article.title?.substring(0, 60)}..."`)
@@ -263,11 +277,16 @@ export class MultiTenantDatabaseOperations {
         console.log(`      - Quality: ${qualityScore} >= ${qualityThreshold} ✓`)
 
         // Check for competing topic linkage (prevent cross-contamination)
-        const { data: existingLinks } = await this.supabase
-          .from('topic_articles')
-          .select('topic_id, regional_relevance_score')
-          .eq('shared_content_id', article.id || '')
-          .neq('topic_id', topicId)
+        // Only query if we have a valid article.id (UUID validation)
+        let existingLinks: any[] | null = null;
+        if (isValidUUID(article.id)) {
+          const { data } = await this.supabase
+            .from('topic_articles')
+            .select('topic_id, regional_relevance_score')
+            .eq('shared_content_id', article.id)
+            .neq('topic_id', topicId);
+          existingLinks = data;
+        }
         
         if (existingLinks && existingLinks.length > 0) {
           const hasHigherRelevanceElsewhere = existingLinks.some(
@@ -391,7 +410,7 @@ export class MultiTenantDatabaseOperations {
       .upsert({
         shared_content_id: sharedContent.id,
         topic_id: topic.id,
-        source_id: sourceId || null, // Ensure proper UUID or null
+        source_id: isValidUUID(sourceId) ? sourceId : null, // Validated UUID or null
         regional_relevance_score: relevanceScore,
         content_quality_score: qualityScore,
         keyword_matches: this.findKeywordMatches(article, topic),
