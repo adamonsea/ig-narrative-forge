@@ -169,6 +169,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Filter version tracking to prevent stale server responses from overwriting active filters
   const filterVersionRef = useRef(0);
   
+  // Filter index loading state with safeguards
+  const [filterIndexLoading, setFilterIndexLoading] = useState(false);
+  const [filterIndexError, setFilterIndexError] = useState<string | null>(null);
+  const [filterIndexTimedOut, setFilterIndexTimedOut] = useState(false);
+  const filterIndexTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  
   // Derived filtered stories for backward compatibility
   const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
 
@@ -1241,6 +1247,23 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     if (filterIndexLoadingRef.current && !forceReload) return;
 
     filterIndexLoadingRef.current = true;
+    setFilterIndexLoading(true);
+    setFilterIndexError(null);
+    setFilterIndexTimedOut(false);
+    
+    // Set 8-second timeout fallback to prevent permanently disabled button
+    if (filterIndexTimeoutRef.current) {
+      clearTimeout(filterIndexTimeoutRef.current);
+    }
+    filterIndexTimeoutRef.current = setTimeout(() => {
+      if (filterIndexLoadingRef.current) {
+        console.warn('⏱️ Filter index loading timed out after 8s, enabling button anyway');
+        setFilterIndexTimedOut(true);
+        setFilterIndexLoading(false);
+        filterIndexLoadingRef.current = false;
+      }
+    }, 8000);
+    
     console.log('🔍 [FILTER INDEX] Starting load for topic:', {
       topicId: topicData.id,
       topicSlug: topicData.slug,
@@ -1422,10 +1445,22 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       });
 
       setFilterStoryIndex(indexEntries);
+      
+      // Clear timeout on success
+      if (filterIndexTimeoutRef.current) {
+        clearTimeout(filterIndexTimeoutRef.current);
+      }
     } catch (error) {
       console.warn('⚠️ Failed to build filter story index:', error);
+      setFilterIndexError(error instanceof Error ? error.message : 'Failed to load filters');
+      
+      // Clear timeout on error
+      if (filterIndexTimeoutRef.current) {
+        clearTimeout(filterIndexTimeoutRef.current);
+      }
     } finally {
       filterIndexLoadingRef.current = false;
+      setFilterIndexLoading(false);
     }
   }, [extractDomain, slug]);
 
@@ -2047,6 +2082,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         await loadStories(topicData, 0, false, null, null);
         console.log('✅ Stories loaded successfully');
         
+        // Eagerly load filter index for instant availability when Curate button is clicked
+        if (topicData) {
+          loadFilterStoryIndex(topicData);
+        }
+        
         // Reset states
         setAutoRetryCount(0);
         setUsingCachedContent(false);
@@ -2282,11 +2322,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     hasSetupRealtimeRef.current = false;
   }, [topic?.id]);
 
-  // Cleanup debounce on unmount
+  // Cleanup debounce and filter timeout on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
+      }
+      if (filterIndexTimeoutRef.current) {
+        clearTimeout(filterIndexTimeoutRef.current);
       }
     };
   }, []);
@@ -2296,6 +2339,23 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     setLoadError(null);
     refresh();
   }, [refresh]);
+
+  // Compute filter readiness - true when:
+  // 1. Filter options are populated, OR
+  // 2. Timeout was reached (fallback), OR  
+  // 3. Topic has no filter terms configured (nothing to load)
+  const hasNoFilterTermsConfigured = 
+    (!topic?.keywords?.length) && 
+    (!topic?.landmarks?.length) && 
+    (!topic?.organizations?.length);
+
+  const filterOptionsReady = 
+    filterIndexTimedOut ||
+    hasNoFilterTermsConfigured ||
+    availableKeywords.length > 0 || 
+    availableLandmarks.length > 0 || 
+    availableOrganizations.length > 0 || 
+    availableSources.length > 0;
 
   return {
     // Story data
@@ -2358,6 +2418,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     toggleSource,
     removeSource,
 
-    ensureFilterStoryIndexLoaded
+    ensureFilterStoryIndexLoaded,
+    
+    // Filter readiness state for Curate button
+    filterIndexLoading,
+    filterOptionsReady
   };
 };

@@ -157,7 +157,10 @@ const TopicFeed = () => {
     // Error handling for mobile
     loadError,
     retryCount,
-    retryLoad
+    retryLoad,
+    // Filter readiness state
+    filterIndexLoading,
+    filterOptionsReady
   } = useHybridTopicFeedWithKeywords(slug || '');
 
   // OPTIMIZED: Fetch all secondary metadata in parallel via cached React Query
@@ -665,15 +668,19 @@ const TopicFeed = () => {
 
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  disabled={loading || filteredContent.length === 0}
+                  disabled={loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady)}
                   className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg transition-colors ${
-                    loading || filteredContent.length === 0 
+                    loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady)
                       ? 'bg-muted/50 cursor-not-allowed' 
                       : 'bg-muted hover:bg-muted/80'
                   }`}
                 >
-                  <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
-                  <span className={`hidden sm:inline text-sm font-medium ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
+                  {filterIndexLoading && !filterOptionsReady ? (
+                    <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                  ) : (
+                    <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady) ? 'text-muted-foreground/50' : ''}`} />
+                  )}
+                  <span className={`hidden sm:inline text-sm font-medium ${loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady) ? 'text-muted-foreground/50' : ''}`}>Curate</span>
                   {hasActiveFilters && (
                     <span className="w-2 h-2 bg-primary rounded-full" />
                   )}
@@ -885,16 +892,20 @@ const TopicFeed = () => {
               <button
                 onClick={() => setIsModalOpen(true)}
                 data-onboarding="filter-button"
-                disabled={loading || filteredContent.length === 0}
+                disabled={loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                  loading || filteredContent.length === 0 
+                  loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady)
                     ? 'bg-muted/50 cursor-not-allowed' 
                     : 'bg-muted hover:bg-muted/80'
                 }`}
                 aria-label="Open filters"
               >
-                <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`} />
-                <span className={`text-sm font-medium ${loading || filteredContent.length === 0 ? 'text-muted-foreground/50' : ''}`}>Curate</span>
+                {filterIndexLoading && !filterOptionsReady ? (
+                  <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                ) : (
+                  <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady) ? 'text-muted-foreground/50' : ''}`} />
+                )}
+                <span className={`text-sm font-medium ${loading || filteredContent.length === 0 || (filterIndexLoading && !filterOptionsReady) ? 'text-muted-foreground/50' : ''}`}>Curate</span>
                 {hasActiveFilters && (
                   <span className="w-2 h-2 bg-primary rounded-full" />
                 )}
