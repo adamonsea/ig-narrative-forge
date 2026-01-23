@@ -58,7 +58,7 @@ export const PlayModeMenu = ({
           <ChevronDown className="w-3 h-3 opacity-60" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
+      <DropdownMenuContent align="start" className="w-48 z-[60]">
         <DropdownMenuItem 
           onClick={() => navigate(`/play/${slug}`)}
           className="cursor-pointer"
