@@ -5078,24 +5078,20 @@ export type Database = {
       get_user_dashboard_stats: {
         Args: { p_user_id: string }
         Returns: {
-          articles_disliked: number
           articles_in_arrivals: number
-          articles_liked: number
-          avg_carousel_swipes: number
-          avg_final_slides_seen: number
-          avg_stories_engaged: number
-          installs_this_week: number
-          installs_total: number
-          play_mode_visits_week: number
-          quiz_responses_count: number
-          registrants_this_week: number
-          registrants_total: number
-          share_clicks: number
-          source_clicks: number
-          stories_published_week: number
+          avg_engagement_pct: number
+          avg_swipes_per_session: number
+          funnel_approved: number
+          funnel_arrivals: number
+          funnel_published: number
+          play_visitors_week: number
+          stories_published: number
           topic_id: string
-          visits_this_week: number
-          visits_today: number
+          total_likes: number
+          total_shares: number
+          total_swipes: number
+          visitors_today: number
+          visitors_week: number
         }[]
       }
       has_role: {
