@@ -14,11 +14,45 @@ interface StoryReactionBarProps {
   prefetchedCounts?: ReactionCounts;
   /** Callback to update batch counts after reaction */
   onCountsChange?: (storyId: string, counts: ReactionCounts) => void;
+  /** Position in feed - used to scale displayed engagement numbers */
+  storyIndex?: number;
 }
 
-// Inflation adds a fixed base to make numbers look busier
-const INFLATION_BASE_UP = 47;
-const INFLATION_BASE_DOWN = 23;
+// Generate a deterministic "random" number from a string seed
+const seededRandom = (seed: string, min: number, max: number): number => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  const normalized = Math.abs(Math.sin(hash)) * 10000 % 1;
+  return Math.floor(normalized * (max - min + 1)) + min;
+};
+
+// Calculate position-scaled inflation bases based on story index
+const getPositionScaledBases = (storyId: string, index: number) => {
+  let likesMin: number, likesMax: number, dislikesMin: number, dislikesMax: number;
+  
+  if (index <= 2) {
+    // Newest stories (top 3): low engagement
+    likesMin = 12; likesMax = 28;
+    dislikesMin = 3; dislikesMax = 12;
+  } else if (index <= 6) {
+    // Mid-feed: moderate engagement
+    likesMin = 25; likesMax = 55;
+    dislikesMin = 8; dislikesMax = 22;
+  } else {
+    // Further down: higher engagement
+    likesMin = 45; likesMax = 95;
+    dislikesMin = 15; dislikesMax = 38;
+  }
+  
+  return {
+    thumbsUp: seededRandom(storyId + '-up', likesMin, likesMax),
+    thumbsDown: seededRandom(storyId + '-down', dislikesMin, dislikesMax),
+  };
+};
 
 export const StoryReactionBar = ({ 
   storyId, 
@@ -26,7 +60,8 @@ export const StoryReactionBar = ({
   className, 
   onMoreLikeThis,
   prefetchedCounts,
-  onCountsChange
+  onCountsChange,
+  storyIndex = 0
 }: StoryReactionBarProps) => {
   // Always use individual hook for reaction logic
   const individualHook = useStoryReactions(storyId, topicId);
@@ -88,7 +123,13 @@ export const StoryReactionBar = ({
     baselineRef.current = null;
   }
 
-  // Calculate displayed numbers: base inflation + relative change from baseline
+  // Get position-scaled base numbers (memoized per story + position)
+  const scaledBases = useMemo(
+    () => getPositionScaledBases(storyId, storyIndex),
+    [storyId, storyIndex]
+  );
+
+  // Calculate displayed numbers: scaled base + relative change from baseline
   const displayNumbers = useMemo(() => {
     if (!hasReacted || !baselineRef.current) {
       return { thumbsUp: 0, thumbsDown: 0 };
@@ -99,10 +140,10 @@ export const StoryReactionBar = ({
     const deltaDown = counts.thumbsDown - baseline.thumbsDown;
     
     return {
-      thumbsUp: INFLATION_BASE_UP + deltaUp,
-      thumbsDown: INFLATION_BASE_DOWN + deltaDown,
+      thumbsUp: scaledBases.thumbsUp + deltaUp,
+      thumbsDown: scaledBases.thumbsDown + deltaDown,
     };
-  }, [hasReacted, counts.thumbsUp, counts.thumbsDown]);
+  }, [hasReacted, counts.thumbsUp, counts.thumbsDown, scaledBases]);
 
   return (
     <div

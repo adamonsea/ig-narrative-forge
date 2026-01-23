@@ -1048,6 +1048,7 @@ export default function StoryCarousel({
                 <StoryReactionBar 
                   storyId={story.id} 
                   topicId={topicId}
+                  storyIndex={storyIndex}
                   className="flex-shrink-0"
                   onMoreLikeThis={onMoreLikeThis ? (_storyId) => onMoreLikeThis(story) : undefined}
                   prefetchedCounts={prefetchedReactionCounts}
