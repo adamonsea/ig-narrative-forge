@@ -4,6 +4,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
 import { getCachedFeed, setCachedFeed, isCacheFresh, CachedStory, CachedTopic } from '@/lib/feedCache';
+import { prefetchBriefings } from '@/lib/briefingsCache';
 interface Story {
   id: string;
   title: string;
@@ -1148,6 +1149,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           slides: s.slides.length,
           published_at: s.article.published_at
         })));
+        
+        // Prefetch briefings in idle time after main feed loads
+        if (topicData?.id && topicData?.slug) {
+          prefetchBriefings(topicData.slug, topicData.id);
+        }
       }
       
       // Determine if there might be more data based on unique story count
