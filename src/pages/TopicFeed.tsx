@@ -641,15 +641,14 @@ const TopicFeed = () => {
               {/* Background refresh is invisible - no indicator shown */}
               </div>
               <div className="flex items-center gap-2">
-                {/* Play Mode - First when enabled */}
-                {playModeEnabled && (
-                  <PlayModeMenu 
-                    slug={slug!} 
-                    showPulse={showPlayModePulse}
-                    showLabel={false}
-                    siftEnabled={siftEnabled}
-                  />
-                )}
+                {/* Play Mode - Shows immediately, hides only if explicitly disabled */}
+                <PlayModeMenu 
+                  slug={slug!} 
+                  showPulse={showPlayModePulse}
+                  showLabel={false}
+                  siftEnabled={siftEnabled}
+                  hidden={playModeEnabled === false}
+                />
 
                 <button
                   onClick={() => setShowNotificationModal(true)}
@@ -874,16 +873,15 @@ const TopicFeed = () => {
 
             {/* Action buttons - consistent with sticky header layout */}
             <div className="flex items-center justify-center gap-2 pt-2">
-              {/* Play Mode - First when enabled */}
-              {playModeEnabled && (
-                <div data-onboarding="play-mode">
-                  <PlayModeMenu 
-                    slug={slug!} 
-                    showPulse={showPlayModePulse}
-                    siftEnabled={siftEnabled}
-                  />
-                </div>
-              )}
+              {/* Play Mode - Shows immediately, hides only if explicitly disabled */}
+              <div data-onboarding="play-mode">
+                <PlayModeMenu 
+                  slug={slug!} 
+                  showPulse={showPlayModePulse}
+                  siftEnabled={siftEnabled}
+                  hidden={playModeEnabled === false}
+                />
+              </div>
 
               <button
                 onClick={() => setIsModalOpen(true)}
