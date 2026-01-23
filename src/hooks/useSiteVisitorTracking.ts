@@ -94,20 +94,26 @@ const classifyPage = (path: string): PageClassification => {
     return { pageType: 'admin', topicSlug: null };
   }
   
-  // Play mode: /play/:topicSlug
-  const playMatch = path.match(/^\/play\/([^/]+)$/);
+  // Play mode: /play/:topicSlug (with optional trailing segments)
+  const playMatch = path.match(/^\/play\/([^/]+)/);
   if (playMatch) {
     return { pageType: 'play', topicSlug: playMatch[1] };
   }
   
   // Story page: /feed/:topicSlug/story/:storyId
-  const storyMatch = path.match(/^\/feed\/([^/]+)\/story\/[^/]+$/);
+  const storyMatch = path.match(/^\/feed\/([^/]+)\/story\/[^/]+/);
   if (storyMatch) {
     return { pageType: 'story', topicSlug: storyMatch[1] };
   }
   
-  // Feed page: /feed/:topicSlug
-  const feedMatch = path.match(/^\/feed\/([^/]+)$/);
+  // Feed sub-routes: /feed/:topicSlug/(about|archive|daily|weekly|widget|briefings)
+  const feedSubRouteMatch = path.match(/^\/feed\/([^/]+)\/(about|archive|daily|weekly|widget|briefings)/);
+  if (feedSubRouteMatch) {
+    return { pageType: 'feed', topicSlug: feedSubRouteMatch[1] };
+  }
+  
+  // Feed page: /feed/:topicSlug (base feed URL)
+  const feedMatch = path.match(/^\/feed\/([^/]+)/);
   if (feedMatch) {
     return { pageType: 'feed', topicSlug: feedMatch[1] };
   }
@@ -168,24 +174,27 @@ export const useSiteVisitorTracking = () => {
       }
     };
     
-    // Helper to resolve topic slug to ID
+    // Helper to resolve topic slug to ID (case-insensitive)
     async function resolveTopicId(topicSlug: string | null): Promise<string | null> {
       if (!topicSlug) return null;
       
+      // Normalize to lowercase for consistent caching
+      const normalizedSlug = topicSlug.toLowerCase();
+      
       // Check cache first
-      if (topicIdCache.has(topicSlug)) {
-        return topicIdCache.get(topicSlug) || null;
+      if (topicIdCache.has(normalizedSlug)) {
+        return topicIdCache.get(normalizedSlug) || null;
       }
       
-      // Look up topic ID from slug
+      // Case-insensitive lookup using ilike
       const { data: topic } = await supabase
         .from('topics')
         .select('id')
-        .eq('slug', topicSlug)
+        .ilike('slug', normalizedSlug)
         .maybeSingle();
       
       if (topic?.id) {
-        topicIdCache.set(topicSlug, topic.id);
+        topicIdCache.set(normalizedSlug, topic.id);
         return topic.id;
       }
       
