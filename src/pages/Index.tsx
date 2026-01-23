@@ -394,9 +394,25 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Footer spacing */}
-          <div className="h-12" />
         </main>
+
+        {/* Footer */}
+        <footer className="border-t border-white/10 py-8 mt-12">
+          <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/50">
+            <p>© {new Date().getFullYear()} curatr.pro. All rights reserved.</p>
+            <p>
+              Built by{' '}
+              <a 
+                href="https://getlit.pro" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-white/70 hover:text-white transition-colors underline underline-offset-2"
+              >
+                getlit.pro
+              </a>
+            </p>
+          </div>
+        </footer>
       </div>
       <CookieConsent variant="home" />
     </div>
