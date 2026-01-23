@@ -60,14 +60,16 @@ export const CollapsibleAudienceCard = ({ topicId, visitsToday, visitsThisWeek }
 
       const [thisWeekRes, lastWeekRes] = await Promise.all([
         supabase
-          .from('feed_visits')
+          .from('site_visits')
           .select('visitor_id')
           .eq('topic_id', topicId)
+          .in('page_type', ['feed', 'story'])
           .gte('visit_date', thisWeekStart.toISOString().split('T')[0]),
         supabase
-          .from('feed_visits')
+          .from('site_visits')
           .select('visitor_id')
           .eq('topic_id', topicId)
+          .in('page_type', ['feed', 'story'])
           .gte('visit_date', lastWeekStart.toISOString().split('T')[0])
           .lt('visit_date', thisWeekStart.toISOString().split('T')[0])
       ]);
