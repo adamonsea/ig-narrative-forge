@@ -30,12 +30,25 @@ serve(async (req) => {
 
     console.log('Processing quiz response', { questionId, selectedOption, visitorId });
 
-    // Get the question to check the correct answer
-    const { data: question, error: questionError } = await supabase
-      .from('quiz_questions')
-      .select('*')
-      .eq('id', questionId)
-      .single();
+    // OPTIMIZATION: Run both queries in parallel - they're independent reads
+    const [questionResult, existingResult] = await Promise.all([
+      // Query 1: Get the question to check the correct answer
+      supabase
+        .from('quiz_questions')
+        .select('*')
+        .eq('id', questionId)
+        .single(),
+      // Query 2: Check if user already responded to this question
+      supabase
+        .from('quiz_responses')
+        .select('id, selected_option, is_correct')
+        .eq('question_id', questionId)
+        .eq('visitor_id', visitorId)
+        .maybeSingle()
+    ]);
+
+    const { data: question, error: questionError } = questionResult;
+    const { data: existingResponse } = existingResult;
 
     if (questionError || !question) {
       console.error('Question not found:', questionError);
@@ -47,14 +60,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    // Check if user already responded to this question
-    const { data: existingResponse } = await supabase
-      .from('quiz_responses')
-      .select('id, selected_option, is_correct')
-      .eq('question_id', questionId)
-      .eq('visitor_id', visitorId)
-      .single();
 
     if (existingResponse) {
       // Return the existing response data without inserting a duplicate
