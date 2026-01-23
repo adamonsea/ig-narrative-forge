@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BriefingsArchiveSEO } from "@/components/seo/BriefingsArchiveSEO";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
+import { getCachedBriefings, setCachedBriefings, isBriefingsCacheFresh, CachedRoundup } from "@/lib/briefingsCache";
 
 interface Topic {
   id: string;
@@ -49,6 +50,34 @@ export default function BriefingsArchive() {
         return;
       }
 
+      // Check cache first for instant display
+      const cached = getCachedBriefings(slug);
+      if (cached) {
+        console.log('📋 Using cached briefings for', slug);
+        // We need to fetch topic data still (it's small)
+        const { data: topicData } = await supabase
+          .from('topics')
+          .select('id, name, slug, branding_config')
+          .eq('slug', slug)
+          .eq('is_public', true)
+          .eq('is_active', true)
+          .single();
+        
+        if (topicData) {
+          setTopic(topicData);
+          setDailyRoundups(cached.dailyRoundups as Roundup[]);
+          setWeeklyRoundups(cached.weeklyRoundups as Roundup[]);
+          setLoading(false);
+          
+          // If cache is stale, refresh in background
+          if (!isBriefingsCacheFresh(cached)) {
+            console.log('📋 Cache stale, refreshing in background...');
+            refreshBriefings(topicData.id, slug);
+          }
+          return;
+        }
+      }
+
       try {
         // Fetch topic
         const { data: topicData, error: topicError } = await supabase
@@ -67,36 +96,69 @@ export default function BriefingsArchive() {
 
         setTopic(topicData);
 
-        // Fetch all daily roundups
-        const { data: dailyData, error: dailyError } = await supabase
-          .from('topic_roundups')
-          .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
-          .eq('topic_id', topicData.id)
-          .eq('roundup_type', 'daily')
-          .eq('is_published', true)
-          .order('period_start', { ascending: false });
+        // Fetch all daily and weekly roundups in parallel
+        const [dailyResult, weeklyResult] = await Promise.all([
+          supabase
+            .from('topic_roundups')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .eq('topic_id', topicData.id)
+            .eq('roundup_type', 'daily')
+            .eq('is_published', true)
+            .order('period_start', { ascending: false }),
+          supabase
+            .from('topic_roundups')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .eq('topic_id', topicData.id)
+            .eq('roundup_type', 'weekly')
+            .eq('is_published', true)
+            .order('period_start', { ascending: false })
+        ]);
 
-        if (!dailyError && dailyData) {
-          setDailyRoundups(dailyData as Roundup[]);
-        }
+        const dailyData = (dailyResult.data || []) as Roundup[];
+        const weeklyData = (weeklyResult.data || []) as Roundup[];
 
-        // Fetch all weekly roundups
-        const { data: weeklyData, error: weeklyError } = await supabase
-          .from('topic_roundups')
-          .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
-          .eq('topic_id', topicData.id)
-          .eq('roundup_type', 'weekly')
-          .eq('is_published', true)
-          .order('period_start', { ascending: false });
+        setDailyRoundups(dailyData);
+        setWeeklyRoundups(weeklyData);
 
-        if (!weeklyError && weeklyData) {
-          setWeeklyRoundups(weeklyData as Roundup[]);
-        }
+        // Cache for next time
+        setCachedBriefings(slug, topicData.id, dailyData, weeklyData);
 
         setLoading(false);
       } catch (error) {
         console.error('Fetch error:', error);
         setLoading(false);
+      }
+    };
+
+    // Background refresh helper
+    const refreshBriefings = async (topicId: string, topicSlug: string) => {
+      try {
+        const [dailyResult, weeklyResult] = await Promise.all([
+          supabase
+            .from('topic_roundups')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .eq('topic_id', topicId)
+            .eq('roundup_type', 'daily')
+            .eq('is_published', true)
+            .order('period_start', { ascending: false }),
+          supabase
+            .from('topic_roundups')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .eq('topic_id', topicId)
+            .eq('roundup_type', 'weekly')
+            .eq('is_published', true)
+            .order('period_start', { ascending: false })
+        ]);
+
+        const dailyData = (dailyResult.data || []) as Roundup[];
+        const weeklyData = (weeklyResult.data || []) as Roundup[];
+
+        setDailyRoundups(dailyData);
+        setWeeklyRoundups(weeklyData);
+        setCachedBriefings(topicSlug, topicId, dailyData, weeklyData);
+        console.log('✅ Briefings refreshed in background');
+      } catch (error) {
+        console.warn('Background refresh failed:', error);
       }
     };
 
