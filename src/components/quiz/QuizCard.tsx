@@ -20,6 +20,8 @@ export const QuizCard = ({ question, visitorId, userId, topicSlug, onAnswered }:
   const [result, setResult] = useState<QuizResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startTime] = useState<number>(Date.now());
+  // Optimistic UI: show selected option immediately while backend processes
+  const [optimisticSelection, setOptimisticSelection] = useState<string | null>(null);
   
   const submitResponse = useSubmitQuizResponse();
 
@@ -27,6 +29,8 @@ export const QuizCard = ({ question, visitorId, userId, topicSlug, onAnswered }:
   const handleOptionSelect = async (label: string) => {
     if (result || isSubmitting) return; // Already answered or submitting
 
+    // Optimistic: show selection immediately
+    setOptimisticSelection(label);
     setIsSubmitting(true);
     const responseTimeMs = Date.now() - startTime;
 
@@ -44,6 +48,8 @@ export const QuizCard = ({ question, visitorId, userId, topicSlug, onAnswered }:
       // The answer is already persisted via localStorage in the mutation
     } catch (error) {
       console.error('Error submitting quiz response:', error);
+      // Clear optimistic selection on error
+      setOptimisticSelection(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -56,6 +62,10 @@ export const QuizCard = ({ question, visitorId, userId, topicSlug, onAnswered }:
   };
 
   const getOptionStyle = (label: string) => {
+    // Optimistic: highlight selected option while waiting for result
+    if (!result && optimisticSelection === label) {
+      return 'border-primary bg-primary/10 ring-2 ring-primary/30';
+    }
     if (!result) {
       return 'border-border hover:border-primary/50 cursor-pointer';
     }
