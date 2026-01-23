@@ -13,6 +13,8 @@ interface PlayModeMenuProps {
   showLabel?: boolean;
   className?: string;
   siftEnabled?: boolean;
+  /** When true, hides the menu entirely (for when feature is explicitly disabled) */
+  hidden?: boolean;
 }
 
 export const PlayModeMenu = ({ 
@@ -20,8 +22,11 @@ export const PlayModeMenu = ({
   showPulse = false, 
   showLabel = true,
   className = '',
-  siftEnabled = false
+  siftEnabled = false,
+  hidden = false
 }: PlayModeMenuProps) => {
+  // If explicitly hidden (metadata confirmed feature disabled), don't render
+  if (hidden) return null;
   const navigate = useNavigate();
 
   // If sift is disabled, just show a simple button for swipe mode

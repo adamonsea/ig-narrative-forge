@@ -84,6 +84,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
         gcTime: 10 * 60 * 1000, // 10 minutes
       },
       // Query 2: Play mode, quiz, and sift settings (combined)
+      // Uses placeholderData for instant defaults - Play button shows immediately
       {
         queryKey: ['topic-insight-settings', topicId],
         queryFn: async () => {
@@ -123,6 +124,13 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
         enabled: !!topicId,
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
+        // Optimistic defaults - UI renders instantly with these values
+        placeholderData: { 
+          playModeEnabled: true, 
+          quizCardsEnabled: false, 
+          siftEnabled: false,
+          thisTimeLastMonthEnabled: false 
+        },
       },
       // Query 3: Latest roundups (daily and weekly combined)
       {
