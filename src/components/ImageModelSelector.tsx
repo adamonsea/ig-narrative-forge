@@ -36,20 +36,6 @@ export const illustrativeModels: ImageModel[] = [
     credits: 2,
     provider: 'openai',
     description: 'Fast generation, good quality (GPT-Image-1.5)'
-  },
-  {
-    id: 'gemini-pro-image',
-    name: 'Standard',
-    credits: 3,
-    provider: 'lovable-gemini-pro',
-    description: 'Good quality at low cost'
-  },
-  {
-    id: 'gemini-image',
-    name: 'Budget',
-    credits: 1,
-    provider: 'lovable-gemini',
-    description: 'Fast and economical'
   }
 ];
 
@@ -75,20 +61,6 @@ export const photographicModels: ImageModel[] = [
     credits: 2,
     provider: 'openai',
     description: 'Fast generation, good quality (GPT-Image-1.5)'
-  },
-  {
-    id: 'gemini-pro-image',
-    name: 'Standard',
-    credits: 3,
-    provider: 'lovable-gemini-pro',
-    description: 'Good quality at low cost'
-  },
-  {
-    id: 'gemini-image',
-    name: 'Budget',
-    credits: 1,
-    provider: 'lovable-gemini',
-    description: 'Fast and economical'
   }
 ];
 
