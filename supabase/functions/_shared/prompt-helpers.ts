@@ -157,9 +157,12 @@ export function buildIllustrativePrompt(
 
   const placeGuidance = mentionsLocalPlace ? `
 PLACE-SPECIFIC ELEMENTS (${region}):
-- Architectural shapes must reflect ${region}'s actual building styles (Victorian, Georgian, Art Deco, or local vernacular)
-- If depicting seafront/coastal location, include appropriate seaside elements simplified to geometric forms
-- Landmarks and street scenes should be recognizable as authentically British/local to ${region}
+- PRIORITIZE STORY CONTEXT: The image should illustrate the STORY'S subject matter, not default to famous landmarks
+- Use local architectural styles (Victorian, Georgian, Art Deco, flint walls, local vernacular) as BACKGROUND context, not as the main subject
+- Landmarks (pier, seafront, etc.) should ONLY appear if directly relevant to the story—do NOT use them as generic backdrops
+- Focus on: everyday streetscapes, local shops, residential areas, community spaces, workplaces—whatever the story actually depicts
+- If the story is about a person, business, or event: show THAT context, not tourist attractions
+- Authentically British details: signage, street furniture, weather, architecture—but keep it contextually appropriate to the story
 ` : '';
 
   return `PRINT-MADE EDITORIAL ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
@@ -250,13 +253,16 @@ export function buildPhotographicPrompt(
   const placeAccuracyGuidance = mentionsLocalPlace ? `
 
 PLACE-SPECIFIC ACCURACY (${region}):
-- Architecture must be AUTHENTIC to ${region}—use only building styles, materials, and facades actually found in ${region}
-- Street layouts, signage, shop fronts, and urban furniture must be consistent with real UK locations like ${region}
-- If ${region} is a coastal town, include seaside context: promenades, Victorian/Edwardian architecture, pebble beaches if appropriate
-- Landmarks must be ACCURATE—do NOT invent fictional landmarks or mix architectural styles from other regions
-- If depicting specific streets or locations, research actual appearances—Georgian terraces, flint walls, Art Deco, whatever is authentic to ${region}
-- Weather and light must be consistent with UK climate—overcast skies, soft light, occasional dramatic coastal light
-- CRITICAL: If the image shows recognizable architecture, it MUST look like it could actually be in ${region}. When in doubt, keep architecture generic but authentically British
+- CRITICAL: Illustrate the STORY'S actual subject—do NOT default to famous landmarks as backgrounds
+- Famous landmarks (pier, seafront, beachfront) should ONLY appear if the story is specifically ABOUT that location
+- PREFERRED SETTINGS: Local streets, residential areas, shops, workplaces, community spaces, parks—everyday ${region} life
+- Architecture must be AUTHENTIC to ${region}: Victorian terraces, Georgian facades, flint walls, Art Deco elements, local vernacular
+- Street details: UK signage, lampposts, phone boxes, bus stops, shop fronts—authentic British urban/suburban context
+- If story is about a PERSON: focus on their environment (office, shop, home, meeting venue)—not tourist attractions
+- If story is about a BUSINESS: show the business context, not the seafront
+- If story is about an EVENT: show the event venue/activity, not landmarks
+- Weather and light: UK climate—overcast, soft light, occasional dramatic coastal light when genuinely appropriate
+- ONLY use coastal elements (pier, promenade, beach) when the story EXPLICITLY involves the seafront
 ` : '';
 
   return `Cinematic editorial photography for ${publicationName || 'news publication'}. Subject: ${subject}.
