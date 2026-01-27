@@ -92,26 +92,50 @@ serve(async (req) => {
       // Fetch more stories than needed to filter for those with images
       const fetchLimit = maxStories * 3; // Fetch 3x to ensure we get enough with images
       
-      const { data: stories, error: storiesError } = await supabase
-        .from('stories')
-        .select(`
-          id, 
-          title, 
-          created_at,
-          publication_name,
-          article_id,
-          cover_illustration_url,
-          articles(source_url, image_url),
-          topic_articles!inner(topic_id)
-        `)
-        .eq('topic_articles.topic_id', topic.id)
-        .eq('is_published', true)
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .abortSignal(storiesController.signal)
-        .limit(fetchLimit);
+      // Calculate week start (Monday 00:00:00 UTC)
+      const now = new Date();
+      const dayOfWeek = now.getUTCDay();
+      const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const weekStart = new Date(now);
+      weekStart.setUTCDate(now.getUTCDate() - daysSinceMonday);
+      weekStart.setUTCHours(0, 0, 0, 0);
+      
+      // Parallel fetch: stories for widget + weekly stats
+      const [storiesResult, weeklyStatsResult] = await Promise.all([
+        supabase
+          .from('stories')
+          .select(`
+            id, 
+            title, 
+            created_at,
+            publication_name,
+            article_id,
+            cover_illustration_url,
+            articles(source_url, image_url),
+            topic_articles!inner(topic_id)
+          `)
+          .eq('topic_articles.topic_id', topic.id)
+          .eq('is_published', true)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false })
+          .abortSignal(storiesController.signal)
+          .limit(fetchLimit),
+        
+        // Weekly count + newest story timestamp (filtered by topic)
+        supabase
+          .from('stories')
+          .select('created_at, topic_articles!inner(topic_id)', { count: 'exact', head: false })
+          .eq('topic_articles.topic_id', topic.id)
+          .eq('is_published', true)
+          .eq('status', 'published')
+          .gte('created_at', weekStart.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+      ]);
 
       clearTimeout(storiesTimeoutId);
+
+      const { data: stories, error: storiesError } = storiesResult;
 
       if (storiesError) {
         console.error('Error fetching stories:', storiesError);
@@ -120,6 +144,13 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Extract weekly stats (graceful fallback if query fails)
+      const storiesThisWeek = weeklyStatsResult.count || 0;
+      const newestStoryTime = weeklyStatsResult.data?.[0]?.created_at;
+      const newestStoryAgeMinutes = newestStoryTime 
+        ? Math.floor((Date.now() - new Date(newestStoryTime).getTime()) / 60000)
+        : null;
 
       // Build story URLs with source attribution and images - filter to only stories with images
       const baseUrl = `https://curatr.pro`;
@@ -152,6 +183,10 @@ serve(async (req) => {
         })
         .filter(Boolean) // Remove nulls (stories without images)
         .slice(0, maxStories); // Limit to requested count
+      
+      // Add weekly stats to feed data
+      feedData.stories_this_week = storiesThisWeek;
+      feedData.newest_story_age_minutes = newestStoryAgeMinutes;
 
       console.log(`✅ Returning ${formattedStories.length} stories for widget`);
 

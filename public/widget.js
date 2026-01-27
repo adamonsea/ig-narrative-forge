@@ -253,6 +253,11 @@
         ? `<span class="story-source">${escapeHTML(featured.source_name)}</span>`
         : '';
 
+      // Build CTA text - prefer weekly count, fallback to generic
+      const wideCtaText = feed.stories_this_week > 0 
+        ? `${feed.stories_this_week} stories this week →`
+        : 'View all stories →';
+
       return `
         <div class="widget-header">
           ${logoHTML}
@@ -270,7 +275,7 @@
         </div>
         <div class="widget-footer">
           <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
-            View all stories →
+            ${wideCtaText}
           </a>
           <span class="widget-attribution">
             Powered by <a href="https://curatr.pro" target="_blank" rel="noopener">Curatr</a>
@@ -298,6 +303,11 @@
       `;
     }).join('');
 
+    // Build CTA text - prefer weekly count, fallback to generic
+    const ctaText = feed.stories_this_week > 0 
+      ? `${feed.stories_this_week} stories this week →`
+      : 'View all stories →';
+
     return `
       <div class="widget-header">
         ${logoHTML}
@@ -308,7 +318,7 @@
       </div>
       <div class="widget-footer">
         <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
-          View all stories →
+          ${ctaText}
         </a>
         <span class="widget-attribution">
           Powered by <a href="https://curatr.pro" target="_blank" rel="noopener">Curatr</a>
