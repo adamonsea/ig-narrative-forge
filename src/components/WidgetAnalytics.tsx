@@ -21,6 +21,21 @@ interface WidgetAnalyticsProps {
   onNewSiteDetected?: (domain: string) => void;
 }
 
+// Domains to exclude from analytics (staging, preview, internal)
+const EXCLUDED_DOMAIN_PATTERNS = [
+  /\.webflow\.io$/i,           // Webflow staging
+  /\.canvas\.webflow\.com$/i,  // Webflow editor preview
+  /\.cloudfront\.net$/i,       // AWS CloudFront (internal workflows)
+  /localhost/i,                // Local development
+  /127\.0\.0\.1/i,             // Local IP
+  /\.local$/i,                 // Local network
+];
+
+// Check if a domain should be excluded
+function isExcludedDomain(domain: string): boolean {
+  return EXCLUDED_DOMAIN_PATTERNS.some(pattern => pattern.test(domain));
+}
+
 // Extract clean domain from referrer URL
 function extractDomain(url: string): string {
   try {
@@ -71,6 +86,9 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
         if (!row.referrer_url) return;
         
         const domain = extractDomain(row.referrer_url);
+        
+        // Skip excluded domains (staging, preview, internal)
+        if (isExcludedDomain(domain)) return;
         
         if (!domainMap.has(domain)) {
           domainMap.set(domain, {
