@@ -112,7 +112,8 @@ serve(async (req) => {
             article_id,
             cover_illustration_url,
             articles(source_url, image_url),
-            topic_articles!inner(topic_id)
+            topic_articles!inner(topic_id),
+            slides(content, slide_number)
           `)
           .eq('topic_articles.topic_id', topic.id)
           .eq('is_published', true)
@@ -171,9 +172,13 @@ serve(async (req) => {
             }
           }
 
+          // Use the first slide's rewritten headline if available, fallback to original title
+          const firstSlide = story.slides?.find(s => s.slide_number === 1);
+          const headline = firstSlide?.content || story.title;
+
           return {
             id: story.id,
-            title: story.title,
+            title: headline,
             url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
             published_at: story.created_at,
             source_name: story.publication_name || fallbackSourceName,
