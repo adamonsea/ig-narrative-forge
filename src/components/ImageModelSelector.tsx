@@ -10,7 +10,7 @@ import { ILLUSTRATION_STYLES, type IllustrationStyle } from '@/lib/constants/ill
 // FEATURE FLAG: MidJourney Experimental Mode
 // Set to false to hide MidJourney options from the dropdown
 // ============================================================
-const ENABLE_MIDJOURNEY = true;
+const ENABLE_MIDJOURNEY = false;
 
 export interface ImageModel {
   id: string;
