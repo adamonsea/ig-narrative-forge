@@ -238,12 +238,15 @@
         const sourceHTML = story.source_name 
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
-        // Fresh stories (< 2 hours) get a pulsing bullet
+        // Fresh stories (< 2 hours) get a pulsing bullet with green transition
         const isFresh = story.age_minutes !== undefined && story.age_minutes < 120;
         const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
+        const bulletStyle = isFresh 
+          ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
+          : `background: ${accent}`;
         return `
           <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
-            <span class="${bulletClass}" style="background: ${accent}"></span>
+            <span class="${bulletClass}" style="${bulletStyle}"></span>
             <div class="story-content">
               <span class="story-title">${escapeHTML(story.title)}</span>
               ${sourceHTML}
@@ -295,13 +298,16 @@
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
       
-      // Fresh stories (< 2 hours) get a pulsing bullet
+      // Fresh stories (< 2 hours) get a pulsing bullet with green transition
       const isFresh = story.age_minutes !== undefined && story.age_minutes < 120;
       const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
+      const bulletStyle = isFresh 
+        ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
+        : `background: ${accent}`;
       
       return `
         <a href="${story.url}" target="_blank" rel="noopener" class="story-item" data-story-id="${story.id || ''}">
-          <span class="${bulletClass}" style="background: ${accent}"></span>
+          <span class="${bulletClass}" style="${bulletStyle}"></span>
           <div class="story-content">
             <span class="story-title">${escapeHTML(story.title)}</span>
             ${sourceHTML}
@@ -619,12 +625,20 @@
       }
 
       @keyframes fresh-pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.6; transform: scale(1.3); }
+        0%, 100% { 
+          background: var(--fresh-color, #22c55e); 
+          transform: scale(1.2);
+          box-shadow: 0 0 6px var(--fresh-color, #22c55e);
+        }
+        50% { 
+          background: var(--accent-color, #3b82f6); 
+          transform: scale(1);
+          box-shadow: none;
+        }
       }
 
       .fresh-pulse {
-        animation: fresh-pulse 1.5s ease-in-out infinite;
+        animation: fresh-pulse 2s ease-in-out infinite;
       }
     `;
   }
