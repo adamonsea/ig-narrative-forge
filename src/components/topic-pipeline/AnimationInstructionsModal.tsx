@@ -263,7 +263,7 @@ export function AnimationInstructionsModal({
           
           {/* Cost display */}
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Cost: {ANIMATION_CREDITS} credits{isSuperAdmin ? ' (bypassed)' : ''}</span>
+            <span className="text-muted-foreground">Cost: {ANIMATION_CREDITS} credits</span>
             {!isSuperAdmin && creditBalance !== undefined && (
               <span className={`text-xs ${hasInsufficientCredits ? 'text-destructive' : 'text-muted-foreground'}`}>
                 Balance: {creditBalance}
