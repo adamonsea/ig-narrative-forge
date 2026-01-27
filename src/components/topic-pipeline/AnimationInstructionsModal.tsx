@@ -9,16 +9,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Loader2, Sparkles, Zap } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export type AnimationQuality = 'standard' | 'fast';
 
@@ -42,27 +34,12 @@ interface AnimationInstructionsModalProps {
   isSuperAdmin: boolean;
 }
 
-const qualityOptions = [
-  {
-    value: 'standard' as AnimationQuality,
-    label: '720p Standard',
-    description: '5s video, higher quality',
-    credits: 2,
-    icon: <Sparkles className="w-4 h-4" />,
-  },
-  {
-    value: 'fast' as AnimationQuality,
-    label: '480p Fast',
-    description: '5s video, budget option',
-    credits: 1,
-    icon: <Zap className="w-4 h-4" />,
-  },
-];
+const ANIMATION_CREDITS = 1;
 
 /**
- * Generates smart animation suggestions based on story context
+ * Generates animation suggestions based on story context
  */
-function generateSmartSuggestions(story: {
+function generateSuggestions(story: {
   cover_illustration_prompt?: string | null;
   headline?: string;
   title?: string;
@@ -109,12 +86,21 @@ function generateSmartSuggestions(story: {
     ];
   }
   
-  if (prompt.match(/landscape|nature|park|garden|sea|beach|water/)) {
+  if (prompt.match(/landscape|nature|park|garden|sea|beach|water|helicopter|rescue|coast/)) {
     return [
       'Gentle wave motion',
       'Leaves or grass sway',
       'Clouds drift slowly',
       'Water ripples',
+    ];
+  }
+  
+  if (prompt.match(/helicopter|aircraft|plane|flying/)) {
+    return [
+      'Rotor blades spin',
+      'Aircraft hovers gently',
+      'Winch line sways',
+      'Clouds drift past',
     ];
   }
   
@@ -143,6 +129,15 @@ function generateSmartSuggestions(story: {
       'Worker moves slightly',
       'Dust particles drift',
       'Crane arm shifts',
+    ];
+  }
+  
+  if (titleText.match(/rescue|emergency|helicopter|coast/)) {
+    return [
+      'Helicopter hovers',
+      'Waves crash below',
+      'Wind movement',
+      'Rescue line sways',
     ];
   }
   
@@ -184,13 +179,10 @@ export function AnimationInstructionsModal({
   isSuperAdmin,
 }: AnimationInstructionsModalProps) {
   const [customPrompt, setCustomPrompt] = useState('');
-  const [quality, setQuality] = useState<AnimationQuality>('fast');
-  
-  const selectedQuality = qualityOptions.find(q => q.value === quality)!;
   
   const suggestions = useMemo(() => {
     if (!story) return [];
-    return generateSmartSuggestions({
+    return generateSuggestions({
       cover_illustration_prompt: story.cover_illustration_prompt,
       headline: story.headline,
       title: story.title,
@@ -200,10 +192,9 @@ export function AnimationInstructionsModal({
   
   const hasInsufficientCredits = !isSuperAdmin && 
     creditBalance !== undefined && 
-    creditBalance < selectedQuality.credits;
+    creditBalance < ANIMATION_CREDITS;
   
   const handleSuggestionClick = (suggestion: string) => {
-    // If clicking the same suggestion, deselect it
     if (customPrompt === suggestion) {
       setCustomPrompt('');
     } else {
@@ -214,17 +205,14 @@ export function AnimationInstructionsModal({
   const handleGenerate = async () => {
     if (!story) return;
     await onAnimate({
-      quality,
+      quality: 'fast',
       customPrompt: customPrompt.trim() || undefined,
     });
-    // Reset state after generation
     setCustomPrompt('');
-    setQuality('fast');
   };
   
   const handleClose = () => {
     setCustomPrompt('');
-    setQuality('fast');
     onClose();
   };
   
@@ -241,91 +229,53 @@ export function AnimationInstructionsModal({
         </DialogHeader>
         
         {/* Guidance Header */}
-        <div className="text-center space-y-1 pb-4 border-b">
-          <p className="font-medium text-foreground text-sm">
-            "Guide the motion, not the meaning."
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Tell the AI what to animate and how it should move.
-            <br />Style and story stay exactly as they are.
+        <div className="text-center pb-3 border-b">
+          <p className="text-sm text-muted-foreground">
+            Guide the motion, not the meaning.
           </p>
         </div>
         
         <div className="space-y-4 py-2">
-          {/* Smart Suggestions */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Smart Suggestions</Label>
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map((suggestion) => (
-                <Badge
-                  key={suggestion}
-                  variant={customPrompt === suggestion ? 'default' : 'outline'}
-                  className="cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  {suggestion}
-                </Badge>
-              ))}
-            </div>
+          {/* Suggestions */}
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((suggestion) => (
+              <Badge
+                key={suggestion}
+                variant={customPrompt === suggestion ? 'default' : 'outline'}
+                className="cursor-pointer hover:bg-primary/10 transition-colors"
+                onClick={() => handleSuggestionClick(suggestion)}
+              >
+                {suggestion}
+              </Badge>
+            ))}
           </div>
           
           {/* Custom Instructions */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Or write your own</Label>
+          <div className="space-y-1.5">
             <Textarea
-              placeholder='e.g., "Focus on hands, papers move slightly, face stays still"'
+              placeholder='Or describe what should move...'
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               maxLength={200}
-              className="min-h-[80px] resize-none"
+              className="min-h-[70px] resize-none text-sm"
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {customPrompt.length}/200
-            </p>
-          </div>
-          
-          {/* Quality Selector */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Quality</Label>
-              <Select value={quality} onValueChange={(v) => setQuality(v as AnimationQuality)}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-background z-50">
-                  {qualityOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex items-center gap-2">
-                        {option.icon}
-                        <span>{option.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="text-right">
-              <p className="text-sm font-medium">
-                Cost: {selectedQuality.credits} credit{selectedQuality.credits > 1 ? 's' : ''}
-              </p>
-              {!isSuperAdmin && creditBalance !== undefined && (
-                <p className={`text-xs ${hasInsufficientCredits ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  Balance: {creditBalance} credits
-                </p>
-              )}
-              {isSuperAdmin && (
-                <p className="text-xs text-green-600">Admin: Free</p>
-              )}
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{!customPrompt && 'Leave empty for auto'}</span>
+              <span>{customPrompt.length}/200</span>
             </div>
           </div>
           
-          {/* Empty state hint */}
-          {!customPrompt && (
-            <p className="text-xs text-muted-foreground italic text-center">
-              Leave empty to let AI auto-generate motion instructions
-            </p>
-          )}
+          {/* Cost display */}
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Cost: {ANIMATION_CREDITS} credit</span>
+            {isSuperAdmin ? (
+              <span className="text-xs text-emerald-600">Admin: Free</span>
+            ) : creditBalance !== undefined && (
+              <span className={`text-xs ${hasInsufficientCredits ? 'text-destructive' : 'text-muted-foreground'}`}>
+                Balance: {creditBalance}
+              </span>
+            )}
+          </div>
         </div>
         
         <DialogFooter className="gap-2 sm:gap-0">
@@ -335,7 +285,6 @@ export function AnimationInstructionsModal({
           <Button
             onClick={handleGenerate}
             disabled={isAnimating || hasInsufficientCredits}
-            className="bg-primary hover:bg-primary/90"
           >
             {isAnimating ? (
               <>
@@ -343,9 +292,7 @@ export function AnimationInstructionsModal({
                 Animating...
               </>
             ) : (
-              <>
-                🎬 Generate Animation
-              </>
+              '🎬 Animate'
             )}
           </Button>
         </DialogFooter>
