@@ -99,18 +99,19 @@ serve(async (req) => {
       // Parallel fetch: stories for widget + weekly stats
       const [storiesResult, weeklyStatsResult] = await Promise.all([
         supabase
-          .from('stories')
-          .select(`
-            id, 
-            title, 
-            created_at,
-            publication_name,
-            article_id,
-            cover_illustration_url,
-            articles(source_url, image_url),
-            topic_articles!inner(topic_id),
-            slides(content, slide_number)
-          `)
+        .from('stories')
+        .select(`
+          id, 
+          title, 
+          created_at,
+          published_at,
+          publication_name,
+          article_id,
+          cover_illustration_url,
+          articles(source_url, image_url),
+          topic_articles!inner(topic_id),
+          slides(content, slide_number)
+        `)
           .eq('topic_articles.topic_id', topic.id)
           .eq('is_published', true)
           .eq('status', 'published')
@@ -173,7 +174,9 @@ serve(async (req) => {
           const headline = firstSlide?.content || story.title;
 
           // Calculate story age in minutes for freshness indicator
-          const storyAgeMinutes = Math.floor((Date.now() - new Date(story.created_at).getTime()) / 60000);
+          // Use published_at (when story became visible in feed) instead of created_at (when record was created)
+          const publishedTime = story.published_at || story.created_at;
+          const storyAgeMinutes = Math.floor((Date.now() - new Date(publishedTime).getTime()) / 60000);
 
           return {
             id: story.id,
