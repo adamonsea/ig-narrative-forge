@@ -21,7 +21,7 @@ export function AnimationQualitySelector({
         size="sm"
         variant="default"
         disabled
-        className="bg-purple-600 hover:bg-purple-700 text-xs"
+        className="text-xs"
       >
         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
         Animating...
@@ -35,7 +35,7 @@ export function AnimationQualitySelector({
       variant="default"
       disabled={disabled}
       onClick={() => onAnimate()}
-      className="bg-purple-600 hover:bg-purple-700 text-xs"
+      className="text-xs"
     >
       🎬 Animate
     </Button>

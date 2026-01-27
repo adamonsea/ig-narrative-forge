@@ -184,7 +184,7 @@ export function AnimationInstructionsModal({
   isSuperAdmin,
 }: AnimationInstructionsModalProps) {
   const [customPrompt, setCustomPrompt] = useState('');
-  const [quality, setQuality] = useState<AnimationQuality>('standard');
+  const [quality, setQuality] = useState<AnimationQuality>('fast');
   
   const selectedQuality = qualityOptions.find(q => q.value === quality)!;
   
@@ -219,12 +219,12 @@ export function AnimationInstructionsModal({
     });
     // Reset state after generation
     setCustomPrompt('');
-    setQuality('standard');
+    setQuality('fast');
   };
   
   const handleClose = () => {
     setCustomPrompt('');
-    setQuality('standard');
+    setQuality('fast');
     onClose();
   };
   
@@ -335,7 +335,7 @@ export function AnimationInstructionsModal({
           <Button
             onClick={handleGenerate}
             disabled={isAnimating || hasInsufficientCredits}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-primary hover:bg-primary/90"
           >
             {isAnimating ? (
               <>
