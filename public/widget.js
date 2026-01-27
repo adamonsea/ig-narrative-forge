@@ -238,8 +238,8 @@
         const sourceHTML = story.source_name 
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
-        // Fresh stories (< 60 min) get a pulsing bullet
-        const isFresh = story.age_minutes !== undefined && story.age_minutes < 60;
+        // Fresh stories (< 2 hours) get a pulsing bullet
+        const isFresh = story.age_minutes !== undefined && story.age_minutes < 120;
         const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
         return `
           <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
@@ -295,8 +295,8 @@
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
       
-      // Fresh stories (< 60 min) get a pulsing bullet
-      const isFresh = story.age_minutes !== undefined && story.age_minutes < 60;
+      // Fresh stories (< 2 hours) get a pulsing bullet
+      const isFresh = story.age_minutes !== undefined && story.age_minutes < 120;
       const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
       
       return `
