@@ -47,10 +47,32 @@ function generateSuggestions(story: {
 }): string[] {
   const prompt = (story.cover_illustration_prompt || '').toLowerCase();
   const titleText = (story.headline || story.title || '').toLowerCase();
-  const tone = (story.tone || '').toLowerCase();
+  const combinedText = `${prompt} ${titleText}`;
   
-  // Subject-based suggestions from image prompt
-  if (prompt.match(/person|official|councillor|worker|figure|man|woman|portrait/)) {
+  // Check for specific subjects in the combined text
+  
+  // Performance/entertainment
+  if (combinedText.match(/magician|theatre|stage|performer|hypnot|audience|watch|swing|show|concert|musician/)) {
+    return [
+      'Watch swings gently',
+      'Performer gestures slowly',
+      'Audience member sways',
+      'Stage curtain ripples',
+    ];
+  }
+  
+  // Emergency/rescue
+  if (combinedText.match(/helicopter|rescue|coast|cliff|emergency|lifeboat|winch|paramedic|ambulance/)) {
+    return [
+      'Helicopter hovers',
+      'Rotor blades spin',
+      'Rescue line sways',
+      'Waves crash below',
+    ];
+  }
+  
+  // People/portraits
+  if (combinedText.match(/person|official|councillor|worker|figure|man|woman|portrait|police|officer|mp|minister/)) {
     return [
       'Gentle head nod',
       'Subtle hand gesture',
@@ -59,111 +81,80 @@ function generateSuggestions(story: {
     ];
   }
   
-  if (prompt.match(/crowd|group|protesters|gathering|people|assembly/)) {
+  // Crowds/groups
+  if (combinedText.match(/crowd|group|protest|gather|people|assembly|march|rally|demonstration/)) {
     return [
-      'Closest figure sways gently',
-      'One raised sign moves',
+      'Closest figure sways',
+      'One sign waves gently',
       'Single person gestures',
-      'Background frozen, center moves',
-    ];
-  }
-  
-  if (prompt.match(/building|structure|hall|shop|store|house|architecture/)) {
-    return [
-      'Flag or banner flutters',
-      'Window light flickers',
-      'Smoke or steam wisps',
-      'Leaves rustle nearby',
-    ];
-  }
-  
-  if (prompt.match(/vehicle|car|bus|train|digger|machinery|excavator/)) {
-    return [
-      'Subtle idle vibration',
-      'Exhaust movement',
-      'Wheel creep motion',
-      'Headlight flicker',
-    ];
-  }
-  
-  if (prompt.match(/landscape|nature|park|garden|sea|beach|water|helicopter|rescue|coast/)) {
-    return [
-      'Gentle wave motion',
-      'Leaves or grass sway',
-      'Clouds drift slowly',
-      'Water ripples',
-    ];
-  }
-  
-  if (prompt.match(/helicopter|aircraft|plane|flying/)) {
-    return [
-      'Rotor blades spin',
-      'Aircraft hovers gently',
-      'Winch line sways',
-      'Clouds drift past',
-    ];
-  }
-  
-  // Title-based suggestions (fallback)
-  if (titleText.match(/council|meeting|debate|vote|parliament/)) {
-    return [
-      'Official nods slightly',
-      'Hand gesture while speaking',
-      'Document movement only',
-      'Pen taps on table',
-    ];
-  }
-  
-  if (titleText.match(/protest|rally|march|demonstration/)) {
-    return [
-      'Signs wave gently',
-      'Central figure gestures',
-      'Crowd sways subtly',
       'Banner ripples',
     ];
   }
   
-  if (titleText.match(/construction|building|development|work/)) {
+  // Buildings/architecture
+  if (combinedText.match(/building|structure|hall|shop|store|house|architecture|development|construction/)) {
     return [
-      'Machinery vibrates',
-      'Worker moves slightly',
-      'Dust particles drift',
-      'Crane arm shifts',
+      'Flag or banner flutters',
+      'Window light flickers',
+      'Smoke wisps drift',
+      'Leaves rustle nearby',
     ];
   }
   
-  if (titleText.match(/rescue|emergency|helicopter|coast/)) {
+  // Vehicles/machinery
+  if (combinedText.match(/vehicle|car|bus|train|digger|machinery|excavator|lorry|truck|crane/)) {
     return [
-      'Helicopter hovers',
-      'Waves crash below',
-      'Wind movement',
-      'Rescue line sways',
+      'Subtle idle vibration',
+      'Exhaust wisps rise',
+      'Wheel creeps slowly',
+      'Warning light blinks',
     ];
   }
   
-  // Tone-based adjustments
-  if (tone === 'urgent' || tone === 'breaking') {
+  // Nature/outdoors
+  if (combinedText.match(/landscape|nature|park|garden|sea|beach|water|tree|field|countryside|weather/)) {
     return [
-      'Quick focal point motion',
-      'Urgent hand gesture',
-      'Alert head turn',
-      'Dynamic center movement',
+      'Gentle wave motion',
+      'Leaves and grass sway',
+      'Clouds drift slowly',
+      'Water ripples softly',
     ];
   }
   
-  if (tone === 'somber' || tone === 'reflective') {
+  // Animals
+  if (combinedText.match(/dog|cat|animal|pet|bird|wildlife|horse|farm/)) {
     return [
-      'Slow gentle breathing',
-      'Minimal subtle sway',
-      'Quiet contemplative nod',
-      'Still except focal point',
+      'Animal breathes gently',
+      'Tail wags or flicks',
+      'Ears twitch slightly',
+      'Head turns slowly',
     ];
   }
   
-  // Generic suggestions
+  // Sports/activity
+  if (combinedText.match(/football|sport|match|game|player|runner|athlete|gym|exercise/)) {
+    return [
+      'Ball bounces gently',
+      'Player shifts weight',
+      'Crowd sways in sync',
+      'Flag waves slowly',
+    ];
+  }
+  
+  // Food/restaurant
+  if (combinedText.match(/restaurant|food|chef|kitchen|cafe|pub|bar|drink|eat/)) {
+    return [
+      'Steam rises gently',
+      'Chef stirs slowly',
+      'Glass contents swirl',
+      'Flame flickers',
+    ];
+  }
+  
+  // Generic suggestions based on any visual content
   return [
     'Central subject breathes',
-    'Gentle motion in focal point',
+    'Gentle focal point motion',
     'Subtle sway, static background',
     'One element moves softly',
   ];
@@ -267,10 +258,8 @@ export function AnimationInstructionsModal({
           
           {/* Cost display */}
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Cost: {ANIMATION_CREDITS} credit</span>
-            {isSuperAdmin ? (
-              <span className="text-xs text-emerald-600">Admin: Free</span>
-            ) : creditBalance !== undefined && (
+            <span className="text-muted-foreground">Cost: {isSuperAdmin ? 'Free' : `${ANIMATION_CREDITS} credit`}</span>
+            {!isSuperAdmin && creditBalance !== undefined && (
               <span className={`text-xs ${hasInsufficientCredits ? 'text-destructive' : 'text-muted-foreground'}`}>
                 Balance: {creditBalance}
               </span>
