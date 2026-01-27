@@ -236,17 +236,47 @@ serve(async (req) => {
           // Quick HEAD request to check if the image actually exists and is valid
           try {
             const imageCheck = await fetch(storyData.cover_illustration_url, { method: 'HEAD' });
-            const contentLength = imageCheck.headers.get('content-length');
+            const contentLength = parseInt(imageCheck.headers.get('content-length') || '0');
             const contentType = imageCheck.headers.get('content-type');
             
             // Check if image exists, has content (> 1KB to filter out empty/placeholder images), and is actually an image
-            if (imageCheck.ok && contentType?.startsWith('image/') && parseInt(contentLength || '0') > 1024) {
-              // Note: Supabase Image Transformations require Pro Plan.
-              // For now, use original URL. WhatsApp may not show large images properly.
-              // TODO: Enable transformation when Pro plan is active, or generate smaller images at source
-              ogImage = storyData.cover_illustration_url;
-              useGeneratedOG = false;
-              console.log('Using story cover illustration:', ogImage, '(size:', contentLength, 'bytes)');
+            if (imageCheck.ok && contentType?.startsWith('image/') && contentLength > 1024) {
+              // For WhatsApp compatibility, we need images < 600KB
+              // If image is too large, try Supabase image transformation endpoint
+              if (contentLength > 500000) {
+                // Try to use Supabase render endpoint for optimization
+                // Convert: /storage/v1/object/public/bucket/path → /storage/v1/render/image/public/bucket/path?width=1200&quality=75
+                const transformedUrl = storyData.cover_illustration_url.replace(
+                  '/storage/v1/object/public/',
+                  '/storage/v1/render/image/public/'
+                ) + '?width=1200&height=630&quality=70&resize=cover';
+                
+                // Check if transformation works (Supabase Pro feature)
+                try {
+                  const transformCheck = await fetch(transformedUrl, { method: 'HEAD' });
+                  if (transformCheck.ok) {
+                    const transformedSize = parseInt(transformCheck.headers.get('content-length') || '0');
+                    console.log('Using transformed image:', transformedUrl, '(size:', transformedSize, 'bytes, original:', contentLength, 'bytes)');
+                    ogImage = transformedUrl;
+                    useGeneratedOG = false;
+                  } else {
+                    // Transformation not available, use original (may not show in WhatsApp)
+                    console.log('Image transformation not available, using original (may be too large for WhatsApp):', contentLength, 'bytes');
+                    ogImage = storyData.cover_illustration_url;
+                    useGeneratedOG = false;
+                  }
+                } catch (transformError) {
+                  // Fallback to original
+                  console.log('Transform check failed, using original:', storyData.cover_illustration_url);
+                  ogImage = storyData.cover_illustration_url;
+                  useGeneratedOG = false;
+                }
+              } else {
+                // Image is small enough, use directly
+                ogImage = storyData.cover_illustration_url;
+                useGeneratedOG = false;
+                console.log('Using story cover illustration:', ogImage, '(size:', contentLength, 'bytes)');
+              }
             } else {
               console.log('Cover illustration invalid or too small:', {
                 url: storyData.cover_illustration_url,
