@@ -92,13 +92,9 @@ serve(async (req) => {
       // Fetch more stories than needed to filter for those with images
       const fetchLimit = maxStories * 3; // Fetch 3x to ensure we get enough with images
       
-      // Calculate week start (Monday 00:00:00 UTC)
+      // Calculate rolling 7-day window (now minus 7 days)
       const now = new Date();
-      const dayOfWeek = now.getUTCDay();
-      const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const weekStart = new Date(now);
-      weekStart.setUTCDate(now.getUTCDate() - daysSinceMonday);
-      weekStart.setUTCHours(0, 0, 0, 0);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       // Parallel fetch: stories for widget + weekly stats
       const [storiesResult, weeklyStatsResult] = await Promise.all([
@@ -122,14 +118,14 @@ serve(async (req) => {
           .abortSignal(storiesController.signal)
           .limit(fetchLimit),
         
-        // Weekly count + newest story timestamp (filtered by topic)
+        // Rolling 7-day count + newest story timestamp (filtered by topic)
         supabase
           .from('stories')
           .select('created_at, topic_articles!inner(topic_id)', { count: 'exact', head: false })
           .eq('topic_articles.topic_id', topic.id)
           .eq('is_published', true)
           .eq('status', 'published')
-          .gte('created_at', weekStart.toISOString())
+          .gte('created_at', sevenDaysAgo.toISOString())
           .order('created_at', { ascending: false })
           .limit(1)
       ]);
@@ -197,7 +193,7 @@ serve(async (req) => {
       feedData.stories_this_week = storiesThisWeek;
       feedData.newest_story_age_minutes = newestStoryAgeMinutes;
 
-      console.log(`✅ Returning ${formattedStories.length} stories for widget (${storiesThisWeek} this week, v2)`);
+      console.log(`✅ Returning ${formattedStories.length} stories for widget (${storiesThisWeek} in 7 days, v3)`);
 
       return new Response(
         JSON.stringify({
