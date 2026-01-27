@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { AnimationQualitySelector, AnimationQuality } from "@/components/topic-pipeline/AnimationQualitySelector";
+import { AnimationInstructionsModal } from "@/components/topic-pipeline/AnimationInstructionsModal";
 import { MultiTenantStory } from "@/hooks/useMultiTenantTopicPipeline";
 import SlideEditor from "@/components/SlideEditor";
 
@@ -56,6 +57,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [forcingReturn, setForcingReturn] = useState<Set<string>>(new Set());
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
+  const [animationModalStory, setAnimationModalStory] = useState<MultiTenantStory | null>(null);
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
@@ -139,7 +141,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
     }
   };
 
-  const handleAnimateIllustration = async (story: MultiTenantStory, quality: 'standard' | 'fast' = 'standard') => {
+  const handleAnimateIllustration = async (story: MultiTenantStory, quality: 'standard' | 'fast' = 'standard', customPrompt?: string) => {
     const creditCost = quality === 'fast' ? 1 : 2;
     
     // Check credits based on quality tier
@@ -155,7 +157,8 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         body: { 
           storyId: story.id, 
           staticImageUrl: story.cover_illustration_url,
-          quality
+          quality,
+          customPrompt
         }
       });
       
@@ -578,7 +581,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                           />
                           {story.cover_illustration_url && !story.animated_illustration_url && (
                             <AnimationQualitySelector
-                              onAnimate={(quality) => handleAnimateIllustration(story, quality)}
+                              onAnimate={() => setAnimationModalStory(story)}
                               isAnimating={generatingIllustrations.has(story.id)}
                             />
                           )}
@@ -697,6 +700,28 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
           onClose={() => setSelectedSlideId(null)}
         />
       )}
+
+      {/* Animation Instructions Modal */}
+      <AnimationInstructionsModal
+        isOpen={!!animationModalStory}
+        onClose={() => setAnimationModalStory(null)}
+        story={animationModalStory ? {
+          id: animationModalStory.id,
+          headline: animationModalStory.title,
+          cover_illustration_url: animationModalStory.cover_illustration_url,
+          cover_illustration_prompt: animationModalStory.cover_illustration_prompt,
+          tone: animationModalStory.tone,
+        } : null}
+        onAnimate={async ({ quality, customPrompt }) => {
+          if (animationModalStory) {
+            await handleAnimateIllustration(animationModalStory, quality, customPrompt);
+            setAnimationModalStory(null);
+          }
+        }}
+        isAnimating={animationModalStory ? generatingIllustrations.has(animationModalStory.id) : false}
+        creditBalance={credits?.credits_balance}
+        isSuperAdmin={isSuperAdmin}
+      />
     </div>
   );
 };

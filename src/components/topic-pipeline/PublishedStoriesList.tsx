@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { AnimationQualitySelector, AnimationQuality } from "@/components/topic-pipeline/AnimationQualitySelector";
+import { AnimationInstructionsModal } from "@/components/topic-pipeline/AnimationInstructionsModal";
 import { LinkEditor } from "@/components/LinkEditor";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 
@@ -105,6 +106,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [storyFilter, setStoryFilter] = useState<'all' | 'regular' | 'parliamentary'>('all');
   const pageSize = 10;
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
+  const [animationModalStory, setAnimationModalStory] = useState<PublishedStory | null>(null);
 
   const handleCancelQueueItem = async (queueId: string) => {
     if (!onCancelProcessing) return;
@@ -293,7 +295,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     }
   };
 
-  const handleAnimateIllustration = async (story: PublishedStory, quality: 'standard' | 'fast' = 'standard') => {
+  const handleAnimateIllustration = async (story: PublishedStory, quality: 'standard' | 'fast' = 'standard', customPrompt?: string) => {
     const creditCost = quality === 'fast' ? 1 : 2;
     
     // Check credits based on quality tier
@@ -309,7 +311,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         body: { 
           storyId: story.id, 
           staticImageUrl: story.cover_illustration_url,
-          quality
+          quality,
+          customPrompt
         }
       });
       
@@ -868,7 +871,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                         />
                         {story.cover_illustration_url && !story.animated_illustration_url && (
                           <AnimationQualitySelector
-                            onAnimate={(quality) => handleAnimateIllustration(story, quality)}
+                            onAnimate={() => setAnimationModalStory(story)}
                             isAnimating={generatingIllustrations.has(story.id)}
                           />
                         )}
@@ -1103,6 +1106,28 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           </Button>
         </div>
       )}
+
+      {/* Animation Instructions Modal */}
+      <AnimationInstructionsModal
+        isOpen={!!animationModalStory}
+        onClose={() => setAnimationModalStory(null)}
+        story={animationModalStory ? {
+          id: animationModalStory.id,
+          headline: animationModalStory.title || animationModalStory.headline,
+          cover_illustration_url: animationModalStory.cover_illustration_url,
+          cover_illustration_prompt: animationModalStory.cover_illustration_prompt,
+          tone: null, // PublishedStory doesn't have tone
+        } : null}
+        onAnimate={async ({ quality, customPrompt }) => {
+          if (animationModalStory) {
+            await handleAnimateIllustration(animationModalStory, quality, customPrompt);
+            setAnimationModalStory(null);
+          }
+        }}
+        isAnimating={animationModalStory ? generatingIllustrations.has(animationModalStory.id) : false}
+        creditBalance={credits?.credits_balance}
+        isSuperAdmin={isSuperAdmin}
+      />
     </div>
   );
 };
