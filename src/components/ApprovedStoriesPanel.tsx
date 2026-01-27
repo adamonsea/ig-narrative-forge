@@ -8,6 +8,8 @@ import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/hooks/useAuth';
 import { CreditService } from '@/lib/creditService';
 import { ImageModelSelector, ImageModel } from '@/components/ImageModelSelector';
+import { AnimationQualitySelector } from '@/components/topic-pipeline/AnimationQualitySelector';
+import { AnimationInstructionsModal } from '@/components/topic-pipeline/AnimationInstructionsModal';
 import { CarouselExportButton } from '@/components/CarouselExportButton';
 import { useCarouselExport } from '@/hooks/useCarouselExport';
 import { ExportableSlideRenderer } from '@/components/ExportableSlideRenderer';
@@ -100,6 +102,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     coverOptions?: any[];
     selectedCoverId?: string;
   }>({ isOpen: false });
+  const [animationModalStory, setAnimationModalStory] = useState<Story | null>(null);
   
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -348,12 +351,14 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     }
   };
 
-  const handleAnimateIllustration = async (story: Story) => {
-    // Check credits (2 credits for ~3-4s animation with Replicate Wan 2.2 5b)
-    if (!isSuperAdmin && (!credits || credits.credits_balance < 2)) {
+  const handleAnimateIllustration = async (story: Story, quality: 'standard' | 'fast' = 'standard', customPrompt?: string) => {
+    const creditCost = quality === 'fast' ? 1 : 2;
+    
+    // Check credits
+    if (!isSuperAdmin && (!credits || credits.credits_balance < creditCost)) {
       toast({
         title: 'Insufficient Credits',
-        description: 'You need 2 credits to animate this illustration.',
+        description: `You need ${creditCost} credit${creditCost > 1 ? 's' : ''} to animate this illustration.`,
         variant: 'destructive',
       });
       return;
@@ -365,7 +370,9 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
       const { data, error } = await supabase.functions.invoke('animate-illustration', {
         body: { 
           storyId: story.id, 
-          staticImageUrl: story.cover_illustration_url 
+          staticImageUrl: story.cover_illustration_url,
+          quality,
+          customPrompt
         }
       });
       
@@ -374,7 +381,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
       if (data?.success) {
         toast({ 
           title: 'Animation Complete!', 
-          description: `Used ${data.credits_used} credits. New balance: ${data.new_balance}` 
+          description: `${data.resolution} video created. Used ${data.credits_used} credits. New balance: ${data.new_balance}` 
         });
         await loadApprovedStories();
       } else {
@@ -658,24 +665,10 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                                     illustrationStyle={illustrationStyle as any}
                                   />
                                   {story.cover_illustration_url && !story.animated_illustration_url && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleAnimateIllustration(story)}
-                                      disabled={generatingIllustrations.has(story.id)}
-                                      className="bg-purple-600 hover:bg-purple-700 text-xs"
-                                    >
-                                      {generatingIllustrations.has(story.id) ? (
-                                        <>
-                                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                          Animating...
-                                        </>
-                                      ) : (
-                                        <>
-                                          🎬 Animate (2s) - 2 credits
-                                        </>
-                                      )}
-                                    </Button>
+                                    <AnimationQualitySelector
+                                      onAnimate={() => setAnimationModalStory(story)}
+                                      isAnimating={generatingIllustrations.has(story.id)}
+                                    />
                                   )}
                                   {story.animated_illustration_url && (
                                     <Button
@@ -822,6 +815,28 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
             })}
           </div>
         )}
+
+        {/* Animation Instructions Modal */}
+        <AnimationInstructionsModal
+          isOpen={!!animationModalStory}
+          onClose={() => setAnimationModalStory(null)}
+          story={animationModalStory ? {
+            id: animationModalStory.id,
+            headline: animationModalStory.title,
+            cover_illustration_url: animationModalStory.cover_illustration_url,
+            cover_illustration_prompt: animationModalStory.cover_illustration_prompt,
+            tone: null,
+          } : null}
+          onAnimate={async ({ quality, customPrompt }) => {
+            if (animationModalStory) {
+              await handleAnimateIllustration(animationModalStory, quality, customPrompt);
+              setAnimationModalStory(null);
+            }
+          }}
+          isAnimating={animationModalStory ? generatingIllustrations.has(animationModalStory.id) : false}
+          creditBalance={credits?.credits_balance}
+          isSuperAdmin={isSuperAdmin}
+        />
       </CardContent>
     </Card>
   );

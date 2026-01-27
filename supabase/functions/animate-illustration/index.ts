@@ -60,7 +60,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request
-    const { storyId, staticImageUrl, quality = 'standard' } = await req.json();
+    const { storyId, staticImageUrl, quality = 'standard', customPrompt } = await req.json();
 
     if (!storyId || !staticImageUrl) {
       return new Response(
@@ -155,9 +155,13 @@ serve(async (req) => {
       console.log(`📝 Slide content fetched: ${slideText.substring(0, 100)}...`);
     }
 
-    // Generate animation prompt (AI-driven or keyword-based)
+    // Generate animation prompt (user-provided, AI-driven, or keyword-based)
     let animationPrompt: string;
-    if (USE_AI_PROMPTS) {
+    if (customPrompt && customPrompt.trim()) {
+      // User provided custom instructions - append safety constraints
+      console.log('👤 Using user-provided custom prompt');
+      animationPrompt = `${customPrompt.trim()}, negative prompt: no camera movement, no zoom, no pan, no color changes, static camera, preserve exact source colors, frozen background`;
+    } else if (USE_AI_PROMPTS) {
       console.log('🤖 Using AI-driven prompt generation (Phase 2)');
       animationPrompt = await generateAnimationPromptWithAI(
         story.title,
