@@ -27,8 +27,8 @@ const QUALITY_CONFIGS: Record<AnimationQuality, QualityConfig> = {
     estimatedApiCost: '$1.00',
   },
   fast: {
-    // PrunaAI optimized Wan 2.2 i2v - 480p, 20x cheaper
-    modelVersion: 'prunaai/wan-video-wan-2.2-i2v-a14b-fast:8cc21de48cbe6c6b8dd7020f10665c2b',
+    // Wan 2.2 i2v Fast - 480p, optimized for speed and cost
+    modelVersion: 'febae7d9656309cf8c5df4842b27ae4768c0e47a0e1ce443a5ae81f896956134',
     resolution: '480p',
     creditCost: 1,
     estimatedApiCost: '$0.05',
