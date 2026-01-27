@@ -13,6 +13,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
+import { AnimationQualitySelector, AnimationQuality } from "@/components/topic-pipeline/AnimationQualitySelector";
 import { LinkEditor } from "@/components/LinkEditor";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 
@@ -292,10 +293,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     }
   };
 
-  const handleAnimateIllustration = async (story: PublishedStory) => {
-    // Check credits (2 credits for ~3-4s animation with Replicate Wan 2.2 5b)
-    if (!isSuperAdmin && (!credits || credits.credits_balance < 2)) {
-      toast({ title: 'Insufficient Credits', description: 'You need 2 credits to animate this illustration.', variant: 'destructive' });
+  const handleAnimateIllustration = async (story: PublishedStory, quality: 'standard' | 'fast' = 'standard') => {
+    const creditCost = quality === 'fast' ? 1 : 2;
+    
+    // Check credits based on quality tier
+    if (!isSuperAdmin && (!credits || credits.credits_balance < creditCost)) {
+      toast({ title: 'Insufficient Credits', description: `You need ${creditCost} credit${creditCost > 1 ? 's' : ''} to animate this illustration.`, variant: 'destructive' });
       return;
     }
     
@@ -305,7 +308,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       const { data, error } = await supabase.functions.invoke('animate-illustration', {
         body: { 
           storyId: story.id, 
-          staticImageUrl: story.cover_illustration_url 
+          staticImageUrl: story.cover_illustration_url,
+          quality
         }
       });
       
@@ -314,7 +318,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       if (data?.success) {
         toast({ 
           title: 'Animation Complete!', 
-          description: `Used ${data.credits_used} credits. New balance: ${data.new_balance}` 
+          description: `${data.resolution} video created. Used ${data.credits_used} credit${data.credits_used > 1 ? 's' : ''}. New balance: ${data.new_balance}` 
         });
         onRefresh();
       } else {
@@ -863,24 +867,10 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                           size="sm"
                         />
                         {story.cover_illustration_url && !story.animated_illustration_url && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => handleAnimateIllustration(story)}
-                            disabled={generatingIllustrations.has(story.id)}
-                            className="bg-purple-600 hover:bg-purple-700 text-xs"
-                          >
-                            {generatingIllustrations.has(story.id) ? (
-                              <>
-                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                Animating...
-                              </>
-                            ) : (
-                              <>
-                                🎬 Animate (2s) - 2 credits
-                              </>
-                            )}
-                          </Button>
+                          <AnimationQualitySelector
+                            onAnimate={(quality) => handleAnimateIllustration(story, quality)}
+                            isAnimating={generatingIllustrations.has(story.id)}
+                          />
                         )}
                         {story.animated_illustration_url && (
                           <Button

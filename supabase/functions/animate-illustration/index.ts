@@ -7,7 +7,33 @@ const corsHeaders = {
 };
 
 const FIXED_DURATION = 5; // Alibaba Wan 2.2 i2v outputs ~5 seconds
-const ANIMATION_CREDIT_COST = 2; // Replicate pricing: $0.05-0.11 per video
+
+// Animation quality tiers
+type AnimationQuality = 'standard' | 'fast';
+
+interface QualityConfig {
+  modelVersion: string;
+  resolution: string;
+  creditCost: number;
+  estimatedApiCost: string;
+}
+
+const QUALITY_CONFIGS: Record<AnimationQuality, QualityConfig> = {
+  standard: {
+    // Alibaba Wan 2.2 i2v - 720p, higher quality
+    modelVersion: '9c49fe41d6b2a0e62199dc96bee4a9dd3565a4c563f9b80998358f14322c34f6',
+    resolution: '720p',
+    creditCost: 2,
+    estimatedApiCost: '$1.00',
+  },
+  fast: {
+    // PrunaAI optimized Wan 2.2 i2v - 480p, 20x cheaper
+    modelVersion: 'prunaai/wan-video-wan-2.2-i2v-a14b-fast:8cc21de48cbe6c6b8dd7020f10665c2b',
+    resolution: '480p',
+    creditCost: 1,
+    estimatedApiCost: '$0.05',
+  },
+};
 
 // 🔄 FEATURE FLAG: Toggle AI-driven vs keyword-based animation prompts
 // Set to false to rollback to Phase 1 keyword matching
@@ -34,7 +60,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request
-    const { storyId, staticImageUrl } = await req.json();
+    const { storyId, staticImageUrl, quality = 'standard' } = await req.json();
 
     if (!storyId || !staticImageUrl) {
       return new Response(
@@ -43,7 +69,16 @@ serve(async (req) => {
       );
     }
 
-    console.log(`📖 Story ID: ${storyId}, Image: ${staticImageUrl}`);
+    // Validate quality tier
+    const qualityConfig = QUALITY_CONFIGS[quality as AnimationQuality];
+    if (!qualityConfig) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid quality tier. Use "standard" or "fast"' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`📖 Story ID: ${storyId}, Quality: ${quality} (${qualityConfig.resolution}), Image: ${staticImageUrl}`);
 
     // Get user from request
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
@@ -75,8 +110,8 @@ serve(async (req) => {
     if (!isSuperAdmin) {
       const { data: creditResult, error: creditError } = await supabase.rpc('deduct_user_credits', {
         p_user_id: user.id,
-        p_amount: ANIMATION_CREDIT_COST,
-        p_description: `Animate story illustration (Wan 2.2 i2v)`,
+        p_amount: qualityConfig.creditCost,
+        p_description: `Animate story illustration (Wan 2.2 i2v ${qualityConfig.resolution})`,
         p_story_id: storyId
       });
 
@@ -88,7 +123,7 @@ serve(async (req) => {
         );
       }
 
-      console.log('✅ Credits deducted:', ANIMATION_CREDIT_COST);
+      console.log('✅ Credits deducted:', qualityConfig.creditCost);
     }
 
     // Fetch story to get title and tone for content-aware motion prompt
@@ -136,8 +171,8 @@ serve(async (req) => {
     }
     console.log(`🎬 Animation prompt: ${animationPrompt}`);
 
-    // Call Replicate API with Alibaba Wan 2.2 i2v model
-    console.log('🚀 Calling Replicate API (Alibaba Wan 2.2 i2v)...');
+    // Call Replicate API with selected quality tier
+    console.log(`🚀 Calling Replicate API (${quality} tier: ${qualityConfig.resolution})...`);
     const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -146,12 +181,12 @@ serve(async (req) => {
         'Prefer': 'wait=60'
       },
       body: JSON.stringify({
-        version: '9c49fe41d6b2a0e62199dc96bee4a9dd3565a4c563f9b80998358f14322c34f6',
+        version: qualityConfig.modelVersion,
         input: {
           image: staticImageUrl,
           prompt: animationPrompt,
           video_length: 5,
-          resolution: "720p",
+          resolution: qualityConfig.resolution,
           seed: Math.floor(Math.random() * 1000000)
         }
       })
@@ -264,7 +299,9 @@ serve(async (req) => {
         success: true,
         animated_url: publicUrl,
         duration_seconds: FIXED_DURATION,
-        credits_used: isSuperAdmin ? 0 : ANIMATION_CREDIT_COST,
+        quality: quality,
+        resolution: qualityConfig.resolution,
+        credits_used: isSuperAdmin ? 0 : qualityConfig.creditCost,
         new_balance: updatedCredits?.current_balance || 0
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
