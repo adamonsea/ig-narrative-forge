@@ -974,7 +974,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           size: '1536x1024', // Landscape aspect ratio for feed UI
           quality: modelConfig.quality || 'medium',
           output_format: 'webp', // WebP is ~70% smaller than PNG
-          output_compression: 85 // Balance quality vs size
+          output_compression: 70 // Increased compression for <500KB target (WhatsApp limit is 600KB)
         }),
       });
 
