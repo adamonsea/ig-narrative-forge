@@ -1,304 +1,101 @@
 
-# Animation Instructions Modal - Updated Plan
+# Animation Instructions Modal Fixes
 
-## Overview
-Build a modal that lets users guide **what parts of the image to animate and how**, without impacting the style or story meaning. Include clear guidance in pithy language and smart suggestion pills derived from the image/story context.
+## Problems to Solve
 
-## Key Principle
-**Instructions control motion, not meaning.** Users tell the AI which elements should move and how they should move - but the visual style, color palette, and story interpretation remain untouched.
+1. **Incorrect credit cost display**: The modal shows "Cost: Free" for superadmins, but should show the actual credit cost for all users (just bypass the deduction for superadmins). The cost should also be comparable to image generation.
 
----
+2. **Stale suggestion pills**: The suggestion pills are based on a previously opened story, not the current story. This is caused by:
+   - The `useMemo` dependency on the full `story` object may not detect field changes properly
+   - The `customPrompt` state persists between different stories
 
-## Component Design
-
-### AnimationInstructionsModal.tsx
-
-```text
-+----------------------------------------------------------+
-|  Animate Illustration                            [X]      |
-+----------------------------------------------------------+
-|                                                           |
-|  "Guide the motion, not the meaning."                     |
-|  Tell the AI what to animate and how it should move.      |
-|  Style and story stay exactly as they are.                |
-|                                                           |
-|  ── Smart Suggestions ──────────────────────────────      |
-|                                                           |
-|  [Gentle head nod] [Hand gesture] [Paper flutter]         |
-|  [Background still, subject sways] [Subtle breathing]     |
-|                                                           |
-|  ── Or write your own ──────────────────────────────      |
-|                                                           |
-|  +-----------------------------------------------------+  |
-|  | e.g., "Focus on the hands, slight movement in the   |  |
-|  | papers, everything else frozen"                     |  |
-|  +-----------------------------------------------------+  |
-|                                                           |
-|  Quality: [720p Standard v]        Cost: 2 credits        |
-|                                                           |
-|  [Cancel]                          [Generate Animation]   |
-+----------------------------------------------------------+
-```
+3. **Credit cost alignment**: Animation should cost comparable credits to image generation (images cost 2-10 credits based on tier, animations currently use 1-2 credits).
 
 ---
 
-## Smart Suggestion System
+## Implementation Plan
 
-### How Suggestions Are Generated
+### 1. Fix Credit Cost Display
 
-Based on available story data:
+**File: `src/components/topic-pipeline/AnimationInstructionsModal.tsx`**
 
-1. **From `cover_illustration_prompt`** (most reliable)
-   - Extract subject type: person, crowd, building, vehicle
-   - Suggest appropriate movements for that subject
-
-2. **From `headline` / `title`**
-   - Keyword matching for context (council meeting, protest, construction, etc.)
-   
-3. **From `tone`**
-   - Adjust intensity of suggested movements (urgent vs. somber)
-
-### Example Suggestion Mappings
-
-| Context | Suggestion Pills |
-|---------|------------------|
-| Person/Official | "Subtle nod" / "Hand gesture" / "Weight shift" / "Paper shuffle" |
-| Crowd/Protest | "Closest figure sways" / "Signs flutter" / "One person gestures" |
-| Building | "Flag flutter" / "Window light flicker" / "Smoke wisps" |
-| Vehicle | "Idle vibration" / "Exhaust movement" |
-| Generic | "Focus on center" / "Gentle breathing motion" / "Subtle sway" |
-
-### Suggestion Generator Function
+Update the credit cost constant and display logic:
+- Change `ANIMATION_CREDITS` from 1 to 2 (matching the "fast" tier default or aligning with image costs)
+- Display the actual credit cost for all users (not "Free" for superadmins)
+- Only the deduction is bypassed for superadmins, not the cost visibility
 
 ```typescript
-function generateSmartSuggestions(story: {
-  cover_illustration_prompt?: string;
-  headline: string;
-  tone?: string;
-}): string[] {
-  const prompt = story.cover_illustration_prompt?.toLowerCase() || '';
-  const title = story.headline.toLowerCase();
-  
-  // Subject-based suggestions
-  if (prompt.match(/person|official|councillor|worker|figure/)) {
-    return [
-      "Gentle head nod",
-      "Subtle hand gesture", 
-      "Slight weight shift",
-      "Papers shuffle on desk"
-    ];
-  }
-  
-  if (prompt.match(/crowd|group|protesters|gathering/)) {
-    return [
-      "Closest figure sways gently",
-      "One raised sign moves",
-      "Single person gestures",
-      "Background frozen, center moves"
-    ];
-  }
-  
-  // Title-based suggestions (fallback)
-  if (title.match(/council|meeting|debate/)) {
-    return [
-      "Official nods slightly",
-      "Hand gesture while speaking",
-      "Document movement only"
-    ];
-  }
-  
-  // Generic suggestions
-  return [
-    "Central subject breathes",
-    "Gentle motion in focal point",
-    "Subtle movement, static background"
-  ];
-}
+// Change from:
+const ANIMATION_CREDITS = 1;
+
+// Change to:
+const ANIMATION_CREDITS = 2; // Comparable to low-tier image generation
+
+// Update display logic:
+// From: 'Cost: {isSuperAdmin ? 'Free' : `${ANIMATION_CREDITS} credit`}'
+// To: 'Cost: {ANIMATION_CREDITS} credits'
 ```
 
----
+### 2. Fix Stale Suggestions Bug
 
-## UI Components
+**File: `src/components/topic-pipeline/AnimationInstructionsModal.tsx`**
 
-### Guidance Header
-Pithy, unmissable guidance at the top of the modal:
+The suggestions must regenerate when the story changes. Fix the memoization:
 
-```tsx
-<div className="text-center space-y-1 pb-4 border-b">
-  <p className="font-medium text-foreground">
-    "Guide the motion, not the meaning."
-  </p>
-  <p className="text-sm text-muted-foreground">
-    Tell the AI what to animate and how - style stays untouched.
-  </p>
-</div>
+```typescript
+// Update useMemo to depend on specific story fields, not just the object:
+const suggestions = useMemo(() => {
+  if (!story) return [];
+  return generateSuggestions({
+    cover_illustration_prompt: story.cover_illustration_prompt,
+    headline: story.headline,
+    title: story.title,
+    tone: story.tone,
+  });
+}, [story?.id, story?.cover_illustration_prompt, story?.headline, story?.title, story?.tone]);
 ```
 
-### Suggestion Pills
+Additionally, reset `customPrompt` when the story changes (not just on close):
 
-Clickable badges that populate the textarea:
-
-```tsx
-<div className="space-y-2">
-  <Label className="text-sm font-medium">Smart Suggestions</Label>
-  <div className="flex flex-wrap gap-2">
-    {suggestions.map((suggestion) => (
-      <Badge
-        key={suggestion}
-        variant={selectedSuggestion === suggestion ? "default" : "outline"}
-        className="cursor-pointer hover:bg-primary/10"
-        onClick={() => handleSelectSuggestion(suggestion)}
-      >
-        {suggestion}
-      </Badge>
-    ))}
-  </div>
-</div>
+```typescript
+// Add useEffect to reset state when story changes:
+useEffect(() => {
+  setCustomPrompt('');
+}, [story?.id]);
 ```
 
-### Custom Input Textarea
+### 3. Update Props Interface
 
-```tsx
-<div className="space-y-2">
-  <Label className="text-sm font-medium">Or write your own</Label>
-  <Textarea
-    placeholder='e.g., "Focus on hands, papers move slightly, face stays still"'
-    value={customPrompt}
-    onChange={(e) => setCustomPrompt(e.target.value)}
-    maxLength={200}
-    className="min-h-[80px]"
-  />
-  <p className="text-xs text-muted-foreground text-right">
-    {customPrompt.length}/200
-  </p>
-</div>
-```
+**File: `src/components/topic-pipeline/AnimationInstructionsModal.tsx`**
 
----
+Add story `id` to the interface to enable proper dependency tracking:
 
-## User Flow
-
-1. User clicks **Animate** dropdown on a story
-2. Modal opens showing:
-   - Guidance header ("Guide the motion, not the meaning")
-   - Smart suggestion pills based on story/image context
-   - Optional textarea for custom instructions
-   - Quality selector (720p/480p)
-   - Credit cost display
-3. User either:
-   - Clicks a suggestion pill (populates as the instruction)
-   - Types custom instruction
-   - Leaves empty (uses AI auto-generation)
-4. User clicks **Generate Animation**
-5. Modal passes `customPrompt` (if any) to edge function
-
----
-
-## Technical Changes
-
-### 1. New Component
-**File:** `src/components/topic-pipeline/AnimationInstructionsModal.tsx`
-
-Props:
 ```typescript
 interface AnimationInstructionsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  // ... existing props
   story: {
-    id: string;
-    headline: string;
-    cover_illustration_url: string;
-    cover_illustration_prompt?: string;
-    tone?: string;
-  };
-  onAnimate: (params: {
-    quality: 'standard' | 'fast';
-    customPrompt?: string;
-  }) => Promise<void>;
-  isAnimating: boolean;
-  creditBalance?: number;
-  isSuperAdmin: boolean;
+    id: string;  // Already exists - ensure it's used in dependencies
+    headline?: string;
+    title?: string;
+    cover_illustration_url?: string | null;
+    cover_illustration_prompt?: string | null;
+    tone?: string | null;
+  } | null;
 }
-```
-
-### 2. Edge Function Update
-**File:** `supabase/functions/animate-illustration/index.ts`
-
-Add `customPrompt` to request body:
-```typescript
-const { storyId, staticImageUrl, quality = 'standard', customPrompt } = await req.json();
-
-let animationPrompt: string;
-if (customPrompt?.trim()) {
-  // User provided instructions - append safety constraints
-  animationPrompt = `${customPrompt.trim()}, negative prompt: no camera movement, no zoom, no pan, no color changes, static camera, preserve exact source colors`;
-} else if (USE_AI_PROMPTS) {
-  animationPrompt = await generateAnimationPromptWithAI(...);
-} else {
-  animationPrompt = getContentAwareAnimationPrompt(...);
-}
-```
-
-### 3. UI Integration Updates
-**Files:**
-- `src/components/topic-pipeline/MultiTenantStoriesList.tsx`
-- `src/components/topic-pipeline/PublishedStoriesList.tsx`
-- `src/components/ApprovedStoriesPanel.tsx`
-
-Add modal state and replace direct animation trigger:
-```typescript
-const [animationModalStory, setAnimationModalStory] = useState<Story | null>(null);
-
-// AnimationQualitySelector now opens modal
-<AnimationQualitySelector
-  onOpenModal={() => setAnimationModalStory(story)}
-  isAnimating={generatingIllustrations.has(story.id)}
-/>
-
-// Modal handles the actual animation
-<AnimationInstructionsModal
-  isOpen={!!animationModalStory}
-  onClose={() => setAnimationModalStory(null)}
-  story={animationModalStory}
-  onAnimate={async ({ quality, customPrompt }) => {
-    await handleAnimateIllustration(animationModalStory, quality, customPrompt);
-    setAnimationModalStory(null);
-  }}
-  isAnimating={generatingIllustrations.has(animationModalStory?.id)}
-  creditBalance={credits?.credits_balance}
-  isSuperAdmin={isSuperAdmin}
-/>
 ```
 
 ---
 
-## File Changes Summary
+## Summary of Changes
 
 | File | Change |
 |------|--------|
-| `src/components/topic-pipeline/AnimationInstructionsModal.tsx` | **Create** - New modal with guidance, pills, textarea |
-| `src/components/topic-pipeline/AnimationQualitySelector.tsx` | **Modify** - Add `onOpenModal` prop option |
-| `supabase/functions/animate-illustration/index.ts` | **Modify** - Accept `customPrompt`, append safety constraints |
-| `src/components/topic-pipeline/MultiTenantStoriesList.tsx` | **Modify** - Add modal state, pass custom prompt to handler |
-| `src/components/topic-pipeline/PublishedStoriesList.tsx` | **Modify** - Same modal integration |
-| `src/components/ApprovedStoriesPanel.tsx` | **Modify** - Same modal integration |
+| `AnimationInstructionsModal.tsx` | Fix credit cost to 2, show cost for all users, fix useMemo dependencies, add useEffect to reset state on story change |
 
 ---
 
-## Safety Constraints
+## Technical Details
 
-When user provides custom instructions, the edge function appends mandatory constraints:
-- `no camera movement, no zoom, no pan`
-- `no color changes, preserve exact source colors`
-- `static camera, frozen background`
-
-This ensures user instructions affect **motion only**, not style or composition.
-
----
-
-## Considerations
-
-- **Character limit (200)**: Keeps instructions focused and prevents prompt overflow
-- **Empty state = auto mode**: If user doesn't provide instructions, AI generates them
-- **Pill + custom combo**: Clicking a pill populates the textarea, user can then edit
-- **Credit display**: Shows cost before confirming to prevent surprise deductions
+- **Credit alignment**: 2 credits for animation matches the entry-level image generation tier, making the cost structure consistent
+- **State reset**: Using `story?.id` as a dependency ensures the modal resets when switching between stories
+- **Memoization fix**: Listing individual fields as dependencies ensures React detects changes even when the object reference is the same but fields differ
