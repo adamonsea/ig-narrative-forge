@@ -34,9 +34,12 @@ serve(async (req) => {
 
     console.log(`MidJourney generation for story ${storyId}, speed: ${speed}`);
 
-    // Enhanced prompt for MidJourney with aspect ratio and quality parameters
-    const enhancedPrompt = `${prompt} --ar 3:2 --v 7 --quality 1 --style raw`;
-    console.log(`MidJourney enhanced prompt: ${enhancedPrompt.substring(0, 200)}...`);
+    // Style reference URL for consistent brand aesthetic
+    const styleRefUrl = 'https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-ec6b6ceb-2a8c-4bfa-b3bd-5b9bdbc3f80e-1769511050468.webp';
+    
+    // Enhanced prompt for MidJourney with aspect ratio, quality, and style reference
+    const enhancedPrompt = `${prompt} --ar 3:2 --v 7 --quality 1 --style raw --sref ${styleRefUrl}`;
+    console.log(`MidJourney enhanced prompt: ${enhancedPrompt.substring(0, 300)}...`);
 
     // Generate image using kie.ai MidJourney API
     const mjResponse = await fetch('https://api.kie.ai/api/v1/mj/generate', {
