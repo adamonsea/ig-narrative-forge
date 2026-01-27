@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +34,7 @@ interface AnimationInstructionsModalProps {
   isSuperAdmin: boolean;
 }
 
-const ANIMATION_CREDITS = 1;
+const ANIMATION_CREDITS = 2; // Comparable to low-tier image generation
 
 /**
  * Generates animation suggestions based on story context
@@ -179,7 +179,12 @@ export function AnimationInstructionsModal({
       title: story.title,
       tone: story.tone,
     });
-  }, [story]);
+  }, [story?.id, story?.cover_illustration_prompt, story?.headline, story?.title, story?.tone]);
+  
+  // Reset customPrompt when story changes
+  useEffect(() => {
+    setCustomPrompt('');
+  }, [story?.id]);
   
   const hasInsufficientCredits = !isSuperAdmin && 
     creditBalance !== undefined && 
@@ -258,7 +263,7 @@ export function AnimationInstructionsModal({
           
           {/* Cost display */}
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Cost: {isSuperAdmin ? 'Free' : `${ANIMATION_CREDITS} credit`}</span>
+            <span className="text-muted-foreground">Cost: {ANIMATION_CREDITS} credits{isSuperAdmin ? ' (bypassed)' : ''}</span>
             {!isSuperAdmin && creditBalance !== undefined && (
               <span className={`text-xs ${hasInsufficientCredits ? 'text-destructive' : 'text-muted-foreground'}`}>
                 Balance: {creditBalance}
