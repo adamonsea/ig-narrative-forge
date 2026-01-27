@@ -238,9 +238,12 @@
         const sourceHTML = story.source_name 
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
+        // Fresh stories (< 60 min) get a pulsing bullet
+        const isFresh = story.age_minutes !== undefined && story.age_minutes < 60;
+        const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
         return `
           <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
-            <span class="story-bullet" style="background: ${accent}"></span>
+            <span class="${bulletClass}" style="background: ${accent}"></span>
             <div class="story-content">
               <span class="story-title">${escapeHTML(story.title)}</span>
               ${sourceHTML}
@@ -292,9 +295,13 @@
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
       
+      // Fresh stories (< 60 min) get a pulsing bullet
+      const isFresh = story.age_minutes !== undefined && story.age_minutes < 60;
+      const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
+      
       return `
         <a href="${story.url}" target="_blank" rel="noopener" class="story-item" data-story-id="${story.id || ''}">
-          <span class="story-bullet" style="background: ${accent}"></span>
+          <span class="${bulletClass}" style="background: ${accent}"></span>
           <div class="story-content">
             <span class="story-title">${escapeHTML(story.title)}</span>
             ${sourceHTML}
@@ -609,6 +616,15 @@
 
       @keyframes spin {
         to { transform: rotate(360deg); }
+      }
+
+      @keyframes fresh-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.3); }
+      }
+
+      .fresh-pulse {
+        animation: fresh-pulse 1.5s ease-in-out infinite;
       }
     `;
   }
