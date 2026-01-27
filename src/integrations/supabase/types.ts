@@ -2781,6 +2781,7 @@ export type Database = {
           mp_name: string | null
           mp_party: string | null
           publication_name: string | null
+          published_at: string | null
           quality_score: number | null
           scheduled_publish_at: string | null
           selected_cover_id: string | null
@@ -2812,6 +2813,7 @@ export type Database = {
           mp_name?: string | null
           mp_party?: string | null
           publication_name?: string | null
+          published_at?: string | null
           quality_score?: number | null
           scheduled_publish_at?: string | null
           selected_cover_id?: string | null
@@ -2843,6 +2845,7 @@ export type Database = {
           mp_name?: string | null
           mp_party?: string | null
           publication_name?: string | null
+          published_at?: string | null
           quality_score?: number | null
           scheduled_publish_at?: string | null
           selected_cover_id?: string | null
