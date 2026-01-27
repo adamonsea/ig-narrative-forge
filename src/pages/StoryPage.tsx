@@ -17,6 +17,7 @@ interface Story {
   author: string | null;
   publication_name: string | null;
   cover_illustration_url: string | null;
+  animated_illustration_url: string | null;
   created_at: string;
   updated_at: string;
   slides: Array<{
@@ -154,6 +155,7 @@ const StoryPage = () => {
           author: data.author,
           publication_name: data.publication_name,
           cover_illustration_url: data.cover_illustration_url,
+          animated_illustration_url: data.animated_illustration_url,
           created_at: data.created_at,
           updated_at: data.updated_at,
           slides: data.slides || [],
