@@ -265,7 +265,7 @@ const StoryPage = () => {
           <Button variant="outline" asChild>
             <Link to={`/feed/${slug}`}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to {topic.name}
+              Live {topic.name} feed
             </Link>
           </Button>
         </div>
