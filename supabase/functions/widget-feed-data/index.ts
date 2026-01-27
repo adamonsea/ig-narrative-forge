@@ -197,7 +197,7 @@ serve(async (req) => {
       feedData.stories_this_week = storiesThisWeek;
       feedData.newest_story_age_minutes = newestStoryAgeMinutes;
 
-      console.log(`✅ Returning ${formattedStories.length} stories for widget`);
+      console.log(`✅ Returning ${formattedStories.length} stories for widget (${storiesThisWeek} this week, v2)`);
 
       return new Response(
         JSON.stringify({
