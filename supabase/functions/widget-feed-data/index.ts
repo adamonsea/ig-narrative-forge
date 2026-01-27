@@ -176,11 +176,15 @@ serve(async (req) => {
           const firstSlide = story.slides?.find(s => s.slide_number === 1);
           const headline = firstSlide?.content || story.title;
 
+          // Calculate story age in minutes for freshness indicator
+          const storyAgeMinutes = Math.floor((Date.now() - new Date(story.created_at).getTime()) / 60000);
+
           return {
             id: story.id,
             title: headline,
             url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
             published_at: story.created_at,
+            age_minutes: storyAgeMinutes,
             source_name: story.publication_name || fallbackSourceName,
             source_url: sourceUrl,
             image_url: imageUrl,
