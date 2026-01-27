@@ -31,6 +31,7 @@ import { SentimentKeywordSettings } from "@/components/SentimentKeywordSettings"
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 import { DripFeedSettings } from "@/components/DripFeedSettings";
 import { TrendingKeywordsReview } from "@/components/TrendingKeywordsReview";
+import { WidgetAnalytics } from "@/components/WidgetAnalytics";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -936,7 +937,25 @@ const TopicDashboard = () => {
                     )}
                   </div>
 
-                  {/* Distribution Channels - RSS & Email */}
+                  {/* Widget Analytics - show when widget builder is enabled */}
+                  {topic.public_widget_builder_enabled && (
+                    <div className="border-t pt-4">
+                      <Label className="flex items-center gap-2 text-sm font-medium mb-3">
+                        <BarChart3 className="w-4 h-4" />
+                        Widget Performance
+                      </Label>
+                      <WidgetAnalytics 
+                        topicId={topic.id} 
+                        onNewSiteDetected={(domain) => {
+                          toast({
+                            title: "New widget integration!",
+                            description: `Your widget is now live on ${domain}`,
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <div className="border-t pt-4 space-y-4">
                     <Label className="text-sm font-medium">Distribution Channels</Label>
                     

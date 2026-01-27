@@ -1,0 +1,4 @@
+# Memory: features/widget/dynamic-cta-and-freshness
+Updated: just now
+
+Widget improvements implemented: 1) Dynamic CTA displays rolling 7-day story count (e.g., "79 stories this week →") instead of static "View all stories", 2) Fresh stories (published within 2 hours) display a pulsing bullet that transitions between green and the widget's custom accent color, 3) Rewritten slide headlines (slide_number=1 content) are prioritized over original article titles for shorter, unified-case display, 4) All updates propagate automatically to embedded widgets via server-side code changes without requiring site owner code updates. 5) Widget Analytics dashboard in topic owner's Advanced Tools > Presentation & Reach shows all domains where widget is embedded with impressions, clicks, unique visitors, CTR, and first/last seen timestamps. New widget integrations (first seen < 24h) are highlighted with a badge and trigger a toast notification for topic owners.
