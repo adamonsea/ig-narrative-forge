@@ -98,8 +98,9 @@ serve(async (req) => {
     
     // Model configuration mapping
     interface ModelConfig {
-      provider: 'openai' | 'lovable-gemini' | 'lovable-gemini-pro' | 'replicate-flux' | 'replicate-flux-pro';
+      provider: 'openai' | 'lovable-gemini' | 'lovable-gemini-pro' | 'replicate-flux' | 'replicate-flux-pro' | 'midjourney';
       quality?: 'high' | 'medium' | 'low';
+      speed?: 'fast' | 'relaxed';
       credits: number;
       cost: number;
       stylePrefix: string;
@@ -146,6 +147,22 @@ serve(async (req) => {
         credits: 10,
         cost: 0.04,
         stylePrefix: 'photorealistic editorial photography, '
+      },
+
+      // MidJourney via KIE API (experimental)
+      'midjourney-fast': {
+        provider: 'midjourney',
+        speed: 'fast',
+        credits: 6,
+        cost: 0.04,
+        stylePrefix: 'cinematic editorial photography, '
+      },
+      'midjourney-relaxed': {
+        provider: 'midjourney',
+        speed: 'relaxed',
+        credits: 4,
+        cost: 0.02,
+        stylePrefix: 'cinematic editorial photography, '
       },
 
       // Legacy support for older UI/model keys that map to GPT Image 1
@@ -427,7 +444,98 @@ serve(async (req) => {
     let imageBase64: string
     let generationTime: number
 
-    if (modelConfig.provider === 'replicate-flux') {
+    // MidJourney via KIE API (experimental)
+    if (modelConfig.provider === 'midjourney') {
+      console.log(`Generating with MidJourney via KIE API (speed: ${modelConfig.speed})...`);
+      
+      const KIE_API_KEY = Deno.env.get('KIE_AI_API_KEY');
+      if (!KIE_API_KEY) {
+        throw new Error('KIE_AI_API_KEY not configured - MidJourney generation unavailable');
+      }
+
+      // Build MidJourney-optimized prompt
+      const mjPrompt = `${modelConfig.stylePrefix}${subjectMatter}. ${story.title}. ${expressionInstruction}. --ar 3:2 --v 7 --quality 1 --style raw`;
+      console.log('MidJourney prompt:', mjPrompt.substring(0, 200) + '...');
+
+      // Start generation with KIE API
+      const mjResponse = await fetch('https://api.kie.ai/api/v1/mj/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${KIE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskType: 'mj_txt2img',
+          prompt: mjPrompt,
+          speed: modelConfig.speed || 'relaxed',
+          aspectRatio: '3:2',
+          version: '7'
+        }),
+      });
+
+      if (!mjResponse.ok) {
+        const errorText = await mjResponse.text();
+        console.error('MidJourney API error:', errorText);
+        throw new Error(`MidJourney generation failed: ${mjResponse.status}`);
+      }
+
+      const mjData = await mjResponse.json();
+      console.log('MidJourney response:', JSON.stringify(mjData).substring(0, 300));
+
+      if (mjData.code !== 200 || !mjData.data?.taskId) {
+        throw new Error(`MidJourney API error: ${mjData.msg || 'Unknown error'}`);
+      }
+
+      const taskId = mjData.data.taskId;
+      let imageUrl: string | null = null;
+
+      // Poll for completion (max 3 minutes)
+      let attempts = 0;
+      const maxAttempts = 36; // 3 minutes at 5 second intervals
+
+      while (attempts < maxAttempts && !imageUrl) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const statusResponse = await fetch(`https://api.kie.ai/api/v1/mj/record-info?taskId=${taskId}`, {
+          headers: { 'Authorization': `Bearer ${KIE_API_KEY}` },
+        });
+
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          console.log(`MidJourney poll ${attempts + 1}: successFlag=${statusData.data?.successFlag}`);
+
+          if (statusData.code === 200 && statusData.data?.successFlag === 1) {
+            const resultUrls = statusData.data.resultInfoJson?.resultUrls;
+            if (resultUrls && resultUrls.length > 0) {
+              imageUrl = resultUrls[0].resultUrl;
+              break;
+            }
+          } else if (statusData.data?.successFlag === -1) {
+            throw new Error(`MidJourney generation failed: ${statusData.data?.failReason || 'Unknown error'}`);
+          }
+        }
+        attempts++;
+      }
+
+      if (!imageUrl) {
+        throw new Error('MidJourney generation timed out after 3 minutes');
+      }
+
+      // Download the generated image
+      console.log('Downloading MidJourney image...');
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download MidJourney image: ${imageResponse.status}`);
+      }
+
+      const imageBlob = await imageResponse.blob();
+      const arrayBuffer = await imageBlob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      imageBase64 = safeBase64Encode(uint8Array);
+      generationTime = Date.now() - startTime;
+      console.log(`MidJourney generation completed in ${generationTime}ms`);
+
+    } else if (modelConfig.provider === 'replicate-flux') {
       // FLUX.1-dev via Replicate - Standard quality tier
       console.log('Generating with FLUX.1-dev via Replicate...');
       console.log('🎨 Using FLUX-specific simplified prompt strategy');

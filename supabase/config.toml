@@ -189,11 +189,15 @@ verify_jwt = false
 [functions.publish-ready-stories]
 verify_jwt = false
 
-# Image generation (archived slide visual generators - not in use)
+# Image generation
+# Archived slide visual generators - not in use:
 # [functions.image-generator]
 # [functions.nebius-image-generator]
 # [functions.gemini-image-generator]
-# [functions.midjourney-image-generator]
+
+# MidJourney via KIE API (experimental)
+[functions.midjourney-image-generator]
+verify_jwt = true
 
 # Roundups & notifications
 [functions.generate-daily-roundup]
