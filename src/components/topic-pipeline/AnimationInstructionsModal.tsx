@@ -107,47 +107,50 @@ export function AnimationInstructionsModal({
           </DialogDescription>
         </DialogHeader>
         
-        {/* Guidance Header */}
-        <div className="text-center pb-3 border-b">
-          <p className="text-sm text-muted-foreground">
-            Guide the motion, not the meaning.
-          </p>
-        </div>
+        {/* Guidance Header - only show when no AI suggestions */}
+        {!isAiGenerated && (
+          <div className="text-center pb-3 border-b">
+            <p className="text-sm text-muted-foreground">
+              Guide motion, not meaning.
+            </p>
+          </div>
+        )}
         
         <div className="space-y-4 py-2">
-          {/* Suggestions with AI indicator */}
-          <div className="space-y-2">
-            {isAiGenerated && (
+          {/* AI Suggestions with sparkle indicator */}
+          {isAiGenerated && (
+            <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 <span>AI-suggested for this image</span>
               </div>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map((suggestion) => (
-                <Badge
-                  key={suggestion}
-                  variant={customPrompt === suggestion ? 'default' : 'outline'}
-                  className="cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  {suggestion}
-                </Badge>
-              ))}
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((suggestion) => (
+                  <Badge
+                    key={suggestion}
+                    variant={customPrompt === suggestion ? 'default' : 'outline'}
+                    className="cursor-pointer hover:bg-primary/10 transition-colors"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    {suggestion}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           
           {/* Custom Instructions */}
           <div className="space-y-1.5">
             <Textarea
-              placeholder='Or describe what should move...'
+              placeholder='Describe what should move...'
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               maxLength={200}
               className="min-h-[70px] resize-none text-sm"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{!customPrompt && 'Leave empty for auto'}</span>
+              {/* Only show "Leave empty for auto" when there are no AI suggestions */}
+              <span>{!customPrompt && !isAiGenerated && 'Leave empty for auto'}</span>
               <span>{customPrompt.length}/200</span>
             </div>
           </div>
