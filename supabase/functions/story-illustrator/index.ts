@@ -12,6 +12,72 @@ import {
   buildGeminiPhotographicPrompt 
 } from '../_shared/gemini-prompt-builder.ts'
 
+/**
+ * Generate context-aware animation suggestions using GPT-4o-mini
+ * Cost: ~$0.00005 per call (negligible)
+ */
+async function generateAnimationSuggestions(
+  subjectMatter: string,
+  storyTitle: string,
+  openaiKey: string
+): Promise<string[]> {
+  if (!openaiKey) {
+    console.warn('No OpenAI API key - skipping animation suggestions');
+    return [];
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Given this editorial illustration subject, suggest exactly 4 subtle animation movements for a 5-second cinemagraph.
+
+SUBJECT: ${subjectMatter}
+HEADLINE: ${storyTitle}
+
+RULES:
+- Each suggestion: 3-5 words maximum
+- Focus on MOTION only (what moves, how)
+- Subtle, looping movements
+- One for main subject, one for environment
+
+Return ONLY a JSON array of 4 strings.`
+        }],
+        max_tokens: 80,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn('Animation suggestions API error, skipping:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '[]';
+    
+    // Parse and validate the JSON array
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+      console.log('Generated animation suggestions:', parsed);
+      return parsed.slice(0, 4); // Ensure max 4 suggestions
+    }
+    
+    console.warn('Invalid animation suggestions format, skipping');
+    return [];
+  } catch (error) {
+    console.warn('Animation suggestions failed (non-critical):', error);
+    return []; // Graceful fallback
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1407,14 +1473,22 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
     const imageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/visuals/${fileName}`
 
-    // Update story with illustration (clearing any existing animation)
+    // Generate AI-powered animation suggestions (non-blocking, cheap ~$0.00005)
+    const animationSuggestions = await generateAnimationSuggestions(
+      subjectMatter,
+      story.title || story.headline || '',
+      OPENAI_API_KEY
+    );
+
+    // Update story with illustration, animation suggestions (clearing any existing animation)
     const { error: updateError } = await supabase
       .from('stories')
       .update({
         cover_illustration_url: imageUrl,
         cover_illustration_prompt: illustrationPrompt,
         illustration_generated_at: new Date().toISOString(),
-        animated_illustration_url: null  // Clear animation when new static image is generated
+        animated_illustration_url: null,  // Clear animation when new static image is generated
+        animation_suggestions: animationSuggestions.length > 0 ? animationSuggestions : null
       })
       .eq('id', storyId)
 
