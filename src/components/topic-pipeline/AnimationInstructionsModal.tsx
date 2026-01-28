@@ -83,11 +83,13 @@ export function AnimationInstructionsModal({
   
   const handleGenerate = async () => {
     if (!story) return;
+    const prompt = customPrompt.trim() || undefined;
+    setCustomPrompt('');
+    onClose();
     await onAnimate({
       quality: 'fast',
-      customPrompt: customPrompt.trim() || undefined,
+      customPrompt: prompt,
     });
-    setCustomPrompt('');
   };
   
   const handleClose = () => {
