@@ -77,6 +77,7 @@ export interface MultiTenantStory {
   cover_illustration_prompt?: string;
   illustration_generated_at?: string;
   animated_illustration_url?: string;
+  animation_suggestions?: string[] | null;
   slidetype?: string;
   tone?: string;
   writing_style?: string;
@@ -463,6 +464,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           cover_illustration_prompt,
           illustration_generated_at,
           animated_illustration_url,
+          animation_suggestions,
           slide_type,
           tone,
           writing_style,
@@ -510,6 +512,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           cover_illustration_prompt: s.cover_illustration_prompt,
           illustration_generated_at: s.illustration_generated_at,
           animated_illustration_url: s.animated_illustration_url,
+          animation_suggestions: s.animation_suggestions || null,
           slide_type: s.slide_type,
           tone: s.tone,
           writing_style: s.writing_style,
@@ -667,6 +670,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           cover_illustration_prompt: story.cover_illustration_prompt,
           illustration_generated_at: story.illustration_generated_at,
           animated_illustration_url: story.animated_illustration_url,
+          animation_suggestions: story.animation_suggestions || null,
           slidetype: story.slide_type,
           tone: story.tone || '',
           writing_style: story.writing_style || '',

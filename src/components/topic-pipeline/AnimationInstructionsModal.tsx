@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 export type AnimationQuality = 'standard' | 'fast';
 
@@ -24,6 +24,7 @@ interface AnimationInstructionsModalProps {
     cover_illustration_url?: string | null;
     cover_illustration_prompt?: string | null;
     tone?: string | null;
+    animation_suggestions?: string[] | null;
   } | null;
   onAnimate: (params: {
     quality: AnimationQuality;
@@ -184,13 +185,23 @@ export function AnimationInstructionsModal({
   
   const suggestions = useMemo(() => {
     if (!story) return [];
+    
+    // Prefer AI-generated suggestions from database
+    if (story.animation_suggestions && story.animation_suggestions.length > 0) {
+      return story.animation_suggestions;
+    }
+    
+    // Fallback to regex-based for legacy images
     return generateSuggestions({
       cover_illustration_prompt: story.cover_illustration_prompt,
       headline: story.headline,
       title: story.title,
       tone: story.tone,
     });
-  }, [story?.id, story?.cover_illustration_prompt, story?.headline, story?.title, story?.tone]);
+  }, [story?.id, story?.animation_suggestions, story?.cover_illustration_prompt, story?.headline, story?.title, story?.tone]);
+  
+  // Determine if showing AI suggestions
+  const isAiGenerated = story?.animation_suggestions && story.animation_suggestions.length > 0;
   
   // Reset customPrompt when story changes
   useEffect(() => {
@@ -243,18 +254,26 @@ export function AnimationInstructionsModal({
         </div>
         
         <div className="space-y-4 py-2">
-          {/* Suggestions */}
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion) => (
-              <Badge
-                key={suggestion}
-                variant={customPrompt === suggestion ? 'default' : 'outline'}
-                className="cursor-pointer hover:bg-primary/10 transition-colors"
-                onClick={() => handleSuggestionClick(suggestion)}
-              >
-                {suggestion}
-              </Badge>
-            ))}
+          {/* Suggestions with AI indicator */}
+          <div className="space-y-2">
+            {isAiGenerated && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>AI-suggested for this image</span>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion) => (
+                <Badge
+                  key={suggestion}
+                  variant={customPrompt === suggestion ? 'default' : 'outline'}
+                  className="cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  {suggestion}
+                </Badge>
+              ))}
+            </div>
           </div>
           
           {/* Custom Instructions */}
