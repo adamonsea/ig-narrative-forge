@@ -175,6 +175,7 @@ export const useSiteVisitorTracking = () => {
     };
     
     // Helper to resolve topic slug to ID (case-insensitive)
+    // Uses RPC to bypass RLS is_active filter - visitors should be tracked on all topics
     async function resolveTopicId(topicSlug: string | null): Promise<string | null> {
       if (!topicSlug) return null;
       
@@ -186,7 +187,21 @@ export const useSiteVisitorTracking = () => {
         return topicIdCache.get(normalizedSlug) || null;
       }
       
-      // Case-insensitive lookup using ilike
+      try {
+        // Use RPC call to get topic ID without RLS restrictions
+        // This ensures visitor tracking works even for inactive topics
+        const { data: topicId, error } = await supabase
+          .rpc('get_topic_id_by_slug' as any, { topic_slug: normalizedSlug });
+        
+        if (!error && topicId && typeof topicId === 'string') {
+          topicIdCache.set(normalizedSlug, topicId);
+          return topicId;
+        }
+      } catch {
+        // Fallback below
+      }
+      
+      // Fallback to direct query (for topics that pass RLS)
       const { data: topic } = await supabase
         .from('topics')
         .select('id')
