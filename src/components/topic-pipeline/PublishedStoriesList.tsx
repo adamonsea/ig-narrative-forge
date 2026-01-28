@@ -53,6 +53,7 @@ interface PublishedStory {
   cover_illustration_prompt?: string | null;
   illustration_generated_at?: string | null;
   animated_illustration_url?: string | null;
+  animation_suggestions?: string[] | null;
   is_parliamentary?: boolean;
   scheduled_publish_at?: string | null;
   source_url?: string | null;
@@ -1117,6 +1118,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           cover_illustration_url: animationModalStory.cover_illustration_url,
           cover_illustration_prompt: animationModalStory.cover_illustration_prompt,
           tone: null, // PublishedStory doesn't have tone
+          animation_suggestions: animationModalStory.animation_suggestions || null,
         } : null}
         onAnimate={async ({ quality, customPrompt }) => {
           if (animationModalStory) {
