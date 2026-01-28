@@ -711,6 +711,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
           cover_illustration_url: animationModalStory.cover_illustration_url,
           cover_illustration_prompt: animationModalStory.cover_illustration_prompt,
           tone: animationModalStory.tone,
+          animation_suggestions: animationModalStory.animation_suggestions || null,
         } : null}
         onAnimate={async ({ quality, customPrompt }) => {
           if (animationModalStory) {
