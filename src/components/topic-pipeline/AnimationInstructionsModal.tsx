@@ -37,141 +37,6 @@ interface AnimationInstructionsModalProps {
 
 const ANIMATION_CREDITS = 2; // Comparable to low-tier image generation
 
-/**
- * Generates animation suggestions based on story context
- */
-function generateSuggestions(story: {
-  cover_illustration_prompt?: string | null;
-  headline?: string;
-  title?: string;
-  tone?: string | null;
-}): string[] {
-  const prompt = (story.cover_illustration_prompt || '').toLowerCase();
-  const titleText = (story.headline || story.title || '').toLowerCase();
-  const combinedText = `${prompt} ${titleText}`;
-  
-  // Check for specific subjects in the combined text
-  // Order matters - more specific matches should come first
-  
-  // Baby/birth/medical
-  if (combinedText.match(/baby|birth|midwi|newborn|hospital|nhs|doctor|nurse|patient|health|medical|clinic|surgery/)) {
-    return [
-      'Baby wiggles gently',
-      'Proud parent smiles',
-      'Subtle breathing motion',
-      'Soft light flickers',
-    ];
-  }
-  
-  // Performance/entertainment - be more specific to avoid false positives
-  if (combinedText.match(/magician|theatre|theater|stage show|performer|hypnot|audience watching|pocket watch|swing dance|concert|musician|band|orchestra/)) {
-    return [
-      'Watch swings gently',
-      'Performer gestures slowly',
-      'Audience member sways',
-      'Stage curtain ripples',
-    ];
-  }
-  
-  // Emergency/rescue
-  if (combinedText.match(/helicopter|rescue|coast guard|cliff|emergency|lifeboat|winch|paramedic|ambulance|fire brigade|firefight/)) {
-    return [
-      'Helicopter hovers',
-      'Rotor blades spin',
-      'Rescue line sways',
-      'Waves crash below',
-    ];
-  }
-  
-  // People/portraits
-  if (combinedText.match(/person|official|councillor|worker|figure|portrait|police|officer|mp\b|minister|mayor|councillor/)) {
-    return [
-      'Gentle head nod',
-      'Subtle hand gesture',
-      'Slight weight shift',
-      'Papers shuffle on desk',
-    ];
-  }
-  
-  // Crowds/groups
-  if (combinedText.match(/crowd|group|protest|gather|people|assembly|march|rally|demonstration|festival|parade/)) {
-    return [
-      'Closest figure sways',
-      'One sign waves gently',
-      'Single person gestures',
-      'Banner ripples',
-    ];
-  }
-  
-  // Buildings/architecture
-  if (combinedText.match(/building|structure|hall|shop|store|house|architecture|development|construction|demolition|planning/)) {
-    return [
-      'Flag or banner flutters',
-      'Window light flickers',
-      'Smoke wisps drift',
-      'Leaves rustle nearby',
-    ];
-  }
-  
-  // Vehicles/machinery
-  if (combinedText.match(/vehicle|car|bus|train|digger|machinery|excavator|lorry|truck|crane|road|traffic/)) {
-    return [
-      'Subtle idle vibration',
-      'Exhaust wisps rise',
-      'Wheel creeps slowly',
-      'Warning light blinks',
-    ];
-  }
-  
-  // Nature/outdoors
-  if (combinedText.match(/landscape|nature|park|garden|sea|beach|water|tree|field|countryside|weather|rain|snow|sun/)) {
-    return [
-      'Gentle wave motion',
-      'Leaves and grass sway',
-      'Clouds drift slowly',
-      'Water ripples softly',
-    ];
-  }
-  
-  // Animals
-  if (combinedText.match(/dog|cat|animal|pet|bird|wildlife|horse|farm|zoo|sanctuary/)) {
-    return [
-      'Animal breathes gently',
-      'Tail wags or flicks',
-      'Ears twitch slightly',
-      'Head turns slowly',
-    ];
-  }
-  
-  // Sports/activity
-  if (combinedText.match(/football|sport|match|game|player|runner|athlete|gym|exercise|tennis|cricket|rugby/)) {
-    return [
-      'Ball bounces gently',
-      'Player shifts weight',
-      'Crowd sways in sync',
-      'Flag waves slowly',
-    ];
-  }
-  
-  // Food/restaurant
-  if (combinedText.match(/restaurant|food|chef|kitchen|cafe|pub|bar|drink|eat|bakery|takeaway/)) {
-    return [
-      'Steam rises gently',
-      'Chef stirs slowly',
-      'Glass contents swirl',
-      'Flame flickers',
-    ];
-  }
-  
-  // Generic suggestions based on any visual content
-  return [
-    'Central subject breathes',
-    'Gentle focal point motion',
-    'Subtle sway, static background',
-    'One element moves softly',
-  ];
-}
-
 export function AnimationInstructionsModal({
   isOpen,
   onClose,
@@ -183,25 +48,21 @@ export function AnimationInstructionsModal({
 }: AnimationInstructionsModalProps) {
   const [customPrompt, setCustomPrompt] = useState('');
   
+  // Only show AI-generated suggestions - no fallback to regex (they're often out of context)
   const suggestions = useMemo(() => {
     if (!story) return [];
     
-    // Prefer AI-generated suggestions from database
+    // Only use AI-generated suggestions from database
     if (story.animation_suggestions && story.animation_suggestions.length > 0) {
       return story.animation_suggestions;
     }
     
-    // Fallback to regex-based for legacy images
-    return generateSuggestions({
-      cover_illustration_prompt: story.cover_illustration_prompt,
-      headline: story.headline,
-      title: story.title,
-      tone: story.tone,
-    });
-  }, [story?.id, story?.animation_suggestions, story?.cover_illustration_prompt, story?.headline, story?.title, story?.tone]);
+    // No fallback - legacy images without AI suggestions get no pills
+    return [];
+  }, [story?.id, story?.animation_suggestions]);
   
   // Determine if showing AI suggestions
-  const isAiGenerated = story?.animation_suggestions && story.animation_suggestions.length > 0;
+  const isAiGenerated = suggestions.length > 0;
   
   // Reset customPrompt when story changes
   useEffect(() => {
