@@ -50,9 +50,20 @@ function generateSuggestions(story: {
   const combinedText = `${prompt} ${titleText}`;
   
   // Check for specific subjects in the combined text
+  // Order matters - more specific matches should come first
   
-  // Performance/entertainment
-  if (combinedText.match(/magician|theatre|stage|performer|hypnot|audience|watch|swing|show|concert|musician/)) {
+  // Baby/birth/medical
+  if (combinedText.match(/baby|birth|midwi|newborn|hospital|nhs|doctor|nurse|patient|health|medical|clinic|surgery/)) {
+    return [
+      'Baby wiggles gently',
+      'Proud parent smiles',
+      'Subtle breathing motion',
+      'Soft light flickers',
+    ];
+  }
+  
+  // Performance/entertainment - be more specific to avoid false positives
+  if (combinedText.match(/magician|theatre|theater|stage show|performer|hypnot|audience watching|pocket watch|swing dance|concert|musician|band|orchestra/)) {
     return [
       'Watch swings gently',
       'Performer gestures slowly',
@@ -62,7 +73,7 @@ function generateSuggestions(story: {
   }
   
   // Emergency/rescue
-  if (combinedText.match(/helicopter|rescue|coast|cliff|emergency|lifeboat|winch|paramedic|ambulance/)) {
+  if (combinedText.match(/helicopter|rescue|coast guard|cliff|emergency|lifeboat|winch|paramedic|ambulance|fire brigade|firefight/)) {
     return [
       'Helicopter hovers',
       'Rotor blades spin',
@@ -72,7 +83,7 @@ function generateSuggestions(story: {
   }
   
   // People/portraits
-  if (combinedText.match(/person|official|councillor|worker|figure|man|woman|portrait|police|officer|mp|minister/)) {
+  if (combinedText.match(/person|official|councillor|worker|figure|portrait|police|officer|mp\b|minister|mayor|councillor/)) {
     return [
       'Gentle head nod',
       'Subtle hand gesture',
@@ -82,7 +93,7 @@ function generateSuggestions(story: {
   }
   
   // Crowds/groups
-  if (combinedText.match(/crowd|group|protest|gather|people|assembly|march|rally|demonstration/)) {
+  if (combinedText.match(/crowd|group|protest|gather|people|assembly|march|rally|demonstration|festival|parade/)) {
     return [
       'Closest figure sways',
       'One sign waves gently',
@@ -92,7 +103,7 @@ function generateSuggestions(story: {
   }
   
   // Buildings/architecture
-  if (combinedText.match(/building|structure|hall|shop|store|house|architecture|development|construction/)) {
+  if (combinedText.match(/building|structure|hall|shop|store|house|architecture|development|construction|demolition|planning/)) {
     return [
       'Flag or banner flutters',
       'Window light flickers',
@@ -102,7 +113,7 @@ function generateSuggestions(story: {
   }
   
   // Vehicles/machinery
-  if (combinedText.match(/vehicle|car|bus|train|digger|machinery|excavator|lorry|truck|crane/)) {
+  if (combinedText.match(/vehicle|car|bus|train|digger|machinery|excavator|lorry|truck|crane|road|traffic/)) {
     return [
       'Subtle idle vibration',
       'Exhaust wisps rise',
@@ -112,7 +123,7 @@ function generateSuggestions(story: {
   }
   
   // Nature/outdoors
-  if (combinedText.match(/landscape|nature|park|garden|sea|beach|water|tree|field|countryside|weather/)) {
+  if (combinedText.match(/landscape|nature|park|garden|sea|beach|water|tree|field|countryside|weather|rain|snow|sun/)) {
     return [
       'Gentle wave motion',
       'Leaves and grass sway',
@@ -122,7 +133,7 @@ function generateSuggestions(story: {
   }
   
   // Animals
-  if (combinedText.match(/dog|cat|animal|pet|bird|wildlife|horse|farm/)) {
+  if (combinedText.match(/dog|cat|animal|pet|bird|wildlife|horse|farm|zoo|sanctuary/)) {
     return [
       'Animal breathes gently',
       'Tail wags or flicks',
@@ -132,7 +143,7 @@ function generateSuggestions(story: {
   }
   
   // Sports/activity
-  if (combinedText.match(/football|sport|match|game|player|runner|athlete|gym|exercise/)) {
+  if (combinedText.match(/football|sport|match|game|player|runner|athlete|gym|exercise|tennis|cricket|rugby/)) {
     return [
       'Ball bounces gently',
       'Player shifts weight',
@@ -142,7 +153,7 @@ function generateSuggestions(story: {
   }
   
   // Food/restaurant
-  if (combinedText.match(/restaurant|food|chef|kitchen|cafe|pub|bar|drink|eat/)) {
+  if (combinedText.match(/restaurant|food|chef|kitchen|cafe|pub|bar|drink|eat|bakery|takeaway/)) {
     return [
       'Steam rises gently',
       'Chef stirs slowly',
