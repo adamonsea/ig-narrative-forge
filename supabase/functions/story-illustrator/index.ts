@@ -61,7 +61,13 @@ Return ONLY a JSON array of 4 strings.`
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '[]';
+    let content = data.choices?.[0]?.message?.content || '[]';
+    
+    // Strip markdown code fences if present (e.g., ```json\n...\n```)
+    content = content.trim();
+    if (content.startsWith('```')) {
+      content = content.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
     
     // Parse and validate the JSON array
     const parsed = JSON.parse(content);
