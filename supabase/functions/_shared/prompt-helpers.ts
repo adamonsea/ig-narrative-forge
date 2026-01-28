@@ -82,22 +82,21 @@ export async function extractSubjectMatter(
           content: `Extract the main visual subject from this story in 20-35 words for image generation.
 
 CRITICAL REQUIREMENTS:
-- INCLUDE SPECIFIC NAMES when mentioned (e.g., "MP Stephen Lloyd", "Councillor Jane Smith", "Chef Marco Pierre White")
+- INCLUDE SPECIFIC NAMES when mentioned (e.g., "MP Stephen Lloyd", "Chef Gordon Ramsay")
 - Include their ROLE or TITLE (MP, councillor, business owner, chef, teacher, etc.)
 - Specify gender (man/woman) and approximate age if apparent from context
-- Describe the KEY ACTION or SETTING they're involved in
-- Focus on the PRIMARY person/people, not background characters
+- SHOW THE STORY, not the announcement—if about flooding, show flood context; if about a new business, show the business in action
+- Focus on the PRIMARY person/people in their actual story context
 
-NAMING IS ESSENTIAL:
-- If someone is named in the story, USE THEIR NAME in your output
-- Politicians, officials, business owners, celebrities - always include their actual name
-- This helps generate contextually appropriate images
+VARIETY NOTE: Avoid defaulting to "speaking at podium/press conference/media scrum" unless the story is specifically about a speech or formal announcement. Prefer showing the subject engaged in the story's real-world context.
 
 Example outputs:
-- "MP Stephen Lloyd, middle-aged man in suit, speaking at a community town hall meeting in Eastbourne"
-- "Chef Gordon Ramsay, 50s, demonstrating cooking techniques in his restaurant kitchen"  
-- "Councillor Sarah Thompson, woman in her 40s, cutting ribbon at new community centre opening"
-- "Local business owner David Chen outside his newly renovated seafront cafe"
+- "MP Stephen Lloyd, middle-aged man, walking through flood-damaged streets talking with affected residents"
+- "Chef Gordon Ramsay, 50s, tasting dishes in his restaurant kitchen surrounded by staff"
+- "Councillor Sarah Thompson, woman in her 40s, examining architectural plans with the project team"
+- "NHS midwife Jenny Chen, woman in her 30s, in a hospital maternity ward with medical equipment"
+- "Local farmer James Wilson, weathered man in his 60s, inspecting storm damage to his barn"
+- "Business owner David Chen in his newly renovated cafe interior, arranging furniture before opening"
 
 ${titleContext}Story text:
 ${storyText.slice(0, 2000)}`
