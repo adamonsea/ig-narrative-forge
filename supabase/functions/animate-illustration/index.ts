@@ -162,7 +162,7 @@ serve(async (req) => {
       console.log('👤 Using user-provided custom prompt');
       animationPrompt = `${customPrompt.trim()}, negative prompt: no camera movement, no zoom, no pan, no color changes, static camera, preserve exact source colors, frozen background`;
     } else if (USE_AI_PROMPTS) {
-      console.log('🤖 Using AI-driven prompt generation (Phase 2)');
+      console.log('🤖 Using simplified AI prompt generation (Phase 3)');
       animationPrompt = await generateAnimationPromptWithAI(
         story.title,
         slideText,
@@ -394,13 +394,13 @@ function getSubjectMovementTemplate(subjectType: string, subject: string): strin
 }
 
 /**
- * Generates AI-driven animation prompt based on story content (Phase 2 - ENHANCED with Subject Extraction + Wan 2.2 i2v optimization)
+ * Generates AI-driven animation prompt based on story content (Phase 3 - SIMPLIFIED)
  * 
  * Research insights from Wan 2.2 i2v model:
- * - Negative prompts are now consistently respected (major improvement over 2.1)
- * - Camera movement is the #1 source of unwanted motion - must explicitly forbid
- * - Model adds cinematic motion by default - needs strong negative constraints
- * - "Cinemagraph" / "living photograph" aesthetic: one element moves, rest frozen
+ * - Model works BEST with SHORT, DIRECT motion descriptions (under 20 words)
+ * - Long negative prompts often get ignored or cause unpredictable behavior
+ * - The model has inherent cinematic tendencies - simpler prompts = better control
+ * - Focus on WHAT should move, not what shouldn't
  */
 async function generateAnimationPromptWithAI(
   title: string,
@@ -416,17 +416,12 @@ async function generateAnimationPromptWithAI(
   }
   
   try {
-    console.log('🧠 Generating AI animation prompt with Wan 2.2 i2v optimization...');
+    console.log('🧠 Generating simplified AI animation prompt...');
     
     // Extract main subject from the image prompt or title
     const { type: subjectType, subject } = extractMainSubject(title, originalImagePrompt);
-    const movementTemplate = getSubjectMovementTemplate(subjectType, subject);
     
     console.log(`🎯 Extracted subject: ${subject} (type: ${subjectType})`);
-    
-    const originalStyleHint = originalImagePrompt 
-      ? `\n\nORIGINAL IMAGE GENERATION PROMPT:\n"${originalImagePrompt}"\n\nThe animation MUST preserve this exact visual style, composition, and aesthetic.`
-      : '';
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -438,71 +433,31 @@ async function generateAnimationPromptWithAI(
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Create a CINEMAGRAPH-STYLE MICRO-ANIMATION prompt for this static illustration. Model: Alibaba Wan 2.2 i2v (image-to-video).
+          content: `Generate a SHORT animation prompt (max 15 words) for an image-to-video model.
 
-STORY CONTEXT:
-Title: ${title}
-Content: ${slideContent}
-Tone: ${tone}${originalStyleHint}
+STORY: ${title}
+MAIN SUBJECT: ${subject}
 
-🎯 IDENTIFIED MAIN SUBJECT: ${subject}
-Subject Type: ${subjectType}
-Suggested Movement: ${movementTemplate}
+Rules:
+1. Describe ONE simple, natural movement for the main subject
+2. Be SPECIFIC: "person nods head slowly" NOT "person moves"  
+3. Keep it SHORT - the model works better with concise prompts
+4. Focus on subtle, realistic motion
 
-🎨 CRITICAL COLOR PRESERVATION (NON-NEGOTIABLE - HIGHEST PRIORITY):
-The source image uses a STRICT BLACK & WHITE + GREEN ACCENT color scheme ONLY.
-✅ PRESERVE EXACT RGB VALUES: Black (#000000), white (#FFFFFF), grays (grayscale), and green (#58ffbc) ONLY
-✅ NO NEW COLORS: Absolutely zero introduction of blues, yellows, reds, purples, oranges, pinks, or any other hues
-✅ NO COLOR MODIFICATION: No color correction, no color grading, no color enhancement, no color harmonization, no saturation adjustment
-✅ MAINTAIN SOURCE IMAGE COLOR PALETTE: Use only colors that exist in the static source image
-❌ STRICTLY FORBIDDEN: Color shifts, new colors appearing, tinting, warming, cooling, vibrancy changes, color bleeding, chromatic aberration, color pops in background elements
+Good examples:
+- "Person's hair sways gently in breeze, slight head turn"
+- "Steam rises from coffee cup, subtle hand movement"
+- "Flag flutters in wind, slight fabric ripple"
+- "Officer gestures while speaking, partner listens"
 
-🎬 CINEMAGRAPH AESTHETIC (CRITICAL):
-The goal is a "living photograph" or "cinemagraph" - ONE SINGLE FOCAL ELEMENT moves subtly while EVERYTHING ELSE is completely frozen/static. Like a magazine photo that barely comes to life.
+Bad examples (too vague or complex):
+- "Dynamic scene with multiple movements" 
+- "Everything comes alive with energy"
 
-🚨 CRITICAL CONSTRAINTS (Wan 2.2 i2v tends to add unwanted motion - use STRONG negative prompts):
-
-POSITIVE PROMPT RULES:
-✅ Animate ONLY the identified subject (${subject}) - THE SINGLE MOST PROMINENT FOCAL POINT
-✅ Use words: "barely perceptible", "minimal", "subtle", "slight", "gentle"
-✅ Specify exactly WHICH visible element moves (e.g., "the councilor's hand", "visible flag on building")
-✅ Movement must be natural for a 5-second loop
-✅ Keep under 12 words for the movement description
-✅ NO motion in background, surroundings, or secondary elements
-
-NEGATIVE PROMPT RULES (CRITICAL - Wan 2.2 respects these now):
-❌ NO camera movement: "no zoom, no pan, no tilt, no dolly, no tracking, no push in, no pull back, static camera, fixed frame"
-❌ NO new elements: "no people entering, no objects appearing, no elements from off-screen, no particle effects"
-❌ NO scene changes: "no background movement, no environment changes, no lighting shifts, no shadows moving"
-❌ NO transformation: "no morphing, no scene transitions, no composition changes"
-❌ NO multiple subjects moving: "only one element moves, everything else completely frozen, static background"
-❌ NO color changes (ABSOLUTE PRIORITY): "no color shifts, zero new colors, no saturation changes, no color grading, no color correction, no color enhancement, preserve exact source image color palette, maintain black white green only, no color pops, no chromatic effects, no tinting, no color bleeding"
-❌ NO widespread motion: "no ambient movement, no atmospheric effects, no environmental animation, no particle movement"
-
-MOVEMENT SCALE GUIDE:
-${subjectType === 'person' ? '• Person: head nod range = 2-3cm, hand gesture = 5-8cm, weight shift = slight lean' : ''}
-${subjectType === 'crowd' ? '• Crowd: ONLY closest figure moves, gentle sway = 1-2cm, NO crowd multiplication' : ''}
-${subjectType === 'building' ? '• Building: flag flutter = small visible movement, window flicker = subtle light change' : ''}
-${subjectType === 'vehicle' ? '• Vehicle: idle vibration = barely visible, exhaust = gentle waft' : ''}
-
-📝 OUTPUT FORMAT (MANDATORY):
-"[12-word movement description using 'barely perceptible' or 'subtle'], negative prompt: no camera movement, no zoom, no pan, no tilt, no people entering, no background movement, no new elements, no scene change, static camera, frozen background, no color shifts, no new colors, no color grading, no color correction, preserve exact source image colors, maintain black white green palette only, no color pops, no chromatic effects"
-
-✅ PERFECT EXAMPLES (cinemagraph style with strict color preservation):
-• "Council member's hand gestures barely perceptibly, papers on desk completely still, negative prompt: no camera movement, no zoom, no pan, no people entering, no background movement, static camera, no color changes, no new colors, no color grading, preserve exact source colors, maintain black white green only, no color pops"
-• "Worker nods subtly once, all machinery and background frozen, negative prompt: no camera movement, no zoom, no additional workers, no background movement, static camera, no scene change, no color shifts"
-• "Visible flag on building flutters gently, entire structure and surroundings frozen, negative prompt: no camera movement, no zoom, no pan, no background movement, static camera, no new elements, maintain original colors"
-
-❌ AVOID (too much motion or color changes):
-• "Workers move around construction site, machinery operates" - TOO MANY moving elements
-• "Camera pans across busy street scene" - Camera movement forbidden
-• "Protesters march forward into frame" - New elements entering
-• "Scene shifts to warmer tones" - Color changes forbidden
-
-Return ONLY the animation prompt in the exact format above. Include both positive movement AND comprehensive negative prompt.`
+Return ONLY the motion prompt, nothing else. Max 15 words.`
         }],
-        max_tokens: 120,
-        temperature: 0.5
+        max_tokens: 60,
+        temperature: 0.7
       })
     });
     
@@ -513,9 +468,16 @@ Return ONLY the animation prompt in the exact format above. Include both positiv
     }
     
     const data = await response.json();
-    const prompt = data.choices[0].message.content.trim();
-    console.log('✨ AI-generated CINEMAGRAPH prompt:', prompt);
-    return prompt;
+    let prompt = data.choices[0].message.content.trim();
+    
+    // Remove any quotes the model might have added
+    prompt = prompt.replace(/^["']|["']$/g, '');
+    
+    // Append minimal negative prompt for camera stability only
+    const finalPrompt = `${prompt}, static camera, preserve colors`;
+    
+    console.log('✨ Simplified animation prompt:', finalPrompt);
+    return finalPrompt;
     
   } catch (error) {
     console.error('⚠️ AI prompt generation failed, using keyword fallback:', error);
