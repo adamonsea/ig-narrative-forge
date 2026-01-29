@@ -162,16 +162,20 @@ serve(async (req) => {
       const userPrompt = customPrompt.trim();
       console.log('👤 User-provided prompt:', userPrompt);
       
-      // Check if prompt is too vague (less than 5 words or missing action verbs)
-      const wordCount = userPrompt.split(/\s+/).length;
-      const hasActionVerb = /\b(sway|wave|flutter|nod|turn|gesture|move|blink|ripple|spin|shake|bounce|float|drift|flow|rock|wiggle|breathe|pulse|flicker|shimmer)\b/i.test(userPrompt);
-      
-      if (wordCount < 5 && !hasActionVerb) {
-        // Prompt is too vague - enhance it with AI
-        console.log('⚠️ Prompt too vague, enhancing with AI...');
+      // Detect “abstract” prompts that tend to produce minimal motion in Wan 2.2 i2v.
+      // We only skip enhancement when the prompt already contains multiple *visible* motion verbs.
+      const visibleVerbMatches = userPrompt.match(
+        /\b(sway|wave|flutter|nod|turn|gesture|blink|ripple|spin|shake|bounce|float|drift|flow|rock|wiggle|breathe|pulse|flicker|shimmer|walk|run|march|point|clap|cheer|raise|lower)\b/gi
+      );
+      const visibleVerbCount = visibleVerbMatches?.length ?? 0;
+
+      // If the user prompt is long but still abstract (“investigate”, “announce”, “discuss”), it often yields only one subtle element moving.
+      const shouldEnhance = visibleVerbCount < 2;
+
+      if (shouldEnhance) {
+        console.log(`⚠️ Prompt likely too abstract (visibleVerbCount=${visibleVerbCount}), enhancing with AI...`);
         animationPrompt = await enhanceVaguePrompt(userPrompt, story.title, story.cover_illustration_prompt || '');
       } else {
-        // Good prompt - use directly
         animationPrompt = `${userPrompt}, static camera`;
       }
     } else if (USE_AI_PROMPTS) {
@@ -417,8 +421,8 @@ async function enhanceVaguePrompt(
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
   if (!LOVABLE_API_KEY) {
-    // Fallback: add generic motion
-    return `${vaguePrompt}, figures move naturally, subtle environmental motion, static camera`;
+    // Fallback: add clearly visible motion (avoid “subtle” which can suppress results)
+    return `${vaguePrompt}, people turn heads and gesture clearly, fabric and debris flutter noticeably, static camera`;
   }
   
   try {
@@ -436,11 +440,17 @@ async function enhanceVaguePrompt(
           role: 'user',
           content: `The user wants to animate an image with this instruction: "${vaguePrompt}"
 
-This is too vague for the video model. Expand it into a SPECIFIC motion description (max 25 words).
+This is too vague for the video model. Expand it into a SPECIFIC motion description (max 22 words) with CLEAR, VISIBLE movement.
 
 CONTEXT:
 - Story: ${storyTitle}
 - Image shows: ${imagePrompt.substring(0, 200)}
+
+Requirements:
+1) Include at least TWO moving elements (e.g., person + environment, or two people)
+2) Use concrete body parts/actions (head turns, hands point, shoulders shrug, eyes blink)
+3) Make the motion noticeable (avoid “subtle”, “slight”, “gentle”)
+4) Keep camera static (no zoom/pan)
 
 Add SPECIFIC body movements or environmental motion:
 - For people: describe what body parts move (head turns, arms gesture, eyes blink)
@@ -471,7 +481,7 @@ Return ONLY the enhanced motion prompt.`
     
   } catch (error) {
     console.error('⚠️ Enhancement failed:', error);
-    return `${vaguePrompt}, figures move naturally, subtle environmental motion, static camera`;
+    return `${vaguePrompt}, people turn heads and gesture clearly, fabric and debris flutter noticeably, static camera`;
   }
 }
 
