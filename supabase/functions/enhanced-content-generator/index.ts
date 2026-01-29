@@ -1151,24 +1151,36 @@ Return in JSON format:
       console.log('📱 Stored post copy successfully');
     }
 
-    // Trigger carousel image generation (non-blocking)
+    // Trigger carousel image generation (non-blocking) using direct fetch with service role
     try {
-      const { data: illustrationData, error: carouselError } = await supabase.functions.invoke('story-illustrator', {
-        body: { 
-          storyId,
-          forceRegenerate: true,
-          skipExistingImages: false
-        }
-      });
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       
-      if (carouselError) {
+      const illustrationResponse = await fetch(
+        `${supabaseUrl}/functions/v1/story-illustrator`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            storyId,
+            forceRegenerate: true,
+            skipExistingImages: false
+          })
+        }
+      );
+      
+      if (!illustrationResponse.ok) {
+        const errorText = await illustrationResponse.text();
         console.error('❌ Failed to trigger carousel generation:', {
-          error: carouselError.message || carouselError,
-          storyId,
-          context: carouselError.context || 'No additional context',
-          status: carouselError.status || 'Unknown status'
+          status: illustrationResponse.status,
+          error: errorText,
+          storyId
         });
       } else {
+        const illustrationData = await illustrationResponse.json();
         console.log('🎨 Triggered carousel image generation successfully:', {
           storyId,
           illustrationUrl: illustrationData?.illustration_url,
