@@ -158,9 +158,22 @@ serve(async (req) => {
     // Generate animation prompt (user-provided takes priority, then AI-driven, then keyword fallback)
     let animationPrompt: string;
     if (customPrompt && customPrompt.trim()) {
-      // User provided custom instructions - use directly with minimal constraints
-      console.log('👤 Using user-provided custom prompt (priority mode)');
-      animationPrompt = `${customPrompt.trim()}, static camera`;
+      // User provided custom instructions - enhance if too vague
+      const userPrompt = customPrompt.trim();
+      console.log('👤 User-provided prompt:', userPrompt);
+      
+      // Check if prompt is too vague (less than 5 words or missing action verbs)
+      const wordCount = userPrompt.split(/\s+/).length;
+      const hasActionVerb = /\b(sway|wave|flutter|nod|turn|gesture|move|blink|ripple|spin|shake|bounce|float|drift|flow|rock|wiggle|breathe|pulse|flicker|shimmer)\b/i.test(userPrompt);
+      
+      if (wordCount < 5 && !hasActionVerb) {
+        // Prompt is too vague - enhance it with AI
+        console.log('⚠️ Prompt too vague, enhancing with AI...');
+        animationPrompt = await enhanceVaguePrompt(userPrompt, story.title, story.cover_illustration_prompt || '');
+      } else {
+        // Good prompt - use directly
+        animationPrompt = `${userPrompt}, static camera`;
+      }
     } else if (USE_AI_PROMPTS) {
       console.log('🤖 Using AI prompt generation (Phase 4 - expressive)');
       animationPrompt = await generateAnimationPromptWithAI(
@@ -173,7 +186,7 @@ serve(async (req) => {
       console.log('🔤 Using keyword-based prompt generation (fallback)');
       animationPrompt = getContentAwareAnimationPrompt(story.title, story.tone || 'neutral');
     }
-    console.log(`🎬 Animation prompt: ${animationPrompt}`);
+    console.log(`🎬 Final animation prompt: ${animationPrompt}`);
 
     // Call Replicate API with selected quality tier
     console.log(`🚀 Calling Replicate API (${quality} tier: ${qualityConfig.resolution})...`);
@@ -391,6 +404,75 @@ function getSubjectMovementTemplate(subjectType: string, subject: string): strin
   };
   
   return templates[subjectType] || templates['person'];
+}
+
+/**
+ * Enhances a vague user prompt with specific motion details
+ */
+async function enhanceVaguePrompt(
+  vaguePrompt: string,
+  storyTitle: string,
+  imagePrompt: string
+): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!LOVABLE_API_KEY) {
+    // Fallback: add generic motion
+    return `${vaguePrompt}, figures move naturally, subtle environmental motion, static camera`;
+  }
+  
+  try {
+    console.log('🔧 Enhancing vague prompt with AI...');
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{
+          role: 'user',
+          content: `The user wants to animate an image with this instruction: "${vaguePrompt}"
+
+This is too vague for the video model. Expand it into a SPECIFIC motion description (max 25 words).
+
+CONTEXT:
+- Story: ${storyTitle}
+- Image shows: ${imagePrompt.substring(0, 200)}
+
+Add SPECIFIC body movements or environmental motion:
+- For people: describe what body parts move (head turns, arms gesture, eyes blink)
+- For scenes: describe what elements move (leaves rustle, flags wave, water ripples)
+
+Example transformations:
+- "Police investigate" → "Police officer turns head, gestures toward damage, partner nods and writes notes"
+- "Crowd scene" → "People in crowd sway and shift weight, nearest figures gesture animatedly"
+- "Building exterior" → "Flags on building flutter, tree branches sway, pedestrian walks past"
+
+Return ONLY the enhanced motion prompt.`
+        }],
+        max_tokens: 80,
+        temperature: 0.7
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`AI API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    let enhanced = data.choices[0].message.content.trim();
+    enhanced = enhanced.replace(/^["']|["']$/g, '');
+    
+    console.log(`✨ Enhanced prompt: ${enhanced}`);
+    return `${enhanced}, static camera`;
+    
+  } catch (error) {
+    console.error('⚠️ Enhancement failed:', error);
+    return `${vaguePrompt}, figures move naturally, subtle environmental motion, static camera`;
+  }
 }
 
 /**
