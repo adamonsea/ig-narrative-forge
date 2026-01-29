@@ -45,7 +45,7 @@ HEADLINE: ${storyTitle}
 RULES:
 - Each suggestion: 3-5 words maximum
 - Focus on MOTION only (what moves, how)
-- Subtle, looping movements
+- Subtle, natural movements
 - One for main subject, one for environment
 
 Return ONLY a JSON array of 4 strings.`
