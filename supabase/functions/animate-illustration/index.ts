@@ -460,6 +460,13 @@ The source image uses a STRICT BLACK & WHITE + GREEN ACCENT color scheme ONLY.
 🎬 CINEMAGRAPH AESTHETIC (CRITICAL):
 The goal is a "living photograph" or "cinemagraph" - ONE SINGLE FOCAL ELEMENT moves subtly while EVERYTHING ELSE is completely frozen/static. Like a magazine photo that barely comes to life.
 
+🔄 SEAMLESS LOOP GUIDANCE (IMPORTANT):
+Design the motion to end in the same position it started - a perfect loop. The animation should be cyclical and repeatable:
+✅ Use oscillating/pendulum motion (sway left-right-left, nod forward-back-forward)
+✅ Use cyclical breathing/pulsing that returns to start state
+✅ Avoid progressive/cumulative motion that doesn't reset
+✅ Think "gentle rocking" not "walking forward"
+
 🚨 CRITICAL CONSTRAINTS (Wan 2.2 i2v tends to add unwanted motion - use STRONG negative prompts):
 
 POSITIVE PROMPT RULES:
@@ -590,16 +597,17 @@ function getContentAwareAnimationPrompt(title: string, tone: string): string {
 
 /**
  * Generates camera movement prompt based on story tone (fallback)
+ * Includes seamless loop guidance for cyclical motion
  */
 function getCameraMovementPrompt(tone: string): string {
   const prompts: Record<string, string> = {
-    'urgent': 'Dynamic camera movement with quick zoom and pan, energetic motion',
-    'celebratory': 'Smooth rising camera movement, gentle rotation, uplifting motion',
-    'somber': 'Slow gentle camera drift, minimal movement, contemplative',
-    'hopeful': 'Gradual forward camera movement, soft pan, inspiring motion',
-    'informative': 'Steady professional camera movement, subtle zoom',
-    'conversational': 'Natural gentle camera movement, slight pan',
-    'neutral': 'Subtle camera movement, slight zoom, natural motion'
+    'urgent': 'Dynamic back-and-forth motion, oscillating energy, cyclical rhythm returning to start',
+    'celebratory': 'Gentle swaying motion, subtle rising and falling, seamless looping celebration',
+    'somber': 'Slow breathing-like motion, minimal pendulum sway, contemplative cycle',
+    'hopeful': 'Soft cyclical forward-back motion, gentle oscillation, looping inspiration',
+    'informative': 'Steady subtle sway, professional oscillating motion, seamless loop',
+    'conversational': 'Natural gentle nodding cycle, slight back-and-forth, looping rhythm',
+    'neutral': 'Subtle oscillating motion, gentle sway returning to start, seamless loop'
   };
   return prompts[tone] || prompts['neutral'];
 }
