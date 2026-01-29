@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,11 +8,54 @@ const corsHeaders = {
 };
 
 const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 interface KeywordSuggestion {
   keyword: string;
   confidence_score: number;
   rationale: string;
+}
+
+// Verify user is authenticated and owns the topic
+async function verifyTopicOwnership(authHeader: string, topicId: string): Promise<{ userId: string | null; error: string | null }> {
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { userId: null, error: 'Missing or invalid Authorization header' };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+  
+  if (claimsError || !claimsData?.claims) {
+    return { userId: null, error: 'Invalid or expired token' };
+  }
+
+  const userId = claimsData.claims.sub as string;
+
+  // Verify topic ownership
+  const { data: topic, error: topicError } = await supabase
+    .from('topics')
+    .select('id, owner_id')
+    .eq('id', topicId)
+    .single();
+
+  if (topicError || !topic) {
+    return { userId: null, error: 'Topic not found' };
+  }
+
+  if (topic.owner_id !== userId) {
+    // Check if user is admin
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return { userId: null, error: 'Not authorized to manage this topic' };
+    }
+  }
+
+  return { userId, error: null };
 }
 
 serve(async (req) => {
@@ -22,6 +66,23 @@ serve(async (req) => {
 
   try {
     const { topicId, topicName, description, keywords, topicType, region, existingKeywords = [], publishedStories = [], topicSources = [] } = await req.json();
+
+    // Verify authentication and topic ownership
+    const authHeader = req.headers.get('Authorization') || '';
+    const { userId, error: authError } = await verifyTopicOwnership(authHeader, topicId);
+    
+    if (authError) {
+      console.error('🔒 Authorization failed:', authError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`🔑 Authorized user ${userId} for topic ${topicId}`);
 
     if (!DEEPSEEK_API_KEY) {
       throw new Error('DEEPSEEK_API_KEY is not configured');

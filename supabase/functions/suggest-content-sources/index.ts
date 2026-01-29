@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 interface SourceSuggestion {
   url: string;
@@ -19,6 +19,47 @@ interface SourceSuggestion {
   rationale: string;
 }
 
+// Verify user is authenticated and owns the topic
+async function verifyTopicOwnership(authHeader: string, topicId: string): Promise<{ userId: string | null; error: string | null }> {
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { userId: null, error: 'Missing or invalid Authorization header' };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+  
+  if (claimsError || !claimsData?.claims) {
+    return { userId: null, error: 'Invalid or expired token' };
+  }
+
+  const userId = claimsData.claims.sub as string;
+
+  // Verify topic ownership
+  const { data: topic, error: topicError } = await supabase
+    .from('topics')
+    .select('id, owner_id')
+    .eq('id', topicId)
+    .single();
+
+  if (topicError || !topic) {
+    return { userId: null, error: 'Topic not found' };
+  }
+
+  if (topic.owner_id !== userId) {
+    // Check if user is admin
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return { userId: null, error: 'Not authorized to manage this topic' };
+    }
+  }
+
+  return { userId, error: null };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -26,8 +67,25 @@ serve(async (req) => {
   }
 
   try {
-    const { topicName, description, keywords, topicType, region } = await req.json();
+    const { topicId, topicName, description, keywords, topicType, region } = await req.json();
 
+    // Verify authentication and topic ownership
+    const authHeader = req.headers.get('Authorization') || '';
+    const { userId, error: authError } = await verifyTopicOwnership(authHeader, topicId);
+    
+    if (authError) {
+      console.error('🔒 Authorization failed:', authError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError,
+        suggestions: []
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`🔑 Authorized user ${userId} for topic ${topicId}`);
     console.log('🔍 Generating source suggestions for:', { topicName, topicType, region });
 
     if (!deepseekApiKey) {

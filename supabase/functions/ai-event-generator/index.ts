@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
@@ -14,12 +14,54 @@ const requestSchema = z.object({
   eventTypes: z.array(z.string().max(50)).min(1).max(10)
 });
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-);
-
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
+// Service role client for database operations
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+// Verify user is authenticated and owns the topic
+async function verifyTopicOwnership(authHeader: string, topicId: string): Promise<{ userId: string | null; error: string | null }> {
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { userId: null, error: 'Missing or invalid Authorization header' };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+  
+  if (claimsError || !claimsData?.claims) {
+    return { userId: null, error: 'Invalid or expired token' };
+  }
+
+  const userId = claimsData.claims.sub as string;
+
+  // Verify topic ownership using admin client
+  const { data: topic, error: topicError } = await supabaseAdmin
+    .from('topics')
+    .select('id, owner_id')
+    .eq('id', topicId)
+    .single();
+
+  if (topicError || !topic) {
+    return { userId: null, error: 'Topic not found' };
+  }
+
+  if (topic.owner_id !== userId) {
+    // Check if user is admin
+    const { data: isAdmin } = await supabaseAdmin.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return { userId: null, error: 'Not authorized to manage this topic' };
+    }
+  }
+
+  return { userId, error: null };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -29,11 +71,27 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { topicId, eventTypes, region } = requestSchema.parse(body);
+
+    // Verify authentication and topic ownership
+    const authHeader = req.headers.get('Authorization') || '';
+    const { userId, error: authError } = await verifyTopicOwnership(authHeader, topicId);
     
+    if (authError) {
+      console.error('🔒 Authorization failed:', authError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`🔑 Authorized user ${userId} for topic ${topicId}`);
     console.log('🎪 Generating events for topic:', topicId, 'region:', region, 'types:', eventTypes);
 
-    // Get topic details
-    const { data: topic, error: topicError } = await supabase
+    // Get topic details using admin client
+    const { data: topic, error: topicError } = await supabaseAdmin
       .from('topics')
       .select('*')
       .eq('id', topicId)
@@ -168,8 +226,8 @@ Create a perfect mix for ${regionText} - make locals excited about both the big 
       };
     });
 
-    // Clear existing events for this topic
-    const { error: deleteError } = await supabase
+    // Clear existing events for this topic using admin client
+    const { error: deleteError } = await supabaseAdmin
       .from('events')
       .update({ status: 'deleted' })
       .eq('topic_id', topicId);
@@ -198,7 +256,7 @@ Create a perfect mix for ${regionText} - make locals excited about both the big 
       rank_position: index + 1, // Rank 1-15, top 5 will be shown
     }));
 
-    const { data: insertedEvents, error: insertError } = await supabase
+    const { data: insertedEvents, error: insertError } = await supabaseAdmin
       .from('events')
       .insert(eventsToInsert)
       .select();
