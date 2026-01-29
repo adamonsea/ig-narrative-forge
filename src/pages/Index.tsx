@@ -399,9 +399,20 @@ const Index = () => {
         {/* Footer */}
         <footer className="border-t border-white/10 py-8 mt-12">
           <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/50">
-            <p>© {new Date().getFullYear()} curatr.pro. All rights reserved.</p>
             <p>
-              Built by{' '}
+              © {new Date().getFullYear()}{' '}
+              <a 
+                href="https://getlit.pro" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-white/70 hover:text-white transition-colors underline underline-offset-2"
+              >
+                curatr.pro
+              </a>
+              . All rights reserved.
+            </p>
+            <p>
+              A{' '}
               <a 
                 href="https://getlit.pro" 
                 target="_blank" 
@@ -410,6 +421,7 @@ const Index = () => {
               >
                 getlit.pro
               </a>
+              {' '}product
             </p>
           </div>
         </footer>
