@@ -9,6 +9,92 @@ interface SlideContent {
 }
 
 /**
+ * Extracts specific location/landmark details from story content
+ * Cross-references against known topic landmarks for accurate naming
+ * Returns: "Landmark Name (architectural description)" or null
+ */
+export async function extractLocationDetails(
+  slides: SlideContent[],
+  openaiKey: string,
+  knownLandmarks?: string[],
+  region?: string
+): Promise<string | null> {
+  if (!openaiKey || slides.length === 0) {
+    return null;
+  }
+
+  try {
+    const storyText = slides.map(s => s.content).join('\n');
+    const landmarksList = knownLandmarks?.length 
+      ? knownLandmarks.join(', ') 
+      : 'None specified';
+    const regionContext = region || 'UK';
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Identify any SPECIFIC LOCATION, BUILDING, or LANDMARK mentioned in this story.
+
+KNOWN LOCAL LANDMARKS (use exact name if matched):
+${landmarksList}
+
+REGION: ${regionContext}
+
+INSTRUCTIONS:
+1. Look for named buildings, venues, parks, streets, or landmarks
+2. If a known landmark is mentioned, use its EXACT name from the list
+3. Include architectural style/era (e.g., "Victorian pavilion", "Art Deco theatre", "modernist gallery")
+4. Note distinctive visual features from public knowledge
+
+RETURN FORMAT (single line):
+"[Exact Name] ([architectural style], [distinctive visual features])"
+
+EXAMPLES:
+- "Towner Art Gallery (modernist white building with angular facade and floor-to-ceiling windows)"
+- "Congress Theatre (Art Deco theatre with curved entrance canopy and distinctive signage)"
+- "Seven Sisters cliffs (dramatic white chalk cliffs overlooking English Channel)"
+- "Eastbourne Pier (Victorian pleasure pier with ornate ironwork and domed pavilions)"
+
+If NO specific location, building, or landmark is mentioned, return exactly: null
+
+Story text:
+${storyText.slice(0, 2000)}`
+        }],
+        max_tokens: 100,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn('Location extraction failed, skipping');
+      return null;
+    }
+
+    const data = await response.json();
+    const result = data.choices?.[0]?.message?.content?.trim();
+    
+    // Handle null or empty responses
+    if (!result || result.toLowerCase() === 'null' || result === '') {
+      console.log('No specific location identified in story');
+      return null;
+    }
+    
+    console.log('Extracted location details:', result);
+    return result;
+  } catch (error) {
+    console.warn('Error extracting location:', error);
+    return null;
+  }
+}
+
+/**
  * Analyzes story tone using OpenAI to inform expression/mood guidance
  */
 export async function analyzeStoryTone(
@@ -55,11 +141,13 @@ export async function analyzeStoryTone(
 /**
  * Extracts key visual subject matter from story content using OpenAI
  * Enhanced to capture specific names, roles, gender, age, and physical characteristics
+ * Now accepts optional location context to place subjects in authentic settings
  */
 export async function extractSubjectMatter(
   slides: SlideContent[],
   openaiKey: string,
-  storyTitle?: string
+  storyTitle?: string,
+  locationContext?: string | null
 ): Promise<string> {
   if (!openaiKey || slides.length === 0) {
     return 'local news scene';
@@ -68,6 +156,14 @@ export async function extractSubjectMatter(
   try {
     const storyText = slides.map(s => s.content).join('\n');
     const titleContext = storyTitle ? `Story Title: ${storyTitle}\n\n` : '';
+    
+    // Add location context if available
+    const locationGuidance = locationContext 
+      ? `\nLOCATION CONTEXT (incorporate into scene):
+${locationContext}
+When this location is relevant, describe the subject IN or NEAR this setting with architectural accuracy.
+Example: "Councillor Sarah Thompson, 50s, standing in front of the Art Deco facade of Congress Theatre"\n`
+      : '';
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -87,14 +183,14 @@ CRITICAL REQUIREMENTS:
 - Specify gender (man/woman) and approximate age if apparent from context
 - SHOW THE STORY, not the announcement—if about flooding, show flood context; if about a new business, show the business in action
 - Focus on the PRIMARY person/people in their actual story context
-
+${locationGuidance}
 VARIETY NOTE: Avoid defaulting to "speaking at podium/press conference/media scrum" unless the story is specifically about a speech or formal announcement. Prefer showing the subject engaged in the story's real-world context.
 
 Example outputs:
 - "MP Stephen Lloyd, middle-aged man, walking through flood-damaged streets talking with affected residents"
 - "Chef Gordon Ramsay, 50s, tasting dishes in his restaurant kitchen surrounded by staff"
 - "Councillor Sarah Thompson, woman in her 40s, examining architectural plans with the project team"
-- "NHS midwife Jenny Chen, woman in her 30s, in a hospital maternity ward with medical equipment"
+- "Gallery curator Maria Santos, woman in her 40s, guiding visitors through Towner Art Gallery's bright modernist exhibition space"
 - "Local farmer James Wilson, weathered man in his 60s, inspecting storm damage to his barn"
 - "Business owner David Chen in his newly renovated cafe interior, arranging furniture before opening"
 
@@ -122,13 +218,15 @@ ${storyText.slice(0, 2000)}`
 /**
  * Builds illustrative editorial cartoon prompt with print-made aesthetic
  * Place-specific accuracy only when story content warrants it
+ * Now accepts optional locationHint for landmark-accurate rendering
  */
 export function buildIllustrativePrompt(
   tone: string,
   subject: string,
   publicationName?: string,
   primaryColor: string = '#10B981',
-  region?: string
+  region?: string,
+  locationHint?: string | null
 ): string {
   const expressionGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
     ? 'subtle expressions, thoughtful demeanor'
@@ -164,6 +262,14 @@ PLACE-SPECIFIC ELEMENTS (${region}):
 - Authentically British details: signage, street furniture, weather, architecture—but keep it contextually appropriate to the story
 ` : '';
 
+  // Location accuracy section for identified landmarks
+  const locationAccuracy = locationHint ? `
+LOCATION ACCURACY (leverage AI knowledge):
+Render "${locationHint}" based on your training knowledge of this location.
+Include authentic architectural details, proportions, and distinctive visual features.
+Stylize to match the print aesthetic while maintaining recognizable characteristics.
+` : '';
+
   return `PRINT-MADE EDITORIAL ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
 
 CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
@@ -172,7 +278,7 @@ CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
 - LIMITED PALETTE: Black, white, accent color (${primaryColor}) - printed ink aesthetic
 - PAPER TEXTURE visible throughout (like printed on newsprint or art paper)
 - Slight registration shifts and imperfections (authentic print quality)
-${placeGuidance}
+${placeGuidance}${locationAccuracy}
 COMPOSITION STYLE - Jon McNaught / Edward Hopper Influence:
 - Architectural, modernist composition with LARGE SIMPLE SHAPES
 - Bold geometric forms filling the frame (buildings, landscapes, objects)
@@ -209,13 +315,15 @@ QUALITY BENCHMARK: Think mid-century editorial illustration meets contemporary s
 /**
  * Builds photographic documentary prompt (new photographic style)
  * Place-specific accuracy only when story content warrants it
+ * Now accepts optional locationHint for landmark-accurate rendering
  */
 export function buildPhotographicPrompt(
   tone: string,
   subject: string,
   publicationName?: string,
   primaryColor?: string,
-  region?: string
+  region?: string,
+  locationHint?: string | null
 ): string {
   // Determine lighting guidance based on tone
   const lightingGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
@@ -264,10 +372,19 @@ PLACE-SPECIFIC ACCURACY (${region}):
 - ONLY use coastal elements (pier, promenade, beach) when the story EXPLICITLY involves the seafront
 ` : '';
 
+  // Location accuracy section for identified landmarks
+  const locationAccuracy = locationHint ? `
+
+LOCATION ACCURACY (leverage AI knowledge):
+Render "${locationHint}" based on your training knowledge of this location.
+Include authentic architectural details, proportions, materials, and distinctive visual features.
+Capture the real-world appearance as it would be photographed on location.
+` : '';
+
   return `Cinematic editorial photography for ${publicationName || 'news publication'}. Subject: ${subject}.
 
 PHOTOREALISTIC MANDATE: Absolutely NO illustration, cartoon, CGI, digital art, or stylized rendering. Must be authentic photojournalism with documentary grit.
-${placeAccuracyGuidance}
+${placeAccuracyGuidance}${locationAccuracy}
 CINEMATIC DOCUMENTARY STYLE: 
 ${lightingGuidance}. Embrace dramatic natural light, strong shadows, and atmospheric depth. Think gritty documentary realism with cinematic composition—not polished studio work. Raw, textured, authentic with visual drama.
 

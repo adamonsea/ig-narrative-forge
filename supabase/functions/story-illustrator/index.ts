@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 import { 
   analyzeStoryTone, 
-  extractSubjectMatter, 
+  extractSubjectMatter,
+  extractLocationDetails,
   buildIllustrativePrompt, 
   buildPhotographicPrompt 
 } from '../_shared/prompt-helpers.ts'
@@ -339,15 +340,16 @@ serve(async (req) => {
     // Determine topic_id from either architecture
     const topicId = (story as any).article?.topic_id || (story as any).topic_article?.topic_id
     
-    // Fetch topic's illustration_style and primary color
+    // Fetch topic's illustration_style, primary color, and landmarks
     let illustrationStyle: IllustrationStyle = 'editorial_illustrative' // default
     let primaryColor: string = '#10B981' // default mint green
     let topicRegion: string | undefined = undefined // for place-accurate prompts
+    let topicLandmarks: string[] | undefined = undefined // for landmark-accurate rendering
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style, illustration_primary_color, region')
+        .select('illustration_style, illustration_primary_color, region, landmarks')
         .eq('id', topicId)
         .single()
       
@@ -370,6 +372,12 @@ serve(async (req) => {
       if (topicData?.region) {
         topicRegion = topicData.region
         console.log(`Using topic region for place accuracy: ${topicRegion}`)
+      }
+      
+      // Capture landmarks for location-accurate rendering
+      if (topicData?.landmarks && Array.isArray(topicData.landmarks)) {
+        topicLandmarks = topicData.landmarks
+        console.log(`Using topic landmarks for location accuracy: ${topicLandmarks.length} landmarks available`)
       }
     }
 
@@ -478,24 +486,32 @@ serve(async (req) => {
       }
     }
 
-    // Analyze story tone and subject matter using shared helpers
+    // Analyze story tone, extract location details, and subject matter using shared helpers
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || ''
     
-    const storyTone = await analyzeStoryTone(
-      slides || [],
-      OPENAI_API_KEY
-    )
+    // Run tone analysis and location extraction in parallel
+    const [storyTone, locationDetails] = await Promise.all([
+      analyzeStoryTone(slides || [], OPENAI_API_KEY),
+      extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion)
+    ]);
     
+    console.log(`Story tone: ${storyTone}`)
+    if (locationDetails) {
+      console.log(`Location identified: ${locationDetails}`)
+    }
+    
+    // Extract subject matter with location context
     const subjectMatter = await extractSubjectMatter(
       slides || [],
       OPENAI_API_KEY,
-      story.title
+      story.title,
+      locationDetails
     )
 
-    // Build appropriate prompt based on illustration style, passing region for place accuracy
+    // Build appropriate prompt based on illustration style, passing region and location hint for place accuracy
     const illustrationPrompt = illustrationStyle === 'editorial_photographic'
-      ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion)
-      : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion)
+      ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
+      : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
 
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
