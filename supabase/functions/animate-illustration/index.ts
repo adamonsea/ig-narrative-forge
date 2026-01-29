@@ -155,14 +155,14 @@ serve(async (req) => {
       console.log(`📝 Slide content fetched: ${slideText.substring(0, 100)}...`);
     }
 
-    // Generate animation prompt (user-provided, AI-driven, or keyword-based)
+    // Generate animation prompt (user-provided takes priority, then AI-driven, then keyword fallback)
     let animationPrompt: string;
     if (customPrompt && customPrompt.trim()) {
-      // User provided custom instructions - append safety constraints
-      console.log('👤 Using user-provided custom prompt');
-      animationPrompt = `${customPrompt.trim()}, negative prompt: no camera movement, no zoom, no pan, no color changes, static camera, preserve exact source colors, frozen background`;
+      // User provided custom instructions - use directly with minimal constraints
+      console.log('👤 Using user-provided custom prompt (priority mode)');
+      animationPrompt = `${customPrompt.trim()}, static camera`;
     } else if (USE_AI_PROMPTS) {
-      console.log('🤖 Using simplified AI prompt generation (Phase 3)');
+      console.log('🤖 Using AI prompt generation (Phase 4 - expressive)');
       animationPrompt = await generateAnimationPromptWithAI(
         story.title,
         slideText,
@@ -170,7 +170,7 @@ serve(async (req) => {
         story.cover_illustration_prompt || undefined
       );
     } else {
-      console.log('🔤 Using keyword-based prompt generation (Phase 1)');
+      console.log('🔤 Using keyword-based prompt generation (fallback)');
       animationPrompt = getContentAwareAnimationPrompt(story.title, story.tone || 'neutral');
     }
     console.log(`🎬 Animation prompt: ${animationPrompt}`);
@@ -433,31 +433,33 @@ async function generateAnimationPromptWithAI(
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Generate a SHORT animation prompt (max 15 words) for an image-to-video model.
+          content: `Generate a SHORT animation prompt (max 20 words) for an image-to-video model.
 
 STORY: ${title}
 MAIN SUBJECT: ${subject}
 
 Rules:
-1. Describe ONE simple, natural movement for the main subject
-2. Be SPECIFIC: "person nods head slowly" NOT "person moves"  
-3. Keep it SHORT - the model works better with concise prompts
-4. Focus on subtle, realistic motion
+1. Describe clear, visible movement for the main subject
+2. Be SPECIFIC about the motion: "person turns head and gestures" NOT "person moves"  
+3. Match energy to content - news stories can have dynamic motion, not everything needs to be subtle
+4. Keep it concise - the model works better with direct prompts
 
 Good examples:
-- "Person's hair sways gently in breeze, slight head turn"
-- "Steam rises from coffee cup, subtle hand movement"
-- "Flag flutters in wind, slight fabric ripple"
-- "Officer gestures while speaking, partner listens"
+- "Person turns head, gestures expressively while speaking"
+- "Crowd waves signs, figures in foreground move and react"
+- "Waves crash against shore, seabirds fly across frame"
+- "Construction worker operates machinery, dust rises"
+- "Cyclist pedals along path, wheels spinning"
 
-Bad examples (too vague or complex):
-- "Dynamic scene with multiple movements" 
-- "Everything comes alive with energy"
+Bad examples:
+- "Dynamic scene with multiple movements" (too vague)
+- "Nearly imperceptible movement" (too subtle)
+- "Everything comes alive" (too abstract)
 
-Return ONLY the motion prompt, nothing else. Max 15 words.`
+Return ONLY the motion prompt, nothing else.`
         }],
-        max_tokens: 60,
-        temperature: 0.7
+        max_tokens: 80,
+        temperature: 0.8
       })
     });
     
@@ -473,10 +475,10 @@ Return ONLY the motion prompt, nothing else. Max 15 words.`
     // Remove any quotes the model might have added
     prompt = prompt.replace(/^["']|["']$/g, '');
     
-    // Append minimal negative prompt for camera stability only
-    const finalPrompt = `${prompt}, static camera, preserve colors`;
+    // Only add static camera constraint - let the motion be expressive
+    const finalPrompt = `${prompt}, static camera`;
     
-    console.log('✨ Simplified animation prompt:', finalPrompt);
+    console.log('✨ Expressive animation prompt:', finalPrompt);
     return finalPrompt;
     
   } catch (error) {
