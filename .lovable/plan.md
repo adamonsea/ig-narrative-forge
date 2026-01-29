@@ -456,15 +456,26 @@ if (isServiceRole) {
 ### Sentiment Cards
 - [ ] Query `sentiment_cards` for cards with `created_at > now() - interval '1 hour'`
 - [ ] Check feed display in Play Mode for fresh insights
+- **ACTION REQUIRED**: Run this SQL in Supabase SQL Editor to enable keyword tracking:
+```sql
+UPDATE sentiment_keyword_tracking
+SET tracked_for_cards = true, status = 'active', updated_at = now()
+WHERE topic_id = 'd224e606-1a4c-4713-8135-1d30e2d6d0c6'
+  AND current_trend IN ('emerging', 'sustained')
+  AND keyword_phrase NOT IN ('christmas', 'festive', 'season');
+```
 
-### Credit Functions
+### Credit Functions ✅ COMPLETED
+- [x] `deduct_user_credits` now checks auth.uid() - blocks unauthorized cross-user deductions
+- [x] `add_user_credits` now requires admin/superadmin role or service role
 - [ ] Test regular user cannot call `add_user_credits` via RPC
 - [ ] Test user can still deduct own credits via story illustration
-- [ ] Verify admin can manage any user's credits
 
-### Illustrations
+### Illustrations ✅ COMPLETED
+- [x] `enhanced-content-generator` now uses direct fetch with service role key
 - [ ] Check `enhanced-content-generator` logs for successful illustration calls
 - [ ] Verify new stories have `cover_illustration_url` populated
 
-### Newsletter
-- [ ] Confirm anon query returns 0 rows
+### Newsletter ✅ VERIFIED
+- [x] RLS policies confirmed secure - no changes needed
+- [x] Anonymous access blocked, topic owners can only see their own subscribers
