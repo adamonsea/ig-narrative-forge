@@ -23,13 +23,11 @@ Updated functions:
 - **`suggest-regional-elements`**: ✅ JWT + topic ownership
 - **`ai-event-generator`**: ✅ JWT + topic ownership
 
-## 🔶 MANUAL ACTION REQUIRED
+## ✅ MANUAL ACTIONS COMPLETED
 
-### Auth Configuration (Dashboard)
-Navigate to: https://supabase.com/dashboard/project/fpoywkjgdapgjtdeooak/auth/providers
-
-1. **Reduce OTP expiry**: Set to 300-600 seconds (5-10 minutes)
-2. **Enable leaked password protection**: Turn on HaveIBeenPwned integration
+### Auth Configuration (Dashboard) - DONE
+1. **Reduce OTP expiry**: ✅ Set to 300-600 seconds
+2. **Enable leaked password protection**: ✅ HaveIBeenPwned integration enabled
 
 ## 📋 DEFERRED (Requires Secret Setup)
 
