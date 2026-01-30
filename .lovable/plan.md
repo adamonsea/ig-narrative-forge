@@ -1,131 +1,97 @@
 
+# Plan: Add 4-Hour Scrape Frequency + Fix Full Automation Pipeline
 
-# Enhance Subject Extraction with Landmark Intelligence
+## Overview
+Two changes are needed:
+1. Add a 4-hour frequency option to the scraping settings
+2. Fix the full automation pipeline that isn't triggering auto-simplification
 
-## Summary
-Enhance the `extractSubjectMatter` function to explicitly identify and name local landmarks, buildings, and locations mentioned in stories. By passing the topic's landmark database to the AI extraction step and adding a dedicated location extraction call, OpenAI can leverage its training knowledge to render these places with approximate accuracy.
+---
 
-## Current State
-- Topics already have a `landmarks` TEXT[] column with local places (e.g., "Towner Art Gallery", "Congress Theatre", "Seven Sisters Country Park" for Eastbourne)
-- `extractSubjectMatter()` in `prompt-helpers.ts` extracts people and actions but doesn't specifically look for locations
-- The topic query in `story-illustrator/index.ts` fetches `region` but not `landmarks`
-- OpenAI has training knowledge of famous UK landmarks that we're not currently leveraging
+## Part 1: Add 4-Hour Frequency Option
 
-## Implementation Approach
+### What we'll change
+- Update the scrape frequency slider to start at 4 hours instead of 6
+- Change step size from 6 to 4 for more granular control
 
-### 1. Extend Topic Query to Include Landmarks
-Update the topics query in `story-illustrator/index.ts` to also fetch the `landmarks` array:
+### File to modify
+`src/components/TopicAutomationSettings.tsx`
 
-```typescript
-// Current
-.select('illustration_style, illustration_primary_color, region')
+Current settings (lines 243-245):
+- min: 6, max: 24, step: 6
+- Available: 6h, 12h, 18h, 24h
 
-// New
-.select('illustration_style, illustration_primary_color, region, landmarks')
-```
+New settings:
+- min: 4, max: 24, step: 4
+- Available: 4h, 8h, 12h, 16h, 20h, 24h
 
-### 2. Create New Location Extraction Function
-Add a new function `extractLocationDetails()` in `prompt-helpers.ts` that:
-- Takes story content, OpenAI key, and optional landmarks array
-- Explicitly prompts GPT-4o-mini to identify places mentioned
-- Cross-references with known landmarks for accurate naming
-- Returns structured location info (landmark name, architectural style, era)
+---
 
-```typescript
-export async function extractLocationDetails(
-  slides: SlideContent[],
-  openaiKey: string,
-  knownLandmarks?: string[],
-  region?: string
-): Promise<string | null>
-```
+## Part 2: Fix Full Automation Pipeline
 
-**Prompt design:**
-```
-Identify any SPECIFIC LOCATIONS, BUILDINGS, or LANDMARKS mentioned in this story.
+### Root Causes Identified
 
-KNOWN LOCAL LANDMARKS (prioritize exact matches):
-${knownLandmarks?.join(', ') || 'None specified'}
+1. **Conflicting settings locations**
+   - The `topics` table has `auto_simplify_enabled: true`
+   - The `topic_automation_settings` table has `auto_simplify_enabled: false`
+   - The automation functions check `topic_automation_settings`, so auto-simplify never triggers
 
-REGION: ${region || 'UK'}
+2. **Disabled orchestrator**
+   - `eezee-automation-service` is commented out in config.toml (it was causing articles to be auto-discarded)
+   - This was the main function that orchestrated the full pipeline
 
-If a location is mentioned:
-1. Use the EXACT official name if it matches a known landmark
-2. Describe the architectural style/era (e.g., "Victorian pavilion", "Art Deco theatre", "Georgian townhouse")
-3. Note any distinctive visual features from public knowledge
+3. **Mode mismatch**
+   - Eastbourne is set to `auto_gather` mode only
+   - For full automation, it should be `holiday` mode (which does gather + simplify + illustrate)
 
-Return format: "Towner Art Gallery (modernist white gallery building with angular facade)" or null if no specific location mentioned.
+### Fixes to implement
 
-Story text: [content]
-```
+**Fix A: Synchronize settings when saving automation mode**
+When a user selects `holiday` mode (full automation), ensure `auto_simplify_enabled` and `auto_illustrate_enabled` are set to `true` in `topic_automation_settings`.
 
-### 3. Update extractSubjectMatter with Location Context
-Modify the existing `extractSubjectMatter` function to accept and incorporate location context:
-- Add optional `locationContext` parameter  
-- Append location details to the prompt when available
-- Instruct the model to incorporate the setting into the subject description
+File: `src/components/TopicAutomationSettings.tsx`
+- Already does this partially on line 95-96, but we should verify it saves correctly
 
-**Enhanced prompt addition:**
-```
-LOCATION CONTEXT (incorporate into scene if relevant):
-${locationContext}
+**Fix B: Update `auto-simplify-queue` to also check `automation_mode`**
+The function should queue articles for topics where:
+- `automation_mode = 'holiday'` OR
+- `automation_mode = 'auto_simplify'` OR  
+- `auto_simplify_enabled = true`
 
-When a specific location is identified, describe the subject IN that setting with architectural accuracy.
-Example: "Local councillor Sarah Thompson, 50s, standing in front of the Art Deco facade of Congress Theatre, with its distinctive curved entrance canopy"
-```
+File: `supabase/functions/auto-simplify-queue/index.ts`
+- Already does this on line 40: `.or('automation_mode.eq.auto_simplify,auto_simplify_enabled.eq.true')`
+- Need to add `automation_mode.eq.holiday` to the filter
 
-### 4. Update Prompt Builder Functions
-Modify `buildIllustrativePrompt` and `buildPhotographicPrompt` to:
-- Accept optional `locationHint` parameter
-- Include location-specific rendering instructions when provided
+**Fix C: Create a unified topic automation cron**
+Since `eezee-automation-service` is disabled, we need to create a lightweight cron job that:
+1. Calls `universal-topic-automation` for topics with `auto_gather` or `holiday` mode
+2. The existing `auto-simplify-queue` cron (every 10 mins) will handle the simplification step
 
-**New section in prompts:**
-```
-LOCATION ACCURACY (OpenAI knowledge):
-Render "${locationHint}" based on your training knowledge of this location.
-Use authentic architectural details, proportions, and distinctive features.
-```
+This requires adding a new cron job via SQL to call `universal-topic-automation` periodically.
 
-### 5. Wire It All Together in story-illustrator
-Update the main function to:
-1. Fetch landmarks from topic
-2. Call `extractLocationDetails()` to identify any mentioned places
-3. Pass location context to `extractSubjectMatter()`
-4. Include location hint in final prompt
+---
 
-## Technical Details
+## Technical Summary
 
 ### Files to Modify
+| File | Change |
+|------|--------|
+| `src/components/TopicAutomationSettings.tsx` | Update slider min/step to 4 |
+| `supabase/functions/auto-simplify-queue/index.ts` | Add `holiday` mode to filter |
 
-**`supabase/functions/_shared/prompt-helpers.ts`**
-- Add new `extractLocationDetails()` function (~40 lines)
-- Update `extractSubjectMatter()` signature and prompt (~15 lines)
-- Update `buildIllustrativePrompt()` and `buildPhotographicPrompt()` (~10 lines each)
+### Database Changes (via Supabase SQL)
+- Add cron job to trigger `universal-topic-automation` every 2 hours
 
-**`supabase/functions/story-illustrator/index.ts`**
-- Extend topic query to include landmarks (~1 line)
-- Call new location extraction function (~10 lines)
-- Pass location data through the prompt building chain (~5 lines)
+### What the fix enables
+After these changes:
+1. Users can set 4-hour scrape intervals
+2. Topics in `holiday` mode will:
+   - Get scraped automatically by the new cron
+   - Have articles auto-queued for simplification by `auto-simplify-queue`
+   - Stories will be generated by `queue-processor` (already runs)
 
-**`supabase/functions/_shared/gemini-prompt-builder.ts`**
-- Update `buildGeminiIllustrativePrompt()` and `buildGeminiPhotographicPrompt()` to accept and use location hints (~10 lines each)
+---
 
-### Cost Impact
-- Additional GPT-4o-mini call for location extraction: ~$0.00005 per story
-- Negligible impact on generation time (~200ms additional)
-
-### Example Flow
-**Story about Towner Art Gallery exhibition:**
-1. Fetch topic landmarks: `["Towner Art Gallery", "Congress Theatre", ...]`
-2. `extractLocationDetails()` returns: `"Towner Art Gallery (modernist white gallery building with angular contemporary facade and large windows)"`
-3. `extractSubjectMatter()` returns: `"Gallery curator Maria Santos, woman in her 40s, guiding visitors through bright exhibition space inside Towner Art Gallery"`
-4. Final prompt includes: `"Render Towner Art Gallery based on your training knowledge—modernist white angular facade with floor-to-ceiling windows"`
-5. OpenAI generates image with recognizable Towner-like architecture
-
-## Benefits
-- Leverages OpenAI's existing knowledge of famous UK places
-- Stories about recognizable landmarks will have authentic visual context
-- Maintains existing behavior when no landmarks are mentioned
-- Cost-effective with cheap GPT-4o-mini extraction
-- Progressive enhancement—doesn't break existing illustrations
-
+## Expected Outcome
+- Eastbourne (and other topics) with `holiday` mode will have full end-to-end automation
+- More granular scrape frequency options (4h, 8h, 12h, 16h, 20h, 24h)
