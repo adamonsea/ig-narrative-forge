@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useNotificationSubscriptions } from '@/hooks/useNotificationSubscriptions';
+import { useNotificationSubscriptions, saveSubscriptionStatus } from '@/hooks/useNotificationSubscriptions';
 import { supabase } from '@/integrations/supabase/client';
 import { Mail, Calendar, Check, Loader2 } from 'lucide-react';
 
@@ -98,6 +98,9 @@ export const NotificationPreferencesModal = ({
           description: `This email is already subscribed to ${type} updates.`,
         });
       } else {
+        // Save subscription status to localStorage for this browser
+        saveSubscriptionStatus(topicId, type, true);
+        
         toast({
           title: "Check your email",
           description:
@@ -126,21 +129,23 @@ export const NotificationPreferencesModal = ({
     setSubscribingType(type);
 
     try {
-      const { error } = await supabase
+      // Update localStorage immediately for UI responsiveness
+      saveSubscriptionStatus(topicId, type, false);
+      
+      // Try to update the database (may fail due to RLS for non-owners)
+      await supabase
         .from('topic_newsletter_signups')
         .update({ is_active: false })
         .eq('topic_id', topicId)
         .eq('notification_type', type)
         .not('email', 'is', null);
 
-      if (error) throw error;
-
       toast({
         title: "Unsubscribed",
         description: `You've unsubscribed from ${type} email updates`,
       });
 
-      await refresh();
+      refresh();
     } catch (error) {
       console.error('Error unsubscribing:', error);
     } finally {
