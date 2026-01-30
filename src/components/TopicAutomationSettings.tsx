@@ -240,9 +240,9 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
             <Slider
               value={[scrapeFrequency]}
               onValueChange={([value]) => setScrapeFrequency(value)}
-              min={6}
+              min={4}
               max={24}
-              step={6}
+              step={4}
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">

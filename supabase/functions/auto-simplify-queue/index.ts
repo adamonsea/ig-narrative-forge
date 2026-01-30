@@ -33,11 +33,11 @@ Deno.serve(async (req) => {
     const startTime = new Date().toISOString();
     console.log(`🔄 Auto-simplify queue check started at: ${startTime}`);
 
-    // 1. Fetch topics with auto-simplify enabled
+    // 1. Fetch topics with auto-simplify enabled (including holiday mode)
     const { data: topicSettings, error: settingsError } = await supabase
       .from('topic_automation_settings')
       .select('topic_id, automation_mode, auto_simplify_enabled, quality_threshold')
-      .or('automation_mode.eq.auto_simplify,auto_simplify_enabled.eq.true');
+      .or('automation_mode.eq.auto_simplify,automation_mode.eq.holiday,auto_simplify_enabled.eq.true');
 
     if (settingsError) {
       console.error('❌ Error fetching topic settings:', settingsError);
