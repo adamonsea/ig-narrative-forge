@@ -1,11 +1,52 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 interface SubscriptionState {
   daily: boolean;
   weekly: boolean;
 }
 
+const STORAGE_KEY = 'newsletter_subscriptions';
+
+interface StoredSubscriptions {
+  [topicId: string]: {
+    daily?: boolean;
+    weekly?: boolean;
+  };
+}
+
+/**
+ * Get stored subscriptions from localStorage
+ */
+const getStoredSubscriptions = (): StoredSubscriptions => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * Save subscription status to localStorage
+ */
+export const saveSubscriptionStatus = (topicId: string, type: 'daily' | 'weekly', subscribed: boolean) => {
+  try {
+    const stored = getStoredSubscriptions();
+    if (!stored[topicId]) {
+      stored[topicId] = {};
+    }
+    stored[topicId][type] = subscribed;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+  } catch (e) {
+    console.error('Error saving subscription status:', e);
+  }
+};
+
+/**
+ * Hook to check email subscription status for a topic.
+ * Uses localStorage to track subscriptions since RLS prevents anonymous users
+ * from querying the newsletter_signups table directly.
+ */
 export const useNotificationSubscriptions = (topicId: string, enabled: boolean = true) => {
   const [emailSubscriptions, setEmailSubscriptions] = useState<SubscriptionState>({
     daily: false,
@@ -13,8 +54,7 @@ export const useNotificationSubscriptions = (topicId: string, enabled: boolean =
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkSubscriptions = useCallback(async () => {
-    // Avoid blocking UI (and avoid extra requests) when the modal isn't open.
+  const checkSubscriptions = useCallback(() => {
     if (!enabled || !topicId) {
       setEmailSubscriptions({ daily: false, weekly: false });
       setIsLoading(false);
@@ -24,33 +64,16 @@ export const useNotificationSubscriptions = (topicId: string, enabled: boolean =
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from('topic_newsletter_signups')
-        .select('notification_type, email')
-        .eq('topic_id', topicId)
-        .eq('is_active', true)
-        .not('email', 'is', null);
-
-      if (error) {
-        console.error('Error checking subscriptions:', error);
-        setIsLoading(false);
-        return;
-      }
-
-      if (data) {
-        const emailTypes = data
-          .map(sub => sub.notification_type)
-          .filter((type): type is string => type !== null);
-
-        setEmailSubscriptions({
-          daily: emailTypes.includes('daily'),
-          weekly: emailTypes.includes('weekly')
-        });
-      }
-
-      setIsLoading(false);
+      const stored = getStoredSubscriptions();
+      const topicSubs = stored[topicId] || {};
+      
+      setEmailSubscriptions({
+        daily: topicSubs.daily || false,
+        weekly: topicSubs.weekly || false
+      });
     } catch (error) {
       console.error('Error checking subscriptions:', error);
+    } finally {
       setIsLoading(false);
     }
   }, [topicId, enabled]);
