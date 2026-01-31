@@ -1,97 +1,84 @@
 
-# Plan: Add 4-Hour Scrape Frequency + Fix Full Automation Pipeline
+## Fix: Automated Image Generation for All Stories
 
-## Overview
-Two changes are needed:
-1. Add a 4-hour frequency option to the scraping settings
-2. Fix the full automation pipeline that isn't triggering auto-simplification
+### Problem Summary
+Stories created manually on Jan 30th didn't get illustrations automatically. You generated them yourself this morning around 09:20. The automation pipeline has a gap where:
+- **Full automation path works**: Scrape → Queue → `enhanced-content-generator` → `story-illustrator` ✓
+- **Manual simplification path breaks**: Dashboard Simplify → creates story but illustration may not trigger reliably
 
----
-
-## Part 1: Add 4-Hour Frequency Option
-
-### What we'll change
-- Update the scrape frequency slider to start at 4 hours instead of 6
-- Change step size from 6 to 4 for more granular control
-
-### File to modify
-`src/components/TopicAutomationSettings.tsx`
-
-Current settings (lines 243-245):
-- min: 6, max: 24, step: 6
-- Available: 6h, 12h, 18h, 24h
-
-New settings:
-- min: 4, max: 24, step: 4
-- Available: 4h, 8h, 12h, 16h, 20h, 24h
+### Root Cause
+1. There's no dedicated cron job for `auto-illustrate-stories` to catch stories without cover images
+2. When `enhanced-content-generator` calls `story-illustrator`, any error silently fails without retry
+3. The `eezee-automation-service` (which would call `auto-illustrate-stories`) is disabled
 
 ---
 
-## Part 2: Fix Full Automation Pipeline
+## Implementation Plan
 
-### Root Causes Identified
+### 1. Add Cron Job for Auto-Illustration Catch-Up
+Create a new cron job that runs periodically to find and illustrate any stories missing cover images.
 
-1. **Conflicting settings locations**
-   - The `topics` table has `auto_simplify_enabled: true`
-   - The `topic_automation_settings` table has `auto_simplify_enabled: false`
-   - The automation functions check `topic_automation_settings`, so auto-simplify never triggers
+**Database Migration:**
+```sql
+-- Add cron job to auto-illustrate stories every hour
+SELECT cron.schedule(
+  'auto-illustrate-stories-hourly',
+  '15 * * * *',  -- Every hour at :15 past
+  $$
+  SELECT net.http_post(
+    url := 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/auto-illustrate-stories',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer [ANON_KEY]"}'::jsonb,
+    body := '{"maxIllustrations": 10}'::jsonb
+  ) as request_id;
+  $$
+);
+```
 
-2. **Disabled orchestrator**
-   - `eezee-automation-service` is commented out in config.toml (it was causing articles to be auto-discarded)
-   - This was the main function that orchestrated the full pipeline
+### 2. Update `auto-illustrate-stories` Function
+Modify the function to:
+- Process stories from all topics with Holiday Mode enabled (not just when explicitly called with topicId)
+- Remove the 24-hour age restriction to catch older unillustrated stories
+- Add logging for better observability
 
-3. **Mode mismatch**
-   - Eastbourne is set to `auto_gather` mode only
-   - For full automation, it should be `holiday` mode (which does gather + simplify + illustrate)
+**Changes to `supabase/functions/auto-illustrate-stories/index.ts`:**
+- Add global scanning when no topicId provided
+- Process stories up to 7 days old (not just 24 hours)
+- Better error handling and logging
 
-### Fixes to implement
+### 3. Add Fallback in `queue-processor`
+After `enhanced-content-generator` succeeds, explicitly verify the illustration was created and queue a retry if not.
 
-**Fix A: Synchronize settings when saving automation mode**
-When a user selects `holiday` mode (full automation), ensure `auto_simplify_enabled` and `auto_illustrate_enabled` are set to `true` in `topic_automation_settings`.
-
-File: `src/components/TopicAutomationSettings.tsx`
-- Already does this partially on line 95-96, but we should verify it saves correctly
-
-**Fix B: Update `auto-simplify-queue` to also check `automation_mode`**
-The function should queue articles for topics where:
-- `automation_mode = 'holiday'` OR
-- `automation_mode = 'auto_simplify'` OR  
-- `auto_simplify_enabled = true`
-
-File: `supabase/functions/auto-simplify-queue/index.ts`
-- Already does this on line 40: `.or('automation_mode.eq.auto_simplify,auto_simplify_enabled.eq.true')`
-- Need to add `automation_mode.eq.holiday` to the filter
-
-**Fix C: Create a unified topic automation cron**
-Since `eezee-automation-service` is disabled, we need to create a lightweight cron job that:
-1. Calls `universal-topic-automation` for topics with `auto_gather` or `holiday` mode
-2. The existing `auto-simplify-queue` cron (every 10 mins) will handle the simplification step
-
-This requires adding a new cron job via SQL to call `universal-topic-automation` periodically.
+**Changes to `supabase/functions/queue-processor/index.ts`:**
+- After story creation completes, check if `cover_illustration_url` is populated
+- If not, queue a dedicated illustration job
 
 ---
 
-## Technical Summary
+## Technical Changes
 
-### Files to Modify
-| File | Change |
-|------|--------|
-| `src/components/TopicAutomationSettings.tsx` | Update slider min/step to 4 |
-| `supabase/functions/auto-simplify-queue/index.ts` | Add `holiday` mode to filter |
+### File: `auto-illustrate-stories/index.ts`
+- Line ~70: Change age filter from 24 hours to 7 days
+- Line ~55-85: Add logic to scan ALL Holiday Mode topics when no topicId provided
+- Add better success/failure logging
 
-### Database Changes (via Supabase SQL)
-- Add cron job to trigger `universal-topic-automation` every 2 hours
+### File: New Migration
+- Create hourly cron job for `auto-illustrate-stories`
 
-### What the fix enables
-After these changes:
-1. Users can set 4-hour scrape intervals
-2. Topics in `holiday` mode will:
-   - Get scraped automatically by the new cron
-   - Have articles auto-queued for simplification by `auto-simplify-queue`
-   - Stories will be generated by `queue-processor` (already runs)
+### File: `queue-processor/index.ts` (Optional Enhancement)
+- Add illustration verification step after story generation
 
 ---
 
 ## Expected Outcome
-- Eastbourne (and other topics) with `holiday` mode will have full end-to-end automation
-- More granular scrape frequency options (4h, 8h, 12h, 16h, 20h, 24h)
+1. **Immediate**: Hourly cron catches any unillustrated stories and generates images
+2. **Reliable**: Stories created via any path (manual or automated) will get illustrations within 1 hour max
+3. **Observable**: Better logging to track illustration success/failure
+
+---
+
+## Alternative Approach (Simpler)
+If you prefer minimal changes:
+- Just add the hourly cron job for `auto-illustrate-stories`
+- This acts as a safety net without modifying existing generation logic
+
+This approach ensures all Holiday Mode topics get their stories illustrated automatically, regardless of how the story was created.
