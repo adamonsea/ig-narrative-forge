@@ -49,53 +49,87 @@ Deno.serve(async (req) => {
 
     console.log('Auto-illustrate request:', { topicId, storyIds, dryRun, maxIllustrations });
 
-    // Get topic automation settings to check threshold and holiday mode illustration setting
-    let illustrationThreshold = 70; // Default
-    let shouldIllustrate = true;
+    // Determine which topics to process
+    let topicsToProcess: { topic_id: string; threshold: number }[] = [];
+    
     if (topicId) {
+      // Single topic mode - get its settings
       const { data: settings } = await supabase
         .from('topic_automation_settings')
         .select('illustration_quality_threshold, automation_mode, auto_illustrate_in_holiday')
         .eq('topic_id', topicId)
         .single();
       
-      if (settings?.illustration_quality_threshold) {
-        illustrationThreshold = settings.illustration_quality_threshold;
-      }
-      
       // Check if in holiday mode and if illustrations are disabled
       if (settings?.automation_mode === 'holiday' && settings?.auto_illustrate_in_holiday === false) {
-        shouldIllustrate = false;
         console.log('Auto-illustration disabled in holiday mode for topic:', topicId);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Auto-illustration disabled in holiday mode',
+            skipped: true,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+      
+      topicsToProcess.push({
+        topic_id: topicId,
+        threshold: settings?.illustration_quality_threshold || 70,
+      });
+    } else {
+      // Global mode - find ALL topics with holiday mode enabled (and illustration not disabled)
+      console.log('No topicId provided - scanning all Holiday Mode topics');
+      
+      const { data: holidayTopics, error: topicsError } = await supabase
+        .from('topic_automation_settings')
+        .select('topic_id, illustration_quality_threshold')
+        .eq('automation_mode', 'holiday')
+        .neq('auto_illustrate_in_holiday', false); // Include null (default) and true
+      
+      if (topicsError) {
+        console.error('Error fetching holiday topics:', topicsError);
+        throw topicsError;
+      }
+      
+      if (!holidayTopics || holidayTopics.length === 0) {
+        console.log('No Holiday Mode topics found');
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'No Holiday Mode topics to process',
+            topicsProcessed: 0,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      topicsToProcess = holidayTopics.map(t => ({
+        topic_id: t.topic_id,
+        threshold: t.illustration_quality_threshold || 70,
+      }));
+      
+      console.log(`Found ${topicsToProcess.length} Holiday Mode topics to scan`);
     }
 
-    if (!shouldIllustrate) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Auto-illustration disabled in holiday mode',
-          skipped: true,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Build query for eligible stories
+    // Extended age filter: 7 days instead of 24 hours to catch older unillustrated stories
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Build query for eligible stories across all target topics
+    // Use the minimum threshold from all topics to be inclusive, then filter per-topic
+    const minThreshold = Math.min(...topicsToProcess.map(t => t.threshold));
+    const topicIds = topicsToProcess.map(t => t.topic_id);
+    
     let query = supabase
       .from('stories')
-      .select('id, title, quality_score, created_at')
+      .select('id, title, quality_score, created_at, article_id, articles!inner(topic_id)')
       .is('cover_illustration_url', null)
       .in('status', ['ready', 'published'])
-      .gte('quality_score', illustrationThreshold)
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+      .gte('quality_score', minThreshold)
+      .gte('created_at', sevenDaysAgo)
+      .in('articles.topic_id', topicIds)
       .order('quality_score', { ascending: false })
       .limit(maxIllustrations);
-
-    if (topicId) {
-      // Filter by topic through article relationship
-      query = query.not('article_id', 'is', null);
-    }
 
     if (storyIds && storyIds.length > 0) {
       query = query.in('id', storyIds);
@@ -108,7 +142,7 @@ Deno.serve(async (req) => {
       throw queryError;
     }
 
-    console.log(`Found ${eligibleStories?.length || 0} eligible stories for illustration`);
+    console.log(`Found ${eligibleStories?.length || 0} eligible stories for illustration across ${topicsToProcess.length} topic(s)`);
 
     if (dryRun) {
       return new Response(
@@ -116,7 +150,8 @@ Deno.serve(async (req) => {
           success: true,
           dryRun: true,
           eligibleStories: eligibleStories || [],
-          threshold: illustrationThreshold,
+          topicsScanned: topicsToProcess.length,
+          ageFilterDays: 7,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -187,14 +222,15 @@ Deno.serve(async (req) => {
 
     // Log the batch operation
     await supabase.from('system_logs').insert({
-      level: 'info',
-      message: 'Auto-illustration batch completed',
+      level: successCount > 0 ? 'info' : (failureCount > 0 ? 'warn' : 'info'),
+      message: `Auto-illustration batch completed: ${successCount} success, ${failureCount} failed`,
       context: {
-        topicId,
+        topicId: topicId || 'all_holiday_topics',
+        topicsScanned: topicsToProcess.length,
         eligibleStories: eligibleStories?.length || 0,
         successCount,
         failureCount,
-        threshold: illustrationThreshold,
+        ageFilterDays: 7,
       },
       function_name: 'auto-illustrate-stories',
     });
@@ -202,11 +238,11 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        topicsScanned: topicsToProcess.length,
         eligibleStories: eligibleStories?.length || 0,
         successCount,
         failureCount,
         results,
-        threshold: illustrationThreshold,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
