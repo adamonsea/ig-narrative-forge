@@ -181,11 +181,11 @@ Deno.serve(async (req) => {
         console.log(`Generating illustration for story ${story.id} (score: ${story.quality_score})`);
 
         const { data: illustrationData, error: illustrationError } = await supabase.functions.invoke(
-          'gemini-image-generator',
+          'story-illustrator',
           {
             body: {
               storyId: story.id,
-              model: 'gemini-flash-image',
+              qualityTier: 'low', // 2 credits - OpenAI lowest tier
             },
           }
         );
