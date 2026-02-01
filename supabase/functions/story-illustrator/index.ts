@@ -8,10 +8,6 @@ import {
   buildIllustrativePrompt, 
   buildPhotographicPrompt 
 } from '../_shared/prompt-helpers.ts'
-import { 
-  buildGeminiIllustrativePrompt, 
-  buildGeminiPhotographicPrompt 
-} from '../_shared/gemini-prompt-builder.ts'
 
 /**
  * Generate context-aware animation suggestions using GPT-4o-mini
@@ -171,7 +167,7 @@ serve(async (req) => {
     
     // Model configuration mapping
     interface ModelConfig {
-      provider: 'openai' | 'lovable-gemini' | 'lovable-gemini-pro' | 'replicate-flux' | 'replicate-flux-pro' | 'midjourney';
+      provider: 'openai' | 'replicate-flux' | 'replicate-flux-pro' | 'midjourney';
       quality?: 'high' | 'medium' | 'low';
       speed?: 'fast' | 'relaxed';
       credits: number;
@@ -201,18 +197,6 @@ serve(async (req) => {
         quality: 'low',
         credits: 2,
         cost: 0.013,
-        stylePrefix: 'cinematic and editorial style, '
-      },
-      'gemini-pro-image': {
-        provider: 'lovable-gemini-pro',
-        credits: 3,
-        cost: 0.005,
-        stylePrefix: 'cinematic and editorial style, '
-      },
-      'gemini-image': {
-        provider: 'lovable-gemini',
-        credits: 1,
-        cost: 0.001,
         stylePrefix: 'cinematic and editorial style, '
       },
       'flux-1.1-pro': {
@@ -748,290 +732,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       const uint8Array = new Uint8Array(arrayBuffer);
       imageBase64 = safeBase64Encode(uint8Array);
 
-    } else if (modelConfig.provider === 'lovable-gemini') {
-      // Use Lovable AI Gateway for Gemini image generation - Budget tier
-      console.log('Generating with Gemini 2.5 Flash Image via Lovable AI Gateway...');
-      
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) {
-        throw new Error('LOVABLE_API_KEY not configured');
-      }
 
-      // Generate model-specific prompt leveraging Gemini's world knowledge
-      const geminiPrompt = illustrationStyle === 'editorial_photographic'
-        ? buildGeminiPhotographicPrompt({
-            tone: storyTone,
-            subject: subjectMatter,
-            storyTitle: story.title,
-            slideContent: slideContent || subjectMatter,
-            publicationName: story.topic?.name,
-            primaryColor
-          })
-        : buildGeminiIllustrativePrompt({
-            tone: storyTone,
-            subject: subjectMatter,
-            storyTitle: story.title,
-            slideContent: slideContent || subjectMatter,
-            publicationName: story.topic?.name,
-            primaryColor
-          });
-
-      console.log(`📝 Gemini prompt (${geminiPrompt.length} chars):`, geminiPrompt.substring(0, 200) + '...');
-
-      const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image',
-          messages: [
-            {
-              role: 'user',
-              content: geminiPrompt
-            }
-          ],
-          modalities: ['image', 'text'],
-          response_modalities: ['IMAGE'],
-          image_config: {
-            aspect_ratio: '3:2'
-          }
-        }),
-      });
-
-      if (!geminiResponse.ok) {
-        const errorText = await geminiResponse.text();
-        console.error('Gemini API error response:', errorText);
-        
-        if (geminiResponse.status === 429) {
-          throw new Error('Gemini rate limit exceeded. Please try again later.');
-        } else if (geminiResponse.status === 402) {
-          throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
-        }
-        
-        throw new Error(`Gemini API error: ${geminiResponse.status} - ${errorText}`);
-      }
-
-      const geminiData = await geminiResponse.json();
-      console.log('📊 Gemini generation metadata:', {
-        model: 'google/gemini-2.5-flash-image',
-        requestedAspectRatio: '3:2',
-        promptLength: geminiPrompt.length,
-        estimatedCost: '$0.005',
-        creditsUsed: 1
-      });
-      console.log('Gemini response structure:', JSON.stringify(geminiData, null, 2).substring(0, 1000));
-
-      // Extract image from response with comprehensive error handling
-      let base64Data: string | undefined;
-      
-      console.log('Parsing Gemini response. Available keys:', Object.keys(geminiData));
-      
-      // Try different response formats (Gemini API changes frequently)
-      if (geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url) {
-        console.log('Found image in choices[0].message.images[0].image_url.url');
-        base64Data = geminiData.choices[0].message.images[0].image_url.url;
-      } else if (geminiData.choices?.[0]?.message?.content) {
-        console.log('Checking choices[0].message.content for base64');
-        const content = geminiData.choices[0].message.content;
-        if (typeof content === 'string' && content.includes('base64,')) {
-          base64Data = content;
-        } else if (Array.isArray(content)) {
-          // Check if content is an array with image parts
-          for (const part of content) {
-            if (part?.type === 'image_url' && part?.image_url?.url) {
-              base64Data = part.image_url.url;
-              break;
-            } else if (part?.image_base64) {
-              base64Data = `data:image/png;base64,${part.image_base64}`;
-              break;
-            }
-          }
-        }
-      } else if (geminiData.data?.[0]?.url) {
-        console.log('Found image in data[0].url');
-        base64Data = geminiData.data[0].url;
-      } else if (geminiData.data?.[0]?.b64_json) {
-        console.log('Found image in data[0].b64_json');
-        base64Data = `data:image/png;base64,${geminiData.data[0].b64_json}`;
-      } else if (geminiData.images?.[0]) {
-        console.log('Found image in images[0]');
-        base64Data = geminiData.images[0];
-      }
-
-      if (!base64Data) {
-        console.error('Could not find image in Gemini response. Full response:', JSON.stringify(geminiData, null, 2));
-        throw new Error('No image data in Gemini response. The API response format may have changed.');
-      }
-
-      console.log('Found base64 data, length:', base64Data.length, 'prefix:', base64Data.substring(0, 50));
-      
-      // Remove data URL prefix if present
-      const base64String = base64Data.includes('base64,') 
-        ? base64Data.split('base64,')[1] 
-        : base64Data;
-
-      console.log('Decoding base64 string of length:', base64String.length);
-
-      // Decode base64 to direct base64 string
-      try {
-        // Validate base64 before assigning
-        atob(base64String); // Test decode
-        imageBase64 = base64String;
-        console.log('Successfully validated image base64');
-      } catch (decodeError) {
-        console.error('Failed to decode base64:', decodeError);
-        throw new Error('Failed to decode Gemini image data');
-      }
-    } else if (modelConfig.provider === 'lovable-gemini-pro') {
-      // Use Lovable AI Gateway for Gemini 3 Pro image generation with style reference
-      console.log('Generating with Gemini 3 Pro Image via Lovable AI Gateway (with style reference)...');
-      
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) {
-        throw new Error('LOVABLE_API_KEY not configured');
-      }
-
-      // Build style reference URL - use a publicly accessible URL for Gemini
-      // Gemini requires publicly accessible URLs, not localhost/preview URLs
-      // For now, we'll use an enhanced text-only prompt with very detailed style instructions
-      // since Gemini's image generation doesn't reliably support style transfer from reference images
-      
-      console.log(`📸 Using enhanced text-only prompt for style consistency (Gemini image gen limitation)`);
-      
-      // Flag for style mode - currently text-only with detailed style instructions
-      const useEnhancedStylePrompt = illustrationStyle === 'editorial_illustrative';
-
-      // Generate model-specific prompt leveraging Gemini's world knowledge
-      const geminiProPrompt = illustrationStyle === 'editorial_photographic'
-        ? buildGeminiPhotographicPrompt({
-            tone: storyTone,
-            subject: subjectMatter,
-            storyTitle: story.title,
-            slideContent: slideContent || subjectMatter,
-            publicationName: story.topic?.name,
-            primaryColor
-          })
-        : buildGeminiIllustrativePrompt({
-            tone: storyTone,
-            subject: subjectMatter,
-            storyTitle: story.title,
-            slideContent: slideContent || subjectMatter,
-            publicationName: story.topic?.name,
-            primaryColor
-          });
-
-      // Use text-only prompt (Gemini image gen doesn't reliably support style transfer from reference images)
-      console.log(`📝 Gemini Pro prompt (${geminiProPrompt.length} chars) - enhanced style specification`);
-
-      // Make Gemini Pro request
-      const geminiProResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-3-pro-image-preview',
-          messages: [
-            {
-              role: 'user',
-              content: geminiProPrompt
-            }
-          ],
-          modalities: ['image', 'text'],
-          response_modalities: ['IMAGE'],
-          image_config: {
-            aspect_ratio: '3:2'
-          }
-        }),
-      });
-
-      if (!geminiProResponse.ok) {
-        const errorText = await geminiProResponse.text();
-        console.error('Gemini Pro API error response:', errorText);
-        
-        if (geminiProResponse.status === 429) {
-          throw new Error('Gemini Pro rate limit exceeded. Please try again later.');
-        } else if (geminiProResponse.status === 402) {
-          throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
-        }
-        
-        throw new Error(`Gemini Pro API error: ${geminiProResponse.status} - ${errorText}`);
-      }
-      
-      console.log('✅ Gemini Pro request successful');
-
-      const geminiProData = await geminiProResponse.json();
-      console.log('📊 Gemini Pro generation metadata:', {
-        model: 'google/gemini-3-pro-image-preview',
-        requestedAspectRatio: '3:2',
-        promptLength: geminiProPrompt.length,
-        estimatedCost: '$0.005',
-        creditsUsed: 3
-      });
-      console.log('Gemini Pro response structure:', JSON.stringify(geminiProData, null, 2).substring(0, 1000));
-
-      // Extract image from response with comprehensive error handling
-      let base64DataPro: string | undefined;
-      
-      console.log('Parsing Gemini Pro response. Available keys:', Object.keys(geminiProData));
-      
-      // Try different response formats
-      if (geminiProData.choices?.[0]?.message?.images?.[0]?.image_url?.url) {
-        console.log('Found image in choices[0].message.images[0].image_url.url');
-        base64DataPro = geminiProData.choices[0].message.images[0].image_url.url;
-      } else if (geminiProData.choices?.[0]?.message?.content) {
-        console.log('Checking choices[0].message.content for base64');
-        const content = geminiProData.choices[0].message.content;
-        if (typeof content === 'string' && content.includes('base64,')) {
-          base64DataPro = content;
-        } else if (Array.isArray(content)) {
-          for (const part of content) {
-            if (part?.type === 'image_url' && part?.image_url?.url) {
-              base64DataPro = part.image_url.url;
-              break;
-            } else if (part?.image_base64) {
-              base64DataPro = `data:image/png;base64,${part.image_base64}`;
-              break;
-            }
-          }
-        }
-      } else if (geminiProData.data?.[0]?.url) {
-        console.log('Found image in data[0].url');
-        base64DataPro = geminiProData.data[0].url;
-      } else if (geminiProData.data?.[0]?.b64_json) {
-        console.log('Found image in data[0].b64_json');
-        base64DataPro = `data:image/png;base64,${geminiProData.data[0].b64_json}`;
-      } else if (geminiProData.images?.[0]) {
-        console.log('Found image in images[0]');
-        base64DataPro = geminiProData.images[0];
-      }
-
-      if (!base64DataPro) {
-        console.error('Could not find image in Gemini Pro response. Full response:', JSON.stringify(geminiProData, null, 2));
-        throw new Error('No image data in Gemini Pro response. The API response format may have changed.');
-      }
-
-      console.log('Found base64 data, length:', base64DataPro.length, 'prefix:', base64DataPro.substring(0, 50));
-      
-      // Remove data URL prefix if present
-      const base64StringPro = base64DataPro.includes('base64,') 
-        ? base64DataPro.split('base64,')[1] 
-        : base64DataPro;
-
-      console.log('Decoding base64 string of length:', base64StringPro.length);
-
-      // Decode base64 to direct base64 string
-      try {
-        atob(base64StringPro); // Test decode
-        imageBase64 = base64StringPro;
-        console.log('Successfully validated Gemini Pro image base64');
-      } catch (decodeError) {
-        console.error('Failed to decode base64:', decodeError);
-        throw new Error('Failed to decode Gemini Pro image data');
-      }
     } else if (modelConfig.provider === 'openai') {
       const openaiModelName = model.startsWith('gpt-image-1.5') ? 'gpt-image-1.5' : 'gpt-image-1';
 
@@ -1101,165 +802,96 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
             });
           }
           
-          // Automatically fall back to Gemini
-          console.log('🔄 Automatically falling back to Gemini image generation...');
+          // Automatically fall back to Replicate FLUX (Gemini removed from codebase)
+          console.log('🔄 Automatically falling back to Replicate FLUX image generation...');
           usedFallback = true
-          fallbackReason = 'OpenAI content moderation blocked this prompt (likely due to a celebrity name or sensitive topic). Image generated using fallback model.'
-          fallbackModel = 'Gemini'
+          fallbackReason = 'OpenAI content moderation blocked this prompt (likely due to a celebrity name or sensitive topic). Image generated using Replicate FLUX fallback.'
+          fallbackModel = 'Replicate FLUX'
           
-          const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-          if (!LOVABLE_API_KEY) {
-            throw new Error('Cannot fallback: LOVABLE_API_KEY not configured');
+          const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
+          if (!REPLICATE_API_KEY) {
+            throw new Error('OpenAI moderation blocked and Replicate not configured. Please configure REPLICATE_API_KEY.');
           }
 
-          // Use Gemini-specific prompt
-          const geminiPrompt = illustrationStyle === 'editorial_photographic'
-            ? buildGeminiPhotographicPrompt({
-                tone: storyTone,
-                subject: subjectMatter,
-                storyTitle: story.title,
-                slideContent: slideContent || subjectMatter,
-                publicationName: story.topic?.name,
-                primaryColor
-              })
-            : buildGeminiIllustrativePrompt({
-                tone: storyTone,
-                subject: subjectMatter,
-                storyTitle: story.title,
-                slideContent: slideContent || subjectMatter,
-                publicationName: story.topic?.name,
-                primaryColor
-              });
+          // FLUX-specific prompt (simplified for reliability)
+          const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${story.title}". Style: Clean editorial illustration with bold black outlines and ${primaryColor} accent color. Tone: ${storyTone}. No text.`;
 
-          const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const fluxResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Authorization': `Token ${REPLICATE_API_KEY}`,
               'Content-Type': 'application/json',
+              'Prefer': 'wait=60'
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash-image',
-              messages: [{
-                role: 'user',
-                content: geminiPrompt
-              }],
-              modalities: ['image', 'text'],
-              response_modalities: ['IMAGE'],
-              image_config: {
-                aspect_ratio: '3:2'
+              input: {
+                prompt: fluxFallbackPrompt,
+                aspect_ratio: '3:2',
+                num_outputs: 1,
+                output_format: 'png',
+                go_fast: true
               }
             }),
           });
 
-          if (!geminiResponse.ok) {
-            const geminiErrorText = await geminiResponse.text();
-            console.error('Gemini fallback failed:', geminiErrorText);
-            
-            // Check if it's a credits issue - try Replicate FLUX as tertiary fallback
-            if (geminiResponse.status === 402 || geminiErrorText.includes('Not enough credits')) {
-              console.log('🔄 Gemini credits exhausted - trying Replicate FLUX fallback...');
-              fallbackModel = 'Replicate FLUX'
-              
-              const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
-              if (!REPLICATE_API_KEY) {
-                throw new Error('OpenAI moderation blocked, Gemini credits exhausted, and Replicate not configured. Please add Lovable AI credits or configure REPLICATE_API_KEY.');
-              }
-
-              // FLUX-specific prompt (simplified for reliability)
-              const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${story.title}". Style: Clean editorial illustration with bold black outlines and ${primaryColor} accent color. Tone: ${storyTone}. No text.`;
-
-              const fluxResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Token ${REPLICATE_API_KEY}`,
-                  'Content-Type': 'application/json',
-                  'Prefer': 'wait=60'
-                },
-                body: JSON.stringify({
-                  input: {
-                    prompt: fluxFallbackPrompt,
-                    aspect_ratio: '3:2',
-                    num_outputs: 1,
-                    output_format: 'png',
-                    go_fast: true
-                  }
-                }),
-              });
-
-              if (!fluxResponse.ok) {
-                const fluxErrorText = await fluxResponse.text();
-                console.error('Replicate FLUX fallback also failed:', fluxErrorText);
-                throw new Error('All image generation providers failed. Please try again later or contact support.');
-              }
-
-              const fluxPrediction = await fluxResponse.json();
-              const fluxPredictionId = fluxPrediction.id;
-              console.log('Replicate FLUX fallback prediction started:', fluxPredictionId);
-
-              // Poll for completion (max 60 seconds)
-              let fluxAttempts = 0;
-              const fluxMaxAttempts = 60;
-              let finalFluxPrediction;
-
-              while (fluxAttempts < fluxMaxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${fluxPredictionId}`, {
-                  headers: { 'Authorization': `Token ${REPLICATE_API_KEY}` },
-                });
-
-                if (!statusResponse.ok) {
-                  throw new Error(`Replicate status check failed: ${statusResponse.status}`);
-                }
-
-                finalFluxPrediction = await statusResponse.json();
-                console.log(`Replicate FLUX status (attempt ${fluxAttempts + 1}):`, finalFluxPrediction.status);
-
-                if (finalFluxPrediction.status === 'succeeded') break;
-                if (finalFluxPrediction.status === 'failed' || finalFluxPrediction.status === 'canceled') {
-                  throw new Error(`Replicate FLUX generation failed: ${finalFluxPrediction.error || 'Unknown error'}`);
-                }
-
-                fluxAttempts++;
-              }
-
-              if (!finalFluxPrediction || finalFluxPrediction.status !== 'succeeded') {
-                throw new Error('Replicate FLUX generation timeout');
-              }
-
-              const fluxImageUrl = finalFluxPrediction.output?.[0];
-              if (!fluxImageUrl) {
-                throw new Error('No image URL in Replicate FLUX response');
-              }
-
-              console.log('Fetching FLUX fallback image from:', fluxImageUrl);
-              const fluxImageResponse = await fetch(fluxImageUrl);
-              if (!fluxImageResponse.ok) {
-                throw new Error(`Failed to fetch FLUX image: ${fluxImageResponse.status}`);
-              }
-
-              const fluxImageBlob = await fluxImageResponse.blob();
-              const fluxArrayBuffer = await fluxImageBlob.arrayBuffer();
-              const fluxUint8Array = new Uint8Array(fluxArrayBuffer);
-              imageBase64 = safeBase64Encode(fluxUint8Array);
-              
-              console.log('✅ Successfully generated image using Replicate FLUX fallback');
-            } else {
-              throw new Error(`OpenAI moderation blocked and Gemini fallback failed: ${geminiErrorText}`);
-            }
-          } else {
-            const geminiData = await geminiResponse.json();
-            const base64Data = geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-            
-            if (!base64Data || !base64Data.includes('base64,')) {
-              throw new Error('No valid image data in Gemini fallback response');
-            }
-
-            const base64String = base64Data.split('base64,')[1];
-            imageBase64 = base64String;
-            
-            console.log('✅ Successfully generated image using Gemini fallback');
+          if (!fluxResponse.ok) {
+            const fluxErrorText = await fluxResponse.text();
+            console.error('Replicate FLUX fallback failed:', fluxErrorText);
+            throw new Error('All image generation providers failed. Please try again later or contact support.');
           }
+
+          const fluxPrediction = await fluxResponse.json();
+          const fluxPredictionId = fluxPrediction.id;
+          console.log('Replicate FLUX fallback prediction started:', fluxPredictionId);
+
+          // Poll for completion (max 60 seconds)
+          let fluxAttempts = 0;
+          const fluxMaxAttempts = 60;
+          let finalFluxPrediction;
+
+          while (fluxAttempts < fluxMaxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${fluxPredictionId}`, {
+              headers: { 'Authorization': `Token ${REPLICATE_API_KEY}` },
+            });
+
+            if (!statusResponse.ok) {
+              throw new Error(`Replicate status check failed: ${statusResponse.status}`);
+            }
+
+            finalFluxPrediction = await statusResponse.json();
+            console.log(`Replicate FLUX status (attempt ${fluxAttempts + 1}):`, finalFluxPrediction.status);
+
+            if (finalFluxPrediction.status === 'succeeded') break;
+            if (finalFluxPrediction.status === 'failed' || finalFluxPrediction.status === 'canceled') {
+              throw new Error(`Replicate FLUX generation failed: ${finalFluxPrediction.error || 'Unknown error'}`);
+            }
+
+            fluxAttempts++;
+          }
+
+          if (!finalFluxPrediction || finalFluxPrediction.status !== 'succeeded') {
+            throw new Error('Replicate FLUX generation timeout');
+          }
+
+          const fluxImageUrl = finalFluxPrediction.output?.[0];
+          if (!fluxImageUrl) {
+            throw new Error('No image URL in Replicate FLUX response');
+          }
+
+          console.log('Fetching FLUX fallback image from:', fluxImageUrl);
+          const fluxImageResponse = await fetch(fluxImageUrl);
+          if (!fluxImageResponse.ok) {
+            throw new Error(`Failed to fetch FLUX image: ${fluxImageResponse.status}`);
+          }
+
+          const fluxImageBlob = await fluxImageResponse.blob();
+          const fluxArrayBuffer = await fluxImageBlob.arrayBuffer();
+          const fluxUint8Array = new Uint8Array(fluxArrayBuffer);
+          imageBase64 = safeBase64Encode(fluxUint8Array);
+          
+          console.log('✅ Successfully generated image using Replicate FLUX fallback');
           
         } else {
           // Other OpenAI errors
@@ -1413,10 +1045,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
     let actualCostUsd: number = modelConfig.cost;
 
     if (usedFallback) {
-      if (fallbackModel === 'Gemini') {
-        actualServiceName = 'lovable-gemini';
-        actualCostUsd = modelConfigs['gemini-image']?.cost ?? 0.001;
-      } else if (fallbackModel === 'Replicate FLUX') {
+      if (fallbackModel === 'Replicate FLUX') {
         actualServiceName = 'replicate-flux';
         actualCostUsd = modelConfigs['flux-dev']?.cost ?? 0.025;
       }
