@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, CalendarDays, ExternalLink } from "lucide-react";
+import { ArrowLeft, Calendar, CalendarDays, ExternalLink, Volume2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ interface Roundup {
   stats?: any;
   is_published: boolean;
   created_at: string;
+  audio_url?: string;
 }
 
 export default function BriefingsArchive() {
@@ -100,14 +101,14 @@ export default function BriefingsArchive() {
         const [dailyResult, weeklyResult] = await Promise.all([
           supabase
             .from('topic_roundups')
-            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at, audio_url')
             .eq('topic_id', topicData.id)
             .eq('roundup_type', 'daily')
             .eq('is_published', true)
             .order('period_start', { ascending: false }),
           supabase
             .from('topic_roundups')
-            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at, audio_url')
             .eq('topic_id', topicData.id)
             .eq('roundup_type', 'weekly')
             .eq('is_published', true)
@@ -136,14 +137,14 @@ export default function BriefingsArchive() {
         const [dailyResult, weeklyResult] = await Promise.all([
           supabase
             .from('topic_roundups')
-            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at, audio_url')
             .eq('topic_id', topicId)
             .eq('roundup_type', 'daily')
             .eq('is_published', true)
             .order('period_start', { ascending: false }),
           supabase
             .from('topic_roundups')
-            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at')
+            .select('id, topic_id, roundup_type, period_start, period_end, story_ids, stats, is_published, created_at, audio_url')
             .eq('topic_id', topicId)
             .eq('roundup_type', 'weekly')
             .eq('is_published', true)
@@ -300,7 +301,12 @@ export default function BriefingsArchive() {
                             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
                               <CardHeader className="pb-3">
                                 <CardTitle className="text-base flex items-start justify-between gap-2">
-                                  <span>{formattedDate}</span>
+                                  <span className="flex items-center gap-2">
+                                    {formattedDate}
+                                    {roundup.audio_url && (
+                                      <Volume2 className="w-3 h-3 text-primary" />
+                                    )}
+                                  </span>
                                   <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                 </CardTitle>
                                 <CardDescription>
@@ -349,7 +355,12 @@ export default function BriefingsArchive() {
                             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
                               <CardHeader className="pb-3">
                                 <CardTitle className="text-base flex items-start justify-between gap-2">
-                                  <span>{formattedDate}</span>
+                                  <span className="flex items-center gap-2">
+                                    {formattedDate}
+                                    {roundup.audio_url && (
+                                      <Volume2 className="w-3 h-3 text-primary" />
+                                    )}
+                                  </span>
                                   <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                 </CardTitle>
                                 <CardDescription>
