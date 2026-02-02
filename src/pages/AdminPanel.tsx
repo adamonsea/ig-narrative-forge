@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { ArchivedTopicsCleanup } from '@/components/ArchivedTopicsCleanup';
 import { SourceCleanup } from '@/components/SourceCleanup';
+import { LifecycleAudit } from '@/components/LifecycleAudit';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
@@ -100,6 +101,7 @@ export default function AdminPanel() {
           </TabsContent>
 
           <TabsContent value="maintenance" className="mt-6 space-y-6">
+            <LifecycleAudit />
             <ArchivedTopicsCleanup />
             <SourceCleanup />
           </TabsContent>
