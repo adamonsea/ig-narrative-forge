@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +10,15 @@ const corsHeaders = {
 // ElevenLabs voice options - using Alice for a British female news briefing voice
 const VOICE_ID = 'Xb7hH8MSUJpSbSDYk0k2'; // Alice - British accent, female
 const MODEL_ID = 'eleven_turbo_v2_5'; // Fastest and most cost-effective
+
+// Briefing style character limits
+const BRIEFING_LIMITS = {
+  quick: 800,        // ~20 seconds, headlines only
+  standard: 1500,    // ~1 minute, headlines + brief context
+  comprehensive: 2400, // ~2 minutes, detailed with summaries
+};
+
+type BriefingStyle = 'quick' | 'standard' | 'comprehensive';
 
 interface RoundupSlide {
   type: string;
@@ -37,6 +45,14 @@ interface Roundup {
   audio_generated_at?: string;
 }
 
+interface StoryWithCaption {
+  story_id: string;
+  title: string;
+  publication_name: string | null;
+  author: string | null;
+  caption: string | null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -61,13 +77,22 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { roundupId, forceRegenerate = false } = body;
+    const { 
+      roundupId, 
+      forceRegenerate = false,
+      briefingStyle = 'comprehensive' // Default to comprehensive for richer content
+    } = body;
 
     if (!roundupId) {
       throw new Error('roundupId is required');
     }
 
-    console.log(`🎙️ Generating audio briefing for roundup ${roundupId} (force: ${forceRegenerate})`);
+    // Validate briefing style
+    const style: BriefingStyle = ['quick', 'standard', 'comprehensive'].includes(briefingStyle) 
+      ? briefingStyle as BriefingStyle 
+      : 'comprehensive';
+
+    console.log(`🎙️ Generating ${style} audio briefing for roundup ${roundupId} (force: ${forceRegenerate})`);
 
     // Fetch roundup with topic info
     const { data: roundup, error: roundupError } = await supabase
@@ -95,8 +120,42 @@ serve(async (req) => {
       });
     }
 
-    // Build the TTS script from slide data
-    const script = buildTTSScript(roundup, topic);
+    // Extract story IDs from slide data
+    const slides = roundup.slide_data || [];
+    const storySlides = slides.filter((s: RoundupSlide) => s.type === 'story_preview');
+    const storyIds = storySlides
+      .map((s: RoundupSlide) => s.story_id)
+      .filter(Boolean) as string[];
+
+    // Fetch rich content for stories (captions from story_social_content)
+    let storiesWithCaptions: StoryWithCaption[] = [];
+    
+    if (storyIds.length > 0 && style !== 'quick') {
+      const { data: storyData, error: storyError } = await supabase
+        .from('stories')
+        .select(`
+          id,
+          title,
+          publication_name,
+          author,
+          story_social_content(caption)
+        `)
+        .in('id', storyIds);
+
+      if (!storyError && storyData) {
+        storiesWithCaptions = storyData.map((s: any) => ({
+          story_id: s.id,
+          title: s.title,
+          publication_name: s.publication_name,
+          author: s.author,
+          caption: s.story_social_content?.[0]?.caption || null,
+        }));
+      }
+      console.log(`📚 Fetched ${storiesWithCaptions.length} stories with captions`);
+    }
+
+    // Build the TTS script based on style
+    const script = buildEnhancedTTSScript(roundup, topic, storySlides, storiesWithCaptions, style);
     
     if (!script || script.length < 50) {
       console.log('⏭️ Script too short, skipping audio generation');
@@ -109,16 +168,16 @@ serve(async (req) => {
       });
     }
 
-    console.log(`📝 Generated script (${script.length} chars):\n${script.substring(0, 200)}...`);
+    console.log(`📝 Generated ${style} script (${script.length} chars):\n${script.substring(0, 300)}...`);
 
-    // Character limit to control costs (~2000 chars max)
-    const MAX_CHARS = 2000;
-    const trimmedScript = script.length > MAX_CHARS 
-      ? script.substring(0, MAX_CHARS - 50) + "... That's your briefing. Have a great day!"
+    // Apply character limit based on briefing style
+    const maxChars = BRIEFING_LIMITS[style];
+    const trimmedScript = script.length > maxChars 
+      ? script.substring(0, maxChars - 50) + "... That's your briefing. Have a great day!"
       : script;
 
     // Call ElevenLabs TTS API
-    console.log('🔊 Calling ElevenLabs TTS API...');
+    console.log(`🔊 Calling ElevenLabs TTS API (${trimmedScript.length} chars)...`);
     const ttsResponse = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
       {
@@ -190,22 +249,24 @@ serve(async (req) => {
     // Log to system_logs for tracking
     await supabase.from('system_logs').insert({
       log_type: 'audio_briefing_generated',
-      message: `Audio briefing generated for ${topic.name} ${roundup.roundup_type}`,
+      message: `Audio briefing (${style}) generated for ${topic.name} ${roundup.roundup_type}`,
       context: {
         roundup_id: roundupId,
         topic_id: topic.id,
         roundup_type: roundup.roundup_type,
+        briefing_style: style,
         script_length: trimmedScript.length,
         audio_size_bytes: audioBuffer.byteLength,
         audio_url: publicUrl,
       },
     }).then(() => {}).catch(console.warn);
 
-    console.log(`✅ Audio briefing complete: ${roundupId}`);
+    console.log(`✅ Audio briefing (${style}) complete: ${roundupId}`);
 
     return new Response(JSON.stringify({
       success: true,
       audio_url: publicUrl,
+      briefing_style: style,
       script_length: trimmedScript.length,
       audio_size_bytes: audioBuffer.byteLength,
     }), {
@@ -226,10 +287,15 @@ serve(async (req) => {
 });
 
 /**
- * Build a natural-sounding TTS script from roundup slide data
+ * Build an enhanced TTS script based on briefing style
  */
-function buildTTSScript(roundup: Roundup, topic: Topic): string {
-  const slides = roundup.slide_data || [];
+function buildEnhancedTTSScript(
+  roundup: Roundup, 
+  topic: Topic, 
+  storySlides: RoundupSlide[],
+  storiesWithCaptions: StoryWithCaption[],
+  style: BriefingStyle
+): string {
   const isDaily = roundup.roundup_type === 'daily';
   
   // Format date naturally
@@ -237,53 +303,180 @@ function buildTTSScript(roundup: Roundup, topic: Topic): string {
   const dayName = periodDate.toLocaleDateString('en-GB', { weekday: 'long' });
   const monthDay = periodDate.toLocaleDateString('en-GB', { month: 'long', day: 'numeric' });
   
-  const lines: string[] = [];
+  // Create a map for quick caption lookup
+  const captionMap = new Map<string, StoryWithCaption>();
+  storiesWithCaptions.forEach(s => captionMap.set(s.story_id, s));
   
-  // Intro
-  if (isDaily) {
-    lines.push(`Good morning! Here's your ${topic.name} news for ${dayName}, ${monthDay}.`);
+  const lines: string[] = [];
+  const totalStories = storySlides.length;
+  
+  // Intro based on style
+  if (style === 'quick') {
+    if (isDaily) {
+      lines.push(`Good morning! Here's your ${topic.name} news for ${dayName}.`);
+    } else {
+      lines.push(`Hello! Here's your weekly ${topic.name} roundup.`);
+    }
   } else {
-    lines.push(`Hello! Here's your weekly ${topic.name} roundup.`);
+    if (isDaily) {
+      lines.push(`Good morning! Here's your ${topic.name} news briefing for ${dayName}, ${monthDay}.`);
+    } else {
+      lines.push(`Hello! Here's your weekly ${topic.name} roundup for the week of ${monthDay}.`);
+    }
+    
+    if (totalStories > 5) {
+      lines.push(`We've got ${totalStories} stories to share, but let me highlight the most important ones.`);
+    }
   }
   
   lines.push(''); // Pause
   
-  // Extract story headlines from slide data
-  const storySlides = slides.filter(s => s.type === 'story_preview');
-  
   if (storySlides.length === 0) {
     lines.push("There are no stories to report today.");
-  } else if (storySlides.length === 1) {
-    lines.push("Today's top story:");
-    lines.push(cleanHeadline(storySlides[0].content));
   } else {
-    // Multiple stories
-    const ordinals = ['First up', 'Next', 'Also today', 'And finally', 'Plus'];
+    // Different content depth based on style
+    switch (style) {
+      case 'quick':
+        buildQuickScript(lines, storySlides, captionMap);
+        break;
+      case 'standard':
+        buildStandardScript(lines, storySlides, captionMap);
+        break;
+      case 'comprehensive':
+        buildComprehensiveScript(lines, storySlides, captionMap);
+        break;
+    }
     
-    storySlides.slice(0, 5).forEach((slide, index) => {
-      const prefix = index < ordinals.length ? ordinals[index] : 'Also';
-      const headline = cleanHeadline(slide.content);
-      
-      // Add source attribution if available
-      const source = slide.publication_name || slide.author;
-      if (source && index < 3) {
-        lines.push(`${prefix}: ${headline}. From ${source}.`);
-      } else {
-        lines.push(`${prefix}: ${headline}.`);
-      }
-    });
-    
-    if (storySlides.length > 5) {
-      lines.push(`Plus ${storySlides.length - 5} more ${storySlides.length - 5 === 1 ? 'story' : 'stories'} in your feed.`);
+    // Mention remaining stories if there are more
+    const mentionedCount = style === 'quick' ? 5 : style === 'standard' ? 5 : 5;
+    const remaining = totalStories - Math.min(mentionedCount, storySlides.length);
+    if (remaining > 0) {
+      lines.push(`Plus ${remaining} more ${remaining === 1 ? 'story' : 'stories'} in your feed.`);
     }
   }
   
   lines.push(''); // Pause
   
   // Outro
-  lines.push("That's your briefing. Have a great day!");
+  if (isDaily) {
+    lines.push("That's your briefing. Have a great day!");
+  } else {
+    lines.push("That's your briefing. Have a great week!");
+  }
   
   return lines.join('\n');
+}
+
+/**
+ * Quick style: Headlines only with brief transitions
+ */
+function buildQuickScript(
+  lines: string[], 
+  storySlides: RoundupSlide[],
+  captionMap: Map<string, StoryWithCaption>
+): void {
+  const ordinals = ['First up', 'Next', 'Also today', 'And finally', 'Plus'];
+  
+  storySlides.slice(0, 5).forEach((slide, index) => {
+    const prefix = index < ordinals.length ? ordinals[index] : 'Also';
+    const headline = cleanHeadline(slide.content);
+    lines.push(`${prefix}: ${headline}.`);
+  });
+}
+
+/**
+ * Standard style: Headlines with brief context for top stories
+ */
+function buildStandardScript(
+  lines: string[], 
+  storySlides: RoundupSlide[],
+  captionMap: Map<string, StoryWithCaption>
+): void {
+  storySlides.slice(0, 5).forEach((slide, index) => {
+    const storyData = slide.story_id ? captionMap.get(slide.story_id) : null;
+    const headline = storyData?.title || cleanHeadline(slide.content);
+    const source = storyData?.publication_name || slide.publication_name;
+    
+    if (index === 0) {
+      // Lead story with brief context
+      lines.push(`Our top story: ${headline}.`);
+      
+      // Add first sentence of caption if available
+      if (storyData?.caption) {
+        const firstSentence = extractFirstSentence(storyData.caption);
+        if (firstSentence) {
+          lines.push(firstSentence);
+        }
+      }
+    } else if (index < 3) {
+      // Stories 2-3 with source attribution
+      const prefix = index === 1 ? 'Also making news' : 'Meanwhile';
+      if (source) {
+        lines.push(`${prefix}: ${headline}. From ${source}.`);
+      } else {
+        lines.push(`${prefix}: ${headline}.`);
+      }
+    } else {
+      // Stories 4-5 brief mention
+      const prefix = index === 3 ? 'Also today' : 'And';
+      lines.push(`${prefix}: ${headline}.`);
+    }
+  });
+}
+
+/**
+ * Comprehensive style: Rich detail with summaries and context
+ */
+function buildComprehensiveScript(
+  lines: string[], 
+  storySlides: RoundupSlide[],
+  captionMap: Map<string, StoryWithCaption>
+): void {
+  storySlides.slice(0, 5).forEach((slide, index) => {
+    const storyData = slide.story_id ? captionMap.get(slide.story_id) : null;
+    const headline = storyData?.title || cleanHeadline(slide.content);
+    const source = storyData?.publication_name || slide.publication_name;
+    
+    if (index === 0) {
+      // Lead story with full detail
+      lines.push(`Our top story this week: ${headline}.`);
+      
+      // Add multiple sentences from caption for lead story
+      if (storyData?.caption) {
+        const summary = extractSummary(storyData.caption, 3); // Up to 3 sentences
+        if (summary) {
+          lines.push(summary);
+        }
+      }
+      
+      if (source) {
+        lines.push(`Reported by ${source}.`);
+      }
+      lines.push(''); // Pause after lead story
+      
+    } else if (index < 3) {
+      // Stories 2-3 with context
+      const categoryIntros = [
+        'In other news',
+        'Also this week',
+      ];
+      const prefix = categoryIntros[index - 1] || 'Also';
+      lines.push(`${prefix}: ${headline}.`);
+      
+      // Add one sentence of context
+      if (storyData?.caption) {
+        const context = extractFirstSentence(storyData.caption);
+        if (context) {
+          lines.push(context);
+        }
+      }
+      
+    } else {
+      // Stories 4-5 with transitions
+      const prefix = index === 3 ? 'Meanwhile' : 'And finally';
+      lines.push(`${prefix}: ${headline}.`);
+    }
+  });
 }
 
 /**
@@ -305,4 +498,49 @@ function cleanHeadline(text: string): string {
   cleaned = cleaned.replace(/[.,;:!?]+$/, '');
   
   return cleaned;
+}
+
+/**
+ * Extract the first sentence from a caption
+ */
+function extractFirstSentence(caption: string): string | null {
+  if (!caption) return null;
+  
+  // Remove emojis and clean up
+  let cleaned = caption.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  // Find first sentence (ending with . ! or ?)
+  const match = cleaned.match(/^[^.!?]+[.!?]/);
+  if (match) {
+    return match[0].trim();
+  }
+  
+  // If no sentence found, return first 100 chars
+  if (cleaned.length > 100) {
+    return cleaned.substring(0, 100).trim() + '.';
+  }
+  
+  return cleaned || null;
+}
+
+/**
+ * Extract a summary (multiple sentences) from a caption
+ */
+function extractSummary(caption: string, maxSentences: number): string | null {
+  if (!caption) return null;
+  
+  // Remove emojis and clean up
+  let cleaned = caption.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  // Split into sentences
+  const sentences = cleaned.match(/[^.!?]+[.!?]+/g);
+  if (!sentences || sentences.length === 0) {
+    return cleaned.length > 200 ? cleaned.substring(0, 200).trim() + '.' : cleaned;
+  }
+  
+  // Take up to maxSentences
+  const selected = sentences.slice(0, maxSentences);
+  return selected.join(' ').trim();
 }
