@@ -8,8 +8,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ElevenLabs voice options - using Sarah for a natural, engaging news briefing voice
-const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah
+// ElevenLabs voice options - using Alice for a British female news briefing voice
+const VOICE_ID = 'Xb7hH8MSUJpSbSDYk0k2'; // Alice - British accent, female
 const MODEL_ID = 'eleven_turbo_v2_5'; // Fastest and most cost-effective
 
 interface RoundupSlide {
