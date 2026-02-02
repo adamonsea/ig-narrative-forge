@@ -99,6 +99,7 @@ function isValidIllustrationStyle(value: unknown): value is IllustrationStyle {
 const requestSchema = z.object({
   storyId: z.string().uuid(),
   model: z.string().max(100).optional().default('gpt-image-1.5-medium'),
+  isAutomated: z.boolean().optional().default(false), // Lifecycle tracking flag
 });
 
 serve(async (req) => {
@@ -123,7 +124,7 @@ serve(async (req) => {
       );
     }
 
-    const { storyId, model } = validated.data;
+    const { storyId, model, isAutomated } = validated.data;
 
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
@@ -1132,15 +1133,22 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
     );
 
     // Update story with illustration, animation suggestions (clearing any existing animation)
+    const updateData: Record<string, any> = {
+      cover_illustration_url: imageUrl,
+      cover_illustration_prompt: illustrationPrompt,
+      illustration_generated_at: new Date().toISOString(),
+      animated_illustration_url: null,  // Clear animation when new static image is generated
+      animation_suggestions: animationSuggestions.length > 0 ? animationSuggestions : null,
+    };
+    
+    // Only set automation flag if explicitly marked as automated
+    if (isAutomated) {
+      updateData.is_auto_illustrated = true;
+    }
+    
     const { error: updateError } = await supabase
       .from('stories')
-      .update({
-        cover_illustration_url: imageUrl,
-        cover_illustration_prompt: illustrationPrompt,
-        illustration_generated_at: new Date().toISOString(),
-        animated_illustration_url: null,  // Clear animation when new static image is generated
-        animation_suggestions: animationSuggestions.length > 0 ? animationSuggestions : null
-      })
+      .update(updateData)
       .eq('id', storyId)
 
     if (updateError) {

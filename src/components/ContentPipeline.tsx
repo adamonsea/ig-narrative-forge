@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArticlePipelinePanel } from '@/components/ArticlePipelinePanel';
 import { ApprovedStoriesPanel } from '@/components/ApprovedStoriesPanel';
+import { StoryLifecycleTooltip } from '@/components/StoryLifecycleTooltip';
 import { 
   CheckCircle2, 
   X, 
@@ -53,6 +54,14 @@ interface Story {
   slides: Slide[];
   article?: StoryArticle;
   articles?: StoryArticle;
+  // Lifecycle tracking
+  simplified_at?: string | null;
+  illustration_generated_at?: string | null;
+  animation_generated_at?: string | null;
+  is_auto_gathered?: boolean;
+  is_auto_simplified?: boolean;
+  is_auto_illustrated?: boolean;
+  is_auto_animated?: boolean;
 }
 
 interface ContentPipelineProps {
@@ -445,7 +454,18 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                 {story.slides.length} slides
                               </Badge>
                             </div>
-                            <h3 className="font-medium text-sm mb-1 line-clamp-2">{story.title}</h3>
+                            <StoryLifecycleTooltip
+                              gatheredAt={story.created_at}
+                              simplifiedAt={story.simplified_at}
+                              illustratedAt={story.illustration_generated_at}
+                              animatedAt={story.animation_generated_at}
+                              isAutoGathered={story.is_auto_gathered}
+                              isAutoSimplified={story.is_auto_simplified}
+                              isAutoIllustrated={story.is_auto_illustrated}
+                              isAutoAnimated={story.is_auto_animated}
+                            >
+                              <h3 className="font-medium text-sm mb-1 line-clamp-2 cursor-help">{story.title}</h3>
+                            </StoryLifecycleTooltip>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                               <User className="w-3 h-3" />
                               <span>{story.article?.author || 'Unknown Author'}</span>

@@ -292,11 +292,13 @@ serve(async (req) => {
 
     console.log('📤 Uploaded to:', publicUrl);
 
-    // Update story record
+    // Update story record with animation and lifecycle tracking
     const { error: updateError } = await supabase
       .from('stories')
       .update({
         animated_illustration_url: publicUrl,
+        animation_generated_at: new Date().toISOString(),
+        is_auto_animated: false, // Manual animations - set to true only from automation
         updated_at: new Date().toISOString()
       })
       .eq('id', storyId);

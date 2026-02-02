@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import { StyleTooltip } from '@/components/ui/style-tooltip';
+import { StoryLifecycleTooltip } from '@/components/StoryLifecycleTooltip';
 
 // Types
 interface Slide {
@@ -77,6 +78,14 @@ interface Story {
   content_generation_queue?: any;
   scheduled_publish_at?: string | null;
   drip_queued_at?: string | null;
+  // Lifecycle tracking
+  simplified_at?: string | null;
+  illustration_generated_at?: string | null;
+  animation_generated_at?: string | null;
+  is_auto_gathered?: boolean;
+  is_auto_simplified?: boolean;
+  is_auto_illustrated?: boolean;
+  is_auto_animated?: boolean;
 }
 
 export const FixedApprovedStoriesPanel = () => {
@@ -401,7 +410,18 @@ export const FixedApprovedStoriesPanel = () => {
                               {story.slides.length} slides
                             </Badge>
                           </div>
-                          <h3 className="font-medium text-sm mb-1 line-clamp-2">{story.title}</h3>
+                          <StoryLifecycleTooltip
+                            gatheredAt={story.created_at}
+                            simplifiedAt={story.simplified_at}
+                            illustratedAt={story.illustration_generated_at}
+                            animatedAt={story.animation_generated_at}
+                            isAutoGathered={story.is_auto_gathered}
+                            isAutoSimplified={story.is_auto_simplified}
+                            isAutoIllustrated={story.is_auto_illustrated}
+                            isAutoAnimated={story.is_auto_animated}
+                          >
+                            <h3 className="font-medium text-sm mb-1 line-clamp-2 cursor-help">{story.title}</h3>
+                          </StoryLifecycleTooltip>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                             <span>{story.author || article?.author || 'Unknown Author'}</span>
                             <span>•</span>
