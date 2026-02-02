@@ -33,6 +33,7 @@ interface DailyRoundupEmailProps {
   baseUrl: string;
   unsubscribeUrl?: string;
   isSlowNewsDay?: boolean;
+  audioUrl?: string; // Audio briefing URL if available
 }
 
 export const DailyRoundupEmail = ({
@@ -45,6 +46,7 @@ export const DailyRoundupEmail = ({
   baseUrl = 'https://curatr.pro',
   unsubscribeUrl,
   isSlowNewsDay = false,
+  audioUrl,
 }: DailyRoundupEmailProps) => (
   <Html style={html}>
     <Head>
@@ -116,6 +118,11 @@ export const DailyRoundupEmail = ({
         <Hr style={hr} />
 
         <Section style={ctaSection}>
+          {audioUrl && (
+            <Link href={audioUrl} target="_blank" style={ctaButtonListen}>
+              🎧 Listen
+            </Link>
+          )}
           <Link href={`${baseUrl}/feed/${topicSlug}/daily/${dateParam}`} target="_blank" style={ctaButtonPrimary}>
             View Daily Briefing →
           </Link>
@@ -258,6 +265,18 @@ const emptyText = {
 const ctaSection = {
   padding: '16px 32px 24px',
   textAlign: 'center' as const,
+}
+
+const ctaButtonListen = {
+  backgroundColor: '#10b981',
+  borderRadius: '8px',
+  color: '#ffffff',
+  display: 'inline-block',
+  fontSize: '14px',
+  fontWeight: '700',
+  padding: '12px 24px',
+  textDecoration: 'none',
+  marginRight: '12px',
 }
 
 const ctaButtonPrimary = {

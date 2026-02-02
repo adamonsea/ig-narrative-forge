@@ -308,7 +308,10 @@ function buildEnhancedTTSScript(
   storiesWithCaptions.forEach(s => captionMap.set(s.story_id, s));
   
   const lines: string[] = [];
-  const totalStories = storySlides.length;
+  
+  // Use the actual total story count from roundup stats, not just the slide count
+  const totalStories = (roundup.stats as { story_count?: number })?.story_count || storySlides.length;
+  const previewedCount = storySlides.length;
   
   // Intro based on style
   if (style === 'quick') {
@@ -324,8 +327,9 @@ function buildEnhancedTTSScript(
       lines.push(`Hello! Here's your weekly ${topic.name} roundup for the week of ${monthDay}.`);
     }
     
-    if (totalStories > 5) {
-      lines.push(`We've got ${totalStories} stories to share, but let me highlight the most important ones.`);
+    // Always mention the total story count when there are stories
+    if (totalStories > 0) {
+      lines.push(`We've got ${totalStories} ${totalStories === 1 ? 'story' : 'stories'} this week, but let me highlight the ones you engaged with most.`);
     }
   }
   
@@ -349,7 +353,7 @@ function buildEnhancedTTSScript(
     
     // Mention remaining stories if there are more
     const mentionedCount = style === 'quick' ? 5 : style === 'standard' ? 5 : 5;
-    const remaining = totalStories - Math.min(mentionedCount, storySlides.length);
+    const remaining = totalStories - Math.min(mentionedCount, previewedCount);
     if (remaining > 0) {
       lines.push(`Plus ${remaining} more ${remaining === 1 ? 'story' : 'stories'} in your feed.`);
     }

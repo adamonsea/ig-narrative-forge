@@ -323,6 +323,24 @@ serve(async (req) => {
     const dateParam = dateEnd.toISOString().split('T')[0];
     const weekStartParam = dateStart.toISOString().split('T')[0];
     
+    // Fetch roundup for audio_url and total story count
+    const roundupType = notificationType === 'daily' ? 'daily' : 'weekly';
+    const { data: roundup } = await supabase
+      .from('topic_roundups')
+      .select('audio_url, stats')
+      .eq('topic_id', topicId)
+      .eq('roundup_type', roundupType)
+      .gte('period_start', dateStart.toISOString())
+      .lte('period_start', dateEnd.toISOString())
+      .order('period_start', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    const audioUrl = roundup?.audio_url || undefined;
+    const totalStoryCount = (roundup?.stats as { story_count?: number })?.story_count;
+    
+    console.log(`🎧 Audio URL: ${audioUrl ? 'found' : 'none'}, Total stories: ${totalStoryCount || 'N/A'}`);
+    
     if (notificationType === 'daily') {
       emailHtml = await renderAsync(
         React.createElement(DailyRoundupEmail, {
@@ -333,7 +351,8 @@ serve(async (req) => {
           dateParam,
           stories,
           baseUrl: BASE_URL,
-          isSlowNewsDay
+          isSlowNewsDay,
+          audioUrl
         })
       );
     } else {
@@ -349,7 +368,9 @@ serve(async (req) => {
           weekEnd: weekEndDisplay,
           weekStartParam,
           stories,
-          baseUrl: BASE_URL
+          baseUrl: BASE_URL,
+          audioUrl,
+          totalStoryCount
         })
       );
     }
