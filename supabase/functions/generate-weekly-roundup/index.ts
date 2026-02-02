@@ -87,14 +87,40 @@ serve(async (req) => {
       .eq('is_published', true)
       .in('status', ['ready', 'published'])
       .gte('created_at', weekStart.toISOString())
-      .lte('created_at', weekEnd.toISOString())
-      .order('created_at', { ascending: false });
+      .lte('created_at', weekEnd.toISOString());
 
     if (storiesError) {
       throw new Error(`Failed to fetch stories: ${storiesError.message}`);
     }
 
     const storyCount = stories?.length || 0;
+
+    // Get engagement counts for these stories (sort by popularity)
+    let sortedStories = stories || [];
+    if (storyCount > 0) {
+      const storyIds = stories!.map(s => s.id);
+      const { data: engagementData } = await supabase
+        .from('story_interactions')
+        .select('story_id')
+        .in('story_id', storyIds)
+        .eq('interaction_type', 'swipe');
+
+      // Count swipes per story
+      const swipeCountMap = new Map<string, number>();
+      engagementData?.forEach(row => {
+        swipeCountMap.set(row.story_id, (swipeCountMap.get(row.story_id) || 0) + 1);
+      });
+
+      // Sort by swipe count (popularity), fallback to newest
+      sortedStories = [...stories!].sort((a, b) => {
+        const aSwipes = swipeCountMap.get(a.id) || 0;
+        const bSwipes = swipeCountMap.get(b.id) || 0;
+        if (bSwipes !== aSwipes) return bSwipes - aSwipes;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+      console.log(`📊 Top story by engagement: "${sortedStories[0]?.title}" with ${swipeCountMap.get(sortedStories[0]?.id) || 0} swipes`);
+    }
 
     if (storyCount === 0) {
       console.log('⏭️ No stories found for this week, skipping roundup generation');
@@ -116,8 +142,8 @@ serve(async (req) => {
       content: `Your Week in ${topic.name}\n\n${storyCount} ${storyCount === 1 ? 'story' : 'stories'}`
     });
 
-    // Top 10 story preview slides
-    const topStories = stories.slice(0, 10);
+    // Top 10 story preview slides (sorted by popularity)
+    const topStories = sortedStories.slice(0, 10);
     topStories.forEach((story, index) => {
       slides.push({
         type: 'story_preview',
@@ -135,7 +161,7 @@ serve(async (req) => {
     // Stats slide
     slides.push({
       type: 'stats',
-      content: `This week's highlights:\n\n${storyCount} stories published\n${topStories.length} featured stories\n${stories.length - topStories.length} more to explore`
+      content: `This week's highlights:\n\n${storyCount} stories published\n${topStories.length} featured stories\n${sortedStories.length - topStories.length} more to explore`
     });
 
     // Outro slide
@@ -152,7 +178,7 @@ serve(async (req) => {
         roundup_type: 'weekly',
         period_start: weekStart.toISOString(),
         period_end: weekEnd.toISOString(),
-        story_ids: stories.map(s => s.id),
+        story_ids: sortedStories.map(s => s.id),
         slide_data: slides,
         stats: {
           story_count: storyCount,
