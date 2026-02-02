@@ -2765,6 +2765,7 @@ export type Database = {
       stories: {
         Row: {
           animated_illustration_url: string | null
+          animation_generated_at: string | null
           animation_suggestions: string[] | null
           article_id: string | null
           audience_expertise: string | null
@@ -2776,6 +2777,10 @@ export type Database = {
           drip_queued_at: string | null
           id: string
           illustration_generated_at: string | null
+          is_auto_animated: boolean | null
+          is_auto_gathered: boolean | null
+          is_auto_illustrated: boolean | null
+          is_auto_simplified: boolean | null
           is_parliamentary: boolean | null
           is_published: boolean
           last_quality_check: string | null
@@ -2787,6 +2792,7 @@ export type Database = {
           scheduled_publish_at: string | null
           selected_cover_id: string | null
           shared_content_id: string | null
+          simplified_at: string | null
           slide_type: string | null
           slug: string | null
           status: string
@@ -2798,6 +2804,7 @@ export type Database = {
         }
         Insert: {
           animated_illustration_url?: string | null
+          animation_generated_at?: string | null
           animation_suggestions?: string[] | null
           article_id?: string | null
           audience_expertise?: string | null
@@ -2809,6 +2816,10 @@ export type Database = {
           drip_queued_at?: string | null
           id?: string
           illustration_generated_at?: string | null
+          is_auto_animated?: boolean | null
+          is_auto_gathered?: boolean | null
+          is_auto_illustrated?: boolean | null
+          is_auto_simplified?: boolean | null
           is_parliamentary?: boolean | null
           is_published?: boolean
           last_quality_check?: string | null
@@ -2820,6 +2831,7 @@ export type Database = {
           scheduled_publish_at?: string | null
           selected_cover_id?: string | null
           shared_content_id?: string | null
+          simplified_at?: string | null
           slide_type?: string | null
           slug?: string | null
           status?: string
@@ -2831,6 +2843,7 @@ export type Database = {
         }
         Update: {
           animated_illustration_url?: string | null
+          animation_generated_at?: string | null
           animation_suggestions?: string[] | null
           article_id?: string | null
           audience_expertise?: string | null
@@ -2842,6 +2855,10 @@ export type Database = {
           drip_queued_at?: string | null
           id?: string
           illustration_generated_at?: string | null
+          is_auto_animated?: boolean | null
+          is_auto_gathered?: boolean | null
+          is_auto_illustrated?: boolean | null
+          is_auto_simplified?: boolean | null
           is_parliamentary?: boolean | null
           is_published?: boolean
           last_quality_check?: string | null
@@ -2853,6 +2870,7 @@ export type Database = {
           scheduled_publish_at?: string | null
           selected_cover_id?: string | null
           shared_content_id?: string | null
+          simplified_at?: string | null
           slide_type?: string | null
           slug?: string | null
           status?: string

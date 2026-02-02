@@ -1052,7 +1052,10 @@ Return in JSON format:
         audience_expertise: topicExpertise,
         slide_type: finalSlideType,
         quality_score: article.content_quality_score,
-        cover_illustration_url: article.image_url || null
+        cover_illustration_url: article.image_url || null,
+        // Lifecycle tracking
+        simplified_at: new Date().toISOString(),
+        is_auto_simplified: autoSimplifyEnabled, // Flag if automated
       };
       
       // Set appropriate IDs based on context - mutually exclusive
