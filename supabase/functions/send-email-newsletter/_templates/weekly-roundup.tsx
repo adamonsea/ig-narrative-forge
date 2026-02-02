@@ -33,6 +33,8 @@ interface WeeklyRoundupEmailProps {
   stories: EmailStory[];
   baseUrl: string;
   unsubscribeUrl?: string;
+  audioUrl?: string; // Audio briefing URL if available
+  totalStoryCount?: number; // Total stories in the week (not just email preview)
 }
 
 export const WeeklyRoundupEmail = ({
@@ -45,7 +47,12 @@ export const WeeklyRoundupEmail = ({
   stories = [],
   baseUrl = 'https://curatr.pro',
   unsubscribeUrl,
-}: WeeklyRoundupEmailProps) => (
+  audioUrl,
+  totalStoryCount,
+}: WeeklyRoundupEmailProps) => {
+  const displayStoryCount = totalStoryCount || stories.length;
+  
+  return (
   <Html style={html}>
     <Head>
       <meta name="color-scheme" content="light" />
@@ -57,7 +64,7 @@ export const WeeklyRoundupEmail = ({
         `}
       </style>
     </Head>
-    <Preview>{topicName} Weekly Briefing • {stories.length} stories</Preview>
+    <Preview>{topicName} Weekly Briefing • {displayStoryCount} stories</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
@@ -66,7 +73,7 @@ export const WeeklyRoundupEmail = ({
           ) : (
             <Heading style={h1}>{topicName}</Heading>
           )}
-          <Text style={subtitle}>Weekly Briefing • {weekStart} – {weekEnd}</Text>
+          <Text style={subtitle}>Weekly Briefing • {weekStart} – {weekEnd} • {displayStoryCount} stories</Text>
         </Section>
 
         <Hr style={hr} />
@@ -108,6 +115,11 @@ export const WeeklyRoundupEmail = ({
         <Hr style={hr} />
 
         <Section style={ctaSection}>
+          {audioUrl && (
+            <Link href={audioUrl} target="_blank" style={ctaButtonListen}>
+              🎧 Listen
+            </Link>
+          )}
           <Link href={`${baseUrl}/feed/${topicSlug}/weekly/${weekStartParam}`} target="_blank" style={ctaButtonPrimary}>
             View Weekly Briefing →
           </Link>
@@ -128,7 +140,8 @@ export const WeeklyRoundupEmail = ({
       </Container>
     </Body>
   </Html>
-)
+  );
+}
 
 export default WeeklyRoundupEmail
 
@@ -250,6 +263,18 @@ const emptyText = {
 const ctaSection = {
   padding: '16px 32px 24px',
   textAlign: 'center' as const,
+}
+
+const ctaButtonListen = {
+  backgroundColor: '#10b981',
+  borderRadius: '8px',
+  color: '#ffffff',
+  display: 'inline-block',
+  fontSize: '14px',
+  fontWeight: '700',
+  padding: '12px 24px',
+  textDecoration: 'none',
+  marginRight: '12px',
 }
 
 const ctaButtonPrimary = {
