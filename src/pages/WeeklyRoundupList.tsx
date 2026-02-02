@@ -436,10 +436,15 @@ export default function WeeklyRoundupList() {
   const endDate = parseISO(roundup.period_end);
   const startDay = format(startDate, 'd');
   const endDay = format(endDate, 'd');
-  const monthYear = format(startDate, 'MMM');
+  const startMonth = format(startDate, 'MMM');
+  const endMonth = format(endDate, 'MMM');
   const startDayOfWeek = format(startDate, 'EEE');
   const endDayOfWeek = format(endDate, 'EEE');
-  const formattedDateRange = `${monthYear} ${startDay}-${endDay} (${startDayOfWeek}-${endDayOfWeek})`;
+  
+  // Show both months if they differ (e.g., "Jan 29 - Feb 1" instead of "Jan 29-1")
+  const formattedDateRange = startMonth === endMonth
+    ? `${startMonth} ${startDay}-${endDay} (${startDayOfWeek}-${endDayOfWeek})`
+    : `${startMonth} ${startDay} - ${endMonth} ${endDay} (${startDayOfWeek}-${endDayOfWeek})`;
   const hasActiveFilters = selectedKeywords.length > 0 || selectedLocations.length > 0 || selectedSources.length > 0;
 
   return (
