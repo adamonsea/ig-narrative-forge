@@ -505,6 +505,43 @@ function cleanHeadline(text: string): string {
 }
 
 /**
+ * Protect abbreviations and initials from being treated as sentence endings
+ */
+function protectAbbreviations(text: string): string {
+  // Common abbreviations
+  const abbreviations = [
+    'Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Rev', 'Sr', 'Jr', 'St', 'Mt',
+    'vs', 'etc', 'i.e', 'e.g', 'a.m', 'p.m', 'Inc', 'Ltd', 'Co', 'Corp',
+    'Jan', 'Feb', 'Mar', 'Apr', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  
+  let protected_text = text;
+  
+  // Protect common abbreviations (Mr. Mrs. Dr. etc.)
+  abbreviations.forEach(abbr => {
+    const regex = new RegExp(`\\b${abbr}\\.`, 'gi');
+    protected_text = protected_text.replace(regex, `${abbr}‧`); // Use middle dot as placeholder
+  });
+  
+  // Protect initials like A.A., J.K., U.S., U.K. (single letter followed by period)
+  // This handles patterns like "A.A. Milne" or "J.K. Rowling"
+  protected_text = protected_text.replace(/\b([A-Z])\.([A-Z])\./g, '$1‧$2‧');
+  protected_text = protected_text.replace(/\b([A-Z])\.\s(?=[A-Z])/g, '$1‧ ');
+  
+  // Protect numbers with decimals (e.g., "3.5 million")
+  protected_text = protected_text.replace(/(\d)\.(\d)/g, '$1‧$2');
+  
+  return protected_text;
+}
+
+/**
+ * Restore protected abbreviations back to normal periods
+ */
+function restoreAbbreviations(text: string): string {
+  return text.replace(/‧/g, '.');
+}
+
+/**
  * Extract the first sentence from a caption
  */
 function extractFirstSentence(caption: string): string | null {
@@ -514,10 +551,19 @@ function extractFirstSentence(caption: string): string | null {
   let cleaned = caption.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   
-  // Find first sentence (ending with . ! or ?)
-  const match = cleaned.match(/^[^.!?]+[.!?]/);
+  // Protect abbreviations before sentence detection
+  const protected_text = protectAbbreviations(cleaned);
+  
+  // Find first sentence (ending with . ! or ? followed by space and capital, or end of string)
+  const match = protected_text.match(/^[^.!?]+[.!?](?=\s+[A-Z]|$)/);
   if (match) {
-    return match[0].trim();
+    return restoreAbbreviations(match[0].trim());
+  }
+  
+  // Fallback: simple split on sentence-ending punctuation
+  const simpleSplit = protected_text.match(/^[^.!?]+[.!?]/);
+  if (simpleSplit) {
+    return restoreAbbreviations(simpleSplit[0].trim());
   }
   
   // If no sentence found, return first 100 chars
@@ -538,13 +584,22 @@ function extractSummary(caption: string, maxSentences: number): string | null {
   let cleaned = caption.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   
-  // Split into sentences
-  const sentences = cleaned.match(/[^.!?]+[.!?]+/g);
+  // Protect abbreviations before sentence detection
+  const protected_text = protectAbbreviations(cleaned);
+  
+  // Split into sentences - look for punctuation followed by space and capital letter
+  const sentences = protected_text.match(/[^.!?]+[.!?]+(?=\s+[A-Z]|$)/g);
   if (!sentences || sentences.length === 0) {
-    return cleaned.length > 200 ? cleaned.substring(0, 200).trim() + '.' : cleaned;
+    // Fallback to simple split
+    const simpleSentences = protected_text.match(/[^.!?]+[.!?]+/g);
+    if (!simpleSentences || simpleSentences.length === 0) {
+      return cleaned.length > 200 ? cleaned.substring(0, 200).trim() + '.' : cleaned;
+    }
+    const selected = simpleSentences.slice(0, maxSentences);
+    return restoreAbbreviations(selected.join(' ').trim());
   }
   
   // Take up to maxSentences
   const selected = sentences.slice(0, maxSentences);
-  return selected.join(' ').trim();
+  return restoreAbbreviations(selected.join(' ').trim());
 }
