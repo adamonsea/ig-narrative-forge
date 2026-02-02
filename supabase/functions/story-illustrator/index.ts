@@ -125,6 +125,9 @@ serve(async (req) => {
     }
 
     const { storyId, model, isAutomated } = validated.data;
+    
+    // Debug logging for lifecycle tracking
+    console.log(`📊 Story Illustrator invoked - storyId: ${storyId}, model: ${model}, isAutomated: ${isAutomated}`);
 
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
@@ -1144,6 +1147,9 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
     // Only set automation flag if explicitly marked as automated
     if (isAutomated) {
       updateData.is_auto_illustrated = true;
+      console.log(`🤖 Setting is_auto_illustrated=true for story ${storyId}`);
+    } else {
+      console.log(`👤 Manual illustration for story ${storyId} - is_auto_illustrated will remain unchanged`);
     }
     
     const { error: updateError } = await supabase
