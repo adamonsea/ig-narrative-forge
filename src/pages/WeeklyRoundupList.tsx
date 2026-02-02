@@ -12,6 +12,7 @@ import { FeedFilters } from "@/components/FeedFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { buildShareUrl } from "@/lib/urlUtils";
+import { AudioBriefingPlayer } from "@/components/AudioBriefingPlayer";
 
 interface Topic {
   id: string;
@@ -35,6 +36,8 @@ interface Roundup {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  audio_url?: string;
+  audio_generated_at?: string;
 }
 
 interface Story {
@@ -531,6 +534,16 @@ export default function WeeklyRoundupList() {
               <Share2 className="w-4 h-4 mr-2" />
               Share {filteredStories.length} {filteredStories.length === 1 ? 'story' : 'stories'}
             </Button>
+            
+            {/* Audio Player */}
+            {roundup.audio_url && (
+              <AudioBriefingPlayer
+                audioUrl={roundup.audio_url}
+                title={`${topic.name} Weekly Briefing`}
+                compact
+                className="mt-2"
+              />
+            )}
           </div>
         </div>
       </div>

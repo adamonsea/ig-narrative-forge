@@ -164,18 +164,39 @@ serve(async (req) => {
 
     console.log(`✅ Daily roundup generated: ${roundup.id} with ${storyCount} stories`);
 
+    // Check if audio briefing is enabled for this topic
+    const { data: topicSettings } = await supabase
+      .from('topics')
+      .select('audio_briefings_daily_enabled')
+      .eq('id', topic_id)
+      .single();
+
+    let audioGenerated = false;
+    if (topicSettings?.audio_briefings_daily_enabled) {
+      console.log('🎙️ Audio briefing enabled, triggering generation...');
+      try {
+        const audioResponse = await supabase.functions.invoke('generate-audio-briefing', {
+          body: { roundupId: roundup.id }
+        });
+        audioGenerated = audioResponse.data?.success === true;
+        console.log(`🎙️ Audio generation ${audioGenerated ? 'succeeded' : 'skipped/failed'}`);
+      } catch (audioError) {
+        console.warn('⚠️ Audio generation failed (non-blocking):', audioError);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       roundup_id: roundup.id,
       story_count: storyCount,
-      slide_count: slides.length
+      slide_count: slides.length,
+      audio_generated: audioGenerated
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('💥 Daily roundup generation error:', error);
-    
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : String(error)

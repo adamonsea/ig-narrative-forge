@@ -38,7 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles, Code, Rss, Mail } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles, Code, Rss, Mail, Volume2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
@@ -1005,6 +1005,60 @@ const TopicDashboard = () => {
                           }
                         }}
                       />
+                    </div>
+
+                    {/* Audio Briefings Section */}
+                    <div className="border-t pt-4 mt-4 space-y-4">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Volume2 className="w-4 h-4" />
+                        Audio Briefings
+                        <Badge variant="secondary" className="text-xs">Premium</Badge>
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Generate TTS audio versions of your briefings using ElevenLabs. ~$0.09/daily, ~$0.18/weekly.
+                      </p>
+                      
+                      {/* Daily Audio Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm">Daily Audio Briefings</Label>
+                          <p className="text-xs text-muted-foreground">Auto-generate audio for daily roundups</p>
+                        </div>
+                        <Switch
+                          checked={(topic as any).audio_briefings_daily_enabled || false}
+                          onCheckedChange={async (checked) => {
+                            const { error } = await supabase
+                              .from('topics')
+                              .update({ audio_briefings_daily_enabled: checked })
+                              .eq('id', topic.id);
+                            if (!error) {
+                              loadTopicAndStats();
+                              toast({ title: checked ? "Daily audio briefings enabled" : "Daily audio briefings disabled" });
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {/* Weekly Audio Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm">Weekly Audio Briefings</Label>
+                          <p className="text-xs text-muted-foreground">Auto-generate audio for weekly roundups</p>
+                        </div>
+                        <Switch
+                          checked={(topic as any).audio_briefings_weekly_enabled || false}
+                          onCheckedChange={async (checked) => {
+                            const { error } = await supabase
+                              .from('topics')
+                              .update({ audio_briefings_weekly_enabled: checked })
+                              .eq('id', topic.id);
+                            if (!error) {
+                              loadTopicAndStats();
+                              toast({ title: checked ? "Weekly audio briefings enabled" : "Weekly audio briefings disabled" });
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                   

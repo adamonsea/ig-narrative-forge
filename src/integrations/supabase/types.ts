@@ -3675,6 +3675,9 @@ export type Database = {
       }
       topic_roundups: {
         Row: {
+          audio_generated_at: string | null
+          audio_script: string | null
+          audio_url: string | null
           created_at: string
           id: string
           is_published: boolean
@@ -3688,6 +3691,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audio_generated_at?: string | null
+          audio_script?: string | null
+          audio_url?: string | null
           created_at?: string
           id?: string
           is_published?: boolean
@@ -3701,6 +3707,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audio_generated_at?: string | null
+          audio_script?: string | null
+          audio_url?: string | null
           created_at?: string
           id?: string
           is_published?: boolean
@@ -3916,6 +3925,8 @@ export type Database = {
           audience_expertise:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
+          audio_briefings_daily_enabled: boolean | null
+          audio_briefings_weekly_enabled: boolean | null
           auto_simplify_enabled: boolean | null
           automated_insights_enabled: boolean | null
           automation_quality_threshold: number | null
@@ -3969,6 +3980,8 @@ export type Database = {
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
+          audio_briefings_daily_enabled?: boolean | null
+          audio_briefings_weekly_enabled?: boolean | null
           auto_simplify_enabled?: boolean | null
           automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
@@ -4022,6 +4035,8 @@ export type Database = {
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
+          audio_briefings_daily_enabled?: boolean | null
+          audio_briefings_weekly_enabled?: boolean | null
           auto_simplify_enabled?: boolean | null
           automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
