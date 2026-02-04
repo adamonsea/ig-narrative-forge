@@ -444,5 +444,82 @@ export function useIsMobile(): boolean {
   return tier !== 'desktop';
 }
 
+/**
+ * Detects if device is Safari browser (for leveraging native scroll physics)
+ */
+export function isSafariBrowser(): boolean {
+  const ua = navigator.userAgent;
+  // Safari but not Chrome (Chrome includes Safari in UA)
+  return /Safari/.test(ua) && !/Chrome/.test(ua) && !/Chromium/.test(ua);
+}
+
+/**
+ * Determines if native scroll physics should be prioritized
+ * iOS Safari has superior scroll physics that we want to leverage
+ */
+export function shouldUseNativeScrollPhysics(): boolean {
+  return isSafariBrowser() && isIOSDevice();
+}
+
+/**
+ * Gets optimized Embla carousel settings based on device tier
+ */
+export function getEmblaSettings(): {
+  duration: number;
+  useGpuAcceleration: boolean;
+  dragThreshold: number;
+  useNativeScrollSnap: boolean;
+  shouldPreDecodeImages: boolean;
+} {
+  const tier = getDevicePerformanceTier();
+  const useNativeScroll = shouldUseNativeScrollPhysics();
+  
+  switch (tier) {
+    case 'modern-ios':
+      return {
+        duration: 22,
+        useGpuAcceleration: true,
+        dragThreshold: 6,
+        useNativeScrollSnap: useNativeScroll,
+        shouldPreDecodeImages: true,
+      };
+    case 'modern-android':
+      return {
+        duration: 24,
+        useGpuAcceleration: true,
+        dragThreshold: 6,
+        useNativeScrollSnap: false,
+        shouldPreDecodeImages: true,
+      };
+    case 'mid-range-ios':
+    case 'mid-range-android':
+      return {
+        duration: 26,
+        useGpuAcceleration: true,
+        dragThreshold: 8,
+        useNativeScrollSnap: useNativeScroll,
+        shouldPreDecodeImages: false, // Save memory
+      };
+    case 'old-ios':
+    case 'legacy-android':
+      return {
+        duration: 35,
+        useGpuAcceleration: false,
+        dragThreshold: 12,
+        useNativeScrollSnap: false,
+        shouldPreDecodeImages: false,
+      };
+    case 'desktop':
+    default:
+      return {
+        duration: 20,
+        useGpuAcceleration: true,
+        dragThreshold: 4,
+        useNativeScrollSnap: false,
+        shouldPreDecodeImages: true,
+      };
+  }
+}
+
 // React import for the hook
 import * as React from 'react';

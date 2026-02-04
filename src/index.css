@@ -82,6 +82,36 @@
     }
   }
 
+  /* Embla carousel GPU layer - stable compositor hint */
+  .embla-gpu-layer {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Embla slide containment - prevents layout thrashing during swipe */
+  .embla-slide-contained {
+    contain: content;
+  }
+
+  /* Embla container smooth settling after swipe */
+  .embla-container-smooth {
+    /* Applied during settling phase only */
+  }
+  .embla-container-smooth.is-settling {
+    transition: transform 0.1s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  /* Native scroll-snap enhancement for iOS Safari */
+  .embla-native-scroll {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .embla-native-scroll > div {
+    scroll-snap-align: start;
+  }
+
   /* Static sepia filter for card images - prevents recalculation during animation */
   .sepia-card-image {
     filter: sepia(12%) contrast(1.02) brightness(0.98);
