@@ -31,17 +31,9 @@ export const FeedHamburgerMenu = ({
   const canFilter = !loading && contentLength > 0 && filterOptionsReady;
 
   const menuItems = [
-    ...(aboutPageEnabled ? [{
-      icon: HelpCircle,
-      label: 'About',
-      description: 'Learn more about this feed',
-      action: 'link' as const,
-      href: `/feed/${slug}/about`,
-    }] : []),
     {
       icon: Filter,
       label: 'Curate',
-      description: 'Filter stories by topic',
       action: 'button' as const,
       onClick: () => {
         onOpenFilters();
@@ -53,24 +45,27 @@ export const FeedHamburgerMenu = ({
     {
       icon: Calendar,
       label: 'Daily Briefing',
-      description: "Today's top stories",
       action: 'link' as const,
       href: `/feed/${slug}/daily/${latestDaily || 'latest'}`,
     },
     {
       icon: CalendarDays,
       label: 'Weekly Briefing',
-      description: "This week's highlights",
       action: 'link' as const,
       href: `/feed/${slug}/weekly/${latestWeekly || 'latest'}`,
     },
     {
       icon: Archive,
       label: 'Archive',
-      description: 'Browse all past stories',
       action: 'link' as const,
       href: `/feed/${slug}/archive`,
     },
+    ...(aboutPageEnabled ? [{
+      icon: HelpCircle,
+      label: 'About',
+      action: 'link' as const,
+      href: `/feed/${slug}/about`,
+    }] : []),
   ];
 
   return (
