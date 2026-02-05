@@ -119,15 +119,15 @@ export const FeedHamburgerMenu = ({
               </div>
 
               {/* Menu Items */}
-              <nav className="flex-1 overflow-y-auto p-4">
-                <ul className="space-y-2">
+              <nav className="flex-1 overflow-y-auto p-4 flex flex-col justify-center">
+                <ul className="space-y-2 max-w-xs mx-auto w-full">
                   {menuItems.map((item, index) => {
                     const content = (
                       <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 + 0.1 }}
-                        className={`flex items-start gap-4 p-4 rounded-xl transition-colors ${
+                        className={`flex items-center justify-center gap-3 p-4 rounded-xl transition-colors ${
                           item.disabled 
                             ? 'opacity-50 cursor-not-allowed' 
                             : 'hover:bg-muted active:bg-muted/80'
@@ -136,17 +136,10 @@ export const FeedHamburgerMenu = ({
                         <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted shrink-0">
                           <item.icon className="w-5 h-5" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{item.label}</span>
-                            {item.badge && (
-                              <span className="w-2 h-2 bg-primary rounded-full" />
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-0.5">
-                            {item.description}
-                          </p>
-                        </div>
+                        <span className="font-medium">{item.label}</span>
+                        {item.badge && (
+                          <span className="w-2 h-2 bg-primary rounded-full" />
+                        )}
                       </motion.div>
                     );
 
