@@ -15,20 +15,30 @@ import { useToast } from '@/hooks/use-toast';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { Mail, Bell, Loader2 } from 'lucide-react';
 
+export type SubscriptionFrequency = 'daily' | 'weekly' | 'both';
+
 interface NewsletterSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
   topicName: string;
   topicId: string;
+  defaultFrequency?: SubscriptionFrequency;
 }
 
-export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId }: NewsletterSignupModalProps) => {
+const frequencyLabels: Record<SubscriptionFrequency, string> = {
+  daily: 'daily updates',
+  weekly: 'weekly digest',
+  both: 'daily updates and weekly digest',
+};
+
+export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, defaultFrequency = 'weekly' }: NewsletterSignupModalProps) => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [enablePushNotifications, setEnablePushNotifications] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { isSupported: isPushSupported, subscribeToPush } = usePushSubscription(topicId);
+  const selectedFrequency = defaultFrequency;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +155,7 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId }: N
             Stay Updated
           </DialogTitle>
           <DialogDescription>
-            Get notified when new <strong>{topicName}</strong> content is published
+            Subscribe to {frequencyLabels[selectedFrequency]} for <strong>{topicName}</strong>
           </DialogDescription>
         </DialogHeader>
         
