@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_test_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          test_name: string
+          topic_id: string | null
+          user_agent: string | null
+          variant: string
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          test_name: string
+          topic_id?: string | null
+          user_agent?: string | null
+          variant: string
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          test_name?: string
+          topic_id?: string | null
+          user_agent?: string | null
+          variant?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_events_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_events_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_usage: {
         Row: {
           cost_usd: number | null
@@ -4560,6 +4608,16 @@ export type Database = {
       generate_story_slug: {
         Args: { story_id: string; title_text: string }
         Returns: string
+      }
+      get_ab_test_stats: {
+        Args: { p_days?: number; p_test_name: string }
+        Returns: {
+          clicks: number
+          ctr: number
+          impressions: number
+          unique_visitors: number
+          variant: string
+        }[]
       }
       get_admin_topic_stories: {
         Args: {

@@ -10,9 +10,9 @@ import { QueueManager } from '@/components/QueueManager';
 import { AutomationDashboard } from '@/components/AutomationDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
-import { ArchivedTopicsCleanup } from '@/components/ArchivedTopicsCleanup';
 import { SourceCleanup } from '@/components/SourceCleanup';
 import { LifecycleAudit } from '@/components/LifecycleAudit';
+import { ABTestDashboard } from '@/components/admin/ABTestDashboard';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
@@ -38,76 +38,80 @@ export default function AdminPanel() {
         <div className="container mx-auto py-8">
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
-            </Button>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Admin Panel</h1>
-          <p className="text-muted-foreground">
-            Manage system-wide settings and monitor platform health
-            <span className="text-xs ml-2 opacity-60">• Powered by <span className="font-display">Curatr.pro</span></span>
-          </p>
-        </div>
-
-        <Tabs defaultValue="sources" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="sources">Source Management</TabsTrigger>
-            <TabsTrigger value="queue">Queue Manager</TabsTrigger>
-            <TabsTrigger value="automation">Topic Automation</TabsTrigger>
-            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="sources" className="mt-6">
-            <UnifiedSourceManager 
-              mode="global"
-              onSourcesChange={() => {}}
-              title="Global Source Management"
-              description="Manage all content sources across the platform with enhanced validation and health monitoring"
-            />
-          </TabsContent>
-
-          <TabsContent value="queue" className="mt-6">
-            <QueueManager />
-            <div className="mt-6">
-              <div className="bg-card rounded-lg border p-6">
-                <h3 className="text-lg font-semibold mb-4">Multi-Tenant Story Linkage</h3>
-                <p className="text-muted-foreground mb-4">
-                  Repair existing stories that lack proper multi-tenant linkage (topic_article_id and shared_content_id).
-                </p>
-                <button 
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-                  onClick={async () => {
-                    try {
-                      const { data, error } = await supabase.functions.invoke('backfill-story-linkage');
-                      if (error) throw error;
-                      alert(`Backfill complete! Updated ${data.updated} stories out of ${data.processed} processed.`);
-                    } catch (error) {
-                      console.error('Backfill failed:', error);
-                      alert('Backfill failed: ' + error.message);
-                    }
-                  }}
-                >
-                  Run Story Linkage Backfill
-                </button>
-              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/dashboard">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
             </div>
-          </TabsContent>
+            <h1 className="text-3xl font-bold text-foreground">Admin Panel</h1>
+            <p className="text-muted-foreground">
+              Manage system-wide settings and monitor platform health
+              <span className="text-xs ml-2 opacity-60">• Powered by <span className="font-display">Curatr.pro</span></span>
+            </p>
+          </div>
 
-          <TabsContent value="automation" className="mt-6">
-            <AutomationDashboard />
-          </TabsContent>
+          <Tabs defaultValue="sources" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="sources">Source Management</TabsTrigger>
+              <TabsTrigger value="queue">Queue Manager</TabsTrigger>
+              <TabsTrigger value="automation">Topic Automation</TabsTrigger>
+              <TabsTrigger value="experiments">Experiments</TabsTrigger>
+              <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="sources" className="mt-6">
+              <UnifiedSourceManager 
+                mode="global"
+                onSourcesChange={() => {}}
+                title="Global Source Management"
+                description="Manage all content sources across the platform with enhanced validation and health monitoring"
+              />
+            </TabsContent>
 
-          <TabsContent value="maintenance" className="mt-6 space-y-6">
-            <LifecycleAudit />
-            <ArchivedTopicsCleanup />
-            <SourceCleanup />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="queue" className="mt-6">
+              <QueueManager />
+              <div className="mt-6">
+                <div className="bg-card rounded-lg border p-6">
+                  <h3 className="text-lg font-semibold mb-4">Multi-Tenant Story Linkage</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Repair existing stories that lack proper multi-tenant linkage (topic_article_id and shared_content_id).
+                  </p>
+                  <button 
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                    onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.functions.invoke('backfill-story-linkage');
+                        if (error) throw error;
+                        alert(`Backfill complete! Updated ${data.updated} stories out of ${data.processed} processed.`);
+                      } catch (error: any) {
+                        console.error('Backfill failed:', error);
+                        alert('Backfill failed: ' + error.message);
+                      }
+                    }}
+                  >
+                    Run Story Linkage Backfill
+                  </button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="automation" className="mt-6">
+              <AutomationDashboard />
+            </TabsContent>
+
+            <TabsContent value="experiments" className="mt-6">
+              <ABTestDashboard />
+            </TabsContent>
+
+            <TabsContent value="maintenance" className="mt-6 space-y-6">
+              <LifecycleAudit />
+              <SourceCleanup />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
     </AppLayout>
   );
 }
