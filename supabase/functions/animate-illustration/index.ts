@@ -162,20 +162,21 @@ serve(async (req) => {
       const userPrompt = customPrompt.trim();
       console.log('👤 User-provided prompt:', userPrompt);
       
-      // Detect “abstract” prompts that tend to produce minimal motion in Wan 2.2 i2v.
-      // We only skip enhancement when the prompt already contains multiple *visible* motion verbs.
+      // Detect "abstract" prompts that tend to produce minimal motion in Wan 2.2 i2v.
+      // EXPANDED verb list - only enhance if NO motion verbs present (respects user intent)
       const visibleVerbMatches = userPrompt.match(
-        /\b(sway|wave|flutter|nod|turn|gesture|blink|ripple|spin|shake|bounce|float|drift|flow|rock|wiggle|breathe|pulse|flicker|shimmer|walk|run|march|point|clap|cheer|raise|lower)\b/gi
+        /\b(sway|wave|flutter|nod|turn|gesture|blink|ripple|spin|shake|bounce|float|drift|flow|rock|wiggle|breathe|pulse|flicker|shimmer|walk|run|march|point|clap|cheer|raise|lower|scroll|look|gaze|stare|move|shift|lean|sit|stand|jump|dance|twist|stretch|reach|grab|hold|drop|throw|catch|push|pull|swing|tilt|rotate|fly|fall|rise|climb|open|close|write|read|type|tap|swipe|blow|crash|splash|drip|pour|spray|scatter|gather|spread|shrink|grow|expand|vibrate|tremble|quiver|shudder|slide|glide|roll|tumble|hop|skip|stride|stroll|hurry|rush|dash|crawl|creep|sneak|prowl|pounce|lunge|strike|hit|kick|punch|slap|knock|pound|hammer|drill|saw|cut|chop|stir|mix|whisk|blend|knead|press|squeeze|crush|grind|peel|scrub|wipe|dust|polish|sweep|brush|comb|speaks|talking|speaking|nodding|waving|moving|turning|walking|running|gesturing|pointing|looking|standing|sitting|leaning)\b/gi
       );
       const visibleVerbCount = visibleVerbMatches?.length ?? 0;
 
-      // If the user prompt is long but still abstract (“investigate”, “announce”, “discuss”), it often yields only one subtle element moving.
-      const shouldEnhance = visibleVerbCount < 2;
+      // Only enhance if NO motion verbs (much more permissive - respects user intent)
+      const shouldEnhance = visibleVerbCount < 1;
 
       if (shouldEnhance) {
-        console.log(`⚠️ Prompt likely too abstract (visibleVerbCount=${visibleVerbCount}), enhancing with AI...`);
+        console.log(`⚠️ Prompt has no motion verbs, enhancing with AI...`);
         animationPrompt = await enhanceVaguePrompt(userPrompt, story.title, story.cover_illustration_prompt || '');
       } else {
+        console.log(`✅ User prompt has ${visibleVerbCount} motion verb(s), using directly`);
         animationPrompt = `${userPrompt}, static camera`;
       }
     } else if (USE_AI_PROMPTS) {
@@ -342,77 +343,6 @@ serve(async (req) => {
 });
 
 /**
- * Extracts the main subject from the original image prompt or story title
- */
-function extractMainSubject(title: string, imagePrompt?: string): { type: string; subject: string } {
-  const sourceText = (imagePrompt || title).toLowerCase();
-  
-  // Person/People subjects
-  if (sourceText.match(/council member|councillor|official|politician/i)) {
-    return { type: 'person', subject: 'council member' };
-  }
-  if (sourceText.match(/protester|demonstrator|activist/i)) {
-    return { type: 'person', subject: 'protester' };
-  }
-  if (sourceText.match(/worker|builder|construction worker|tradesperson/i)) {
-    return { type: 'person', subject: 'worker' };
-  }
-  if (sourceText.match(/shopkeeper|merchant|shop owner|retailer/i)) {
-    return { type: 'person', subject: 'shopkeeper' };
-  }
-  if (sourceText.match(/teacher|educator|instructor/i)) {
-    return { type: 'person', subject: 'teacher' };
-  }
-  if (sourceText.match(/doctor|nurse|medical staff|healthcare worker/i)) {
-    return { type: 'person', subject: 'medical worker' };
-  }
-  if (sourceText.match(/police|officer|detective/i)) {
-    return { type: 'person', subject: 'police officer' };
-  }
-  if (sourceText.match(/athlete|player|footballer|cricketer/i)) {
-    return { type: 'person', subject: 'athlete' };
-  }
-  
-  // Building/Structure subjects
-  if (sourceText.match(/building|structure|council hall|town hall/i)) {
-    return { type: 'building', subject: 'building' };
-  }
-  if (sourceText.match(/shop|store|business premises/i)) {
-    return { type: 'building', subject: 'shop' };
-  }
-  
-  // Vehicle subjects
-  if (sourceText.match(/digger|excavator|bulldozer|machinery/i)) {
-    return { type: 'vehicle', subject: 'construction machinery' };
-  }
-  if (sourceText.match(/bus|train|vehicle/i)) {
-    return { type: 'vehicle', subject: 'vehicle' };
-  }
-  
-  // Crowd/Group subjects
-  if (sourceText.match(/crowd|group|gathering|assembly/i)) {
-    return { type: 'crowd', subject: 'crowd' };
-  }
-  
-  // Default to generic person
-  return { type: 'person', subject: 'person' };
-}
-
-/**
- * Generates subject-specific movement templates
- */
-function getSubjectMovementTemplate(subjectType: string, subject: string): string {
-  const templates: Record<string, string> = {
-    'person': `${subject} in frame nods slightly, minimal hand gesture, subtle weight shift`,
-    'crowd': `closest figure in center of ${subject} sways gently, nearest person shifts weight`,
-    'building': `visible flags on ${subject} flutter gently, window lights flicker subtly`,
-    'vehicle': `${subject} shows slight idle vibration, visible exhaust movement`
-  };
-  
-  return templates[subjectType] || templates['person'];
-}
-
-/**
  * Enhances a vague user prompt with specific motion details
  */
 async function enhanceVaguePrompt(
@@ -423,7 +353,7 @@ async function enhanceVaguePrompt(
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
   if (!LOVABLE_API_KEY) {
-    // Fallback: add clearly visible motion (avoid “subtle” which can suppress results)
+    // Fallback: add clearly visible motion (avoid "subtle" which can suppress results)
     return `${vaguePrompt}, people turn heads and gesture clearly, fabric and debris flutter noticeably, static camera`;
   }
   
@@ -451,7 +381,7 @@ CONTEXT:
 Requirements:
 1) Include at least TWO moving elements (e.g., person + environment, or two people)
 2) Use concrete body parts/actions (head turns, hands point, shoulders shrug, eyes blink)
-3) Make the motion noticeable (avoid “subtle”, “slight”, “gentle”)
+3) Make the motion noticeable (avoid "subtle", "slight", "gentle")
 4) Keep camera static (no zoom/pan)
 
 Add SPECIFIC body movements or environmental motion:
@@ -466,7 +396,7 @@ Example transformations:
 Return ONLY the enhanced motion prompt.`
         }],
         max_tokens: 80,
-        temperature: 0.7
+        temperature: 0.5
       })
     });
     
@@ -479,7 +409,7 @@ Return ONLY the enhanced motion prompt.`
     enhanced = enhanced.replace(/^["']|["']$/g, '');
     
     console.log(`✨ Enhanced prompt: ${enhanced}`);
-    return `${enhanced}, static camera`;
+    return `Static camera, ${enhanced}`;
     
   } catch (error) {
     console.error('⚠️ Enhancement failed:', error);
@@ -488,7 +418,7 @@ Return ONLY the enhanced motion prompt.`
 }
 
 /**
- * Generates AI-driven animation prompt based on story content (Phase 3 - SIMPLIFIED)
+ * Generates AI-driven animation prompt based on story content
  * 
  * Research insights from Wan 2.2 i2v model:
  * - Model works BEST with SHORT, DIRECT motion descriptions (under 20 words)
@@ -510,12 +440,14 @@ async function generateAnimationPromptWithAI(
   }
   
   try {
-    console.log('🧠 Generating simplified AI animation prompt...');
+    console.log('🧠 Generating AI animation prompt with full image context...');
     
-    // Extract main subject from the image prompt or title
-    const { type: subjectType, subject } = extractMainSubject(title, originalImagePrompt);
+    // USE THE FULL IMAGE PROMPT for context instead of generic extraction
+    const imageContext = originalImagePrompt 
+      ? originalImagePrompt.substring(0, 400) // Use actual image description
+      : title; // Fallback to title only if no image prompt
     
-    console.log(`🎯 Extracted subject: ${subject} (type: ${subjectType})`);
+    console.log(`🎯 Image context: ${imageContext.substring(0, 100)}...`);
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -527,33 +459,31 @@ async function generateAnimationPromptWithAI(
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Generate a SHORT animation prompt (max 20 words) for an image-to-video model.
+          content: `Generate a SHORT animation prompt (max 18 words) for an image-to-video model.
 
-STORY: ${title}
-MAIN SUBJECT: ${subject}
+IMAGE SHOWS: ${imageContext}
+STORY HEADLINE: ${title}
 
-Rules:
-1. Describe clear, visible movement for the main subject
-2. Be SPECIFIC about the motion: "person turns head and gestures" NOT "person moves"  
-3. Match energy to content - news stories can have dynamic motion, not everything needs to be subtle
-4. Keep it concise - the model works better with direct prompts
+Create a motion description that:
+1. References specific elements FROM THE IMAGE (not generic "person" or "figure")
+2. Uses concrete physical actions: turns, gestures, waves, nods, shifts, sways
+3. Has at least 2 moving elements
+4. Avoids vague words: subtle, gentle, slight, nearly imperceptible
 
-Good examples:
-- "Person turns head, gestures expressively while speaking"
-- "Crowd waves signs, figures in foreground move and react"
-- "Waves crash against shore, seabirds fly across frame"
-- "Construction worker operates machinery, dust rises"
-- "Cyclist pedals along path, wheels spinning"
+Examples of GOOD prompts:
+- "Council member turns to camera and gestures, papers flutter on desk"
+- "Cyclist pedals steadily, wheels spin, jacket flaps in wind"
+- "Chef stirs pot vigorously, steam rises, assistant chops vegetables"
 
-Bad examples:
-- "Dynamic scene with multiple movements" (too vague)
-- "Nearly imperceptible movement" (too subtle)
-- "Everything comes alive" (too abstract)
+Examples of BAD prompts:
+- "Scene comes to life with movement" (too vague)
+- "Subtle atmospheric motion" (too passive)
+- "Person moves naturally" (too generic)
 
-Return ONLY the motion prompt, nothing else.`
+Return ONLY the motion prompt, no quotes or explanation.`
         }],
-        max_tokens: 80,
-        temperature: 0.8
+        max_tokens: 60,
+        temperature: 0.5 // Lower temperature for more consistent results
       })
     });
     
@@ -569,10 +499,10 @@ Return ONLY the motion prompt, nothing else.`
     // Remove any quotes the model might have added
     prompt = prompt.replace(/^["']|["']$/g, '');
     
-    // Only add static camera constraint - let the motion be expressive
-    const finalPrompt = `${prompt}, static camera`;
+    // Prepend static camera for better model compliance
+    const finalPrompt = `Static camera, ${prompt}`;
     
-    console.log('✨ Expressive animation prompt:', finalPrompt);
+    console.log('✨ Context-aware animation prompt:', finalPrompt);
     return finalPrompt;
     
   } catch (error) {
@@ -589,57 +519,57 @@ function getContentAwareAnimationPrompt(title: string, tone: string): string {
   
   // Construction/roadworks stories
   if (titleLower.match(/roadwork|construction|building|digger|excavat|demolit/i)) {
-    return 'Heavy machinery operates rhythmically, workers gesture, frustrated pedestrians observe, shopkeepers look on concerned';
+    return 'Static camera, heavy machinery operates, workers gesture, pedestrians observe';
   }
   
   // Protest/demonstration stories
   if (titleLower.match(/protest|demonstrat|march|rally|campaign/i)) {
-    return 'Crowd sways and gestures energetically, signs move, people march forward, passionate speakers gesture';
+    return 'Static camera, crowd sways and gestures, signs move, people march forward';
   }
   
   // Business/retail stories
   if (titleLower.match(/shop|business|retail|store|trade|customer/i)) {
-    return 'Shopkeeper gestures welcomingly, customers browse and interact, door opens, gentle bustle of commerce';
+    return 'Static camera, shopkeeper gestures, customers browse, door opens';
   }
   
   // Council/meeting stories
   if (titleLower.match(/council|meeting|debate|hearing|committee/i)) {
-    return 'Officials gesture in discussion, papers shuffle subtly, attendees nod and react, formal deliberation';
+    return 'Static camera, officials gesture in discussion, papers shuffle, attendees nod';
   }
   
   // Crime/police stories
   if (titleLower.match(/crime|police|arrest|theft|burglary|investigation/i)) {
-    return 'Police officers move purposefully, witnesses gesture and point, concerned residents observe, tense atmosphere';
+    return 'Static camera, police officers move purposefully, witnesses gesture and point';
   }
   
   // Education/school stories
   if (titleLower.match(/school|education|student|teacher|university|pupil/i)) {
-    return 'Students interact and gesture, teachers demonstrate, books and materials handled, learning environment';
+    return 'Static camera, students interact and gesture, teachers demonstrate';
   }
   
   // Sports/recreation stories
   if (titleLower.match(/sport|football|cricket|match|play|recreation|team/i)) {
-    return 'Athletes move dynamically, spectators cheer and gesture, equipment in motion, energetic sporting action';
+    return 'Static camera, athletes move dynamically, spectators cheer and gesture';
   }
   
   // Health/hospital stories
   if (titleLower.match(/hospital|health|medical|doctor|nhs|patient/i)) {
-    return 'Medical staff move with purpose, patients interact gently, equipment used carefully, caring atmosphere';
+    return 'Static camera, medical staff move with purpose, patients interact';
   }
   
   // Weather/environment stories
   if (titleLower.match(/weather|storm|flood|wind|rain|climate|snow/i)) {
-    return 'Natural elements move powerfully, people react to conditions, environmental impact visible, dynamic weather';
+    return 'Static camera, natural elements move powerfully, people react to conditions';
   }
   
   // Transport/traffic stories
   if (titleLower.match(/traffic|transport|road|train|bus|railway/i)) {
-    return 'Vehicles move along routes, commuters wait and board, drivers navigate, transit flows';
+    return 'Static camera, vehicles move along routes, commuters wait and board';
   }
   
   // Fire/emergency stories
   if (titleLower.match(/fire|blaze|emergency|rescue|firefighter/i)) {
-    return 'Emergency responders act swiftly, flames flicker, smoke rises, urgent rescue operations';
+    return 'Static camera, emergency responders act swiftly, flames flicker, smoke rises';
   }
   
   // Fallback to tone-based movement
@@ -651,13 +581,13 @@ function getContentAwareAnimationPrompt(title: string, tone: string): string {
  */
 function getCameraMovementPrompt(tone: string): string {
   const prompts: Record<string, string> = {
-    'urgent': 'Dynamic energy, sense of motion and importance',
-    'celebratory': 'Gentle movement, subtle rising and falling',
-    'somber': 'Slow breathing-like motion, minimal movement, contemplative',
-    'hopeful': 'Soft forward motion, gentle inspiration',
-    'informative': 'Steady subtle movement, professional atmosphere',
-    'conversational': 'Natural gentle movement, slight motion',
-    'neutral': 'Subtle motion, gentle atmospheric movement'
+    'urgent': 'Static camera, dynamic energy, sense of motion and importance',
+    'celebratory': 'Static camera, people wave and cheer, festive movement',
+    'somber': 'Static camera, slow contemplative motion, minimal movement',
+    'hopeful': 'Static camera, soft forward motion, gentle inspiration',
+    'informative': 'Static camera, steady movement, professional atmosphere',
+    'conversational': 'Static camera, natural movement, people interact',
+    'neutral': 'Static camera, gentle atmospheric movement, people shift weight'
   };
   return prompts[tone] || prompts['neutral'];
 }
