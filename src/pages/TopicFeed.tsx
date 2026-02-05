@@ -11,7 +11,9 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, HelpCircle, Mail } from "lucide-react";
+import { Hash, MapPin, RefreshCw } from "lucide-react";
+import { FeedHamburgerMenu } from "@/components/feed/FeedHamburgerMenu";
+import { SubscribeMenu } from "@/components/feed/SubscribeMenu";
 import { PlayModeMenu } from "@/components/feed/PlayModeMenu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,7 +90,7 @@ const TopicFeed = () => {
   const [hasCheckedNotificationStatus, setHasCheckedNotificationStatus] = useState(false);
   const [shouldShowNotificationPrompt, setShouldShowNotificationPrompt] = useState(false);
   const [scrollPastStoriesWithSwipes, setScrollPastStoriesWithSwipes] = useState(false);
-  const [showCollectionsHint, setShowCollectionsHint] = useState(false);
+  // showCollectionsHint removed - collections now in hamburger menu
   const [storiesScrolledPast, setStoriesScrolledPast] = useState(0);
   const [showPlayModePulse, setShowPlayModePulse] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -271,16 +273,7 @@ const TopicFeed = () => {
     [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword, setIsModalOpen, toast]
   );
 
-  // Debug helper for resetting collections hint
-  useEffect(() => {
-    (window as any).resetCollectionsHint = () => {
-      if (slug) {
-        localStorage.removeItem(`collections_hint_shown_${slug}`);
-        setShowCollectionsHint(false);
-        console.log('Collections hint reset - will show on next page load');
-      }
-    };
-  }, [slug]);
+  // Debug helper for resetting collections hint removed - collections now in hamburger menu
 
   // Track visitor for analytics
   const visitorId = useVisitorTracking(topic?.id);
@@ -362,28 +355,7 @@ const TopicFeed = () => {
     });
   }, [shouldShowNotificationPrompt, topic?.id, trackImpression]);
 
-  // Show collections hint on page load (once per topic)
-  useEffect(() => {
-    if (!slug || showCollectionsHint) return;
-    
-    const hintKey = `collections_hint_shown_${slug}`;
-    const hasBeenShown = localStorage.getItem(hintKey);
-    
-    if (!hasBeenShown) {
-      // Show hint after a brief delay to let page settle
-      const timer = setTimeout(() => {
-        setShowCollectionsHint(true);
-        localStorage.setItem(hintKey, 'true');
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-          setShowCollectionsHint(false);
-        }, 5000);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [slug, showCollectionsHint]);
+  // Collections hint removed - collections now in hamburger menu
 
   // Track when user scrolls past stories they've engaged with
   const handleStoryScrolledPast = useCallback(() => {
@@ -400,7 +372,7 @@ const TopicFeed = () => {
       localStorage.setItem(`notification_prompt_shown_${topic.id}`, 'true');
       setShouldShowNotificationPrompt(false);
     }
-  }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id, storiesScrolledPast, showCollectionsHint, slug]);
+  }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id, storiesScrolledPast, slug]);
 
   // Update favicon based on topic branding (pass full branding config for optimized variants)
   const branding = topic?.branding_config as any;
@@ -650,88 +622,38 @@ const TopicFeed = () => {
                   hidden={playModeEnabled === false}
                 />
 
-                <button
-                  onClick={() => setShowNotificationModal(true)}
-                  className="relative flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-                  aria-label="Manage notifications"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span className="hidden sm:inline text-sm font-medium">Notify Me</span>
-                  {shouldShowNotificationPrompt && (
-                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-background"></span>
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  disabled={loading || filteredContent.length === 0 || !filterOptionsReady}
-                  className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg transition-colors ${
-                    loading || filteredContent.length === 0 || !filterOptionsReady
-                      ? 'bg-muted/50 cursor-not-allowed' 
-                      : 'bg-muted hover:bg-muted/80'
-                  }`}
-                >
-                  <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 || !filterOptionsReady ? 'text-muted-foreground/50' : ''}`} />
-                  <span className={`hidden sm:inline text-sm font-medium ${loading || filteredContent.length === 0 || !filterOptionsReady ? 'text-muted-foreground/50' : ''}`}>Curate</span>
-                  {hasActiveFilters && (
-                    <span className="w-2 h-2 bg-primary rounded-full" />
-                  )}
-                </button>
-
-                {/* Collection Icons - Daily and Weekly only */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="Today's briefing"
-                        >
-                          <Calendar className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-medium">Daily Briefing</p>
-                      <p className="text-xs text-muted-foreground">Today's top stories</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link to={`/feed/${slug}/weekly/${latestWeekly || 'latest'}`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="This week's briefing"
-                        >
-                          <CalendarDays className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-medium">Weekly Briefing</p>
-                      <p className="text-xs text-muted-foreground">This week's highlights</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-
-              {/* Donation Button - Icon Only */}
-              {topic.donation_enabled && topic.donation_config?.tiers?.length > 0 && (
-                <DonationButton
-                  onClick={() => setShowDonationModal(true)}
-                  buttonText={topic.donation_config.button_text || "Support"}
+                {/* Subscribe dropdown */}
+                <SubscribeMenu
+                  topicName={topic.name}
                   topicId={topic.id}
-                  visitorId={visitorId}
-                  iconOnly
+                  showLabel={false}
+                  showPulse={shouldShowNotificationPrompt}
                 />
-              )}
 
+                {/* Hamburger menu with about, filter, daily/weekly, archive */}
+                <FeedHamburgerMenu
+                  slug={slug!}
+                  aboutPageEnabled={(topic.branding_config as any)?.about_page_enabled}
+                  latestDaily={latestDaily}
+                  latestWeekly={latestWeekly}
+                  hasActiveFilters={hasActiveFilters}
+                  onOpenFilters={() => setIsModalOpen(true)}
+                  filterOptionsReady={filterOptionsReady}
+                  loading={loading}
+                  contentLength={filteredContent.length}
+                />
+
+                {/* Donation Button - Icon Only */}
+                {topic.donation_enabled && topic.donation_config?.tiers?.length > 0 && (
+                  <DonationButton
+                    onClick={() => setShowDonationModal(true)}
+                    buttonText={topic.donation_config.button_text || "Support"}
+                    topicId={topic.id}
+                    visitorId={visitorId}
+                    iconOnly
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -799,28 +721,7 @@ const TopicFeed = () => {
             ) : null}
           </div>
 
-          {/* Top-right: About icon */}
-          {(topic.branding_config as any)?.about_page_enabled && (
-            <div className="absolute right-4 top-4">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to={`/feed/${slug}/about`}>
-                      <button
-                        className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                        aria-label="About this feed"
-                      >
-                        <HelpCircle className="w-4 h-4" />
-                      </button>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>About this feed</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
+          {/* About moved to hamburger menu - no top-right icon needed */}
 
           {/* Topic Header - Clean and minimal with branding support */}
           <div className="text-center space-y-4">
@@ -871,7 +772,7 @@ const TopicFeed = () => {
               </p>
             ) : null}
 
-            {/* Action buttons - consistent with sticky header layout */}
+            {/* Action buttons - Play, Subscribe, and Hamburger menu */}
             <div className="flex items-center justify-center gap-2 pt-2">
               {/* Play Mode - Shows immediately, hides only if explicitly disabled */}
               <div data-onboarding="play-mode">
@@ -883,78 +784,27 @@ const TopicFeed = () => {
                 />
               </div>
 
-              <button
-                onClick={() => setIsModalOpen(true)}
-                data-onboarding="filter-button"
-                disabled={loading || filteredContent.length === 0 || !filterOptionsReady}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                  loading || filteredContent.length === 0 || !filterOptionsReady
-                    ? 'bg-muted/50 cursor-not-allowed' 
-                    : 'bg-muted hover:bg-muted/80'
-                }`}
-                aria-label="Open filters"
-              >
-                <Filter className={`w-4 h-4 ${loading || filteredContent.length === 0 || !filterOptionsReady ? 'text-muted-foreground/50' : ''}`} />
-                <span className={`text-sm font-medium ${loading || filteredContent.length === 0 || !filterOptionsReady ? 'text-muted-foreground/50' : ''}`}>Curate</span>
-                {hasActiveFilters && (
-                  <span className="w-2 h-2 bg-primary rounded-full" />
-                )}
-              </button>
+              {/* Subscribe dropdown */}
+              <div data-onboarding="notifications">
+                <SubscribeMenu
+                  topicName={topic.name}
+                  topicId={topic.id}
+                  showPulse={shouldShowNotificationPrompt}
+                />
+              </div>
 
-              <TooltipProvider>
-                <Tooltip open={showCollectionsHint}>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1">
-                      <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="Today's briefing"
-                        >
-                          <Calendar className="w-4 h-4" />
-                        </button>
-                      </Link>
-
-                      <Link to={`/feed/${slug}/weekly/${latestWeekly || 'latest'}`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="This week's briefing"
-                        >
-                          <CalendarDays className="w-4 h-4" />
-                        </button>
-                      </Link>
-
-                      <Link to={`/feed/${slug}/archive`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="View archive"
-                        >
-                          <Archive className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="z-[60]">
-                    <p className="font-medium">Daily & Weekly Briefings</p>
-                    <p className="text-xs text-muted-foreground mt-1">Quick summaries of top stories</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              {/* Notifications button - in main header for onboarding */}
-              <button
-                onClick={() => setShowNotificationModal(true)}
-                data-onboarding="notifications"
-                className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                aria-label="Manage notifications"
-              >
-                <Mail className="w-4 h-4" />
-                {shouldShowNotificationPrompt && (
-                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-background"></span>
-                  </span>
-                )}
-              </button>
+              {/* Hamburger menu with about, filter, daily/weekly, archive */}
+              <FeedHamburgerMenu
+                slug={slug!}
+                aboutPageEnabled={(topic.branding_config as any)?.about_page_enabled}
+                latestDaily={latestDaily}
+                latestWeekly={latestWeekly}
+                hasActiveFilters={hasActiveFilters}
+                onOpenFilters={() => setIsModalOpen(true)}
+                filterOptionsReady={filterOptionsReady}
+                loading={loading}
+                contentLength={filteredContent.length}
+              />
             </div>
           </div>
         </div>
