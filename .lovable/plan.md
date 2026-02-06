@@ -1,180 +1,101 @@
 
+# Interactive Demo Flow for Curatr Homepage
 
-## Carousel Animation Smoothness Optimization Plan
+## Overview
+A guided, multi-step interactive demo embedded directly into the homepage that lets visitors experience the full Curatr pipeline -- from picking a topic, selecting a source, choosing voice/style, to seeing a live feed with their freshly generated stories. No sign-up required. The demo uses real data from pre-tested sources, making it feel authentic rather than canned.
 
-### Overview
-
-This plan addresses improving the swipe experience in your news carousel while maintaining compatibility with older devices. Based on my analysis of the current implementation, I've identified several areas for optimization that will create a noticeably smoother, more responsive feel without breaking the experience for legacy users.
-
----
-
-### Current State Analysis
-
-Your existing implementation already has good foundations:
-- Device tier detection (modern/mid-range/legacy for iOS, Android, desktop)
-- GPU acceleration hints for modern devices
-- Variable animation duration based on device capability
-- Reduced motion accessibility support
-
-However, there are opportunities to make the experience significantly smoother:
-
----
-
-### Recommended Improvements
-
-#### 1. Fine-tune Embla Duration Values
-
-The current `duration` values (28/32/40) are slightly higher than optimal. Embla recommends 20-60, but the sweet spot for perceived responsiveness is typically 20-30.
-
-**Current:** 28 (modern), 32 (mid-range), 40 (legacy)
-**Proposed:** 22 (modern), 26 (mid-range), 35 (legacy)
-
-This creates a snappier feel without making legacy devices struggle.
-
----
-
-#### 2. Add CSS Scroll Snap as Enhancement
-
-CSS scroll snap can work alongside Embla to provide an additional layer of native smoothness, particularly on iOS where Safari's native scroll physics are exceptionally polished.
+## Demo Flow (5 Steps)
 
 ```text
-.embla__container {
-  scroll-snap-type: x mandatory;
-}
-.embla__slide {
-  scroll-snap-align: start;
-}
+[1. Pick a Topic] --> [2. Pick a Source] --> [3. Set Voice + Style] --> [4. Watch it Build] --> [5. See Your Feed]
 ```
 
-This is applied subtly as an enhancement, not a replacement.
+### Step 1: "What do you want to curate?"
+- 3-4 hardcoded demo topic cards (e.g. "Local News", "Tech & AI", "Sport", "Culture")
+- Each card has a name, icon, and one-line description
+- Behind the scenes, each maps to the Eastbourne topic (the only one with rich legacy content), but the UI presents them as distinct choices to show versatility
+- Selecting a card animates it forward and fades the others
 
----
+### Step 2: "Pick a source"
+- Shows 3 pre-vetted, 100% success-rate sources for the chosen topic (e.g. sussexexpress.co.uk, bournefreelive.co.uk, bbc.co.uk)
+- Each displayed as a clean pill/card with source name and article count
+- User picks one source -- this is the source that will be "gathered" from
+- Single source keeps the demo fast and focused
 
-#### 3. Optimize Touch Event Handling
+### Step 3: "Set your style"
+- Two simple toggle choices, side by side:
+  - **Tone**: Conversational / Engaging / Satirical (3 pills, pick one)
+  - **Image style**: Illustrative / Photographic (2 pills, pick one)
+- Minimal UI -- no dropdowns, just tappable pills
+- Default pre-selected (Conversational + Illustrative)
 
-Add `passive: true` to touch event listeners where possible. This tells the browser "I promise I won't call preventDefault()" which allows the browser to begin scrolling immediately without waiting for JavaScript.
+### Step 4: "Building your feed..."
+- Animated progress sequence (3 sub-steps, ~8-12 seconds total):
+  1. "Gathering stories from [source]..." -- with a subtle progress bar
+  2. "AI is rewriting in your voice..." -- shows tone badge
+  3. "Generating cover images..." -- shows style badge
+- Behind the scenes: calls the `enhanced-content-generator` edge function for 3 pre-selected recent articles from the chosen source (already in the articles table, status=pending or ready)
+- If generation takes too long, falls back to showing existing published stories with a "Here's what your feed looks like" message
+- This step creates the "investment effect" -- the user has committed choices and watched work happen, making the result feel earned
 
----
+### Step 5: "Your feed is live"
+- Renders a stripped-down version of the TopicFeed component in an embedded container
+- Shows: the 3 newly generated stories at the top (if ready), plus 5-7 legacy published stories below
+- Available interactions:
+  - Swipe through story carousels (existing StoryCarousel component)
+  - "Try Play Mode" button that opens SwipeMode in a modal/overlay
+  - "Subscribe" button (existing SubscribeMenu) 
+  - No hamburger menu, no filters, no curation tools -- clean reader experience only
+- A floating CTA bar at the bottom: "Like what you see? Start curating your own feed" with sign-up button
 
-#### 4. Reduce Layout Thrashing During Swipe
+## Behavioral Psychology Elements
 
-The current slide content renders dynamic elements that can cause micro-stutters. Add `contain: content` to slide containers to create isolation boundaries, preventing layout recalculations from propagating.
+1. **Endowment Effect**: User makes choices (topic, source, style) creating ownership over "their" feed before seeing it
+2. **Investment Escalation**: Each step is a small commitment that makes abandoning feel like waste
+3. **Progress Momentum**: The build animation creates anticipation and perceived value
+4. **Social Proof**: Show "142 subscribers" or "8 stories published today" in the feed header
+5. **Loss Aversion**: After seeing the feed, the CTA implies "this feed exists now -- sign up to keep it"
+6. **Instant Gratification**: Real content, real AI output -- not mockups
 
----
+## Additional Elevating Ideas
 
-#### 5. Image Loading Optimization for Adjacent Slides
+- **Typing animation** on the "rewriting" step showing a snippet of the AI-transformed headline
+- **Before/after flash**: briefly show the raw article title, then animate to the rewritten version
+- **Confetti or subtle sparkle** when the feed appears
+- **"Your feed score: 94/100"** -- a fake-but-fun quality score to gamify the result
+- **Play Mode teaser**: Auto-open a single swipe card as a teaser after 3 seconds on the feed view
 
-Pre-decode images for the next/previous slides using the `Image.decode()` API. This ensures images are GPU-ready before they scroll into view, eliminating the brief flash or stutter when new content appears.
+## Technical Approach
 
----
+### New Files
+- `src/components/demo/DemoFlow.tsx` -- Main orchestrator with step state machine
+- `src/components/demo/DemoTopicPicker.tsx` -- Step 1 topic cards
+- `src/components/demo/DemoSourcePicker.tsx` -- Step 2 source selection
+- `src/components/demo/DemoStylePicker.tsx` -- Step 3 tone + image style
+- `src/components/demo/DemoBuildProgress.tsx` -- Step 4 animated progress
+- `src/components/demo/DemoFeedPreview.tsx` -- Step 5 embedded feed
+- `src/lib/demoConfig.ts` -- Hardcoded demo topic/source mappings and config
 
-#### 6. Simplify GPU Acceleration Hints
+### Modified Files
+- `src/pages/Index.tsx` -- Replace the static "How it works" section with the interactive demo, or add it as a new section between "How it works" and the CTA
 
-The current `willChange: "transform"` is good, but adding it conditionally can cause repaints. Apply it consistently via CSS class instead of inline styles, and use `transform: translateZ(0)` as a stable compositor layer hint.
+### Edge Function Usage
+- No new edge functions needed -- the demo will call `enhanced-content-generator` for the simplify step (existing function)
+- Fallback: if the user is not authenticated, the demo skips actual generation and shows existing published stories directly (zero-auth demo path)
 
----
+### Data Strategy
+- Demo uses the Eastbourne topic's real sources and published stories
+- Pre-select 3 recent articles per source that are known-good (have extractable content)
+- The "gathering" step is cosmetic for the demo -- articles already exist in the DB
+- The "simplify" step can be real (calling enhanced-content-generator) for authenticated users, or simulated for anonymous visitors
+- Legacy stories provide the "full feed" feeling regardless of generation success
 
-#### 7. Add Momentum Deceleration Smoothing
+### Routing
+- No new route needed -- the demo lives inline on the homepage (`/`)
+- The embedded feed preview is not a full TopicFeed page, just a visual container using StoryCarousel components
 
-When a swipe ends, Embla snaps to the nearest slide. Adding a slight easing curve via CSS transitions on the container can make this final snap feel more natural:
-
-```css
-.embla__container {
-  transition: transform 0.1s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-```
-
-This is applied only during the settling phase, not during active dragging.
-
----
-
-### Technical Implementation Details
-
-#### File Changes Required
-
-**1. src/components/ui/embla-slide-carousel.tsx**
-- Adjust duration values for each device tier
-- Add `inViewThreshold` option for better slide visibility detection
-- Add image pre-decoding for adjacent slides
-- Consolidate GPU acceleration to CSS class
-
-**2. src/index.css**
-- Add new `.embla-slide-gpu` class with stable GPU layer hints
-- Add `.embla-container-smooth` class with subtle CSS enhancements
-- Add `contain: content` to slide wrappers
-- Add scroll-snap fallback for browsers with Embla disabled
-
-**3. src/lib/deviceUtils.ts**
-- Add a new helper function to detect if native scroll physics should be prioritized
-- Add Safari-specific detection for leveraging iOS's superior scroll behavior
-
----
-
-### Device-Specific Strategy
-
-```text
-+------------------+----------------------------+
-| Device Tier      | Optimization Strategy      |
-+------------------+----------------------------+
-| Modern iOS       | Duration: 22               |
-|                  | GPU layers: Yes            |
-|                  | Haptics: Yes               |
-|                  | CSS scroll-snap: Enhance   |
-+------------------+----------------------------+
-| Modern Android   | Duration: 24               |
-|                  | GPU layers: Yes            |
-|                  | Haptics: Yes               |
-|                  | Image pre-decode: Yes      |
-+------------------+----------------------------+
-| Mid-range        | Duration: 26               |
-|                  | GPU layers: Selective      |
-|                  | Reduce visual effects      |
-|                  | No pre-decode (save memory)|
-+------------------+----------------------------+
-| Legacy/Old       | Duration: 35               |
-|                  | GPU layers: No             |
-|                  | Minimal effects            |
-|                  | Graceful degradation       |
-+------------------+----------------------------+
-```
-
----
-
-### Risk Assessment
-
-| Change | Risk | Mitigation |
-|--------|------|------------|
-| Duration reduction | Very Low | Still within Embla's 20-60 range |
-| CSS scroll-snap | Low | Applied as enhancement, Embla remains primary |
-| GPU layer consolidation | Very Low | Moving from inline to class |
-| Image pre-decode | Low | Uses lazy initialization, no memory impact on legacy |
-| `contain: content` | Very Low | Standard CSS containment |
-
----
-
-### Expected Outcomes
-
-- **Reduced input latency**: Swipes will feel more immediately responsive
-- **Smoother transitions**: Less micro-stuttering during slide changes
-- **Better iOS experience**: Leveraging Safari's native scroll physics
-- **No degradation for older devices**: All changes are tier-aware
-- **Maintained accessibility**: Reduced motion preferences still respected
-
----
-
-### Testing Recommendations
-
-After implementation, test on:
-1. iPhone 15/14 (modern iOS)
-2. iPhone X/11 (mid-range iOS)
-3. iPhone 7/8 (old iOS)
-4. Pixel 8 (modern Android)
-5. Mid-range Android (Samsung A series)
-6. Older Android (Android 8-9)
-
-Focus on:
-- First swipe responsiveness
-- Continuous swiping smoothness
-- Snap-to-slide settling behavior
-- Image appearance timing
-
+### Mobile Considerations
+- Steps stack vertically on mobile
+- Topic/source cards become full-width tappable rows
+- Style pills remain horizontal but wrap
+- Feed preview is full-width with horizontal story swiping
