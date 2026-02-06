@@ -4,6 +4,7 @@ import { Search, Filter, Sparkles, Gamepad2, Brain, Users, Image, Mail, Share2, 
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CookieConsent } from '@/components/CookieConsent';
+import { DemoFlow } from '@/components/demo/DemoFlow';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -279,65 +280,8 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Workflow Timeline */}
-          <section className="max-w-5xl mx-auto py-24">
-            <h2 className="text-4xl md:text-5xl font-display font-semibold text-center mb-16 tracking-tight text-white">
-              How it works
-            </h2>
-
-            {/* Timeline */}
-            <div className="relative">
-              {/* Connecting line - desktop */}
-              <div className="hidden lg:block absolute top-7 left-[calc(12.5%+28px)] right-[calc(12.5%+28px)] h-px bg-gradient-to-r from-[hsl(155,100%,67%)]/40 via-[hsl(270,100%,68%)]/40 to-[hsl(155,100%,67%)]/40" />
-
-              {/* Timeline items */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
-                {/* Step 1 - Connect */}
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="relative z-10 rounded-full bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
-                    <Rss className="h-6 w-6 text-[hsl(155,100%,67%)]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Connect sources</h3>
-                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Add RSS feeds, news sites, or any web source
-                  </p>
-                </div>
-
-                {/* Step 2 - Curate */}
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="relative z-10 rounded-full bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
-                    <Filter className="h-6 w-6 text-[hsl(270,100%,68%)]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Curate content</h3>
-                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Approve stories and let AI transform them
-                  </p>
-                </div>
-
-                {/* Step 3 - Publish */}
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="relative z-10 rounded-full bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
-                    <Share2 className="h-6 w-6 text-[hsl(155,100%,67%)]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Distribute</h3>
-                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Publish to feed, send newsletters, export carousels
-                  </p>
-                </div>
-
-                {/* Step 4 - Grow */}
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="relative z-10 rounded-full bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
-                    <Users className="h-6 w-6 text-[hsl(270,100%,68%)]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Grow audience</h3>
-                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Build a loyal community around your niche
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          {/* Interactive Demo */}
+          <DemoFlow />
 
           {/* Use Cases */}
           <section className="max-w-7xl mx-auto py-24">
