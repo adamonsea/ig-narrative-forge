@@ -1,14 +1,16 @@
 import { motion } from 'framer-motion';
-import { DEMO_SOURCES, type DemoSource } from '@/lib/demoConfig';
+import { DEMO_SOURCES_BY_TOPIC, type DemoSource } from '@/lib/demoConfig';
 import { Globe, Check } from 'lucide-react';
 
 interface DemoSourcePickerProps {
   onSelect: (source: DemoSource) => void;
   selected?: string | null;
-  topicName: string;
+  topicId: string; // demo category key e.g. 'local', 'culture'
 }
 
-export const DemoSourcePicker = ({ onSelect, selected, topicName }: DemoSourcePickerProps) => {
+export const DemoSourcePicker = ({ onSelect, selected, topicId }: DemoSourcePickerProps) => {
+  const sources = DEMO_SOURCES_BY_TOPIC[topicId] || DEMO_SOURCES_BY_TOPIC['local'];
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -20,7 +22,7 @@ export const DemoSourcePicker = ({ onSelect, selected, topicName }: DemoSourcePi
       </div>
 
       <div className="flex flex-col gap-3 max-w-md mx-auto">
-        {DEMO_SOURCES.map((source, i) => {
+        {sources.map((source, i) => {
           const isSelected = selected === source.id;
 
           return (
@@ -49,7 +51,9 @@ export const DemoSourcePicker = ({ onSelect, selected, topicName }: DemoSourcePi
                 <div className="text-sm font-semibold text-white">{source.name}</div>
                 <div className="text-xs text-white/40">{source.domain}</div>
               </div>
-              <div className="text-xs text-white/30 font-mono">{source.articleCount.toLocaleString()} articles</div>
+              {source.articleCount > 0 && (
+                <div className="text-xs text-white/30 font-mono">{source.articleCount.toLocaleString()} articles</div>
+              )}
             </motion.button>
           );
         })}
