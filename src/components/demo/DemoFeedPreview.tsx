@@ -2,11 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { PlayModeMenu } from '@/components/feed/PlayModeMenu';
-import { SubscribeMenu } from '@/components/feed/SubscribeMenu';
-import { Sparkles, ArrowRight, Users, Newspaper } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface DemoStory {
   id: string;
@@ -71,48 +68,23 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, type: 'spring' }}
-        >
-          <Sparkles className="w-8 h-8 text-[hsl(155,100%,67%)] mx-auto mb-2" />
-        </motion.div>
+      <div className="text-center">
         <h3 className="text-2xl md:text-3xl font-display font-semibold text-white">
           Your feed is live
         </h3>
-        <p className="text-white/50 text-sm">Here's what your curated feed looks like</p>
       </div>
 
-      {/* Social proof badges */}
-      <div className="flex items-center justify-center gap-3 flex-wrap">
-        <Badge className="bg-white/5 text-white/60 border-white/10 text-xs gap-1.5">
-          <Users className="w-3 h-3" /> 142 subscribers
-        </Badge>
-        <Badge className="bg-white/5 text-white/60 border-white/10 text-xs gap-1.5">
-          <Newspaper className="w-3 h-3" /> 8 stories today
-        </Badge>
-      </div>
-
-      {/* Feed actions */}
-      <div className="flex items-center justify-center gap-2">
-        <PlayModeMenu slug={topicSlug} showLabel showPulse={false} />
-        <SubscribeMenu topicName={topicName} topicId={topicId} showLabel />
-      </div>
-
-      {/* Story cards grid */}
+      {/* Story cards */}
       <div className="max-w-2xl mx-auto">
         {loading ? (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-28 rounded-xl bg-white/5 animate-pulse" />
+              <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />
             ))}
           </div>
         ) : stories.length === 0 ? (
-          <div className="text-center py-10 space-y-3">
-            <p className="text-white/40 text-sm">Stories are being generated for this topic...</p>
-            <p className="text-white/25 text-xs">Check back shortly — our AI is curating content now</p>
+          <div className="text-center py-8">
+            <p className="text-white/40 text-sm">Generating stories…</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
@@ -131,7 +103,7 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
                     <img
                       src={story.cover_illustration_url}
                       alt=""
-                      className="w-16 h-16 rounded-lg object-cover shrink-0"
+                      className="w-14 h-14 rounded-lg object-cover shrink-0"
                       loading="lazy"
                     />
                   )}
@@ -139,12 +111,9 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
                     <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-[hsl(155,100%,67%)] transition-colors">
                       {story.title}
                     </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      {story.publication_name && (
-                        <span className="text-xs text-white/30">{story.publication_name}</span>
-                      )}
-                      <span className="text-xs text-white/20">{story.slideCount} slides</span>
-                    </div>
+                    {story.publication_name && (
+                      <span className="text-xs text-white/30 mt-1 block">{story.publication_name}</span>
+                    )}
                   </div>
                 </Link>
               </motion.div>
@@ -153,7 +122,7 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
         )}
       </div>
 
-      {/* View full feed CTA */}
+      {/* View feed link */}
       <div className="text-center">
         <Button
           asChild
@@ -161,20 +130,13 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
           className="text-[hsl(270,100%,68%)] hover:text-[hsl(270,100%,75%)] hover:bg-[hsl(270,100%,68%)]/10"
         >
           <Link to={`/feed/${topicSlug}`}>
-            View the full live feed <ArrowRight className="w-4 h-4 ml-1" />
+            View full feed <ArrowRight className="w-4 h-4 ml-1" />
           </Link>
         </Button>
       </div>
 
-      {/* Floating CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1, duration: 0.5 }}
-        className="bg-gradient-to-r from-[hsl(270,100%,68%)]/20 to-[hsl(155,100%,67%)]/20 rounded-2xl p-6 border border-[hsl(270,100%,68%)]/30 text-center space-y-3"
-      >
-        <p className="text-white font-semibold">Like what you see?</p>
-        <p className="text-white/50 text-sm">Start curating your own feed — free, no credit card required</p>
+      {/* CTA */}
+      <div className="text-center pt-2">
         <Button
           asChild
           size="lg"
@@ -182,7 +144,7 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
         >
           <Link to="/auth">Start curating free</Link>
         </Button>
-      </motion.div>
+      </div>
     </div>
   );
 };
