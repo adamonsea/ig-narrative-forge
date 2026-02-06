@@ -32,24 +32,9 @@ export const SubscribeMenu = ({
   };
 
   const frequencyOptions = [
-    {
-      value: 'daily' as const,
-      icon: Calendar,
-      label: 'Daily',
-      description: 'Get updates every day',
-    },
-    {
-      value: 'weekly' as const,
-      icon: CalendarDays,
-      label: 'Weekly',
-      description: 'Weekly digest of top stories',
-    },
-    {
-      value: 'both' as const,
-      icon: Layers,
-      label: 'Both',
-      description: 'Daily updates + weekly digest',
-    },
+    { value: 'daily' as const, icon: Calendar, label: 'Daily' },
+    { value: 'weekly' as const, icon: CalendarDays, label: 'Weekly' },
+    { value: 'both' as const, icon: Layers, label: 'Both' },
   ];
 
   return (
@@ -77,10 +62,7 @@ export const SubscribeMenu = ({
               className="cursor-pointer"
             >
               <option.icon className="w-4 h-4 mr-2" />
-              <div className="flex flex-col">
-                <span className="font-medium">{option.label}</span>
-                <span className="text-xs text-muted-foreground">{option.description}</span>
-              </div>
+              <span className="font-medium">{option.label}</span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
