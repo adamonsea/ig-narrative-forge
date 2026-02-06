@@ -19,7 +19,11 @@ type DemoStep = 'topic' | 'source' | 'style' | 'build' | 'feed';
 
 const STEP_ORDER: DemoStep[] = ['topic', 'source', 'style', 'build', 'feed'];
 
-export const DemoFlow = () => {
+interface DemoFlowProps {
+  isOverlay?: boolean;
+}
+
+export const DemoFlow = ({ isOverlay = false }: DemoFlowProps) => {
   const [step, setStep] = useState<DemoStep>('topic');
   const [selectedTopic, setSelectedTopic] = useState<DemoTopic | null>(null);
   const [selectedSource, setSelectedSource] = useState<DemoSource | null>(null);
@@ -85,9 +89,9 @@ export const DemoFlow = () => {
   );
 
   return (
-    <section className="max-w-5xl mx-auto py-24">
+    <section className={isOverlay ? '' : 'max-w-5xl mx-auto py-24'}>
       <div className="text-center mb-10">
-        <h2 className="text-4xl md:text-5xl font-display font-semibold tracking-tight text-white mb-4">
+        <h2 className={`font-display font-semibold tracking-tight text-white mb-4 ${isOverlay ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl'}`}>
           Try it now
         </h2>
         <p className="text-xl text-white/60 max-w-2xl mx-auto">
@@ -95,7 +99,7 @@ export const DemoFlow = () => {
         </p>
       </div>
 
-      <div className="bg-[hsl(214,50%,11%)] rounded-3xl border border-white/10 p-6 md:p-10">
+      <div className={`bg-[hsl(214,50%,11%)] rounded-3xl border border-white/10 ${isOverlay ? 'p-6 md:p-12' : 'p-6 md:p-10'}`}>
         {renderDots()}
 
         <AnimatePresence mode="wait">

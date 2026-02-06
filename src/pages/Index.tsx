@@ -4,10 +4,12 @@ import { Search, Filter, Sparkles, Gamepad2, Brain, Users, Image, Mail, Share2, 
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CookieConsent } from '@/components/CookieConsent';
-import { DemoFlow } from '@/components/demo/DemoFlow';
+import { DemoOverlay } from '@/components/demo/DemoOverlay';
+import { useState } from 'react';
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const [demoOpen, setDemoOpen] = useState(false);
   usePageFavicon();
 
   if (loading) {
@@ -65,8 +67,13 @@ const Index = () => {
               <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
                 <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
               </Button>
-              <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white">
-                <Link to="/feed/eastbourne">View live demo</Link>
+              <Button
+                onClick={() => setDemoOpen(true)}
+                variant="ghost"
+                size="lg"
+                className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
+              >
+                Try the demo
               </Button>
             </div>
           </section>
@@ -280,8 +287,8 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Interactive Demo */}
-          <DemoFlow />
+          {/* Demo Overlay */}
+          <DemoOverlay open={demoOpen} onClose={() => setDemoOpen(false)} />
 
           {/* Use Cases */}
           <section className="max-w-7xl mx-auto py-24">
