@@ -90,14 +90,16 @@ export const DemoFlow = ({ isOverlay = false }: DemoFlowProps) => {
 
   return (
     <section className={isOverlay ? '' : 'max-w-5xl mx-auto py-24'}>
-      <div className="text-center mb-10">
-        <h2 className={`font-display font-semibold tracking-tight text-white mb-4 ${isOverlay ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl'}`}>
-          Try it now
-        </h2>
-        <p className="text-xl text-white/60 max-w-2xl mx-auto">
-          Build a live feed in 30 seconds — no sign-up required
-        </p>
-      </div>
+      {!isOverlay && (
+        <div className="text-center mb-10">
+          <h2 className="font-display font-semibold tracking-tight text-white mb-4 text-4xl md:text-5xl">
+            Try it now
+          </h2>
+          <p className="text-xl text-white/60 max-w-2xl mx-auto">
+            Build a live feed in 30 seconds — no sign-up required
+          </p>
+        </div>
+      )}
 
       <div className={`bg-[hsl(214,50%,11%)] rounded-3xl border border-white/10 ${isOverlay ? 'p-6 md:p-12' : 'p-6 md:p-10'}`}>
         {renderDots()}

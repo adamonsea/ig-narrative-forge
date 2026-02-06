@@ -13,12 +13,10 @@ export const DemoSourcePicker = ({ onSelect, selected, topicId }: DemoSourcePick
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <p className="text-sm uppercase tracking-widest text-[hsl(155,100%,67%)] font-medium">Step 2</p>
+      <div className="text-center">
         <h3 className="text-2xl md:text-3xl font-display font-semibold text-white">
           Pick a source
         </h3>
-        <p className="text-white/50 text-sm">Choose where to gather stories from</p>
       </div>
 
       <div className="flex flex-col gap-3 max-w-md mx-auto">
