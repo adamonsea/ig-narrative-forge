@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { DEMO_TOPIC_ID, DEMO_TOPIC_SLUG } from '@/lib/demoConfig';
 import { PlayModeMenu } from '@/components/feed/PlayModeMenu';
 import { SubscribeMenu } from '@/components/feed/SubscribeMenu';
 import { Sparkles, ArrowRight, Users, Newspaper } from 'lucide-react';
@@ -20,30 +19,42 @@ interface DemoStory {
 
 interface DemoFeedPreviewProps {
   topicName: string;
+  topicId: string;
+  topicSlug: string;
 }
 
-export const DemoFeedPreview = ({ topicName }: DemoFeedPreviewProps) => {
+export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPreviewProps) => {
   const [stories, setStories] = useState<DemoStory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStories = async () => {
-      // Fetch published stories with their slide counts
+      // First get topic_article IDs for this topic
+      const { data: topicArticles } = await supabase
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', topicId);
+
+      if (!topicArticles || topicArticles.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      const taIds = topicArticles.map(ta => ta.id);
+
+      // Fetch published stories linked to these topic articles
       const { data, error } = await supabase
         .from('stories')
-        .select(`
-          id, title, cover_illustration_url, created_at, publication_name,
-          slides(id)
-        `)
+        .select('id, title, cover_illustration_url, created_at, publication_name, slides(id)')
         .eq('status', 'published')
+        .in('topic_article_id', taIds)
         .order('created_at', { ascending: false })
         .limit(8);
 
       if (!error && data) {
-        // Filter to stories that actually have slides and cover images
-        const validStories = data
-          .filter((s: any) => s.slides && s.slides.length > 0 && s.cover_illustration_url)
-          .map((s: any) => ({
+        const validStories = (data as any[])
+          .filter((s) => s.slides && s.slides.length > 0 && s.cover_illustration_url)
+          .map((s) => ({
             id: s.id,
             title: s.title,
             cover_illustration_url: s.cover_illustration_url,
@@ -56,7 +67,7 @@ export const DemoFeedPreview = ({ topicName }: DemoFeedPreviewProps) => {
       setLoading(false);
     };
     fetchStories();
-  }, []);
+  }, [topicId]);
 
   return (
     <div className="space-y-6">
@@ -86,8 +97,8 @@ export const DemoFeedPreview = ({ topicName }: DemoFeedPreviewProps) => {
 
       {/* Feed actions */}
       <div className="flex items-center justify-center gap-2">
-        <PlayModeMenu slug={DEMO_TOPIC_SLUG} showLabel showPulse={false} />
-        <SubscribeMenu topicName="Demo Feed" topicId={DEMO_TOPIC_ID} showLabel />
+        <PlayModeMenu slug={topicSlug} showLabel showPulse={false} />
+        <SubscribeMenu topicName={topicName} topicId={topicId} showLabel />
       </div>
 
       {/* Story cards grid */}
@@ -97,6 +108,11 @@ export const DemoFeedPreview = ({ topicName }: DemoFeedPreviewProps) => {
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-28 rounded-xl bg-white/5 animate-pulse" />
             ))}
+          </div>
+        ) : stories.length === 0 ? (
+          <div className="text-center py-10 space-y-3">
+            <p className="text-white/40 text-sm">Stories are being generated for this topic...</p>
+            <p className="text-white/25 text-xs">Check back shortly — our AI is curating content now</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
@@ -108,7 +124,7 @@ export const DemoFeedPreview = ({ topicName }: DemoFeedPreviewProps) => {
                 transition={{ delay: i * 0.08, duration: 0.3 }}
               >
                 <Link
-                  to={`/feed/${DEMO_TOPIC_SLUG}`}
+                  to={`/feed/${topicSlug}`}
                   className="flex items-center gap-4 rounded-xl p-3 bg-[hsl(214,50%,12%)] border border-white/10 hover:border-white/20 transition-all group"
                 >
                   {story.cover_illustration_url && (
@@ -144,7 +160,7 @@ export const DemoFeedPreview = ({ topicName }: DemoFeedPreviewProps) => {
           variant="ghost"
           className="text-[hsl(270,100%,68%)] hover:text-[hsl(270,100%,75%)] hover:bg-[hsl(270,100%,68%)]/10"
         >
-          <Link to={`/feed/${DEMO_TOPIC_SLUG}`}>
+          <Link to={`/feed/${topicSlug}`}>
             View the full live feed <ArrowRight className="w-4 h-4 ml-1" />
           </Link>
         </Button>

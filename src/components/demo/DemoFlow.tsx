@@ -12,6 +12,7 @@ import {
   type DemoSource,
   type DemoStyle,
   DEFAULT_DEMO_STYLE,
+  DEMO_TOPIC_MAP,
 } from '@/lib/demoConfig';
 
 type DemoStep = 'topic' | 'source' | 'style' | 'build' | 'feed';
@@ -26,8 +27,15 @@ export const DemoFlow = () => {
 
   const stepIndex = STEP_ORDER.indexOf(step);
 
+  // Resolve the real topic info from the selected demo category
+  const resolvedTopic = selectedTopic
+    ? DEMO_TOPIC_MAP[selectedTopic.id] || DEMO_TOPIC_MAP['local']
+    : null;
+
   const handleTopicSelect = (topic: DemoTopic) => {
     setSelectedTopic(topic);
+    // Reset source when topic changes
+    setSelectedSource(null);
   };
 
   const handleSourceSelect = (source: DemoSource) => {
@@ -59,7 +67,6 @@ export const DemoFlow = () => {
     return false;
   };
 
-  // Step dots indicator
   const renderDots = () => (
     <div className="flex items-center justify-center gap-2 mb-6">
       {STEP_ORDER.map((s, i) => (
@@ -106,7 +113,7 @@ export const DemoFlow = () => {
               <DemoSourcePicker
                 onSelect={handleSourceSelect}
                 selected={selectedSource?.id}
-                topicName={selectedTopic?.name || ''}
+                topicId={selectedTopic?.id || 'local'}
               />
             )}
             {step === 'style' && (
@@ -120,13 +127,16 @@ export const DemoFlow = () => {
                 onComplete={handleBuildComplete}
               />
             )}
-            {step === 'feed' && (
-              <DemoFeedPreview topicName={selectedTopic?.name || 'Your Feed'} />
+            {step === 'feed' && resolvedTopic && (
+              <DemoFeedPreview
+                topicName={selectedTopic?.name || 'Your Feed'}
+                topicId={resolvedTopic.topicId}
+                topicSlug={resolvedTopic.slug}
+              />
             )}
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation */}
         {step !== 'build' && step !== 'feed' && (
           <div className="flex justify-center mt-8">
             <Button
