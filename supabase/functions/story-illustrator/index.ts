@@ -277,23 +277,37 @@ serve(async (req) => {
       )
     }
 
-    // Get the authenticated user (use auth client with user token)
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
-    if (authError) {
-      console.error('Auth error:', authError.message);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', details: authError.message }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Check if this is an internal service-role call (from enhanced-content-generator, cron, etc.)
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const token = authHeader.replace('Bearer ', '');
+    const isServiceRole = token === serviceRoleKey;
+
+    let userId: string;
+
+    if (isServiceRole) {
+      // Internal call — skip user auth, use a system identifier
+      console.log('Service role auth detected — internal call');
+      userId = 'service-role';
+    } else {
+      // User call — validate JWT
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
+      if (authError) {
+        console.error('Auth error:', authError.message);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized', details: authError.message }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      if (!user) {
+        console.error('No user found from token');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized', details: 'Invalid or expired token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      userId = user.id;
+      console.log(`Authenticated user: ${userId}`);
     }
-    if (!user) {
-      console.error('No user found from token');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', details: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    console.log(`Authenticated user: ${user.id}`);
 
     // Check feature flag for photographic mode
     const { data: featureFlag } = await supabase
@@ -437,11 +451,11 @@ serve(async (req) => {
 
     // Check if user is super admin (bypass credit deduction)
     const { data: hasAdminRole } = await supabase.rpc('has_role', {
-      _user_id: user.id,
+      _user_id: userId,
       _role: 'superadmin'
     })
     
-    const isSuperAdmin = hasAdminRole === true
+    const isSuperAdmin = hasAdminRole === true || isServiceRole
     let creditResult = null
     
     // Track fallback usage to inform the user
@@ -452,7 +466,7 @@ serve(async (req) => {
     // Deduct credits based on model - skip for super admin
     if (!isSuperAdmin) {
       const { data: result, error: creditError } = await supabase.rpc('deduct_user_credits', {
-        p_user_id: user.id,
+        p_user_id: userId,
         p_credits_amount: modelConfig.credits,
         p_description: `Story illustration generation (${model})`,
         p_story_id: storyId
@@ -799,7 +813,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           if (!isSuperAdmin && creditResult) {
             console.log('💰 Refunding credits due to moderation block...');
             await supabase.rpc('add_user_credits', {
-              p_user_id: user.id,
+              p_user_id: userId,
               p_credits_amount: modelConfig.credits,
               p_description: `Refund: OpenAI moderation false positive (${model})`,
               p_story_id: storyId
