@@ -16,12 +16,10 @@ interface DemoStylePickerProps {
 export const DemoStylePicker = ({ style, onChange }: DemoStylePickerProps) => {
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <p className="text-sm uppercase tracking-widest text-[hsl(155,100%,67%)] font-medium">Step 3</p>
+      <div className="text-center">
         <h3 className="text-2xl md:text-3xl font-display font-semibold text-white">
           Set your style
         </h3>
-        <p className="text-white/50 text-sm">Choose a voice and visual direction</p>
       </div>
 
       <motion.div
