@@ -1169,6 +1169,7 @@ Return in JSON format:
           },
           body: JSON.stringify({
             storyId,
+            model: 'gpt-image-1.5-low', // Quick tier - 2 credits
             forceRegenerate: true,
             skipExistingImages: false
           })
