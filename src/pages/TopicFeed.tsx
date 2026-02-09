@@ -288,6 +288,9 @@ const TopicFeed = () => {
         else toggleKeyword(match.value);
       }
 
+      // Scroll to top of feed so user sees filtered results
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       const filterDescription = matches.map(m => m.value).join(' or ');
       toast({
         title: 'Filtering',
