@@ -162,7 +162,9 @@ const TopicFeed = () => {
     retryLoad,
     // Filter readiness state
     filterIndexLoading,
-    filterOptionsReady
+    filterOptionsReady,
+    // Prefetch for "More like this"
+    prefetchForFilter
   } = useHybridTopicFeedWithKeywords(slug || '');
 
   // OPTIMIZED: Fetch all secondary metadata in parallel via cached React Query
@@ -193,9 +195,10 @@ const TopicFeed = () => {
     }
   }, [isModalOpen, ensureFilterStoryIndexLoaded]);
 
-  const handleMoreLikeThis = useCallback(
+  // Extract matching keywords/landmarks/organizations from a story
+  const computeStoryFilterMatches = useCallback(
     (story: any) => {
-      if (!topic) return;
+      if (!topic) return [];
 
       const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const combinedText = `${story?.title ?? ''} ${(story?.slides ?? []).map((s: any) => s?.content ?? '').join(' ')}`.toLowerCase();
@@ -213,7 +216,6 @@ const TopicFeed = () => {
         for (const raw of group.items) {
           const value = String(raw || '').trim();
           if (value.length <= 2) continue;
-          // Skip the topic name itself (too generic)
           if (value.toLowerCase() === topic.name?.toLowerCase()) continue;
 
           const escaped = escapeRegExp(value.toLowerCase());
@@ -233,7 +235,6 @@ const TopicFeed = () => {
             const value = String(raw || '').trim();
             if (value.length <= 2) continue;
             if (value.toLowerCase() === topic.name?.toLowerCase()) continue;
-            // Skip if already matched
             if (matches.some(m => m.value.toLowerCase() === value.toLowerCase())) continue;
 
             if (combinedText.includes(value.toLowerCase())) {
@@ -244,6 +245,30 @@ const TopicFeed = () => {
           if (matches.length >= 2) break;
         }
       }
+
+      return matches;
+    },
+    [topic]
+  );
+
+  // Prefetch filter results when "More like this" button appears
+  const handlePrefetchFilter = useCallback(
+    (story: any) => {
+      const matches = computeStoryFilterMatches(story);
+      if (matches.length === 0) return;
+
+      // Compute the combined keywords that will be passed to the server
+      const combinedKeywords = matches.map(m => m.value);
+      prefetchForFilter(combinedKeywords, []);
+    },
+    [computeStoryFilterMatches, prefetchForFilter]
+  );
+
+  const handleMoreLikeThis = useCallback(
+    (story: any) => {
+      if (!topic) return;
+
+      const matches = computeStoryFilterMatches(story);
 
       if (matches.length === 0) {
         setIsModalOpen(true);
@@ -269,7 +294,7 @@ const TopicFeed = () => {
         description: filterDescription,
       });
     },
-    [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword, toast]
+    [topic, computeStoryFilterMatches, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword, toast]
   );
 
   // Debug helper for resetting collections hint removed - collections now in hamburger menu
@@ -993,6 +1018,7 @@ const TopicFeed = () => {
                         onStorySwipe={handleStorySwipe}
                         onStoryScrolledPast={handleStoryScrolledPast}
                         onMoreLikeThis={handleMoreLikeThis}
+                        onPrefetchFilter={handlePrefetchFilter}
                         prefetchedReactionCounts={reactionCountsMap.get(story.id)}
                         onReactionCountsChange={updateReactionCounts}
                       />

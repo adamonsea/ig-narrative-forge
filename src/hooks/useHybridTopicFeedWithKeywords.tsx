@@ -170,6 +170,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Filter version tracking to prevent stale server responses from overwriting active filters
   const filterVersionRef = useRef(0);
   
+  // Prefetch cache: stores raw RPC response for "More like this" prefetching
+  const prefetchRpcRef = useRef<{ 
+    key: string; 
+    data: any[] | null; 
+    abortController: AbortController | null;
+  } | null>(null);
+  
   // Filter index loading state with safeguards
   const [filterIndexLoading, setFilterIndexLoading] = useState(false);
   const [filterIndexError, setFilterIndexError] = useState<string | null>(null);
@@ -597,6 +604,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       let rpcError: any = null;
       const currentAllContent = allContentRef.current;
 
+      // Check prefetch cache before making RPC call
+      const prefetchKey = [...(keywords || [])].sort().join(',') + '|' + [...(sources || [])].sort().join(',');
+      const cachedPrefetch = prefetchRpcRef.current;
+      if (cachedPrefetch && cachedPrefetch.key === prefetchKey && cachedPrefetch.data && pageNum === 0) {
+        console.log('⚡ Using prefetched RPC data for filter - skipping network call');
+        clearTimeout(timeoutId);
+        storiesData = cachedPrefetch.data;
+        rpcError = null;
+        // Clear the cache after use
+        prefetchRpcRef.current = null;
+      } else {
       try {
         const { data, error } = await supabase
           .rpc('get_topic_stories_with_keywords', {
@@ -629,6 +647,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           rpcError = err;
         }
       }
+      } // end prefetch cache else block
 
       // PHASE 2: If RPC failed, fall back to multiple strategies
       if (rpcError) {
@@ -1715,6 +1734,46 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
   }, [normalizeMPName]);
 
+  // Prefetch server filter results in background (for "More like this" optimization)
+  const prefetchForFilter = useCallback(async (keywords: string[], sources: string[]) => {
+    if (!topic) return;
+    
+    const key = [...keywords].sort().join(',') + '|' + [...sources].sort().join(',');
+    
+    // Abort any previous prefetch
+    if (prefetchRpcRef.current?.abortController) {
+      prefetchRpcRef.current.abortController.abort();
+    }
+    
+    const controller = new AbortController();
+    prefetchRpcRef.current = { key, data: null, abortController: controller };
+    
+    const rawLimit = keywords.length > 0 || sources.length > 0 ? STORIES_PER_PAGE * 20 : STORIES_PER_PAGE * 10;
+    
+    console.log('🔮 Prefetching filter results for:', { keywords, sources, key });
+    
+    try {
+      const { data, error } = await supabase
+        .rpc('get_topic_stories_with_keywords', {
+          p_topic_id: topic.id,
+          p_keyword_filters: keywords.length > 0 ? keywords : null,
+          p_source_filters: sources.length > 0 ? sources : null,
+          p_limit: rawLimit,
+          p_offset: 0
+        } as any)
+        .abortSignal(controller.signal);
+      
+      if (!error && data && prefetchRpcRef.current?.key === key) {
+        prefetchRpcRef.current.data = data;
+        console.log('✅ Prefetch complete:', data.length, 'rows cached for key:', key);
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.debug('⚠️ Prefetch failed (non-critical):', err);
+      }
+    }
+  }, [topic]);
+
   // Debounced server-side filtering with sources (Phase 2)
   const triggerServerFiltering = useCallback(async (keywords: string[], sources: string[], expectedVersion: number) => {
     if (!topic) return;
@@ -2328,7 +2387,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     hasSetupRealtimeRef.current = false;
   }, [topic?.id]);
 
-  // Cleanup debounce and filter timeout on unmount
+  // Cleanup debounce, filter timeout, and prefetch on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
@@ -2336,6 +2395,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
       if (filterIndexTimeoutRef.current) {
         clearTimeout(filterIndexTimeoutRef.current);
+      }
+      if (prefetchRpcRef.current?.abortController) {
+        prefetchRpcRef.current.abortController.abort();
       }
     };
   }, []);
@@ -2429,6 +2491,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     removeSource,
 
     ensureFilterStoryIndexLoaded,
+    
+    // Prefetch for "More like this" optimization
+    prefetchForFilter,
     
     // Filter readiness state for Curate button
     filterIndexLoading,

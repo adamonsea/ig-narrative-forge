@@ -107,6 +107,7 @@ interface StoryCarouselProps {
   topicName?: string; // Topic name for branded WhatsApp share
   topicSlug?: string; // Topic slug for branded WhatsApp share
   onMoreLikeThis?: (story: Story) => void;
+  onPrefetchFilter?: (story: Story) => void;
   /** Pre-fetched reaction counts from batch hook */
   prefetchedReactionCounts?: {
     thumbsUp: number;
@@ -128,19 +129,24 @@ export default function StoryCarousel({
   topicName, 
   topicSlug, 
   onMoreLikeThis,
+  onPrefetchFilter,
   prefetchedReactionCounts,
   onReactionCountsChange
 }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
 
-  // Show "More like this" 2s after first swipe
+  // Show "More like this" 2s after first swipe, and trigger prefetch
   useEffect(() => {
     if (currentSlideIndex > 0 && !showMoreLikeThis && onMoreLikeThis) {
-      const timer = setTimeout(() => setShowMoreLikeThis(true), 2000);
+      const timer = setTimeout(() => {
+        setShowMoreLikeThis(true);
+        // Trigger prefetch when the button appears
+        onPrefetchFilter?.(story);
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [currentSlideIndex, showMoreLikeThis, onMoreLikeThis]);
+  }, [currentSlideIndex, showMoreLikeThis, onMoreLikeThis, onPrefetchFilter, story]);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const iOSVersion = isIOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
   const { trackShareClick, trackSourceClick } = useStoryInteractionTracking();
