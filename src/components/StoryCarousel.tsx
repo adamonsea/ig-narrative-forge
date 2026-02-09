@@ -136,15 +136,12 @@ export default function StoryCarousel({
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
 
-  // Show "More like this" 2s after first swipe, and trigger prefetch
+  // Show "More like this" immediately on first swipe, and trigger prefetch
   useEffect(() => {
     if (currentSlideIndex > 0 && !showMoreLikeThis && onMoreLikeThis) {
-      const timer = setTimeout(() => {
-        setShowMoreLikeThis(true);
-        // Trigger prefetch when the button appears
-        onPrefetchFilter?.(story);
-      }, 2000);
-      return () => clearTimeout(timer);
+      setShowMoreLikeThis(true);
+      // Trigger prefetch as soon as user starts swiping
+      onPrefetchFilter?.(story);
     }
   }, [currentSlideIndex, showMoreLikeThis, onMoreLikeThis, onPrefetchFilter, story]);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
