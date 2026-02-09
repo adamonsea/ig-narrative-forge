@@ -774,6 +774,15 @@ const TopicFeed = () => {
 
             {/* Action buttons - Play, Subscribe, and Hamburger menu */}
             <div className="flex items-center justify-center gap-2 pt-2">
+              {/* Subscribe dropdown */}
+              <div data-onboarding="notifications">
+                <SubscribeMenu
+                  topicName={topic.name}
+                  topicId={topic.id}
+                  showPulse={shouldShowNotificationPrompt}
+                />
+              </div>
+
               {/* Play Mode - Shows immediately, hides only if explicitly disabled */}
               <div data-onboarding="play-mode">
                 <PlayModeMenu 
@@ -781,15 +790,6 @@ const TopicFeed = () => {
                   showPulse={showPlayModePulse}
                   siftEnabled={siftEnabled}
                   hidden={playModeEnabled === false}
-                />
-              </div>
-
-              {/* Subscribe dropdown */}
-              <div data-onboarding="notifications">
-                <SubscribeMenu
-                  topicName={topic.name}
-                  topicId={topic.id}
-                  showPulse={shouldShowNotificationPrompt}
                 />
               </div>
 
