@@ -1,33 +1,59 @@
 
 
-## Fix: Align Automated Gathering with Force Rescrape Behavior
+## Speed up "More like this" filtering
 
 ### Problem
+When a user taps "More like this", the client-side filter applies instantly but a server-side RPC call (`loadStories`) fires to fetch the full filtered dataset. This round-trip causes a visible "Updating..." delay of 1-3 seconds.
 
-The automated "gather" pipeline (`universal-topic-automation`) calls the universal scraper with `forceRescrape: false`. This means if a source was scraped within its cooldown window (default 24 hours), the scraper **silently skips it** with a `skipped_cooldown` status. The manual "force rescrape" button works because it passes `forceRescrape: true`, bypassing cooldowns entirely.
+### Solution: Prefetch on swipe
+Since we already know the story content when the user swipes, we can **pre-compute the filter matches and prefetch server results in the background** before the user ever taps the button. By the time they tap, the data is already cached and ready.
 
-This is why force rescrape successfully pulls in stories when automated gathering does not.
+### How it works
 
-### Solution
+```text
+User swipes slide 1
+        |
+        v
+[2s delay] "More like this" button fades in
+        |  (simultaneously)
+        v
+[Background] Pre-compute keyword matches for this story
+[Background] Prefetch server-filtered results for those matches
+        |
+        v
+User taps "More like this"
+        |
+        v
+Results already available --> instant filter apply (no "Updating..." spinner)
+```
 
-Change the `universal-topic-automation` edge function to pass `forceRescrape: true` when invoking the scraper. Since the automation system already has its own scheduling logic (via `topic_automation_settings.next_run_at` and `scrape_frequency_hours`), the per-source cooldown check inside the scraper is redundant for automated runs — the automation scheduler already ensures topics are only processed when they are due.
+### Technical details
 
-### Changes
+**1. Add prefetch logic to `StoryCarousel.tsx`**
+- When `showMoreLikeThis` triggers (after 2s delay on swipe), also call a new `onPrefetchFilter(story)` callback
+- This runs the same keyword-matching logic from `handleMoreLikeThis` but only triggers the prefetch, not the UI filter
 
-**1. `supabase/functions/universal-topic-automation/index.ts`**
-- Line 170: Change `forceRescrape: false` to `forceRescrape: true`
+**2. Add prefetch infrastructure to `useHybridTopicFeedWithKeywords.tsx`**
+- New function: `prefetchForKeywords(keywords, sources)` -- calls `loadStories` in the background and caches the result in a ref (`prefetchedFilterRef`)
+- New function: `applyPrefetchedFilter(keywords, sources)` -- checks if prefetched data matches the requested filter; if so, applies it instantly instead of calling `triggerServerFiltering`
 
-**2. `supabase/functions/eezee-automation-service/index.ts`** (if still in use)
-- Line 236: Change `forceRescrape: false` to `forceRescrape: true`
+**3. Update `handleMoreLikeThis` in `TopicFeed.tsx`**
+- Before calling `triggerServerFiltering`, check if prefetched results are available for the matching keywords
+- If yes: apply instantly (no server call, no "Updating..." state)
+- If no (e.g., user tapped before prefetch finished): fall back to current behavior
 
-**3. `supabase/functions/daily-content-monitor/index.ts`** (if still in use)
-- Line 175: Change `forceRescrape: false` to `forceRescrape: true`
+**4. Cache invalidation**
+- Prefetch cache is keyed by the sorted keyword set
+- Cache is cleared when the user navigates to a new story card (new prefetch starts)
+- Only one prefetch in flight at a time (abort previous if story changes)
 
-### Why This Is Safe
+### What the user experiences
+- Swipe a slide, wait 2 seconds, "More like this" fades in (same as now)
+- Tap it: filter applies **instantly** -- no "Updating..." pill, no delay
+- If they tap very fast before prefetch completes, they see the current behavior as a graceful fallback
 
-The automation layer already controls when scraping happens through its own schedule (`next_run_at`). The source-level cooldown inside the scraper is a second, conflicting gate that causes legitimate automation runs to produce zero results. Removing this double-gating means automation runs will always actually scrape when triggered.
-
-### Technical Detail
-
-No schema changes or new files required. Three one-line edits across edge functions, followed by redeployment.
+### Files to modify
+- `src/components/StoryCarousel.tsx` -- trigger prefetch callback alongside the button reveal
+- `src/hooks/useHybridTopicFeedWithKeywords.tsx` -- add `prefetchForKeywords` and `applyPrefetchedFilter` functions
+- `src/pages/TopicFeed.tsx` -- wire up prefetch on swipe, use cached results in `handleMoreLikeThis`
 
