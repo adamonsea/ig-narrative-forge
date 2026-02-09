@@ -263,14 +263,13 @@ const TopicFeed = () => {
         else toggleKeyword(match.value);
       }
 
-      setIsModalOpen(true);
       const filterDescription = matches.map(m => m.value).join(' or ');
       toast({
-        title: 'More like this',
-        description: `Filtering by ${filterDescription}`,
+        title: 'Filtering',
+        description: filterDescription,
       });
     },
-    [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword, setIsModalOpen, toast]
+    [topic, clearAllFilters, toggleLandmark, toggleOrganization, toggleKeyword, toast]
   );
 
   // Debug helper for resetting collections hint removed - collections now in hamburger menu
@@ -594,6 +593,16 @@ const TopicFeed = () => {
                 )}
               {/* Background refresh is invisible - no indicator shown */}
               </div>
+              {/* Clear filters button in sticky header */}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Clear filters
+                </button>
+              )}
               <div className="flex items-center gap-2">
                 {/* Subscribe dropdown */}
                 <SubscribeMenu
@@ -620,6 +629,7 @@ const TopicFeed = () => {
                   latestWeekly={latestWeekly}
                   hasActiveFilters={hasActiveFilters}
                   onOpenFilters={() => setIsModalOpen(true)}
+                  onClearFilters={clearAllFilters}
                   filterOptionsReady={filterOptionsReady}
                   loading={loading}
                   contentLength={filteredContent.length}
@@ -766,6 +776,7 @@ const TopicFeed = () => {
                 latestWeekly={latestWeekly}
                 hasActiveFilters={hasActiveFilters}
                 onOpenFilters={() => setIsModalOpen(true)}
+                onClearFilters={clearAllFilters}
                 filterOptionsReady={filterOptionsReady}
                 loading={loading}
                 contentLength={filteredContent.length}
@@ -777,11 +788,10 @@ const TopicFeed = () => {
 
       <div className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
 
-        {/* Mobile-only selected filters display */}
-        {(selectedKeywords.length > 0 || selectedSources.length > 0) && (
-          <div className="mb-6 sm:hidden">
+        {/* Active filters banner with clear button */}
+        {hasActiveFilters && (
+          <div className="mb-6">
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="text-xs text-muted-foreground mb-2 w-full text-center">Filtering by:</span>
               {selectedKeywords.map((keyword) => (
                 <Badge
                   key={`keyword-${keyword}`}
@@ -791,6 +801,36 @@ const TopicFeed = () => {
                   <span className="capitalize">{keyword}</span>
                   <button
                     onClick={() => removeKeyword(keyword)}
+                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+              {selectedLandmarks.map((landmark) => (
+                <Badge
+                  key={`landmark-${landmark}`}
+                  variant="secondary"
+                  className="flex items-center gap-1 pr-1"
+                >
+                  <span className="capitalize">{landmark}</span>
+                  <button
+                    onClick={() => toggleLandmark(landmark)}
+                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+              {selectedOrganizations.map((org) => (
+                <Badge
+                  key={`org-${org}`}
+                  variant="secondary"
+                  className="flex items-center gap-1 pr-1"
+                >
+                  <span className="capitalize">{org}</span>
+                  <button
+                    onClick={() => toggleOrganization(org)}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -812,6 +852,13 @@ const TopicFeed = () => {
                   </button>
                 </Badge>
               ))}
+              <button
+                onClick={clearAllFilters}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              >
+                <X className="w-3 h-3" />
+                Clear all
+              </button>
             </div>
           </div>
         )}

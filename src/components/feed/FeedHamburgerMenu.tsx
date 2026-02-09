@@ -10,6 +10,7 @@ interface FeedHamburgerMenuProps {
   latestWeekly?: string;
   hasActiveFilters?: boolean;
   onOpenFilters: () => void;
+  onClearFilters?: () => void;
   filterOptionsReady?: boolean;
   loading?: boolean;
   contentLength?: number;
@@ -22,6 +23,7 @@ export const FeedHamburgerMenu = ({
   latestWeekly,
   hasActiveFilters = false,
   onOpenFilters,
+  onClearFilters,
   filterOptionsReady = true,
   loading = false,
   contentLength = 0,
@@ -42,6 +44,15 @@ export const FeedHamburgerMenu = ({
       disabled: !canFilter,
       badge: hasActiveFilters,
     },
+    ...(hasActiveFilters && onClearFilters ? [{
+      icon: X,
+      label: 'Clear filters',
+      action: 'button' as const,
+      onClick: () => {
+        onClearFilters();
+        setIsOpen(false);
+      },
+    }] : []),
     {
       icon: Calendar,
       label: 'Daily Briefing',
