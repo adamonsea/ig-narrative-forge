@@ -167,7 +167,7 @@ serve(async (req) => {
           {
             body: {
               topicId: topic.id,
-              forceRescrape: false
+              forceRescrape: true
             }
           }
         );

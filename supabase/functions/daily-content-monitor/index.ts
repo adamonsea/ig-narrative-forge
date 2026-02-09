@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
               body: {
                 topicId: topicSource.topic_id,
                 sourceIds: [topicSource.source_id],
-                forceRescrape: false,
+                forceRescrape: true,
                 testMode: false
               }
             })
