@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 import { useStoryImpressionTracking } from "@/hooks/useStoryImpressionTracking";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
@@ -426,8 +426,6 @@ const TopicFeed = () => {
     (topic as any)?.parliamentary_tracking_enabled
   );
   
-  // Debug log for quiz cards
-  console.log('Quiz cards state:', { quizCardsEnabled, questionsCount: quizQuestions.length, topicId: topic?.id });
 
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
   const shouldShowCommunityPulse = topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
@@ -481,22 +479,6 @@ const TopicFeed = () => {
     if (node) observerRef.current.observe(node);
   }, [loading, loadingMore, hasMore, loadMore, isMobile]);
   
-  // Mobile-specific: Add passive scroll listener for feed container
-  useEffect(() => {
-    if (!isMobile) return;
-    
-    const feedContainer = document.querySelector('[data-feed-container]');
-    if (!feedContainer) return;
-    
-    const handleScroll = () => {
-      requestAnimationFrame(() => {
-        // Mobile optimization: Debounce expensive operations during scroll
-      });
-    };
-    
-    feedContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => feedContainer.removeEventListener('scroll', handleScroll);
-  }, [isMobile]);
 
   useEffect(() => {
     return () => {
@@ -613,6 +595,14 @@ const TopicFeed = () => {
               {/* Background refresh is invisible - no indicator shown */}
               </div>
               <div className="flex items-center gap-2">
+                {/* Subscribe dropdown */}
+                <SubscribeMenu
+                  topicName={topic.name}
+                  topicId={topic.id}
+                  showLabel={false}
+                  showPulse={shouldShowNotificationPrompt}
+                />
+
                 {/* Play Mode - Shows immediately, hides only if explicitly disabled */}
                 <PlayModeMenu 
                   slug={slug!} 
@@ -620,14 +610,6 @@ const TopicFeed = () => {
                   showLabel={false}
                   siftEnabled={siftEnabled}
                   hidden={playModeEnabled === false}
-                />
-
-                {/* Subscribe dropdown */}
-                <SubscribeMenu
-                  topicName={topic.name}
-                  topicId={topic.id}
-                  showLabel={false}
-                  showPulse={shouldShowNotificationPrompt}
                 />
 
                 {/* Hamburger menu with about, filter, daily/weekly, archive */}
@@ -677,17 +659,8 @@ const TopicFeed = () => {
       {/* White banner header */}
       <div className="bg-background border-b border-border">
         <div className="container mx-auto px-1 md:px-4 py-16">
-          {/* Top left: Avatar (if logged in) and Live pill (if active) */}
-          {/* User avatar - top left corner */}
-          {/* Top-left: User avatar and Live badge */}
+          {/* Top-left: Live badge */}
           <div className="absolute left-4 top-4 flex items-center gap-2">
-            {user && (
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                  {user.email?.charAt(0).toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-            )}
             {isLive && avgDailyStories > 1 ? (
               <span 
                 data-onboarding="live-badge"
@@ -752,14 +725,6 @@ const TopicFeed = () => {
               
               {/* Refreshing state is now shown in the Live pill */}
               
-              {/* Beta pill top right - only show if no branding logo */}
-              {!topic.branding_config?.logo_url && (
-                <div className="absolute right-0 top-0">
-                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                    beta
-                  </span>
-                </div>
-              )}
             </div>
 
             {topic.branding_config?.subheader ? (
