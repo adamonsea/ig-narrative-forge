@@ -14,7 +14,7 @@ import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
-import { StoryReactionBar } from '@/components/StoryReactionBar';
+import { AnimatePresence, motion } from 'framer-motion';
 // Force cache refresh
 
 // Hook to detect network speed (adjusted for device tier)
@@ -132,6 +132,15 @@ export default function StoryCarousel({
   onReactionCountsChange
 }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
+
+  // Show "More like this" 2s after first swipe
+  useEffect(() => {
+    if (currentSlideIndex > 0 && !showMoreLikeThis && onMoreLikeThis) {
+      const timer = setTimeout(() => setShowMoreLikeThis(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentSlideIndex, showMoreLikeThis, onMoreLikeThis]);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const iOSVersion = isIOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
   const { trackShareClick, trackSourceClick } = useStoryInteractionTracking();
@@ -1043,18 +1052,24 @@ export default function StoryCarousel({
                 {teaserBadge}
                 {storyBadges}
               </div>
-              {/* Reaction bar in top-right */}
-              {topicId && (
-                <StoryReactionBar 
-                  storyId={story.id} 
-                  topicId={topicId}
-                  storyIndex={storyIndex}
-                  className="flex-shrink-0"
-                  onMoreLikeThis={onMoreLikeThis ? (_storyId) => onMoreLikeThis(story) : undefined}
-                  prefetchedCounts={prefetchedReactionCounts}
-                  onCountsChange={onReactionCountsChange}
-                />
-              )}
+              {/* More like this - fades in after swipe */}
+              <AnimatePresence>
+                {showMoreLikeThis && onMoreLikeThis && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.4 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoreLikeThis(story);
+                    }}
+                    className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    More like this
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
