@@ -688,37 +688,12 @@ const TopicDashboard = () => {
                     {topic.description}
                   </p>
                 )}
-                <div className="flex items-center gap-3 pt-1">
-                  <Badge 
-                    variant={topic.is_public ? "default" : "secondary"} 
-                    className={topic.is_public 
-                      ? "bg-emerald-500 hover:bg-emerald-600 text-white" 
-                      : "bg-muted text-muted-foreground"
-                    }
-                  >
-                    {topic.is_public ? (
-                      <>
-                        <Eye className="w-3 h-3 mr-1" />
-                        Published
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="w-3 h-3 mr-1" />
-                        Draft
-                      </>
-                    )}
-                  </Badge>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {topic.is_public ? 'Live' : 'Draft'}
-                    </span>
-                    <Switch
-                      id="publish-toggle"
-                      checked={topic.is_public}
-                      onCheckedChange={handlePublishToggle}
-                    />
-                  </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Switch
+                    id="publish-toggle"
+                    checked={topic.is_public}
+                    onCheckedChange={handlePublishToggle}
+                  />
                 </div>
               </div>
             </div>
@@ -839,7 +814,7 @@ const TopicDashboard = () => {
                     <Clock className="h-4 w-4 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium">Automation & Scheduling</p>
-                      <p className="text-xs text-muted-foreground truncate">Publishing mode, drip feed, backfill</p>
+                      <p className="text-xs text-muted-foreground truncate">Publishing mode, drip feed</p>
                     </div>
                   </div>
                 </AccordionTrigger>
@@ -848,50 +823,17 @@ const TopicDashboard = () => {
                   <div className="border-t pt-4">
                     <DripFeedSettings topicId={topic.id} onUpdate={() => loadTopicAndStats()} />
                   </div>
-                  <div className="border-t pt-4">
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium">Manual Backfill</p>
-                        <p className="text-xs text-muted-foreground">Gather historical content with custom settings</p>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <select 
-                          value={maxAgeDays}
-                          onChange={(e) => setMaxAgeDays(Number(e.target.value))}
-                          className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                        >
-                          <option value={7}>Last 7 days</option>
-                          <option value={30}>Last 30 days</option>
-                          <option value={60}>Last 60 days</option>
-                          <option value={100}>Last 100 days</option>
-                        </select>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={forceRescrape}
-                            onChange={(e) => setForceRescrape(e.target.checked)}
-                            className="w-4 h-4 rounded"
-                          />
-                          Force rescrape
-                        </label>
-                      </div>
-                      <Button onClick={handleStartScraping} disabled={gatheringAll} variant="outline" size="sm" className="w-full sm:w-auto">
-                        {gatheringAll ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                        {gatheringAll ? 'Running...' : 'Run Backfill'}
-                      </Button>
-                    </div>
-                  </div>
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Presentation & Reach */}
-              <AccordionItem value="presentation" className="rounded-lg border bg-card">
+              {/* Branding & Onboarding */}
+              <AccordionItem value="branding" className="rounded-lg border bg-card">
                 <AccordionTrigger className="px-4 py-3 hover:no-underline">
                   <div className="flex items-center gap-3 text-left">
                     <Palette className="h-4 w-4 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium">Presentation & Reach</p>
-                      <p className="text-xs text-muted-foreground truncate">Branding, widgets, onboarding, donations</p>
+                      <p className="text-sm font-medium">Branding & Onboarding</p>
+                      <p className="text-xs text-muted-foreground truncate">Logo, subheader, welcome card</p>
                     </div>
                   </div>
                 </AccordionTrigger>
@@ -900,9 +842,29 @@ const TopicDashboard = () => {
                     topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config }}
                     onUpdate={() => loadTopicAndStats()}
                   />
-                  
-                  {/* Widget Builder Toggle */}
                   <div className="border-t pt-4">
+                    <OnboardingSettings
+                      topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
+                      onUpdate={() => loadTopicAndStats()}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Distribution & Monetization */}
+              <AccordionItem value="distribution" className="rounded-lg border bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center gap-3 text-left">
+                    <Globe className="h-4 w-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">Distribution & Monetization</p>
+                      <p className="text-xs text-muted-foreground truncate">RSS, email, audio, widgets, donations</p>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 space-y-6">
+                  {/* Widget Builder Toggle */}
+                  <div>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label className="flex items-center gap-2 text-sm font-medium">
@@ -1062,12 +1024,6 @@ const TopicDashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="border-t pt-4">
-                    <OnboardingSettings
-                      topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
-                      onUpdate={() => loadTopicAndStats()}
-                    />
-                  </div>
                   <div className="border-t pt-4">
                     <TopicDonationSettings
                       topicId={topic.id}
