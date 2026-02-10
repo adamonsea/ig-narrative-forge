@@ -1,59 +1,54 @@
 
 
-## Speed up "More like this" filtering
+## Clean up share links with on-the-fly URL shortening
 
 ### Problem
-When a user taps "More like this", the client-side filter applies instantly but a server-side RPC call (`loadStories`) fires to fetch the full filtered dataset. This round-trip causes a visible "Updating..." delay of 1-3 seconds.
+Share links expose the raw Supabase edge function URL (`fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/...`), which looks unprofessional. Previous attempts to use `curatr.pro` links directly broke OG image previews because the SPA can't serve server-rendered meta tags to crawlers.
 
-### Solution: Prefetch on swipe
-Since we already know the story content when the user swipes, we can **pre-compute the filter matches and prefetch server results in the background** before the user ever taps the button. By the time they tap, the data is already cached and ready.
-
-### How it works
+### Solution
+Use TinyURL's free API (no authentication required) to shorten share links on-the-fly. The flow stays exactly the same -- the short URL just redirects to the existing Supabase function, preserving all OG tag handling and image previews.
 
 ```text
-User swipes slide 1
-        |
-        v
-[2s delay] "More like this" button fades in
-        |  (simultaneously)
-        v
-[Background] Pre-compute keyword matches for this story
-[Background] Prefetch server-filtered results for those matches
-        |
-        v
-User taps "More like this"
-        |
-        v
-Results already available --> instant filter apply (no "Updating..." spinner)
+Current flow:
+  User taps Share --> ugly Supabase URL shared
+  Crawler hits ugly URL --> gets OG tags --> shows preview (works)
+
+New flow:
+  User taps Share --> call TinyURL API --> get short URL --> share clean link
+  Crawler hits short URL --> redirects to Supabase function --> gets OG tags --> shows preview (still works)
+  Real user hits short URL --> redirects to Supabase function --> redirects to curatr.pro (still works)
 ```
+
+### Why this is safe
+- Zero changes to the share-page edge function
+- Zero changes to OG tag rendering
+- Zero changes to the redirect logic
+- If the shortener API fails, graceful fallback to the existing Supabase URL
+- TinyURL API is free, no API key needed, been stable for 20+ years
 
 ### Technical details
 
-**1. Add prefetch logic to `StoryCarousel.tsx`**
-- When `showMoreLikeThis` triggers (after 2s delay on swipe), also call a new `onPrefetchFilter(story)` callback
-- This runs the same keyword-matching logic from `handleMoreLikeThis` but only triggers the prefetch, not the UI filter
+**1. New utility: `src/lib/urlShortener.ts`**
+- `shortenUrl(longUrl: string): Promise<string>` -- calls `https://tinyurl.com/api-create.php?url=ENCODED_URL`
+- Returns the short URL on success, or the original URL on failure (graceful fallback)
+- Includes a simple in-memory cache so repeat shares of the same story don't re-call the API
+- 3-second timeout to avoid blocking the share action
 
-**2. Add prefetch infrastructure to `useHybridTopicFeedWithKeywords.tsx`**
-- New function: `prefetchForKeywords(keywords, sources)` -- calls `loadStories` in the background and caches the result in a ref (`prefetchedFilterRef`)
-- New function: `applyPrefetchedFilter(keywords, sources)` -- checks if prefetched data matches the requested filter; if so, applies it instantly instead of calling `triggerServerFiltering`
+**2. Update `src/components/StoryCarousel.tsx`**
+- In `handleShare` and `handleWhatsAppShare`: call `shortenUrl()` before sharing
+- Show a brief "Preparing link..." state if needed (though it should be near-instant)
+- If shortening fails, fall back to the current Supabase URL silently
 
-**3. Update `handleMoreLikeThis` in `TopicFeed.tsx`**
-- Before calling `triggerServerFiltering`, check if prefetched results are available for the matching keywords
-- If yes: apply instantly (no server call, no "Updating..." state)
-- If no (e.g., user tapped before prefetch finished): fall back to current behavior
+**3. Update any other share handlers** (e.g., `DailyRoundupList.tsx`)
+- Same pattern: shorten before sharing, fallback on failure
 
-**4. Cache invalidation**
-- Prefetch cache is keyed by the sorted keyword set
-- Cache is cleared when the user navigates to a new story card (new prefetch starts)
-- Only one prefetch in flight at a time (abort previous if story changes)
+### What changes for the user
+- Share links go from `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/my-story` to something like `https://tinyurl.com/3abc7de`
+- OG previews (images, titles, descriptions) continue to work exactly as before
+- If TinyURL is ever down, the old URL is used as fallback -- no broken shares
 
-### What the user experiences
-- Swipe a slide, wait 2 seconds, "More like this" fades in (same as now)
-- Tap it: filter applies **instantly** -- no "Updating..." pill, no delay
-- If they tap very fast before prefetch completes, they see the current behavior as a graceful fallback
-
-### Files to modify
-- `src/components/StoryCarousel.tsx` -- trigger prefetch callback alongside the button reveal
-- `src/hooks/useHybridTopicFeedWithKeywords.tsx` -- add `prefetchForKeywords` and `applyPrefetchedFilter` functions
-- `src/pages/TopicFeed.tsx` -- wire up prefetch on swipe, use cached results in `handleMoreLikeThis`
+### Files to create/modify
+- **Create** `src/lib/urlShortener.ts` -- shortener utility with caching and fallback
+- **Edit** `src/components/StoryCarousel.tsx` -- use shortener in share handlers
+- **Edit** `src/pages/DailyRoundupList.tsx` -- use shortener in daily roundup share
 
