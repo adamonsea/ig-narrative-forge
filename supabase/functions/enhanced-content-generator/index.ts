@@ -157,14 +157,14 @@ serve(async (req) => {
     };
   }
 
-  // Fetch recent similar stories to provide context
+  // Fetch recent similar stories to provide context and enforce fresh angles
   async function fetchRecentSimilarStories(
     supabase: any,
     topicId: string,
     newArticleTitle: string,
     newArticleBody: string,
     daysBack: number = 7
-  ): Promise<string | null> {
+  ): Promise<{ context: string | null; isDuplicate: boolean }> {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysBack);
@@ -174,63 +174,106 @@ serve(async (req) => {
         .select(`
           title,
           created_at,
-          slides!inner(content)
+          slides!inner(content, slide_number)
         `)
         .gte('created_at', cutoffDate.toISOString())
         .eq('is_published', true)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(15);
         
-      if (!recentStories?.length) return null;
+      if (!recentStories?.length) return { context: null, isDuplicate: false };
       
       // Extract key terms from new article
+      const stopWords = new Set(['about', 'their', 'which', 'would', 'there', 'being', 'after', 'before', 'under', 'these', 'those', 'could', 'should', 'while', 'other', 'every', 'where', 'still', 'since']);
       const newText = `${newArticleTitle} ${newArticleBody}`.toLowerCase();
       const newWords = new Set(
         newText.split(/\s+/)
           .filter(w => w.length > 4)
-          .filter(w => !['about', 'their', 'which', 'would', 'there', 'being', 'after', 'before', 'under', 'these', 'those'].includes(w))
+          .filter(w => !stopWords.has(w))
       );
       
-      // Find stories with significant word overlap
+      // Find stories with significant word overlap, using two tiers
       const similarStories = recentStories
-        .map(story => {
-          const storyText = `${story.title} ${story.slides[0]?.content || ''}`.toLowerCase();
-          const storyWords = new Set(storyText.split(/\s+/));
+        .map((story: any) => {
+          // Include ALL slide content, not just first slide
+          const allSlideContent = (story.slides || [])
+            .sort((a: any, b: any) => (a.slide_number || 0) - (b.slide_number || 0))
+            .map((s: any) => s.content || '')
+            .join(' ');
+          const storyText = `${story.title} ${allSlideContent}`.toLowerCase();
+          const storyWords = new Set(storyText.split(/\s+/).filter((w: string) => w.length > 4));
           
           const overlap = [...newWords].filter(w => storyWords.has(w)).length;
-          const similarity = overlap / Math.min(newWords.size, storyWords.size);
+          const similarity = newWords.size > 0 ? overlap / Math.min(newWords.size, storyWords.size) : 0;
           
-          return { story, similarity };
+          return { story, similarity, allSlideContent };
         })
-        .filter(({ similarity }) => similarity > 0.3)
+        .filter(({ similarity }) => similarity > 0.4)
         .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, 3);
+        .slice(0, 5);
         
-      if (similarStories.length === 0) return null;
+      if (similarStories.length === 0) return { context: null, isDuplicate: false };
+
+      // Check if any story is very similar (likely duplicate)
+      const verySimiiar = similarStories.filter(s => s.similarity >= 0.6);
+      const isDuplicate = verySimiiar.length > 0;
       
-      const contextLines = similarStories.map(({ story }) => {
-        const date = new Date(story.created_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
-        const headline = story.slides[0]?.content || story.title;
-        return `  • "${story.title}" (${date})\n    Headline: "${headline}"`;
+      // Build recent_angles_used list
+      const recentAngles = similarStories.map(({ story }) => {
+        const headline = story.slides?.find((s: any) => s.slide_number === 1)?.content || story.title;
+        return headline;
       });
       
-      return `
+      const contextLines = similarStories.map(({ story, similarity, allSlideContent }) => {
+        const date = new Date(story.created_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+        const headline = story.slides?.find((s: any) => s.slide_number === 1)?.content || story.title;
+        const tier = similarity >= 0.6 ? '🔴 VERY SIMILAR' : '🟡 SIMILAR';
+        // Include up to 200 chars of slide content for context
+        const slidePreview = allSlideContent.substring(0, 200);
+        return `  ${tier} (${Math.round(similarity * 100)}% match)
+  • "${story.title}" (${date})
+    Headline used: "${headline}"
+    Content preview: "${slidePreview}..."`;
+      });
+      
+      let context = `
 RECENT COVERAGE CONTEXT:
 We recently published ${similarStories.length} ${similarStories.length === 1 ? 'story' : 'stories'} about this topic:
-${contextLines.join('\n')}
+${contextLines.join('\n\n')}
 
-CRITICAL INSTRUCTION: 
-The audience has already seen the above coverage. Your task is to identify what is NEW or DIFFERENT in today's article:
-- Is this a REACTION or RESPONSE to the previous incident?
-- Is there a NEW DEVELOPMENT or escalation?
-- Is there a CONSEQUENCE or follow-up?
-- Is there a different STAKEHOLDER weighing in?
+RECENT ANGLES ALREADY USED (you MUST avoid these):
+${recentAngles.map((a, i) => `  ${i + 1}. "${a}"`).join('\n')}
+`;
 
-DO NOT rehash the basic facts the audience already knows. Lead with the fresh angle or progression.
-`.trim();
+      if (verySimiiar.length > 0) {
+        context += `
+⚠️ VERY SIMILAR STORY DETECTED (${Math.round(verySimiiar[0].similarity * 100)}% match):
+"${verySimiiar[0].story.title}"
+
+You MUST find a COMPLETELY DIFFERENT angle. The audience has already seen this exact topic covered.
+Focus on ONE of these fresh perspectives:
+- CONSEQUENCES: What happened as a result?
+- REACTIONS: Who responded and what did they say?
+- DIFFERENT STAKEHOLDERS: Who else is affected?
+- TIMELINE PROGRESSION: What's changed since the previous coverage?
+- BROADER CONTEXT: How does this fit into a bigger trend?
+- DATA/STATISTICS: What numbers tell a new story?
+- HUMAN INTEREST: Who is personally affected and how?
+`;
+      }
+
+      context += `
+ANTI-REPETITION RULES:
+- If recent coverage context is provided, you MUST NOT repeat the same headline angle
+- Each story must offer the reader something NEW they haven't seen
+- Acceptable fresh angles: new developments, reactions, consequences, different stakeholders, broader context, human interest, data/statistics focus
+- If you cannot find a genuinely new angle, say so in the first slide rather than rehashing
+`;
+      
+      return { context: context.trim(), isDuplicate };
     } catch (error) {
       console.error('Error fetching recent stories:', error);
-      return null;
+      return { context: null, isDuplicate: false };
     }
   }
 
@@ -251,14 +294,14 @@ DO NOT rehash the basic facts the audience already knows. Lead with the fresh an
       // Fetch recent similar stories for context
       let storyHistoryContext = '';
       if (supabase && article.topic_id) {
-        const context = await fetchRecentSimilarStories(
+        const result = await fetchRecentSimilarStories(
           supabase,
           article.topic_id,
           article.title,
           article.body
         );
-        if (context) {
-          storyHistoryContext = `\n${context}\n`;
+        if (result.context) {
+          storyHistoryContext = `\n${result.context}\n`;
           console.log('📚 Injecting story history context - found similar recent coverage');
         }
       }

@@ -5,9 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2, Copy } from "lucide-react";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
+import { DuplicateInfo } from "@/lib/titleSimilarity";
 
 interface MultiTenantArticlesListProps {
   articles: MultiTenantArticle[];
@@ -37,6 +39,7 @@ interface MultiTenantArticlesListProps {
   onPromote?: (articleId: string) => void;
   topicId?: string;
   onRefresh?: () => void;
+  duplicateMap?: Map<string, DuplicateInfo>;
   
   // Pagination props
   hasMoreArticles?: boolean;
@@ -67,6 +70,7 @@ export default function MultiTenantArticlesList({
   onPromote,
   topicId,
   onRefresh,
+  duplicateMap,
   hasMoreArticles = false,
   totalArticlesCount = null,
   loadingMore = false,
@@ -183,13 +187,14 @@ export default function MultiTenantArticlesList({
     const isProcessing = processingArticle === article.id;
     const isDeleting = deletingArticles.has(article.id);
     const isAnimating = animatingArticles.has(article.id);
+    const dupInfo = duplicateMap?.get(article.id);
     
     return (
       <Card 
         key={article.id} 
         className={`transition-all duration-300 hover:shadow-md ${
           isAnimating ? 'animate-fade-out opacity-0 transform translate-x-4' : 'animate-fade-in'
-        }`}
+        } ${dupInfo && !dupInfo.isDuplicateLeader ? 'ml-4 border-l-4 border-l-amber-400' : ''}`}
       >
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
@@ -270,9 +275,38 @@ export default function MultiTenantArticlesList({
         </div>
 
         <div className="px-4 pb-2">
-          <h3 className="font-medium text-sm leading-tight mb-2 line-clamp-2">
-            {article.title}
-          </h3>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="font-medium text-sm leading-tight line-clamp-2 flex-1">
+              {article.title}
+            </h3>
+            {dupInfo && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge 
+                      variant={dupInfo.isDuplicateLeader ? "secondary" : "outline"}
+                      className={dupInfo.isDuplicateLeader 
+                        ? "shrink-0 bg-amber-100 text-amber-800 border-amber-300" 
+                        : "shrink-0 bg-amber-50 text-amber-600 border-amber-200"}
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      {dupInfo.isDuplicateLeader 
+                        ? `${dupInfo.similarCount} similar` 
+                        : 'Duplicate'}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold mb-1">
+                      {dupInfo.isDuplicateLeader ? 'Similar articles:' : 'Similar to:'}
+                    </p>
+                    {dupInfo.similarTitles.map((t, i) => (
+                      <p key={i} className="text-xs truncate">• {t}</p>
+                    ))}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           
           {/* Published Date & Currentness Tag */}
           <div className="mb-2 flex items-center gap-2">
