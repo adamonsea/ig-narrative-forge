@@ -2619,6 +2619,30 @@ export type Database = {
         }
         Relationships: []
       }
+      short_links: {
+        Row: {
+          click_count: number
+          code: string
+          created_at: string
+          id: string
+          target_url: string
+        }
+        Insert: {
+          click_count?: number
+          code: string
+          created_at?: string
+          id?: string
+          target_url: string
+        }
+        Update: {
+          click_count?: number
+          code?: string
+          created_at?: string
+          id?: string
+          target_url?: string
+        }
+        Relationships: []
+      }
       site_visits: {
         Row: {
           country_code: string | null
@@ -5217,6 +5241,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_short_link_clicks: {
+        Args: { link_code: string }
+        Returns: undefined
       }
       is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
       is_story_published: { Args: { p_story_id: string }; Returns: boolean }
