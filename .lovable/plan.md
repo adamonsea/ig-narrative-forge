@@ -1,33 +1,22 @@
 
 
-## Fix: DemoFeedPreview stuck on "Generating stories..."
+## Fix: Replace TinyURL with is.gd
 
-### Root cause
-The `DemoFeedPreview` component uses a two-step query:
-1. Fetch ALL `topic_articles` IDs for a topic (Eastbourne alone has ~3,000)
-2. Pass all those IDs into `.in('topic_article_id', taIds)` on the `stories` table
+### Problem
+TinyURL's free `api-create.php` endpoint now shows a consent/cookie interstitial page before redirecting. This is not a staging issue — it affects all links and completely breaks the share experience.
 
-This creates a massive query that silently fails or times out, resulting in zero stories and the permanent "Generating stories..." message.
+### Solution
+Swap the shortener to **is.gd** — free, no API key, no interstitial, instant 301 redirects (crawlers follow them for OG tags), running since 2009.
 
-### Fix
-Replace the two-step query with a single query using the same join pattern used elsewhere in the codebase:
+### Change
 
-```sql
--- Instead of fetching 3000 IDs and using IN(...)
--- Use a direct join:
-stories.select('..., topic_articles!inner(topic_id)')
-  .eq('status', 'published')
-  .eq('topic_articles.topic_id', topicId)
-  .order('created_at', { ascending: false })
-  .limit(8)
-```
+**`src/lib/urlShortener.ts`** (single file, 3 line changes):
+- Line 5: Update JSDoc comment from "TinyURL" to "is.gd"
+- Line 18: Change endpoint from `https://tinyurl.com/api-create.php?url=` to `https://is.gd/create.php?format=simple&url=`
+- Line 31: Change validation prefix from `https://tinyurl.com/` to `https://is.gd/`
 
-### File change
+No other files need to change — `StoryCarousel.tsx` and `DailyRoundupList.tsx` already call `shortenUrl()` and will automatically use the new service.
 
-**`src/components/demo/DemoFeedPreview.tsx`**
-- Remove the first query that fetches all `topic_articles` IDs
-- Replace the second query with a single joined query: `.select('id, title, cover_illustration_url, created_at, publication_name, slides(id), topic_articles!inner(topic_id)').eq('status', 'published').eq('topic_articles.topic_id', topicId)`
-- Remove the `taIds` variable and early return
-- Keep all existing filtering logic (slides > 0, cover image required)
+### Result
+Share links become `https://is.gd/AbCdEf` which redirect instantly and transparently to the Supabase share-page function, preserving all OG previews with zero interstitials.
 
-This is a single-file, query-only change with zero risk to other components.
