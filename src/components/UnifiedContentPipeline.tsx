@@ -93,6 +93,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     loading,
     loadingMore,
     stats,
+    duplicateMap,
     loadTopicContent: refreshContent,
     handleMultiTenantApprove,
     handleMultiTenantDelete,
@@ -273,9 +274,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setProcessingRejection(prev => new Set([...prev, storyId]));
     try {
       await handleMultiTenantRejectStory(storyId);
+      // Force refresh so the returned article reappears in Arrivals
+      await refreshContent();
       toast({
         title: "Story Rejected",
-        description: "Story has been rejected",
+        description: "Story has been rejected and returned to Arrivals",
       });
     } catch (error) {
       console.error('Error rejecting story:', error);
@@ -547,6 +550,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   processingArticle={processingArticle}
                   deletingArticles={deletingArticles}
                   animatingArticles={animatingArticles}
+                  duplicateMap={duplicateMap}
                   slideQuantityOverrides={slideQuantities}
                   toneOverrides={toneOverrides}
                   writingStyleOverrides={writingStyleOverrides}

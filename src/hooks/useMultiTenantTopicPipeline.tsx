@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
+import { detectDuplicateGroups, DuplicateInfo } from "@/lib/titleSimilarity";
 
 export interface MultiTenantArticle {
   id: string;
@@ -1279,12 +1280,16 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
   }, [selectedTopicId, articlesPage, loadingMore, hasMoreArticles, articles]);
 
+  // Compute duplicate groups from articles
+  const duplicateMap = useMemo(() => detectDuplicateGroups(articles), [articles]);
+
   return {
     // Data
     articles,
     queueItems,
     stories,
     stats,
+    duplicateMap,
     
     // Loading states
     loading,

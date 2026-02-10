@@ -162,6 +162,65 @@ serve(async (req) => {
           continue;
         }
 
+        // ── Duplicate-title check: skip if a similar story was published in the last 48h ──
+        let articleTitle = '';
+        let articleTopicId: string | null = null;
+
+        if (job.topic_article_id) {
+          const { data: ta } = await supabase
+            .from('topic_articles')
+            .select('topic_id, shared_content:shared_article_content(title)')
+            .eq('id', job.topic_article_id)
+            .single();
+          articleTitle = (ta as any)?.shared_content?.title || '';
+          articleTopicId = ta?.topic_id || null;
+        } else if (job.article_id) {
+          const { data: a } = await supabase
+            .from('articles')
+            .select('title, topic_id')
+            .eq('id', job.article_id)
+            .single();
+          articleTitle = a?.title || '';
+          articleTopicId = a?.topic_id || null;
+        }
+
+        if (articleTitle && articleTopicId) {
+          const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+          const { data: recentStories } = await supabase
+            .from('stories')
+            .select('id, title')
+            .eq('is_published', true)
+            .gte('created_at', cutoff48h);
+
+          // Simple word-overlap similarity
+          const normalize = (t: string) => {
+            const stops = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','is','it','as','be','was','are','has','have','had','this','that','will','can','not','its','been','were','after','before','into','over','than','about','up','out','new','says','said','also','could','would','more']);
+            return new Set(t.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2 && !stops.has(w)));
+          };
+          const wordsA = normalize(articleTitle);
+          const isDuplicate = (recentStories || []).some(rs => {
+            const wordsB = normalize(rs.title || '');
+            if (wordsA.size === 0 || wordsB.size === 0) return false;
+            let overlap = 0;
+            for (const w of wordsA) { if (wordsB.has(w)) overlap++; }
+            return (overlap / Math.min(wordsA.size, wordsB.size)) >= 0.7;
+          });
+
+          if (isDuplicate) {
+            await supabase
+              .from('content_generation_queue')
+              .update({
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+                result_data: { success: true, skipped: true, reason: 'duplicate_story_recently_published' }
+              })
+              .eq('id', job.id);
+            console.log(`⏩ Skipped ${jobType} job ${job.id} - duplicate story recently published: "${articleTitle}"`);
+            results.push({ jobId: job.id, articleId: jobIdentifier, success: true, skipped: true, reason: 'duplicate' });
+            continue;
+          }
+        }
+
         // Prepare generator body with multi-tenant support
         const generatorBody: any = {
           slideType: job.slidetype,
