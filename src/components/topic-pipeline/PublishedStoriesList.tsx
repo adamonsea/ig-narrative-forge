@@ -93,6 +93,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [animatingVideos, setAnimatingVideos] = useState<Set<string>>(new Set());
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [cancellingQueue, setCancellingQueue] = useState<Set<string>>(new Set());
   const [coverSelectionModal, setCoverSelectionModal] = useState<{ 
@@ -305,7 +306,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       return;
     }
     
-    setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+    setAnimatingVideos(prev => new Set(prev.add(story.id)));
     
     try {
       const { data, error } = await supabase.functions.invoke('animate-illustration', {
@@ -340,7 +341,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         variant: 'destructive' 
       });
     } finally {
-      setGeneratingIllustrations(prev => {
+      setAnimatingVideos(prev => {
         const next = new Set(prev);
         next.delete(story.id);
         return next;
@@ -873,7 +874,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                         {story.cover_illustration_url && !story.animated_illustration_url && (
                           <AnimationQualitySelector
                             onAnimate={() => setAnimationModalStory(story)}
-                            isAnimating={generatingIllustrations.has(story.id)}
+                            isAnimating={animatingVideos.has(story.id)}
                           />
                         )}
                         {story.animated_illustration_url && (
@@ -1126,7 +1127,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             setAnimationModalStory(null);
           }
         }}
-        isAnimating={animationModalStory ? generatingIllustrations.has(animationModalStory.id) : false}
+        isAnimating={animationModalStory ? animatingVideos.has(animationModalStory.id) : false}
         creditBalance={credits?.credits_balance}
         isSuperAdmin={isSuperAdmin}
       />
