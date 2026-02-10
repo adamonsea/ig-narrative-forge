@@ -54,6 +54,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   topicId
 }) => {
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [animatingVideos, setAnimatingVideos] = useState<Set<string>>(new Set());
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [forcingReturn, setForcingReturn] = useState<Set<string>>(new Set());
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
@@ -150,7 +151,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       return;
     }
     
-    setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+    setAnimatingVideos(prev => new Set(prev.add(story.id)));
     
     try {
       const { data, error } = await supabase.functions.invoke('animate-illustration', {
@@ -185,7 +186,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         variant: 'destructive' 
       });
     } finally {
-      setGeneratingIllustrations(prev => {
+      setAnimatingVideos(prev => {
         const next = new Set(prev);
         next.delete(story.id);
         return next;
@@ -582,7 +583,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                           {story.cover_illustration_url && !story.animated_illustration_url && (
                             <AnimationQualitySelector
                               onAnimate={() => setAnimationModalStory(story)}
-                              isAnimating={generatingIllustrations.has(story.id)}
+                              isAnimating={animatingVideos.has(story.id)}
                             />
                           )}
                           {story.animated_illustration_url && (
@@ -719,7 +720,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
             setAnimationModalStory(null);
           }
         }}
-        isAnimating={animationModalStory ? generatingIllustrations.has(animationModalStory.id) : false}
+        isAnimating={animationModalStory ? animatingVideos.has(animationModalStory.id) : false}
         creditBalance={credits?.credits_balance}
         isSuperAdmin={isSuperAdmin}
       />
