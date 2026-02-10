@@ -12,6 +12,7 @@ import { FeedFilters } from "@/components/FeedFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { buildShareUrl } from "@/lib/urlUtils";
+import { shortenUrl } from "@/lib/urlShortener";
 import { AudioBriefingPlayer } from "@/components/AudioBriefingPlayer";
 
 interface Topic {
@@ -481,8 +482,9 @@ export default function DailyRoundupList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const shareUrl = buildShareUrl(`/feed/${slug}/daily/${date}`);
+              onClick={async () => {
+                const longUrl = buildShareUrl(`/feed/${slug}/daily/${date}`);
+                const shareUrl = await shortenUrl(longUrl);
                 const shareText = `${topic.name} Daily Briefing - ${formattedDate}`;
                 if (navigator.share) {
                   navigator.share({

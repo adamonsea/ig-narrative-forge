@@ -15,7 +15,7 @@ import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
 import { AnimatePresence, motion } from 'framer-motion';
-// Force cache refresh
+import { shortenUrl } from '@/lib/urlShortener';
 
 // Hook to detect network speed (adjusted for device tier)
 const useNetworkSpeed = () => {
@@ -488,36 +488,27 @@ export default function StoryCarousel({
       trackShareClick(story.id, topicId, navigator.share ? 'native' : 'clipboard');
     }
 
-    // Build slug from current URL
-    const pathParts = window.location.pathname.split('/');
-    const feedIndex = pathParts.indexOf('feed');
-    const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
-    
     // Use story slug for shorter, readable URLs; fallback to UUID for backward compatibility
     const storyIdentifier = (story as any).slug || story.id;
-    const shareUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/${storyIdentifier}`;
+    const longUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/${storyIdentifier}`;
+    
+    // Shorten the URL (falls back to original on failure)
+    const shareUrl = await shortenUrl(longUrl);
     const shareText = `Check out this story: ${story.title}`;
     
     console.log('Share URL:', shareUrl);
-    console.log('Share text:', shareText);
     
     try {
       if (navigator.share) {
-        console.log('Using native share API');
         await navigator.share({
           title: story.title,
           text: shareText,
           url: shareUrl,
         });
-        console.log('Native share successful');
       } else {
-        console.log('Using clipboard fallback');
-        // Fallback - copy to clipboard
         const clipboardText = `${story.title}\n\n${shareUrl}`;
         await navigator.clipboard.writeText(clipboardText);
-        console.log('Clipboard copy successful');
         
-        // Show toast notification for clipboard copy
         import('@/components/ui/use-toast').then(({ toast }) => {
           toast({
             title: "Link copied!",
@@ -526,15 +517,11 @@ export default function StoryCarousel({
         });
       }
     } catch (error) {
-      // Check if the error is because the user cancelled the share
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Share cancelled by user');
-        return; // Don't show error for user cancellation
+        return;
       }
       
       console.error('Share failed:', error);
-      
-      // Show error toast only for actual errors, not cancellations
       import('@/components/ui/use-toast').then(({ toast }) => {
         toast({
           title: "Share failed",
@@ -548,39 +535,28 @@ export default function StoryCarousel({
   const handleWhatsAppShare = async () => {
     console.log('WhatsApp share clicked for story:', story.id);
     
-    // Track share click with WhatsApp platform
     if (topicId) {
       trackShareClick(story.id, topicId, 'whatsapp');
     }
 
-    // Build slug from current URL
-    const pathParts = window.location.pathname.split('/');
-    const feedIndex = pathParts.indexOf('feed');
-    const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
-
-    // Use story slug for shorter, readable URLs; fallback to UUID for backward compatibility
     const storyIdentifier = (story as any).slug || story.id;
-    const shareUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/${storyIdentifier}`;
+    const longUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/${storyIdentifier}`;
+    
+    // Shorten the URL (falls back to original on failure)
+    const shareUrl = await shortenUrl(longUrl);
 
-    // Build branded message
     const topicNameText = topicName ? `${topicName} | ` : '';
     const shareText = `${topicNameText}${story.title}`;
     const whatsappMessage = `${shareText}\n\n${shareUrl}`;
     
-    // Open WhatsApp with pre-filled message
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
-    
-    // Detect mobile for better WhatsApp handling
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isMobile) {
-      // On mobile, use custom URL scheme for native app
       window.location.href = `whatsapp://send?text=${encodeURIComponent(whatsappMessage)}`;
     } else {
-      // On desktop, open WhatsApp Web in new tab
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     }
-    console.log('WhatsApp share opened successfully');
   };
 
   const handleDownloadImage = () => {
