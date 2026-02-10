@@ -26,25 +26,12 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
 
   useEffect(() => {
     const fetchStories = async () => {
-      // First get topic_article IDs for this topic
-      const { data: topicArticles } = await supabase
-        .from('topic_articles')
-        .select('id')
-        .eq('topic_id', topicId);
-
-      if (!topicArticles || topicArticles.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const taIds = topicArticles.map(ta => ta.id);
-
-      // Fetch published stories linked to these topic articles
+      // Single joined query — avoids fetching thousands of topic_article IDs
       const { data, error } = await supabase
         .from('stories')
-        .select('id, title, cover_illustration_url, created_at, publication_name, slides(id)')
+        .select('id, title, cover_illustration_url, created_at, publication_name, slides(id), topic_articles!inner(topic_id)')
         .eq('status', 'published')
-        .in('topic_article_id', taIds)
+        .eq('topic_articles.topic_id', topicId)
         .order('created_at', { ascending: false })
         .limit(8);
 
