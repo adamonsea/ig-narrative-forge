@@ -40,7 +40,7 @@ export const usePushSubscription = (topicId?: string) => {
       if (isSupported && Notification.permission === 'granted' && topicId && VAPID_PUBLIC_KEY) {
         try {
           const registration = await navigator.serviceWorker.ready;
-          const existingSubscription = await registration.pushManager.getSubscription();
+          const existingSubscription = await (registration as any).pushManager.getSubscription();
           
           // Get a fresh subscription (re-subscribe to ensure valid token)
           let currentSubscription = existingSubscription;
@@ -51,7 +51,7 @@ export const usePushSubscription = (topicId?: string) => {
           }
           
           // Always re-subscribe to get a fresh token
-          currentSubscription = await registration.pushManager.subscribe({
+          currentSubscription = await (registration as any).pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
           });
@@ -172,7 +172,7 @@ export const usePushSubscription = (topicId?: string) => {
       const registration = await navigator.serviceWorker.ready;
       
       // Subscribe to push notifications
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
@@ -240,7 +240,7 @@ const messages = {
       setState(prev => ({ ...prev, isLoading: true }));
       
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
       
       if (!subscription) {
         setState(prev => ({ ...prev, isLoading: false }));

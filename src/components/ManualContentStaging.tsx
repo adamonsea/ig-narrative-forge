@@ -53,36 +53,7 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
   const isProcessingRef = useRef(false);
   const { toast } = useToast();
 
-  // Load queue from localStorage on mount
-  useEffect(() => {
-    const savedQueue = localStorage.getItem(STORAGE_KEY);
-    if (savedQueue) {
-      try {
-        const parsed = JSON.parse(savedQueue);
-        setProcessingFiles(parsed);
-        
-        // Auto-resume processing if there are pending files
-        const hasPendingFiles = parsed.some((f: ProcessingFile) => 
-          ['pending', 'extracting', 'rewriting', 'saving'].includes(f.status)
-        );
-        if (hasPendingFiles) {
-          console.log('🔄 Auto-resuming processing from saved queue');
-          setTimeout(() => processNextFile(parsed), 1000);
-        }
-      } catch (error) {
-        console.error('Failed to load saved queue:', error);
-      }
-    }
-  }, [topicId]);
-
-  // Save queue to localStorage whenever it changes
-  useEffect(() => {
-    if (processingFiles.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(processingFiles));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [STORAGE_KEY, processingFiles]);
+  // NOTE: localStorage load/save effects are defined below after processNextFileRef
 
   // Process files one at a time with persistent storage
   const processNextFile = useCallback(async (queueOverride?: ProcessingFile[]) => {
@@ -397,7 +368,7 @@ try {
     });
 
     // Start processing after all uploads complete
-    setTimeout(() => processNextFile(), 2000);
+    setTimeout(() => processNextFileRef.current?.(), 2000);
   }, [processNextFile, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -420,7 +391,7 @@ try {
         ? { ...f, status: 'pending', progress: 15, error: undefined }
         : f
     ));
-    setTimeout(() => processNextFile(), 100);
+    setTimeout(() => processNextFileRef.current?.(), 100);
   };
 
   const clearCompleted = () => {
