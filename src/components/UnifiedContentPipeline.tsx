@@ -2,11 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2, Zap, Bot, Users } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -15,7 +13,6 @@ import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArti
 
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
-import { CommunityPulseReview } from "@/components/CommunityPulseReview";
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
 
@@ -52,26 +49,19 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [sentimentCount, setSentimentCount] = useState(0);
-  const [parliamentaryFilter, setParliamentaryFilter] = useState(false);
   const { toast } = useToast();
   
-  // Handler to fetch article body when previewing
   const handlePreviewArticle = async (article: any) => {
     if (!article) return;
-    
     setPreviewArticle(article);
     setLoadingPreview(true);
-    
     try {
-      // Fetch the body from shared_article_content
       if (article.shared_content_id) {
         const { data, error } = await supabase
           .from('shared_article_content')
           .select('body')
           .eq('id', article.shared_content_id)
           .single();
-        
         if (!error && data?.body) {
           setPreviewArticle((prev: any) => ({ ...prev, body: data.body }));
         }
@@ -85,7 +75,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   const [runningPublishMigration, setRunningPublishMigration] = useState(false);
 
-  // Multi-tenant system data (now the only system)
   const {
     articles,
     queueItems,
@@ -115,13 +104,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     loadMoreArticles
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
-  // Multi-tenant actions for additional functionality  
   const multiTenantActions = useMultiTenantActions();
-
-  // Animation states for stories
   const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
 
-  // Load topics
   useEffect(() => {
     const loadTopics = async () => {
       try {
@@ -143,39 +128,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         }
       } catch (error) {
         console.error('Error loading topics:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load topics",
-          variant: "destructive"
-        });
+        toast({ title: "Error", description: "Failed to load topics", variant: "destructive" });
       }
     };
-
     loadTopics();
   }, []);
 
-  // Load sentiment card count for Insights tab
-  useEffect(() => {
-    const loadSentimentCount = async () => {
-      if (!selectedTopicId) return;
-      
-      try {
-        const { count, error } = await supabase
-          .from('sentiment_cards')
-          .select('*', { count: 'exact', head: true })
-          .eq('topic_id', selectedTopicId);
-
-        if (error) throw error;
-        setSentimentCount(count || 0);
-      } catch (error) {
-        console.error('Error loading sentiment count:', error);
-      }
-    };
-
-    loadSentimentCount();
-  }, [selectedTopicId]);
-
-  // Update selectedTopicId if propTopicId changes
   useEffect(() => {
     if (propTopicId && propTopicId !== selectedTopicId) {
       setSelectedTopicId(propTopicId);
@@ -184,29 +142,24 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   const currentTopic = topics.find(t => t.id === selectedTopicId);
 
-  // Load topic slug when selectedTopicId changes
   useEffect(() => {
     const loadTopicSlug = async () => {
       if (!selectedTopicId) return;
-      
       try {
         const { data, error } = await supabase
           .from('topics')
           .select('slug')
           .eq('id', selectedTopicId)
           .single();
-        
         if (error) throw error;
         if (data) setTopicSlug(data.slug);
       } catch (error) {
         console.error('Error loading topic slug:', error);
       }
     };
-    
     loadTopicSlug();
   }, [selectedTopicId]);
 
-  // Unified data counts
   const totalArticles = articles.length;
   const totalQueue = queueItems.length;
   const totalStories = stories.length;
@@ -220,7 +173,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     q.error_message
   ).length;
 
-  // Article management handlers
   const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
     setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
   };
@@ -233,15 +185,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setWritingStyleOverrides(prev => ({ ...prev, [articleId]: style }));
   };
 
-  // Story management handlers
   const handleToggleStoryExpanded = (storyId: string) => {
     setExpandedStories(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(storyId)) {
-        newSet.delete(storyId);
-      } else {
-        newSet.add(storyId);
-      }
+      newSet.has(storyId) ? newSet.delete(storyId) : newSet.add(storyId);
       return newSet;
     });
   };
@@ -250,23 +197,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setProcessingApproval(prev => new Set([...prev, storyId]));
     try {
       await handleMultiTenantApproveStory(storyId);
-      toast({
-        title: "Story Approved",
-        description: "Story approved and published",
-      });
+      toast({ title: "Story Approved", description: "Story approved and published" });
     } catch (error) {
       console.error('Error approving story:', error);
-      toast({
-        title: "Error",
-        description: "Failed to approve story",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to approve story", variant: "destructive" });
     } finally {
-      setProcessingApproval(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(storyId);
-        return newSet;
-      });
+      setProcessingApproval(prev => { const n = new Set(prev); n.delete(storyId); return n; });
     }
   };
 
@@ -274,34 +210,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setProcessingRejection(prev => new Set([...prev, storyId]));
     try {
       await handleMultiTenantRejectStory(storyId);
-      // Force refresh so the returned article reappears in Arrivals
       await refreshContent();
-      toast({
-        title: "Story Rejected",
-        description: "Story has been rejected and returned to Arrivals",
-      });
+      toast({ title: "Story Rejected", description: "Story has been rejected and returned to Arrivals" });
     } catch (error) {
       console.error('Error rejecting story:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject story",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to reject story", variant: "destructive" });
     } finally {
-      setProcessingRejection(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(storyId);
-        return newSet;
-      });
+      setProcessingRejection(prev => { const n = new Set(prev); n.delete(storyId); return n; });
     }
-  };
-
-  const handleEditSlide = (slide: any) => {
-    // Simple placeholder for now - could open a dialog to edit slide content
-    toast({
-      title: "Edit Slide",
-      description: "Slide editing functionality will be implemented soon",
-    });
   };
 
   const handleReturnToReview = async (storyId: string) => {
@@ -312,33 +228,18 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
-  
-  // Handler functions for Published stories
   const handleArchiveStory = async (storyId: string, title: string) => {
     try {
       const { error } = await supabase
         .from('stories')
-        .update({ 
-          status: 'archived',
-          is_published: false,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: 'archived', is_published: false, updated_at: new Date().toISOString() })
         .eq('id', storyId);
-
       if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: `Story "${title}" archived successfully`,
-      });
+      toast({ title: "Success", description: `Story "${title}" archived successfully` });
       refreshContent();
     } catch (error) {
       console.error('Error archiving story:', error);
-      toast({
-        title: "Error",
-        description: "Failed to archive story",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to archive story", variant: "destructive" });
     }
   };
 
@@ -346,34 +247,21 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     if (story.id && topicSlug) {
       window.open(`/feed/${topicSlug}/story/${story.id}`, '_blank');
     } else if (story.id) {
-      // Fallback if topicSlug not available
       window.open(`/story/${story.id}`, '_blank');
     }
   };
 
-  // Publish ready stories migration
   const runPublishMigration = useCallback(async () => {
     try {
       setRunningPublishMigration(true);
-      const { data, error } = await supabase.functions.invoke('publish-ready-stories', {
-        body: {}
-      });
+      const { data, error } = await supabase.functions.invoke('publish-ready-stories', { body: {} });
       if (error) throw error;
-      if (!data?.success) {
-        throw new Error(data?.error || 'Failed to publish ready stories');
-      }
-      toast({
-        title: 'Published',
-        description: data.message || 'Converted ready stories to published',
-      });
+      if (!data?.success) throw new Error(data?.error || 'Failed to publish ready stories');
+      toast({ title: 'Published', description: data.message || 'Converted ready stories to published' });
       await refreshContent();
     } catch (err: any) {
       console.error('Publish migration failed:', err);
-      toast({
-        title: 'Migration failed',
-        description: err.message || 'Could not publish ready stories',
-        variant: 'destructive',
-      });
+      toast({ title: 'Migration failed', description: err.message || 'Could not publish ready stories', variant: 'destructive' });
     } finally {
       setRunningPublishMigration(false);
     }
@@ -390,7 +278,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     );
   }
 
-  // Multi-color context highlighting for regional relevance review
   const highlightContentWithContext = (
     text: string, 
     regionName: string,
@@ -399,94 +286,33 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     organizations: string[]
   ) => {
     if (!text) return '';
-
     const escapeHtml = (value: string) =>
-      value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     let highlightedText = escapeHtml(text);
-    
-    // Helper to create regex with word boundaries
     const createRegex = (term: string) => {
       const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const useWordBoundaries = /^[\w-]+$/.test(term.trim());
       const boundary = useWordBoundaries ? '\\b' : '';
       return new RegExp(`${boundary}(${escaped})${boundary}`, 'gi');
     };
-
-    // Priority order: Region name > Landmarks > Organizations > Keywords
-    
-    // 1. Region name - BRIGHT GREEN with bold border (strongest signal)
     if (regionName) {
-      const regex = createRegex(regionName);
-      highlightedText = highlightedText.replace(
-        regex,
-        '<mark class="bg-green-200 text-green-900 px-1.5 py-0.5 rounded font-bold border-2 border-green-500">$1</mark>'
-      );
+      highlightedText = highlightedText.replace(createRegex(regionName), '<mark class="bg-green-200 text-green-900 px-1.5 py-0.5 rounded font-bold border-2 border-green-500">$1</mark>');
     }
-
-    // 2. Landmarks - BLUE (strong location anchor)
-    landmarks.forEach(landmark => {
-      if (landmark && landmark.trim()) {
-        const regex = createRegex(landmark);
-        highlightedText = highlightedText.replace(
-          regex,
-          '<mark class="bg-blue-200 text-blue-900 px-1 rounded font-semibold border border-blue-400">$1</mark>'
-        );
-      }
-    });
-
-    // 3. Organizations - PURPLE (medium-strong regional indicator)
-    organizations.forEach(org => {
-      if (org && org.trim()) {
-        const regex = createRegex(org);
-        highlightedText = highlightedText.replace(
-          regex,
-          '<mark class="bg-purple-200 text-purple-900 px-1 rounded border border-purple-300">$1</mark>'
-        );
-      }
-    });
-
-    // 4. Keywords - PALE YELLOW (weakest, only relevant with context)
-    keywords.forEach(keyword => {
-      if (keyword && keyword.trim()) {
-        const regex = createRegex(keyword);
-        highlightedText = highlightedText.replace(
-          regex,
-          '<mark class="bg-yellow-100 text-yellow-800 px-1 rounded">$1</mark>'
-        );
-      }
-    });
-
+    landmarks.forEach(l => { if (l?.trim()) highlightedText = highlightedText.replace(createRegex(l), '<mark class="bg-blue-200 text-blue-900 px-1 rounded font-semibold border border-blue-400">$1</mark>'); });
+    organizations.forEach(o => { if (o?.trim()) highlightedText = highlightedText.replace(createRegex(o), '<mark class="bg-purple-200 text-purple-900 px-1 rounded border border-purple-300">$1</mark>'); });
+    keywords.forEach(k => { if (k?.trim()) highlightedText = highlightedText.replace(createRegex(k), '<mark class="bg-yellow-100 text-yellow-800 px-1 rounded">$1</mark>'); });
     return highlightedText;
   };
 
-  const currentTopicKeywords = currentTopic ? 
-    [...(currentTopic.keywords || []), ...(currentTopic.landmarks || []), ...(currentTopic.organizations || [])] 
-    : [];
-
   return (
-    <div className="space-y-6">
-      {/* Main Content Tabs */}
+    <div className="space-y-4">
+      {/* Two-tab pipeline */}
       <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="articles" className="relative">
             <div className="flex items-center gap-2">
               <span>Arrivals ({totalArticles})</span>
-              {currentTopic?.auto_simplify_enabled && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                  <Bot className="w-3 h-3 mr-1" />
-                  Auto
-                </Badge>
-              )}
-              <NewContentBadge 
-                show={newArrivals} 
-                onDismiss={clearNewArrivals}
-              />
+              <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
             </div>
           </TabsTrigger>
           <TabsTrigger value="published">
@@ -498,208 +324,97 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   <span className="text-xs">{queueItems.length}</span>
                 </span>
               )}
-              {stories.filter(s => s.is_parliamentary).length > 0 && (
-                <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                  <Users className="w-3 h-3 mr-1" />
-                  {stories.filter(s => s.is_parliamentary).length}
-                </Badge>
-              )}
-              <NewContentBadge 
-                show={newPublished} 
-                onDismiss={clearNewPublished}
-              />
+              <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
             </div>
-          </TabsTrigger>
-          <TabsTrigger value="insights">
-            Insights ({sentimentCount})
           </TabsTrigger>
         </TabsList>
 
         {/* Articles Tab */}
-        <TabsContent value="articles" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-muted-foreground">
-              Showing new articles awaiting review
-              {currentTopic?.auto_simplify_enabled && (
-                <Badge variant="outline" className="ml-2 text-xs">
-                  <Bot className="w-3 h-3 mr-1" />
-                  Auto-simplification enabled (threshold: {currentTopic.automation_quality_threshold || 60}%)
-                </Badge>
-              )}
-            </div>
-          </div>
-          
+        <TabsContent value="articles" className="space-y-3">
           {totalArticles === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8 text-muted-foreground">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-semibold">No new arrivals</p>
-                <p className="text-sm mt-2">
-                  New articles appear here when scraped. Already processed articles are moved to Published.
-                </p>
-                <p className="text-xs mt-3 text-muted-foreground/70">
-                  💡 Tip: Use "Gather All" to fetch fresh content from all sources
-                </p>
-              </CardContent>
-            </Card>
+            <div className="text-center py-8 text-muted-foreground">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="font-semibold">No new arrivals</p>
+              <p className="text-sm mt-2">
+                New articles appear here when scraped.
+              </p>
+            </div>
           ) : (
-            <Card>
-              <CardContent>
-                <MultiTenantArticlesList
-                  articles={articles}
-                  processingArticle={processingArticle}
-                  deletingArticles={deletingArticles}
-                  animatingArticles={animatingArticles}
-                  duplicateMap={duplicateMap}
-                  slideQuantityOverrides={slideQuantities}
-                  toneOverrides={toneOverrides}
-                  writingStyleOverrides={writingStyleOverrides}
-                  onSlideQuantityChange={handleSlideQuantityChange}
-                  onToneOverrideChange={handleToneOverrideChange}
-                  onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                  onPreview={handlePreviewArticle}
-                  onApprove={(article, slideType, tone, writingStyle) => 
-                    handleMultiTenantApprove(article, slideType, tone, writingStyle)
-                  }
-                  onDelete={handleMultiTenantDelete}
-                  onBulkDelete={handleMultiTenantBulkDelete}
-                  onPromote={promoteTopicArticle}
-                  defaultTone={currentTopic?.default_tone || 'conversational'}
-                  defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
-                  onRefresh={refreshContent}
-                  hasMoreArticles={hasMoreArticles}
-                  totalArticlesCount={totalArticlesCount}
-                  loadingMore={loadingMore}
-                  onLoadMore={loadMoreArticles}
-                />
-              </CardContent>
-            </Card>
+            <MultiTenantArticlesList
+              articles={articles}
+              processingArticle={processingArticle}
+              deletingArticles={deletingArticles}
+              animatingArticles={animatingArticles}
+              duplicateMap={duplicateMap}
+              slideQuantityOverrides={slideQuantities}
+              toneOverrides={toneOverrides}
+              writingStyleOverrides={writingStyleOverrides}
+              onSlideQuantityChange={handleSlideQuantityChange}
+              onToneOverrideChange={handleToneOverrideChange}
+              onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+              onPreview={handlePreviewArticle}
+              onApprove={(article, slideType, tone, writingStyle) => 
+                handleMultiTenantApprove(article, slideType, tone, writingStyle)
+              }
+              onDelete={handleMultiTenantDelete}
+              onBulkDelete={handleMultiTenantBulkDelete}
+              onPromote={promoteTopicArticle}
+              defaultTone={currentTopic?.default_tone || 'conversational'}
+              defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
+              onRefresh={refreshContent}
+              hasMoreArticles={hasMoreArticles}
+              totalArticlesCount={totalArticlesCount}
+              loadingMore={loadingMore}
+              onLoadMore={loadMoreArticles}
+            />
           )}
         </TabsContent>
 
         {/* Published Tab */}
-        <TabsContent value="published" className="space-y-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground">
-                Stories that are published and visible in the feed
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch 
-                  id="parliamentary-filter"
-                  checked={parliamentaryFilter}
-                  onCheckedChange={setParliamentaryFilter}
-                />
-                <Label htmlFor="parliamentary-filter" className="text-sm">
-                  Show only parliamentary stories
-                </Label>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {stuckCount > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
-                      if (error) throw error;
-                      toast({
-                        title: "Recovery Triggered",
-                        description: `Recovered ${data?.totalRecovered || 0} stuck items`,
-                      });
-                      refreshContent();
-                    } catch (error) {
-                      toast({
-                        title: "Recovery Failed",
-                        description: error instanceof Error ? error.message : "Failed to recover stuck items",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  className="text-destructive border-destructive/50 hover:bg-destructive/10"
-                >
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  Recover {stuckCount} stuck
-                </Button>
-              )}
+        <TabsContent value="published" className="space-y-3">
+          <div className="flex justify-end items-center gap-2 mb-2">
+            {stuckCount > 0 && (
               <Button
-                variant="outline" 
                 size="sm"
-                onClick={refreshContent}
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
+                    if (error) throw error;
+                    toast({ title: "Recovery Triggered", description: `Recovered ${data?.totalRecovered || 0} stuck items` });
+                    refreshContent();
+                  } catch (error) {
+                    toast({ title: "Recovery Failed", description: error instanceof Error ? error.message : "Failed to recover stuck items", variant: "destructive" });
+                  }
+                }}
+                className="text-destructive border-destructive/50 hover:bg-destructive/10 h-7 text-xs"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Recover {stuckCount} stuck
               </Button>
-            </div>
+            )}
           </div>
           
-          {stories.filter(s => ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary)).length === 0 && queueItems.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8 text-muted-foreground">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No {parliamentaryFilter ? 'parliamentary ' : ''}published stories</p>
-                <p className="text-sm mt-2">
-                  {parliamentaryFilter 
-                    ? 'No parliamentary voting stories have been published yet'
-                    : 'Approved stories will appear here when published to the feed'
-                  }
-                </p>
-              </CardContent>
-            </Card>
+          {stories.filter(s => ['ready', 'published'].includes(s.status)).length === 0 && queueItems.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No published stories</p>
+              <p className="text-sm mt-2">Approved stories will appear here when published to the feed</p>
+            </div>
           ) : (
-            <Card>
-              <CardContent>
-                <PublishedStoriesList 
-                  stories={stories.filter(s => ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary))}
-                  processingItems={queueItems}
-                  onArchive={handleArchiveStory}
-                  onReturnToReview={handleMultiTenantRejectStory}
-                  onDelete={handleMultiTenantRejectStory}
-                  onViewStory={handleViewStory}
-                  onCancelProcessing={handleMultiTenantCancelQueue}
-                  onRefresh={refreshContent}
-                  loading={loading}
-                  topicSlug={topicSlug}
-                  topicId={selectedTopicId}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Insights Tab */}
-        <TabsContent value="insights" className="space-y-6">
-          {selectedTopicId && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sentiment Analysis</CardTitle>
-                  <CardDescription>
-                    Manage sentiment cards and keywords in the Advanced Tools tab
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      const sentimentSection = document.getElementById('sentiment');
-                      if (sentimentSection) {
-                        sentimentSection.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
-                  >
-                    Go to Sentiment Hub →
-                  </Button>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <CommunityPulseReview topicId={selectedTopicId} />
-                </CardContent>
-              </Card>
-            </>
+            <PublishedStoriesList 
+              stories={stories.filter(s => ['ready', 'published'].includes(s.status))}
+              processingItems={queueItems}
+              onArchive={handleArchiveStory}
+              onReturnToReview={handleMultiTenantRejectStory}
+              onDelete={handleMultiTenantRejectStory}
+              onViewStory={handleViewStory}
+              onCancelProcessing={handleMultiTenantCancelQueue}
+              onRefresh={refreshContent}
+              loading={loading}
+              topicSlug={topicSlug}
+              topicId={selectedTopicId}
+            />
           )}
         </TabsContent>
       </Tabs>
@@ -733,11 +448,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Multi-signal color legend */}
             <div className="grid grid-cols-2 gap-2 p-3 bg-muted/50 rounded-lg border">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-green-200 border-2 border-green-500 rounded font-bold flex items-center justify-center text-[8px]">R</div>
-                <span className="text-xs font-semibold text-green-700">Region Name (Strongest)</span>
+                <span className="text-xs font-semibold text-green-700">Region Name</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-blue-200 border border-blue-400 rounded font-semibold flex items-center justify-center text-[8px]">L</div>
@@ -749,11 +463,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center text-[8px]">K</div>
-                <span className="text-xs text-muted-foreground">Keywords (Generic)</span>
+                <span className="text-xs text-muted-foreground">Keywords</span>
               </div>
             </div>
 
-            {/* Article title highlighting */}
             {previewArticle?.title && (
               <div className="border-b pb-3">
                 <div className="text-xs font-semibold text-muted-foreground mb-1">HEADLINE</div>
@@ -772,7 +485,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               </div>
             )}
 
-            {/* Body content with position indicators */}
             {loadingPreview && !previewArticle?.body && (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -781,12 +493,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
             {previewArticle?.body && (
               <div className="relative">
-                {/* Position strength indicator bar */}
                 <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-amber-200 via-green-300 to-amber-200 rounded-l"></div>
-                <div className="absolute -left-20 top-2 text-[10px] text-amber-600 font-medium">Top<br/>(Weak)</div>
-                <div className="absolute -left-20 top-1/2 -translate-y-1/2 text-[10px] text-green-600 font-bold">Mid<br/>(Strong)</div>
-                <div className="absolute -left-20 bottom-2 text-[10px] text-amber-600 font-medium">End<br/>(Weak)</div>
-                
                 <div className="prose max-w-none">
                   <div
                     className="min-h-[300px] whitespace-pre-wrap text-sm leading-relaxed border rounded-md p-4 pl-6 bg-muted/30"
