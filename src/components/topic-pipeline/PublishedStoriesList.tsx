@@ -521,7 +521,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               </div>
 
               {/* Action bar */}
-              <div className="flex items-center gap-1.5 pt-1 border-t border-border/40">
+              <div className="flex items-center gap-1.5 pt-1 border-t border-border/40 flex-wrap">
                 {topicSlug && isLive && (
                   <Button size="sm" className="h-7 text-xs" asChild>
                     <a href={`/feed/${topicSlug}/story/${story.id}`} target="_blank" rel="noopener noreferrer">
@@ -547,6 +547,23 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   illustrationStyle={illustrationStyle as any}
                   size="sm"
                 />
+
+                {story.cover_illustration_url && !story.animated_illustration_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAnimationModalStory(story)}
+                    disabled={animatingVideos.has(story.id)}
+                    className="h-7 text-xs"
+                  >
+                    {animatingVideos.has(story.id) ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Film className="w-3 h-3 mr-1" />
+                    )}
+                    Animate
+                  </Button>
+                )}
 
                 <div className="ml-auto flex items-center gap-1">
                   <Button
