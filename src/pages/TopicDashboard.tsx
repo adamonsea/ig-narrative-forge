@@ -1,13 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AppLayout } from "@/components/AppLayout";
@@ -23,7 +19,6 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
-// AudienceProgressCard removed - functionality merged into TopicInsightSettings
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
 import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
@@ -38,7 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles, Code, Rss, Mail, Volume2 } from "lucide-react";
+import { ExternalLink, MapPin, Hash, Clock, ChevronDown, Loader2, Globe, Code, Rss, Mail, Volume2, Users, Palette, Sparkles, Settings } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
@@ -96,7 +91,7 @@ interface Topic {
   auto_simplify_enabled?: boolean;
   automation_quality_threshold?: number;
   parliamentary_tracking_enabled?: boolean;
-  branding_config?: any; // Use any to handle Json type from Supabase
+  branding_config?: any;
   donation_enabled?: boolean;
   donation_config?: any;
   drip_feed_enabled?: boolean;
@@ -134,38 +129,27 @@ const TopicDashboard = () => {
   const [negativeKeywords, setNegativeKeywords] = useState<string[]>([]);
   const [competingRegions, setCompetingRegions] = useState<string[]>([]);
   const [stats, setStats] = useState<TopicDashboardStats>({
-    articles: 0,
-    stories: 0,
-    sources: 0,
-    pending_articles: 0,
-    processing_queue: 0,
-    ready_stories: 0,
-    simplified_stories_24h: 0,
-    sentiment_cards: 0,
-    liked_stories: 0,
-    total_swipes: 0,
-    shared_stories: 0
+    articles: 0, stories: 0, sources: 0, pending_articles: 0,
+    processing_queue: 0, ready_stories: 0, simplified_stories_24h: 0,
+    sentiment_cards: 0, liked_stories: 0, total_swipes: 0, shared_stories: 0
   });
   const [loading, setLoading] = useState(true);
   const [gatheringAll, setGatheringAll] = useState(false);
-  const [activeTab, setActiveTab] = useState("content-flow");
-  const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
+  const [activeTab, setActiveTab] = useState("feed");
   const [autoSuggestSources, setAutoSuggestSources] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const { toast } = useToast();
   
-  // Set Curatr favicon for topic dashboard (auth page)
   usePageFavicon();
 
-  // Set up parliamentary automation when enabled
   useParliamentaryAutomation({
     topicId: topic?.id || '',
     enabled: topic?.topic_type === 'regional' && topic?.parliamentary_tracking_enabled === true,
     region: topic?.region
   });
 
-  // Play subtle chime when drip feed stories publish
   useDripFeedPublishSound(topic?.id, topic?.drip_feed_enabled === true);
 
   useEffect(() => {
@@ -174,12 +158,11 @@ const TopicDashboard = () => {
     }
   }, [slug, user]);
 
-  // Handle sources redirect from topic creation
   useEffect(() => {
     if (searchParams.get('sources') === 'true') {
-      setActiveTab('automation');
+      setActiveTab('feed');
+      setSourcesExpanded(true);
       setAutoSuggestSources(true);
-      // Clean the URL
       searchParams.delete('sources');
       setSearchParams(searchParams, { replace: true });
     }
@@ -187,7 +170,6 @@ const TopicDashboard = () => {
 
   const loadTopicAndStats = async () => {
     try {
-      // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
         .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color, drip_feed_enabled, rss_enabled, email_subscriptions_enabled')
@@ -195,17 +177,12 @@ const TopicDashboard = () => {
         .single();
 
       if (topicError) {
-        if (topicError.code === 'PGRST116') {
-          throw new Error('Topic not found');
-        }
+        if (topicError.code === 'PGRST116') throw new Error('Topic not found');
         throw topicError;
       }
 
-      // Check if user has ADMIN access to this topic (not just viewing access)
       const hasAdminAccess = topicData.created_by === user?.id || isAdmin;
-
       if (!hasAdminAccess) {
-        // Redirect non-owners to the public feed view instead of throwing error
         window.location.href = `/feed/${slug}`;
         return;
       }
@@ -227,13 +204,11 @@ const TopicDashboard = () => {
       setNegativeKeywords(topicData.negative_keywords || []);
       setCompetingRegions(topicData.competing_regions || []);
 
-      // Load stats using multi-tenant architecture (topic_articles)
       const articlesRes = await supabase
         .from('topic_articles')
         .select('id', { count: 'exact' })
         .eq('topic_id', topicData.id);
 
-      // Get topic article IDs for related queries
       const { data: topicArticles } = await supabase
         .from('topic_articles')
         .select('id')
@@ -246,7 +221,6 @@ const TopicDashboard = () => {
         .select('id', { count: 'exact' })
         .in('topic_article_id', topicArticleIds) : { count: 0 };
 
-      // Use topic_sources junction table for accurate source count
       const { count: sourcesCount } = await supabase
         .from('topic_sources')
         .select('source_id', { count: 'exact' })
@@ -271,25 +245,22 @@ const TopicDashboard = () => {
         .in('topic_article_id', topicArticleIds)
         .in('status', ['ready', 'published']) : { count: 0 };
 
-      // Get actual arrivals count - only 'new' articles not yet queued or published
       const { data: allNewArticles } = await supabase
         .from('topic_articles')
         .select('id, import_metadata')
         .eq('topic_id', topicData.id)
-        .eq('processing_status', 'new'); // Only count 'new' status as "to process"
+        .eq('processing_status', 'new');
       
       if (!allNewArticles) {
         console.error('Failed to fetch topic articles');
         return;
       }
 
-      // Get IDs of articles already published or queued
       const newArticleIds = allNewArticles.map(a => a.id).filter(id => id && id.length > 0);
       
       let publishedIds = new Set<string>();
       let queuedIds = new Set<string>();
       
-      // Only query if we have valid article IDs
       if (newArticleIds.length > 0) {
         const { data: allPublishedStories } = await supabase
           .from('stories')
@@ -312,7 +283,6 @@ const TopicDashboard = () => {
           .filter((id): id is string => !!id));
       }
       
-      // Filter out parliamentary, published, and queued articles
       const availableArticles = allNewArticles.filter(article => {
         const metadata = article.import_metadata as any || {};
         const isParliamentary = metadata.source === 'parliamentary_vote' || 
@@ -325,7 +295,6 @@ const TopicDashboard = () => {
       
       const arrivalsRes = { count: availableArticles.length };
 
-      // Get stories in last 24h - query directly through topic_articles join
       const yesterday = new Date();
       yesterday.setHours(yesterday.getHours() - 24);
       
@@ -336,13 +305,11 @@ const TopicDashboard = () => {
         .gte('created_at', yesterday.toISOString())
         .not('topic_article_id', 'is', null);
 
-      // Get sentiment cards count
       const sentimentRes = await supabase
         .from('sentiment_cards')
         .select('id', { count: 'exact' })
         .eq('topic_id', topicData.id);
 
-      // Get email subscriber stats
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
       const weekAgo = new Date(today);
@@ -387,7 +354,6 @@ const TopicDashboard = () => {
         .not('email', 'is', null)
         .gte('created_at', weekAgo.toISOString());
 
-      // Get donation interaction stats
       const { count: donationButtonClicks } = await supabase
         .from('story_interactions')
         .select('*', { count: 'exact', head: true })
@@ -400,7 +366,6 @@ const TopicDashboard = () => {
         .eq('topic_id', topicData.id)
         .eq('interaction_type', 'donation_modal_opened');
 
-      // Get swipe mode engagement stats
       const { count: likedStories } = await supabase
         .from('story_swipes')
         .select('*', { count: 'exact', head: true })
@@ -461,17 +426,13 @@ const TopicDashboard = () => {
 
   useEffect(() => {
     if (!topic?.id || typeof window === "undefined") return;
-
     try {
       const stored = window.localStorage.getItem(`topic-scraping-settings:${topic.id}`);
       if (!stored) return;
-
       const parsed = JSON.parse(stored) as { maxAgeDays?: number; forceRescrape?: boolean };
-
       if (typeof parsed.maxAgeDays === "number" && SCRAPING_WINDOW_OPTIONS.has(parsed.maxAgeDays)) {
         setMaxAgeDays(parsed.maxAgeDays);
       }
-
       if (typeof parsed.forceRescrape === "boolean") {
         setForceRescrape(parsed.forceRescrape);
       }
@@ -482,53 +443,36 @@ const TopicDashboard = () => {
 
   useEffect(() => {
     if (!topic?.id || typeof window === "undefined") return;
-
     const payload = JSON.stringify({ maxAgeDays, forceRescrape });
     window.localStorage.setItem(`topic-scraping-settings:${topic.id}`, payload);
   }, [topic?.id, maxAgeDays, forceRescrape]);
 
   const handleStartScraping = async () => {
     if (!topic) return;
-
     setGatheringAll(true);
     setShowGatheringProgress(true);
     setJobRunId(null);
     try {
       toast({
         title: "Scraping Started",
-        description: `Gathering content from last ${maxAgeDays} days across all sources. This runs asynchronously and may take a few minutes.`,
+        description: `Gathering content from last ${maxAgeDays} days across all sources.`,
       });
 
       const { data, error } = await supabase.functions.invoke('universal-topic-automation', {
-        body: {
-          topicIds: [topic.id],
-          force: forceRescrape,
-          dryRun: false,
-          maxAgeDays
-        }
+        body: { topicIds: [topic.id], force: forceRescrape, dryRun: false, maxAgeDays }
       });
 
       if (error) throw error;
-
       const jobId = data?.jobRunId;
-      if (jobId) {
-        setJobRunId(jobId);
-      }
+      if (jobId) setJobRunId(jobId);
 
       toast({
         title: "Scraping Job Started",
-        description: "Content gathering is running in the background. Dashboard will update automatically.",
+        description: "Content gathering is running in the background.",
       });
 
-      // Refresh stats periodically
-      const refreshInterval = setInterval(() => {
-        loadTopicAndStats();
-      }, 5000);
-
-      setTimeout(() => {
-        clearInterval(refreshInterval);
-        setGatheringAll(false);
-      }, 60000); // Stop polling after 1 minute
+      const refreshInterval = setInterval(() => { loadTopicAndStats(); }, 5000);
+      setTimeout(() => { clearInterval(refreshInterval); setGatheringAll(false); }, 60000);
       
     } catch (error) {
       console.error('Error starting scrape:', error);
@@ -542,67 +486,51 @@ const TopicDashboard = () => {
     }
   };
 
-
   const handlePublishToggle = (newState: boolean) => {
     if (!topic) return;
-    
     if (!newState) {
-      // Unpublishing - show confirmation dialog
       setPendingPublishState(newState);
       setShowConfirmDialog(true);
     } else {
-      // Publishing - do it directly
       confirmPublishToggle(newState);
     }
   };
 
   const confirmPublishToggle = async (newState: boolean) => {
     if (!topic) return;
-    
     try {
       const { error } = await supabase
         .from('topics')
-        .update({ 
-          is_public: newState,
-          is_active: newState // Keep both in sync
-        })
+        .update({ is_public: newState, is_active: newState })
         .eq('id', topic.id);
-
       if (error) throw error;
-
-      setTopic(prev => prev ? { 
-        ...prev, 
-        is_public: newState,
-        is_active: newState 
-      } : null);
-      
-      toast({
-        title: "Success",
-        description: `Feed ${newState ? 'published' : 'unpublished'}`,
-      });
+      setTopic(prev => prev ? { ...prev, is_public: newState, is_active: newState } : null);
+      toast({ title: "Success", description: `Feed ${newState ? 'published' : 'unpublished'}` });
     } catch (error) {
       console.error('Error updating publish status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update publish status",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to update publish status", variant: "destructive" });
+    }
+  };
+
+  // Inline toggle helper for distribution channels
+  const handleChannelToggle = async (field: string, checked: boolean, label: string) => {
+    const { error } = await supabase
+      .from('topics')
+      .update({ [field]: checked })
+      .eq('id', topic!.id);
+    if (!error) {
+      loadTopicAndStats();
+      toast({ title: `${label} ${checked ? 'enabled' : 'disabled'}` });
     }
   };
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold text-foreground">Access Denied</h1>
-            <p className="text-muted-foreground">
-              Please log in to access the topic dashboard.
-            </p>
-            <Button asChild>
-              <Link to="/auth">Sign In</Link>
-            </Button>
-          </div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 text-center space-y-4">
+          <h1 className="text-4xl font-bold text-foreground">Access Denied</h1>
+          <p className="text-muted-foreground">Please log in to access the topic dashboard.</p>
+          <Button asChild><Link to="/auth">Sign In</Link></Button>
         </div>
       </div>
     );
@@ -610,11 +538,9 @@ const TopicDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </div>
     );
@@ -622,408 +548,194 @@ const TopicDashboard = () => {
 
   if (!topic) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold text-foreground">Topic Not Found</h1>
-            <p className="text-muted-foreground">
-              The topic you're looking for doesn't exist or you don't have access to it.
-            </p>
-            <Button asChild>
-              <Link to="/dashboard">Back to Dashboard</Link>
-            </Button>
-          </div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 text-center space-y-4">
+          <h1 className="text-4xl font-bold text-foreground">Topic Not Found</h1>
+          <p className="text-muted-foreground">The topic you're looking for doesn't exist or you don't have access.</p>
+          <Button asChild><Link to="/dashboard">Back to Dashboard</Link></Button>
         </div>
       </div>
     );
   }
 
-  // Progressive disclosure logic (for potential future use)
-  const hasEnoughArticles = stats.articles > 10;
-
   return (
     <AppLayout>
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          {/* Breadcrumb Navigation */}
-          <Breadcrumb className="mb-6">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/dashboard">Dashboard</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{topic.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <div className="container mx-auto px-4 py-6">
 
-        {/* Topic Header - Clean, out of card */}
-        <div className="mb-8 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-5">
-              {topic.branding_config?.icon_url ? (
-                <img 
-                  src={topic.branding_config.icon_url} 
-                  alt={`${topic.name} favicon`}
-                  className="w-14 h-14 rounded-lg object-cover shadow-sm border border-border mt-1"
-                />
-              ) : topic.topic_type === 'regional' ? (
-                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(270,100%,68%)] to-[hsl(270,80%,55%)] flex items-center justify-center shadow-sm mt-1">
-                  <MapPin className="w-7 h-7 text-white" />
-                </div>
-              ) : (
-                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(155,100%,67%)] to-[hsl(155,80%,50%)] flex items-center justify-center shadow-sm mt-1">
-                  <Hash className="w-7 h-7 text-white" />
-                </div>
-              )}
-              <div className="space-y-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-                  {topic.name}
-                </h1>
-                {topic.description && (
-                  <p className="text-muted-foreground text-sm max-w-xl">
-                    {topic.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 pt-1">
-                  <Switch
-                    id="publish-toggle"
-                    checked={topic.is_public}
-                    onCheckedChange={handlePublishToggle}
-                  />
-                </div>
-              </div>
+          {/* Simplified Header — name + toggle + view feed icon */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold text-foreground">{topic.name}</h1>
+              <Switch
+                id="publish-toggle"
+                checked={topic.is_public}
+                onCheckedChange={handlePublishToggle}
+              />
             </div>
-
-            <Button variant="outline" asChild className="shrink-0 hover:bg-primary/5 hover:text-primary hover:border-primary/30">
+            <Button variant="ghost" size="icon" asChild>
               <Link to={`/feed/${topic.slug}`} target="_blank">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                View Feed
+                <ExternalLink className="w-4 h-4" />
               </Link>
             </Button>
           </div>
-        </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3 h-12 p-1 bg-muted/50 rounded-lg">
-            <TabsTrigger 
-              value="content-flow" 
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md font-medium"
-            >
-              Content Flow
-            </TabsTrigger>
-            <TabsTrigger 
-              value="automation" 
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md font-medium"
-            >
-              Sources
-            </TabsTrigger>
-            <TabsTrigger 
-              value="advanced" 
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md font-medium"
-            >
-              Advanced Tools
-            </TabsTrigger>
-          </TabsList>
+          {/* 2 Tabs: Feed + Settings */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="w-full grid grid-cols-2 h-10 p-1 bg-muted/50 rounded-lg">
+              <TabsTrigger value="feed" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md text-sm font-medium">
+                Feed
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md text-sm font-medium">
+                Settings
+              </TabsTrigger>
+            </TabsList>
 
-
-          <TabsContent value="content-flow" className="space-y-6">
-            {/* Gathering Progress Indicator */}
-            {showGatheringProgress && (
-              <GatheringProgressIndicator 
-                topicId={topic.id}
-                jobRunId={jobRunId}
-                isVisible={showGatheringProgress}
-                onComplete={() => {
-                  setShowGatheringProgress(false);
-                  setGatheringAll(false);
-                  setJobRunId(null);
-                  loadTopicAndStats();
-                  toast({
-                    title: "Gathering Complete",
-                    description: "All sources have been processed",
-                  });
-                }}
-              />
-            )}
-            
-            {/* Manual Content Staging Area - Critical: Above main pipeline */}
-            <ManualContentStaging 
-              topicId={topic.id} 
-              onContentProcessed={loadTopicAndStats}
-            />
-            <Card className="bg-card border-border">
-              <CardContent className="p-6">
-                <UnifiedContentPipeline selectedTopicId={topic.id} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="automation" className="space-y-6">
-            <Card className="bg-card border-border">
-              <CardContent className="p-6">
-                <TopicAwareSourceManager
-                  selectedTopicId={topic.id}
-                  onSourcesChange={loadTopicAndStats}
-                  topicName={topic.name}
-                  description={topic.description || ''}
-                  keywords={topic.keywords || []}
-                  topicType={topic.topic_type}
-                  region={topic.region}
-                  articleCount={stats?.articles || 0}
+            {/* ===== FEED TAB ===== */}
+            <TabsContent value="feed" className="space-y-6">
+              {showGatheringProgress && (
+                <GatheringProgressIndicator 
+                  topicId={topic.id}
+                  jobRunId={jobRunId}
+                  isVisible={showGatheringProgress}
+                  onComplete={() => {
+                    setShowGatheringProgress(false);
+                    setGatheringAll(false);
+                    setJobRunId(null);
+                    loadTopicAndStats();
+                    toast({ title: "Gathering Complete", description: "All sources have been processed" });
+                  }}
                 />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="advanced" className="space-y-4">
-            {/* Mobile-optimized accordion sections */}
-            <Accordion type="multiple" defaultValue={["content-voice"]} className="space-y-3">
+              )}
               
-              {/* Content & Voice */}
-              <AccordionItem value="content-voice" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline [&[data-state=open]>div>svg]:rotate-0">
-                  <div className="flex items-center gap-3 text-left">
-                    <Settings className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Content & Voice</p>
-                      <p className="text-xs text-muted-foreground truncate">Expertise, tone, style, visuals</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <ContentVoiceSettings
-                    topicId={topic.id}
-                    currentExpertise={topic.audience_expertise}
-                    currentTone={topic.default_tone}
-                    currentWritingStyle={topic.default_writing_style}
-                    currentIllustrationStyle={topic.illustration_style}
-                    onUpdate={() => loadTopicAndStats()}
-                  />
-                </AccordionContent>
-              </AccordionItem>
+              <ManualContentStaging 
+                topicId={topic.id} 
+                onContentProcessed={loadTopicAndStats}
+              />
 
-              {/* Automation & Scheduling */}
-              <AccordionItem value="automation" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <Clock className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Automation & Scheduling</p>
-                      <p className="text-xs text-muted-foreground truncate">Publishing mode, drip feed</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-6">
+              <Card className="bg-card border-border">
+                <CardContent className="p-6">
+                  <UnifiedContentPipeline selectedTopicId={topic.id} />
+                </CardContent>
+              </Card>
+
+              {/* Sources — collapsible section within Feed tab */}
+              <Collapsible open={sourcesExpanded} onOpenChange={setSourcesExpanded}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between px-4 py-3 h-auto">
+                    <span className="text-sm font-medium">Sources</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${sourcesExpanded ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Card className="bg-card border-border mt-2">
+                    <CardContent className="p-6">
+                      <TopicAwareSourceManager
+                        selectedTopicId={topic.id}
+                        onSourcesChange={loadTopicAndStats}
+                        topicName={topic.name}
+                        description={topic.description || ''}
+                        keywords={topic.keywords || []}
+                        topicType={topic.topic_type}
+                        region={topic.region}
+                        articleCount={stats?.articles || 0}
+                      />
+                    </CardContent>
+                  </Card>
+                </CollapsibleContent>
+              </Collapsible>
+            </TabsContent>
+
+            {/* ===== SETTINGS TAB — flat sections ===== */}
+            <TabsContent value="settings" className="space-y-8">
+
+              {/* Voice */}
+              <section>
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Voice</h3>
+                <ContentVoiceSettings
+                  topicId={topic.id}
+                  currentExpertise={topic.audience_expertise}
+                  currentTone={topic.default_tone}
+                  currentWritingStyle={topic.default_writing_style}
+                  currentIllustrationStyle={topic.illustration_style}
+                  onUpdate={() => loadTopicAndStats()}
+                />
+              </section>
+
+              {/* Automation */}
+              <section className="border-t pt-6">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Automation</h3>
+                <div className="space-y-6">
                   <TopicAutomationSettings topicId={topic.id} />
-                  <div className="border-t pt-4">
-                    <DripFeedSettings topicId={topic.id} onUpdate={() => loadTopicAndStats()} />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                  <DripFeedSettings topicId={topic.id} onUpdate={() => loadTopicAndStats()} />
+                </div>
+              </section>
 
-              {/* Branding & Onboarding */}
-              <AccordionItem value="branding" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <Palette className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Branding & Onboarding</p>
-                      <p className="text-xs text-muted-foreground truncate">Logo, subheader, welcome card</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-6">
-                  <TopicBrandingSettings
-                    topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config }}
-                    onUpdate={() => loadTopicAndStats()}
-                  />
-                  <div className="border-t pt-4">
-                    <OnboardingSettings
-                      topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
-                      onUpdate={() => loadTopicAndStats()}
+              {/* Channels */}
+              <section className="border-t pt-6">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Channels</h3>
+                <div className="space-y-4">
+                  {/* Widget Builder */}
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-sm"><Code className="w-4 h-4" />Widget Builder</Label>
+                    <Switch
+                      checked={topic.public_widget_builder_enabled || false}
+                      onCheckedChange={(checked) => handleChannelToggle('public_widget_builder_enabled', checked, 'Widget builder')}
                     />
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Distribution & Monetization */}
-              <AccordionItem value="distribution" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <Globe className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Distribution & Monetization</p>
-                      <p className="text-xs text-muted-foreground truncate">RSS, email, audio, widgets, donations</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-6">
-                  {/* Widget Builder Toggle */}
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="flex items-center gap-2 text-sm font-medium">
-                          <Code className="w-4 h-4" />
-                          Public Widget Builder
-                        </Label>
-                        <p className="text-xs text-muted-foreground">Allow anyone to create embed widgets for this feed</p>
-                      </div>
-                      <Switch
-                        checked={topic.public_widget_builder_enabled || false}
-                        onCheckedChange={async (checked) => {
-                          const { error } = await supabase
-                            .from('topics')
-                            .update({ public_widget_builder_enabled: checked })
-                            .eq('id', topic.id);
-                          if (!error) {
-                            loadTopicAndStats();
-                            toast({ title: checked ? "Widget builder enabled" : "Widget builder disabled" });
-                          }
-                        }}
-                      />
-                    </div>
-                    {topic.public_widget_builder_enabled && (
-                      <div className="mt-3">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/feed/${topic.slug}/widget`} target="_blank">
-                            <ExternalLink className="w-3 h-3 mr-2" />
-                            Open Widget Builder
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Widget Analytics - show when widget builder is enabled */}
                   {topic.public_widget_builder_enabled && (
-                    <div className="border-t pt-4">
-                      <Label className="flex items-center gap-2 text-sm font-medium mb-3">
-                        <BarChart3 className="w-4 h-4" />
-                        Widget Performance
-                      </Label>
-                      <WidgetAnalytics 
-                        topicId={topic.id} 
-                        onNewSiteDetected={(domain) => {
-                          toast({
-                            title: "New widget integration!",
-                            description: `Your widget is now live on ${domain}`,
-                          });
-                        }}
-                      />
-                    </div>
+                    <>
+                      <Button variant="outline" size="sm" asChild className="ml-6">
+                        <Link to={`/feed/${topic.slug}/widget`} target="_blank">
+                          <ExternalLink className="w-3 h-3 mr-2" />Open Widget Builder
+                        </Link>
+                      </Button>
+                      <div className="ml-6">
+                        <WidgetAnalytics 
+                          topicId={topic.id} 
+                          onNewSiteDetected={(domain) => toast({ title: "New widget integration!", description: `Your widget is now live on ${domain}` })}
+                        />
+                      </div>
+                    </>
                   )}
 
-                  <div className="border-t pt-4 space-y-4">
-                    <Label className="text-sm font-medium">Distribution Channels</Label>
-                    
-                    {/* RSS Feed Toggle */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="flex items-center gap-2 text-sm">
-                          <Rss className="w-4 h-4" />
-                          RSS Feed
-                        </Label>
-                        <p className="text-xs text-muted-foreground">Allow subscribers to access this feed via RSS</p>
-                      </div>
-                      <Switch
-                        checked={topic.rss_enabled || false}
-                        onCheckedChange={async (checked) => {
-                          const { error } = await supabase
-                            .from('topics')
-                            .update({ rss_enabled: checked })
-                            .eq('id', topic.id);
-                          if (!error) {
-                            loadTopicAndStats();
-                            toast({ title: checked ? "RSS feed enabled" : "RSS feed disabled" });
-                          }
-                        }}
-                      />
-                    </div>
-
-                    {/* Email Subscriptions Toggle */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="flex items-center gap-2 text-sm">
-                          <Mail className="w-4 h-4" />
-                          Email Subscriptions
-                        </Label>
-                        <p className="text-xs text-muted-foreground">Allow readers to subscribe to email newsletters</p>
-                      </div>
-                      <Switch
-                        checked={topic.email_subscriptions_enabled || false}
-                        onCheckedChange={async (checked) => {
-                          const { error } = await supabase
-                            .from('topics')
-                            .update({ email_subscriptions_enabled: checked })
-                            .eq('id', topic.id);
-                          if (!error) {
-                            loadTopicAndStats();
-                            toast({ title: checked ? "Email subscriptions enabled" : "Email subscriptions disabled" });
-                          }
-                        }}
-                      />
-                    </div>
-
-                    {/* Audio Briefings Section */}
-                    <div className="border-t pt-4 mt-4 space-y-4">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <Volume2 className="w-4 h-4" />
-                        Audio Briefings
-                        <Badge variant="secondary" className="text-xs">Premium</Badge>
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Generate TTS audio versions of your briefings using ElevenLabs. ~$0.09/daily, ~$0.18/weekly.
-                      </p>
-                      
-                      {/* Daily Audio Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="text-sm">Daily Audio Briefings</Label>
-                          <p className="text-xs text-muted-foreground">Auto-generate audio for daily roundups</p>
-                        </div>
-                        <Switch
-                          checked={(topic as any).audio_briefings_daily_enabled || false}
-                          onCheckedChange={async (checked) => {
-                            const { error } = await supabase
-                              .from('topics')
-                              .update({ audio_briefings_daily_enabled: checked })
-                              .eq('id', topic.id);
-                            if (!error) {
-                              loadTopicAndStats();
-                              toast({ title: checked ? "Daily audio briefings enabled" : "Daily audio briefings disabled" });
-                            }
-                          }}
-                        />
-                      </div>
-
-                      {/* Weekly Audio Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="text-sm">Weekly Audio Briefings</Label>
-                          <p className="text-xs text-muted-foreground">Auto-generate audio for weekly roundups</p>
-                        </div>
-                        <Switch
-                          checked={(topic as any).audio_briefings_weekly_enabled || false}
-                          onCheckedChange={async (checked) => {
-                            const { error } = await supabase
-                              .from('topics')
-                              .update({ audio_briefings_weekly_enabled: checked })
-                              .eq('id', topic.id);
-                            if (!error) {
-                              loadTopicAndStats();
-                              toast({ title: checked ? "Weekly audio briefings enabled" : "Weekly audio briefings disabled" });
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
+                  {/* RSS */}
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-sm"><Rss className="w-4 h-4" />RSS Feed</Label>
+                    <Switch
+                      checked={topic.rss_enabled || false}
+                      onCheckedChange={(checked) => handleChannelToggle('rss_enabled', checked, 'RSS feed')}
+                    />
                   </div>
-                  
+
+                  {/* Email */}
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4" />Email Subscriptions</Label>
+                    <Switch
+                      checked={topic.email_subscriptions_enabled || false}
+                      onCheckedChange={(checked) => handleChannelToggle('email_subscriptions_enabled', checked, 'Email subscriptions')}
+                    />
+                  </div>
+
+                  {/* Audio — daily */}
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm flex items-center gap-2"><Volume2 className="w-4 h-4" />Daily Audio Briefings</Label>
+                    <Switch
+                      checked={(topic as any).audio_briefings_daily_enabled || false}
+                      onCheckedChange={(checked) => handleChannelToggle('audio_briefings_daily_enabled', checked, 'Daily audio briefings')}
+                    />
+                  </div>
+
+                  {/* Audio — weekly */}
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm flex items-center gap-2"><Volume2 className="w-4 h-4" />Weekly Audio Briefings</Label>
+                    <Switch
+                      checked={(topic as any).audio_briefings_weekly_enabled || false}
+                      onCheckedChange={(checked) => handleChannelToggle('audio_briefings_weekly_enabled', checked, 'Weekly audio briefings')}
+                    />
+                  </div>
+
+                  {/* Donations */}
                   <div className="border-t pt-4">
                     <TopicDonationSettings
                       topicId={topic.id}
@@ -1032,136 +744,143 @@ const TopicDashboard = () => {
                       onUpdate={loadTopicAndStats}
                     />
                   </div>
-                </AccordionContent>
-              </AccordionItem>
+                </div>
+              </section>
 
-              {/* Feed Insight Cards */}
-              <AccordionItem value="insights" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <Sparkles className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Feed Insight Cards</p>
-                      <p className="text-xs text-muted-foreground truncate">Quiz, momentum, social proof controls</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <TopicInsightSettings topicId={topic.id} />
-                </AccordionContent>
-              </AccordionItem>
+              {/* More — set-once-and-forget settings */}
+              <section className="border-t pt-6">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">More</h3>
+                <div className="space-y-6">
+                  {/* Branding & Onboarding */}
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
+                        <span className="flex items-center gap-2 text-sm font-medium"><Palette className="w-4 h-4" />Branding & Onboarding</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4 space-y-6">
+                      <TopicBrandingSettings
+                        topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config }}
+                        onUpdate={() => loadTopicAndStats()}
+                      />
+                      <OnboardingSettings
+                        topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
+                        onUpdate={() => loadTopicAndStats()}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
 
-              {/* Keywords & Discovery */}
-              <AccordionItem value="keywords" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <Hash className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Keywords & Discovery</p>
-                      <p className="text-xs text-muted-foreground truncate">Keywords, exclusions, sentiment</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-4">
-                  <KeywordManager
-                    topic={topic}
-                    onTopicUpdate={(updatedTopic: Topic) => {
-                      setTopic((prevTopic) => ({ ...prevTopic!, ...updatedTopic }));
-                      loadTopicAndStats();
-                    }}
-                  />
-                  
-                  {topic.topic_type === 'regional' && (
-                    <div className="grid gap-4 sm:grid-cols-2 border-t pt-4">
-                      <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={setNegativeKeywords} />
-                      <TopicCompetingRegions topicId={topic.id} competingRegions={competingRegions} onUpdate={setCompetingRegions} />
-                    </div>
-                  )}
-                  
-                  <div className="border-t pt-4">
-                    <SentimentKeywordSettings topicId={topic.id} />
-                  </div>
-                  
-                  <div className="border-t pt-4">
-                    <CommunityVoiceSettings
-                      topicId={topic.id}
-                      enabled={topic.community_intelligence_enabled}
-                      pulseFrequency={topic.community_pulse_frequency}
-                      config={topic.community_config}
-                      topicType={topic.topic_type}
-                      region={topic.region}
-                      onUpdate={() => loadTopicAndStats()}
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                  {/* Insight Cards */}
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
+                        <span className="flex items-center gap-2 text-sm font-medium"><Sparkles className="w-4 h-4" />Insight Cards</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                      <TopicInsightSettings topicId={topic.id} />
+                    </CollapsibleContent>
+                  </Collapsible>
 
-
-              {/* Regional Features - only for regional topics */}
-              {topic.topic_type === 'regional' && (
-                <AccordionItem value="regional" className="rounded-lg border bg-card">
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                    <div className="flex items-center gap-3 text-left">
-                      <MapPin className="h-4 w-4 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">Regional Features</p>
-                        <p className="text-xs text-muted-foreground truncate">Parliamentary tracking, events</p>
+                  {/* Keywords & Discovery */}
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
+                        <span className="flex items-center gap-2 text-sm font-medium"><Hash className="w-4 h-4" />Keywords & Discovery</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4 space-y-4">
+                      <KeywordManager
+                        topic={topic}
+                        onTopicUpdate={(updatedTopic: Topic) => {
+                          setTopic((prevTopic) => ({ ...prevTopic!, ...updatedTopic }));
+                          loadTopicAndStats();
+                        }}
+                      />
+                      {topic.topic_type === 'regional' && (
+                        <div className="grid gap-4 sm:grid-cols-2 border-t pt-4">
+                          <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={setNegativeKeywords} />
+                          <TopicCompetingRegions topicId={topic.id} competingRegions={competingRegions} onUpdate={setCompetingRegions} />
+                        </div>
+                      )}
+                      <div className="border-t pt-4">
+                        <SentimentKeywordSettings topicId={topic.id} />
                       </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <RegionalFeaturesSettings
-                      topicId={topic.id}
-                      region={topic.region}
-                      parliamentaryEnabled={topic.parliamentary_tracking_enabled}
-                      eventsEnabled={(topic as any).events_enabled}
-                      onUpdate={() => loadTopicAndStats()}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-              )}
+                      <div className="border-t pt-4">
+                        <CommunityVoiceSettings
+                          topicId={topic.id}
+                          enabled={topic.community_intelligence_enabled}
+                          pulseFrequency={topic.community_pulse_frequency}
+                          config={topic.community_config}
+                          topicType={topic.topic_type}
+                          region={topic.region}
+                          onUpdate={() => loadTopicAndStats()}
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
 
-              {/* Subscribers */}
-              <AccordionItem value="subscribers" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <Users className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Subscribers</p>
-                      <p className="text-xs text-muted-foreground truncate">Manage notification subscribers</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <NewsletterSignupsManager topicId={topic.id} />
-                </AccordionContent>
-              </AccordionItem>
+                  {/* Regional Features — only for regional topics */}
+                  {topic.topic_type === 'regional' && (
+                    <Collapsible>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
+                          <span className="flex items-center gap-2 text-sm font-medium"><MapPin className="w-4 h-4" />Regional Features</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-4">
+                        <RegionalFeaturesSettings
+                          topicId={topic.id}
+                          region={topic.region}
+                          parliamentaryEnabled={topic.parliamentary_tracking_enabled}
+                          eventsEnabled={(topic as any).events_enabled}
+                          onUpdate={() => loadTopicAndStats()}
+                        />
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
 
-            </Accordion>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      <ConfirmationDialog
-        isOpen={showConfirmDialog}
-        onClose={() => setShowConfirmDialog(false)}
-        onConfirm={() => {
-          confirmPublishToggle(pendingPublishState);
-          setShowConfirmDialog(false);
-        }}
-        title="Unpublish Feed"
-        description="This will make your feed private and remove it from public access. Subscribers won't be able to view new content. Are you sure?"
-        confirmText="Unpublish"
-        variant="destructive"
-      />
-      
-      {/* Subtle Curatr.pro branding */}
-      <div className="mt-12 pb-6 text-center">
-        <p className="text-xs text-muted-foreground/50">
-          Powered by <span className="font-display font-medium text-muted-foreground/70">Curatr</span><span className="font-display font-light text-muted-foreground/70">.pro</span>
-        </p>
-      </div>
+                  {/* Subscribers */}
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
+                        <span className="flex items-center gap-2 text-sm font-medium"><Users className="w-4 h-4" />Subscribers</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                      <NewsletterSignupsManager topicId={topic.id} />
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </section>
+            </TabsContent>
+          </Tabs>
         </div>
+
+        <ConfirmationDialog
+          isOpen={showConfirmDialog}
+          onClose={() => setShowConfirmDialog(false)}
+          onConfirm={() => {
+            confirmPublishToggle(pendingPublishState);
+            setShowConfirmDialog(false);
+          }}
+          title="Unpublish Feed"
+          description="This will make your feed private and remove it from public access. Subscribers won't be able to view new content. Are you sure?"
+          confirmText="Unpublish"
+          variant="destructive"
+        />
+        
+        <div className="mt-12 pb-6 text-center">
+          <p className="text-xs text-muted-foreground/50">
+            Powered by <span className="font-display font-medium text-muted-foreground/70">Curatr</span><span className="font-display font-light text-muted-foreground/70">.pro</span>
+          </p>
+        </div>
+      </div>
     </AppLayout>
   );
 };
