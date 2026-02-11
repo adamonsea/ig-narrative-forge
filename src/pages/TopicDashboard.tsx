@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
@@ -33,7 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { ExternalLink, MapPin, Hash, Clock, ChevronDown, Loader2, Globe, Code, Rss, Mail, Volume2, Users, Palette, Sparkles, Settings } from "lucide-react";
+import { ExternalLink, MapPin, Hash, Clock, ChevronDown, Loader2, Globe, Users, Palette, Sparkles } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
@@ -582,11 +582,11 @@ const TopicDashboard = () => {
 
           {/* 2 Tabs: Feed + Settings */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="w-full grid grid-cols-2 h-10 p-1 bg-muted/50 rounded-lg">
-              <TabsTrigger value="feed" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md text-sm font-medium">
+            <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
+              <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Feed
               </TabsTrigger>
-              <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md text-sm font-medium">
+              <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Settings
               </TabsTrigger>
             </TabsList>
@@ -613,11 +613,7 @@ const TopicDashboard = () => {
                 onContentProcessed={loadTopicAndStats}
               />
 
-              <Card className="bg-card border-border">
-                <CardContent className="p-6">
-                  <UnifiedContentPipeline selectedTopicId={topic.id} />
-                </CardContent>
-              </Card>
+              <UnifiedContentPipeline selectedTopicId={topic.id} />
 
               {/* Sources — collapsible section within Feed tab */}
               <Collapsible open={sourcesExpanded} onOpenChange={setSourcesExpanded}>
@@ -627,31 +623,27 @@ const TopicDashboard = () => {
                     <ChevronDown className={`h-4 w-4 transition-transform ${sourcesExpanded ? 'rotate-180' : ''}`} />
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Card className="bg-card border-border mt-2">
-                    <CardContent className="p-6">
-                      <TopicAwareSourceManager
-                        selectedTopicId={topic.id}
-                        onSourcesChange={loadTopicAndStats}
-                        topicName={topic.name}
-                        description={topic.description || ''}
-                        keywords={topic.keywords || []}
-                        topicType={topic.topic_type}
-                        region={topic.region}
-                        articleCount={stats?.articles || 0}
-                      />
-                    </CardContent>
-                  </Card>
+                <CollapsibleContent className="mt-2">
+                  <TopicAwareSourceManager
+                    selectedTopicId={topic.id}
+                    onSourcesChange={loadTopicAndStats}
+                    topicName={topic.name}
+                    description={topic.description || ''}
+                    keywords={topic.keywords || []}
+                    topicType={topic.topic_type}
+                    region={topic.region}
+                    articleCount={stats?.articles || 0}
+                  />
                 </CollapsibleContent>
               </Collapsible>
             </TabsContent>
 
             {/* ===== SETTINGS TAB — flat sections ===== */}
-            <TabsContent value="settings" className="space-y-8">
+            <TabsContent value="settings" className="space-y-6">
 
               {/* Voice */}
               <section>
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Voice</h3>
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Voice</h3>
                 <ContentVoiceSettings
                   topicId={topic.id}
                   currentExpertise={topic.audience_expertise}
@@ -663,21 +655,21 @@ const TopicDashboard = () => {
               </section>
 
               {/* Automation */}
-              <section className="border-t pt-6">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Automation</h3>
-                <div className="space-y-6">
+              <section className="border-t border-border/40 pt-4">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Automation</h3>
+                <div className="space-y-4">
                   <TopicAutomationSettings topicId={topic.id} />
                   <DripFeedSettings topicId={topic.id} onUpdate={() => loadTopicAndStats()} />
                 </div>
               </section>
 
               {/* Channels */}
-              <section className="border-t pt-6">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Channels</h3>
-                <div className="space-y-4">
+              <section className="border-t border-border/40 pt-4">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Channels</h3>
+                <div className="space-y-3">
                   {/* Widget Builder */}
                   <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2 text-sm"><Code className="w-4 h-4" />Widget Builder</Label>
+                    <Label className="text-sm">Widget Builder</Label>
                     <Switch
                       checked={topic.public_widget_builder_enabled || false}
                       onCheckedChange={(checked) => handleChannelToggle('public_widget_builder_enabled', checked, 'Widget builder')}
@@ -701,7 +693,7 @@ const TopicDashboard = () => {
 
                   {/* RSS */}
                   <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2 text-sm"><Rss className="w-4 h-4" />RSS Feed</Label>
+                    <Label className="text-sm">RSS Feed</Label>
                     <Switch
                       checked={topic.rss_enabled || false}
                       onCheckedChange={(checked) => handleChannelToggle('rss_enabled', checked, 'RSS feed')}
@@ -710,7 +702,7 @@ const TopicDashboard = () => {
 
                   {/* Email */}
                   <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4" />Email Subscriptions</Label>
+                    <Label className="text-sm">Email Subscriptions</Label>
                     <Switch
                       checked={topic.email_subscriptions_enabled || false}
                       onCheckedChange={(checked) => handleChannelToggle('email_subscriptions_enabled', checked, 'Email subscriptions')}
@@ -719,7 +711,7 @@ const TopicDashboard = () => {
 
                   {/* Audio — daily */}
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm flex items-center gap-2"><Volume2 className="w-4 h-4" />Daily Audio Briefings</Label>
+                    <Label className="text-sm">Daily Audio</Label>
                     <Switch
                       checked={(topic as any).audio_briefings_daily_enabled || false}
                       onCheckedChange={(checked) => handleChannelToggle('audio_briefings_daily_enabled', checked, 'Daily audio briefings')}
@@ -728,7 +720,7 @@ const TopicDashboard = () => {
 
                   {/* Audio — weekly */}
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm flex items-center gap-2"><Volume2 className="w-4 h-4" />Weekly Audio Briefings</Label>
+                    <Label className="text-sm">Weekly Audio</Label>
                     <Switch
                       checked={(topic as any).audio_briefings_weekly_enabled || false}
                       onCheckedChange={(checked) => handleChannelToggle('audio_briefings_weekly_enabled', checked, 'Weekly audio briefings')}
@@ -748,8 +740,8 @@ const TopicDashboard = () => {
               </section>
 
               {/* More — set-once-and-forget settings */}
-              <section className="border-t pt-6">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">More</h3>
+              <section className="border-t border-border/40 pt-4">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">More</h3>
                 <div className="space-y-6">
                   {/* Branding & Onboarding */}
                   <Collapsible>
