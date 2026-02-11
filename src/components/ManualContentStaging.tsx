@@ -453,19 +453,7 @@ try {
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-4 mt-4">
-        <Card className="border-dashed border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              Manual Content Staging
-              {hasActiveFiles && (
-                <Badge variant="secondary" className="animate-pulse">
-                  Processing...
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <div className="space-y-4">
             {/* Drop Zone */}
             <div
               {...getRootProps()}
@@ -576,20 +564,9 @@ try {
                 </Card>
               ))}
             </div>
+            </div>
+          )}
           </div>
-        )}
-
-        {/* Improved instructions */}
-        <Alert>
-          <AlertTriangle className="w-4 h-4" />
-          <AlertDescription className="text-xs">
-            <strong>How it works:</strong> Files are uploaded to secure storage, then processed 
-            one at a time through AI extraction and rewriting. Your queue persists across page 
-            reloads. Completed articles appear in the arrivals queue below for review.
-          </AlertDescription>
-        </Alert>
-          </CardContent>
-        </Card>
       </CollapsibleContent>
     </Collapsible>
   );
