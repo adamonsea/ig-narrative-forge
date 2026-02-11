@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2, Copy } from "lucide-react";
+import { ExternalLink, Eye, Trash2, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2, Copy, Settings2, CheckSquare } from "lucide-react";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
@@ -17,12 +17,10 @@ interface MultiTenantArticlesListProps {
   deletingArticles: Set<string>;
   animatingArticles: Set<string>;
   
-  // Configuration defaults (from topic settings)
   defaultSlideQuantity?: 'short' | 'tabloid' | 'indepth' | 'extensive';
   defaultTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   defaultWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   
-  // Individual overrides (user selections per article)
   slideQuantityOverrides?: Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>;
   toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet'>;  
   writingStyleOverrides?: Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven'>;
@@ -41,7 +39,6 @@ interface MultiTenantArticlesListProps {
   onRefresh?: () => void;
   duplicateMap?: Map<string, DuplicateInfo>;
   
-  // Pagination props
   hasMoreArticles?: boolean;
   totalArticlesCount?: number | null;
   loadingMore?: boolean;
@@ -78,31 +75,18 @@ export default function MultiTenantArticlesList({
 }: MultiTenantArticlesListProps) {
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
-  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
   const [bulkDeleteCount, setBulkDeleteCount] = useState<number | null>(null);
+  const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
 
-  // Clear selection and animation states when articles array becomes empty
   useEffect(() => {
     if (articles.length === 0) {
       setSelectedArticles(new Set());
-      setShowBulkActions(false);
+      setSelectMode(false);
       setBulkDeleteCount(null);
     }
   }, [articles.length]);
 
-  // Debug logging for article management
-  useEffect(() => {
-    console.log('🔍 MultiTenantArticlesList Debug:', {
-      articlesCount: articles.length,
-      selectedCount: selectedArticles.size,
-      deletingCount: deletingArticles.size,
-      animatingCount: animatingArticles.size,
-      processingArticle,
-      showBulkActions
-    });
-  }, [articles.length, selectedArticles.size, deletingArticles.size, animatingArticles.size, processingArticle, showBulkActions]);
-
-  // Helper functions
   const getRelevanceColor = (score: number) => {
     if (score >= 50) return "text-green-600 bg-green-50 border-green-200";
     if (score >= 25) return "text-yellow-600 bg-yellow-50 border-yellow-200";
@@ -110,42 +94,17 @@ export default function MultiTenantArticlesList({
   };
 
   const getRelevanceLabel = (score: number) => {
-    if (score >= 50) return `${score}% (High)`;
-    if (score >= 25) return `${score}% (Medium)`;
-    return `${score}% (Low)`;
+    if (score >= 50) return `${score}%`;
+    if (score >= 25) return `${score}%`;
+    return `${score}%`;
   };
 
-  const getQualityColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const getSlideTypeInfo = (type: string) => {
-    const types = {
-      short: { slides: 3, desc: 'Quick' },
-      tabloid: { slides: 6, desc: 'Standard' },
-      indepth: { slides: 8, desc: 'Detailed' },
-      extensive: { slides: 12, desc: 'Full' }
-    };
-    return types[type as keyof typeof types];
-  };
-
-  // Bulk action handlers
   const handleBulkDelete = () => {
     if (selectedArticles.size === 0) return;
-    
-    // Show immediate feedback
     setBulkDeleteCount(selectedArticles.size);
-    
-    // Execute deletion
     onBulkDelete?.(Array.from(selectedArticles));
-    
-    // Clear states immediately for better UX
     setSelectedArticles(new Set());
-    setShowBulkActions(false);
-    
-    // Clear count after a delay
+    setSelectMode(false);
     setTimeout(() => setBulkDeleteCount(null), 3000);
   };
 
@@ -153,41 +112,46 @@ export default function MultiTenantArticlesList({
     const lowRelevanceIds = articles
       .filter(article => article.regional_relevance_score < bulkDeleteRelevanceThreshold)
       .map(article => article.id);
-    
     if (lowRelevanceIds.length === 0) return;
-    
-    // Show immediate feedback
     setBulkDeleteCount(lowRelevanceIds.length);
-    
-    // Execute deletion
     onBulkDelete?.(lowRelevanceIds);
-    
-    // Clear count after a delay
     setTimeout(() => setBulkDeleteCount(null), 3000);
   };
 
   const handleSelectAll = () => {
-    const allIds = new Set(articles.map(a => a.id));
-    setSelectedArticles(allIds);
-    setShowBulkActions(true);
+    setSelectedArticles(new Set(articles.map(a => a.id)));
   };
 
   const handleDeselectAll = () => {
     setSelectedArticles(new Set());
-    setShowBulkActions(false);
+  };
+
+  const toggleConfig = (articleId: string) => {
+    setExpandedConfig(prev => {
+      const next = new Set(prev);
+      next.has(articleId) ? next.delete(articleId) : next.add(articleId);
+      return next;
+    });
+  };
+
+  const getSourceDomain = (url: string) => {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return '';
+    }
   };
 
   const renderArticleCard = (article: MultiTenantArticle) => {
-    // Default snippets to 'short' (3 slides) instead of 'tabloid' (6 slides)
     const defaultType = article.is_snippet ? 'short' : defaultSlideQuantity;
     const slideType = slideQuantityOverrides[article.id] || defaultType;
-    const slideInfo = getSlideTypeInfo(slideType);
     const toneOverride = toneOverrides[article.id] || defaultTone;
     const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
     const isProcessing = processingArticle === article.id;
     const isDeleting = deletingArticles.has(article.id);
     const isAnimating = animatingArticles.has(article.id);
     const dupInfo = duplicateMap?.get(article.id);
+    const showConfig = expandedConfig.has(article.id);
     
     return (
       <Card 
@@ -196,103 +160,43 @@ export default function MultiTenantArticlesList({
           isAnimating ? 'animate-fade-out opacity-0 transform translate-x-4' : 'animate-fade-in'
         } ${dupInfo && !dupInfo.isDuplicateLeader ? 'ml-4 border-l-4 border-l-amber-400' : ''}`}
       >
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={selectedArticles.has(article.id)}
-              onCheckedChange={(checked) => {
-                const newSelected = new Set(selectedArticles);
-                if (checked) {
-                  newSelected.add(article.id);
-                } else {
-                  newSelected.delete(article.id);
-                }
-                setSelectedArticles(newSelected);
-                setShowBulkActions(newSelected.size > 0);
-              }}
-              className="mr-2"
-            />
-            <span className="text-sm text-muted-foreground">
-              Relevance: {article.regional_relevance_score}%
-            </span>
-            <div 
-              className={`px-2 py-1 rounded text-xs font-medium border ${getRelevanceColor(article.regional_relevance_score)}`}
-            >
+        <div className="p-4 space-y-2.5">
+          {/* Metadata line: source domain, relevance pill, currentness */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {selectMode && (
+              <Checkbox
+                checked={selectedArticles.has(article.id)}
+                onCheckedChange={(checked) => {
+                  const newSelected = new Set(selectedArticles);
+                  if (checked) newSelected.add(article.id);
+                  else newSelected.delete(article.id);
+                  setSelectedArticles(newSelected);
+                }}
+                className="mr-1"
+              />
+            )}
+            <span className="truncate max-w-[140px]">{getSourceDomain(article.url)}</span>
+            <div className={`px-1.5 py-0.5 rounded text-xs font-medium border ${getRelevanceColor(article.regional_relevance_score)}`}>
               {getRelevanceLabel(article.regional_relevance_score)}
             </div>
-            <span className="text-xs text-muted-foreground">
-              {article.word_count} words
-              {article.is_snippet && (
-                <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
-                  Snippet
-                </Badge>
-              )}
-            </span>
-            {article.author && (
-              <span className="text-xs text-muted-foreground">
-                by {article.author}
-              </span>
+            {article.is_snippet && (
+              <Badge variant="outline" className="text-[10px] h-4 px-1 bg-blue-50 text-blue-700 border-blue-200">
+                Snippet
+              </Badge>
             )}
-          </div>
-          
-          <div className="flex gap-2">
-            {onPreview && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onPreview(article)}
-              >
-                <Eye className="w-4 h-4" />
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => window.open(article.url, '_blank')}
-            >
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDelete(article.id, article.title)}
-              disabled={isDeleting}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            {onDiscardAndSuppress && topicId && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => onDiscardAndSuppress(article.id, topicId, article.url, article.title)}
-                disabled={isDeleting}
-                title="Discard and permanently suppress from future scrapes"
-              >
-                <Shield className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="px-4 pb-2">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-medium text-sm leading-tight line-clamp-2 flex-1">
-              {article.title}
-            </h3>
+            <div className={`px-1.5 py-0.5 rounded text-xs border ${getCurrentnessColor(article.published_at, article.created_at)}`}>
+              {getCurrentnessTag(article.published_at, article.created_at)}
+            </div>
             {dupInfo && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Badge 
-                      variant={dupInfo.isDuplicateLeader ? "secondary" : "outline"}
-                      className={dupInfo.isDuplicateLeader 
-                        ? "shrink-0 bg-amber-100 text-amber-800 border-amber-300" 
-                        : "shrink-0 bg-amber-50 text-amber-600 border-amber-200"}
+                      variant="outline"
+                      className="text-[10px] h-4 px-1 bg-amber-50 text-amber-600 border-amber-200"
                     >
-                      <Copy className="w-3 h-3 mr-1" />
-                      {dupInfo.isDuplicateLeader 
-                        ? `${dupInfo.similarCount} similar` 
-                        : 'Duplicate'}
+                      <Copy className="w-2.5 h-2.5 mr-0.5" />
+                      {dupInfo.isDuplicateLeader ? `${dupInfo.similarCount}` : 'dup'}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
@@ -307,46 +211,38 @@ export default function MultiTenantArticlesList({
               </TooltipProvider>
             )}
           </div>
-          
-          {/* Published Date & Currentness Tag */}
-          <div className="mb-2 flex items-center gap-2">
-            {article.published_at && (
-              <span className="text-xs text-muted-foreground">
-                {new Date(article.published_at).toLocaleDateString('en-GB', { 
-                  day: 'numeric', 
-                  month: 'short', 
-                  year: 'numeric' 
-                })}
-              </span>
-            )}
-            <div 
-              className={`inline-flex px-2 py-1 rounded text-xs font-medium border ${getCurrentnessColor(article.published_at, article.created_at)}`}
-            >
-              {getCurrentnessTag(article.published_at, article.created_at)}
-            </div>
-          </div>
-          
-          {/* Keywords */}
-          <div className="flex flex-wrap gap-1 mb-3">
-            {(article.keyword_matches || []).slice(0, 4).map((keyword, idx) => (
-              <Badge key={idx} variant="secondary" className="text-xs">
-                {keyword}
-              </Badge>
-            ))}
-          </div>
-        </div>
 
-        <div className="p-4 pt-0 border-t bg-muted/20">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {/* Slide Quantity */}
+          {/* Headline */}
+          <h3 className="font-semibold text-base leading-tight line-clamp-2">
+            {article.title}
+          </h3>
+
+          {/* Author */}
+          {article.author && (
+            <p className="text-sm text-muted-foreground">by {article.author}</p>
+          )}
+
+          {/* Keywords */}
+          {(article.keyword_matches || []).length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {(article.keyword_matches || []).slice(0, 4).map((keyword, idx) => (
+                <Badge key={idx} variant="secondary" className="text-xs">
+                  {keyword}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Configure expansion */}
+          {showConfig && (
+            <div className="flex gap-2 pt-1">
               <Select
                 value={slideType}
                 onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
                   onSlideQuantityChange(article.id, value)
                 }
               >
-                <SelectTrigger className="w-16 h-8">
+                <SelectTrigger className="w-16 h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -356,34 +252,30 @@ export default function MultiTenantArticlesList({
                   <SelectItem value="extensive">12</SelectItem>
                 </SelectContent>
               </Select>
-              
-              {/* Tone */}
               <Select
                 value={toneOverride}
                 onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => 
                   onToneOverrideChange(article.id, value)
                 }
               >
-                <SelectTrigger className="w-24 h-8">
+                <SelectTrigger className="w-24 h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="formal">Formal</SelectItem>
                   <SelectItem value="conversational">Conversational</SelectItem>
                   <SelectItem value="engaging">Engaging</SelectItem>
-                  <SelectItem value="satirical">Satirical ⚡</SelectItem>
-                  <SelectItem value="rhyming_couplet">Rhyming 🎭</SelectItem>
+                  <SelectItem value="satirical">Satirical</SelectItem>
+                  <SelectItem value="rhyming_couplet">Rhyming</SelectItem>
                 </SelectContent>
               </Select>
-
-              {/* Writing Style */}
               <Select
                 value={writingStyleOverride}
                 onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => 
                   onWritingStyleOverrideChange(article.id, value)
                 }
               >
-                <SelectTrigger className="w-28 h-8">
+                <SelectTrigger className="w-28 h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -394,21 +286,66 @@ export default function MultiTenantArticlesList({
                 </SelectContent>
               </Select>
             </div>
+          )}
 
+          {/* Action bar */}
+          <div className="flex items-center gap-1.5 pt-1 border-t border-border/40">
             <Button
-              onClick={() => onApprove(
-                article, 
-                slideType, 
-                toneOverride, 
-                writingStyleOverride
-              )}
+              onClick={() => onApprove(article, slideType, toneOverride, writingStyleOverride)}
               disabled={isProcessing || isDeleting}
-              className="bg-green-600 text-white hover:bg-green-700"
               size="sm"
+              className="h-7 text-xs"
             >
-              <PlayCircle className="w-4 h-4 mr-1" />
+              {isProcessing ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <PlayCircle className="w-3 h-3 mr-1" />
+              )}
               Simplify
             </Button>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => toggleConfig(article.id)}
+              className="h-7 w-7 p-0"
+              title="Configure"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+            </Button>
+
+            <div className="ml-auto flex items-center gap-1">
+              {onPreview && (
+                <Button size="sm" variant="ghost" onClick={() => onPreview(article)} className="h-7 w-7 p-0" title="Preview">
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => window.open(article.url, '_blank')} className="h-7 w-7 p-0" title="Source">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Button>
+              {onDiscardAndSuppress && topicId && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onDiscardAndSuppress(article.id, topicId, article.url, article.title)}
+                  disabled={isDeleting}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  title="Suppress"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onDelete(article.id, article.title)}
+                disabled={isDeleting}
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                title="Delete"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -426,14 +363,12 @@ export default function MultiTenantArticlesList({
           Articles Deleted Successfully
         </h3>
         <p className="text-muted-foreground mb-6 max-w-md">
-          {bulkDeleteCount} article{bulkDeleteCount !== 1 ? 's' : ''} deleted successfully. The feed is now empty.
+          {bulkDeleteCount} article{bulkDeleteCount !== 1 ? 's' : ''} deleted successfully.
         </p>
-        <div className="flex gap-3">
-          <Button onClick={onRefresh} variant="outline" className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Gather More Content
-          </Button>
-        </div>
+        <Button onClick={onRefresh} variant="outline" className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Gather More Content
+        </Button>
       </div>
     );
   }
@@ -449,7 +384,7 @@ export default function MultiTenantArticlesList({
           No Articles Available
         </h3>
         <p className="text-muted-foreground mb-6 max-w-md">
-          No new articles have been discovered yet. Use the "Start Scraping" button at the top to gather content.
+          No new articles have been discovered yet.
         </p>
         <Button onClick={onRefresh} variant="outline" className="gap-2">
           <RefreshCw className="w-4 h-4" />
@@ -460,61 +395,71 @@ export default function MultiTenantArticlesList({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Bulk action toolbar */}
-      {(showBulkActions || selectedArticles.size > 0) && (
-        <Card className="p-4 bg-muted/20 border-primary/20">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium">
-                {selectedArticles.size} article{selectedArticles.size !== 1 ? 's' : ''} selected
-              </span>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={handleSelectAll}>
-                  Select All ({articles.length})
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleDeselectAll}>
-                  Deselect All
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Delete articles below:</Label>
-                <Select value={bulkDeleteRelevanceThreshold.toString()} onValueChange={(value) => setBulkDeleteRelevanceThreshold(Number(value))}>
-                  <SelectTrigger className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10%</SelectItem>
-                    <SelectItem value="25">25%</SelectItem>
-                    <SelectItem value="50">50%</SelectItem>
-                    <SelectItem value="75">75%</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button size="sm" variant="destructive" onClick={handleBulkDeleteByRelevance}>
-                  Delete {articles.filter(a => a.regional_relevance_score < bulkDeleteRelevanceThreshold).length} Low Relevance
-                </Button>
-              </div>
-              
-              <Button 
-                size="sm" 
-                variant="destructive" 
-                onClick={handleBulkDelete}
-                disabled={selectedArticles.size === 0}
-              >
-                Delete Selected ({selectedArticles.size})
-              </Button>
-            </div>
+    <div className="space-y-3">
+      {/* Header toolbar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={selectMode ? "default" : "outline"}
+            onClick={() => {
+              setSelectMode(!selectMode);
+              if (selectMode) {
+                setSelectedArticles(new Set());
+              }
+            }}
+            className="h-7 text-xs gap-1.5"
+          >
+            <CheckSquare className="w-3 h-3" />
+            Select
+          </Button>
+          {totalArticlesCount !== null && totalArticlesCount > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {articles.length} of {totalArticlesCount}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Bulk action toolbar - only in select mode */}
+      {selectMode && (
+        <div className="flex items-center justify-between flex-wrap gap-3 p-3 rounded-lg border border-border/60 bg-muted/10">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium">
+              {selectedArticles.size} selected
+            </span>
+            <Button size="sm" variant="ghost" onClick={handleSelectAll} className="h-6 text-xs px-2">
+              All ({articles.length})
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleDeselectAll} className="h-6 text-xs px-2">
+              None
+            </Button>
           </div>
-        </Card>
-      )}
-      
-      {/* Articles count display */}
-      {totalArticlesCount !== null && totalArticlesCount > 0 && (
-        <div className="text-sm text-muted-foreground text-center py-2">
-          Showing {articles.length} of {totalArticlesCount} arrivals
+          <div className="flex items-center gap-2">
+            <Select value={bulkDeleteRelevanceThreshold.toString()} onValueChange={(value) => setBulkDeleteRelevanceThreshold(Number(value))}>
+              <SelectTrigger className="w-16 h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10%</SelectItem>
+                <SelectItem value="25">25%</SelectItem>
+                <SelectItem value="50">50%</SelectItem>
+                <SelectItem value="75">75%</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="destructive" onClick={handleBulkDeleteByRelevance} className="h-7 text-xs">
+              Delete below ({articles.filter(a => a.regional_relevance_score < bulkDeleteRelevanceThreshold).length})
+            </Button>
+            <Button 
+              size="sm" 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              disabled={selectedArticles.size === 0}
+              className="h-7 text-xs"
+            >
+              Delete selected ({selectedArticles.size})
+            </Button>
+          </div>
         </div>
       )}
       
@@ -522,21 +467,21 @@ export default function MultiTenantArticlesList({
       
       {/* Load more button */}
       {hasMoreArticles && onLoadMore && (
-        <div className="pt-4">
+        <div className="pt-2">
           <Button 
             onClick={onLoadMore} 
             variant="outline" 
-            className="w-full gap-2"
+            className="w-full gap-2 h-8 text-xs"
             disabled={loadingMore}
           >
             {loadingMore ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3 h-3 animate-spin" />
                 Loading...
               </>
             ) : (
               <>
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3 h-3" />
                 Load More {totalArticlesCount !== null && articles.length < totalArticlesCount 
                   ? `(${totalArticlesCount - articles.length} remaining)` 
                   : ''}
