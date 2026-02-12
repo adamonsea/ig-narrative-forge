@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ExternalLink, Eye, Trash2, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2, Copy, Settings2, CheckSquare } from "lucide-react";
+import { ExternalLink, Eye, Trash2, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2, Copy, Settings2, CheckSquare, ImageIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
@@ -30,7 +31,7 @@ interface MultiTenantArticlesListProps {
   onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   
   onPreview?: (article: MultiTenantArticle) => void;
-  onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
+  onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven', generateIllustration?: boolean) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete?: (articleIds: string[]) => void;
@@ -78,6 +79,7 @@ export default function MultiTenantArticlesList({
   const [selectMode, setSelectMode] = useState(false);
   const [bulkDeleteCount, setBulkDeleteCount] = useState<number | null>(null);
   const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
+  const [illustrationOverrides, setIllustrationOverrides] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (articles.length === 0) {
@@ -291,7 +293,7 @@ export default function MultiTenantArticlesList({
           {/* Action bar */}
           <div className="flex items-center gap-1.5 pt-1 border-t border-border/40">
             <Button
-              onClick={() => onApprove(article, slideType, toneOverride, writingStyleOverride)}
+              onClick={() => onApprove(article, slideType, toneOverride, writingStyleOverride, illustrationOverrides[article.id] ?? true)}
               disabled={isProcessing || isDeleting}
               size="sm"
               className="h-7 text-xs"
@@ -303,6 +305,29 @@ export default function MultiTenantArticlesList({
               )}
               Simplify
             </Button>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 h-7 px-1.5"
+                  onClick={() => setIllustrationOverrides(prev => ({
+                    ...prev,
+                    [article.id]: !(prev[article.id] ?? true)
+                  }))}
+                >
+                  <ImageIcon className={`w-3 h-3 ${(illustrationOverrides[article.id] ?? true) ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Switch
+                    checked={illustrationOverrides[article.id] ?? true}
+                    className="scale-75 -mx-1"
+                    tabIndex={-1}
+                  />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">{(illustrationOverrides[article.id] ?? true) ? 'Image will be auto-generated' : 'No image generation'}</p>
+              </TooltipContent>
+            </Tooltip>
 
             <Button
               size="sm"

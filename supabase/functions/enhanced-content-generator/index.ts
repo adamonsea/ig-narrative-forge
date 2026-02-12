@@ -738,7 +738,8 @@ Return in JSON format:
       aiProvider = 'deepseek',
       tone = 'conversational',
       writingStyle = 'journalistic',
-      audienceExpertise = 'intermediate'
+      audienceExpertise = 'intermediate',
+      generateIllustration = true
     } = await req.json();
     
     // Log multi-tenant context
@@ -1198,6 +1199,10 @@ Return in JSON format:
     }
 
     // Trigger carousel image generation (non-blocking) using direct fetch with service role
+    // Only generate if the user opted in (generateIllustration flag, defaults to true)
+    if (generateIllustration === false) {
+      console.log('⏭️ Skipping illustration generation - user opted out');
+    } else {
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1241,6 +1246,7 @@ Return in JSON format:
         storyId
       });
     }
+    } // end generateIllustration else
 
     return new Response(
       JSON.stringify({ 

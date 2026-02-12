@@ -17,7 +17,8 @@ export const useMultiTenantActions = () => {
     article: MultiTenantArticle,
     slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid',
     tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' = 'conversational',
-    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic',
+    generateIllustration: boolean = true
   ) => {
     if (processingArticle) return;
 
@@ -153,7 +154,10 @@ export const useMultiTenantActions = () => {
           writing_style: writingStyle,
           audience_expertise: 'intermediate',
           status: 'pending',
-          result_data: article.is_snippet ? { is_snippet: true, original_word_count: article.word_count } : null
+          result_data: {
+            ...(article.is_snippet ? { is_snippet: true, original_word_count: article.word_count } : {}),
+            generate_illustration: generateIllustration
+          }
         })
         .select('id')
         .single();

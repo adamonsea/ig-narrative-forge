@@ -778,7 +778,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     article: MultiTenantArticle,
     slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid',
     tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' = 'conversational',
-    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic',
+    generateIllustration: boolean = true
   ) => {
     // Auto-detect snippets and default to 'short' (3 slides) for better experience
     const finalSlideType = article.is_snippet && slideType === 'tabloid' ? 'short' : slideType;
@@ -794,7 +795,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       if (error) throw error;
     } else {
       // Handle multi-tenant article approval
-      await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle);
+      await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle, generateIllustration);
     }
     
     // Reload to update all sections and show the queue item
