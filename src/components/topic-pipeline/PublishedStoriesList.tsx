@@ -565,6 +565,22 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   </Button>
                 )}
 
+                {(isScheduled || isReady) && (
+                  <Button
+                    size="sm"
+                    onClick={() => handlePublishNow(story.id, storyTitle)}
+                    disabled={publishingNow.has(story.id)}
+                    className="h-7 text-xs"
+                  >
+                    {publishingNow.has(story.id) ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Zap className="w-3 h-3 mr-1" />
+                    )}
+                    Publish Now
+                  </Button>
+                )}
+
                 <div className="ml-auto flex items-center gap-1">
                   <Button
                     variant="ghost"
