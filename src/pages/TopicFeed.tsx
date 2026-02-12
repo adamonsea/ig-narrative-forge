@@ -46,6 +46,7 @@ import { useParliamentaryDigestCards } from "@/hooks/useParliamentaryDigestCards
 import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
 import { ParliamentaryDigestCard } from "@/components/ParliamentaryDigestCard";
 import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
+import { InlineEmailSignupCard } from "@/components/feed/InlineEmailSignupCard";
 import { useStoriesReactionsBatch } from "@/hooks/useStoriesReactionsBatch";
 import { MobileLoadErrorOverlay } from "@/components/MobileLoadErrorOverlay";
 import { 
@@ -70,6 +71,7 @@ const shouldShowParliamentaryDigest = (idx: number) => shouldShowCard('parliamen
 const shouldShowFlashback = (idx: number) => shouldShowCard('flashback', idx);
 const shouldShowCommunityPulseCard = (idx: number) => shouldShowCard('communityPulse', idx);
 const getCommunityPulseIndex = (idx: number) => getCardIndex('communityPulse', idx);
+const shouldShowEmailBriefing = (idx: number) => shouldShowCard('emailBriefing', idx);
 
 // Log position map on mount (development only)
 if (import.meta.env.DEV) {
@@ -1180,6 +1182,20 @@ const TopicFeed = () => {
                       <FlashbackInsightsPanel
                         topicId={topic.id}
                         topicSlug={slug}
+                      />
+                    </div>
+                  );
+                }
+
+                // Email briefing sign-up card (positions 9, 29, 49...)
+                if (shouldShowEmailBriefing(storyIndex) && topic?.id && (topic as any)?.email_subscriptions_enabled) {
+                  items.push(
+                    <div key={`email-briefing-${storyIndex}`} className="w-full max-w-2xl">
+                      <InlineEmailSignupCard
+                        topicId={topic.id}
+                        topicName={topic.name}
+                        topicSlug={slug || ''}
+                        topicLogoUrl={topic.branding_config?.logo_url}
                       />
                     </div>
                   );

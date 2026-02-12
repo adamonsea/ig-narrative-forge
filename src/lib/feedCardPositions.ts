@@ -102,6 +102,14 @@ export const FEED_CARD_POSITIONS = {
     position: 2,
     description: 'Add to home screen prompt'
   } as SingleCardPosition,
+
+  // Email briefing sign-up: positions 9, 29, 49...
+  emailBriefing: {
+    type: 'repeating',
+    interval: 20,
+    offset: 9,
+    description: 'Email briefing sign-up prompt'
+  } as RepeatingCardPosition,
 } as const;
 
 /**
