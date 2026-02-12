@@ -268,13 +268,7 @@ export const TopicManager = () => {
             const trafficAlert = wowChange < -50;
 
             return (
-              <Card key={topic.id} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-card border-border hover:border-[hsl(270,100%,68%)]/30">
-                {/* Accent bar */}
-                <div className={`h-[3px] w-full ${
-                  topic.is_public
-                    ? 'bg-gradient-to-r from-[hsl(270,100%,68%)] to-[hsl(270,100%,68%)]/30'
-                    : 'bg-muted/50'
-                }`} />
+              <Card key={topic.id} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-card border-border">
                 <Link 
                   to={`/dashboard/topic/${topic.slug}`}
                   className="block"
