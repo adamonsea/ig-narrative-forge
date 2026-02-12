@@ -1,90 +1,68 @@
 
 
-# Dashboard Stats -- Clarity and Accuracy Fix
+# Publish Pill + Product-Feel Topic Cards
 
-## The Problem
+## What's changing
 
-The "Subscribers: 76 total" metric for Eastbourne is technically correct but deeply misleading. It sums four unrelated audience types into one number:
+Two improvements to the dashboard topic cards:
 
-- 6 homescreen installs (PWA users)
-- 7 play mode registrants (interactive users)
-- 9 email newsletter subscribers
-- 54 push notification subscribers
+### 1. One-click Publish pill on every card
 
-A curator seeing "76 subscribers" thinks they have 76 email subscribers. They don't -- they have 9. The aggregated number hides the actual composition and makes it impossible to know which audience channels are working.
+The publish toggle currently only lives inside the topic dashboard header. Curators have to click into a topic just to toggle it live/offline. This adds it directly to the overview card as a small, tappable pill badge in the header row.
 
-Additionally, the RPC doesn't return `visits_last_week`, so the WoW% always shows 0% -- the trend indicator is broken.
+- **Live state**: Green pill reading "Live" -- clicking it shows a confirm dialog before unpublishing
+- **Draft state**: Muted pill reading "Draft" -- clicking it publishes immediately (matching the existing `handlePublishToggle` pattern from TopicDashboard.tsx)
+- Positioned next to the topic name so the publish state is instantly visible and actionable
 
-## Design: What Curators Actually Need
+### 2. Subtle product-feel card backgrounds
 
-For building audience, a curator needs to answer three questions at a glance:
+Current cards are flat white (`bg-card`) with a thin border -- functional but generic. To give each card a mini-product feel while staying low cognitive load:
 
-1. **"Is anyone coming?"** -- Visitors this week + trend direction
-2. **"Are they engaging?"** -- Do visitors interact with stories?
-3. **"Are they subscribing?"** -- Are visitors converting to recurring audience?
+- **Light top gradient strip**: A 3px-tall accent bar at the very top of each card using the brand purple (`hsl(270,100%,68%)`), fading to transparent. This is the "product label" -- like a colored tab on a physical folder.
+- **Published cards**: Purple accent bar (active, branded)
+- **Draft cards**: Grey accent bar (muted, clearly different state)
+- **Hover state**: The existing `hover:border-purple` stays, plus a very subtle background shift to `bg-card/95` for depth
 
-The third question requires clarity on *how* they're subscribing, not a blended total.
-
-## Changes
-
-### 1. Replace "Subscribers" Column with Breakdown
-
-Instead of one blended number, show the subscriber types individually with tiny labels:
-
-```text
-Audience
-9 email · 54 push · 7 registered · 6 installed
-```
-
-This is a single line of text that tells the curator exactly what their audience looks like. On mobile, it wraps naturally.
-
-If all values are zero, show "No subscribers yet".
-
-### 2. Fix WoW% (Visitors Trend)
-
-The `get_user_dashboard_stats` RPC doesn't return `visits_last_week`. The code reads it but it's always undefined, so WoW% is always 0%.
-
-**Fix:** Add `visits_last_week` to the RPC function by querying `site_visits` for the previous 7-day window. This makes the trend indicator actually work.
-
-### 3. Rename "Engagement" to "Approval"
-
-"Engagement" is vague. The number shown is specifically the approval rate (liked / (liked + disliked)). Call it what it is: "Approval" with the percentage, and "avg stories engaged" as the subtitle.
-
-### 4. Add Subtle Tooltips Back (Selectively)
-
-The previous simplification removed all tooltips. But three specific labels genuinely benefit from a one-line explanation for new users:
-
-- **Visitors**: "Unique visitors to your feed this week"
-- **Approval**: "% of stories readers swiped right on"
-- **Audience**: "People subscribed to your feed updates"
-
-Use the native `title` attribute (browser tooltip) rather than Radix Tooltip components -- zero JS overhead, appears on hover, invisible otherwise.
+This avoids gradients on the card body itself (which would fight the stat readability) while adding just enough visual identity to make each card feel like a distinct product tile.
 
 ## Technical Details
 
 ### Files Modified
 
-**1. `src/components/TopicManager.tsx`**
-- Replace `getTotalSubscribers()` with an inline audience breakdown string
-- Rename "Engagement" label to "Approval"  
-- Rename "Subscribers" label to "Audience"
-- Add `title` attributes to the 3 stat labels
-- Read `visits_last_week` from the stats (will work once RPC is updated)
+**`src/components/TopicManager.tsx`**
 
-**2. Database Migration: Update `get_user_dashboard_stats` RPC**
-- Add a `visits_last_week` output column
-- Query `site_visits` for `created_at` between 14 days ago and 7 days ago, same logic as `visits_this_week` but offset by one week
-- This fixes the WoW% trend that currently always shows 0%
+1. Add `Switch` import (from ui/switch) and Supabase mutation for `is_public` toggle
+2. Add a `handlePublishToggle` function mirroring the one in TopicDashboard.tsx (updates `is_public` and `is_active`, with confirm dialog on unpublish)
+3. In the card header row, add a clickable pill between the topic name and the action buttons:
+   ```
+   <button 
+     onClick={togglePublish}
+     className={topic.is_public 
+       ? "text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-600 font-medium" 
+       : "text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"}
+   >
+     {topic.is_public ? "Live" : "Draft"}
+   </button>
+   ```
+4. Add a 3px accent bar at the top of each Card using a `before` pseudo-element or a small div:
+   ```
+   <div className={`h-[3px] w-full rounded-t-lg ${
+     topic.is_public 
+       ? 'bg-gradient-to-r from-[hsl(270,100%,68%)] to-[hsl(270,100%,68%)]/30' 
+       : 'bg-muted/50'
+   }`} />
+   ```
+5. Add local state for a confirmation dialog when unpublishing (simple `confirm()` prompt, matching existing pattern)
+6. After toggling, update the topic in local state so the pill reflects immediately without refetching
 
-### No new components or files needed.
+### No database changes needed -- uses existing `is_public` and `is_active` columns.
 
 ## Before/After
 
 | Element | Before | After |
 |---------|--------|-------|
-| Subscribers display | "76 total" (meaningless aggregate) | "9 email . 54 push . 7 registered . 6 installed" |
-| Engagement label | "Engagement" (vague) | "Approval" (specific) |
-| WoW trend | Always 0% (broken) | Actual week-over-week change |
-| Tooltips | None | Native `title` on 3 labels only |
-| Zero-subscriber state | "0 total" | "No subscribers yet" |
+| Publish action | Must click into topic dashboard | One-click pill on overview card |
+| Publish state visibility | Not shown on dashboard | Green "Live" or grey "Draft" pill |
+| Card visual identity | Flat white, thin border | 3px colored accent bar at top |
+| Published vs Draft distinction | None visible | Purple bar vs grey bar + pill color |
 
