@@ -1,85 +1,95 @@
 
-# Fix Illustration Style Drift — Stronger Anti-Realism Guardrails
 
-## The Problem
+# Story Card Animations: Review, Improve, and Make Optional
 
-GPT Image 1.5 is progressively generating more detailed, realistic illustrations despite the prompt instructing flat risograph/screen print style. The farmers image shows the target aesthetic; the fiddler and tennis images show unwanted detail creep (fine cross-hatching, realistic shading, detailed facial features, perspective depth).
+## Current State
 
-This happens because:
-- The `FORBIDDEN ELEMENTS` section sits at the **end** of the prompt where it has less weight
-- The subject description in the middle pulls the model toward narrative realism
-- References to "Edward Hopper" and "cinematic perspective" actively encourage realism
-- No structural reinforcement of flatness constraints near the subject description
+The `StoryCard` component has three subtle CSS animations:
+- **Image hover zoom**: `group-hover:scale-105` on the cover image (300ms)
+- **Card shadow lift**: `hover:shadow-md` on the card (200ms)
+- **Title colour shift**: `group-hover:text-primary` on the headline
 
-## The Fix
+These are lightweight and appropriate. The codebase already has a `prefers-reduced-motion` detection system in `deviceUtils.ts` and `AudioBriefingPlayer.tsx`, but it's not wired into the StoryCard or exposed as a user-facing setting.
 
-Restructure `buildIllustrativePrompt` in `supabase/functions/_shared/prompt-helpers.ts` with three changes:
+## Changes
 
-### 1. Lead with the ban list (strongest position in prompt)
+### 1. Add a staggered fade-in entrance animation to StoryCard grid
 
-Move `FORBIDDEN ELEMENTS` to the very top, before any subject matter. GPT Image models weight early instructions more heavily. Rename to `ABSOLUTE CONSTRAINTS` for stronger language.
+When the archive page loads, cards currently appear all at once. Add a subtle staggered `animate-fade-in` entrance so cards cascade in, giving the page a polished feel. Each card gets an increasing animation delay based on its grid index.
 
-### 2. Remove realism-encouraging references
+**File: `src/pages/TopicArchive.tsx`**
+- Pass an `index` prop to each `StoryCard`
+- Apply a staggered animation delay style
 
-- Remove "Edward Hopper" (painter of atmospheric realism — directly contradicts the goal)
-- Remove "cinematic perspective with narrative depth" (encourages photographic depth)
-- Keep "Jon McNaught" (genuinely flat print artist) and add "Riso Club" / "Risograph" as primary style anchors
-- Replace "Architectural, modernist composition" with "Poster-flat composition"
+**File: `src/components/StoryCard.tsx`**
+- Accept optional `index` prop
+- Apply `animate-fade-in` class with a calculated delay (`index * 50ms`, capped at 400ms)
+- Wrap animation classes in a `prefers-reduced-motion` check so they are skipped when the user or OS opts out
 
-### 3. Add a style lock wrapper around the subject
+### 2. Respect `prefers-reduced-motion` on hover effects
 
-Wrap the subject matter in explicit flatness reminders so the model doesn't drift when interpreting the narrative content:
+When the OS-level "reduce motion" setting is active, disable:
+- The image hover zoom (`group-hover:scale-105`)
+- The fade-in entrance animation
 
-```
-SUBJECT (render in FLAT PRINT STYLE — no realism):
-[subject matter here]
-(Remember: this subject must be rendered as a flat screen print, not a realistic scene)
-```
+Keep the shadow lift and text colour shift (these are non-motion visual changes and don't cause accessibility issues).
+
+**File: `src/components/StoryCard.tsx`**
+- Use a small hook or inline `window.matchMedia` check
+- Conditionally omit `group-hover:scale-105` and `animate-fade-in`
+
+### 3. Add an in-app "Reduce animations" toggle
+
+Create a lightweight user preference stored in `localStorage` (key: `eezee_reduce_animations`) that overrides OS-level settings. This gives users explicit control without needing to change their OS settings.
+
+**File: `src/components/NotificationPreferencesModal.tsx`** (or a new small preferences section)
+- Add a "Reduce animations" toggle (Switch component) below notification preferences
+- Reads/writes `localStorage` key `eezee_reduce_animations`
+
+**File: `src/hooks/useReducedMotion.ts`** (new)
+- Custom hook that checks both:
+  1. OS-level `prefers-reduced-motion: reduce`
+  2. localStorage `eezee_reduce_animations` flag
+- Returns `true` if either is active
+- Used by StoryCard and any future animated components
+
+### 4. Wire the hook into StoryCard
+
+**File: `src/components/StoryCard.tsx`**
+- Import `useReducedMotion`
+- When `true`: no entrance animation, no image hover scale
+- When `false`: full animations as designed
 
 ## Technical Details
 
-### File: `supabase/functions/_shared/prompt-helpers.ts` (lines 273-312)
-
-Restructured prompt output:
-
-```
-ABSOLUTE CONSTRAINTS (read these FIRST):
-- NO crosshatching, NO halftone dots, NO fine line detail
-- NO realistic shading or smooth gradients
-- NO detailed facial features — simplified geometric forms only
-- NO perspective depth or atmospheric effects
-- NO photorealistic rendering of any kind
-- Maximum 3-4 flat colors total (black, white/cream, accent)
-- Every surface must be a SOLID FLAT fill — no blending
-
-STYLE: Risograph / screen print editorial illustration for [publication].
-Think: Riso Club zine cover, Jon McNaught, Paul Rand poster.
-
-SUBJECT (render as FLAT SHAPES — not realistic):
-[subject matter]
-
-PALETTE: Black outlines + [primaryColor] accent + cream paper background.
-Paper texture visible throughout. Slight ink registration shifts.
-
-COMPOSITION: Poster-flat arrangement. Large simple shapes.
-1-3 main visual elements. 60%+ negative space.
-Human figures = basic geometric forms (circle heads, rectangle bodies).
-[expression guidance]
-
-[place guidance if applicable]
-[location accuracy if applicable]
-
-FORMAT: Landscape 3:2 for editorial cover use.
+### New file: `src/hooks/useReducedMotion.ts`
+```typescript
+export function useReducedMotion(): boolean {
+  // Check localStorage user preference
+  const userPref = localStorage.getItem('eezee_reduce_animations');
+  if (userPref === 'true') return true;
+  // Check OS preference
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 ```
 
-### File: `supabase/functions/_shared/gemini-prompt-builder.ts` (lines 100-130)
+### `src/components/StoryCard.tsx`
+- Add `index?: number` to `StoryCardProps`
+- Conditionally apply entrance animation and hover scale based on `useReducedMotion()`
+- Entrance: `opacity-0 animate-fade-in` with `animationDelay: Math.min(index * 50, 400)ms` and `animationFillMode: forwards`
+- No-motion fallback: just render statically with no animation classes
 
-Apply the same constraint-first restructuring to `buildGeminiIllustrativePrompt` for consistency, though this is currently less used. Move `CONSTRAINTS/EXCLUSIONS` section to the top of the prompt.
+### `src/pages/TopicArchive.tsx`
+- Pass `index={index}` in the `.map()` callback to `StoryCard`
 
-## Why This Should Work
+### `src/components/NotificationPreferencesModal.tsx`
+- Add a "Reduce animations" Switch at the bottom of the modal
+- Toggle writes `eezee_reduce_animations` to localStorage
 
-- Prompt position matters: constraints at the **start** get more attention than at the end
-- Removing "Edward Hopper" and "cinematic perspective" eliminates realism anchors
-- Wrapping the subject in flatness reminders prevents narrative-driven drift
-- Stronger language ("ABSOLUTE CONSTRAINTS", "FLAT SHAPES — not realistic") reduces ambiguity
-- The target aesthetic (farmers image) used this same model, so the model *can* produce it — it just needs tighter guardrails
+## Summary
+
+- Staggered fade-in entrance for story cards on the archive page
+- OS-level `prefers-reduced-motion` respected automatically
+- In-app toggle for users who want less motion without changing OS settings
+- Hover effects gracefully degrade (shadow and colour stay, zoom removed)
+
