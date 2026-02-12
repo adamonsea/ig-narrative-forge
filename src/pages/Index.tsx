@@ -36,6 +36,9 @@ const Index = () => {
               Curatr<span className="text-xl opacity-70">.pro</span>
             </div>
             <div className="flex items-center gap-4">
+              <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
+                Discover
+              </Link>
               <Link to="/pricing" className="text-white/70 hover:text-white transition-colors">
                 Pricing
               </Link>

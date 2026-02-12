@@ -28,6 +28,7 @@ import WeeklyRoundupList from "./pages/WeeklyRoundupList";
 import BriefingsArchive from "./pages/BriefingsArchive";
 import SwipeMode from "./pages/SwipeMode";
 import Pricing from "./pages/Pricing";
+import Discover from "./pages/Discover";
 import AboutFeed from "./pages/AboutFeed";
 import ExplorePile from "./pages/ExplorePile";
 import PublicWidgetBuilder from "./pages/PublicWidgetBuilder";
@@ -80,6 +81,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/discover" element={<Discover />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/cookies" element={<Cookies />} />
