@@ -145,6 +145,24 @@ export const TopicManager = () => {
     navigate(`/dashboard/topic/${topicSlug}`);
   };
 
+  const handlePublishToggle = async (topicId: string, currentlyPublic: boolean) => {
+    if (currentlyPublic) {
+      if (!confirm('Take this topic offline? It will no longer be visible to readers.')) return;
+    }
+    const newPublic = !currentlyPublic;
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ is_public: newPublic, is_active: newPublic })
+        .eq('id', topicId);
+      if (error) throw error;
+      setTopics(prev => prev.map(t => t.id === topicId ? { ...t, is_public: newPublic, is_active: newPublic } : t));
+    } catch (error) {
+      console.error('Error toggling publish:', error);
+      toast({ title: "Error", description: "Failed to update publish state", variant: "destructive" });
+    }
+  };
+
   const handleArchiveTopic = async (topicId: string, topicName: string) => {
     if (!confirm(`Archive "${topicName}"? You can restore it later from the archive.`)) {
       return;
@@ -251,6 +269,12 @@ export const TopicManager = () => {
 
             return (
               <Card key={topic.id} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-card border-border hover:border-[hsl(270,100%,68%)]/30">
+                {/* Accent bar */}
+                <div className={`h-[3px] w-full ${
+                  topic.is_public
+                    ? 'bg-gradient-to-r from-[hsl(270,100%,68%)] to-[hsl(270,100%,68%)]/30'
+                    : 'bg-muted/50'
+                }`} />
                 <Link 
                   to={`/dashboard/topic/${topic.slug}`}
                   className="block"
@@ -262,7 +286,7 @@ export const TopicManager = () => {
                   }}
                 >
                   <CardContent className="p-4 md:p-6">
-                    {/* Header: Name + subtitle + actions */}
+                    {/* Header: Name + pill + actions */}
                     <div className="flex items-start justify-between gap-4 mb-5">
                       <div className="flex items-start gap-3 min-w-0">
                         {topic.branding_config?.logo_url && (
@@ -273,9 +297,25 @@ export const TopicManager = () => {
                           />
                         )}
                         <div className="min-w-0">
-                          <h3 className="text-lg md:text-xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors truncate">
-                            {topic.name}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg md:text-xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors truncate">
+                              {topic.name}
+                            </h3>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handlePublishToggle(topic.id, topic.is_public);
+                              }}
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 transition-colors ${
+                                topic.is_public
+                                  ? 'bg-green-500/15 text-green-600 dark:text-green-400 hover:bg-green-500/25'
+                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                              }`}
+                            >
+                              {topic.is_public ? 'Live' : 'Draft'}
+                            </button>
+                          </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {topic.articles_in_arrivals || 0} in arrivals · {topic.stories_published_this_week || 0} published · {topic._count?.sources || 0} sources
                           </p>
