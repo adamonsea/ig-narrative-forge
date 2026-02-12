@@ -1,149 +1,123 @@
 
-# Heroic Story Cards -- Arrivals & Publishing Flow Redesign
+
+# Dashboard Statistics -- Radical Simplification
 
 ## The Problem
 
-The current arrivals and publishing cards are dense, utilitarian, and feel like database rows -- not the editorial content they represent. The article cards in Arrivals show a horizontal bar of metadata (relevance %, word count, checkboxes) above a cramped title, with 3 inline dropdowns and a green "Simplify" button jammed into a grey footer. Published stories are marginally better but still lack visual impact -- tiny 16x16 thumbnails hidden on desktop, accordion-based slide previews, and action buttons scattered across the card.
+Each topic card on `/dashboard` currently contains:
 
-For the core flow that delivers the most delight and control, these cards need to feel **valuable** -- like you're holding a piece of content worth publishing.
+1. **Content section** -- 2 stat boxes (Arrivals, Stories) + SourceHealthBadge, wrapped in a bordered card
+2. **CollapsibleAudienceCard** -- visits today/week, week-over-week comparison, new/returning breakdown, return rate progress bar, geographic relevance -- all in a collapsible with 469 lines of code
+3. **CollapsibleEngagementCard** -- Play Mode (liked/disliked/visitors), Feed Mode (engaged/completed/shares/source clicks/quiz), engagement funnel chart -- 245 lines
+4. **EngagementSparkline** -- 3-line recharts sparkline with 7/14/30-day toggle -- 208 lines
+5. **CollapsibleSubscribersCard** -- 4 stat boxes (homescreen week/total, registrants week/total) + email count + newsletter signups manager -- 137 lines
+6. **TrafficHealthAlert** -- banner at top with per-topic traffic drop warnings
 
----
+That's **5 separate data-fetching components per topic card**, each making their own Supabase queries, wrapped in collapsibles with tooltips on every number. A user with 3 topics triggers 15+ API calls on page load for stats that mostly show single-digit numbers.
+
+This violates every principle of the minimalist dashboard philosophy.
 
 ## Design Direction
 
-Inspired by Linear's issue cards, Notion's database rows, and Apple News editorial cards:
+A dashboard overview card should answer ONE question: **"How is this topic doing?"** -- at a glance, in under 2 seconds.
 
-- **Headline-first hierarchy**: Title is the hero, large and prominent
-- **Visual presence**: Cover images shown inline when available, not hidden behind accordions
-- **Clean action bar**: Primary action (Simplify/Publish) prominent, secondary actions as icon buttons
-- **Metadata as subtle context**, not competing for attention with the headline
-- **Remove inline configuration clutter**: Tone/style/slide-count dropdowns default from topic settings and only appear on hover or via a "Configure" expansion
+Think: GitHub repository cards, Vercel project cards, or Stripe dashboard tiles. They show 2-3 numbers and a trend indicator, not a full analytics suite.
 
----
+## Proposed Redesign
 
-## Arrivals Cards (MultiTenantArticlesList.tsx)
-
-### Current issues:
-- Checkbox + relevance score + relevance badge + word count + "Snippet" badge + author all crammed into one horizontal row above the title
-- Title is `text-sm` and buried below metadata
-- 3 Select dropdowns (slide count, tone, writing style) visible on every card even though most users accept defaults
-- "Simplify" button uses a non-standard green color
-
-### Redesigned card structure:
+### New Topic Card Layout
 
 ```text
-+--------------------------------------------------+
-|  [Source domain]    [Relevance pill]   [3d ago]   |  <- subtle metadata line
-|                                                    |
-|  Article Headline Here in Bold                     |  <- text-base/lg, font-semibold
-|  by Author Name                                    |  <- text-sm muted
-|                                                    |
-|  keyword  keyword  keyword                         |  <- existing keyword badges
-|                                                    |
-|  [Simplify]              [Preview] [Source] [x]    |  <- clean action bar
-+--------------------------------------------------+
++--------------------------------------------------------------+
+|  [Logo]  Topic Name                    [Feed] [Archive]       |
+|          3 in arrivals  ·  12 published  ·  5/6 sources       |
+|                                                                |
+|  Visitors        Engagement       Subscribers                  |
+|  142 this week   78% approval     23 total                     |
+|  +12% WoW        4.2 avg engaged                              |
+|                                                                |
+|  [__________sparkline (visitors only)__________]               |
++--------------------------------------------------------------+
 ```
 
-**Key changes:**
-1. **Promote title** to `text-base font-semibold` -- the headline IS the card
-2. **Move metadata above title** as a subtle context line (source domain, relevance pill, age)
-3. **Hide configuration dropdowns by default** -- use topic defaults. Add a small "Configure" toggle that reveals tone/style/slides inline only when clicked
-4. **Simplify action bar**: Primary "Simplify" button left-aligned (uses `variant="default"` not custom green), icon-only secondary actions right-aligned
-5. **Remove the checkbox from default view** -- show checkboxes only when bulk mode is toggled via a toolbar button
-6. **Remove duplicate relevance display** -- currently shows both "Relevance: 65%" text AND a colored "65% (High)" badge. Keep only the colored pill
-7. **Remove the grey `bg-muted/20` footer section** -- integrate actions into the card body with a subtle top border
+### What changes:
 
-### Bulk actions:
-- Add a "Select" toggle button in the articles header that enables checkbox mode
-- When off (default), cards are clean with no checkboxes
-- Bulk delete toolbar appears only in select mode
+**1. Replace 4 collapsible cards with a single inline stats row**
 
----
+Instead of Content/Audience/Engagement/Subscribers as separate expandable sections, show 3 compact stat columns inline:
+- **Visitors**: weekly count + WoW change (replaces entire CollapsibleAudienceCard)
+- **Engagement**: approval rate + avg engaged (replaces entire CollapsibleEngagementCard)
+- **Subscribers**: single total number (replaces entire CollapsibleSubscribersCard)
 
-## Published Stories Cards (PublishedStoriesList.tsx)
+No collapsibles. No expand/collapse. Just the numbers.
 
-### Current issues:
-- Cover image is a tiny 64x64 thumbnail hidden on mobile
-- Slide preview requires expanding an accordion with individual textareas
-- Action buttons (Preview, Generate Image, Animate, Archive, Source, Delete) are a cluttered row of small buttons
-- Illustration management (generate, animate, delete) takes significant visual space
+**2. Move the Content stats into the subtitle line**
 
-### Redesigned card structure:
+"3 in arrivals . 12 published . 5/6 sources" as a text line below the topic name. These are operational counts, not analytics -- they belong as metadata, not stat boxes.
 
-```text
-+--------------------------------------------------+
-|  [Live pill]  [3 hours ago]            [...]      |  <- status + overflow menu
-|                                                    |
-|  +--------+  Story Headline Here                  |
-|  | cover  |  by Author                            |
-|  | image  |  6 slides  ·  142 words               |
-|  | 80x80  |                                        |
-|  +--------+                                        |
-|                                                    |
-|  [View in Feed]        [Preview]  [Archive]  [x]  |  <- clean actions
-+--------------------------------------------------+
-```
+**3. Simplify the sparkline to visitors-only**
 
-**Key changes:**
-1. **Larger cover thumbnail** (80x80, visible on all screen sizes) placed left of the title
-2. **Overflow menu** (`...` button) for low-frequency actions: Generate Image, Animate, Delete Illustration, Delete Animation, Return to Review, Source Link, Edit Links
-3. **Only 3-4 visible action buttons**: "View in Feed" (primary), "Preview & Edit", "Archive", and delete
-4. **Remove inline slide editing** from the main card -- move to a dedicated slide editor dialog (SlideEditor component already exists)
-5. **Remove the accordion entirely** -- "Preview & Edit" opens the existing SlideEditor in a dialog/drawer
-6. **Merge the scheduled/ready indicator bars** into a simpler inline badge next to the status dot rather than full-width colored bars
+The current sparkline shows 3 overlapping lines (swipes, shares, visitors) which is hard to read at small size. Show only the visitors line -- the single most important trend. Remove the 7/14/30-day toggle (default to 7 days).
 
----
+**4. Remove TrafficHealthAlert as a separate component**
 
-## Pipeline Container (UnifiedContentPipeline.tsx)
+Integrate the traffic warning directly into the topic card's WoW indicator. If traffic is down >50%, the WoW percentage turns red with a small warning icon. No separate banner needed.
 
-### Changes:
-1. **Remove the inner `<Card>` wrappers** around articles and stories lists (lines 546-577, 651-668) -- the cards themselves provide structure
-2. **Remove the description text** below the Arrivals tab ("Showing new articles awaiting review" + automation badge) -- the tab name is sufficient
-3. **Remove the Insights tab entirely** -- it just contains a redirect button and CommunityPulseReview. Move insights to the main dashboard
-4. **Simplify tab bar to 2 tabs**: "Arrivals (N)" and "Published" -- remove the Insights tab and the parliamentary/auto badges from the tab triggers
-5. **Remove the parliamentary filter toggle** from Published -- move to the existing filter pills inside PublishedStoriesList (which already has filter buttons)
+**5. Remove all Tooltip wrappers from the dashboard**
 
----
+Every number currently has a Tooltip explaining what it means. On a dashboard you visit daily, this is noise. The labels are self-explanatory.
 
-## Technical Implementation
+**6. Kill the collapsible detail views entirely**
 
-### Files modified:
+The new/returning breakdown, geographic relevance, Play Mode vs Feed Mode split, funnel visualization, and newsletter signups list should live on a dedicated analytics page (accessed via a "View Analytics" link), not crammed into the overview card.
 
-1. **`src/components/topic-pipeline/MultiTenantArticlesList.tsx`** (major rewrite of `renderArticleCard`)
-   - Restructure card layout: metadata line -> headline -> keywords -> action bar
-   - Hide checkboxes by default, add "Select" toggle
-   - Hide config dropdowns behind a "Configure" expansion
-   - Remove duplicate relevance display
-   - Remove bg-muted footer, use subtle border-t
+## Technical Changes
 
-2. **`src/components/topic-pipeline/PublishedStoriesList.tsx`** (significant cleanup)
-   - Enlarge cover thumbnail, make visible on mobile
-   - Move illustration/animation actions into a DropdownMenu overflow
-   - Remove inline accordion slide editing, use SlideEditor dialog
-   - Simplify status indicators
+### Files Modified
 
-3. **`src/components/UnifiedContentPipeline.tsx`** (structural cleanup)
-   - Remove inner Card wrappers from tab content
-   - Remove Insights tab
-   - Remove description text and automation badges from tab area
-   - Simplify tab triggers to "Arrivals (N)" and "Published"
-   - Remove parliamentary filter (already handled by PublishedStoriesList)
+**1. `src/components/TopicManager.tsx`** (major simplification)
+- Remove imports for `CollapsibleAudienceCard`, `CollapsibleEngagementCard`, `CollapsibleSubscribersCard`, `TrafficHealthAlert`, `SourceHealthBadge`
+- Remove `TooltipProvider` wrapping
+- Replace the 4-section stats grid (lines 337-422) with a single 3-column inline row
+- Move content counts (arrivals, published, sources) into a subtitle text line
+- Simplify sparkline: pass a `minimal` prop or replace with a visitors-only version
+- Remove the footer badges section (Regional/General badge, Status badge, keywords tooltip, created date) -- this is clutter that adds no value to daily use
+- Keep only: topic name, logo, subtitle stats line, 3 stat columns, sparkline, action buttons
+
+**2. `src/components/EngagementSparkline.tsx`** (simplify)
+- Add a `minimal` mode that shows only the visitors line, no toggle buttons, no multi-line chart
+- Reduce height from `h-16` to `h-10` for dashboard context
+- Remove the time range toggle buttons in minimal mode
+
+**3. Components NOT deleted but no longer imported by TopicManager:**
+- `CollapsibleAudienceCard.tsx` -- may be reused on a future analytics page
+- `CollapsibleEngagementCard.tsx` -- same
+- `CollapsibleSubscribersCard.tsx` -- same
+- `TrafficHealthAlert.tsx` -- replaced by inline WoW indicator
+- `SourceHealthBadge.tsx` -- moved to subtitle line as text "X/Y sources"
+- `EngagementFunnel.tsx` -- future analytics page
+
+These components stay in the codebase but are decoupled from the dashboard overview.
+
+### Data Changes
+
+The `get_user_dashboard_stats` RPC already returns all needed data. The subscriber counts are already fetched in `loadTopics`. No new queries needed. In fact, this change **reduces** API calls because we stop mounting 5 child components that each run their own queries (SourceHealthBadge, week comparison in Audience, visitor breakdown, funnel data, sparkline interactions).
+
+The source health count (X/Y) can be derived from the existing `get_user_dashboard_stats` if it includes source counts, or from a lightweight query added to the parallel `Promise.all` in `loadTopics`.
 
 ### No database or edge function changes required.
 
----
+## Before/After
 
-## Before/After Summary
+| Aspect | Before | After |
+|--------|--------|-------|
+| Stat sections per card | 4 collapsible + sparkline + alert | 1 inline row + sparkline |
+| API calls per topic | 5+ (health, breakdown, funnel, sparkline, sources) | 1 (consolidated RPC + sparkline) |
+| Lines of code in card | ~120 lines of JSX per topic | ~40 lines |
+| Tooltips per card | 12+ | 0 |
+| Collapsible interactions | 4 expand/collapse | 0 |
+| Visual elements per card | ~20 stat boxes, badges, progress bars | ~6 numbers + 1 sparkline |
+| Footer metadata | 5 items (type badge, status badge, keywords, date, actions) | 2 items (Feed link, Archive) |
 
-| Element | Before | After |
-|---------|--------|-------|
-| Article title | `text-sm`, buried below metadata | `text-base font-semibold`, hero position |
-| Config dropdowns | 3 visible on every card | Hidden, revealed via "Configure" toggle |
-| Checkboxes | Always visible | Only in bulk-select mode |
-| Relevance display | Duplicated (text + badge) | Single colored pill |
-| Card footer | Grey bg-muted section | Clean inline action bar |
-| Published cover image | 64px, desktop only | 80px, all screens |
-| Slide editing | Inline accordion with textareas | SlideEditor dialog |
-| Published actions | 6+ visible buttons | 3 visible + overflow menu |
-| Pipeline tabs | 3 (Arrivals, Published, Insights) | 2 (Arrivals, Published) |
-| Card wrappers | Double-nested Cards | Single card per item |
+The result: a dashboard that loads instantly, communicates health at a glance, and gets out of the way so curators can click into the topic that needs attention.
+
