@@ -353,8 +353,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               onToneOverrideChange={handleToneOverrideChange}
               onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
               onPreview={handlePreviewArticle}
-              onApprove={(article, slideType, tone, writingStyle) => 
-                handleMultiTenantApprove(article, slideType, tone, writingStyle)
+              onApprove={(article, slideType, tone, writingStyle, generateIllustration) => 
+                handleMultiTenantApprove(article, slideType, tone, writingStyle, generateIllustration)
               }
               onDelete={handleMultiTenantDelete}
               onBulkDelete={handleMultiTenantBulkDelete}

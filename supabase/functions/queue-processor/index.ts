@@ -228,6 +228,12 @@ serve(async (req) => {
           tone: job.tone || 'conversational',
           audienceExpertise: job.writing_style === 'journalistic' ? 'intermediate' : 'beginner'
         };
+
+        // Pass generate_illustration flag from result_data (defaults to true)
+        const resultData = job.result_data as any;
+        if (resultData && resultData.generate_illustration === false) {
+          generatorBody.generateIllustration = false;
+        }
         
         // Include all relevant IDs for multi-tenant support
         if (job.article_id) {
