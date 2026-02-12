@@ -11,7 +11,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSubscriptions, saveSubscriptionStatus } from '@/hooks/useNotificationSubscriptions';
 import { supabase } from '@/integrations/supabase/client';
-import { Mail, Calendar, Check, Loader2 } from 'lucide-react';
+import { Mail, Calendar, Check, Loader2, Sparkles } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useReducedMotion, setReduceAnimations } from '@/hooks/useReducedMotion';
 
 interface NotificationPreferencesModalProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ export const NotificationPreferencesModal = ({
 }: NotificationPreferencesModalProps) => {
   const { toast } = useToast();
   const { emailSubscriptions, isLoading: checkingSubscriptions, refresh } = useNotificationSubscriptions(topicId, isOpen);
+  const reducedMotion = useReducedMotion();
   const [subscribingType, setSubscribingType] = useState<NotificationType | null>(null);
   const [emailInput, setEmailInput] = useState('');
   const [nameInput, setNameInput] = useState('');
@@ -285,6 +288,18 @@ export const NotificationPreferencesModal = ({
               </div>
             );
           })}
+        </div>
+
+        {/* Reduce animations toggle */}
+        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Reduce animations</span>
+          </div>
+          <Switch
+            checked={reducedMotion}
+            onCheckedChange={(checked) => setReduceAnimations(checked)}
+          />
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-4">

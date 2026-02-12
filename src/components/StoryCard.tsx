@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface Story {
   id: string;
@@ -19,9 +20,12 @@ interface Story {
 interface StoryCardProps {
   story: Story;
   topicSlug: string;
+  index?: number;
 }
 
-export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
+export const StoryCard = ({ story, topicSlug, index = 0 }: StoryCardProps) => {
+  const reduceMotion = useReducedMotion();
+
   const storyDate = story.article?.published_at 
     ? new Date(story.article.published_at)
     : new Date(story.created_at);
@@ -30,12 +34,21 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
     ? new URL(story.article.source_url).hostname.replace('www.', '')
     : null;
 
+  const entranceStyle = reduceMotion
+    ? undefined
+    : {
+        opacity: 0,
+        animationDelay: `${Math.min(index * 50, 400)}ms`,
+        animationFillMode: 'forwards' as const,
+      };
+
   return (
     <Link to={`/feed/${topicSlug}/story/${story.id}`}>
       <article 
         itemScope 
         itemType="https://schema.org/Article"
-        className="h-full"
+        className={`h-full ${reduceMotion ? '' : 'animate-fade-in'}`}
+        style={entranceStyle}
       >
         <Card className="h-full rounded-xl bg-[#fafaf8] dark:bg-card border-muted/40 hover:shadow-md transition-all duration-200 overflow-hidden group">
           {/* Cover Image or Fallback */}
@@ -45,7 +58,9 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
                 src={story.cover_illustration_url}
                 alt={story.title}
                 itemProp="image"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className={`w-full h-full object-cover transition-transform duration-300 ${
+                  reduceMotion ? '' : 'group-hover:scale-105'
+                }`}
                 loading="lazy"
               />
             </div>
@@ -54,7 +69,6 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
           )}
 
           <CardContent className="p-4">
-            {/* Title */}
             <h2 
               className="text-lg font-semibold line-clamp-3 mb-2 group-hover:text-primary transition-colors"
               itemProp="headline"
@@ -62,14 +76,12 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
               {story.title}
             </h2>
 
-            {/* Author */}
             {story.author && (
               <p className="text-sm text-muted-foreground mb-2">
                 by <span itemProp="author">{story.author}</span>
               </p>
             )}
 
-            {/* Date */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="w-3 h-3" />
               <time dateTime={storyDate.toISOString()} itemProp="datePublished">
@@ -78,7 +90,6 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
             </div>
           </CardContent>
 
-          {/* Footer with Source */}
           {sourceDomain && (
             <CardFooter className="p-4 pt-0">
               <Badge variant="secondary" className="text-[10px] font-normal">

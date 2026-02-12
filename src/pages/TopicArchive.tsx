@@ -277,11 +277,12 @@ const TopicArchive = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
-              {stories.map((story) => (
+              {stories.map((story, index) => (
                 <StoryCard
                   key={story.id}
                   story={story}
                   topicSlug={slug || ''}
+                  index={index}
                 />
               ))}
             </div>
