@@ -157,7 +157,7 @@ export default function MultiTenantArticlesList({
       <Card 
         key={article.id} 
         className={`transition-all duration-300 hover:shadow-md ${
-          isAnimating ? 'animate-fade-out opacity-0 transform translate-x-4' : 'animate-fade-in'
+          isAnimating ? 'animate-fade-out opacity-0 transform translate-x-4' : ''
         } ${dupInfo && !dupInfo.isDuplicateLeader ? 'ml-4 border-l-4 border-l-amber-400' : ''}`}
       >
         <div className="p-4 space-y-2.5">

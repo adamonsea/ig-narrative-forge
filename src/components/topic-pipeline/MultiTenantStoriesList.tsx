@@ -398,7 +398,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
 
         return (
           <Card key={story.id} className={`transition-all duration-300 hover:shadow-md ${
-            isAnimating ? 'animate-slide-out-left opacity-0' : 'animate-fade-in'
+            isAnimating ? 'animate-slide-out-left opacity-0' : ''
           }`}>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
