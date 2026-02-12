@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 
 interface EngagementSparklineProps {
   topicId: string;
+  minimal?: boolean;
 }
 
 interface DayData {
@@ -19,85 +20,106 @@ interface DayData {
 
 type TimeRange = 7 | 14 | 30;
 
-export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
+export const EngagementSparkline = ({ topicId, minimal = false }: EngagementSparklineProps) => {
   const [data, setData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
 
+  const effectiveRange = minimal ? 7 : timeRange;
+
   useEffect(() => {
     loadSparklineData();
-  }, [topicId, timeRange]);
+  }, [topicId, effectiveRange]);
 
   const loadSparklineData = async () => {
     try {
       setLoading(true);
-
-      const daysAgo = new Date(Date.now() - timeRange * 24 * 60 * 60 * 1000);
+      const daysAgo = new Date(Date.now() - effectiveRange * 24 * 60 * 60 * 1000);
       
-      const [{ data: interactions, error: interactionsError }, { data: visits, error: visitsError }] = await Promise.all([
+      const visitsQuery = supabase
+        .from('feed_visits')
+        .select('visit_date, visitor_id')
+        .eq('topic_id', topicId)
+        .gte('visit_date', daysAgo.toISOString().split('T')[0]);
+
+      if (minimal) {
+        const { data: visits, error } = await visitsQuery;
+        if (error) throw error;
+
+        const dayMap = new Map<string, { swipes: number; shares: number; visitors: number }>();
+        for (let i = 0; i < effectiveRange; i++) {
+          const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+          dayMap.set(date.toISOString().split('T')[0], { swipes: 0, shares: 0, visitors: 0 });
+        }
+
+        const visitorsPerDay = new Map<string, Set<string>>();
+        (visits || []).forEach((visit: any) => {
+          if (!visitorsPerDay.has(visit.visit_date)) visitorsPerDay.set(visit.visit_date, new Set());
+          visitorsPerDay.get(visit.visit_date)!.add(visit.visitor_id);
+        });
+        visitorsPerDay.forEach((visitorSet, date) => {
+          const existing = dayMap.get(date);
+          if (existing) existing.visitors = visitorSet.size;
+        });
+
+        const chartData: DayData[] = Array.from(dayMap.entries())
+          .map(([date, counts]) => ({
+            date, ...counts,
+            displayDate: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        setData(chartData);
+        setLoading(false);
+        return;
+      }
+
+      // Full mode: fetch both visits and interactions
+      const [{ data: visits, error: visitsError }, { data: interactions, error: interactionsError }] = await Promise.all([
+        visitsQuery,
         supabase
           .from('story_interactions')
           .select('interaction_type, created_at')
           .eq('topic_id', topicId)
           .gte('created_at', daysAgo.toISOString())
-          .in('interaction_type', ['swipe', 'share_click']),
-        supabase
-          .from('feed_visits')
-          .select('visit_date, visitor_id')
-          .eq('topic_id', topicId)
-          .gte('visit_date', daysAgo.toISOString().split('T')[0])
+          .in('interaction_type', ['swipe', 'share_click'])
       ]);
-
-      if (interactionsError) throw interactionsError;
       if (visitsError) throw visitsError;
+      if (interactionsError) throw interactionsError;
 
-      // Group by day
       const dayMap = new Map<string, { swipes: number; shares: number; visitors: number }>();
-      
-      // Initialize all days with zero counts
-      for (let i = 0; i < timeRange; i++) {
+      for (let i = 0; i < effectiveRange; i++) {
         const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
         const dateKey = date.toISOString().split('T')[0];
         dayMap.set(dateKey, { swipes: 0, shares: 0, visitors: 0 });
       }
 
-      // Count interactions per day
-      (interactions || []).forEach((interaction) => {
+      interactions.forEach((interaction: any) => {
         const dateKey = interaction.created_at.split('T')[0];
         const existing = dayMap.get(dateKey);
         if (existing) {
-          if (interaction.interaction_type === 'swipe') {
-            existing.swipes++;
-          } else if (interaction.interaction_type === 'share_click') {
-            existing.shares++;
-          }
+          if (interaction.interaction_type === 'swipe') existing.swipes++;
+          else if (interaction.interaction_type === 'share_click') existing.shares++;
         }
       });
 
-      // Count unique visitors per day using Set
       const visitorsPerDay = new Map<string, Set<string>>();
-      (visits || []).forEach((visit) => {
+      visits.forEach((visit: any) => {
         if (!visitorsPerDay.has(visit.visit_date)) {
           visitorsPerDay.set(visit.visit_date, new Set());
         }
         visitorsPerDay.get(visit.visit_date)!.add(visit.visitor_id);
       });
       
-      // Update dayMap with unique visitor counts
       visitorsPerDay.forEach((visitorSet, date) => {
         const existing = dayMap.get(date);
-        if (existing) {
-          existing.visitors = visitorSet.size;
-        }
+        if (existing) existing.visitors = visitorSet.size;
       });
 
-      // Convert to array and sort by date
       const chartData: DayData[] = Array.from(dayMap.entries())
         .map(([date, counts]) => ({
           date,
-          swipes: counts.swipes,
-          shares: counts.shares,
-          visitors: counts.visitors,
+          ...counts,
           displayDate: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         }))
         .sort((a, b) => a.date.localeCompare(b.date));
@@ -113,7 +135,7 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-16">
+      <div className={`flex items-center justify-center ${minimal ? 'h-10' : 'h-16'}`}>
         <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
       </div>
     );
@@ -121,13 +143,27 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
 
   if (data.length === 0) {
     return (
-      <div className="h-16 flex items-center justify-center text-xs text-muted-foreground">
+      <div className={`${minimal ? 'h-10' : 'h-16'} flex items-center justify-center text-xs text-muted-foreground`}>
         No data yet
       </div>
     );
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const MinimalTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-popover border border-border rounded-lg px-2 py-1 shadow-lg">
+          <p className="text-xs font-medium">{payload[0].payload.displayDate}</p>
+          <p className="text-xs" style={{ color: engagementColors.visitors }}>
+            {payload[0]?.value || 0} visitors
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const FullTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-popover border border-border rounded-lg px-2 py-1 shadow-lg">
@@ -141,9 +177,29 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
     return null;
   };
 
+  // Minimal mode: visitors-only sparkline, no toggles
+  if (minimal) {
+    return (
+      <div className="w-full h-10">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+            <Tooltip content={<MinimalTooltip />} />
+            <Line 
+              type="monotone" 
+              dataKey="visitors" 
+              stroke={engagementColors.visitors}
+              strokeWidth={1.5}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  // Full mode: 3 lines with time range toggle
   return (
     <div className="space-y-2">
-      {/* Time range toggle */}
       <div className="flex items-center justify-end gap-1">
         {([7, 14, 30] as TimeRange[]).map((range) => (
           <Button
@@ -169,7 +225,7 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
       <div className="w-full h-16">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<FullTooltip />} />
             {timeRange >= 14 && (
               <XAxis 
                 dataKey="displayDate" 
@@ -179,27 +235,9 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
                 interval={timeRange === 30 ? 6 : 3}
               />
             )}
-            <Line 
-              type="monotone" 
-              dataKey="swipes" 
-              stroke={engagementColors.swipes}
-              strokeWidth={1.5}
-              dot={false}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="shares" 
-              stroke={engagementColors.shares}
-              strokeWidth={1.5}
-              dot={false}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="visitors" 
-              stroke={engagementColors.visitors}
-              strokeWidth={1.5}
-              dot={false}
-            />
+            <Line type="monotone" dataKey="swipes" stroke={engagementColors.swipes} strokeWidth={1.5} dot={false} />
+            <Line type="monotone" dataKey="shares" stroke={engagementColors.shares} strokeWidth={1.5} dot={false} />
+            <Line type="monotone" dataKey="visitors" stroke={engagementColors.visitors} strokeWidth={1.5} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
