@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, ExternalLink } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 interface Story {
   id: string;
@@ -37,9 +37,9 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
         itemType="https://schema.org/Article"
         className="h-full"
       >
-        <Card className="h-full hover:shadow-lg transition-shadow duration-200 overflow-hidden group">
-          {/* Cover Image */}
-          {story.cover_illustration_url && (
+        <Card className="h-full rounded-xl bg-[#fafaf8] dark:bg-card border-muted/40 hover:shadow-md transition-all duration-200 overflow-hidden group">
+          {/* Cover Image or Fallback */}
+          {story.cover_illustration_url ? (
             <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted">
               <img
                 src={story.cover_illustration_url}
@@ -49,6 +49,8 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
                 loading="lazy"
               />
             </div>
+          ) : (
+            <div className="h-24 bg-gradient-to-b from-muted/20 to-transparent" />
           )}
 
           <CardContent className="p-4">
@@ -79,8 +81,7 @@ export const StoryCard = ({ story, topicSlug }: StoryCardProps) => {
           {/* Footer with Source */}
           {sourceDomain && (
             <CardFooter className="p-4 pt-0">
-              <Badge variant="secondary" className="text-xs">
-                <ExternalLink className="w-3 h-3 mr-1" />
+              <Badge variant="secondary" className="text-[10px] font-normal">
                 <span itemProp="publisher" itemScope itemType="https://schema.org/Organization">
                   <span itemProp="name">{sourceDomain}</span>
                 </span>
