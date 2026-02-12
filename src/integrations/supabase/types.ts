@@ -5231,6 +5231,7 @@ export type Database = {
           source_clicks: number
           stories_published_week: number
           topic_id: string
+          visits_last_week: number
           visits_this_week: number
           visits_today: number
         }[]

@@ -108,7 +108,7 @@ export const TopicManager = () => {
           articles_in_arrivals: Number(stats.articles_in_arrivals) || 0,
           stories_published_this_week: Number(stats.stories_published_week) || 0,
           visits_this_week: Number(stats.visits_this_week) || 0,
-          visits_last_week: Number(stats.visits_last_week) || 0,
+          visits_last_week: Number(stats.visits_last_week) || 0,  // Now from RPC
           articles_liked: Number(stats.articles_liked) || 0,
           articles_disliked: Number(stats.articles_disliked) || 0,
           avg_stories_engaged: Number(stats.avg_stories_engaged) || 0,
@@ -195,8 +195,19 @@ export const TopicManager = () => {
     return Math.round((liked / total) * 100);
   };
 
-  const getTotalSubscribers = (topic: Topic) => {
-    return (topic.installs_total || 0) + (topic.registrants_total || 0) + (topic.email_subscribers || 0) + (topic.push_subscribers || 0);
+  const getAudienceBreakdown = (topic: Topic) => {
+    const email = topic.email_subscribers || 0;
+    const push = topic.push_subscribers || 0;
+    const reg = topic.registrants_total || 0;
+    const installs = topic.installs_total || 0;
+    const total = email + push + reg + installs;
+    if (total === 0) return { total: 0, label: 'No subscribers yet' };
+    const parts: string[] = [];
+    if (email > 0) parts.push(`${email} email`);
+    if (push > 0) parts.push(`${push} push`);
+    if (reg > 0) parts.push(`${reg} registered`);
+    if (installs > 0) parts.push(`${installs} installed`);
+    return { total, label: parts.join(' · ') };
   };
 
   return (
@@ -235,7 +246,7 @@ export const TopicManager = () => {
           {topics.map((topic) => {
             const wowChange = getWowChange(topic.visits_this_week || 0, topic.visits_last_week || 0);
             const approvalRate = getApprovalRate(topic.articles_liked || 0, topic.articles_disliked || 0);
-            const totalSubs = getTotalSubscribers(topic);
+            const audience = getAudienceBreakdown(topic);
             const trafficAlert = wowChange < -50;
 
             return (
@@ -304,7 +315,7 @@ export const TopicManager = () => {
                     <div className="grid grid-cols-3 gap-4 mb-4">
                       {/* Visitors */}
                       <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Visitors</div>
+                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1" title="Unique visitors to your feed this week">Visitors</div>
                         <div className="text-xl font-bold">{topic.visits_this_week || 0}</div>
                         <div className={`text-xs flex items-center gap-0.5 mt-0.5 ${
                           trafficAlert ? 'text-destructive font-medium' : 
@@ -318,9 +329,9 @@ export const TopicManager = () => {
                         </div>
                       </div>
 
-                      {/* Engagement */}
+                      {/* Approval */}
                       <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Engagement</div>
+                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1" title="% of stories readers swiped right on">Approval</div>
                         <div className="text-xl font-bold">
                           {approvalRate !== null ? `${approvalRate}%` : '—'}
                         </div>
@@ -331,11 +342,11 @@ export const TopicManager = () => {
                         </div>
                       </div>
 
-                      {/* Subscribers */}
+                      {/* Audience */}
                       <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Subscribers</div>
-                        <div className="text-xl font-bold">{totalSubs}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">total</div>
+                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1" title="People subscribed to your feed updates">Audience</div>
+                        <div className="text-xl font-bold">{audience.total}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{audience.label}</div>
                       </div>
                     </div>
 
