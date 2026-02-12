@@ -407,15 +407,47 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {isLive && <Badge variant="default" className="h-5 text-[10px] bg-green-600">Live</Badge>}
                   {isScheduled && (
-                    <Badge variant="outline" className="h-5 text-[10px] border-amber-300 text-amber-700 bg-amber-50">
-                      <Clock className="w-2.5 h-2.5 mr-0.5" />
-                      {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
-                    </Badge>
+                    <>
+                      <Badge variant="outline" className="h-5 text-[10px] border-amber-300 text-amber-700 bg-amber-50">
+                        <Clock className="w-2.5 h-2.5 mr-0.5" />
+                        {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePublishNow(story.id, storyTitle)}
+                        disabled={publishingNow.has(story.id)}
+                        className="h-5 px-1.5 text-[10px] text-amber-700 hover:text-amber-900"
+                      >
+                        {publishingNow.has(story.id) ? (
+                          <Loader2 className="w-2.5 h-2.5 mr-0.5 animate-spin" />
+                        ) : (
+                          <Zap className="w-2.5 h-2.5 mr-0.5" />
+                        )}
+                        Publish Now
+                      </Button>
+                    </>
                   )}
                   {isReady && (
-                    <Badge variant="outline" className="h-5 text-[10px] border-blue-300 text-blue-700 bg-blue-50">
-                      Ready
-                    </Badge>
+                    <>
+                      <Badge variant="outline" className="h-5 text-[10px] border-blue-300 text-blue-700 bg-blue-50">
+                        Ready
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePublishNow(story.id, storyTitle)}
+                        disabled={publishingNow.has(story.id)}
+                        className="h-5 px-1.5 text-[10px] text-blue-700 hover:text-blue-900"
+                      >
+                        {publishingNow.has(story.id) ? (
+                          <Loader2 className="w-2.5 h-2.5 mr-0.5 animate-spin" />
+                        ) : (
+                          <Zap className="w-2.5 h-2.5 mr-0.5" />
+                        )}
+                        Publish Now
+                      </Button>
+                    </>
                   )}
                   {story.is_parliamentary && <Badge variant="secondary" className="h-5 text-[10px]">Parliament</Badge>}
                   <span>{formatDistanceToNow(new Date(story.created_at), { addSuffix: true })}</span>
@@ -565,21 +597,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   </Button>
                 )}
 
-                {(isScheduled || isReady) && (
-                  <Button
-                    size="sm"
-                    onClick={() => handlePublishNow(story.id, storyTitle)}
-                    disabled={publishingNow.has(story.id)}
-                    className="h-7 text-xs"
-                  >
-                    {publishingNow.has(story.id) ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Zap className="w-3 h-3 mr-1" />
-                    )}
-                    Publish Now
-                  </Button>
-                )}
+
 
                 <div className="ml-auto flex items-center gap-1">
                   <Button
