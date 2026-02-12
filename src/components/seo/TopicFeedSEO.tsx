@@ -182,6 +182,9 @@ export const TopicFeedSEO = ({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={imageUrl} />
 
+      {/* RSS Autodiscovery */}
+      <link rel="alternate" type="application/rss+xml" title={`${topicName} RSS Feed`} href={`https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/rss-feed/${topicSlug}`} />
+
       {/* Additional SEO Tags */}
       {region && <meta name="geo.placename" content={region} />}
       {topicType && <meta name="article:section" content={topicType} />}

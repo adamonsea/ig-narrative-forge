@@ -59,3 +59,4 @@ Allow: /
 
 # Sitemap location
 Sitemap: https://curatr.pro/sitemap.xml
+Sitemap: https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/sitemap-xml
