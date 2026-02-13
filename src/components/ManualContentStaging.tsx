@@ -200,16 +200,31 @@ try {
     const savedQueue = localStorage.getItem(STORAGE_KEY);
     if (savedQueue) {
       try {
-        const parsed = JSON.parse(savedQueue);
-        setProcessingFiles(parsed);
+        const parsed: ProcessingFile[] = JSON.parse(savedQueue);
 
-        // Auto-resume processing if there are pending files
-        const hasPendingFiles = parsed.some((f: ProcessingFile) =>
-          ['pending', 'extracting', 'rewriting', 'saving'].includes(f.status)
+        // Expire uploads older than 50 minutes (signed URLs last 1 hour)
+        const MAX_AGE_MS = 50 * 60 * 1000;
+        const now = Date.now();
+        const corrected = parsed.map((f) => {
+          if (
+            ['pending', 'extracting', 'rewriting', 'saving', 'uploading'].includes(f.status) &&
+            f.uploadedAt &&
+            now - new Date(f.uploadedAt).getTime() > MAX_AGE_MS
+          ) {
+            return { ...f, status: 'failed' as const, progress: 0, error: 'Upload expired — signed URL is no longer valid. Please re-upload the file.' };
+          }
+          return f;
+        });
+
+        setProcessingFiles(corrected);
+
+        // Auto-resume processing if there are still-valid pending files
+        const hasPendingFiles = corrected.some((f) =>
+          f.status === 'pending'
         );
         if (hasPendingFiles) {
           console.log('🔄 Auto-resuming processing from saved queue');
-          setTimeout(() => processNextFileRef.current?.(parsed), 1000);
+          setTimeout(() => processNextFileRef.current?.(corrected), 1000);
         }
       } catch (error) {
         console.error('Failed to load saved queue:', error);
