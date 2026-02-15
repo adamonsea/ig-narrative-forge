@@ -1,57 +1,76 @@
 
+# Fix Broken Email Unsubscribe Links
 
-# Inline Email Briefing Sign-Up Card in Feed
+## The Problem
 
-## What We're Building
+The unsubscribe links in daily and weekly briefing emails point to `/feed/{slug}?unsubscribe=daily` (or `weekly`), but:
 
-A lightweight, inline email briefing sign-up card that appears between stories in the feed -- fitting naturally alongside existing interstitial cards (quizzes, sentiment, community pulse, etc.). It uses the existing `feedCardPositions.ts` registry and the proven `secure-newsletter-signup` edge function.
+1. No frontend code reads the `?unsubscribe` query parameter
+2. No backend endpoint processes unsubscribe requests
+3. Clicking "Unsubscribe" just loads the feed page -- nothing happens
 
-## How It Works
+This is also a GDPR compliance issue: subscribers must be able to unsubscribe easily.
 
-- A new `InlineEmailSignupCard` component appears at a specific position in the feed (position 9, repeating every 20 stories)
-- It shows a compact card with a single email input, topic name, and a "Get the briefing" button
-- On submit, it calls the existing `secure-newsletter-signup` edge function (no new backend work)
-- Once subscribed, the card collapses to a small "Subscribed" confirmation and won't reappear (tracked via localStorage, matching existing pattern from `useNotificationSubscriptions`)
-- Only shows if `email_subscriptions_enabled` is true for the topic
+## The Solution
 
-## Why Position 9, Every 20
+Build a secure, token-based unsubscribe flow with two parts:
 
-- Position 9 avoids collisions with all existing card types (checked against the registry)
-- Every 20 stories ensures it's not too frequent -- readers see it once early, then sparingly
-- It sits after the PWA prompt (position 2) and before the flashback card (position 16), creating a natural engagement ladder
+### 1. Create an `unsubscribe-newsletter` edge function
+
+A new edge function that accepts a signed unsubscribe token and deactivates the subscription. Each email will include a unique, per-subscriber unsubscribe URL so no one can unsubscribe someone else.
+
+- Accepts a token via query param (GET request for one-click unsubscribe)
+- Looks up the subscription by token
+- Sets `is_active = false` on the matching `topic_newsletter_signups` row
+- Returns an HTML page confirming the unsubscribe (not JSON -- this is opened in a browser)
+
+### 2. Generate per-subscriber unsubscribe tokens
+
+Update `send-email-newsletter/index.ts` to:
+- Generate a unique unsubscribe token per recipient (using `crypto.randomUUID()`)
+- Store it in a new `unsubscribe_token` column on `topic_newsletter_signups`
+- Pass the full unsubscribe URL to the email template as `unsubscribeUrl`
+
+The unsubscribe URL will be: `https://{supabase}/functions/v1/unsubscribe-newsletter?token={uuid}`
+
+### 3. Database migration
+
+Add an `unsubscribe_token` column to `topic_newsletter_signups`:
+```sql
+ALTER TABLE topic_newsletter_signups
+  ADD COLUMN IF NOT EXISTS unsubscribe_token uuid DEFAULT gen_random_uuid();
+
+CREATE INDEX IF NOT EXISTS idx_newsletter_unsubscribe_token
+  ON topic_newsletter_signups(unsubscribe_token);
+```
 
 ## Technical Details
 
-### 1. Register position in `src/lib/feedCardPositions.ts`
+### New file: `supabase/functions/unsubscribe-newsletter/index.ts`
 
-Add a new entry to `FEED_CARD_POSITIONS`:
-```
-emailBriefing: {
-  type: 'repeating',
-  interval: 20,
-  offset: 9,
-  description: 'Email briefing sign-up prompt'
-}
-```
+- Configured with `verify_jwt = false` (public access, opened from email)
+- GET handler: reads `token` from query string
+- Uses service role to look up and deactivate the subscription
+- Returns a simple, branded HTML confirmation page (not a redirect to the app)
+- Handles edge cases: invalid token, already unsubscribed
 
-### 2. Create `src/components/feed/InlineEmailSignupCard.tsx`
+### Modified: `supabase/functions/send-email-newsletter/index.ts`
 
-A compact card component:
-- Shows topic icon (if available), headline "Get the {topicName} briefing", and a brief line like "Daily or weekly -- straight to your inbox"
-- Single email input + submit button, inline (not a modal)
-- On success: stores subscription in localStorage (matching existing `saveSubscriptionStatus` pattern), collapses to a checkmark + "You're subscribed"
-- Respects existing subscriptions: checks localStorage on mount and auto-hides if already subscribed
+- When fetching subscribers, also select `id` and `unsubscribe_token`
+- For each recipient, build the unsubscribe URL using their token
+- Pass `unsubscribeUrl` to the email template render call
 
-### 3. Wire into `src/pages/TopicFeed.tsx`
+### Modified: `supabase/config.toml`
 
-Following the exact same pattern as other cards:
-- Import `shouldShowCard` for `emailBriefing`
-- Check `topicMetadata?.email_subscriptions_enabled`
-- Render `InlineEmailSignupCard` at the registered positions
+- Add `[functions.unsubscribe-newsletter]` with `verify_jwt = false`
 
-### 4. No database, edge function, or schema changes
+### No frontend changes needed
 
-Everything reuses existing infrastructure:
-- `secure-newsletter-signup` edge function for submission
-- `saveSubscriptionStatus` from `useNotificationSubscriptions` for persistence
-- `email_subscriptions_enabled` flag already on topics table
+The current fallback URL (`/feed/{slug}?unsubscribe=...`) becomes irrelevant once proper per-subscriber URLs are passed. No need to add query-param handling to the feed page.
+
+## Flow
+
+1. User receives email with unsubscribe link containing their unique token
+2. User clicks link, which opens the edge function URL directly
+3. Edge function deactivates their subscription and shows a confirmation page
+4. Done -- no login, no extra clicks required
