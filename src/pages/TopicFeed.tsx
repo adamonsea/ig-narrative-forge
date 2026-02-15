@@ -1188,7 +1188,7 @@ const TopicFeed = () => {
                 }
 
                 // Email briefing sign-up card (positions 9, 29, 49...)
-                if (shouldShowEmailBriefing(storyIndex) && topic?.id && (topic as any)?.email_subscriptions_enabled) {
+                if (shouldShowEmailBriefing(storyIndex) && topic?.id && topicMetadata?.emailSubscriptionsEnabled) {
                   items.push(
                     <div key={`email-briefing-${storyIndex}`} className="w-full max-w-2xl">
                       <InlineEmailSignupCard
