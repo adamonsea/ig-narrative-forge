@@ -277,15 +277,15 @@ serve(async (req) => {
     });
 
     // Get subscribers (or use test email)
-    let recipients: { email: string; name?: string | null }[] = [];
+    let recipients: { email: string; name?: string | null; unsubscribe_token?: string | null }[] = [];
     
     if (testEmail) {
-      recipients = [{ email: testEmail, name: null }];
+      recipients = [{ email: testEmail, name: null, unsubscribe_token: null }];
       console.log(`🧪 Test mode: sending to ${testEmail}`);
     } else {
       const { data: subscribers, error: subError } = await supabase
         .from('topic_newsletter_signups')
-        .select('email, name')
+        .select('email, name, unsubscribe_token')
         .eq('topic_id', topicId)
         .eq('is_active', true)
         .eq('notification_type', notificationType)
@@ -311,8 +311,7 @@ serve(async (req) => {
 
     console.log(`📬 Sending to ${recipients.length} recipients`);
 
-    // Generate email HTML
-    let emailHtml: string;
+    // Prepare shared email template data
     const displayDate = dateEnd.toLocaleDateString('en-GB', { 
       weekday: 'long', 
       day: 'numeric', 
@@ -340,40 +339,51 @@ serve(async (req) => {
     const totalStoryCount = (roundup?.stats as { story_count?: number })?.story_count;
     
     console.log(`🎧 Audio URL: ${audioUrl ? 'found' : 'none'}, Total stories: ${totalStoryCount || 'N/A'}`);
-    
-    if (notificationType === 'daily') {
-      emailHtml = await renderAsync(
-        React.createElement(DailyRoundupEmail, {
-          topicName: topic.name,
-          topicSlug: topic.slug,
-          topicLogoUrl,
-          date: displayDate,
-          dateParam,
-          stories,
-          baseUrl: BASE_URL,
-          isSlowNewsDay,
-          audioUrl
-        })
-      );
-    } else {
-      const weekStartDisplay = dateStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      const weekEndDisplay = dateEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      
-      emailHtml = await renderAsync(
-        React.createElement(WeeklyRoundupEmail, {
-          topicName: topic.name,
-          topicSlug: topic.slug,
-          topicLogoUrl,
-          weekStart: weekStartDisplay,
-          weekEnd: weekEndDisplay,
-          weekStartParam,
-          stories,
-          baseUrl: BASE_URL,
-          audioUrl,
-          totalStoryCount
-        })
-      );
-    }
+
+    // Helper to build unsubscribe URL for a recipient
+    const buildUnsubscribeUrl = (token: string | null | undefined): string | undefined => {
+      if (!token) return undefined;
+      return `${supabaseUrl}/functions/v1/unsubscribe-newsletter?token=${token}`;
+    };
+
+    // Helper to render email HTML for a specific recipient
+    const renderEmailForRecipient = async (unsubscribeUrl?: string): Promise<string> => {
+      if (notificationType === 'daily') {
+        return await renderAsync(
+          React.createElement(DailyRoundupEmail, {
+            topicName: topic.name,
+            topicSlug: topic.slug,
+            topicLogoUrl,
+            date: displayDate,
+            dateParam,
+            stories,
+            baseUrl: BASE_URL,
+            isSlowNewsDay,
+            audioUrl,
+            unsubscribeUrl
+          })
+        );
+      } else {
+        const weekStartDisplay = dateStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const weekEndDisplay = dateEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        
+        return await renderAsync(
+          React.createElement(WeeklyRoundupEmail, {
+            topicName: topic.name,
+            topicSlug: topic.slug,
+            topicLogoUrl,
+            weekStart: weekStartDisplay,
+            weekEnd: weekEndDisplay,
+            weekStartParam,
+            stories,
+            baseUrl: BASE_URL,
+            audioUrl,
+            totalStoryCount,
+            unsubscribeUrl
+          })
+        );
+      }
+    };
 
     // Send emails
     let sentCount = 0;
@@ -382,6 +392,12 @@ serve(async (req) => {
 
     for (const recipient of recipients) {
       try {
+        // Build per-recipient unsubscribe URL
+        const unsubscribeUrl = buildUnsubscribeUrl(recipient.unsubscribe_token);
+        
+        // Render email HTML with this recipient's unsubscribe link
+        const emailHtml = await renderEmailForRecipient(unsubscribeUrl);
+
         // Dynamic subject line with personalization
         const storyCount = stories.length;
         const firstName = recipient.name?.split(' ')[0];
