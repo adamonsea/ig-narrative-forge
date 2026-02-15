@@ -3685,6 +3685,7 @@ export type Database = {
           notification_type: string | null
           push_subscription: Json | null
           topic_id: string | null
+          unsubscribe_token: string | null
           updated_at: string
           verification_sent_at: string | null
           verification_token: string | null
@@ -3704,6 +3705,7 @@ export type Database = {
           notification_type?: string | null
           push_subscription?: Json | null
           topic_id?: string | null
+          unsubscribe_token?: string | null
           updated_at?: string
           verification_sent_at?: string | null
           verification_token?: string | null
@@ -3723,6 +3725,7 @@ export type Database = {
           notification_type?: string | null
           push_subscription?: Json | null
           topic_id?: string | null
+          unsubscribe_token?: string | null
           updated_at?: string
           verification_sent_at?: string | null
           verification_token?: string | null
