@@ -10,6 +10,7 @@ interface TopicMetadata {
   this_time_last_month_enabled: boolean;
   latestDailyRoundup: string | null;
   latestWeeklyRoundup: string | null;
+  emailSubscriptionsEnabled: boolean;
 }
 
 interface UseTopicMetadataResult {
@@ -168,10 +169,26 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
       },
+      // Query 4: Email subscriptions enabled flag
+      {
+        queryKey: ['topic-email-subs-enabled', topicId],
+        queryFn: async () => {
+          if (!topicId) return false;
+          const { data } = await supabase
+            .from('topics')
+            .select('email_subscriptions_enabled')
+            .eq('id', topicId)
+            .single();
+          return data?.email_subscriptions_enabled ?? false;
+        },
+        enabled: !!topicId,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+      },
     ],
   });
 
-  const [avgDailyResult, insightSettingsResult, roundupsResult] = results;
+  const [avgDailyResult, insightSettingsResult, roundupsResult, emailSubsResult] = results;
 
   const isLoading = results.some(r => r.isLoading);
   const isError = results.some(r => r.isError);
@@ -185,6 +202,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
       this_time_last_month_enabled: insightSettingsResult.data?.thisTimeLastMonthEnabled ?? false,
       latestDailyRoundup: roundupsResult.data?.daily ?? null,
       latestWeeklyRoundup: roundupsResult.data?.weekly ?? null,
+      emailSubscriptionsEnabled: (emailSubsResult.data as boolean) ?? false,
     },
     isLoading,
     isError,
