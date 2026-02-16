@@ -36,6 +36,7 @@ import VerifySubscription from "./pages/VerifySubscription";
 import WidgetsPage from "./pages/dashboard/Widgets";
 import WidgetTestPage from "./pages/dashboard/WidgetTest";
 import Health from "./pages/Health";
+import Unsubscribe from "./pages/Unsubscribe";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -116,6 +117,7 @@ const App = () => {
               
               {/* Subscription verification */}
               <Route path="/verify-subscription" element={<VerifySubscription />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
