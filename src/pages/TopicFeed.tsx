@@ -1,3 +1,4 @@
+import React, { Suspense } from "react";
 import { useParams } from "react-router-dom";
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -6,7 +7,6 @@ import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
-import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
@@ -36,17 +36,20 @@ import { useStoryViewTracker } from "@/hooks/useStoryViewTracker";
 import { Link } from "react-router-dom";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAutomatedInsightCards";
-import { AutomatedInsightCard } from "@/components/AutomatedInsightCard";
 import { useQuizCards } from "@/hooks/useQuizCards";
-import { QuizCard } from "@/components/quiz/QuizCard";
 import { useTopicMetadata } from "@/hooks/useTopicMetadata";
 import { FeedOnboardingOrchestrator, InlinePWACard } from "@/components/onboarding";
 import { useParliamentaryInsightCards } from "@/hooks/useParliamentaryInsightCards";
 import { useParliamentaryDigestCards } from "@/hooks/useParliamentaryDigestCards";
-import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
-import { ParliamentaryDigestCard } from "@/components/ParliamentaryDigestCard";
-import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
 import { InlineEmailSignupCard } from "@/components/feed/InlineEmailSignupCard";
+
+// Optimization #7: Lazy-load interstitial card components to reduce initial bundle
+const SentimentCard = React.lazy(() => import("@/components/SentimentCard").then(m => ({ default: m.SentimentCard })));
+const AutomatedInsightCard = React.lazy(() => import("@/components/AutomatedInsightCard").then(m => ({ default: m.AutomatedInsightCard })));
+const QuizCard = React.lazy(() => import("@/components/quiz/QuizCard").then(m => ({ default: m.QuizCard })));
+const ParliamentaryInsightCard = React.lazy(() => import("@/components/ParliamentaryInsightCard").then(m => ({ default: m.ParliamentaryInsightCard })));
+const ParliamentaryDigestCard = React.lazy(() => import("@/components/ParliamentaryDigestCard").then(m => ({ default: m.ParliamentaryDigestCard })));
+const FlashbackInsightsPanel = React.lazy(() => import("@/components/FlashbackInsightsPanel").then(m => ({ default: m.FlashbackInsightsPanel })));
 import { useStoriesReactionsBatch } from "@/hooks/useStoriesReactionsBatch";
 import { MobileLoadErrorOverlay } from "@/components/MobileLoadErrorOverlay";
 import { 
@@ -83,6 +86,9 @@ const TopicFeed = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const observerRef = useRef<IntersectionObserver | null>(null);
+  // Optimization #2: Shared IntersectionObserver for story view tracking
+  const sharedStoryObserverRef = useRef<IntersectionObserver | null>(null);
+  const storyObserverMapRef = useRef<Map<Element, string>>(new Map());
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -105,15 +111,13 @@ const TopicFeed = () => {
   // Primes the Supabase connection to reduce cold-start latency
   useEffect(() => {
     if (isInAppBrowser()) {
-      console.log('🔌 Warming up Supabase connection for in-app browser...');
+      if (import.meta.env.DEV) console.log('🔌 Warming up Supabase connection for in-app browser...');
       const warmupConnection = async () => {
         try {
-          // Simple query to establish connection before main feed loads
           await supabase.from('topics').select('id').limit(1);
-          console.log('✅ Connection warmup complete');
+          if (import.meta.env.DEV) console.log('✅ Connection warmup complete');
         } catch {
-          // Ignore warmup errors - the main load will handle retries
-          console.log('⚠️ Connection warmup failed (non-critical)');
+          if (import.meta.env.DEV) console.log('⚠️ Connection warmup failed (non-critical)');
         }
       };
       warmupConnection();
@@ -434,25 +438,31 @@ const TopicFeed = () => {
     };
   }, [slug]);
 
-  const { sentimentCards } = useSentimentCards(topic?.id);
-  const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
-  const { data: insightCards = [] } = useAutomatedInsightCards(topic?.id, topic?.automated_insights_enabled ?? true);
-  
-  // Quiz cards hook - uses quizCardsEnabled from useTopicMetadata, passes user ID for deduplication
-  const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled, user?.id);
-  
-  // Parliamentary insight cards - only for regional topics with tracking enabled (MAJOR votes)
-  const { votes: parliamentaryVotes, hasData: hasParliamentaryData } = useParliamentaryInsightCards(
-    topic?.id,
-    topic?.topic_type,
-    (topic as any)?.parliamentary_tracking_enabled
+  // Optimization #5: Defer secondary hooks until main feed has rendered
+  const { sentimentCards } = useSentimentCards(storiesLoading ? undefined : topic?.id);
+  const { data: pulseData } = useCommunityPulseKeywords(storiesLoading ? '' : (topic?.id || ''));
+  const { data: insightCards = [] } = useAutomatedInsightCards(
+    storiesLoading ? undefined : topic?.id, 
+    !storiesLoading && (topic?.automated_insights_enabled ?? true)
   );
   
-  // Parliamentary digest cards - weekly digest of MINOR votes
-  const { votes: parliamentaryDigestVotes, hasData: hasParliamentaryDigest } = useParliamentaryDigestCards(
-    topic?.id,
+  // Optimization #5: Defer secondary hooks until main feed has rendered
+  const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(
+    storiesLoading ? undefined : topic?.id, 
+    !storiesLoading && quizCardsEnabled, 
+    user?.id
+  );
+  
+  const { votes: parliamentaryVotes, hasData: hasParliamentaryData } = useParliamentaryInsightCards(
+    storiesLoading ? undefined : topic?.id,
     topic?.topic_type,
-    (topic as any)?.parliamentary_tracking_enabled
+    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled
+  );
+  
+  const { votes: parliamentaryDigestVotes, hasData: hasParliamentaryDigest } = useParliamentaryDigestCards(
+    storiesLoading ? undefined : topic?.id,
+    topic?.topic_type,
+    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled
   );
   
 
@@ -516,6 +526,290 @@ const TopicFeed = () => {
       }
     };
   }, []);
+
+  // Optimization #2: Shared IntersectionObserver for story view tracking
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) return;
+    
+    sharedStoryObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            incrementStoriesViewed();
+            sharedStoryObserverRef.current?.unobserve(entry.target);
+            storyObserverMapRef.current.delete(entry.target);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    return () => {
+      sharedStoryObserverRef.current?.disconnect();
+      storyObserverMapRef.current.clear();
+    };
+  }, [incrementStoriesViewed]);
+
+  // Optimization #6: Pre-compute filter matches into a Map
+  const filterMatchesMap = useMemo(() => {
+    const map = new Map<string, { type: 'landmark' | 'organization' | 'keyword'; value: string }[]>();
+    if (!topic) return map;
+    filteredContent.forEach(item => {
+      if (item.type === 'story') {
+        map.set(item.id, computeStoryFilterMatches(item.data));
+      }
+    });
+    return map;
+  }, [filteredContent, topic, computeStoryFilterMatches]);
+
+  // Optimization #1: Memoize the entire feed render loop
+  const feedItems = useMemo(() => {
+    // Defensive duplicate detection
+    const seenIds = new Set<string>();
+    const duplicates: string[] = [];
+    
+    filteredContent.forEach(item => {
+      if (item?.id) {
+        if (seenIds.has(item.id)) {
+          duplicates.push(item.id.substring(0, 8));
+        } else {
+          seenIds.add(item.id);
+        }
+      }
+    });
+    
+    if (duplicates.length > 0) {
+      console.warn(`⚠️ DUPLICATE CONTENT IDs IN FEED: ${duplicates.join(', ')}...`);
+    }
+    
+    // Apply ghost filter FIRST to create displayable content array
+    const displayableContent = filteredContent.filter(contentItem => {
+      if (contentItem.type !== 'story') return true;
+      const story = contentItem.data as any;
+      const hasRealSlides = story.slides?.length > 0 && 
+        !story.slides[0]?.id?.startsWith('placeholder-') &&
+        story.slides[0]?.content !== 'Loading...';
+      return hasRealSlides;
+    });
+    
+    const lastDisplayableStoryIndex = displayableContent.length > 0 
+      ? displayableContent.map(item => item.type).lastIndexOf('story')
+      : -1;
+    
+    return displayableContent.map((contentItem, index) => {
+      const items: React.ReactNode[] = [];
+      
+      const storyIndex = displayableContent.slice(0, index + 1).filter(item => item.type === 'story').length;
+      
+      if (contentItem.type === 'story') {
+        const story = contentItem.data as any;
+        const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
+        
+        items.push(
+          <div
+            key={`story-${story.id}`}
+            className="w-full max-w-2xl"
+            ref={(node) => {
+              if (index === lastDisplayableStoryIndex) {
+                lastStoryElementRef(node);
+              }
+              if (node && sharedStoryObserverRef.current) {
+                storyObserverMapRef.current.set(node, story.id);
+                sharedStoryObserverRef.current.observe(node);
+              }
+            }}
+          >
+            <StoryCarousel 
+              story={story} 
+              storyUrl={storyShareUrl}
+              topicId={topic?.id}
+              storyIndex={index}
+              topicName={topic?.name}
+              topicSlug={slug}
+              onStorySwipe={handleStorySwipe}
+              onStoryScrolledPast={handleStoryScrolledPast}
+              onMoreLikeThis={handleMoreLikeThis}
+              onPrefetchFilter={handlePrefetchFilter}
+              prefetchedReactionCounts={reactionCountsMap.get(story.id)}
+              onReactionCountsChange={updateReactionCounts}
+            />
+          </div>
+        );
+
+        if (index === 4) {
+          items.push(
+            <div key="inline-pwa-card" className="w-full max-w-2xl">
+              <InlinePWACard
+                topicName={topic?.name || ''}
+                topicSlug={slug || ''}
+                topicIcon={topic?.branding_config?.icon_url || topic?.branding_config?.logo_url}
+                storiesScrolledPast={storiesScrolledPast}
+              />
+            </div>
+          );
+        }
+      }
+
+      // Community pulse cards
+      if (shouldShowCommunityPulseCard(storyIndex) && shouldShowCommunityPulse && topic && pulseData) {
+        items.push(
+          <div key={`community-pulse-${storyIndex}`} className="w-full max-w-2xl">
+            <CommunityPulseSlides
+              keywords={pulseData.keywords}
+              timeframe="48h"
+              mostActiveThreadUrl={pulseData.mostActiveThread?.url}
+              mostActiveThreadTitle={pulseData.mostActiveThread?.title}
+            />
+          </div>
+        );
+      }
+
+      // Sentiment cards - wrapped in Suspense for lazy loading
+      if (shouldShowSentiment(storyIndex) && sentimentCards.length > 0) {
+        const keywordCards = sentimentCards.filter(card => card.card_type !== 'comparison');
+        const comparisonCards = sentimentCards.filter(card => card.card_type === 'comparison');
+        const totalSentimentCardsShown = getSentimentIndex(storyIndex);
+        const showComparison = (totalSentimentCardsShown + 1) % 4 === 0 && comparisonCards.length > 0;
+        
+        let sentimentCard;
+        if (showComparison) {
+          const comparisonIndex = Math.floor(totalSentimentCardsShown / 4) % comparisonCards.length;
+          sentimentCard = comparisonCards[comparisonIndex];
+        } else {
+          const keywordSlotsUsed = totalSentimentCardsShown - Math.floor(totalSentimentCardsShown / 4);
+          const keywordIndex = keywordSlotsUsed % keywordCards.length;
+          sentimentCard = keywordCards[keywordIndex];
+        }
+        
+        if (sentimentCard) {
+          items.push(
+            <div key={`sentiment-${sentimentCard.id}-${index}`} className="w-full max-w-2xl">
+              <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
+                <SentimentCard
+                  id={sentimentCard.id}
+                  keywordPhrase={sentimentCard.keyword_phrase}
+                  content={sentimentCard.content}
+                  sources={sentimentCard.sources}
+                  sentimentScore={sentimentCard.sentiment_score}
+                  confidenceScore={sentimentCard.confidence_score}
+                  analysisDate={sentimentCard.analysis_date}
+                  cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
+                  createdAt={sentimentCard.created_at}
+                  updatedAt={sentimentCard.updated_at}
+                />
+              </Suspense>
+            </div>
+          );
+        }
+      }
+
+      // Automated insight cards
+      if (shouldShowAutomatedInsight(storyIndex) && insightCards.length > 0 && topic?.automated_insights_enabled) {
+        const cardIndex = getAutomatedInsightIndex(storyIndex) % insightCards.length;
+        const insightCard = insightCards[cardIndex];
+        
+        items.push(
+          <div key={`insight-${insightCard.id}-${index}`} className="w-full max-w-2xl">
+            <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
+              <AutomatedInsightCard 
+                card={insightCard} 
+                topicSlug={slug}
+              />
+            </Suspense>
+          </div>
+        );
+        trackInsightCardDisplay(insightCard.id);
+      }
+
+      // Events accordion
+      if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled) {
+        items.push(
+          <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
+            <EventsAccordion topicId={topic.id} isOwner={false} />
+          </div>
+        );
+      }
+
+      // Quiz cards
+      if (shouldShowQuiz(storyIndex) && quizQuestions.length > 0 && quizCardsEnabled) {
+        const quizIndex = getQuizIndex(storyIndex) % quizQuestions.length;
+        const quizQuestion = quizQuestions[quizIndex];
+        
+        if (quizQuestion) {
+          items.push(
+            <div key={`quiz-${quizQuestion.id}-${storyIndex}`} className="w-full max-w-2xl">
+              <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
+                <QuizCard
+                  question={quizQuestion}
+                  visitorId={quizVisitorId}
+                  userId={user?.id}
+                  topicSlug={slug}
+                  onAnswered={markAsAnswered}
+                />
+              </Suspense>
+            </div>
+          );
+        }
+      }
+
+      // Parliamentary insight cards
+      if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0) {
+        items.push(
+          <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
+            <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
+              <ParliamentaryInsightCard votes={parliamentaryVotes} topicSlug={slug} />
+            </Suspense>
+          </div>
+        );
+      }
+
+      // Parliamentary weekly digest
+      if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0) {
+        items.push(
+          <div key={`parliamentary-digest-${storyIndex}`} className="w-full max-w-2xl">
+            <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
+              <ParliamentaryDigestCard votes={parliamentaryDigestVotes} topicSlug={slug} />
+            </Suspense>
+          </div>
+        );
+      }
+
+      // Flashback card
+      if (shouldShowFlashback(storyIndex) && topic?.id && topicMetadata?.this_time_last_month_enabled) {
+        items.push(
+          <div key="flashback-insight" className="w-full max-w-2xl">
+            <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
+              <FlashbackInsightsPanel topicId={topic.id} topicSlug={slug} />
+            </Suspense>
+          </div>
+        );
+      }
+
+      // Email briefing sign-up card
+      if (shouldShowEmailBriefing(storyIndex) && topic?.id && topicMetadata?.emailSubscriptionsEnabled) {
+        items.push(
+          <div key={`email-briefing-${storyIndex}`} className="w-full max-w-2xl">
+            <InlineEmailSignupCard
+              topicId={topic.id}
+              topicName={topic.name}
+              topicSlug={slug || ''}
+              topicLogoUrl={topic.branding_config?.logo_url}
+            />
+          </div>
+        );
+      }
+
+      return items;
+    }).flat();
+  }, [
+    filteredContent, slug, topic, lastStoryElementRef, handleStorySwipe,
+    handleStoryScrolledPast, handleMoreLikeThis, handlePrefetchFilter,
+    reactionCountsMap, updateReactionCounts, storiesScrolledPast,
+    shouldShowCommunityPulse, pulseData, sentimentCards, insightCards,
+    quizQuestions, quizCardsEnabled, quizVisitorId, user?.id, markAsAnswered,
+    parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
+    hasParliamentaryDigest, topicMetadata, filterMatchesMap
+  ]);
 
   if (loading) {
     return (
@@ -942,278 +1236,17 @@ const TopicFeed = () => {
           </div>
         ) : filteredContent.length > 0 ? (
           <div className="space-y-6 md:space-y-8 flex flex-col items-center">
-            {(() => {
-              // Defensive duplicate detection with console warning
-              const seenIds = new Set<string>();
-              const duplicates: string[] = [];
-              
-              filteredContent.forEach(item => {
-                if (item?.id) {
-                  if (seenIds.has(item.id)) {
-                    duplicates.push(item.id.substring(0, 8));
-                  } else {
-                    seenIds.add(item.id);
-                  }
-                }
-              });
-              
-              if (duplicates.length > 0) {
-                console.warn(`⚠️ DUPLICATE CONTENT IDs IN FEED: ${duplicates.join(', ')}...`);
-              }
-              
-              // Apply ghost filter FIRST to create displayable content array
-              // This ensures storyIndex is calculated from the same array used for rendering
-              const displayableContent = filteredContent.filter(contentItem => {
-                if (contentItem.type !== 'story') return true;
-                const story = contentItem.data as any;
-                const hasRealSlides = story.slides?.length > 0 && 
-                  !story.slides[0]?.id?.startsWith('placeholder-') &&
-                  story.slides[0]?.content !== 'Loading...';
-                return hasRealSlides;
-              });
-              
-              const lastDisplayableStoryIndex = displayableContent.length > 0 
-                ? displayableContent.map(item => item.type).lastIndexOf('story')
-                : -1;
-              
-              // Map over displayable content with correct indices
-              return displayableContent.map((contentItem, index) => {
-                const items = [];
-                
-                // Calculate story index from displayableContent (same array as index)
-                const storyIndex = displayableContent.slice(0, index + 1).filter(item => item.type === 'story').length;
-                
-                if (contentItem.type === 'story') {
-                  const story = contentItem.data as any;
-                  // Generate universal story URL
-                  const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
-                  
-                  items.push(
-                    <div
-                      key={`story-${story.id}`}
-                      className="w-full max-w-2xl"
-                      ref={(node) => {
-                        if (index === lastDisplayableStoryIndex) {
-                          lastStoryElementRef(node);
-                        }
-                        // Track story view when it enters viewport
-                        if (node && 'IntersectionObserver' in window) {
-                          const observer = new IntersectionObserver(
-                            (entries) => {
-                              entries.forEach((entry) => {
-                                if (entry.isIntersecting) {
-                                  incrementStoriesViewed();
-                                  observer.disconnect();
-                                }
-                              });
-                            },
-                            { threshold: 0.5 }
-                          );
-                          observer.observe(node);
-                        }
-                      }}
-                    >
-                      <StoryCarousel 
-                        story={story} 
-                        storyUrl={storyShareUrl}
-                        topicId={topic?.id}
-                        storyIndex={index}
-                        topicName={topic?.name}
-                        topicSlug={slug}
-                        onStorySwipe={handleStorySwipe}
-                        onStoryScrolledPast={handleStoryScrolledPast}
-                        onMoreLikeThis={handleMoreLikeThis}
-                        onPrefetchFilter={handlePrefetchFilter}
-                        prefetchedReactionCounts={reactionCountsMap.get(story.id)}
-                        onReactionCountsChange={updateReactionCounts}
-                      />
-                    </div>
-                  );
-
-                  {/* Inline PWA Card - appears after 5th story */}
-                  if (index === 4) {
-                    items.push(
-                      <div key="inline-pwa-card" className="w-full max-w-2xl">
-                        <InlinePWACard
-                          topicName={topic?.name || ''}
-                          topicSlug={slug || ''}
-                          topicIcon={topic?.branding_config?.icon_url || topic?.branding_config?.logo_url}
-                          storiesScrolledPast={storiesScrolledPast}
-                        />
-                      </div>
-                    );
-                  }
-                }
-
-                // ═══════════════════════════════════════════════════════════════════
-                // FEED CARD POSITIONS - Using centralized registry from feedCardPositions.ts
-                // ═══════════════════════════════════════════════════════════════════
-
-                // Community pulse cards (positions 4, 19, 34...)
-                if (shouldShowCommunityPulseCard(storyIndex) && shouldShowCommunityPulse && topic && pulseData) {
-                  items.push(
-                    <div key={`community-pulse-${storyIndex}`} className="w-full max-w-2xl">
-                      <CommunityPulseSlides
-                        keywords={pulseData.keywords}
-                        timeframe="48h"
-                        mostActiveThreadUrl={pulseData.mostActiveThread?.url}
-                        mostActiveThreadTitle={pulseData.mostActiveThread?.title}
-                      />
-                    </div>
-                  );
-                }
-
-                // Sentiment cards (positions 6, 12, 18, 24...)
-                if (shouldShowSentiment(storyIndex) && sentimentCards.length > 0) {
-                  const keywordCards = sentimentCards.filter(card => card.card_type !== 'comparison');
-                  const comparisonCards = sentimentCards.filter(card => card.card_type === 'comparison');
-                  const totalSentimentCardsShown = getSentimentIndex(storyIndex);
-                  
-                  // Every 4th sentiment card slot is a comparison card
-                  const showComparison = (totalSentimentCardsShown + 1) % 4 === 0 && comparisonCards.length > 0;
-                  
-                  let sentimentCard;
-                  if (showComparison) {
-                    const comparisonIndex = Math.floor(totalSentimentCardsShown / 4) % comparisonCards.length;
-                    sentimentCard = comparisonCards[comparisonIndex];
-                  } else {
-                    const keywordSlotsUsed = totalSentimentCardsShown - Math.floor(totalSentimentCardsShown / 4);
-                    const keywordIndex = keywordSlotsUsed % keywordCards.length;
-                    sentimentCard = keywordCards[keywordIndex];
-                  }
-                  
-                  if (sentimentCard) {
-                    items.push(
-                      <div key={`sentiment-${sentimentCard.id}-${index}`} className="w-full max-w-2xl">
-                        <SentimentCard
-                          id={sentimentCard.id}
-                          keywordPhrase={sentimentCard.keyword_phrase}
-                          content={sentimentCard.content}
-                          sources={sentimentCard.sources}
-                          sentimentScore={sentimentCard.sentiment_score}
-                          confidenceScore={sentimentCard.confidence_score}
-                          analysisDate={sentimentCard.analysis_date}
-                          cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
-                          createdAt={sentimentCard.created_at}
-                          updatedAt={sentimentCard.updated_at}
-                        />
-                      </div>
-                    );
-                  }
-                }
-
-                // Automated insight cards (positions 3, 10, 17, 24...)
-                if (shouldShowAutomatedInsight(storyIndex) && insightCards.length > 0 && topic?.automated_insights_enabled) {
-                  const cardIndex = getAutomatedInsightIndex(storyIndex) % insightCards.length;
-                  const insightCard = insightCards[cardIndex];
-                  
-                  items.push(
-                    <div key={`insight-${insightCard.id}-${index}`} className="w-full max-w-2xl">
-                      <AutomatedInsightCard 
-                        card={insightCard} 
-                        topicSlug={slug}
-                      />
-                    </div>
-                  );
-                  trackInsightCardDisplay(insightCard.id);
-                }
-
-                // Events accordion (positions 11, 22, 33...)
-                if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled) {
-                  items.push(
-                    <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
-                      <EventsAccordion 
-                        topicId={topic.id} 
-                        isOwner={false}
-                      />
-                    </div>
-                  );
-                }
-
-                // Quiz cards (positions 5, 14, 23, 32...)
-                if (shouldShowQuiz(storyIndex) && quizQuestions.length > 0 && quizCardsEnabled) {
-                  const quizIndex = getQuizIndex(storyIndex) % quizQuestions.length;
-                  const quizQuestion = quizQuestions[quizIndex];
-                  
-                  if (quizQuestion) {
-                    items.push(
-                      <div key={`quiz-${quizQuestion.id}-${storyIndex}`} className="w-full max-w-2xl">
-                        <QuizCard
-                          question={quizQuestion}
-                          visitorId={quizVisitorId}
-                          userId={user?.id}
-                          topicSlug={slug}
-                          onAnswered={markAsAnswered}
-                        />
-                      </div>
-                    );
-                  }
-                }
-
-                // Parliamentary insight cards for MAJOR votes (positions 8, 21, 34...)
-                if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0) {
-                  items.push(
-                    <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
-                      <ParliamentaryInsightCard
-                        votes={parliamentaryVotes}
-                        topicSlug={slug}
-                      />
-                    </div>
-                  );
-                }
-
-                // Parliamentary weekly digest for MINOR votes (position 25, once)
-                if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0) {
-                  items.push(
-                    <div key={`parliamentary-digest-${storyIndex}`} className="w-full max-w-2xl">
-                      <ParliamentaryDigestCard
-                        votes={parliamentaryDigestVotes}
-                        topicSlug={slug}
-                      />
-                    </div>
-                  );
-                }
-
-                // Flashback "This time last month" card (position 16, once)
-                // Only shows if this_time_last_month_enabled is true in topic settings
-                if (shouldShowFlashback(storyIndex) && topic?.id && topicMetadata?.this_time_last_month_enabled) {
-                  items.push(
-                    <div key="flashback-insight" className="w-full max-w-2xl">
-                      <FlashbackInsightsPanel
-                        topicId={topic.id}
-                        topicSlug={slug}
-                      />
-                    </div>
-                  );
-                }
-
-                // Email briefing sign-up card (positions 9, 29, 49...)
-                if (shouldShowEmailBriefing(storyIndex) && topic?.id && topicMetadata?.emailSubscriptionsEnabled) {
-                  items.push(
-                    <div key={`email-briefing-${storyIndex}`} className="w-full max-w-2xl">
-                      <InlineEmailSignupCard
-                        topicId={topic.id}
-                        topicName={topic.name}
-                        topicSlug={slug || ''}
-                        topicLogoUrl={topic.branding_config?.logo_url}
-                      />
-                    </div>
-                  );
-                }
-
-                return items;
-              });
-            })().flat()}
-            
+            {/* Optimization #1: Memoized feed items rendered below */}
+            {feedItems}
             {/* Universal bottom sentinel for infinite scroll */}
             {hasMore && (
               <div 
                 ref={(el) => {
                   if (el && lastStoryElementRef) {
                     lastStoryElementRef(el);
-                    console.log('🔭 Bottom sentinel mounted, infinite scroll active');
+                    if (import.meta.env.DEV) console.log('🔭 Bottom sentinel mounted, infinite scroll active');
                   }
-                }} 
+                }}
                 className="h-px w-full" 
                 aria-hidden="true" 
               />
