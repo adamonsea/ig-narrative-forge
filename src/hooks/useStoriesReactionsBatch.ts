@@ -48,7 +48,13 @@ export const useStoriesReactionsBatch = (storyIds: string[], topicId: string) =>
     }
 
     let isMounted = true;
-    setIsLoading(true);
+
+    // Optimization #4: Debounce 500ms to let content stabilize before batch RPC
+    const debounceId = setTimeout(() => {
+      if (!isMounted) return;
+      setIsLoading(true);
+      fetchBatchCounts();
+    }, 500);
 
     const fetchBatchCounts = async () => {
       try {
@@ -102,10 +108,9 @@ export const useStoriesReactionsBatch = (storyIds: string[], topicId: string) =>
       if (isMounted) setIsLoading(false);
     }, 5000);
 
-    fetchBatchCounts();
-
     return () => {
       isMounted = false;
+      clearTimeout(debounceId);
       clearTimeout(timeoutId);
     };
   }, [storyIds.join(','), topicId]); // Join IDs for stable dependency

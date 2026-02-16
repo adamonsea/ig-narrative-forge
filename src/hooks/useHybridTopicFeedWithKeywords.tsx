@@ -5,6 +5,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
 import { getCachedFeed, setCachedFeed, isCacheFresh, CachedStory, CachedTopic } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
+
+// Optimization #3: Strip production console.log - noop in prod, real log in dev
+const devLog = import.meta.env.DEV
+  ? (...args: any[]) => console.log(...args)
+  : (..._args: any[]) => {};
 interface Story {
   id: string;
   title: string;
