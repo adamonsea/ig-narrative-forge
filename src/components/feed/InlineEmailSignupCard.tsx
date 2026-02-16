@@ -14,6 +14,8 @@ interface InlineEmailSignupCardProps {
   topicLogoUrl?: string;
 }
 
+type FrequencyOption = 'daily' | 'weekly' | 'both';
+
 export const InlineEmailSignupCard = ({
   topicId,
   topicName,
@@ -27,6 +29,7 @@ export const InlineEmailSignupCard = ({
     () => localStorage.getItem(storageKey) === 'true'
   );
   const [email, setEmail] = useState('');
+  const [frequency, setFrequency] = useState<FrequencyOption>('daily');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -41,24 +44,26 @@ export const InlineEmailSignupCard = ({
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('secure-newsletter-signup', {
-        body: {
-          email: email.trim(),
-          topicId,
-          notificationType: 'daily',
-        },
-      });
+      const types: ('daily' | 'weekly')[] =
+        frequency === 'both' ? ['daily', 'weekly'] : [frequency];
 
-      if (error) throw error;
+      // Fire signup calls (sequentially to avoid race conditions on rate limiting)
+      for (const type of types) {
+        const { data, error } = await supabase.functions.invoke('secure-newsletter-signup', {
+          body: { email: email.trim(), topicId, notificationType: type },
+        });
+        if (error) throw error;
+      }
 
       // Mark as subscribed in localStorage
       localStorage.setItem(storageKey, 'true');
-      saveSubscriptionStatus(topicId, 'daily', true);
+      types.forEach((t) => saveSubscriptionStatus(topicId, t, true));
       setIsSubscribed(true);
 
+      const label = frequency === 'both' ? 'daily & weekly' : frequency;
       toast({
-        title: data?.pendingVerification ? 'Check your inbox!' : 'Subscribed!',
-        description: data?.message || `You're signed up for the ${topicName} briefing.`,
+        title: 'Check your inbox!',
+        description: `Confirm your email to start receiving ${label} briefings.`,
       });
     } catch (err) {
       console.error('Email signup error:', err);
@@ -66,9 +71,8 @@ export const InlineEmailSignupCard = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, isSubmitting, topicId, topicName, storageKey, toast]);
+  }, [email, isSubmitting, topicId, frequency, storageKey, toast]);
 
-  // Don't render if already subscribed
   if (isSubscribed) {
     return (
       <Card className="border-primary/20 bg-primary/5">
@@ -79,6 +83,13 @@ export const InlineEmailSignupCard = ({
       </Card>
     );
   }
+
+  const pillClass = (opt: FrequencyOption) =>
+    `px-3 py-1 rounded-full text-xs font-medium border cursor-pointer transition-colors ${
+      frequency === opt
+        ? 'bg-primary text-primary-foreground border-primary'
+        : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/40'
+    }`;
 
   return (
     <Card className="border-primary/20">
@@ -91,7 +102,20 @@ export const InlineEmailSignupCard = ({
           )}
           <h3 className="font-semibold text-sm">Get the {topicName} briefing</h3>
         </div>
-        <p className="text-xs text-muted-foreground">Daily or weekly — straight to your inbox</p>
+
+        {/* Frequency pills */}
+        <div className="flex gap-2">
+          <button type="button" className={pillClass('daily')} onClick={() => setFrequency('daily')}>
+            Daily
+          </button>
+          <button type="button" className={pillClass('weekly')} onClick={() => setFrequency('weekly')}>
+            Weekly
+          </button>
+          <button type="button" className={pillClass('both')} onClick={() => setFrequency('both')}>
+            Both
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
             type="email"
