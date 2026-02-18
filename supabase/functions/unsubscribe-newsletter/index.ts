@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Supabase Edge Functions rewrite text/html GET responses to text/plain,
 // so we redirect to the frontend app which renders the confirmation page.
-const APP_BASE_URL = 'https://breefly.lovable.app';
+const APP_BASE_URL = 'https://curatr.pro';
 
 serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
