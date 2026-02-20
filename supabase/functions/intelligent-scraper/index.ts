@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { getAdaptiveStrategyHint, updatePhase1Metrics } from '../_shared/phase1-scraping-improvements.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,10 +41,10 @@ serve(async (req) => {
     console.log(`🧠 Intelligent scraper starting for source: ${sourceId}`);
     console.log(`🎯 Target URL: ${feedUrl}`);
 
-    // Get source information and historical performance
+    // Get source information and historical performance (including Phase 1 columns)
     const { data: source, error: sourceError } = await supabase
       .from('content_sources')
-      .select('*, scraping_method, success_rate, articles_scraped')
+      .select('*, scraping_method, success_rate, articles_scraped, last_successful_method, last_method_execution_ms, quality_metrics')
       .eq('id', sourceId)
       .single();
 
@@ -52,19 +53,24 @@ serve(async (req) => {
       return createErrorResponse('Source not found', 404);
     }
 
-    // Determine optimal scraping strategy
+    // Phase 1: Check adaptive strategy memory first
+    const adaptiveHint = getAdaptiveStrategyHint(source);
+
+    // Determine optimal scraping strategy (with adaptive hint)
     const strategy = await determineOptimalStrategy(
       source, 
       feedUrl, 
       forceMethod, 
-      supabase
+      supabase,
+      adaptiveHint.shouldFastTrack ? adaptiveHint.method : null
     );
 
-    console.log(`🎲 Selected strategy: ${strategy.method} (priority: ${strategy.priority})`);
+    console.log(`🎲 Selected strategy: ${strategy.method} (priority: ${strategy.priority}, adaptive: ${adaptiveHint.shouldFastTrack})`);
 
     let result = null;
     let attempts = 0;
     const maxAttempts = 3;
+    const scrapeStartTime = Date.now();
     const methodsToTry = [strategy.method, ...strategy.fallbackMethods];
 
     // Execute scraping with intelligent fallbacks
@@ -82,15 +88,23 @@ serve(async (req) => {
         );
 
         if (result && result.success && result.articles_imported > 0) {
-          console.log(`✅ Method "${method}" succeeded with ${result.articles_imported} articles`);
+          const executionMs = Date.now() - scrapeStartTime;
+          console.log(`✅ Method "${method}" succeeded with ${result.articles_imported} articles in ${executionMs}ms`);
           
-          // Update source with successful method
+          // Update source with successful method (existing)
           await updateSourcePerformance(supabase, sourceId, method, true, result.articles_imported);
+          
+          // Phase 1: Update adaptive memory, quality metrics, and domain profile
+          await updatePhase1Metrics(
+            supabase, sourceId, method, executionMs,
+            result.articles || [], source.quality_metrics, feedUrl
+          );
           
           return new Response(JSON.stringify({
             ...result,
             method_used: method,
             attempts_made: attempts,
+            execution_ms: executionMs,
             strategy_info: strategy
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -139,7 +153,8 @@ async function determineOptimalStrategy(
   source: any, 
   feedUrl: string, 
   forceMethod: string | null,
-  supabase: any
+  supabase: any,
+  adaptiveMethod?: string | null
 ): Promise<ScrapingStrategy> {
   
   // If method is forced, use it
@@ -159,10 +174,20 @@ async function determineOptimalStrategy(
     .not('success_rate', 'is', null)
     .order('success_rate', { ascending: false });
 
+  // Phase 1: If adaptive memory suggests a method, prioritize it
+  if (adaptiveMethod) {
+    return {
+      method: adaptiveMethod,
+      priority: 0, // Highest priority — remembered from last success
+      fallbackMethods: getFallbackMethods(adaptiveMethod),
+      avgSuccessRate: 95 // High confidence since it worked before
+    };
+  }
+
   // Analyze URL patterns to predict best method
   const urlAnalysis = analyzeUrlPatterns(feedUrl);
   
-  // EMERGENCY FIX: Enhanced priority-based method selection with better fallbacks
+  // Enhanced priority-based method selection with better fallbacks
   const strategies = [
     {
       method: 'rss_discovery',

@@ -669,7 +669,10 @@ export type Database = {
           is_whitelisted: boolean | null
           last_failure_at: string | null
           last_failure_reason: string | null
+          last_method_execution_ms: number | null
           last_scraped_at: string | null
+          last_successful_method: string | null
+          quality_metrics: Json | null
           recommend_replacement: boolean | null
           region: string | null
           scrape_frequency_hours: number | null
@@ -699,7 +702,10 @@ export type Database = {
           is_whitelisted?: boolean | null
           last_failure_at?: string | null
           last_failure_reason?: string | null
+          last_method_execution_ms?: number | null
           last_scraped_at?: string | null
+          last_successful_method?: string | null
+          quality_metrics?: Json | null
           recommend_replacement?: boolean | null
           region?: string | null
           scrape_frequency_hours?: number | null
@@ -729,7 +735,10 @@ export type Database = {
           is_whitelisted?: boolean | null
           last_failure_at?: string | null
           last_failure_reason?: string | null
+          last_method_execution_ms?: number | null
           last_scraped_at?: string | null
+          last_successful_method?: string | null
+          quality_metrics?: Json | null
           recommend_replacement?: boolean | null
           region?: string | null
           scrape_frequency_hours?: number | null
