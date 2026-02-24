@@ -1,76 +1,95 @@
 
-# Fix Broken Email Unsubscribe Links
 
-## The Problem
+# Holiday Mode Automation -- Root Cause Analysis and Fix Plan
 
-The unsubscribe links in daily and weekly briefing emails point to `/feed/{slug}?unsubscribe=daily` (or `weekly`), but:
+## Problem Summary
 
-1. No frontend code reads the `?unsubscribe` query parameter
-2. No backend endpoint processes unsubscribe requests
-3. Clicking "Unsubscribe" just loads the feed page -- nothing happens
+Holiday mode is supposed to run a 3-step pipeline: **Gather → Simplify → Illustrate**. Currently only step 1 (gathering) works. Steps 2 and 3 are broken due to three distinct blockers.
 
-This is also a GDPR compliance issue: subscribers must be able to unsubscribe easily.
+---
 
-## The Solution
+## Root Cause Analysis
 
-Build a secure, token-based unsubscribe flow with two parts:
+### Blocker 1: `auto-simplify-queue` requires a legacy bridge row that doesn't exist
 
-### 1. Create an `unsubscribe-newsletter` edge function
+The `auto-simplify-queue` function (runs every 10 minutes via cron) finds qualifying articles but then tries to look up a matching row in the legacy `articles` table by URL. For multi-tenant articles, no such bridge row exists. The logs confirm this -- **every single qualifying article is skipped with "no articles entry"**:
 
-A new edge function that accepts a signed unsubscribe token and deactivates the subscription. Each email will include a unique, per-subscriber unsubscribe URL so no one can unsubscribe someone else.
-
-- Accepts a token via query param (GET request for one-click unsubscribe)
-- Looks up the subscription by token
-- Sets `is_active = false` on the matching `topic_newsletter_signups` row
-- Returns an HTML page confirming the unsubscribe (not JSON -- this is opened in a browser)
-
-### 2. Generate per-subscriber unsubscribe tokens
-
-Update `send-email-newsletter/index.ts` to:
-- Generate a unique unsubscribe token per recipient (using `crypto.randomUUID()`)
-- Store it in a new `unsubscribe_token` column on `topic_newsletter_signups`
-- Pass the full unsubscribe URL to the email template as `unsubscribeUrl`
-
-The unsubscribe URL will be: `https://{supabase}/functions/v1/unsubscribe-newsletter?token={uuid}`
-
-### 3. Database migration
-
-Add an `unsubscribe_token` column to `topic_newsletter_signups`:
-```sql
-ALTER TABLE topic_newsletter_signups
-  ADD COLUMN IF NOT EXISTS unsubscribe_token uuid DEFAULT gen_random_uuid();
-
-CREATE INDEX IF NOT EXISTS idx_newsletter_unsubscribe_token
-  ON topic_newsletter_signups(unsubscribe_token);
+```text
+⏭️ Skipping article cfa2f172-...: no articles entry
+⏭️ Skipping article 82095b34-...: no articles entry
+⏭️ Skipping article bd9e083d-...: no articles entry
+... (20 articles found, 0 queued)
 ```
 
-## Technical Details
+The function requires `article_id` (legacy FK) to insert into the queue, but the `queue-processor` already handles multi-tenant jobs perfectly well using just `topic_article_id` + `shared_content_id` -- no `article_id` needed.
 
-### New file: `supabase/functions/unsubscribe-newsletter/index.ts`
+### Blocker 2: `auto-simplify-queue` never calls the queue processor
 
-- Configured with `verify_jwt = false` (public access, opened from email)
-- GET handler: reads `token` from query string
-- Uses service role to look up and deactivate the subscription
-- Returns a simple, branded HTML confirmation page (not a redirect to the app)
-- Handles edge cases: invalid token, already unsubscribed
+Even if articles were successfully queued, `auto-simplify-queue` only inserts into `content_generation_queue` and returns. It never invokes `queue-processor` to actually generate the stories. The only cron that calls `queue-processor` is `automated-scheduler` (runs at 2am, 6am, 6pm) -- so queued items could sit for hours before processing.
 
-### Modified: `supabase/functions/send-email-newsletter/index.ts`
+### Blocker 3: `auto-illustrate-stories` is never triggered
 
-- When fetching subscribers, also select `id` and `unsubscribe_token`
-- For each recipient, build the unsubscribe URL using their token
-- Pass `unsubscribeUrl` to the email template render call
+No cron job calls `auto-illustrate-stories`. It's only called inside `eezee-automation-service`, which itself has **zero cron triggers** and **zero recent logs** -- it's completely orphaned code. So even after stories are created, illustration never happens automatically.
 
-### Modified: `supabase/config.toml`
+---
 
-- Add `[functions.unsubscribe-newsletter]` with `verify_jwt = false`
+## Fix Plan
 
-### No frontend changes needed
+Rewrite `auto-simplify-queue` to be a complete Holiday Mode orchestrator:
 
-The current fallback URL (`/feed/{slug}?unsubscribe=...`) becomes irrelevant once proper per-subscriber URLs are passed. No need to add query-param handling to the feed page.
+### Change 1: Remove the legacy bridge row requirement
 
-## Flow
+Instead of the current flow:
+```text
+topic_articles → shared_article_content.url → articles.source_url → article_id
+```
 
-1. User receives email with unsubscribe link containing their unique token
-2. User clicks link, which opens the edge function URL directly
-3. Edge function deactivates their subscription and shows a confirmation page
-4. Done -- no login, no extra clicks required
+Queue directly as multi-tenant:
+```text
+topic_articles → insert queue with (topic_article_id, shared_content_id) only
+```
+
+This matches how `eezee-automation-service` Phase 3b already queues (lines 320-331) and how `queue-processor` already handles multi-tenant jobs (line 86-87).
+
+### Change 2: Invoke `queue-processor` after queuing
+
+After all articles are queued, call `supabase.functions.invoke('queue-processor')` to immediately process them into stories. This closes the gap between queuing and processing.
+
+### Change 3: Invoke `auto-illustrate-stories` after processing
+
+After the queue processor completes, call `auto-illustrate-stories` for each topic that had articles processed. This completes the full pipeline: Gather → Simplify → Illustrate.
+
+### Change 4: Mark articles as `processed` when queued
+
+Currently `auto-simplify-queue` doesn't update `topic_articles.processing_status`, so the same articles get re-evaluated every 10 minutes (and skipped via the "already queued" check). Update status to `processed` on successful queue insertion, matching `eezee-automation-service` behavior.
+
+---
+
+## Technical Detail
+
+### Files Modified
+- `supabase/functions/auto-simplify-queue/index.ts` -- rewrite core logic
+
+### What's removed
+- The entire "bridge row" lookup chain (lines 88-118): fetching `shared_article_content` URLs, looking up `articles` by `source_url`, requiring `article_id`
+- The `article_id` field from queue inserts
+
+### What's added
+- Direct multi-tenant queue insertion with just `topic_article_id` + `shared_content_id`
+- `topic_articles.processing_status` update to `processed` after queuing
+- Story existence check via `topic_article_id` (not `article_id`)
+- Post-queue invocation of `queue-processor`
+- Post-processing invocation of `auto-illustrate-stories` per topic
+- Topic-level tracking of which topics had new items queued (for targeted illustration)
+
+### What stays the same
+- The topic settings query (line 37-40) -- already correctly filters for holiday mode
+- The quality threshold filtering (line 71-78)
+- The duplicate queue check (lines 134-149)
+- The system log at the end
+
+### Safety
+- All changes are within `auto-simplify-queue` only -- no other functions modified
+- `queue-processor` and `auto-illustrate-stories` already work correctly (confirmed by existing logs)
+- Fallback: if `queue-processor` or `auto-illustrate-stories` invocation fails, it logs the error but doesn't break the queuing step
+
