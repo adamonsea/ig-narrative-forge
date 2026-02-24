@@ -566,7 +566,7 @@ export type Database = {
       content_generation_queue: {
         Row: {
           ai_provider: string | null
-          article_id: string
+          article_id: string | null
           attempts: number
           audience_expertise:
             | Database["public"]["Enums"]["audience_expertise"]
@@ -587,7 +587,7 @@ export type Database = {
         }
         Insert: {
           ai_provider?: string | null
-          article_id: string
+          article_id?: string | null
           attempts?: number
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
@@ -608,7 +608,7 @@ export type Database = {
         }
         Update: {
           ai_provider?: string | null
-          article_id?: string
+          article_id?: string | null
           attempts?: number
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
