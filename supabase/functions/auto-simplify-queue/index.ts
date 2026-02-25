@@ -53,6 +53,44 @@ Deno.serve(async (req) => {
 
     console.log(`📋 Found ${topicSettings.length} topics with auto-simplify enabled`);
 
+    // 1b. Orphan recovery: reset 'processed' articles back to 'new' if they have no story and no active queue item
+    const topicIdsForRecovery = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
+    for (const tid of topicIdsForRecovery) {
+      const { data: orphans } = await supabase
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', tid)
+        .eq('processing_status', 'processed');
+
+      if (orphans && orphans.length > 0) {
+        for (const orphan of orphans) {
+          // Check if a story exists for this topic_article
+          const { data: existingStory } = await supabase
+            .from('stories')
+            .select('id')
+            .eq('topic_article_id', orphan.id)
+            .maybeSingle();
+          if (existingStory) continue;
+
+          // Check if an active queue item exists
+          const { data: activeQueue } = await supabase
+            .from('content_generation_queue')
+            .select('id')
+            .eq('topic_article_id', orphan.id)
+            .in('status', ['pending', 'processing'])
+            .maybeSingle();
+          if (activeQueue) continue;
+
+          // Orphan: no story, no active queue item — reset to 'new'
+          console.log(`🔁 Resetting orphaned article ${orphan.id} from 'processed' to 'new'`);
+          await supabase
+            .from('topic_articles')
+            .update({ processing_status: 'new' })
+            .eq('id', orphan.id);
+        }
+      }
+    }
+
     let totalQueued = 0;
     const maxPerTopic = 20;
     const topicsWithNewItems: string[] = [];

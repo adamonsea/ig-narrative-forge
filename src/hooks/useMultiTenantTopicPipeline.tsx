@@ -225,7 +225,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Process ONLY multi-tenant articles (including snippets) that are still available for processing
       const rawMultiTenantArticles = (multiTenantArticlesResult.data || [])
         .filter((item: any) => 
-          ['new', 'processed'].includes(item.processing_status) && // Show both new and processed articles
+          item.processing_status === 'new' && // Only show genuinely new, unprocessed articles
           !publishedMultiTenantIds.has(item.id) &&
           !queuedMultiTenantIds.has(item.id) &&
           !isParliamentaryArticle(item) // Exclude parliamentary items deterministically
@@ -1233,7 +1233,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       // Process and append new articles
       const newArticles = (result.data || [])
-        .filter((item: any) => ['new', 'processed'].includes(item.processing_status))
+        .filter((item: any) => item.processing_status === 'new')
         .map((item: any) => ({
           id: item.id,
           shared_content_id: item.shared_content_id,
