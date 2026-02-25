@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, ExternalLink, Landmark, ThumbsUp, ThumbsDown, ScrollText } from 'lucide-react';
+import { ExternalLink, Landmark, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { ParliamentaryDigestVote } from '@/hooks/useParliamentaryDigestCards';
 
 interface ParliamentaryDigestCardProps {
@@ -26,53 +25,31 @@ const getPartyColor = (party: string | null): string => {
 const getVoteIcon = (direction: string | null) => {
   switch (direction?.toLowerCase()) {
     case 'aye':
-      return <ThumbsUp className="w-4 h-4 text-green-500" />;
+      return <ThumbsUp className="w-3.5 h-3.5 text-green-500" />;
     case 'no':
-      return <ThumbsDown className="w-4 h-4 text-red-500" />;
+      return <ThumbsDown className="w-3.5 h-3.5 text-red-500" />;
     default:
       return null;
   }
 };
 
-const getCategoryColor = (category: string | null): string => {
-  const colors: Record<string, string> = {
-    'Economy': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    'NHS': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    'Education': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-    'Housing': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    'Environment': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    'Transport': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-    'Defence': 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
-    'Justice': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    'Immigration': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
-    'Welfare': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
-  };
-  return colors[category || ''] || 'bg-muted text-muted-foreground';
-};
-
 export const ParliamentaryDigestCard = ({ votes, topicSlug }: ParliamentaryDigestCardProps) => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const votesPerPage = 5;
+  const [expanded, setExpanded] = useState(false);
 
   if (!votes || votes.length === 0) return null;
 
-  const totalPages = Math.ceil(votes.length / votesPerPage);
-  const startIdx = currentPage * votesPerPage;
-  const visibleVotes = votes.slice(startIdx, startIdx + votesPerPage);
-  const mpName = votes[0]?.mp_name || 'Your MP';
+  const rebellionCount = votes.filter(v => v.is_rebellion).length;
+  const mpNames = [...new Set(votes.map(v => v.mp_name).filter(Boolean))];
+  const mpLabel = mpNames.length === 1 ? mpNames[0] : `${mpNames.length} MPs`;
 
-  const handlePrev = () => {
-    setCurrentPage(prev => (prev > 0 ? prev - 1 : totalPages - 1));
-  };
+  // Show top 3 by default, all when expanded
+  const visibleVotes = expanded ? votes : votes.slice(0, 3);
+  const hasMore = votes.length > 3;
 
-  const handleNext = () => {
-    setCurrentPage(prev => (prev < totalPages - 1 ? prev + 1 : 0));
-  };
-
-  // Get unique date range
+  // Date range
   const dates = votes.map(v => v.vote_date).filter(Boolean).sort();
   const dateRange = dates.length > 0 
-    ? `${format(new Date(dates[0]!), 'MMM d')} - ${format(new Date(dates[dates.length - 1]!), 'MMM d')}`
+    ? `${format(new Date(dates[0]!), 'MMM d')} – ${format(new Date(dates[dates.length - 1]!), 'MMM d')}`
     : 'This Week';
 
   return (
@@ -81,36 +58,38 @@ export const ParliamentaryDigestCard = ({ votes, topicSlug }: ParliamentaryDiges
       <div className="bg-muted/50 px-4 py-3 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ScrollText className="w-4 h-4 text-primary" />
-            <span className="font-semibold text-sm">Weekly Voting Digest</span>
+            <Landmark className="w-4 h-4 text-primary" />
+            <span className="font-semibold text-sm">This Week in Parliament</span>
           </div>
-          <Badge variant="secondary" className="text-xs">
-            {votes.length} votes
-          </Badge>
+          <span className="text-xs text-muted-foreground">{dateRange}</span>
         </div>
+        {/* Summary line */}
         <p className="text-xs text-muted-foreground mt-1">
-          {mpName}'s recent votes · {dateRange}
+          {mpLabel} voted {votes.length} time{votes.length !== 1 ? 's' : ''} this week.
+          {rebellionCount > 0 && (
+            <span className="text-red-500 font-medium"> {rebellionCount} rebellion{rebellionCount !== 1 ? 's' : ''}.</span>
+          )}
         </p>
       </div>
 
       <CardContent className="p-0">
-        {/* Vote List */}
+        {/* Vote list */}
         <div className="divide-y divide-border">
           {visibleVotes.map((vote) => (
-            <div key={vote.id} className="p-3 hover:bg-muted/30 transition-colors">
-              <div className="flex items-start gap-3">
-                {/* Party indicator */}
-                <div className={`w-1 h-full min-h-[40px] rounded-full ${getPartyColor(vote.party)}`} />
+            <div key={vote.id} className="px-4 py-3">
+              <div className="flex items-start gap-2.5">
+                {/* Party bar */}
+                <div className={`w-1 min-h-[32px] rounded-full shrink-0 mt-0.5 ${getPartyColor(vote.party)}`} />
                 
                 <div className="flex-1 min-w-0">
-                  {/* Title and vote direction */}
+                  {/* Title + vote direction */}
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="text-sm font-medium text-foreground line-clamp-2 flex-1">
                       {vote.vote_title || 'Parliamentary Vote'}
                     </h4>
                     <div className="flex items-center gap-1 shrink-0">
                       {getVoteIcon(vote.vote_direction)}
-                      <span className="text-xs font-medium uppercase text-muted-foreground">
+                      <span className="text-[10px] font-medium uppercase text-muted-foreground">
                         {vote.vote_direction}
                       </span>
                     </div>
@@ -118,13 +97,14 @@ export const ParliamentaryDigestCard = ({ votes, topicSlug }: ParliamentaryDiges
                   
                   {/* Meta row */}
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground">{vote.mp_name}</span>
                     {vote.vote_date && (
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(vote.vote_date), 'MMM d')}
+                        · {format(new Date(vote.vote_date), 'MMM d')}
                       </span>
                     )}
                     {vote.vote_category && (
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getCategoryColor(vote.vote_category)}`}>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                         {vote.vote_category}
                       </Badge>
                     )}
@@ -138,7 +118,7 @@ export const ParliamentaryDigestCard = ({ votes, topicSlug }: ParliamentaryDiges
                         href={vote.vote_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline inline-flex items-center gap-0.5"
+                        className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5 ml-auto"
                       >
                         Details
                         <ExternalLink className="w-2.5 h-2.5" />
@@ -151,43 +131,18 @@ export const ParliamentaryDigestCard = ({ votes, topicSlug }: ParliamentaryDiges
           ))}
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handlePrev}
-              className="gap-1 h-8"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </Button>
-            
-            {/* Page dots */}
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }).map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentPage(idx)}
-                  className={`w-2 h-2 rounded-full transition-colors p-[19px] -m-[19px] ${
-                    idx === currentPage ? 'bg-primary' : 'bg-muted-foreground/30'
-                  }`}
-                  style={{ width: '10px', height: '10px', padding: 0, margin: '0 2px' }}
-                />
-              ))}
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleNext}
-              className="gap-1 h-8"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+        {/* Expand/collapse */}
+        {hasMore && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border bg-muted/30 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {expanded ? (
+              <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
+            ) : (
+              <>See all {votes.length} votes <ChevronDown className="w-3.5 h-3.5" /></>
+            )}
+          </button>
         )}
       </CardContent>
     </Card>

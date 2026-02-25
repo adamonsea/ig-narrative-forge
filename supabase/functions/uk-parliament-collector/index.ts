@@ -1,6 +1,6 @@
 // UK Parliament Voting Record Collector
 // Fetches comprehensive MP voting records for regional topics
-// Supports daily individual posts and weekly roundup posts
+// Stores data in parliamentary_mentions ONLY — no stories/slides created
 
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -22,7 +22,6 @@ interface VotingRecord {
   region_mentioned: string;
   relevance_score: number;
   source_api: string;
-  // New enhanced fields
   party_whip_vote?: 'aye' | 'no' | 'free_vote';
   is_rebellion: boolean;
   vote_category: string;
@@ -187,7 +186,7 @@ serve(async (req) => {
     const constituencies = REGIONAL_CONSTITUENCIES[region] || [region];
     
     if (mode === 'daily') {
-      // First, fetch tracked MPs for validation
+      // Fetch tracked MPs for validation
       const { data: trackedMPs, error: trackedError } = await supabase
         .from('topic_tracked_mps')
         .select('mp_id, mp_name, constituency')
@@ -212,25 +211,15 @@ serve(async (req) => {
       
       console.log(`📋 Validated ${trackedMPs?.length || 0} tracked MPs for filtering`);
       
-      // Backfill any existing votes that don't have stories, but ONLY for tracked MPs
-      console.log('🔄 Checking for existing votes without stories...');
-      const { data: orphanedVotes, error: orphanedError } = await supabase
-        .from('parliamentary_mentions')
-        .select('*')
-        .eq('topic_id', topicId)
-        .is('story_id', null)
-        .eq('is_weekly_roundup', false);
-      
-      // Clean up ALL invalid votes, not just orphaned ones
-      console.log('🧹 Cleaning up all invalid parliamentary mentions...');
+      // Clean up votes from untracked MPs
+      console.log('🧹 Cleaning up invalid parliamentary mentions...');
       const { data: allVotes, error: allVotesError } = await supabase
         .from('parliamentary_mentions')
-        .select('*')
+        .select('id, mp_name, constituency, import_metadata')
         .eq('topic_id', topicId);
       
       if (!allVotesError && allVotes) {
         let deletedCount = 0;
-        let validCount = 0;
         
         for (const vote of allVotes) {
           const mpId = vote.import_metadata?.mp_id;
@@ -238,71 +227,17 @@ serve(async (req) => {
           const isTracked = (mpId && trackedByMpId.has(mpId)) || trackedByNameConstituency.has(nameConstKey);
           
           if (!isTracked) {
-            console.log(`🗑️ Deleting vote from untracked MP: ${vote.mp_name} (${vote.constituency})`);
             await supabase
               .from('parliamentary_mentions')
               .delete()
               .eq('id', vote.id);
             deletedCount++;
-          } else {
-            validCount++;
           }
         }
         
-        console.log(`✅ Cleanup complete: ${validCount} valid votes kept, ${deletedCount} invalid votes deleted`);
-      }
-      
-      // Now process orphaned votes (votes without stories) from tracked MPs only
-      if (!orphanedError && orphanedVotes && orphanedVotes.length > 0) {
-        console.log(`📝 Found ${orphanedVotes.length} votes without stories - creating stories...`);
-        
-        let processedCount = 0;
-        
-        for (const vote of orphanedVotes) {
-          try {
-            const mpId = vote.import_metadata?.mp_id;
-            const nameConstKey = `${normalizeName(vote.mp_name)}|${normalizeConstituency(vote.constituency)}`;
-            const isTracked = (mpId && trackedByMpId.has(mpId)) || trackedByNameConstituency.has(nameConstKey);
-            
-            if (isTracked) {
-              await createDailyVoteStory(supabase, vote, topicId);
-              processedCount++;
-            }
-          } catch (error) {
-            console.error(`Error creating story for vote ${vote.id}:`, error);
-          }
+        if (deletedCount > 0) {
+          console.log(`✅ Deleted ${deletedCount} votes from untracked MPs`);
         }
-        
-        console.log(`✅ Created ${processedCount} stories for tracked MPs`);
-      }
-      
-      // Check for stories with mismatched MP names and delete them
-      console.log('🔍 Checking for stories with mismatched MP names...');
-      const { data: storiesWithMentions, error: mentionsError } = await supabase
-        .from('parliamentary_mentions')
-        .select('id, mp_name, story_id, stories(id, title)')
-        .eq('topic_id', topicId)
-        .not('story_id', 'is', null);
-      
-      if (!mentionsError && storiesWithMentions) {
-        let mismatchCount = 0;
-        for (const mention of storiesWithMentions) {
-          if (mention.stories && !mention.stories.title.includes(mention.mp_name)) {
-            console.log(`🗑️ Deleting story with mismatched MP name: "${mention.stories.title}" (should contain "${mention.mp_name}")`);
-            
-            // Delete the story via cascade function
-            const { error: deleteError } = await supabase.functions.invoke('delete-story-cascade', {
-              body: { story_id: mention.stories.id }
-            });
-            
-            if (deleteError) {
-              console.error(`Error deleting mismatched story ${mention.stories.id}:`, deleteError);
-            } else {
-              mismatchCount++;
-            }
-          }
-        }
-        console.log(`✅ Deleted ${mismatchCount} stories with mismatched MP names`);
       }
       
       // Daily collection: get votes from tracked MPs
@@ -327,14 +262,20 @@ serve(async (req) => {
       );
       
     } else if (mode === 'weekly') {
-      // Weekly collection: create roundup of this week's votes
-      await createWeeklyRoundup(supabase, topicId, region, constituencies, topic);
+      // Weekly mode now just ensures all votes are collected — no story creation
+      console.log('Weekly mode: running daily collection to ensure completeness');
+      const votes = await collectDailyVotes(topicId, region, supabase);
+      
+      if (votes.length > 0) {
+        await storeDailyVotes(supabase, votes, topicId);
+      }
       
       return new Response(
         JSON.stringify({
           success: true,
           mode: 'weekly',
-          message: 'Weekly roundup created'
+          message: 'Weekly collection completed (mentions only)',
+          votesCollected: votes.length
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -352,7 +293,7 @@ serve(async (req) => {
   }
 });
 
-// Collect votes from the last 2 days for daily posts
+// Collect votes from the last 14 days for tracked MPs
 async function collectDailyVotes(
   topicId: string,
   region: string,
@@ -375,7 +316,6 @@ async function collectDailyVotes(
   if (!trackedMPs || trackedMPs.length === 0) {
     console.log('⚠️ No tracked MPs found. Running auto-detection...');
     
-    // Auto-detect MPs for this region
     const { error: autoDetectError } = await supabase.functions.invoke('auto-detect-regional-mps', {
       body: { topicId, region }
     });
@@ -385,7 +325,6 @@ async function collectDailyVotes(
       throw new Error('No MPs tracked and auto-detection failed');
     }
     
-    // Retry fetching after auto-detection
     const { data: retryMPs } = await supabase
       .from('topic_tracked_mps')
       .select('*')
@@ -410,7 +349,6 @@ async function collectDailyVotes(
       const mpInfo = await fetchCurrentMpForConstituency(mp.constituency);
       if (mpInfo) {
         mp.mp_party = mpInfo.party || 'Unknown';
-        // Update the database record
         await supabase
           .from('topic_tracked_mps')
           .update({ mp_party: mp.mp_party })
@@ -419,7 +357,6 @@ async function collectDailyVotes(
     }
     
     console.log(`📊 Collecting votes for ${mp.mp_name} (${mp.mp_party})`);
-    console.log(`   MP ID: ${mp.mp_id}, Constituency: ${mp.constituency}`);
     
     try {
       const votes = await collectVotesForMP(mp.mp_id, mp.mp_name, mp.mp_party, mp.constituency, region);
@@ -456,18 +393,15 @@ async function collectVotesForMP(
     
     const divisionsData = await divisionsResponse.json();
     
-    // Filter to last 14 days (extended for better coverage and resilience to automation gaps)
+    // Filter to last 14 days
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 14);
     const endDate = new Date();
     
-    console.log(`   Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
-    
     for (const division of divisionsData || []) {
       const voteDate = new Date(division.Date);
-      if (voteDate < startDate) continue; // Skip older votes
+      if (voteDate < startDate) continue;
       
-      // Get detailed division info
       const detailResponse = await fetch(
         `https://commonsvotes-api.parliament.uk/data/division/${division.DivisionId}.json`
       );
@@ -476,7 +410,6 @@ async function collectVotesForMP(
       
       const detailData = await detailResponse.json();
       
-      // Find how this MP voted
       const ayeVote = detailData.Ayes?.find((v: any) => v.MemberId === mpId);
       const noVote = detailData.Noes?.find((v: any) => v.MemberId === mpId);
       const voteDirection = ayeVote ? 'aye' : noVote ? 'no' : 'abstain';
@@ -486,27 +419,19 @@ async function collectVotesForMP(
       const outcome = ayeCount > noCount ? 'passed' : 'rejected';
       const title = division.Title || '';
       
-      // Extract bill context from Parliament API
       const billDescription = detailData.Description || '';
       const billStage = detailData.PublicationUpdated || detailData.DivisionWasExclusivelyWhileOnline ? 'Committee' : 'Main Chamber';
       
-      // Detect party whip and rebellion
       const partyWhip = await detectPartyWhip(detailData, party);
       const isRebellion = detectRebellion(voteDirection, partyWhip);
-      
-      // Categorize the vote
       const category = categorizeVote(title);
-      
-      // Calculate national relevance
       const nationalRelevance = calculateNationalRelevance(title, ayeCount, noCount);
-      
-      // Generate local impact summary
       const localImpact = generateLocalImpact(title, region, category);
       
-      // Determine if this is a MAJOR vote (rebellion, close vote, high relevance, or major policy)
+      // Determine if this is a MAJOR vote
       const totalVotes = ayeCount + noCount;
       const voteMargin = totalVotes > 0 ? Math.abs(ayeCount - noCount) / totalVotes : 1;
-      const isCloseVote = voteMargin < 0.1; // Less than 10% margin
+      const isCloseVote = voteMargin < 0.1;
       const isMajorPolicy = ['Economy', 'NHS', 'Education', 'Housing'].includes(category) && totalVotes > 400;
       const isMajorVote = isRebellion || isCloseVote || nationalRelevance > 75 || isMajorPolicy;
       
@@ -514,13 +439,13 @@ async function collectVotesForMP(
         mention_type: 'vote',
         mp_name: mpName,
         constituency: constituency,
-        party: party || 'Unknown', // Ensure party is never null
+        party: party || 'Unknown',
         vote_title: title,
         vote_date: voteDate.toISOString().split('T')[0],
         vote_direction: voteDirection as 'aye' | 'no' | 'abstain',
         vote_url: `https://votes.parliament.uk/votes/commons/division/${division.DivisionId}`,
         region_mentioned: region,
-        relevance_score: 75, // Default relevance since we track all MP votes
+        relevance_score: 75,
         source_api: 'uk_parliament_commons_votes',
         party_whip_vote: partyWhip,
         is_rebellion: isRebellion,
@@ -562,7 +487,6 @@ async function detectPartyWhip(
   const ayes = divisionData.Ayes || [];
   const noes = divisionData.Noes || [];
   
-  // Count party members in each lobby
   const partyAyes = ayes.filter((v: any) => v.Party === party).length;
   const partyNoes = noes.filter((v: any) => v.Party === party).length;
   const totalPartyVotes = partyAyes + partyNoes;
@@ -571,14 +495,12 @@ async function detectPartyWhip(
   
   const ayePercentage = partyAyes / totalPartyVotes;
   
-  // If 70%+ voted one way, that's likely the whip
   if (ayePercentage >= 0.7) return 'aye';
   if (ayePercentage <= 0.3) return 'no';
   
   return 'free_vote';
 }
 
-// Detect if MP rebelled against party line
 function detectRebellion(
   mpVote: 'aye' | 'no' | 'abstain',
   partyWhip?: 'aye' | 'no' | 'free_vote'
@@ -586,11 +508,9 @@ function detectRebellion(
   if (!partyWhip || partyWhip === 'free_vote' || mpVote === 'abstain') {
     return false;
   }
-  
   return mpVote !== partyWhip;
 }
 
-// Categorize vote by analyzing title keywords
 function categorizeVote(title: string): string {
   const lower = title.toLowerCase();
   
@@ -608,23 +528,19 @@ function categorizeVote(title: string): string {
   return 'General Legislation';
 }
 
-// Calculate national relevance score (0-100)
 function calculateNationalRelevance(title: string, ayeCount: number, noCount: number): number {
-  let score = 50; // Base score
+  let score = 50;
   
   const totalVotes = ayeCount + noCount;
   const margin = Math.abs(ayeCount - noCount);
   const marginPercentage = margin / totalVotes;
   
-  // High turnout = more important
   if (totalVotes > 500) score += 20;
   else if (totalVotes > 400) score += 10;
   
-  // Close vote = more significant
-  if (marginPercentage < 0.1) score += 20; // Within 10%
-  else if (marginPercentage < 0.2) score += 10; // Within 20%
+  if (marginPercentage < 0.1) score += 20;
+  else if (marginPercentage < 0.2) score += 10;
   
-  // Budget/major bills
   if (title.toLowerCase().includes('budget') || 
       title.toLowerCase().includes('finance bill') ||
       title.toLowerCase().includes('spending review')) {
@@ -634,46 +550,36 @@ function calculateNationalRelevance(title: string, ayeCount: number, noCount: nu
   return Math.min(100, Math.max(0, score));
 }
 
-// Generate local impact summary
 function generateLocalImpact(title: string, region: string, category: string): string {
-  const lower = title.toLowerCase();
-  
   if (category === 'Housing') {
-    return `This ${title.toLowerCase().includes('rent') ? 'rental' : 'housing'} legislation will affect ${region} residents, particularly in terms of ${lower.includes('afford') ? 'housing affordability' : 'local development'}.`;
+    return `This ${title.toLowerCase().includes('rent') ? 'rental' : 'housing'} legislation will affect ${region} residents, particularly in terms of ${title.toLowerCase().includes('afford') ? 'housing affordability' : 'local development'}.`;
   }
-  
   if (category === 'Transport') {
     return `Transport infrastructure decisions impact ${region}'s connectivity and local commuters' daily journeys.`;
   }
-  
   if (category === 'NHS') {
     return `NHS funding and service decisions directly affect healthcare provision for ${region} residents.`;
   }
-  
   if (category === 'Education') {
     return `Education policy affects schools and families across ${region}, including funding and curriculum standards.`;
   }
-  
   if (category === 'Environment') {
     return `Environmental legislation impacts ${region}'s local environment, green spaces, and sustainability goals.`;
   }
-  
   return `This legislative decision at Westminster affects ${region} as part of national policy implementation.`;
 }
 
-// Store daily votes as individual stories
+// Store daily votes as mentions only — no stories or slides created
 async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: string) {
-  console.log(`Storing ${votes.length} daily votes`);
+  console.log(`Storing ${votes.length} daily votes (mentions only)`);
 
   for (const vote of votes) {
     try {
       // Validate that this MP is actually tracked for this topic
-      // Prefer mp_id lookup for robustness, fallback to name+constituency
       const mpId = vote.import_metadata?.mp_id;
       
       let trackedMp;
       if (mpId) {
-        // Primary: lookup by mp_id
         const { data, error } = await supabase
           .from('topic_tracked_mps')
           .select('mp_id, mp_name, constituency')
@@ -682,23 +588,18 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
           .eq('tracking_enabled', true)
           .maybeSingle();
         
-        if (error) {
-          console.error('Error checking tracked MPs by mp_id:', error);
-        }
+        if (error) console.error('Error checking tracked MPs by mp_id:', error);
         trackedMp = data;
       }
       
       if (!trackedMp) {
-        // Fallback: lookup by normalized name + constituency
         const { data: allTracked, error: allError } = await supabase
           .from('topic_tracked_mps')
           .select('mp_id, mp_name, constituency')
           .eq('topic_id', topicId)
           .eq('tracking_enabled', true);
         
-        if (allError) {
-          console.error('Error checking tracked MPs by name:', allError);
-        }
+        if (allError) console.error('Error checking tracked MPs by name:', allError);
         
         trackedMp = (allTracked || []).find(mp => 
           normalizeName(mp.mp_name) === normalizeName(vote.mp_name) &&
@@ -706,28 +607,26 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
         );
       }
       
-      // Skip if MP is not tracked for this topic
       if (!trackedMp) {
-        console.log(`⏭️ Skipping vote for ${vote.mp_name} (${vote.constituency}) - not tracked for this topic`);
+        console.log(`⏭️ Skipping vote for ${vote.mp_name} (${vote.constituency}) - not tracked`);
         continue;
       }
       
-      // Verify constituency matches (normalized comparison)
       if (normalizeConstituency(trackedMp.constituency) !== normalizeConstituency(vote.constituency)) {
-        console.log(`⏭️ Skipping vote for ${vote.mp_name} - constituency mismatch (expected: ${trackedMp.constituency}, got: ${vote.constituency})`);
+        console.log(`⏭️ Skipping vote for ${vote.mp_name} - constituency mismatch`);
         continue;
       }
       
-      const existingVoteQuery = supabase
+      // Check if vote already exists
+      const { data: existingVote, error: existingVoteError } = await supabase
         .from('parliamentary_mentions')
-        .select('id, story_id')
+        .select('id')
         .eq('topic_id', topicId)
         .eq('mention_type', 'vote')
         .eq('vote_url', vote.vote_url)
         .eq('mp_name', vote.mp_name)
-        .limit(1);
-
-      const { data: existingVote, error: existingVoteError } = await existingVoteQuery.maybeSingle();
+        .limit(1)
+        .maybeSingle();
 
       if (existingVoteError) {
         console.error('Error checking for existing vote:', existingVoteError);
@@ -761,401 +660,20 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
       };
 
       if (existingVote) {
-        const { error: updateError } = await supabase
+        await supabase
           .from('parliamentary_mentions')
           .update(voteRecord)
           .eq('id', existingVote.id);
-
-        if (updateError) {
-          console.error('Error updating existing vote:', updateError);
-          continue;
-        }
-
-        // Only create stories for MAJOR votes
-        if (!existingVote.story_id && vote.is_major_vote) {
-          const { data: refreshedVote, error: refreshedError } = await supabase
-            .from('parliamentary_mentions')
-            .select('*')
-            .eq('id', existingVote.id)
-            .single();
-
-          if (refreshedError) {
-            console.error('Error loading refreshed vote for story creation:', refreshedError);
-            continue;
-          }
-
-          await createDailyVoteStory(supabase, refreshedVote, topicId);
-        } else if (!vote.is_major_vote) {
-          console.log(`⏭️ Skipping story creation for minor vote: ${vote.vote_title?.substring(0, 50)}...`);
-        }
-
-        continue;
-      }
-
-      // Insert the voting record
-      const { data: insertedVote, error: insertError } = await supabase
-        .from('parliamentary_mentions')
-        .insert(voteRecord)
-        .select()
-        .single();
-      
-      if (insertError) {
-        console.error('Error inserting vote:', insertError);
-        continue;
-      }
-      
-      // Only create stories for MAJOR votes
-      if (vote.is_major_vote) {
-        await createDailyVoteStory(supabase, insertedVote, topicId);
+        console.log(`♻️ Updated existing vote: ${vote.vote_title?.substring(0, 50)}...`);
       } else {
-        console.log(`⏭️ Minor vote stored (no story): ${vote.vote_title?.substring(0, 50)}...`);
+        await supabase
+          .from('parliamentary_mentions')
+          .insert(voteRecord);
+        console.log(`✅ Stored new vote: ${vote.vote_title?.substring(0, 50)}... ${vote.is_major_vote ? '⭐ MAJOR' : ''}`);
       }
       
     } catch (error) {
       console.error('Error processing vote:', error);
     }
-  }
-}
-
-// Create a single-slide banner story for a daily vote
-async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
-  try {
-    // Check if shared content already exists (with MP-specific URL)
-    const mpSpecificUrl = `${vote.vote_url}?mp=${vote.mp_id || 'unknown'}`;
-    let sharedContent;
-    const { data: existingContent } = await supabase
-      .from('shared_article_content')
-      .select('id, title')
-      .eq('url', mpSpecificUrl)
-      .maybeSingle();
-    
-    if (existingContent) {
-      console.log(`♻️ Reusing existing shared content for vote ${vote.id}`);
-      sharedContent = existingContent;
-    } else {
-      // Create new shared content with MP-specific URL
-      const { data: newContent, error: contentError } = await supabase
-        .from('shared_article_content')
-        .insert({
-          url: mpSpecificUrl,
-          normalized_url: mpSpecificUrl.toLowerCase(),
-          title: `${vote.mp_name} voted ${vote.vote_direction} on ${vote.vote_title}`,
-          body: vote.local_impact_summary,
-          published_at: vote.vote_date,
-          word_count: 50,
-          language: 'en'
-        })
-        .select()
-        .single();
-      
-      if (contentError) throw contentError;
-      sharedContent = newContent;
-    }
-    
-    // Check if topic article already exists
-    let topicArticle;
-    const { data: existingTopicArticle } = await supabase
-      .from('topic_articles')
-      .select('id')
-      .eq('shared_content_id', sharedContent.id)
-      .eq('topic_id', topicId)
-      .maybeSingle();
-    
-    if (existingTopicArticle) {
-      console.log(`♻️ Reusing existing topic article for vote ${vote.id}`);
-      topicArticle = existingTopicArticle;
-    } else {
-      // Create new topic article
-      console.log(`📝 Creating new topic_article for vote ${vote.id} (topic: ${topicId})`);
-      const { data: newTopicArticle, error: topicArticleError } = await supabase
-        .from('topic_articles')
-        .insert({
-          topic_id: topicId,
-          shared_content_id: sharedContent.id,
-          processing_status: 'processed',
-          regional_relevance_score: vote.relevance_score,
-          content_quality_score: 80,
-          import_metadata: {
-            source: 'parliamentary_vote',
-            mention_id: vote.id,
-            is_rebellion: vote.is_rebellion
-          }
-        })
-        .select()
-        .single();
-      
-      if (topicArticleError) throw topicArticleError;
-      topicArticle = newTopicArticle;
-    }
-    
-    // Check if story already exists FOR THIS TOPIC_ARTICLE
-    // CRITICAL: Must check topic_article_id to prevent cross-topic story reuse
-    const { data: existingStory } = await supabase
-      .from('stories')
-      .select('id, title')
-      .eq('shared_content_id', sharedContent.id)
-      .eq('topic_article_id', topicArticle.id)
-      .maybeSingle();
-    
-    let story;
-    if (existingStory) {
-      console.log(`✓ Story already exists for vote ${vote.id} (topic: ${topicId})`);
-      story = existingStory;
-    } else {
-      console.log(`📝 Creating new story for vote ${vote.id} (topic: ${topicId}, topic_article: ${topicArticle.id})`);
-
-      // Create new story
-      const { data: newStory, error: storyError } = await supabase
-        .from('stories')
-        .insert({
-          topic_article_id: topicArticle.id,
-          shared_content_id: sharedContent.id,
-          title: sharedContent.title,
-          status: 'ready',
-          is_published: false,
-          is_parliamentary: true,
-          mp_name: vote.mp_name,
-          mp_party: vote.party,
-          constituency: vote.constituency,
-          audience_expertise: 'general',
-          tone: 'formal',
-          writing_style: 'journalistic'
-        })
-        .select()
-        .single();
-      
-      if (storyError) throw storyError;
-      story = newStory;
-      
-      console.log(`✅ Created parliamentary story:`, {
-        story_id: story.id.substring(0, 8),
-        mp_name: vote.mp_name,
-        mp_party: vote.party,
-        constituency: vote.constituency,
-        is_parliamentary: true
-      });
-      
-      // Format vote date
-      const voteDate = new Date(vote.vote_date).toLocaleDateString('en-GB', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-      });
-
-      // Helper to map outcome
-      const mapOutcome = (outcome: string) => outcome.toLowerCase() === 'passed' ? 'ACCEPTED' : 'REJECTED';
-
-      // Get topic name for slide 4
-      const { data: topicData } = await supabase
-        .from('topics')
-        .select('name')
-        .eq('id', topicId)
-        .single();
-      const topicName = topicData?.name || 'this area';
-
-      // Slide 1: MP prefix, name, date (smaller/separate), vote title (body text)
-      const slide1Content = `MP ${vote.mp_name}
-
-${voteDate}
-
-${vote.vote_title}`;
-
-      // Slide 2: Small "Voted", large vote direction, optional rebellion indicator
-      const rebellionIndicator = vote.is_rebellion ? '\n\n🔥 Against party whip' : '';
-      const slide2Content = `Voted
-
-${vote.vote_direction.toUpperCase()}${rebellionIndicator}`;
-
-      // Slide 3: Small "Vote outcome", large outcome, small counts
-      const slide3Content = `Vote outcome
-
-${mapOutcome(vote.vote_outcome)}
-
-Ayes ${vote.aye_count}, Nos ${vote.no_count}`;
-
-      // Slide 4: Category and local impact
-      const slide4Content = `Category: ${vote.vote_category}
-
-Information: This legislative decision at Westminster affects ${topicName} as part of national policy implementation`;
-
-      // Slide 5: Link button only
-      const slide5Content = `View vote details on Parliament.uk`;
-
-      // Insert all 5 slides
-      const slides = [
-        { slide_number: 1, content: slide1Content, links: [] },
-        { slide_number: 2, content: slide2Content, links: [] },
-        { slide_number: 3, content: slide3Content, links: [] },
-        { slide_number: 4, content: slide4Content, links: [] },
-        { slide_number: 5, content: slide5Content, links: [{ text: 'View vote details', url: vote.vote_url, start: 0, end: 16 }] }
-      ];
-
-      for (const slideData of slides) {
-        const { error: slideError } = await supabase
-          .from('slides')
-          .insert({
-            story_id: story.id,
-            slide_number: slideData.slide_number,
-            content: slideData.content,
-            word_count: slideData.content.split(' ').length,
-            links: slideData.links
-          });
-        
-        if (slideError) throw slideError;
-      }
-      
-      console.log(`✓ Created daily vote story: ${story.title}`);
-    }
-    
-    // Update parliamentary mention with story_id
-    await supabase
-      .from('parliamentary_mentions')
-      .update({ story_id: story.id })
-      .eq('id', vote.id);
-    
-  } catch (error) {
-    console.error('Error creating daily vote story:', error);
-  }
-}
-
-// Create weekly roundup story
-async function createWeeklyRoundup(
-  supabase: any,
-  topicId: string,
-  region: string,
-  constituencies: string[],
-  topic: any
-) {
-  console.log('Creating weekly roundup');
-  
-  // Get Monday of this week
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diff));
-  monday.setHours(0, 0, 0, 0);
-  
-  const mondayStr = monday.toISOString().split('T')[0];
-  
-  // Get all votes from this week for this topic
-  const { data: weekVotes, error: votesError } = await supabase
-    .from('parliamentary_mentions')
-    .select('*')
-    .eq('topic_id', topicId)
-    .eq('mention_type', 'vote')
-    .gte('vote_date', mondayStr)
-    .eq('is_weekly_roundup', false)
-    .order('vote_date', { ascending: false });
-  
-  if (votesError || !weekVotes || weekVotes.length === 0) {
-    console.log('No votes to create roundup from');
-    return;
-  }
-  
-  const mp = weekVotes[0];
-  const rebellionCount = weekVotes.filter((v: any) => v.is_rebellion).length;
-  const categories = [...new Set(weekVotes.map((v: any) => v.vote_category))];
-  
-  // Create weekly roundup story
-  try {
-    const { data: sharedContent, error: contentError } = await supabase
-      .from('shared_article_content')
-      .insert({
-        url: mp.vote_url,
-        normalized_url: mp.vote_url?.toLowerCase(),
-        title: `${mp.mp_name}'s Week in Parliament: ${monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}`,
-        body: `Weekly voting roundup for ${mp.constituency}`,
-        published_at: new Date().toISOString().split('T')[0],
-        word_count: 300,
-        language: 'en'
-      })
-      .select()
-      .single();
-    
-    if (contentError) throw contentError;
-    
-    const { data: topicArticle, error: topicArticleError } = await supabase
-      .from('topic_articles')
-      .insert({
-        topic_id: topicId,
-        shared_content_id: sharedContent.id,
-        processing_status: 'processed',
-        regional_relevance_score: 90,
-        content_quality_score: 85,
-        import_metadata: {
-          source: 'parliamentary_weekly_roundup', // Tag for deterministic exclusion from Arrivals
-          weekly_roundup: true,
-          week_start: startOfWeek.toISOString(),
-          week_end: endOfWeek.toISOString(),
-          total_votes: votesByMP.size,
-          tracked_mps: Array.from(votesByMP.keys())
-        }
-      })
-      .select()
-      .single();
-    
-    if (topicArticleError) throw topicArticleError;
-    
-    const { data: story, error: storyError } = await supabase
-      .from('stories')
-      .insert({
-        topic_article_id: topicArticle.id,
-        shared_content_id: sharedContent.id,
-        title: sharedContent.title,
-        status: 'ready',
-        is_published: false,
-        is_parliamentary: true,
-        mp_name: 'Multiple MPs',
-        mp_party: 'Various',
-        constituency: region,
-        audience_expertise: 'general',
-        tone: 'formal',
-        writing_style: 'journalistic'
-      })
-      .select()
-      .single();
-    
-    if (storyError) throw storyError;
-    
-    // Intro slide
-    const introContent = `**${mp.mp_name}'s Voting Record**
-Week of ${monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-
-**${weekVotes.length}** parliamentary votes this week
-${rebellionCount > 0 ? `**${rebellionCount}** votes against party line\n` : ''}
-**Key categories:** ${categories.slice(0, 3).join(', ')}`;
-    
-    await supabase.from('slides').insert({
-      story_id: story.id,
-      slide_number: 1,
-      content: introContent,
-      word_count: introContent.split(' ').length
-    });
-    
-    // One slide per vote
-    let slideNum = 2;
-    for (const vote of weekVotes) {
-      const voteContent = `**${new Date(vote.vote_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}** – Voted **${vote.vote_direction.toUpperCase()}**
-
-${vote.vote_title}
-
-${vote.local_impact_summary}
-
-${vote.is_rebellion ? '⚠️ **Against party line**\n' : ''}Outcome: **${vote.vote_outcome.toUpperCase()}** (${vote.aye_count}-${vote.no_count})
-Category: ${vote.vote_category}`;
-      
-      await supabase.from('slides').insert({
-        story_id: story.id,
-        slide_number: slideNum++,
-        content: voteContent,
-        word_count: voteContent.split(' ').length,
-        links: [{ text: 'View Vote', url: vote.vote_url }]
-      });
-    }
-    
-    console.log(`✓ Created weekly roundup: ${weekVotes.length} votes`);
-    
-  } catch (error) {
-    console.error('Error creating weekly roundup:', error);
   }
 }
