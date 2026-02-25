@@ -58,12 +58,18 @@ Deno.serve(async (req) => {
     for (const tid of topicIdsForRecovery) {
       const { data: orphans } = await supabase
         .from('topic_articles')
-        .select('id')
+        .select('id, import_metadata')
         .eq('topic_id', tid)
         .eq('processing_status', 'processed');
 
       if (orphans && orphans.length > 0) {
         for (const orphan of orphans) {
+          // Skip parliamentary articles — they have their own pipeline
+          const meta = orphan.import_metadata as Record<string, unknown> | null;
+          if (meta?.source === 'parliamentary_vote' || meta?.source === 'parliamentary_weekly_roundup') {
+            continue;
+          }
+
           // Check if a story exists for this topic_article
           const { data: existingStory } = await supabase
             .from('stories')

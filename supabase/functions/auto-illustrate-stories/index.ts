@@ -122,9 +122,10 @@ Deno.serve(async (req) => {
     
     let query = supabase
       .from('stories')
-      .select('id, title, quality_score, created_at, topic_article_id, topic_articles!inner(topic_id)')
+      .select('id, title, quality_score, created_at, topic_article_id, is_parliamentary, topic_articles!inner(topic_id)')
       .is('cover_illustration_url', null)
       .in('status', ['ready', 'published'])
+      .neq('is_parliamentary', true)
       .gte('quality_score', minThreshold)
       .gte('created_at', sevenDaysAgo)
       .in('topic_articles.topic_id', topicIds)

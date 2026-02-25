@@ -30,7 +30,7 @@ import { WidgetAnalytics } from "@/components/WidgetAnalytics";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
+
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
 import { ExternalLink, MapPin, Hash, Clock, ChevronDown, Loader2, Globe, Users, Palette, Sparkles } from "lucide-react";
@@ -144,11 +144,8 @@ const TopicDashboard = () => {
   
   usePageFavicon();
 
-  useParliamentaryAutomation({
-    topicId: topic?.id || '',
-    enabled: topic?.topic_type === 'regional' && topic?.parliamentary_tracking_enabled === true,
-    region: topic?.region
-  });
+
+
 
   useDripFeedPublishSound(topic?.id, topic?.drip_feed_enabled === true);
 
