@@ -100,7 +100,7 @@ export const InlineEmailSignupCard = ({
           ) : (
             <Mail className="h-5 w-5 text-primary" />
           )}
-          <h3 className="font-semibold text-sm">Get the {topicName} briefing</h3>
+          <h3 className="font-semibold text-sm">Get the {topicName} briefing in your inbox</h3>
         </div>
 
         {/* Frequency pills */}
