@@ -1,0 +1,1 @@
+UPDATE topic_articles SET processing_status = 'new' WHERE id = '397019a5-47a1-40cc-a473-01bc6b6a6124'
