@@ -1,98 +1,100 @@
-## Improving Parliamentary Content: Validation, Interaction, and Publishing
 
-### Current State Summary
 
-The parliamentary feature currently has three output formats:
+## Audit: Tone, Writing Style, and Expertise Settings Flow
 
-1. **Full story carousels** -- 5-slide stories created for "major" votes, now landing as `status: 'ready'` (post-audit fix)
-2. **ParliamentaryInsightCard** -- major vote cards injected into the feed at position 8, 21, 34...
-3. **ParliamentaryDigestCard** -- a single weekly digest card at position 25, showing up to 15 minor votes in a paginated list
-4. **VotingRecordPanel** -- a raw admin table in the dashboard showing all collected votes with filters
+### Findings
 
-The topic owner's interaction points are:
-
-- Toggle tracking on/off
-- Test Daily / Test Weekly buttons
-- Toggle `is_major_vote` star on individual votes in VotingRecordPanel
-- Manage tracked MPs
-
-### Problems
-
-1. **No editorial preview before publish.** The owner can star/unstar votes as "major" but can't preview how they'll look in the feed before they go live as insight cards or digest entries. There's no approval step for the card content itself.
-2. **Major vote classification is fragile.** It's auto-detected by the collector (rebellion, close margin, high relevance score) and then manually adjustable via a tiny star button in a dense admin table. The owner has no clear way to understand *why* something was marked major.
-3. **Three separate rendering paths = inconsistent quality.** A "major" vote can appear as both a full story carousel AND an insight card in the same feed. There's no deduplication logic between story-based and card-based parliamentary content.
-4. **The digest card is buried and static.** Position 25 means most readers never scroll far enough. It's a paginated table inside a card -- not engaging, not swipeable, not shareable.
-5. **VotingRecordPanel is developer-facing.** Dense data table with raw fields. Not useful for a non-technical topic curator.
+I traced the full path from UI selection through queue insertion, queue processing, and AI prompt injection. There are **four bugs** that prevent settings from properly influencing AI generation.
 
 ---
 
-### Proposed Improvements
+### Bug 1: `queue-processor` drops `writingStyle` entirely
 
-#### A. Simplify the Dashboard Validation UX
+**File:** `supabase/functions/queue-processor/index.ts`, line 225-230
 
-**Replace VotingRecordPanel with a curated "Parliamentary Review" panel.**
+The queue-processor builds the request body for `enhanced-content-generator` but **never passes `writingStyle`**. It reads `job.writing_style` only to incorrectly derive `audienceExpertise`:
 
-Instead of a raw data table, show:
+```typescript
+// CURRENT (broken)
+const generatorBody: any = {
+  slideType: job.slidetype,
+  aiProvider: job.ai_provider || 'deepseek',
+  tone: job.tone || 'conversational',
+  audienceExpertise: job.writing_style === 'journalistic' ? 'intermediate' : 'beginner'
+};
+```
 
-- A clean list of this week's collected votes, grouped by date
-- Each vote shows: title, MP name, Aye/No badge, category pill, and a one-line local impact summary
-- A single toggle per vote: "Feature in feed" (replaces the confusing `is_major_vote` star)
-- A preview button that opens the vote rendered exactly as it would appear in the ParliamentaryInsightCard
-- Remove the filters/sort complexity -- just show recent votes chronologically
+The `writingStyle` field is never sent. The generator then falls back to `'journalistic'` regardless of what the user selected.
 
-This gives the curator a clear, simple question per vote: "Do I want readers to see this?"
-
-#### B. Eliminate the Story Carousel for Parliamentary Votes
-
-Parliamentary vote stories (the 5-slide carousels) are the root cause of pipeline pollution and self-publishing issues. They duplicate what the insight cards already do, but worse -- they require illustration, go through drip feed, and compete with editorial content.
-
-**Proposal:** Stop creating `stories` and `slides` rows for parliamentary votes entirely. Instead:
-
-- Major votes appear exclusively as `ParliamentaryInsightCard` in the feed
-- Minor votes appear exclusively in the `ParliamentaryDigestCard`
-- The `uk-parliament-collector` stores data only in `parliamentary_mentions` -- no `topic_articles`, no `stories`, no `slides`
-
-This completely ring-fences parliamentary content from the editorial pipeline.
-
-#### C. Make the Feed Cards More Engaging (while maintianing low congnitive load ethic)
-
-**ParliamentaryInsightCard (major votes):**
-
-- Make it swipeable (2-3 mini-slides within the card): Slide 1 = vote title + MP. Slide 2 = result + tally. Slide 3 = local impact + link to Parliament.uk
-- Add a "How did your MP vote?" hook as the card header to increase engagement
-- Add share button (same pattern as story share)
-
-**ParliamentaryDigestCard (weekly minor votes):**
-
-- Rename to "This Week in Parliament" with a clearer framing
-- Move from position 25 (too deep) to position 10-12 range
-- Collapse to show top 3 votes with an "See all X votes" expand -- not paginated dots
-- Add a summary line at the top: "Your MP voted X times this week. 2 rebellions."
-
-#### D. Add a Weekly Digest Email Option
-
-If email subscriptions are enabled for a topic, include a "Parliamentary Week" section in the email briefing -- a compact summary of votes, formatted for email. This uses existing email infrastructure but adds parliamentary data as a section rather than a separate story.
+**Fix:** Add `writingStyle: job.writing_style || 'journalistic'` and use `job.audience_expertise` (which exists on the queue table) instead of deriving it from writing style.
 
 ---
 
-### Implementation Plan (Prioritized)
+### Bug 2: `queue-processor` ignores `audience_expertise` from the queue
 
+The `content_generation_queue` table has an `audience_expertise` column, and `useMultiTenantActions` correctly inserts `audience_expertise: 'intermediate'` (line 155). But the queue-processor ignores it entirely, instead computing a wrong value from `writing_style`.
 
-| Priority | Change                                                                                                             | Files                                                                                      |
-| -------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| 1        | Stop creating stories/slides for parliamentary votes in collector. Store in `parliamentary_mentions` only.         | `uk-parliament-collector/index.ts`                                                         |
-| 2        | Remove story-creation functions (`createDailyVoteStory`, `createWeeklyRoundup` story parts). Keep mention storage. | `uk-parliament-collector/index.ts`                                                         |
-| 3        | Simplify VotingRecordPanel into a "Parliamentary Review" panel with toggle + preview per vote                      | `src/components/VotingRecordPanel.tsx`                                                     |
-| 4        | Add swipeable mini-carousel to ParliamentaryInsightCard (2-3 slides within the card)                               | `src/components/ParliamentaryInsightCard.tsx`                                              |
-| 5        | Redesign ParliamentaryDigestCard as "This Week in Parliament" with summary + expandable list                       | `src/components/ParliamentaryDigestCard.tsx`                                               |
-| 6        | Move digest card position from 25 to 12                                                                            | `src/lib/feedCardPositions.ts`                                                             |
-| 7        | Remove parliamentary story rendering path from StoryCarousel                                                       | `src/components/StoryCarousel.tsx` (remove ~150 lines of parliamentary-specific rendering) |
-| 8        | Clean up: remove `parliamentary-weekly-backfill` edge function (no longer creates stories)                         | `supabase/functions/parliamentary-weekly-backfill/`                                        |
+**Fix:** Change to `audienceExpertise: job.audience_expertise || 'intermediate'`.
 
+---
 
-### Result
+### Bug 3: `auto-simplify-queue` inserts jobs without tone, writing style, or expertise
 
-- Parliamentary content is fully separated from the editorial pipeline -- no shared tables, no shared automation
-- Topic owners get a simple "feature this vote / don't" toggle with preview
-- Readers get more engaging, scannable parliamentary cards instead of awkward 5-slide carousels
-- The on/off toggle genuinely controls everything -- no leaked stories, no orphaned records
+**File:** `supabase/functions/auto-simplify-queue/index.ts`, lines 165-174
+
+When automation queues articles, it inserts bare-minimum fields:
+
+```typescript
+await supabase.from('content_generation_queue').insert({
+  topic_article_id: article.id,
+  shared_content_id: article.shared_content_id,
+  status: 'pending',
+  // ← NO tone, writing_style, audience_expertise, slidetype
+});
+```
+
+This means every auto-queued article uses hardcoded defaults (`conversational`, `journalistic`, `intermediate`) regardless of what the topic owner configured in Content Voice Settings.
+
+**Fix:** Look up the topic's `default_tone`, `default_writing_style`, and `audience_expertise` from the `topics` table and include them in the queue insert.
+
+---
+
+### Bug 4: `enhanced-content-generator` request defaults shadow topic defaults
+
+**File:** `supabase/functions/enhanced-content-generator/index.ts`, lines 738-834
+
+The request body destructuring sets defaults:
+```typescript
+const { tone = 'conversational', writingStyle = 'journalistic', audienceExpertise = 'intermediate' } = await req.json();
+```
+
+Then the topic lookup does:
+```typescript
+topicExpertise = audienceExpertise || topicData.audience_expertise;
+effectiveTone = tone || topicData.default_tone;
+effectiveWritingStyle = writingStyle || topicData.default_writing_style;
+```
+
+Since destructuring defaults mean `tone` is always `'conversational'` (never `undefined`), the `||` fallback to `topicData.default_tone` **never fires**. Topic-level defaults are dead code.
+
+**Fix:** Use `undefined` as the destructuring default, or check for explicit `null`/`undefined` before falling back to topic defaults. The cleanest approach: only apply topic defaults when the queue didn't provide an explicit value.
+
+---
+
+### Implementation Plan
+
+| Priority | File | Change |
+|----------|------|--------|
+| 1 | `supabase/functions/queue-processor/index.ts` | Pass `writingStyle` and use `job.audience_expertise` instead of deriving from writing_style |
+| 2 | `supabase/functions/enhanced-content-generator/index.ts` | Fix destructuring defaults to allow topic-level fallbacks to work |
+| 3 | `supabase/functions/auto-simplify-queue/index.ts` | Fetch topic defaults and include `tone`, `writing_style`, `audience_expertise`, `slidetype` in queue inserts |
+| 4 | `src/hooks/useMultiTenantActions.tsx` | Pass `audience_expertise` from topic settings instead of hardcoded `'intermediate'` (line 155) |
+
+### Expected Result
+
+After these fixes:
+- Manual approvals: tone/style/expertise selected per-article in the UI will reach the AI prompt
+- Auto-simplify: topic-level defaults from Content Voice Settings will be used
+- Topic-level fallbacks: if no per-article override exists, the topic owner's configured defaults apply
+- All three guidance blocks (tone, writing style, expertise) will inject the correct instructions into the DeepSeek prompt
+
