@@ -19,6 +19,7 @@ interface QueueJob {
   ai_provider?: string;
   tone?: string;
   writing_style?: string;
+  audience_expertise?: string;
 }
 
 serve(async (req) => {
@@ -225,8 +226,9 @@ serve(async (req) => {
         const generatorBody: any = {
           slideType: job.slidetype,
           aiProvider: job.ai_provider || 'deepseek',
-          tone: job.tone || 'conversational',
-          audienceExpertise: job.writing_style === 'journalistic' ? 'intermediate' : 'beginner'
+          tone: job.tone || undefined,
+          writingStyle: job.writing_style || undefined,
+          audienceExpertise: job.audience_expertise || undefined,
         };
 
         // Pass generate_illustration flag from result_data (defaults to true)

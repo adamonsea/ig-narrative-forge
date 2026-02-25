@@ -101,7 +101,23 @@ Deno.serve(async (req) => {
     const maxPerTopic = 20;
     const topicsWithNewItems: string[] = [];
 
-    // 2. For each topic, find qualifying articles and queue them directly
+    // 2. Pre-fetch topic voice defaults for all topics
+    const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
+    const { data: topicDefaults } = await supabase
+      .from('topics')
+      .select('id, default_tone, default_writing_style, audience_expertise')
+      .in('id', topicIds);
+    
+    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string }> = {};
+    for (const t of (topicDefaults || [])) {
+      topicDefaultsMap[t.id] = {
+        tone: t.default_tone,
+        writing_style: t.default_writing_style,
+        audience_expertise: t.audience_expertise,
+      };
+    }
+
+    // 3. For each topic, find qualifying articles and queue them directly
     for (const settings of topicSettings as TopicAutomationSettings[]) {
       const { topic_id, quality_threshold } = settings;
 
@@ -161,7 +177,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Insert into queue — multi-tenant, no article_id needed
+        // Insert into queue with topic voice defaults
+        const defaults = topicDefaultsMap[article.topic_id] || {};
         const { error: insertError } = await supabase
           .from('content_generation_queue')
           .insert({
@@ -171,6 +188,9 @@ Deno.serve(async (req) => {
             created_at: new Date().toISOString(),
             attempts: 0,
             max_attempts: 3,
+            tone: defaults.tone || null,
+            writing_style: defaults.writing_style || null,
+            audience_expertise: defaults.audience_expertise || null,
           });
 
         if (insertError) {

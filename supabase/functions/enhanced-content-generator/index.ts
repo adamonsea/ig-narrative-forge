@@ -736,9 +736,9 @@ Return in JSON format:
       sharedContentId,
       slideType = 'tabloid', 
       aiProvider = 'deepseek',
-      tone = 'conversational',
-      writingStyle = 'journalistic',
-      audienceExpertise = 'intermediate',
+      tone,
+      writingStyle,
+      audienceExpertise,
       generateIllustration = true
     } = await req.json();
     
@@ -812,9 +812,9 @@ Return in JSON format:
     }
 
     // Get topic details for audience expertise, default tone, and drip feed settings
-    let topicExpertise = audienceExpertise;
-    let effectiveTone = tone;
-    let effectiveWritingStyle = writingStyle;
+    let topicExpertise = audienceExpertise || 'intermediate';
+    let effectiveTone = tone || 'conversational';
+    let effectiveWritingStyle = writingStyle || 'journalistic';
     let dripFeedEnabled = false;
     let autoSimplifyEnabled = false; // Controls whether stories skip editorial review
     
@@ -826,9 +826,9 @@ Return in JSON format:
         .maybeSingle();
       
       if (topicData) {
-        topicExpertise = audienceExpertise || topicData.audience_expertise;
-        effectiveTone = tone || topicData.default_tone;
-        effectiveWritingStyle = writingStyle || topicData.default_writing_style;
+        topicExpertise = audienceExpertise ?? topicData.audience_expertise ?? 'intermediate';
+        effectiveTone = tone ?? topicData.default_tone ?? 'conversational';
+        effectiveWritingStyle = writingStyle ?? topicData.default_writing_style ?? 'journalistic';
         dripFeedEnabled = topicData.drip_feed_enabled || false;
         autoSimplifyEnabled = topicData.auto_simplify_enabled || false;
         console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}, autoSimplify=${autoSimplifyEnabled}`);
