@@ -173,177 +173,8 @@ export default function StoryCarousel({
   
   const [isFirstCard, setIsFirstCard] = useState(false);
   
-  // Detect parliamentary stories for banner styling
+  // Detect parliamentary stories (legacy — no new ones created)
   const isParliamentaryStory = (story as any).is_parliamentary === true;
-  
-  type PartyColorTheme = {
-    border: string;
-    bg: string;
-    gradient: string;
-    header: string;
-    accentText: string;
-    pill: string;
-    chip: string;
-    icon: string;
-    button: string;
-  };
-
-  const getPartyColors = (party: string | undefined): PartyColorTheme => {
-    const baseTheme: PartyColorTheme = {
-      border: 'border-l-4 border-l-slate-400',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-      accentText: 'text-slate-700 dark:text-slate-100',
-      pill: 'bg-slate-200 text-slate-800 dark:bg-slate-900/50 dark:text-slate-100',
-      chip: 'border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200',
-      icon: 'text-slate-600 dark:text-slate-200',
-      button: 'bg-slate-600 hover:bg-slate-700 text-white'
-    };
-
-    if (!party) return baseTheme;
-
-    const partyLower = party.toLowerCase();
-    if (partyLower.includes('liberal democrat') || partyLower.includes('lib dem')) {
-      return {
-      border: 'border-l-4 border-l-amber-500',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-        accentText: 'text-amber-700 dark:text-amber-200',
-        pill: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-100',
-        chip: 'border border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-200',
-        icon: 'text-amber-500 dark:text-amber-200',
-        button: 'bg-amber-500 hover:bg-amber-600 text-white'
-      };
-    }
-    if (partyLower.includes('conservative') || partyLower.includes('tory')) {
-      return {
-      border: 'border-l-4 border-l-blue-600',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-        accentText: 'text-blue-700 dark:text-blue-200',
-        pill: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-100',
-        chip: 'border border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-200',
-        icon: 'text-blue-600 dark:text-blue-200',
-        button: 'bg-blue-600 hover:bg-blue-700 text-white'
-      };
-    }
-    if (partyLower.includes('labour')) {
-      return {
-      border: 'border-l-4 border-l-red-600',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-        accentText: 'text-red-700 dark:text-red-200',
-        pill: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-100',
-        chip: 'border border-red-300 text-red-700 dark:border-red-700 dark:text-red-200',
-        icon: 'text-red-600 dark:text-red-200',
-        button: 'bg-red-600 hover:bg-red-700 text-white'
-      };
-    }
-    if (partyLower.includes('green')) {
-      return {
-      border: 'border-l-4 border-l-green-600',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-        accentText: 'text-green-700 dark:text-green-200',
-        pill: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-100',
-        chip: 'border border-green-300 text-green-700 dark:border-green-700 dark:text-green-200',
-        icon: 'text-green-600 dark:text-green-200',
-        button: 'bg-green-600 hover:bg-green-700 text-white'
-      };
-    }
-    if (partyLower.includes('reform')) {
-      return {
-      border: 'border-l-4 border-l-purple-600',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-        accentText: 'text-purple-700 dark:text-purple-200',
-        pill: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-100',
-        chip: 'border border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-200',
-        icon: 'text-purple-600 dark:text-purple-200',
-        button: 'bg-purple-600 hover:bg-purple-700 text-white'
-      };
-    }
-    if (partyLower.includes('snp')) {
-      return {
-      border: 'border-l-4 border-l-yellow-500',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-        accentText: 'text-yellow-700 dark:text-yellow-200',
-        pill: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-100',
-        chip: 'border border-yellow-300 text-yellow-700 dark:border-yellow-700 dark:text-yellow-200',
-        icon: 'text-yellow-600 dark:text-yellow-200',
-        button: 'bg-yellow-500 hover:bg-yellow-600 text-slate-900'
-      };
-    }
-    if (partyLower.includes('plaid')) {
-      return {
-      border: 'border-l-4 border-l-emerald-600',
-        bg: 'bg-white dark:bg-slate-950',
-        gradient: 'bg-white dark:bg-slate-950',
-        header: 'bg-slate-50/50 dark:bg-slate-900/50',
-        accentText: 'text-emerald-700 dark:text-emerald-200',
-        pill: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-100',
-        chip: 'border border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-200',
-        icon: 'text-emerald-600 dark:text-emerald-200',
-        button: 'bg-emerald-600 hover:bg-emerald-700 text-white'
-      };
-    }
-
-    return baseTheme;
-  };
-
-  const partyColors = getPartyColors((story as any).mp_party);
-
-  // Removed layout randomization - using single consistent layout
-
-  const mpName = (story as any).mp_name || story.author || 'Member of Parliament';
-  const constituency = (story as any).constituency;
-  const mpInitials = mpName
-    .split(' ')
-    .filter(Boolean)
-    .map(part => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'MP';
-
-  const renderParliamentaryCta = (slide: any) => {
-    // Priority: slide.links > story vote_url > article source_url > generic fallback
-    let ctaUrl = story.article?.source_url;
-    let ctaText = 'View full vote details';
-    
-    if (slide.links && slide.links.length > 0) {
-      ctaUrl = slide.links[0].url;
-      ctaText = slide.links[0].text || ctaText;
-    } else if ((story as any).vote_url) {
-      ctaUrl = (story as any).vote_url;
-    }
-    
-    // Generic fallback if no URL available
-    if (!ctaUrl || ctaUrl === '#') {
-      ctaUrl = 'https://votes.parliament.uk';
-      ctaText = 'View on Parliament website';
-    }
-
-    return (
-      <Button
-        size="lg"
-        onClick={(e) => {
-          e.stopPropagation();
-          window.open(ctaUrl, '_blank', 'noopener,noreferrer');
-        }}
-        className={`text-lg px-8 py-6 rounded-full shadow-lg transition-transform hover:scale-105 ${partyColors.button}`}
-      >
-        {ctaText}
-      </Button>
-    );
-  };
 
   const storyBadges = useMemo<React.ReactNode[]>(() => {
     const badges: React.ReactNode[] = [];
@@ -703,149 +534,7 @@ export default function StoryCarousel({
     return parts.join('');
   };
 
-  // Parliamentary slide renderer - single clean layout
-  const renderParliamentarySlide = (slide: any, slideIndex: number) => {
-    const lines = slide.content.split('\n').filter((line: string) => line.trim());
-    const backgroundClass = 'bg-white dark:bg-slate-950';
-
-    // Slide 1: Title + MP Info
-    if (slideIndex === 0) {
-      const voteTitle = lines[0] || 'Parliamentary Vote';
-      const mpInfo = lines[1] || '';
-      const voteDate = lines[2] || '';
-
-      return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
-          {/* MP Avatar */}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${partyColors.pill}`}>
-            {mpInitials}
-          </div>
-          
-          {/* Parliamentary Vote Badge */}
-          <div className={`text-xs uppercase tracking-widest font-semibold ${partyColors.accentText}`}>
-            Parliamentary Vote
-          </div>
-          
-          {/* Vote Title */}
-          <h1 className="text-3xl md:text-4xl font-bold leading-tight text-balance">
-            {voteTitle}
-          </h1>
-          
-          {/* MP Name + Constituency */}
-          {mpInfo && (
-            <p className="text-sm text-muted-foreground">
-              {mpInfo}
-            </p>
-          )}
-          
-          {/* Date */}
-          {voteDate && (
-            <p className="text-xs text-muted-foreground">
-              {voteDate}
-            </p>
-          )}
-        </div>
-      );
-    }
-
-    // Slide 2: Vote Direction
-    if (slideIndex === 1) {
-      const voteDirection = lines.find((l: string) => l === 'AYE' || l === 'NO') || 'ABSTAIN';
-      const isRebellion = slide.content.includes('Against party whip');
-      const isAye = voteDirection === 'AYE';
-
-      return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
-          {/* Large Vote Direction */}
-          <div className="space-y-3">
-            <h2 className={`text-7xl font-black ${isAye ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              {voteDirection}
-            </h2>
-            <p className="text-base text-muted-foreground">
-              {isAye ? 'Backed the motion' : voteDirection === 'NO' ? 'Opposed the motion' : 'Abstained from voting'}
-            </p>
-          </div>
-          
-          {/* Rebellion Badge */}
-          {isRebellion && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800">
-              <span className="text-sm font-semibold text-red-700 dark:text-red-200">
-                🔥 Against party whip
-              </span>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Slide 3: Outcome
-    if (slideIndex === 2) {
-      const outcome = lines.find((l: string) => l === 'ACCEPTED' || l === 'REJECTED') || 'PENDING';
-      const counts = lines.find((l: string) => l.includes('Ayes'));
-
-      return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
-          <div className="space-y-4">
-            <p className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">
-              Vote Outcome
-            </p>
-            <h2 className="text-5xl font-bold">
-              {outcome}
-            </h2>
-            {counts && (
-              <p className="text-sm text-muted-foreground">
-                {counts}
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // Slide 4: Category/Context
-    if (slideIndex === 3) {
-      const category = lines.find((l: string) => l.startsWith('Category:'))?.replace('Category: ', '');
-      const info = lines.find((l: string) => l.startsWith('Information:'))?.replace('Information: ', '');
-      const voteTitle = lines[0] || '';
-
-      return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
-          {/* Category Badge */}
-          {category && (
-            <div className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-semibold ${partyColors.pill}`}>
-              {category}
-            </div>
-          )}
-          
-          {/* Vote Title for Context */}
-          {voteTitle && (
-            <p className="text-lg font-medium text-balance">
-              {voteTitle}
-            </p>
-          )}
-          
-          {/* Additional Info */}
-          {info && (
-            <p className="text-base text-muted-foreground text-balance leading-relaxed">
-              {info}
-            </p>
-          )}
-        </div>
-      );
-    }
-
-    // Slide 5: CTA
-    if (slideIndex === 4) {
-      return (
-        <div className={`flex flex-col items-center justify-center h-full px-8 py-16 ${partyColors.border} ${backgroundClass}`}>
-          {renderParliamentaryCta(slide)}
-        </div>
-      );
-    }
-
-    // Fallback
-    return null;
-  };
+  // Parliamentary slide renderer removed — parliamentary content now uses dedicated feed cards only
 
   // Dynamic text sizing based on content length
   const getTextSize = (content: string, isTitle: boolean, isLaterSlide: boolean = false) => {
@@ -890,13 +579,6 @@ export default function StoryCarousel({
   
   // Memoize slide components to prevent re-renders during swipe
   const slideComponents = useMemo(() => sortedSlides.map((slide, index) => {
-    // Check if this is a parliamentary story and render accordingly
-    if (isParliamentaryStory) {
-      const parliamentaryContent = renderParliamentarySlide(slide, index);
-      if (parliamentaryContent) {
-        return <div key={slide.id} className="h-full w-full">{parliamentaryContent}</div>;
-      }
-    }
     
     // Standard slide rendering
     const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
@@ -993,7 +675,7 @@ export default function StoryCarousel({
         )}
       </div>
     );
-  }), [sortedSlides, story, validSlides.length, isParliamentaryStory, isFastConnection, partyColors]);
+  }), [sortedSlides, story, validSlides.length, isFastConnection]);
 
   const slidesForEmbla = slideComponents.length
     ? slideComponents
@@ -1018,7 +700,7 @@ export default function StoryCarousel({
       <meta itemProp="author" content={story.author || 'Unknown'} />
       <meta itemProp="datePublished" content={story.created_at} />
       <Card 
-        className={`w-full overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} 
+        className={`w-full overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? 'parliamentary-card border-l-4 border-l-primary' : ''}`} 
         data-story-card 
         data-story-id={story.id}
         style={{} as React.CSSProperties}

@@ -74,11 +74,11 @@ export const FEED_CARD_POSITIONS = {
     description: 'Major MP voting records (rebellions, close votes, high relevance)'
   } as RepeatingCardPosition,
 
-  // Parliamentary weekly digest (minor votes batched): position 25 (once per feed load)
+  // Parliamentary weekly digest: position 12 (once per feed load)
   parliamentaryDigest: {
     type: 'single',
-    position: 25,
-    description: 'Weekly digest of routine MP votes'
+    position: 12,
+    description: 'This Week in Parliament digest card'
   } as SingleCardPosition,
 
   // Community pulse: positions 4, 19, 34...

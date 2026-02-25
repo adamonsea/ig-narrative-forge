@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Vote, Calendar, Star } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Landmark, ThumbsUp, ThumbsDown, ExternalLink, Eye, Calendar, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
+import type { ParliamentaryVote } from "@/hooks/useParliamentaryInsightCards";
 
 interface VotingRecord {
   id: string;
@@ -19,28 +21,14 @@ interface VotingRecord {
   vote_direction: 'aye' | 'no' | 'abstain';
   vote_url: string;
   vote_category: string;
-  vote_outcome: 'passed' | 'rejected';
+  vote_outcome: string;
   is_rebellion: boolean;
   aye_count: number;
   no_count: number;
   national_relevance_score: number;
   local_impact_summary: string;
-  is_weekly_roundup: boolean;
   is_major_vote: boolean;
-  story_id: string | null;
-  created_at: string;
   vote_context?: string | null;
-  bill_stage?: string | null;
-  bill_description?: string | null;
-}
-
-interface TrackedMP {
-  mp_id: number;
-  mp_name: string;
-  mp_party: string;
-  constituency: string;
-  is_primary: boolean;
-  tracking_enabled: boolean;
 }
 
 interface VotingRecordPanelProps {
@@ -48,27 +36,26 @@ interface VotingRecordPanelProps {
   topicSlug: string;
 }
 
+const getPartyBorderColor = (party: string): string => {
+  const p = party.toLowerCase();
+  if (p.includes('labour')) return 'border-l-red-500';
+  if (p.includes('conservative')) return 'border-l-blue-600';
+  if (p.includes('liberal democrat')) return 'border-l-amber-500';
+  if (p.includes('green')) return 'border-l-green-600';
+  if (p.includes('snp')) return 'border-l-yellow-400';
+  if (p.includes('plaid')) return 'border-l-emerald-600';
+  if (p.includes('reform')) return 'border-l-purple-600';
+  return 'border-l-muted-foreground';
+};
+
 export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps) => {
   const [votes, setVotes] = useState<VotingRecord[]>([]);
-  const [trackedMPs, setTrackedMPs] = useState<TrackedMP[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'rebellions' | 'major'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'rebellion' | 'category' | 'mp'>('date');
   const [isTopicOwner, setIsTopicOwner] = useState(false);
-  const [validating, setValidating] = useState(false);
-  const [validationResult, setValidationResult] = useState<any>(null);
+  const [previewVote, setPreviewVote] = useState<VotingRecord | null>(null);
   const [lastCollectionAt, setLastCollectionAt] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Check if we're in summer recess (typically July 25 - September 2)
-  const isInSummerRecess = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const recessStart = new Date(year, 6, 25); // July 25
-    const recessEnd = new Date(year, 8, 2); // September 2
-    return now >= recessStart && now <= recessEnd;
-  };
 
   const checkTopicOwnership = async () => {
     if (!user) return;
@@ -88,261 +75,29 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     }
   };
 
-  const validateCompleteness = async () => {
-    if (!isTopicOwner) return;
-    
-    setValidating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-parliamentary-completeness', {
-        body: { topicId, days: 30 }
-      });
-
-      if (error) throw error;
-      
-      setValidationResult(data);
-      toast({
-        title: "Validation Complete",
-        description: `${data.validation.completeness}% completeness - ${data.validation.missingVotes} missing votes detected`,
-      });
-    } catch (error) {
-      console.error('Validation error:', error);
-      toast({
-        title: "Validation Failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive"
-      });
-    } finally {
-      setValidating(false);
-    }
-  };
-
-  const triggerManualCollection = async () => {
-    if (!isTopicOwner) return;
-    
-    try {
-      toast({
-        title: "Triggering Collection",
-        description: "Fetching latest votes from Parliament...",
-      });
-
-      const { data: topic } = await supabase
-        .from('topics')
-        .select('region')
-        .eq('id', topicId)
-        .single();
-
-      if (!topic?.region) {
-        throw new Error('Topic region not configured');
-      }
-
-      const { error } = await supabase.functions.invoke('uk-parliament-collector', {
-        body: {
-          topicId,
-          region: topic.region,
-          mode: 'daily',
-          forceRefresh: true
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Collection Started",
-        description: "Refreshing votes... This may take a minute.",
-      });
-
-      // Refresh data after 5 seconds
-      setTimeout(() => {
-        checkTopicOwnership();
-        loadVotes();
-      }, 5000);
-
-    } catch (error) {
-      console.error('Manual collection error:', error);
-      toast({
-        title: "Collection Failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const loadTrackedMPs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('topic_tracked_mps')
-        .select('*')
-        .eq('topic_id', topicId)
-        .eq('tracking_enabled', true)
-        .order('is_primary', { ascending: false });
-
-      if (error) throw error;
-      setTrackedMPs(data || []);
-    } catch (error) {
-      console.error('Error loading tracked MPs:', error);
-    }
-  };
-
   const loadVotes = async () => {
     try {
-      let query = supabase
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+      const { data, error } = await supabase
         .from('parliamentary_mentions')
-        .select('*')
+        .select('id, mp_name, constituency, party, vote_title, vote_date, vote_direction, vote_url, vote_category, vote_outcome, is_rebellion, aye_count, no_count, national_relevance_score, local_impact_summary, is_major_vote, vote_context')
         .eq('topic_id', topicId)
         .eq('mention_type', 'vote')
-        .order('vote_date', { ascending: false })
-        .limit(100);
-
-      // Apply filters
-      if (filterType === 'daily') {
-        query = query.eq('is_weekly_roundup', false);
-      } else if (filterType === 'weekly') {
-        query = query.eq('is_weekly_roundup', true);
-      } else if (filterType === 'rebellions') {
-        query = query.eq('is_rebellion', true);
-      } else if (filterType === 'major') {
-        query = query.eq('is_major_vote', true);
-      }
-
-      const { data, error } = await query;
+        .gte('vote_date', fourteenDaysAgo.toISOString().split('T')[0])
+        .order('vote_date', { ascending: false });
 
       if (error) throw error;
-
-      let sortedData = data || [];
-
-      // Apply sorting
-      if (sortBy === 'rebellion') {
-        sortedData = [...sortedData].sort((a, b) => {
-          if (a.is_rebellion && !b.is_rebellion) return -1;
-          if (!a.is_rebellion && b.is_rebellion) return 1;
-          return new Date(b.vote_date).getTime() - new Date(a.vote_date).getTime();
-        });
-      } else if (sortBy === 'category') {
-        sortedData = [...sortedData].sort((a, b) => {
-          const catCompare = (a.vote_category || '').localeCompare(b.vote_category || '');
-          if (catCompare !== 0) return catCompare;
-          return new Date(b.vote_date).getTime() - new Date(a.vote_date).getTime();
-        });
-      } else if (sortBy === 'mp') {
-        sortedData = [...sortedData].sort((a, b) => {
-          const mpCompare = a.mp_name.localeCompare(b.mp_name);
-          if (mpCompare !== 0) return mpCompare;
-          return new Date(b.vote_date).getTime() - new Date(a.vote_date).getTime();
-        });
-      }
-
-      setVotes(sortedData as VotingRecord[]);
+      setVotes((data || []) as VotingRecord[]);
     } catch (error) {
       console.error('Error loading voting records:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load voting records",
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    checkTopicOwnership();
-    loadTrackedMPs();
-    loadVotes();
-    
-    // Subscribe to new parliamentary mentions for real-time updates
-    const subscription = supabase
-      .channel(`parliamentary-votes-${topicId}`)
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'parliamentary_mentions', filter: `topic_id=eq.${topicId}` },
-        () => {
-          console.log('🔔 New parliamentary vote detected, refreshing...');
-          loadVotes();
-        }
-      )
-      .subscribe();
-    
-    return () => { subscription.unsubscribe(); };
-  }, [topicId, filterType, sortBy, user]);
-
-  const rebellionCount = votes.filter(v => v.is_rebellion && !v.is_weekly_roundup).length;
-  const weeklyRoundupCount = votes.filter(v => v.is_weekly_roundup).length;
-  const majorVoteCount = votes.filter(v => v.is_major_vote).length;
-  const totalVotes = votes.filter(v => !v.is_weekly_roundup).length;
-  const uniqueMps = [...new Set(votes.map(v => v.mp_name))].length;
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      'Housing': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-      'NHS': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-      'Transport': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-      'Education': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-      'Environment': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-      'Justice': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-      'Economy': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
-    };
-    return colors[category] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-  };
-
-  const getPartyColors = (party: string): { border: string; bg: string } => {
-    const partyLower = party.toLowerCase();
-    
-    if (partyLower.includes('liberal democrat') || partyLower.includes('lib dem')) {
-      return { 
-        border: 'border-l-4 border-amber-400', 
-        bg: 'bg-amber-50/50 dark:bg-amber-950/20' 
-      };
-    }
-    if (partyLower.includes('conservative') || partyLower.includes('tory')) {
-      return { 
-        border: 'border-l-4 border-blue-500', 
-        bg: 'bg-blue-50/50 dark:bg-blue-950/20' 
-      };
-    }
-    if (partyLower.includes('labour')) {
-      return { 
-        border: 'border-l-4 border-red-500', 
-        bg: 'bg-red-50/50 dark:bg-red-950/20' 
-      };
-    }
-    if (partyLower.includes('green')) {
-      return { 
-        border: 'border-l-4 border-green-500', 
-        bg: 'bg-green-50/50 dark:bg-green-950/20' 
-      };
-    }
-    if (partyLower.includes('reform')) {
-      return { 
-        border: 'border-l-4 border-purple-500', 
-        bg: 'bg-purple-50/50 dark:bg-purple-950/20' 
-      };
-    }
-    if (partyLower.includes('snp')) {
-      return { 
-        border: 'border-l-4 border-yellow-500', 
-        bg: 'bg-yellow-50/50 dark:bg-yellow-950/20' 
-      };
-    }
-    if (partyLower.includes('plaid')) {
-      return { 
-        border: 'border-l-4 border-emerald-600', 
-        bg: 'bg-emerald-50/50 dark:bg-emerald-950/20' 
-      };
-    }
-    
-    // Default/Independent
-    return { 
-      border: 'border-l-4 border-gray-300', 
-      bg: 'bg-gray-50/50 dark:bg-gray-950/20' 
-    };
-  };
-
-  const getVoteDirectionBadge = (direction: string) => {
-    if (direction === 'aye') return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Aye</Badge>;
-    if (direction === 'no') return <Badge variant="destructive">No</Badge>;
-    return <Badge variant="outline">Abstain</Badge>;
-  };
-
-  const toggleMajorVote = async (voteId: string, currentValue: boolean) => {
+  const toggleFeatureInFeed = async (voteId: string, currentValue: boolean) => {
     try {
       const { error } = await supabase
         .from('parliamentary_mentions')
@@ -351,320 +106,271 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
 
       if (error) throw error;
 
-      // Update local state
       setVotes(prev => prev.map(v => 
         v.id === voteId ? { ...v, is_major_vote: !currentValue } : v
       ));
 
       toast({
-        title: "Success",
-        description: `Vote ${!currentValue ? 'marked as major' : 'unmarked as major'}`,
+        title: !currentValue ? "Featured in feed" : "Removed from feed",
+        description: !currentValue 
+          ? "This vote will appear as a featured card in the feed"
+          : "This vote will only appear in the weekly digest",
       });
     } catch (error) {
-      console.error('Error toggling major vote:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update vote status",
-        variant: "destructive"
-      });
+      console.error('Error toggling feature:', error);
+      toast({ title: "Error", description: "Failed to update", variant: "destructive" });
     }
   };
 
-  const renderVoteCard = (vote: VotingRecord) => {
-    const partyColors = getPartyColors(vote.party);
-    
-    return (
-      <Card key={vote.id} className={`hover:shadow-md transition-shadow ${partyColors.border} ${partyColors.bg}`}>
-        <CardHeader className="pb-4">
-          <div className="space-y-3">
-            {/* Title with inline indicators */}
-            <CardTitle className="text-lg leading-tight flex items-start gap-2">
-              {vote.is_major_vote && (
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400 flex-shrink-0 mt-0.5" />
-              )}
-              {vote.is_rebellion && <span className="text-base">🔥</span>}
-              <span className="flex-1">{vote.vote_title}</span>
-              {isTopicOwner && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 ml-auto flex-shrink-0"
-                  onClick={() => toggleMajorVote(vote.id, vote.is_major_vote)}
-                >
-                  <Star className={`w-3 h-3 ${vote.is_major_vote ? 'fill-amber-400 text-amber-400' : ''}`} />
-                </Button>
-              )}
-            </CardTitle>
-          
-          {/* MP Info - single clean line */}
-          <div className="text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
-            <span className="font-medium text-foreground">{vote.mp_name}</span>
-            <span>•</span>
-            <span>{vote.party}</span>
-            <span>•</span>
-            <span>{vote.constituency}</span>
-            <span>•</span>
-            <span className="text-xs">{format(new Date(vote.vote_date), 'MMM d, yyyy')}</span>
-          </div>
-          
-          {/* Vote direction and outcome - compact line */}
-          <div className="flex items-center gap-3 text-sm">
-            {getVoteDirectionBadge(vote.vote_direction)}
-            <span className="text-muted-foreground">
-              {vote.vote_outcome === 'passed' ? '✓' : '✗'} {vote.vote_outcome.charAt(0).toUpperCase() + vote.vote_outcome.slice(1)} ({vote.aye_count}-{vote.no_count})
-            </span>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0 space-y-4 max-h-96 overflow-y-auto">
-        {/* Bill stage and category badges */}
-        <div className="flex items-center gap-2">
-          <Badge className={getCategoryColor(vote.vote_category)}>{vote.vote_category}</Badge>
-          {vote.bill_stage && (
-            <Badge variant="outline" className="text-xs">{vote.bill_stage}</Badge>
-          )}
-        </div>
+  const triggerCollection = async () => {
+    try {
+      toast({ title: "Collecting...", description: "Fetching latest votes from Parliament" });
 
-        {/* AI-generated context summary */}
-        {vote.vote_context && (
-          <div className="bg-primary/5 border-l-2 border-primary/30 pl-3 py-2">
-            <p className="text-sm font-medium text-foreground">
-              📋 What it's about:
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {vote.vote_context}
-            </p>
-          </div>
-        )}
-        
-        {/* Enhanced local impact */}
-        <div>
-          <p className="text-sm font-medium text-foreground mb-1">💡 Why it matters:</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {vote.local_impact_summary}
-          </p>
-        </div>
-        
-        {/* Footer with links */}
-        <div className="flex items-center justify-between text-xs pt-2 border-t">
-          <span className="text-muted-foreground">Parliamentary Record</span>
-          <div className="flex gap-2">
-            {vote.story_id && (
-              <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
-                <a href={`/@${topicSlug}/${vote.story_id}`} target="_blank" rel="noopener noreferrer">
-                  Story →
-                </a>
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
-              <a href={vote.vote_url} target="_blank" rel="noopener noreferrer">
-                Parliament.uk →
-              </a>
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-    );
+      const { data: topic } = await supabase
+        .from('topics')
+        .select('region')
+        .eq('id', topicId)
+        .single();
+
+      if (!topic?.region) throw new Error('Topic region not configured');
+
+      const { error } = await supabase.functions.invoke('uk-parliament-collector', {
+        body: { topicId, region: topic.region, mode: 'daily', forceRefresh: true }
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Collection started", description: "Refreshing in a few seconds..." });
+      setTimeout(() => { loadVotes(); checkTopicOwnership(); }, 5000);
+    } catch (error) {
+      console.error('Collection error:', error);
+      toast({ title: "Failed", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
+    }
   };
+
+  useEffect(() => {
+    checkTopicOwnership();
+    loadVotes();
+  }, [topicId, user]);
+
+  // Group votes by date
+  const votesByDate = votes.reduce<Record<string, VotingRecord[]>>((acc, vote) => {
+    const dateKey = vote.vote_date || 'Unknown';
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(vote);
+    return acc;
+  }, {});
+
+  const featuredCount = votes.filter(v => v.is_major_vote).length;
+  const rebellionCount = votes.filter(v => v.is_rebellion).length;
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Voting Record</h3>
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+        <div className="flex items-center gap-2">
+          <Landmark className="w-5 h-5" />
+          <h3 className="text-lg font-semibold">Parliamentary Review</h3>
         </div>
-        <p className="text-muted-foreground">Loading voting records...</p>
+        <p className="text-sm text-muted-foreground">Loading votes...</p>
       </div>
     );
   }
 
+  // Convert vote to preview format
+  const toPreviewFormat = (vote: VotingRecord): ParliamentaryVote => ({
+    id: vote.id,
+    mp_name: vote.mp_name,
+    party: vote.party,
+    constituency: vote.constituency,
+    vote_title: vote.vote_title,
+    vote_direction: vote.vote_direction,
+    vote_date: vote.vote_date,
+    vote_url: vote.vote_url,
+    vote_outcome: vote.vote_outcome,
+    aye_count: vote.aye_count,
+    no_count: vote.no_count,
+    is_rebellion: vote.is_rebellion,
+    local_impact_summary: vote.local_impact_summary,
+    vote_category: vote.vote_category,
+    created_at: new Date().toISOString(),
+  });
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Vote className="w-5 h-5" />
-            Voting Record
+            <Landmark className="w-5 h-5" />
+            Parliamentary Review
           </h3>
           <p className="text-sm text-muted-foreground">
-            Comprehensive MP voting tracker
+            {votes.length} votes in the last 14 days · {featuredCount} featured · {rebellionCount} rebellions
           </p>
         </div>
+        {isTopicOwner && (
+          <Button variant="outline" size="sm" onClick={triggerCollection} className="gap-1.5">
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </Button>
+        )}
       </div>
 
-      {/* Monitoring & Validation Dashboard */}
-      {isTopicOwner && (
-        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-semibold text-sm mb-1">📊 Data Monitoring</h4>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>Last Collection: {lastCollectionAt ? format(new Date(lastCollectionAt), 'MMM d, yyyy HH:mm') : 'Never'}</div>
-                  {validationResult && (
-                    <>
-                      <div>Completeness: {validationResult.validation.completeness}%</div>
-                      <div>Missing Votes: {validationResult.validation.missingVotes}</div>
-                      <div>Orphaned Votes: {validationResult.validation.orphanedVotes}</div>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={validateCompleteness}
-                  disabled={validating}
-                >
-                  {validating ? 'Validating...' : 'Validate'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={triggerManualCollection}
-                >
-                  Refresh Now
-                </Button>
-              </div>
-            </div>
-            {validationResult && validationResult.recommendations.length > 0 && (
-              <div className="pt-2 border-t text-xs space-y-1">
-                <div className="font-medium">Recommendations:</div>
-                {validationResult.recommendations.map((rec: string, idx: number) => (
-                  <div key={idx} className="text-muted-foreground">• {rec}</div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Last collection info */}
+      {lastCollectionAt && (
+        <p className="text-xs text-muted-foreground">
+          Last collected: {format(new Date(lastCollectionAt), 'MMM d, yyyy HH:mm')}
+        </p>
       )}
 
-      {/* Tracked MPs Banner */}
-      {trackedMPs.length > 0 && (
-        <div className="p-4 bg-muted/50 rounded-lg border">
-          <h3 className="font-medium mb-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5">
-              👥 Tracking {trackedMPs.length} MP{trackedMPs.length > 1 ? 's' : ''}
-            </span>
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {trackedMPs.map(mp => (
-              <Badge 
-                key={mp.mp_id} 
-                variant={mp.is_primary ? "default" : "secondary"}
-                className="flex items-center gap-1"
-              >
-                {mp.is_primary && <span className="text-xs">⭐</span>}
-                {mp.mp_name} ({mp.constituency})
-              </Badge>
-            ))}
+      {/* Preview modal */}
+      {previewVote && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-muted-foreground">Feed Preview</h4>
+            <Button variant="ghost" size="sm" onClick={() => setPreviewVote(null)}>
+              Close preview
+            </Button>
+          </div>
+          <div className="max-w-md mx-auto">
+            <ParliamentaryInsightCard 
+              votes={[toPreviewFormat(previewVote)]} 
+              topicSlug={topicSlug} 
+            />
           </div>
         </div>
       )}
 
-      {/* Summer Recess Banner */}
-      {isInSummerRecess() && votes.length === 0 && (
-        <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                  Parliament in Summer Recess
-                </h4>
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  UK Parliament is currently in summer recess (July 25 - September 2). 
-                  Voting will resume when Parliament returns in early September.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-500">{totalVotes}</div>
-            <div className="text-xs text-muted-foreground">Total Votes</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-amber-500 flex items-center justify-center gap-1">
-              <Star className="w-5 h-5 fill-amber-500" />
-              {majorVoteCount}
-            </div>
-            <div className="text-xs text-muted-foreground">Major Votes</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-500">{uniqueMps}</div>
-            <div className="text-xs text-muted-foreground">MPs Tracked</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-500">{rebellionCount}</div>
-            <div className="text-xs text-muted-foreground">Rebellions</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-purple-500">{weeklyRoundupCount}</div>
-            <div className="text-xs text-muted-foreground">Roundups</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <Select value={filterType} onValueChange={(v) => setFilterType(v as any)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Votes ({votes.length})</SelectItem>
-            <SelectItem value="major">⭐ Major Votes ({majorVoteCount})</SelectItem>
-            <SelectItem value="daily">Daily Posts</SelectItem>
-            <SelectItem value="weekly">Weekly Roundups</SelectItem>
-            <SelectItem value="rebellions">Rebellions Only</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date">Date (Newest)</SelectItem>
-            <SelectItem value="mp">By MP</SelectItem>
-            <SelectItem value="rebellion">Rebellions First</SelectItem>
-            <SelectItem value="category">By Category</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Votes List */}
+      {/* Vote list grouped by date */}
       {votes.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <Vote className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {filterType === 'rebellions' 
-                ? 'No rebellions found' 
-                : 'No voting records found yet. Check back soon.'}
-            </p>
+            <Landmark className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No votes collected yet.</p>
+            {isTopicOwner && (
+              <Button variant="outline" className="mt-4" onClick={triggerCollection}>
+                Collect Now
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {votes.map(renderVoteCard)}
+        <div className="space-y-6">
+          {Object.entries(votesByDate)
+            .sort(([a], [b]) => b.localeCompare(a))
+            .map(([dateKey, dateVotes]) => (
+              <div key={dateKey} className="space-y-3">
+                {/* Date header */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span className="font-medium">
+                    {dateKey !== 'Unknown' ? format(new Date(dateKey), 'EEEE, MMMM d, yyyy') : 'Unknown date'}
+                  </span>
+                  <span className="text-xs">({dateVotes.length} vote{dateVotes.length > 1 ? 's' : ''})</span>
+                </div>
+
+                {/* Votes for this date */}
+                <div className="space-y-2">
+                  {dateVotes.map(vote => (
+                    <Card 
+                      key={vote.id} 
+                      className={`border-l-4 ${getPartyBorderColor(vote.party)} overflow-hidden`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          {/* Vote direction icon */}
+                          <div className="mt-0.5">
+                            {vote.vote_direction === 'aye' 
+                              ? <ThumbsUp className="w-4 h-4 text-green-500" />
+                              : vote.vote_direction === 'no'
+                              ? <ThumbsDown className="w-4 h-4 text-red-500" />
+                              : null
+                            }
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0 space-y-2">
+                            {/* Title */}
+                            <h4 className="font-medium text-sm leading-snug line-clamp-2">
+                              {vote.vote_title}
+                            </h4>
+
+                            {/* MP + meta */}
+                            <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">{vote.mp_name}</span>
+                              <span>·</span>
+                              <span>{vote.party}</span>
+                              <span>·</span>
+                              <span className="uppercase font-medium">
+                                {vote.vote_direction}
+                              </span>
+                            </div>
+
+                            {/* Badges */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className="text-[10px]">
+                                {vote.vote_category}
+                              </Badge>
+                              <Badge variant={vote.vote_outcome === 'passed' ? 'default' : 'secondary'} className="text-[10px]">
+                                {vote.vote_outcome} ({vote.aye_count}-{vote.no_count})
+                              </Badge>
+                              {vote.is_rebellion && (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  🔥 Rebellion
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Local impact summary */}
+                            {vote.local_impact_summary && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {vote.local_impact_summary}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          {isTopicOwner && (
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                              {/* Feature toggle */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-muted-foreground">
+                                  {vote.is_major_vote ? 'Featured' : 'Digest only'}
+                                </span>
+                                <Switch
+                                  checked={vote.is_major_vote}
+                                  onCheckedChange={() => toggleFeatureInFeed(vote.id, vote.is_major_vote)}
+                                />
+                              </div>
+
+                              {/* Preview + Link */}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => setPreviewVote(previewVote?.id === vote.id ? null : vote)}
+                                >
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  Preview
+                                </Button>
+                                {vote.vote_url && (
+                                  <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                                    <a href={vote.vote_url} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
         </div>
       )}
     </div>
