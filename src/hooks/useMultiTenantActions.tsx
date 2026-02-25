@@ -152,7 +152,7 @@ export const useMultiTenantActions = () => {
           ai_provider: 'deepseek',
           tone: tone,
           writing_style: writingStyle,
-          audience_expertise: 'intermediate',
+          audience_expertise: null,
           status: 'pending',
           result_data: {
             ...(article.is_snippet ? { is_snippet: true, original_word_count: article.word_count } : {}),
