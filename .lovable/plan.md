@@ -1,95 +1,81 @@
 
 
-# Holiday Mode Automation -- Root Cause Analysis and Fix Plan
+## Two Issues: Hidden Arrivals + Holiday Mode Not Self-Publishing
 
-## Problem Summary
+### Problem 1: "Hidden stories in arrivals" that become non-interactive
 
-Holiday mode is supposed to run a 3-step pipeline: **Gather → Simplify → Illustrate**. Currently only step 1 (gathering) works. Steps 2 and 3 are broken due to three distinct blockers.
+**Root cause:** The arrivals filter (line 228 of `useMultiTenantTopicPipeline.tsx`) includes articles with `processing_status` in both `'new'` AND `'processed'`:
+
+```text
+Arrivals shows:  processing_status IN ('new', 'processed')
+                 AND NOT in published stories
+                 AND NOT in active queue
+```
+
+When you "Simplify" an article, `auto-simplify-queue` marks it `processing_status = 'processed'` and inserts a queue item. While the queue item is `pending`/`processing`, the article is hidden. But once the queue item completes (status becomes `completed`), the article reappears in arrivals because the filter only excludes `pending`/`processing` queue items. It shows alongside its published story, creating a "ghost" card that has no meaningful action.
+
+After you publish another story, the refresh triggers a reload, and these ghost articles may lose their interactive state or end up with stale references (the story exists but the card still renders as an "arrival").
+
+**Fix:** Stop showing `'processed'` articles in arrivals. Only show `processing_status = 'new'`. Articles that have been successfully queued and processed should not reappear. Line 228 changes from:
+
+```
+['new', 'processed'].includes(item.processing_status)
+```
+to:
+```
+item.processing_status === 'new'
+```
+
+This is safe because:
+- `auto-simplify-queue` marks articles `'processed'` when it queues them
+- Manual "Simplify" also queues them
+- Once processed, the story exists in Published — no reason to show the article again
 
 ---
 
-## Root Cause Analysis
+### Problem 2: 100% rated story stuck in arrivals (not auto-published in holiday mode)
 
-### Blocker 1: `auto-simplify-queue` requires a legacy bridge row that doesn't exist
+**Root cause chain — two blockers:**
 
-The `auto-simplify-queue` function (runs every 10 minutes via cron) finds qualifying articles but then tries to look up a matching row in the legacy `articles` table by URL. For multi-tenant articles, no such bridge row exists. The logs confirm this -- **every single qualifying article is skipped with "no articles entry"**:
+1. **`auto-simplify-queue` only processes `processing_status = 'new'`** (line 71). If an article somehow got set to `'processed'` without a story being created (e.g. a failed queue run, or a previous story was deleted with the old `delete_story_cascade` that used to reset to `'new'` but the article got re-processed and re-marked), it's stuck. The 100% article you saw was likely already `'processed'` from a prior run.
 
-```text
-⏭️ Skipping article cfa2f172-...: no articles entry
-⏭️ Skipping article 82095b34-...: no articles entry
-⏭️ Skipping article bd9e083d-...: no articles entry
-... (20 articles found, 0 queued)
+2. **`auto-illustrate-stories` uses legacy join** (line 125): `articles!inner(topic_id)`. Multi-tenant stories link via `topic_article_id` → `topic_articles.topic_id`, not via `articles.topic_id`. So even if a story is created and ready, auto-illustration finds zero eligible stories.
+
+3. **`publish-ready-stories`** checks for drip feed and scheduled times, which may hold stories in `ready` status without publishing them if no `scheduled_publish_at` is set and drip feed is enabled.
+
+**Fixes:**
+
+#### Fix A: `auto-illustrate-stories` — multi-tenant query path
+Replace the legacy join query (lines 123-132):
 ```
+.select('id, title, quality_score, created_at, article_id, articles!inner(topic_id)')
+.in('articles.topic_id', topicIds)
+```
+With a dual-path query that also covers multi-tenant stories via `topic_articles`:
+```
+.select('id, title, quality_score, created_at, topic_article_id, topic_articles!inner(topic_id)')
+.in('topic_articles.topic_id', topicIds)
+```
+Since almost all new stories are multi-tenant, the legacy path can be dropped or kept as a fallback with a union approach.
 
-The function requires `article_id` (legacy FK) to insert into the queue, but the `queue-processor` already handles multi-tenant jobs perfectly well using just `topic_article_id` + `shared_content_id` -- no `article_id` needed.
+#### Fix B: Arrivals filter — only show `'new'`
+As described above. Prevents ghost articles from appearing.
 
-### Blocker 2: `auto-simplify-queue` never calls the queue processor
-
-Even if articles were successfully queued, `auto-simplify-queue` only inserts into `content_generation_queue` and returns. It never invokes `queue-processor` to actually generate the stories. The only cron that calls `queue-processor` is `automated-scheduler` (runs at 2am, 6am, 6pm) -- so queued items could sit for hours before processing.
-
-### Blocker 3: `auto-illustrate-stories` is never triggered
-
-No cron job calls `auto-illustrate-stories`. It's only called inside `eezee-automation-service`, which itself has **zero cron triggers** and **zero recent logs** -- it's completely orphaned code. So even after stories are created, illustration never happens automatically.
+#### Fix C: Add resilience to `auto-simplify-queue`
+Add a secondary check: if an article is `'processed'` but has NO story and NO active queue item, reset it to `'new'` so it gets re-queued. This handles edge cases where processing failed silently.
 
 ---
 
-## Fix Plan
+### Summary of Changes
 
-Rewrite `auto-simplify-queue` to be a complete Holiday Mode orchestrator:
+| File | Change |
+|------|--------|
+| `src/hooks/useMultiTenantTopicPipeline.tsx` (line 228) | Filter arrivals to only `processing_status === 'new'` |
+| `supabase/functions/auto-illustrate-stories/index.ts` (lines 123-132) | Replace `articles!inner(topic_id)` with `topic_articles!inner(topic_id)` for multi-tenant story discovery |
+| `supabase/functions/auto-simplify-queue/index.ts` | Add orphan recovery: reset `'processed'` articles back to `'new'` if they have no story and no queue item |
 
-### Change 1: Remove the legacy bridge row requirement
-
-Instead of the current flow:
-```text
-topic_articles → shared_article_content.url → articles.source_url → article_id
-```
-
-Queue directly as multi-tenant:
-```text
-topic_articles → insert queue with (topic_article_id, shared_content_id) only
-```
-
-This matches how `eezee-automation-service` Phase 3b already queues (lines 320-331) and how `queue-processor` already handles multi-tenant jobs (line 86-87).
-
-### Change 2: Invoke `queue-processor` after queuing
-
-After all articles are queued, call `supabase.functions.invoke('queue-processor')` to immediately process them into stories. This closes the gap between queuing and processing.
-
-### Change 3: Invoke `auto-illustrate-stories` after processing
-
-After the queue processor completes, call `auto-illustrate-stories` for each topic that had articles processed. This completes the full pipeline: Gather → Simplify → Illustrate.
-
-### Change 4: Mark articles as `processed` when queued
-
-Currently `auto-simplify-queue` doesn't update `topic_articles.processing_status`, so the same articles get re-evaluated every 10 minutes (and skipped via the "already queued" check). Update status to `processed` on successful queue insertion, matching `eezee-automation-service` behavior.
-
----
-
-## Technical Detail
-
-### Files Modified
-- `supabase/functions/auto-simplify-queue/index.ts` -- rewrite core logic
-
-### What's removed
-- The entire "bridge row" lookup chain (lines 88-118): fetching `shared_article_content` URLs, looking up `articles` by `source_url`, requiring `article_id`
-- The `article_id` field from queue inserts
-
-### What's added
-- Direct multi-tenant queue insertion with just `topic_article_id` + `shared_content_id`
-- `topic_articles.processing_status` update to `processed` after queuing
-- Story existence check via `topic_article_id` (not `article_id`)
-- Post-queue invocation of `queue-processor`
-- Post-processing invocation of `auto-illustrate-stories` per topic
-- Topic-level tracking of which topics had new items queued (for targeted illustration)
-
-### What stays the same
-- The topic settings query (line 37-40) -- already correctly filters for holiday mode
-- The quality threshold filtering (line 71-78)
-- The duplicate queue check (lines 134-149)
-- The system log at the end
-
-### Safety
-- All changes are within `auto-simplify-queue` only -- no other functions modified
-- `queue-processor` and `auto-illustrate-stories` already work correctly (confirmed by existing logs)
-- Fallback: if `queue-processor` or `auto-illustrate-stories` invocation fails, it logs the error but doesn't break the queuing step
+These three changes together ensure:
+- Arrivals only shows genuinely new, unprocessed articles
+- Holiday mode auto-illustrates multi-tenant stories correctly
+- Failed processing doesn't permanently orphan articles
 
