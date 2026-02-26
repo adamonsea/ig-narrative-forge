@@ -450,12 +450,15 @@ serve(async (req) => {
     // Model configuration is now defined at the top of the function (line ~77)
 
     // Check if user is super admin (bypass credit deduction)
-    const { data: hasAdminRole } = await supabase.rpc('has_role', {
-      _user_id: userId,
-      _role: 'superadmin'
-    })
-    
-    const isSuperAdmin = hasAdminRole === true || isServiceRole
+    // Skip RPC call for service-role calls to avoid 'invalid UUID' errors
+    let isSuperAdmin = isServiceRole
+    if (!isServiceRole) {
+      const { data: hasAdminRole } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'superadmin'
+      })
+      isSuperAdmin = hasAdminRole === true
+    }
     let creditResult = null
     
     // Track fallback usage to inform the user
