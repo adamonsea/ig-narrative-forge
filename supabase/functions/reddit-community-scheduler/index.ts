@@ -16,6 +16,21 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authorize: service_role (cron/internal) or authenticated user (dashboard)
+  const authHeader = req.headers.get('Authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  let jwtRole: string | null = null;
+  try {
+    const payload = token ? JSON.parse(atob(token.split('.')[1])) : null;
+    jwtRole = payload?.role;
+  } catch {}
+  if (jwtRole !== 'service_role' && jwtRole !== 'authenticated') {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     console.log('🕐 Community Intelligence Scheduler starting...');
     
