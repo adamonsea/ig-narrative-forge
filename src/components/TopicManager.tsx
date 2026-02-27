@@ -137,10 +137,6 @@ export const TopicManager = () => {
   };
 
   const handleTopicCreated = (topicSlug: string) => {
-    toast({
-      title: "Success!",
-      description: "Topic created successfully! Redirecting to topic dashboard..."
-    });
     loadTopics();
     navigate(`/dashboard/topic/${topicSlug}`);
   };
