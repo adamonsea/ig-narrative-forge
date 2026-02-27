@@ -288,6 +288,7 @@ serve(async (req) => {
         .select('email, name, unsubscribe_token')
         .eq('topic_id', topicId)
         .eq('is_active', true)
+        .eq('email_verified', true)
         .eq('notification_type', notificationType)
         .not('email', 'is', null);
 
