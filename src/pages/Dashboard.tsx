@@ -26,6 +26,7 @@ interface DashboardStats {
 
 const Dashboard = () => {
   const { user, isAdmin, signOut, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     topics: 0,
     articles: 0,
@@ -38,6 +39,13 @@ const Dashboard = () => {
   
   // Set Curatr favicon for dashboard
   usePageFavicon();
+
+  // Redirect unauthenticated users to auth page
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   useEffect(() => {
     if (user) {
