@@ -27,6 +27,7 @@ import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 import { DripFeedSettings } from "@/components/DripFeedSettings";
 import { TrendingKeywordsReview } from "@/components/TrendingKeywordsReview";
 import { WidgetAnalytics } from "@/components/WidgetAnalytics";
+import { SectionLabel } from "@/components/ui/section-label";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
