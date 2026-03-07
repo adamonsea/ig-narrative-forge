@@ -136,14 +136,6 @@ const Dashboard = () => {
     );
   }
 
-  const navigate = useNavigate();
-
-  // Redirect unauthenticated users to auth page
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth', { replace: true });
-    }
-  }, [authLoading, user, navigate]);
 
   if (!user) {
     return null;
