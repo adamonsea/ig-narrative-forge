@@ -274,48 +274,77 @@ export class DatabaseOperations {
     articlesStored: number = 0
   ): Promise<void> {
     try {
-      // Get current metrics
+      // Get current metrics using actual schema columns
       const { data: source } = await this.supabase
         .from('content_sources')
-        .select('success_count, failure_count, articles_scraped, success_rate, avg_response_time_ms')
+        .select('articles_scraped, success_rate, avg_response_time_ms, consecutive_failures, total_failures, is_active, source_name')
         .eq('id', sourceId)
         .single();
 
       if (source) {
-        const successCount = (source.success_count || 0) + (success ? 1 : 0);
-        const failureCount = (source.failure_count || 0) + (success ? 0 : 1);
-        const totalAttempts = successCount + failureCount;
-        const newSuccessRate = totalAttempts > 0 ? Math.round((successCount / totalAttempts) * 100) : 100;
+        const currentConsecutiveFailures = source.consecutive_failures || 0;
+        const currentTotalFailures = source.total_failures || 0;
+        const newConsecutiveFailures = success ? 0 : currentConsecutiveFailures + 1;
+        const newTotalFailures = success ? currentTotalFailures : currentTotalFailures + 1;
+
+        // Calculate rolling success rate using EMA (alpha=0.2)
+        const currentSuccessRate = source.success_rate || 100;
+        const newSuccessRate = Math.round(currentSuccessRate * 0.8 + (success ? 100 : 0) * 0.2);
 
         const currentAvgResponseTime = source.avg_response_time_ms || 0;
-        const totalScrapes = (source.articles_scraped || 0) + Math.max(1, articlesStored);
-        const newAvgResponseTime = totalScrapes > 1 
-          ? Math.round(((currentAvgResponseTime * (totalScrapes - 1)) + responseTime) / totalScrapes)
+        const newAvgResponseTime = currentAvgResponseTime > 0
+          ? Math.round(currentAvgResponseTime * 0.8 + responseTime * 0.2)
           : responseTime;
 
-        const updateData = {
-          success_count: successCount,
-          failure_count: failureCount,
+        const updateData: Record<string, any> = {
+          consecutive_failures: newConsecutiveFailures,
+          total_failures: newTotalFailures,
           success_rate: newSuccessRate,
           avg_response_time_ms: Math.round(newAvgResponseTime),
           last_scraped_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          scraping_method: method
+          last_successful_method: success ? method : undefined,
+          last_method_execution_ms: responseTime
         };
+
+        // Track failure reason
+        if (!success) {
+          updateData.last_failure_at = new Date().toISOString();
+          updateData.last_failure_reason = `Scrape failed at ${new Date().toISOString()}`;
+        }
 
         // Only update articles_scraped if we actually stored articles
         if (articlesStored > 0) {
-          // Note: articles_scraped field may not exist on source object, so we handle it safely
-          const currentArticlesScraped = (source as any).articles_scraped || 0;
-          (updateData as any).articles_scraped = currentArticlesScraped + articlesStored;
+          const currentArticlesScraped = source.articles_scraped || 0;
+          updateData.articles_scraped = currentArticlesScraped + articlesStored;
         }
+
+        // Auto-disable sources after 5+ consecutive failures to save API credits
+        const AUTO_DISABLE_THRESHOLD = 5;
+        if (newConsecutiveFailures >= AUTO_DISABLE_THRESHOLD && source.is_active) {
+          updateData.is_active = false;
+          updateData.last_failure_reason = `Auto-disabled: ${newConsecutiveFailures} consecutive failures`;
+          console.warn(`🚫 AUTO-DISABLED source "${source.source_name}" (${sourceId}) after ${newConsecutiveFailures} consecutive failures`);
+          
+          // Log the auto-disable event
+          await this.logSystemEvent('warning', `Source auto-disabled after ${newConsecutiveFailures} consecutive failures`, {
+            source_id: sourceId,
+            source_name: source.source_name,
+            consecutive_failures: newConsecutiveFailures,
+            total_failures: newTotalFailures,
+            success_rate: newSuccessRate
+          }, 'source-auto-disable');
+        }
+
+        // Remove undefined values
+        Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
         await this.supabase
           .from('content_sources')
           .update(updateData)
           .eq('id', sourceId);
 
-        console.log(`📈 Updated source metrics: success ${successCount}/${totalScrapes}, ${newSuccessRate}% rate${articlesStored > 0 ? `, +${articlesStored} articles` : ''}`);
+        console.log(`📈 Updated source metrics: consecutive_failures=${newConsecutiveFailures}, ${newSuccessRate}% rate${articlesStored > 0 ? `, +${articlesStored} articles` : ''}`);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
