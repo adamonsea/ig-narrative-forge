@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -579,7 +580,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
       <CardContent>
         {loadingApproved ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <Spinner size="lg" />
           </div>
         ) : approvedStories.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">

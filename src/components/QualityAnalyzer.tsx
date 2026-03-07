@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -127,7 +128,7 @@ export const QualityAnalyzer = ({ storyId, onAnalysisComplete }: QualityAnalyzer
           >
             {analyzing ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <Spinner size="sm" className="text-white mr-2" />
                 Analyzing Content...
               </>
             ) : (

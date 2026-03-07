@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Spinner } from '@/components/ui/spinner';
 import { TopicManager } from "@/components/TopicManager";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,10 +21,10 @@ const Dashboard = () => {
   // Show loading spinner while auth initializes
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center min-h-[60vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <Spinner size="lg" />
           </div>
         </div>
       </div>
@@ -37,7 +38,7 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">

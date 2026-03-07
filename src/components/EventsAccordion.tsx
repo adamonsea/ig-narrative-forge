@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -125,7 +126,7 @@ export const EventsAccordion: React.FC<EventsAccordionProps> = ({ topicId, isOwn
       <Card className="w-full">
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <Spinner size="lg" />
           </div>
         </CardContent>
       </Card>

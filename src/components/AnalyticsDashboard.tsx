@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -96,7 +97,7 @@ export const AnalyticsDashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner size="lg" />
       </div>
     );
   }

@@ -185,7 +185,7 @@ const StoryPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-1 md:px-4 py-8">
           <div className="mb-6">
             <Skeleton className="w-32 h-10" />
@@ -201,7 +201,7 @@ const StoryPage = () => {
 
   if (!story || !topic) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="container mx-auto px-4 py-8 max-w-md animate-fade-in">
           <div className="text-center space-y-6">
             {/* Archive icon */}

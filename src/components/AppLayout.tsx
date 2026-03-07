@@ -45,7 +45,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         
         <div className="flex flex-col flex-1 w-full">
           {/* Single unified header bar */}
-          <header className="sticky top-0 z-50 flex h-10 items-center gap-3 border-b border-sidebar-border bg-white dark:bg-sidebar-background px-4">
+          <header className="sticky top-0 z-50 flex h-10 items-center gap-3 border-b border-border/30 bg-white dark:bg-sidebar-background px-4 relative">
             <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent" />
             
             {hasBreadcrumbs && (
@@ -68,10 +68,12 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </BreadcrumbList>
               </Breadcrumb>
             )}
+            {/* Brand accent line */}
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent" />
           </header>
 
           {/* Main content */}
-          <main className="flex-1">
+          <main className="flex-1 animate-fade-in">
             {children}
           </main>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Spinner } from '@/components/ui/spinner';
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +101,7 @@ export const AutomationDashboard = () => {
         <CardContent className="space-y-3">
           {loading ? (
             <div className="flex items-center justify-center py-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <Spinner size="lg" />
             </div>
           ) : topicStatus.length === 0 ? (
             <p className="text-sm text-muted-foreground">
