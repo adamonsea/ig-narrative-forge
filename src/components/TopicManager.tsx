@@ -14,8 +14,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CreateTopicDialog } from "@/components/CreateTopicDialog";
-import { EngagementSparkline } from "@/components/EngagementSparkline";
 
 interface Topic {
   id: string;
