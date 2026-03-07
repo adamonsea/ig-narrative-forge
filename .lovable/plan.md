@@ -1,76 +1,79 @@
 
 
-## Current Onboarding Flow — Problems Identified
+# UI Noise Audit — Recommendations
 
-The current topic creation is a **3-step form → redirect to dashboard → manually open source discovery modal → manually trigger scraping** flow. Key friction points:
+After reviewing Dashboard.tsx, TopicManager.tsx, TopicDashboard.tsx, AppLayout.tsx, and AppSidebar.tsx, here are the specific issues contributing to cognitive load, grouped by severity.
 
-1. **Step 2 is bloated** — type selector, region, audience level, description, AND keyword generation all crammed into one step. High cognitive load.
-2. **Step 3 (keyword pruning) is a chore** — users must understand keyword categories, manually select/deselect from 50 keywords. Most users should never see this.
-3. **After creation, the user lands on an admin dashboard** — jarring transition from a clean wizard to a complex settings page. No sense of progress toward a "live feed."
-4. **Source discovery is a separate modal** — user has to find and click "Discover Sources" after landing on the dashboard. Breaks flow momentum.
-5. **No visualization of the feed being built** — the DemoFlow has a beautiful build progress animation (DemoBuildProgress), but the real creation flow has nothing similar. User creates topic → lands on empty dashboard. Anticlimactic.
-6. **No auto-scrape trigger** — after adding sources, user must manually start scraping. First-time users don't know to do this.
+---
 
-## Proposed Design: Streamlined "Feed Builder" Wizard
+## 1. Dashboard page has redundant navigation layers
 
-Collapse the entire journey — from naming to live feed — into a **single full-screen wizard** that never leaves the creation context. The user sees their feed "come alive" without touching the admin dashboard.
+**Problem**: The dashboard has THREE competing navigation/action zones:
+- AppLayout sticky header (sidebar trigger only — a lonely hamburger icon in a 56px bar)
+- Dashboard's own header with "Your topics" title + a SECOND hamburger menu (DropdownMenu with Admin/Sign Out)
+- The sidebar itself (which also has Dashboard, Admin, Sign Out)
 
-```text
-Current:  Name → Details+Keywords → Dashboard → Find Sources → Manual Scrape → ???
-Proposed: Name → Sources (auto) → Building... → Your Feed is Live!
-```
+The AppLayout header is an empty bar with just a sidebar trigger — wasted vertical space on the primary view.
 
-### New Step Flow (4 steps, but faster)
+**Fix**: Remove the Dashboard's inline DropdownMenu (lines 159-180). All those actions already exist in the sidebar. This eliminates a duplicate hamburger icon that creates confusion about which menu does what.
 
-**Step 1: Name your feed** (unchanged, clean)
-- Same name input with validation
-- Auto-detect regional vs keyword type from name (already works)
-- On "Continue": auto-generate keywords + description in background (don't show to user)
+---
 
-**Step 2: Add sources** (merged into wizard)
-- Auto-triggers source discovery immediately using the generated keywords
-- Shows source pills appearing one by one (like current SourceDiscoveryModal but inline)
-- User taps to add, dismiss, or just hits "Continue" to accept all
-- Smart default: auto-add top 3 highest-confidence sources
-- "Add all" button prominent
+## 2. Collapsible stats panel serves no purpose
 
-**Step 3: Building your feed** (new — inspired by DemoBuildProgress)
-- Full-screen animated build visualization
-- Three phases with checkmarks: "Sources connected" → "Gathering stories" → "Generating your feed"
-- Actually triggers: topic creation → source linking → first scrape → auto-simplify
-- Progress bar + encouraging messages
-- A preview of the feed "assembling" — story cards slide in as they're found/generated
-- This replaces the dead landing on an empty dashboard
+**Problem**: The Dashboard has a collapsible stats panel (Topics/Sources/Articles/Stories counts, lines 183-243) behind a tiny icon-only button. These same numbers are already visible inline on each topic card (sources count, arrivals, published). The collapsible adds a click barrier to data that's either redundant or not actionable.
 
-**Step 4: Your feed is live** (new)
-- Shows the actual first stories (if available) or a "stories incoming" state
-- Big "View your feed" CTA that opens the public feed
-- Secondary "Go to dashboard" link for power users
-- Confetti or subtle celebration animation
+**Fix**: Remove the entire collapsible stats section. The topic cards already surface the metrics that matter (visitors, approval, audience).
 
-### Technical Implementation
+---
 
-1. **Refactor `CreateTopicDialog.tsx`** — Remove step 2 (details) and step 3 (keywords). Auto-generate keywords silently after step 1. Add inline source discovery (step 2), build progress (step 3), and completion (step 4).
+## 3. "Powered by Curatr.pro" appears in too many places
 
-2. **Create `FeedBuildProgress.tsx`** — New component adapted from `DemoBuildProgress` pattern but wired to real Supabase operations (insert topic, link sources, invoke `universal-topic-scraper`, poll for stories).
+**Problem**: The branding tagline appears on:
+- Dashboard header (line 154-156)
+- TopicDashboard footer (lines 874-878)
+- The sidebar already shows the Curatr brand/logo
 
-3. **Auto-source selection** — After keyword generation, auto-add top 3 sources (confidence ≥ 75, reliability = high) without user action. User can still add/remove on step 2.
+This is self-referential noise for authenticated users who already know what product they're using.
 
-4. **Auto-scrape trigger** — Step 3 automatically invokes `universal-topic-scraper` for the new topic after sources are linked, then polls `topic_articles` count to show real progress.
+**Fix**: Remove the "Powered by Curatr.pro" text from Dashboard header and TopicDashboard footer. The sidebar brand mark is sufficient.
 
-5. **Update `TopicManager.handleTopicCreated`** — Remove the immediate redirect to dashboard. The wizard handles the entire flow and only navigates when the user explicitly clicks "View feed" or "Dashboard."
+---
 
-### What Gets Removed/Simplified
+## 4. AppLayout header bar is nearly empty
 
-- **Step 2 details form** (type/region/audience/description) — auto-inferred or defaulted, editable later in settings
-- **Step 3 keyword pruning** — keywords auto-selected, editable later in settings  
-- **Post-creation redirect to empty dashboard** — replaced by in-wizard build visualization
-- **Separate source discovery modal trigger** — merged into wizard step 2
+**Problem**: The sticky header (line 49) is 56px tall and contains only a sidebar trigger icon. It consumes prime screen real estate with almost no content. On the topic dashboard, breadcrumbs add a SECOND bar below it.
 
-### Scope
+**Fix**: Merge the sidebar trigger into the breadcrumb bar when breadcrumbs are present. When no breadcrumbs (dashboard root), make the header thinner (h-10) or integrate the trigger directly into the page header.
 
-- Modify: `CreateTopicDialog.tsx` (major refactor)
-- Create: `FeedBuildProgress.tsx` (real build progress with Supabase calls)
-- Modify: `TopicManager.tsx` (remove immediate redirect)
-- The admin dashboard, source manager, keyword settings remain untouched — they become "advanced settings" accessible later
+---
+
+## 5. TopicDashboard "Access Denied" is dead code
+
+**Problem**: Lines 531-541 render an "Access Denied" page for `!user`, but the `useEffect` redirect (lines 150-155) already navigates to `/auth` before this renders. Same pattern as the old Dashboard bug we just fixed.
+
+**Fix**: Replace with `if (!user) return null;` — the redirect handles it.
+
+---
+
+## 6. Topic card archive button is too prominent
+
+**Problem**: Every topic card shows a destructive-styled Archive button (red hover) at the same visual weight as the Feed button. Archive is a rare, irreversible action sitting next to an everyday action. This creates anxiety.
+
+**Fix**: Move Archive into a three-dot overflow menu on the card, or hide it behind a long-press/right-click. Only Feed button remains visible.
+
+---
+
+## Implementation Summary
+
+| Change | File | Impact |
+|---|---|---|
+| Remove Dashboard inline menu | Dashboard.tsx | Eliminate duplicate navigation |
+| Remove collapsible stats panel | Dashboard.tsx | Remove redundant data layer |
+| Remove "Powered by" text x2 | Dashboard.tsx, TopicDashboard.tsx | Reduce branding noise |
+| Slim down AppLayout header | AppLayout.tsx | Reclaim vertical space |
+| Replace dead "Access Denied" | TopicDashboard.tsx | Clean dead code |
+| Move Archive to overflow menu | TopicManager.tsx | Reduce destructive action prominence |
+
+Six changes, all subtractive — removing elements rather than adding them. Net result: fewer competing UI layers, less vertical space consumed by chrome, and clearer information hierarchy.
 
