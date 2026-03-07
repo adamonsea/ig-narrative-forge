@@ -202,9 +202,11 @@ serve(async (req) => {
 
         if (articleTitle && articleTopicId) {
           const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+          // Fetch recent stories scoped to the SAME topic via topic_articles join
           const { data: recentStories } = await supabase
             .from('stories')
-            .select('id, title')
+            .select('id, title, topic_article:topic_articles!inner(topic_id)')
+            .eq('topic_articles.topic_id', articleTopicId)
             .eq('is_published', true)
             .gte('created_at', cutoff48h);
 
