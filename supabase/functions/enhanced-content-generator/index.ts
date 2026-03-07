@@ -766,7 +766,7 @@ Return in JSON format:
           .single(),
         topicArticleId ? supabase
           .from('topic_articles')
-          .select('*')
+          .select('*, source:content_sources!topic_articles_source_id_fkey(source_name)')
           .eq('id', topicArticleId)
           .single() : { data: null, error: null }
       ]);
@@ -847,8 +847,31 @@ Return in JSON format:
     
     console.log(`Built prompt system with ${promptSystem?.systemPrompts?.length || 0} system prompts and ${promptSystem?.contentPrompts?.length || 0} content prompts`);
     
-    // Determine publication name
+    // Determine publication name (actual source) and topic name (feed name)
     let publicationName = 'News Update';
+    let topicName = 'News Update';
+    
+    // First, try to get the actual source publication name from the topic_article's source
+    if (isMultiTenant && topicArticleId) {
+      const topicArticle = topicArticleResult?.data;
+      if (topicArticle?.source?.source_name) {
+        publicationName = topicArticle.source.source_name;
+        console.log(`📰 Source publication resolved: ${publicationName}`);
+      }
+    } else if (!isMultiTenant && article.source_id) {
+      // Legacy path: fetch source name from content_sources
+      const { data: sourceData } = await supabase
+        .from('content_sources')
+        .select('source_name')
+        .eq('id', article.source_id)
+        .maybeSingle();
+      if (sourceData?.source_name) {
+        publicationName = sourceData.source_name;
+        console.log(`📰 Legacy source publication resolved: ${publicationName}`);
+      }
+    }
+    
+    // Also get topic name for context (but NOT as the source attribution)
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
@@ -857,9 +880,16 @@ Return in JSON format:
         .maybeSingle();
       
       if (topicData?.name) {
-        publicationName = topicData.name;
+        topicName = topicData.name;
+        // Only fall back to topic name if no source was found
+        if (publicationName === 'News Update') {
+          publicationName = topicData.name;
+          console.log(`⚠️ No source found, falling back to topic name: ${publicationName}`);
+        }
       }
     }
+    
+    console.log(`Attribution: publication="${publicationName}", topic="${topicName}"`);
 
     // Snippet handling logic
     const isSnippet = article.word_count > 0 && article.word_count < 150;
