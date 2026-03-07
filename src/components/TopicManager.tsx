@@ -1,11 +1,19 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Hash, Archive, ExternalLink, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { Plus, Hash, Archive, ExternalLink, TrendingUp, TrendingDown, AlertTriangle, MoreHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
+import { CreateTopicDialog } from "@/components/CreateTopicDialog";
+import { EngagementSparkline } from "@/components/EngagementSparkline";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CreateTopicDialog } from "@/components/CreateTopicDialog";
 import { EngagementSparkline } from "@/components/EngagementSparkline";
 
@@ -326,18 +334,34 @@ export const TopicManager = () => {
                           <ExternalLink className="w-3 h-3 mr-1.5" />
                           <span className="hidden md:inline text-xs">Feed</span>
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 hover:bg-destructive/10 hover:text-destructive"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleArchiveTopic(topic.id, topic.name);
-                          }}
-                        >
-                          <Archive className="w-3.5 h-3.5" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleArchiveTopic(topic.id, topic.name);
+                              }}
+                            >
+                              <Archive className="w-3.5 h-3.5 mr-2" />
+                              Archive
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
 

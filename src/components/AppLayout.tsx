@@ -20,12 +20,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const { data: topics } = useTopics();
   
-  // Parse breadcrumbs from current route
   const getBreadcrumbs = () => {
     const pathSegments = location.pathname.split("/").filter(Boolean);
     const crumbs = [{ label: "Dashboard", path: "/dashboard" }];
     
-    // Check if we're in a topic route
     if (pathSegments[0] === "dashboard" && pathSegments[1] === "topic" && pathSegments[2]) {
       const topicSlug = pathSegments[2];
       const topic = topics?.find((t) => t.slug === topicSlug);
@@ -38,6 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
   
   const breadcrumbs = getBreadcrumbs();
+  const hasBreadcrumbs = breadcrumbs.length > 1;
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -45,14 +44,11 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
         
         <div className="flex flex-col flex-1 w-full">
-          {/* Global header with trigger - always visible */}
-          <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-sidebar-border bg-white dark:bg-sidebar-background px-4 shadow-sm">
+          {/* Single unified header bar */}
+          <header className="sticky top-0 z-50 flex h-10 items-center gap-3 border-b border-sidebar-border bg-white dark:bg-sidebar-background px-4">
             <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent" />
-          </header>
-
-          {/* Breadcrumb navigation */}
-          {breadcrumbs.length > 1 && (
-            <div className="border-b border-sidebar-border bg-white dark:bg-sidebar-background px-4 py-2">
+            
+            {hasBreadcrumbs && (
               <Breadcrumb>
                 <BreadcrumbList>
                   {breadcrumbs.map((crumb, index) => (
@@ -71,8 +67,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                   ))}
                 </BreadcrumbList>
               </Breadcrumb>
-            </div>
-          )}
+            )}
+          </header>
 
           {/* Main content */}
           <main className="flex-1">

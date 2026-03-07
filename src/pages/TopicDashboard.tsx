@@ -529,15 +529,7 @@ const TopicDashboard = () => {
   };
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 text-center space-y-4">
-          <h1 className="text-4xl font-bold text-foreground">Access Denied</h1>
-          <p className="text-muted-foreground">Please log in to access the topic dashboard.</p>
-          <Button asChild><Link to="/auth">Sign In</Link></Button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (loading) {
@@ -871,11 +863,6 @@ const TopicDashboard = () => {
           variant="destructive"
         />
         
-        <div className="mt-12 pb-6 text-center">
-          <p className="text-xs text-muted-foreground/50">
-            Powered by <span className="font-display font-medium text-muted-foreground/70">Curatr</span><span className="font-display font-light text-muted-foreground/70">.pro</span>
-          </p>
-        </div>
       </div>
     </AppLayout>
   );
