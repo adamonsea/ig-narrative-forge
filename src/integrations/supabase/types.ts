@@ -1440,7 +1440,7 @@ export type Database = {
           ip_hash: string
           signup_count: number | null
           updated_at: string | null
-          window_duration: unknown
+          window_duration: string | null
           window_start: string | null
         }
         Insert: {
@@ -1450,7 +1450,7 @@ export type Database = {
           ip_hash: string
           signup_count?: number | null
           updated_at?: string | null
-          window_duration?: unknown
+          window_duration?: string | null
           window_start?: string | null
         }
         Update: {
@@ -1460,7 +1460,7 @@ export type Database = {
           ip_hash?: string
           signup_count?: number | null
           updated_at?: string | null
-          window_duration?: unknown
+          window_duration?: string | null
           window_start?: string | null
         }
         Relationships: []
@@ -1864,7 +1864,7 @@ export type Database = {
           max_requests: number
           requests: number
           user_id: string | null
-          window_duration: unknown
+          window_duration: string
           window_start: string
         }
         Insert: {
@@ -1874,7 +1874,7 @@ export type Database = {
           max_requests?: number
           requests?: number
           user_id?: string | null
-          window_duration?: unknown
+          window_duration?: string
           window_start?: string
         }
         Update: {
@@ -1884,7 +1884,7 @@ export type Database = {
           max_requests?: number
           requests?: number
           user_id?: string | null
-          window_duration?: unknown
+          window_duration?: string
           window_start?: string
         }
         Relationships: []
