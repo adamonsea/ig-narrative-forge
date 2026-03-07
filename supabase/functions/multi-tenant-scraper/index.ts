@@ -210,29 +210,31 @@ function isContentSnippet(content: string, title: string): boolean {
   
   const wordCount = calculateWordCount(content);
   
-  // Too short to be full article
-  if (wordCount < 100) return true;
+  // Very short content is definitely a snippet
+  if (wordCount < 25) return true;
   
-  // Check for common snippet indicators
-  const snippetIndicators = [
+  // Long articles (200+ words) are never snippets regardless of indicator words
+  if (wordCount >= 200) return false;
+  
+  // Truncation indicators (strong signal — excludes 'subscribe'/'newsletter' which appear in full articles)
+  const truncationIndicators = [
     'read more', 'continue reading', 'full story', 'view more',
-    'the post', 'appeared first', 'original article', 'source:',
-    'click here', 'see more', '...', 'read the full',
-    'subscribe', 'follow us', 'newsletter'
+    'the post', 'appeared first', 'original article',
+    'click here', 'see more', 'read the full'
   ];
   
   const contentLower = content.toLowerCase();
-  const hasSnippetIndicators = snippetIndicators.some(indicator => 
+  const hasTruncationIndicator = truncationIndicators.some(indicator => 
     contentLower.includes(indicator)
   );
   
-  // Check if content ends abruptly (common in RSS snippets)
-  const endsAbruptly = content.trim().endsWith('...') || 
-                       content.trim().endsWith('…') ||
-                       !content.includes('.') || // No sentences
-                       content.split('.').length < 3; // Very few sentences
+  // Clear truncation signals
+  const hasEllipsis = content.trim().endsWith('...') || content.trim().endsWith('…');
+  const hasNoSentences = !content.includes('.') || content.split('.').length < 2;
+  const isClearlyTruncated = hasEllipsis || hasNoSentences;
   
-  return hasSnippetIndicators || endsAbruptly;
+  // For medium-length content (25-199 words): only flag if truncation detected
+  return (hasTruncationIndicator && wordCount < 100) || (isClearlyTruncated && wordCount < 75);
 }
 
 function findKeywordMatches(article: any, topic: any): string[] {
