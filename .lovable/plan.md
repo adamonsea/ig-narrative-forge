@@ -1,76 +1,74 @@
 
 
-## Current Onboarding Flow — Problems Identified
+# Multi-Tenant System Audit
 
-The current topic creation is a **3-step form → redirect to dashboard → manually open source discovery modal → manually trigger scraping** flow. Key friction points:
+## Audit Summary
 
-1. **Step 2 is bloated** — type selector, region, audience level, description, AND keyword generation all crammed into one step. High cognitive load.
-2. **Step 3 (keyword pruning) is a chore** — users must understand keyword categories, manually select/deselect from 50 keywords. Most users should never see this.
-3. **After creation, the user lands on an admin dashboard** — jarring transition from a clean wizard to a complex settings page. No sense of progress toward a "live feed."
-4. **Source discovery is a separate modal** — user has to find and click "Discover Sources" after landing on the dashboard. Breaks flow momentum.
-5. **No visualization of the feed being built** — the DemoFlow has a beautiful build progress animation (DemoBuildProgress), but the real creation flow has nothing similar. User creates topic → lands on empty dashboard. Anticlimactic.
-6. **No auto-scrape trigger** — after adding sources, user must manually start scraping. First-time users don't know to do this.
+After reviewing the codebase across routing, authentication, RLS policies, edge functions, data isolation, and the content pipeline, the system is **largely sound** with a few issues that should be addressed before opening to new users.
 
-## Proposed Design: Streamlined "Feed Builder" Wizard
+---
 
-Collapse the entire journey — from naming to live feed — into a **single full-screen wizard** that never leaves the creation context. The user sees their feed "come alive" without touching the admin dashboard.
+## What's Working Well
 
-```text
-Current:  Name → Details+Keywords → Dashboard → Find Sources → Manual Scrape → ???
-Proposed: Name → Sources (auto) → Building... → Your Feed is Live!
-```
+- **Data isolation**: All major tables (topics, articles, stories, content_sources, topic_articles) use RLS policies scoped via `topics.created_by = auth.uid()` or `has_role()` checks. The `user_roles` table is properly separated from profiles.
+- **Edge function auth**: Critical functions (queue-processor, auto-simplify-queue, etc.) validate JWT role (`service_role` or `authenticated`) before proceeding.
+- **Topic ownership**: Dashboard, TopicDashboard, and all source/pipeline components correctly filter by `created_by = user.id`.
+- **Content pipeline**: Multi-tenant scraping, scoring, deduplication, and story generation are all topic-scoped. Recent fixes ensured duplicate detection and fresh-angle checks are also topic-scoped.
+- **Feed access**: Public feeds (`/feed/:slug`) work for anonymous users; dashboards require authentication.
 
-### New Step Flow (4 steps, but faster)
+---
 
-**Step 1: Name your feed** (unchanged, clean)
-- Same name input with validation
-- Auto-detect regional vs keyword type from name (already works)
-- On "Continue": auto-generate keywords + description in background (don't show to user)
+## Issues Found
 
-**Step 2: Add sources** (merged into wizard)
-- Auto-triggers source discovery immediately using the generated keywords
-- Shows source pills appearing one by one (like current SourceDiscoveryModal but inline)
-- User taps to add, dismiss, or just hits "Continue" to accept all
-- Smart default: auto-add top 3 highest-confidence sources
-- "Add all" button prominent
+### 1. No Route Guards on `/dashboard` and `/dashboard/topic/:slug` (Medium Priority)
 
-**Step 3: Building your feed** (new — inspired by DemoBuildProgress)
-- Full-screen animated build visualization
-- Three phases with checkmarks: "Sources connected" → "Gathering stories" → "Generating your feed"
-- Actually triggers: topic creation → source linking → first scrape → auto-simplify
-- Progress bar + encouraging messages
-- A preview of the feed "assembling" — story cards slide in as they're found/generated
-- This replaces the dead landing on an empty dashboard
+**Problem**: Neither route has a proper redirect to `/auth`. Dashboard shows an "Access Denied" message inline but doesn't redirect. TopicDashboard silently fails if no user is present. Compare with `/dashboard/widgets` which correctly calls `navigate("/auth")`.
 
-**Step 4: Your feed is live** (new)
-- Shows the actual first stories (if available) or a "stories incoming" state
-- Big "View your feed" CTA that opens the public feed
-- Secondary "Go to dashboard" link for power users
-- Confetti or subtle celebration animation
+**Fix**: Add `useEffect` redirect to `/auth` when `!user && !authLoading` in both `Dashboard.tsx` and `TopicDashboard.tsx`, consistent with the Widgets page pattern.
 
-### Technical Implementation
+### 2. `demoConfig.ts` Contains Hardcoded Topic IDs (Low Priority)
 
-1. **Refactor `CreateTopicDialog.tsx`** — Remove step 2 (details) and step 3 (keywords). Auto-generate keywords silently after step 1. Add inline source discovery (step 2), build progress (step 3), and completion (step 4).
+**Problem**: `DEMO_TOPIC_ID`, `DEMO_TOPIC_MAP`, and `DEMO_SOURCES_BY_TOPIC` hardcode your specific topic UUIDs and source IDs. This violates the universal multi-tenant constraint and will break for new users who don't have these topics.
 
-2. **Create `FeedBuildProgress.tsx`** — New component adapted from `DemoBuildProgress` pattern but wired to real Supabase operations (insert topic, link sources, invoke `universal-topic-scraper`, poll for stories).
+**Fix**: The demo flow should either:
+- Query the database for the user's actual topics/sources, or
+- Be clearly marked as a landing-page-only demo that doesn't affect authenticated user flows (verify this is the case — if `DemoFlow` is only used on the public landing page, this is acceptable).
 
-3. **Auto-source selection** — After keyword generation, auto-add top 3 sources (confidence ≥ 75, reliability = high) without user action. User can still add/remove on step 2.
+### 3. No Automatic Profile/Role Creation on Sign-Up (Medium Priority)
 
-4. **Auto-scrape trigger** — Step 3 automatically invokes `universal-topic-scraper` for the new topic after sources are linked, then polls `topic_articles` count to show real progress.
+**Problem**: When a new user signs up via `supabase.auth.signUp()`, no `user_roles` row or profile record is created. The `fetchUserRole` function defaults to `'user'` if no row exists, which is fine for role checking, but there's no onboarding trigger to set up initial data.
 
-5. **Update `TopicManager.handleTopicCreated`** — Remove the immediate redirect to dashboard. The wizard handles the entire flow and only navigates when the user explicitly clicks "View feed" or "Dashboard."
+**Fix**: Create a database trigger on `auth.users` INSERT that automatically creates a `user_roles` row with role `'user'` and any necessary profile scaffolding. Alternatively, handle this in the `AuthProvider` when a new session is first detected.
 
-### What Gets Removed/Simplified
+### 4. `content_sources` RLS May Block New Users (Medium Priority)
 
-- **Step 2 details form** (type/region/audience/description) — auto-inferred or defaulted, editable later in settings
-- **Step 3 keyword pruning** — keywords auto-selected, editable later in settings  
-- **Post-creation redirect to empty dashboard** — replaced by in-wizard build visualization
-- **Separate source discovery modal trigger** — merged into wizard step 2
+**Problem**: The `content_sources` SELECT policy requires either topic ownership, region access, or admin role. A brand new user with no topics would see nothing — which is correct — but when they create their first topic and add sources, the INSERT path needs verification. The `handleAddSource` in `UnifiedSourceManager` creates sources and links them to topics, but the RLS INSERT policy should be checked to ensure it allows users to insert sources for their own topics.
 
-### Scope
+**Fix**: Verify the INSERT policy on `content_sources` allows `authenticated` users to insert rows where `topic_id` belongs to a topic they own. If missing, add it.
 
-- Modify: `CreateTopicDialog.tsx` (major refactor)
-- Create: `FeedBuildProgress.tsx` (real build progress with Supabase calls)
-- Modify: `TopicManager.tsx` (remove immediate redirect)
-- The admin dashboard, source manager, keyword settings remain untouched — they become "advanced settings" accessible later
+### 5. Admin Route Has No Role Check (Low Priority)
+
+**Problem**: `/admin` renders `AdminPanel` which checks `if (!user)` but doesn't verify `isAdmin`. Any authenticated user could potentially access admin UI (though RLS would prevent data access, the UI exposure is undesirable).
+
+**Fix**: Add `if (!isAdmin) return <Navigate to="/dashboard" />` in `AdminPanel`.
+
+---
+
+## What Doesn't Need Changing
+
+- **RLS policies**: Well-structured with `has_role()` security definer function, subquery-wrapped `auth.uid()` for performance
+- **Edge function secrets**: Properly using environment variables, not client-side
+- **Multi-tenant pipeline**: Scraping, scoring, deduplication, story generation all correctly topic-scoped
+- **Auth storage**: Role checks use `user_roles` table (not localStorage) — secure pattern
+- **Credit system**: Properly server-side via RPCs
+
+---
+
+## Recommended Implementation Order
+
+1. **Add route guards** to Dashboard and TopicDashboard (quick, prevents confusion for unauthenticated visitors)
+2. **Add admin role check** to AdminPanel (quick security fix)
+3. **Add auto user_roles creation** on signup (ensures clean new user experience)
+4. **Verify content_sources INSERT RLS** (prevents new users from being blocked when adding sources)
+5. **Audit demoConfig usage** to confirm it's landing-page only (no code change if confirmed)
 
