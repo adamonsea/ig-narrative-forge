@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -124,7 +124,8 @@ interface UniversalScraperResponse {
 const TopicDashboard = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [negativeKeywords, setNegativeKeywords] = useState<string[]>([]);
   const [competingRegions, setCompetingRegions] = useState<string[]>([]);
@@ -146,6 +147,12 @@ const TopicDashboard = () => {
 
 
 
+  // Redirect unauthenticated users to auth page
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   useDripFeedPublishSound(topic?.id, topic?.drip_feed_enabled === true);
 
