@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -128,23 +128,17 @@ const Dashboard = () => {
     );
   }
 
-  // Now safely check if user is authenticated
+  const navigate = useNavigate();
+
+  // Redirect unauthenticated users to auth page
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold">Access Denied</h1>
-            <p className="text-muted-foreground">
-              Please log in to access the dashboard.
-            </p>
-            <Button asChild>
-              <Link to="/auth">Sign In</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

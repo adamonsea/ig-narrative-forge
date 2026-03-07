@@ -15,7 +15,7 @@ import { LifecycleAudit } from '@/components/LifecycleAudit';
 import { ABTestDashboard } from '@/components/admin/ABTestDashboard';
 
 export default function AdminPanel() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   
   // Set Curatr favicon for admin panel
   usePageFavicon();
@@ -30,6 +30,10 @@ export default function AdminPanel() {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
