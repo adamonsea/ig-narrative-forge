@@ -759,7 +759,7 @@ Return in JSON format:
       console.log('🔄 Fetching content from shared_article_content (multi-tenant)');
       
       // Get shared content and topic article data
-      const [sharedContentResult, topicArticleResult] = await Promise.all([
+      const [sharedContentResult, _topicArticleResult] = await Promise.all([
         supabase
           .from('shared_article_content')
           .select('*')
@@ -771,6 +771,7 @@ Return in JSON format:
           .eq('id', topicArticleId)
           .single() : { data: null, error: null }
       ]);
+      topicArticleResult = _topicArticleResult;
 
       if (sharedContentResult.error || !sharedContentResult.data) {
         throw new Error(`Shared content not found: ${sharedContentId}`);
