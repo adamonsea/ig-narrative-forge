@@ -13,6 +13,7 @@ interface Article {
   author?: string;
   published_at?: string;
   source_url: string;
+  source_id?: string;
   image_url?: string;
   canonical_url?: string;
   word_count: number;
