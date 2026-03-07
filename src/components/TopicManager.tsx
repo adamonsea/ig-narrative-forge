@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Hash, Archive, ExternalLink, TrendingUp, TrendingDown, AlertTriangle, MoreHorizontal } from "lucide-react";
@@ -199,7 +200,7 @@ export const TopicManager = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner size="lg" />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -377,7 +378,7 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
         <CardContent>
           {isLoadingStories ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <Spinner />
             </div>
           ) : stories.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">

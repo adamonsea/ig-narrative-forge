@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Search, Filter, Sparkles, Gamepad2, Brain, Users, Image, Mail, Share2, TrendingUp, Rss, BarChart3, Globe, Zap, Shield } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CookieConsent } from '@/components/CookieConsent';
@@ -14,8 +15,8 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Spinner size="lg" />
       </div>
     );
   }

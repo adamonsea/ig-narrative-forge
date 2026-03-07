@@ -639,7 +639,7 @@ const TopicDashboard = () => {
 
               {/* Voice */}
               <section>
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Voice</h3>
+                <SectionLabel>Voice</SectionLabel>
                 <ContentVoiceSettings
                   topicId={topic.id}
                   currentExpertise={topic.audience_expertise}
@@ -652,7 +652,7 @@ const TopicDashboard = () => {
 
               {/* Automation */}
               <section className="border-t border-border/40 pt-4">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Automation</h3>
+                <SectionLabel>Automation</SectionLabel>
                 <div className="space-y-4">
                   <TopicAutomationSettings topicId={topic.id} />
                   <DripFeedSettings topicId={topic.id} onUpdate={() => loadTopicAndStats()} />
@@ -661,7 +661,7 @@ const TopicDashboard = () => {
 
               {/* Channels */}
               <section className="border-t border-border/40 pt-4">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Channels</h3>
+                <SectionLabel>Channels</SectionLabel>
                 <div className="space-y-3">
                   {/* Widget Builder */}
                   <div className="flex items-center justify-between">
@@ -737,7 +737,7 @@ const TopicDashboard = () => {
 
               {/* More — set-once-and-forget settings */}
               <section className="border-t border-border/40 pt-4">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">More</h3>
+                <SectionLabel>More</SectionLabel>
                 <div className="space-y-6">
                   {/* Branding & Onboarding */}
                   <Collapsible>
