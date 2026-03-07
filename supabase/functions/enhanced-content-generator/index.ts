@@ -753,6 +753,7 @@ Return in JSON format:
     // Get article data - prioritize shared content for multi-tenant
     let article: Article;
     let actualContentSource = 'legacy';
+    let topicArticleResult: any = { data: null, error: null };
     
     if (isMultiTenant && sharedContentId) {
       console.log('🔄 Fetching content from shared_article_content (multi-tenant)');
