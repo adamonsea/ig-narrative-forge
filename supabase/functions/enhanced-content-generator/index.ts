@@ -169,13 +169,16 @@ serve(async (req) => {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysBack);
       
+      // Fetch recent stories scoped to the SAME topic via topic_articles join
       const { data: recentStories } = await supabase
         .from('stories')
         .select(`
           title,
           created_at,
-          slides!inner(content, slide_number)
+          slides!inner(content, slide_number),
+          topic_article:topic_articles!inner(topic_id)
         `)
+        .eq('topic_articles.topic_id', topicId)
         .gte('created_at', cutoffDate.toISOString())
         .eq('is_published', true)
         .order('created_at', { ascending: false })
