@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bell, ChevronDown, Calendar, CalendarDays, Layers } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Bell, Mail, ChevronDown, Calendar, CalendarDays, Layers } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,6 +7,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { NewsletterSignupModal, type SubscriptionFrequency } from '@/components/NewsletterSignupModal';
+import { useABTestTracking } from '@/hooks/useABTestTracking';
+import { getVariantConfig } from '@/lib/abTesting';
 
 interface SubscribeMenuProps {
   topicName: string;
@@ -26,9 +28,34 @@ export const SubscribeMenu = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFrequency, setSelectedFrequency] = useState<SubscriptionFrequency>('weekly');
 
+  // Get or create visitor ID for AB test tracking
+  const visitorId = useMemo(() => {
+    let id = localStorage.getItem('visitor_id');
+    if (!id) {
+      id = `visitor_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem('visitor_id', id);
+    }
+    return id;
+  }, []);
+
+  // Wire AB test tracking
+  const { variant, isActive: isTestActive, trackClick } = useABTestTracking({
+    testName: 'subscribe_button_label',
+    visitorId,
+    topicId,
+    trackImpression: true,
+  });
+
+  // Determine button label and icon based on AB test variant
+  const variantConfig = getVariantConfig('subscribe_button_label', visitorId);
+  const buttonLabel = isTestActive && variantConfig ? variantConfig.label : 'Subscribe';
+  const ButtonIcon = isTestActive && variantConfig?.icon === 'Mail' ? Mail : Bell;
+
   const handleSelectFrequency = (frequency: SubscriptionFrequency) => {
     setSelectedFrequency(frequency);
     setIsModalOpen(true);
+    // Track the click event for the AB test
+    trackClick();
   };
 
   const frequencyOptions = [
@@ -47,10 +74,10 @@ export const SubscribeMenu = ({
             } ${className}`}
             aria-label="Subscribe options"
           >
-            <Bell className={`w-4 h-4 transition-colors ${
+            <ButtonIcon className={`w-4 h-4 transition-colors ${
               showPulse ? 'text-primary' : ''
             }`} />
-            {showLabel && <span className="text-sm font-medium">Subscribe</span>}
+            {showLabel && <span className="text-sm font-medium">{buttonLabel}</span>}
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
         </DropdownMenuTrigger>
