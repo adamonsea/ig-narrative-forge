@@ -552,3 +552,10 @@ verify_jwt = false
 
 [functions.optimize-existing-images]
 verify_jwt = false
+
+# ========================================
+# SEO/AEO - Bot-friendly page renderer
+# ========================================
+
+[functions.seo-page]
+verify_jwt = false

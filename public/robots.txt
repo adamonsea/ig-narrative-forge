@@ -60,3 +60,6 @@ Allow: /
 # Sitemap location
 Sitemap: https://curatr.pro/sitemap.xml
 Sitemap: https://curatr.pro/sitemap-dynamic.xml
+
+# SEO page renderer for AI/search crawlers
+# Story pages at /feed/*/story/* are server-rendered for bots via seo-page edge function
