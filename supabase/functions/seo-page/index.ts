@@ -106,18 +106,31 @@ serve(async (req) => {
 
     // === STORY PAGE ===
     if (pageType === 'story' && storyId) {
+      // First fetch the story with slides
       const { data: story } = await supabase
         .from('stories')
         .select(`
           id, title, created_at, author, cover_illustration_url, published_at, slug,
-          slides(content, slide_number),
-          topic_articles!inner(
-            topics!inner(name, slug, description, branding_config),
-            articles(source_url, region, published_at, author, summary)
-          )
+          topic_article_id,
+          slides(content, slide_number)
         `)
         .eq('id', storyId)
         .single();
+
+      // Then fetch topic_article details if available
+      let topicArticleData: any = null;
+      if (story?.topic_article_id) {
+        const { data: ta } = await supabase
+          .from('topic_articles')
+          .select(`
+            topic_id,
+            topics:topic_id(name, slug, description, branding_config),
+            shared_article_content:shared_content_id(url, title, author, published_at)
+          `)
+          .eq('id', story.topic_article_id)
+          .single();
+        topicArticleData = ta;
+      }
 
       if (!story) {
         return new Response('Story not found', { status: 404, headers: corsHeaders });
