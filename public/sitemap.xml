@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Static pages -->
   <url>
     <loc>https://curatr.pro/</loc>
@@ -17,11 +16,89 @@
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
-  
-  <!-- Dynamic content served by edge function -->
-  <!-- For full dynamic sitemap with all topics and stories, visit: -->
-  <!-- https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/sitemap-xml -->
-  
-  <!-- Note: Submit both this static sitemap AND the dynamic edge function URL to Google Search Console -->
-  <!-- The edge function provides real-time sitemap of all published content -->
+
+  <!-- Eastbourne Feed -->
+  <url>
+    <loc>https://curatr.pro/feed/eastbourne</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/eastbourne/archive</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/eastbourne/briefings</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/eastbourne/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Community News Feed -->
+  <url>
+    <loc>https://curatr.pro/feed/community-news</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/community-news/archive</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/community-news/briefings</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Culture and Arts Feed -->
+  <url>
+    <loc>https://curatr.pro/feed/culture-and-arts</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/culture-and-arts/archive</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/culture-and-arts/briefings</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Environment News Feed -->
+  <url>
+    <loc>https://curatr.pro/feed/environment-news</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/environment-news/archive</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/feed/environment-news/briefings</loc>
+    <lastmod>2026-02-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
 </urlset>
