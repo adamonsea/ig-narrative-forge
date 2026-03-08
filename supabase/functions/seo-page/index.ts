@@ -186,10 +186,9 @@ serve(async (req) => {
         ...(story.cover_illustration_url && {
           "image": { "@type": "ImageObject", "url": story.cover_illustration_url }
         }),
-        ...(article?.source_url && {
-          "citation": article.source_url
+        ...(sourceUrl && {
+          "citation": sourceUrl
         }),
-        ...(article?.region && { "dateline": article.region }),
         "speakable": {
           "@type": "SpeakableSpecification",
           "cssSelector": ["h1", "article p"]
