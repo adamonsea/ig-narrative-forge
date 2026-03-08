@@ -163,7 +163,7 @@ serve(async (req) => {
       // NewsArticle structured data
       const structuredData = {
         "@context": "https://schema.org",
-        "@type": article?.region ? "NewsArticle" : "Article",
+        "@type": "NewsArticle",
         "@id": storyUrl,
         "headline": story.title,
         "url": storyUrl,
