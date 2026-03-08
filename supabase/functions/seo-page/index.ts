@@ -106,30 +106,44 @@ serve(async (req) => {
 
     // === STORY PAGE ===
     if (pageType === 'story' && storyId) {
-      const { data: story } = await supabase
+      // First fetch the story with slides
+      const { data: story, error: storyError } = await supabase
         .from('stories')
         .select(`
           id, title, created_at, author, cover_illustration_url, published_at, slug,
-          slides(content, slide_number),
-          topic_articles!inner(
-            topics!inner(name, slug, description, branding_config),
-            articles(source_url, region, published_at, author, summary)
-          )
+          topic_article_id,
+          slides(content, slide_number)
         `)
         .eq('id', storyId)
         .single();
+
+      console.log('Story query result:', { storyId, found: !!story, error: storyError?.message });
+
+      // Then fetch topic_article details if available
+      let topicArticleData: any = null;
+      if (story?.topic_article_id) {
+        const { data: ta } = await supabase
+          .from('topic_articles')
+          .select(`
+            topic_id,
+            topics:topic_id(name, slug, description, branding_config),
+            shared_article_content:shared_content_id(url, title, author, published_at)
+          `)
+          .eq('id', story.topic_article_id)
+          .single();
+        topicArticleData = ta;
+      }
 
       if (!story) {
         return new Response('Story not found', { status: 404, headers: corsHeaders });
       }
 
-      // Extract topic info from join if not already set
-      const storyTopic = Array.isArray(story.topic_articles) 
-        ? story.topic_articles[0] : story.topic_articles;
-      const actualTopicName = storyTopic?.topics?.name || topicName;
-      const actualTopicSlug = storyTopic?.topics?.slug || topicSlug;
-      const article = Array.isArray(storyTopic?.articles) 
-        ? storyTopic?.articles[0] : storyTopic?.articles;
+      // Extract topic info
+      const actualTopicName = topicArticleData?.topics?.name || topicName;
+      const actualTopicSlug = topicArticleData?.topics?.slug || topicSlug;
+      const sharedContent = topicArticleData?.shared_article_content;
+      const sourceUrl = sharedContent?.url;
+      const sourceAuthor = story.author || sharedContent?.author;
 
       // Build article content from slides
       const slides = (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number);
@@ -140,7 +154,7 @@ serve(async (req) => {
 
       const articleBody = articleParagraphs.join('\n\n');
       const wordCount = articleBody.split(/\s+/).length;
-      const publishedDate = story.published_at || article?.published_at || story.created_at;
+      const publishedDate = story.published_at || sharedContent?.published_at || story.created_at;
       const storyUrl = `https://curatr.pro/feed/${actualTopicSlug}/story/${story.id}`;
       const feedUrl = `https://curatr.pro/feed/${actualTopicSlug}`;
       const ogImage = story.cover_illustration_url || logoUrl;
@@ -149,7 +163,7 @@ serve(async (req) => {
       // NewsArticle structured data
       const structuredData = {
         "@context": "https://schema.org",
-        "@type": article?.region ? "NewsArticle" : "Article",
+        "@type": "NewsArticle",
         "@id": storyUrl,
         "headline": story.title,
         "url": storyUrl,
@@ -174,10 +188,9 @@ serve(async (req) => {
         ...(story.cover_illustration_url && {
           "image": { "@type": "ImageObject", "url": story.cover_illustration_url }
         }),
-        ...(article?.source_url && {
-          "citation": article.source_url
+        ...(sourceUrl && {
+          "citation": sourceUrl
         }),
-        ...(article?.region && { "dateline": article.region }),
         "speakable": {
           "@type": "SpeakableSpecification",
           "cssSelector": ["h1", "article p"]
@@ -206,8 +219,8 @@ serve(async (req) => {
         publishedDate,
         articleParagraphs,
         structuredData: [structuredData, breadcrumb],
-        sourceUrl: article?.source_url,
-        sourceAuthor: story.author || article?.author,
+        sourceUrl,
+        sourceAuthor,
         logoUrl,
       });
 
