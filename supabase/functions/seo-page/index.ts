@@ -107,7 +107,7 @@ serve(async (req) => {
     // === STORY PAGE ===
     if (pageType === 'story' && storyId) {
       // First fetch the story with slides
-      const { data: story } = await supabase
+      const { data: story, error: storyError } = await supabase
         .from('stories')
         .select(`
           id, title, created_at, author, cover_illustration_url, published_at, slug,
@@ -116,6 +116,8 @@ serve(async (req) => {
         `)
         .eq('id', storyId)
         .single();
+
+      console.log('Story query result:', { storyId, found: !!story, error: storyError?.message });
 
       // Then fetch topic_article details if available
       let topicArticleData: any = null;
