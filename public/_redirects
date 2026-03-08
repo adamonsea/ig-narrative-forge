@@ -1,3 +1,2 @@
-/feed/*/story/* https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/seo-page/feed/:splat 200
-/feed/*/ https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/seo-page/feed/:splat 200
+/feed/* https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/seo-page/feed/:splat 200
 /sitemap-dynamic.xml https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/sitemap-xml 200
