@@ -217,8 +217,8 @@ serve(async (req) => {
         publishedDate,
         articleParagraphs,
         structuredData: [structuredData, breadcrumb],
-        sourceUrl: article?.source_url,
-        sourceAuthor: story.author || article?.author,
+        sourceUrl,
+        sourceAuthor,
         logoUrl,
       });
 
