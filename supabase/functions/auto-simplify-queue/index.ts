@@ -120,15 +120,16 @@ Deno.serve(async (req) => {
     const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     const { data: topicDefaults } = await supabase
       .from('topics')
-      .select('id, default_tone, default_writing_style, audience_expertise')
+      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords')
       .in('id', topicIds);
     
-    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string }> = {};
+    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[] }> = {};
     for (const t of (topicDefaults || [])) {
       topicDefaultsMap[t.id] = {
         tone: t.default_tone,
         writing_style: t.default_writing_style,
         audience_expertise: t.audience_expertise,
+        negative_keywords: t.negative_keywords || [],
       };
     }
 
@@ -162,7 +163,41 @@ Deno.serve(async (req) => {
 
       let topicQueued = 0;
 
+      const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
+
       for (const article of articles as TopicArticle[]) {
+        // Negative keyword check: fetch content and reject matches
+        if (negativeKeywords.length > 0) {
+          const { data: sharedContent } = await supabase
+            .from('shared_article_content')
+            .select('title, body, source_url')
+            .eq('id', article.shared_content_id)
+            .maybeSingle();
+
+          if (sharedContent) {
+            const fullText = `${(sharedContent.title || '').toLowerCase()} ${(sharedContent.body || '').toLowerCase()}`;
+            const matchedKeyword = negativeKeywords.find((kw: string) => fullText.includes(kw.toLowerCase()));
+            if (matchedKeyword) {
+              console.log(`  🚫 Discarding article ${article.id}: negative keyword "${matchedKeyword}"`);
+              await supabase
+                .from('topic_articles')
+                .update({ processing_status: 'discarded' })
+                .eq('id', article.id);
+              // Record in discarded_articles for suppression
+              const sourceUrl = sharedContent.source_url || article.shared_content_id;
+              await supabase.from('discarded_articles').upsert({
+                topic_id: topic_id,
+                url: sourceUrl,
+                normalized_url: sourceUrl.toLowerCase().trim(),
+                title: sharedContent.title,
+                discarded_reason: `Negative keyword: ${matchedKeyword}`,
+                discarded_by: 'auto-simplify-queue',
+              }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
+              continue;
+            }
+          }
+        }
+
         // Check if already queued (by topic_article_id)
         const { data: existingQueue } = await supabase
           .from('content_generation_queue')
