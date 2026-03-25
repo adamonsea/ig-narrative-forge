@@ -170,13 +170,13 @@ Deno.serve(async (req) => {
         if (negativeKeywords.length > 0) {
           const { data: sharedContent } = await supabase
             .from('shared_article_content')
-            .select('title, body')
+            .select('title, body, source_url')
             .eq('id', article.shared_content_id)
             .maybeSingle();
 
           if (sharedContent) {
             const fullText = `${(sharedContent.title || '').toLowerCase()} ${(sharedContent.body || '').toLowerCase()}`;
-            const matchedKeyword = negativeKeywords.find(kw => fullText.includes(kw.toLowerCase()));
+            const matchedKeyword = negativeKeywords.find((kw: string) => fullText.includes(kw.toLowerCase()));
             if (matchedKeyword) {
               console.log(`  🚫 Discarding article ${article.id}: negative keyword "${matchedKeyword}"`);
               await supabase
@@ -184,15 +184,15 @@ Deno.serve(async (req) => {
                 .update({ processing_status: 'discarded' })
                 .eq('id', article.id);
               // Record in discarded_articles for suppression
-              const sourceUrl = sharedContent.title || article.shared_content_id;
-              await supabase.from('discarded_articles').insert({
+              const sourceUrl = sharedContent.source_url || article.shared_content_id;
+              await supabase.from('discarded_articles').upsert({
                 topic_id: topic_id,
                 url: sourceUrl,
                 normalized_url: sourceUrl.toLowerCase().trim(),
                 title: sharedContent.title,
                 discarded_reason: `Negative keyword: ${matchedKeyword}`,
                 discarded_by: 'auto-simplify-queue',
-              }).onConflict('topic_id,normalized_url').ignore();
+              }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
               continue;
             }
           }
