@@ -163,7 +163,41 @@ Deno.serve(async (req) => {
 
       let topicQueued = 0;
 
+      const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
+
       for (const article of articles as TopicArticle[]) {
+        // Negative keyword check: fetch content and reject matches
+        if (negativeKeywords.length > 0) {
+          const { data: sharedContent } = await supabase
+            .from('shared_article_content')
+            .select('title, body')
+            .eq('id', article.shared_content_id)
+            .maybeSingle();
+
+          if (sharedContent) {
+            const fullText = `${(sharedContent.title || '').toLowerCase()} ${(sharedContent.body || '').toLowerCase()}`;
+            const matchedKeyword = negativeKeywords.find(kw => fullText.includes(kw.toLowerCase()));
+            if (matchedKeyword) {
+              console.log(`  🚫 Discarding article ${article.id}: negative keyword "${matchedKeyword}"`);
+              await supabase
+                .from('topic_articles')
+                .update({ processing_status: 'discarded' })
+                .eq('id', article.id);
+              // Record in discarded_articles for suppression
+              const sourceUrl = sharedContent.title || article.shared_content_id;
+              await supabase.from('discarded_articles').insert({
+                topic_id: topic_id,
+                url: sourceUrl,
+                normalized_url: sourceUrl.toLowerCase().trim(),
+                title: sharedContent.title,
+                discarded_reason: `Negative keyword: ${matchedKeyword}`,
+                discarded_by: 'auto-simplify-queue',
+              }).onConflict('topic_id,normalized_url').ignore();
+              continue;
+            }
+          }
+        }
+
         // Check if already queued (by topic_article_id)
         const { data: existingQueue } = await supabase
           .from('content_generation_queue')
