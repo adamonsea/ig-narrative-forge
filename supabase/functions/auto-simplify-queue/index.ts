@@ -120,15 +120,16 @@ Deno.serve(async (req) => {
     const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     const { data: topicDefaults } = await supabase
       .from('topics')
-      .select('id, default_tone, default_writing_style, audience_expertise')
+      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords')
       .in('id', topicIds);
     
-    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string }> = {};
+    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[] }> = {};
     for (const t of (topicDefaults || [])) {
       topicDefaultsMap[t.id] = {
         tone: t.default_tone,
         writing_style: t.default_writing_style,
         audience_expertise: t.audience_expertise,
+        negative_keywords: t.negative_keywords || [],
       };
     }
 
