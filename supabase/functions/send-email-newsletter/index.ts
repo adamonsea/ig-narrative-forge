@@ -29,31 +29,20 @@ interface EmailStory {
 }
 
 /**
- * Optimizes a Supabase Storage image URL for email thumbnails
- * Uses Supabase's built-in image transformation for faster loading
+ * Returns the email thumbnail URL.
+ *
+ * NOTE: This project is on the Supabase Free plan, which does NOT support
+ * the /render/image/ transformation endpoint. Appending transformation
+ * params (width/height/format) to /object/public/ URLs does nothing on
+ * Free, and email clients (Gmail in particular) proxy images and can
+ * fail/strip URLs with unrecognised query strings — which was causing
+ * email thumbnails to break. We therefore return the raw URL untouched.
+ *
+ * If/when this project upgrades to Pro, switch to the
+ * /storage/v1/render/image/public/ endpoint here.
  */
 function optimizeEmailThumbnail(url: string | null): string | null {
-  if (!url) return null;
-
-  // Check if it's a Supabase Storage URL
-  const isSupabaseStorage = url.includes('supabase.co/storage/v1/object/public/');
-  
-  if (!isSupabaseStorage) {
-    return url; // Return original URL for non-Supabase images
-  }
-
-  // Build transformation parameters for email thumbnails (80x80)
-  const transformParams = new URLSearchParams({
-    width: '160',  // 2x for retina displays
-    height: '160',
-    quality: '70',
-    resize: 'cover',
-    format: 'webp'
-  });
-
-  // Append transformations to URL
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}${transformParams.toString()}`;
+  return url || null;
 }
 
 serve(async (req) => {
