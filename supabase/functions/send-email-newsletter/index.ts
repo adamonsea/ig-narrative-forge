@@ -29,20 +29,27 @@ interface EmailStory {
 }
 
 /**
- * Returns the email thumbnail URL.
+ * Returns an email-safe thumbnail URL.
  *
- * NOTE: This project is on the Supabase Free plan, which does NOT support
- * the /render/image/ transformation endpoint. Appending transformation
- * params (width/height/format) to /object/public/ URLs does nothing on
- * Free, and email clients (Gmail in particular) proxy images and can
- * fail/strip URLs with unrecognised query strings — which was causing
- * email thumbnails to break. We therefore return the raw URL untouched.
+ * Email clients (especially Gmail, Outlook, Apple Mail) have unreliable
+ * WebP support and aggressively proxy/strip large images (>200KB often
+ * fails to render). Our Supabase storage assets are WebP at ~400KB each,
+ * which is why thumbnails were appearing broken in inboxes.
  *
- * If/when this project upgrades to Pro, switch to the
- * /storage/v1/render/image/public/ endpoint here.
+ * Since this project is on the Supabase Free plan (no /render/image/
+ * transformation endpoint), we route the image through wsrv.nl — a free,
+ * widely-used image proxy that resizes and re-encodes to JPEG. This:
+ *   - converts WebP → JPEG (universal email client support)
+ *   - resizes to email-appropriate width (~320px for retina @ 160 display)
+ *   - reduces file size to ~30-60KB (well under email proxy limits)
+ *
+ * If/when this project upgrades to Supabase Pro, switch back to the
+ * /storage/v1/render/image/public/ endpoint for first-party hosting.
  */
 function optimizeEmailThumbnail(url: string | null): string | null {
-  return url || null;
+  if (!url) return null;
+  const stripped = url.replace(/^https?:\/\//, '');
+  return `https://wsrv.nl/?url=${encodeURIComponent(stripped)}&w=320&output=jpg&q=75`;
 }
 
 serve(async (req) => {
