@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -86,8 +87,23 @@ const AboutFeed = () => {
 
   const branding = topic.branding_config;
 
+  const aboutTitle = `About ${topic.name} — Curatr`;
+  const aboutDesc = (topic.description && topic.description.length >= 50)
+    ? topic.description.slice(0, 200)
+    : `About ${topic.name}: how this curated feed is sourced, edited, and published on Curatr.`;
+  const aboutUrl = `https://curatr.pro/feed/${slug}/about`;
+
   return (
     <div className="min-h-screen bg-zinc-900 text-zinc-100">
+      <Helmet>
+        <title>{aboutTitle}</title>
+        <meta name="description" content={aboutDesc} />
+        <link rel="canonical" href={aboutUrl} />
+        <meta property="og:title" content={aboutTitle} />
+        <meta property="og:description" content={aboutDesc} />
+        <meta property="og:url" content={aboutUrl} />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Back link */}
         <Link 
