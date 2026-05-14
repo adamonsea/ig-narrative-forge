@@ -83,6 +83,15 @@ const Pricing = () => {
 
   return (
     <div className="min-h-screen bg-[hsl(214,50%,9%)]">
+      <Helmet>
+        <title>Pricing — Curatr</title>
+        <meta name="description" content="Curatr pricing plans for curators building niche feeds — Starter, Pro, and team tiers with AI credits and analytics." />
+        <link rel="canonical" href="https://curatr.pro/pricing" />
+        <meta property="og:title" content="Pricing — Curatr" />
+        <meta property="og:description" content="Plans for curators building niche feeds, with AI credits, analytics, and source management." />
+        <meta property="og:url" content="https://curatr.pro/pricing" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       {/* Background gradients */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[hsl(270,80%,25%)] rounded-full blur-[150px] opacity-20" />
