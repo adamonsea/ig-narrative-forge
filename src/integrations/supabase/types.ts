@@ -4966,6 +4966,24 @@ export type Database = {
           total_count: number
         }[]
       }
+      get_subscriber_leaderboard: {
+        Args: { p_topic_id: string }
+        Returns: {
+          best_streak: number
+          display_name: string
+          like_count: number
+          total_swipes: number
+        }[]
+      }
+      get_subscriber_score: {
+        Args: { p_email: string; p_topic_id: string }
+        Returns: {
+          best_streak: number
+          like_count: number
+          sessions_played: number
+          total_swipes: number
+        }[]
+      }
       get_swipe_insights: {
         Args: { p_topic_id: string }
         Returns: {
@@ -5404,6 +5422,16 @@ export type Database = {
           thumbs_up: number
           user_reaction: string
         }[]
+      }
+      upsert_subscriber_score: {
+        Args: {
+          p_best_streak: number
+          p_email: string
+          p_like_count: number
+          p_topic_id: string
+          p_total_swipes: number
+        }
+        Returns: undefined
       }
       user_has_region_access: {
         Args: { check_region: string }
