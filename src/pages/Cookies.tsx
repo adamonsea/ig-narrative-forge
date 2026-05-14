@@ -1,10 +1,20 @@
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 const Cookies = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Cookie Policy — Curatr</title>
+        <meta name="description" content="Which cookies Curatr uses, why we use them, and how you can control them in your browser." />
+        <link rel="canonical" href="https://curatr.pro/cookies" />
+        <meta property="og:title" content="Cookie Policy — Curatr" />
+        <meta property="og:description" content="Which cookies Curatr uses and how to control them." />
+        <meta property="og:url" content="https://curatr.pro/cookies" />
+        <meta property="og:type" content="article" />
+      </Helmet>
       <div className="container mx-auto px-6 py-12 max-w-4xl">
         <Button asChild variant="ghost" className="mb-8">
           <Link to="/" className="gap-2">

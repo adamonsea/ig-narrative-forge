@@ -1,10 +1,20 @@
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 const Terms = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Terms and Conditions — Curatr</title>
+        <meta name="description" content="The terms governing your use of Curatr.pro, our content curation and distribution platform operated from the United Kingdom." />
+        <link rel="canonical" href="https://curatr.pro/terms" />
+        <meta property="og:title" content="Terms and Conditions — Curatr" />
+        <meta property="og:description" content="The terms governing your use of Curatr.pro." />
+        <meta property="og:url" content="https://curatr.pro/terms" />
+        <meta property="og:type" content="article" />
+      </Helmet>
       <div className="container mx-auto px-6 py-12 max-w-4xl">
         <Button asChild variant="ghost" className="mb-8">
           <Link to="/" className="gap-2">
