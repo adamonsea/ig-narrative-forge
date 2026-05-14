@@ -1,0 +1,30 @@
+# Curatr
+
+> AI-curated news feeds. Create and follow personalized topic feeds powered by trusted sources, with daily and weekly briefings, audio summaries, and gamified discovery.
+
+Curatr is a multi-tenant editorial platform where independent curators build and publish niche news feeds (local news, communities, culture, environment, and more). Each feed aggregates trusted sources, runs AI summarization with strict attribution back to original publishers, and presents stories as readable carousels alongside daily and weekly briefings.
+
+## Pages
+
+- [Home](/): Overview of Curatr and featured feeds.
+- [Discover](/discover): Public directory of curated topic feeds.
+- [Pricing](/pricing): Plans for curators publishing their own feeds.
+
+## Feeds
+
+- [Eastbourne](/feed/eastbourne): Local news and community stories from Eastbourne, UK.
+- [Community News](/feed/community-news): Stories from local community organisations and grassroots groups.
+- [Culture and Arts](/feed/culture-and-arts): Arts, culture, and creative happenings.
+- [Environment News](/feed/environment-news): Environment, climate, and sustainability coverage.
+
+Each feed also exposes:
+- `/feed/{slug}/archive` — full archive of published stories
+- `/feed/{slug}/briefings` — daily and weekly briefing archive
+- `/feed/{slug}/about` — feed description, sources, and editorial approach
+- `/feed/{slug}/story/{id}` — individual story carousel with attribution
+
+## Optional
+
+- [Terms](/terms): Terms of service.
+- [Privacy](/privacy): Privacy policy.
+- [Cookies](/cookies): Cookie policy.
