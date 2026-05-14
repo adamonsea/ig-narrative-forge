@@ -44,8 +44,22 @@ export const StoryPageSEO = ({
   const canonicalUrl = `https://curatr.pro/feed/${canonicalSlug}/story/${canonicalId}`;
   const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
   
-  // Title: Story title + Curated TopicName
-  const title = `${story.title} | Curated ${topicName}`;
+  // Title: Story title + Curated TopicName, kept under 60 chars for SERP display.
+  const buildTitle = () => {
+    const suffix = ` | Curated ${topicName}`;
+    const full = `${story.title}${suffix}`;
+    if (full.length <= 60) return full;
+    // Try truncating the story title while keeping the suffix
+    const room = 60 - suffix.length - 1; // 1 for ellipsis
+    if (room >= 20) {
+      return `${story.title.slice(0, room).trimEnd()}…${suffix}`;
+    }
+    // Suffix is too long — drop it and truncate the title alone
+    return story.title.length <= 60
+      ? story.title
+      : `${story.title.slice(0, 59).trimEnd()}…`;
+  };
+  const title = buildTitle();
   
   // Description: First 160 chars of first slide or fallback
   const getDescription = () => {
@@ -53,11 +67,14 @@ export const StoryPageSEO = ({
       const firstSlideContent = story.slides[0].content;
       // Strip HTML and trim to 160 chars
       const plainText = firstSlideContent.replace(/<[^>]*>/g, '').trim();
-      return plainText.length > 160 
-        ? plainText.substring(0, 157) + '...'
-        : plainText;
+      if (plainText.length >= 50) {
+        return plainText.length > 160
+          ? plainText.substring(0, 157) + '...'
+          : plainText;
+      }
     }
-    return `Read ${story.title} on Curated ${topicName}`;
+    // Fallback ≥50 chars so search engines accept the description.
+    return `Read “${story.title}” on Curated ${topicName} — curated news, analysis, and updates from trusted sources on Curatr.`;
   };
   
   const description = getDescription();
