@@ -99,7 +99,7 @@ const Index = () => {
                 <div className="rounded-2xl bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
                   <Sparkles className="h-7 w-7 text-[hsl(270,100%,68%)]" />
                 </div>
-                <h3 className="text-2xl font-semibold tracking-tight text-white">AI-powered rewrites</h3>
+                <h3 className="text-2xl font-semibold tracking-tight text-white">AI-powered summaries</h3>
                 <p className="text-white/60 leading-relaxed">
                   Transform dry articles into engaging stories with your tone and style. Full attribution to original sources always preserved.
                 </p>

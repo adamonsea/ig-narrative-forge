@@ -149,7 +149,7 @@ const Pricing = () => {
                   <h3 className="text-lg font-semibold text-white mb-2">How AI credits work</h3>
                   <p className="text-white/60 text-sm leading-relaxed">
                     Credits power AI features like content simplification, illustration generation, quiz creation, and sentiment analysis. 
-                    Usage varies by feature—simple rewrites use fewer credits, while image generation uses more. 
+                    Usage varies by feature—simple summaries use fewer credits, while image generation uses more. 
                     Unused credits don't roll over, but you can always add more.
                   </p>
                 </div>

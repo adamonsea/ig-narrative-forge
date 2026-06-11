@@ -46,7 +46,7 @@ const Terms = () => {
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Aggregate content from various web sources</li>
-              <li>Transform and rewrite content using AI technology</li>
+              <li>Transform and summarise content using AI technology</li>
               <li>Distribute curated content via web feeds, email newsletters, and social media</li>
               <li>Build and grow audiences for niche content topics</li>
             </ul>
