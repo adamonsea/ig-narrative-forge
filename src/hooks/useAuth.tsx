@@ -16,6 +16,7 @@ interface AuthContextType {
   signInWithMagicLink: (email: string, displayName?: string, redirectTo?: string) => Promise<{ error: any }>;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isProductOwner: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -258,6 +259,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithMagicLink,
     isAdmin: userRole === 'admin' || userRole === 'superadmin',
     isSuperAdmin: userRole === 'superadmin',
+    isProductOwner: (user?.email || '').toLowerCase() === 'adamonsea@gmail.com',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

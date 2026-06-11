@@ -95,7 +95,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
-  const { isAdmin, isSuperAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin, isProductOwner } = useAuth();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
@@ -191,7 +191,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
   const handleGenerateIllustration = async (story: PublishedStory, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
-    if (!isAdmin && (!credits || credits.credits_balance < model.credits)) {
+    if (!isProductOwner && (!credits || credits.credits_balance < model.credits)) {
       toast({ title: 'Insufficient Credits', description: `You need ${model.credits} credits.`, variant: 'destructive' });
       return;
     }
@@ -218,7 +218,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
   const handleAnimateIllustration = async (story: PublishedStory, quality: 'standard' | 'fast' = 'standard', customPrompt?: string) => {
     const creditCost = quality === 'fast' ? 1 : 2;
-    if (!isAdmin && (!credits || credits.credits_balance < creditCost)) {
+    if (!isProductOwner && (!credits || credits.credits_balance < creditCost)) {
       toast({ title: 'Insufficient Credits', description: `You need ${creditCost} credits.`, variant: 'destructive' });
       return;
     }
@@ -759,7 +759,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         }}
         isAnimating={animationModalStory ? animatingVideos.has(animationModalStory.id) : false}
         creditBalance={credits?.credits_balance}
-        isAdmin={isAdmin}
+        isAdmin={isProductOwner}
       />
 
       {reelStory && (
@@ -778,7 +778,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           brandName={topicSlug || 'curatr'}
           feedUrl={topicSlug ? `curatr.pro/feed/${topicSlug}` : 'curatr.pro'}
           sourceLabel={reelStory.author || ''}
-          featureUnlocked={isAdmin}
+          featureUnlocked={isProductOwner}
         />
       )}
     </div>

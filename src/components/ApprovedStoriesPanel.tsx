@@ -112,7 +112,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   
   const { toast } = useToast();
   const { credits } = useCredits();
-  const { isSuperAdmin, isAdmin } = useAuth();
+  const { isSuperAdmin, isAdmin, isProductOwner } = useAuth();
   const { exportStory, isExporting, exportingStoryId, progress } = useCarouselExport();
 
   useEffect(() => {
@@ -303,7 +303,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     if (generatingIllustrations.has(story.id)) return;
 
     // Check credits
-    if (!isAdmin && (!credits || credits.credits_balance < model.credits)) {
+    if (!isProductOwner && (!credits || credits.credits_balance < model.credits)) {
       toast({
         title: 'Insufficient Credits',
         description: `You need ${model.credits} credits to generate with ${model.name}.`,
@@ -362,7 +362,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     const creditCost = quality === 'fast' ? 1 : 2;
     
     // Check credits
-    if (!isAdmin && (!credits || credits.credits_balance < creditCost)) {
+    if (!isProductOwner && (!credits || credits.credits_balance < creditCost)) {
       toast({
         title: 'Insufficient Credits',
         description: `You need ${creditCost} credit${creditCost > 1 ? 's' : ''} to animate this illustration.`,
@@ -845,7 +845,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
           }}
           isAnimating={animationModalStory ? generatingIllustrations.has(animationModalStory.id) : false}
           creditBalance={credits?.credits_balance}
-          isAdmin={isAdmin}
+          isAdmin={isProductOwner}
         />
 
         {/* Reel Studio Modal */}
@@ -869,7 +869,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                 : 'curatr.pro'
             }
             sourceLabel={reelStory.article?.author || reelStory.article?.region || ''}
-            featureUnlocked={isAdmin}
+            featureUnlocked={isProductOwner}
           />
         )}
       </CardContent>
