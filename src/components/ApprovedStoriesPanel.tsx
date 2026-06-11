@@ -125,12 +125,13 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
       const fetchIllustrationStyle = async () => {
         const { data, error } = await supabase
           .from('topics')
-          .select('illustration_style')
+          .select('illustration_style, slug, name')
           .eq('id', selectedTopicId)
           .single();
         
         if (data && !error) {
           setIllustrationStyle(data.illustration_style || 'editorial_illustrative');
+          setTopicInfo({ slug: data.slug, name: data.name });
         }
       };
       fetchIllustrationStyle();
