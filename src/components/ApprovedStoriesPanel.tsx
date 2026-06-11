@@ -107,10 +107,12 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     selectedCoverId?: string;
   }>({ isOpen: false });
   const [animationModalStory, setAnimationModalStory] = useState<Story | null>(null);
+  const [reelStory, setReelStory] = useState<Story | null>(null);
+  const [topicInfo, setTopicInfo] = useState<{ slug: string; name: string } | null>(null);
   
   const { toast } = useToast();
   const { credits } = useCredits();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isAdmin } = useAuth();
   const { exportStory, isExporting, exportingStoryId, progress } = useCarouselExport();
 
   useEffect(() => {
