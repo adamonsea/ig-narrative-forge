@@ -32,7 +32,7 @@ interface AnimationInstructionsModalProps {
   }) => Promise<void>;
   isAnimating: boolean;
   creditBalance?: number;
-  isSuperAdmin: boolean;
+  isAdmin: boolean;
 }
 
 const ANIMATION_CREDITS = 2; // Comparable to low-tier image generation

@@ -61,7 +61,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   const [animationModalStory, setAnimationModalStory] = useState<MultiTenantStory | null>(null);
   const { toast } = useToast();
   const { credits } = useCredits();
-  const { isSuperAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAuth();
 
   // Fetch illustration style when topicId changes
   useEffect(() => {
