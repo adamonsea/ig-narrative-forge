@@ -8,11 +8,13 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RotateCcw, Film, Coins, Lock, Sparkles } from 'lucide-react';
+import { RotateCcw, Film, Coins, Lock, Sparkles, Loader2 } from 'lucide-react';
 import { useCredits } from '@/hooks/useCredits';
 import { CREDIT_COSTS } from '@/lib/creditService';
 import { StoryReelPreview } from './StoryReelPreview';
 import { buildReelContent } from './storyReelContent';
+import { recordReel } from './recordReel';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReelStudioStory {
   id: string;
@@ -45,6 +47,8 @@ export const ReelStudioModal = ({
 }: ReelStudioModalProps) => {
   const { credits } = useCredits();
   const [playKey, setPlayKey] = useState(1);
+  const [rendering, setRendering] = useState(false);
+  const { toast } = useToast();
 
   const content = useMemo(
     () => buildReelContent(story, { brandName, feedUrl, sourceLabel }),
@@ -53,6 +57,24 @@ export const ReelStudioModal = ({
 
   const balance = credits?.credits_balance ?? 0;
   const hasEnough = featureUnlocked || balance >= REEL_COST;
+
+  const handleRender = async () => {
+    if (rendering) return;
+    setRendering(true);
+    try {
+      await recordReel(content);
+      toast({ title: 'Reel downloaded', description: 'Your teaser video has been saved.' });
+    } catch (err) {
+      console.error('Reel render failed:', err);
+      toast({
+        title: 'Render failed',
+        description: err instanceof Error ? err.message : 'Could not generate the reel.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRendering(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,9 +143,13 @@ export const ReelStudioModal = ({
                 </span>
               </div>
             ) : (
-              <Button disabled={!hasEnough} className="w-full">
-                <Sparkles className="w-4 h-4 mr-1" />
-                Render &amp; Download MP4
+              <Button disabled={!hasEnough || rendering} className="w-full" onClick={handleRender}>
+                {rendering ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-1" />
+                )}
+                {rendering ? 'Rendering…' : 'Render & Download'}
               </Button>
             )}
 
@@ -134,8 +160,8 @@ export const ReelStudioModal = ({
             )}
 
             <p className="text-xs text-muted-foreground">
-              High-res MP4 rendering is being finalised. The browser preview
-              above shows the exact pacing and layout of the final reel.
+              Renders a 9:16 teaser video in your browser and downloads it. Takes
+              about {Math.round(13)} seconds to capture the full animation.
             </p>
           </div>
         </div>
