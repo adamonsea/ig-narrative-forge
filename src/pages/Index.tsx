@@ -1,17 +1,31 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Search, Filter, Sparkles, Gamepad2, Brain, Users, Image, Mail, Share2, TrendingUp, Rss, BarChart3, Globe, Zap, Shield } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CookieConsent } from '@/components/CookieConsent';
 import { DemoOverlay } from '@/components/demo/DemoOverlay';
 import { useState } from 'react';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
   usePageFavicon();
+  const reduce = useReducedMotion();
+
+  // Subtle, editorial-friendly motion
+  const ease = [0.22, 1, 0.36, 1] as const;
+  const reveal: Variants = {
+    hidden: { opacity: 0, y: reduce ? 0 : 12 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
+  };
+  const container: Variants = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduce ? 0 : 0.08 } },
+  };
+  const viewport = { once: true, margin: '-80px' } as const;
+  const hoverLift = reduce ? {} : { whileHover: { y: -2 }, whileTap: { y: 0 } };
 
   if (loading) {
     return (
@@ -34,7 +48,7 @@ const Index = () => {
         <header className="container mx-auto px-6 py-8">
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
             <div className="text-3xl font-display font-semibold tracking-tight text-white">
-              Curatr<span className="text-xl opacity-70">.pro</span>
+              Curatr<span className="text-[hsl(155,100%,67%)]">.</span><span className="text-xl opacity-70">pro</span>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
@@ -58,308 +72,287 @@ const Index = () => {
 
         <main className="container mx-auto px-6">
           {/* Hero Section */}
-          <section className="max-w-5xl mx-auto text-center py-24 space-y-8">
-            <div className="space-y-6">
-              <h1 className="text-6xl md:text-7xl font-display font-semibold tracking-tight leading-[0.95] text-white">
-                Your niche news feed, powered by AI
-              </h1>
-              <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">
+          <section className="max-w-5xl mx-auto text-center py-24 relative">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[hsl(270,100%,68%)]/10 blur-[120px] rounded-full -z-10" />
+            <motion.div initial="hidden" animate="show" variants={container} className="space-y-8">
+              <motion.h1 variants={reveal} className="text-6xl md:text-8xl font-display font-medium tracking-tight leading-[1.05] text-white">
+                Your niche news feed,<br /><span className="italic">powered by AI</span>
+              </motion.h1>
+              <motion.p variants={reveal} className="text-xl md:text-2xl text-white/60 font-light max-w-2xl mx-auto leading-relaxed">
                 Aggregate content from any source, transform it into beautiful stories, and deliver via newsletters, social carousels, or your own branded feed.
-              </p>
-            </div>
-            <div className="flex gap-4 justify-center pt-4">
-              <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
-                <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
-              </Button>
-              <Button
-                onClick={() => setDemoOpen(true)}
-                variant="ghost"
-                size="lg"
-                className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
-              >
-                Try the demo
-              </Button>
-            </div>
+              </motion.p>
+              <motion.div variants={reveal} className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <motion.div {...hoverLift}>
+                  <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
+                    <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
+                  </Button>
+                </motion.div>
+                <motion.div {...hoverLift}>
+                  <Button
+                    onClick={() => setDemoOpen(true)}
+                    variant="ghost"
+                    size="lg"
+                    className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
+                  >
+                    Try the demo
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
           </section>
 
           {/* Core Value Props */}
-          <section className="max-w-7xl mx-auto py-24">
-            <div className="grid md:grid-cols-3 gap-12">
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
-                  <Rss className="h-7 w-7 text-[hsl(155,100%,67%)]" />
-                </div>
-                <h3 className="text-2xl font-semibold tracking-tight text-white">Aggregate anything</h3>
-                <p className="text-white/60 leading-relaxed">
+          <motion.section
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={container}
+            className="max-w-7xl mx-auto py-24 border-t border-white/10"
+          >
+            <div className="grid md:grid-cols-3 gap-16 pt-16">
+              <motion.div variants={reveal} className="space-y-4">
+                <span className="block font-display text-5xl text-[hsl(155,100%,67%)] opacity-60">01</span>
+                <h3 className="text-2xl font-display text-white">Aggregate anything</h3>
+                <p className="text-white/50 leading-relaxed font-light">
                   Connect RSS feeds, news sites, blogs, or any web source. AI monitors and pulls relevant content 24/7, so you never miss a story.
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
-                  <Sparkles className="h-7 w-7 text-[hsl(270,100%,68%)]" />
-                </div>
-                <h3 className="text-2xl font-semibold tracking-tight text-white">AI-powered summaries</h3>
-                <p className="text-white/60 leading-relaxed">
+              <motion.div variants={reveal} className="space-y-4">
+                <span className="block font-display text-5xl text-[hsl(270,100%,68%)] opacity-60">02</span>
+                <h3 className="text-2xl font-display text-white">AI-powered summaries</h3>
+                <p className="text-white/50 leading-relaxed font-light">
                   Transform dry articles into engaging stories with your tone and style. Full attribution to original sources always preserved.
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
-                  <Globe className="h-7 w-7 text-[hsl(155,100%,67%)]" />
-                </div>
-                <h3 className="text-2xl font-semibold tracking-tight text-white">Multi-channel delivery</h3>
-                <p className="text-white/60 leading-relaxed">
+              <motion.div variants={reveal} className="space-y-4">
+                <span className="block font-display text-5xl text-white/25">03</span>
+                <h3 className="text-2xl font-display text-white">Multi-channel delivery</h3>
+                <p className="text-white/50 leading-relaxed font-light">
                   Publish to your branded web feed, send automated newsletters, or export carousels for Instagram, LinkedIn, and more.
                 </p>
-              </div>
+              </motion.div>
             </div>
-          </section>
+          </motion.section>
 
           {/* Distribution Features */}
-          <section className="max-w-7xl mx-auto py-24">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-display font-semibold tracking-tight text-white mb-4">
+          <motion.section
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={container}
+            className="max-w-7xl mx-auto py-24"
+          >
+            <motion.div variants={reveal} className="mb-16">
+              <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4">
                 Reach your audience everywhere
               </h2>
-              <p className="text-xl text-white/60 max-w-2xl mx-auto">
+              <p className="text-xl text-white/40 max-w-xl">
                 One curation workflow, multiple distribution channels. Grow your audience on the platforms they use.
               </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/10">
+              {[
+                { label: 'Channel 01', title: 'Email newsletters', body: 'Automated daily or weekly digests sent directly to subscribers. Beautiful templates, zero manual work.' },
+                { label: 'Channel 02', title: 'Social carousels', body: 'Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post in seconds — driving traffic back to your feed.' },
+                { label: 'Channel 03', title: 'Mobile-first feed', body: 'Your own branded news feed with swipe navigation, reader ratings, and instant story sharing.' },
+              ].map((c) => (
+                <motion.div
+                  key={c.title}
+                  variants={reveal}
+                  className="group bg-[hsl(214,50%,9%)] p-10 hover:bg-white/[0.03] transition-colors"
+                >
+                  <h4 className="text-[hsl(270,100%,68%)] font-semibold uppercase tracking-widest text-xs mb-6">{c.label}</h4>
+                  <h3 className="text-3xl font-display mb-4 text-white group-hover:text-[hsl(155,100%,67%)] transition-colors">{c.title}</h3>
+                  <p className="text-white/50 font-light leading-relaxed">{c.body}</p>
+                </motion.div>
+              ))}
             </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-4">
-                <div className="rounded-xl bg-[hsl(270,100%,68%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
-                  <Mail className="h-6 w-6 text-[hsl(270,100%,68%)]" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Email newsletters</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Automated daily or weekly digests sent directly to subscribers. Beautiful templates, zero manual work.
-                </p>
-              </div>
-
-              <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-4">
-                <div className="rounded-xl bg-[hsl(155,100%,67%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
-                  <Share2 className="h-6 w-6 text-[hsl(155,100%,67%)]" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Social carousels</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post in seconds — driving traffic back to your feed.
-                </p>
-              </div>
-
-              <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-4">
-                <div className="rounded-xl bg-[hsl(270,100%,68%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
-                  <Zap className="h-6 w-6 text-[hsl(270,100%,68%)]" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Mobile-first feed</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Your own branded news feed with swipe navigation, reader ratings, and instant story sharing.
-                </p>
-              </div>
-            </div>
-          </section>
+          </motion.section>
 
           {/* AI & Engagement Features */}
-          <section className="max-w-7xl mx-auto py-24">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-display font-semibold tracking-tight text-white mb-4">
+          <motion.section
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={container}
+            className="max-w-7xl mx-auto py-24"
+          >
+            <motion.div variants={reveal} className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4">
                 AI tools that drive engagement
               </h2>
-              <p className="text-xl text-white/60 max-w-2xl mx-auto">
+              <p className="text-xl text-white/50 max-w-2xl mx-auto">
                 Go beyond curation with intelligent features that transform passive readers into active communities.
               </p>
-            </div>
+            </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-4">
-                <div className="rounded-xl bg-[hsl(270,100%,68%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
-                  <Image className="h-6 w-6 text-[hsl(270,100%,68%)]" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">AI illustrations</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Generate unique editorial artwork for every story. No stock photos, no copyright concerns.
-                </p>
-              </div>
-
-              <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-4">
-                <div className="rounded-xl bg-[hsl(155,100%,67%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
-                  <Gamepad2 className="h-6 w-6 text-[hsl(155,100%,67%)]" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Play Mode</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Readers swipe through stories, rating content with hot-or-not mechanics that build habits.
-                </p>
-              </div>
-
-              <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-4">
-                <div className="rounded-xl bg-[hsl(270,100%,68%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
-                  <Brain className="h-6 w-6 text-[hsl(270,100%,68%)]" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Quiz cards</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Auto-generate knowledge quizzes from your content. Test and engage readers with gamification.
-                </p>
-              </div>
-
-              <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-4">
-                <div className="rounded-xl bg-[hsl(155,100%,67%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
-                  <TrendingUp className="h-6 w-6 text-[hsl(155,100%,67%)]" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Sentiment tracking</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Monitor what topics resonate with your community. See trends emerge before they go mainstream.
-                </p>
-              </div>
+              {[
+                { title: 'AI illustrations', body: 'Generate unique editorial artwork for every story. No stock photos, no copyright concerns.' },
+                { title: 'Play Mode', body: 'Readers swipe through stories, rating content with hot-or-not mechanics that build habits.' },
+                { title: 'Quiz cards', body: 'Auto-generate knowledge quizzes from your content. Test and engage readers with gamification.' },
+                { title: 'Sentiment tracking', body: 'Monitor what topics resonate with your community. See trends emerge before they go mainstream.' },
+              ].map((f) => (
+                <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
+                  <h4 className="text-xl font-display italic mb-4 text-white">{f.title}</h4>
+                  <p className="text-sm text-white/40 leading-relaxed">{f.body}</p>
+                </motion.div>
+              ))}
             </div>
-          </section>
+          </motion.section>
 
           {/* Editorial Control Section */}
-          <section className="max-w-7xl mx-auto py-24">
+          <motion.section
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={container}
+            className="max-w-7xl mx-auto py-24 border-y border-white/10"
+          >
             <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div className="space-y-8">
-                <h2 className="text-4xl md:text-5xl font-display font-semibold tracking-tight text-white">
+              <motion.div variants={reveal} className="space-y-12">
+                <h2 className="text-5xl md:text-6xl font-display tracking-tight text-white">
                   You stay in control
                 </h2>
-                <div className="space-y-6">
-                  <div className="flex gap-4">
-                    <div className="rounded-xl bg-[hsl(155,100%,67%)]/10 w-10 h-10 flex items-center justify-center border border-[hsl(155,100%,67%)]/30 shrink-0">
-                      <Filter className="h-5 w-5 text-[hsl(155,100%,67%)]" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-1">Editorial pipeline</h3>
-                      <p className="text-white/60 text-sm leading-relaxed">
-                        Every story passes through your approval queue. Accept, reject, or edit before publishing.
-                      </p>
-                    </div>
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-tighter text-[hsl(155,100%,67%)] mb-2">01 — Editorial pipeline</h3>
+                    <p className="text-white/60 font-light leading-relaxed">
+                      Every story passes through your approval queue. Accept, reject, or edit before publishing.
+                    </p>
                   </div>
-
-                  <div className="flex gap-4">
-                    <div className="rounded-xl bg-[hsl(270,100%,68%)]/10 w-10 h-10 flex items-center justify-center border border-[hsl(270,100%,68%)]/30 shrink-0">
-                      <Shield className="h-5 w-5 text-[hsl(270,100%,68%)]" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-1">Source attribution</h3>
-                      <p className="text-white/60 text-sm leading-relaxed">
-                        Every story links back to the original source. Build trust with readers and publishers alike.
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-tighter text-[hsl(270,100%,68%)] mb-2">02 — Source attribution</h3>
+                    <p className="text-white/60 font-light leading-relaxed">
+                      Every story links back to the original source. Build trust with readers and publishers alike.
+                    </p>
                   </div>
-
-                  <div className="flex gap-4">
-                    <div className="rounded-xl bg-[hsl(155,100%,67%)]/10 w-10 h-10 flex items-center justify-center border border-[hsl(155,100%,67%)]/30 shrink-0">
-                      <BarChart3 className="h-5 w-5 text-[hsl(155,100%,67%)]" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-1">Analytics dashboard</h3>
-                      <p className="text-white/60 text-sm leading-relaxed">
-                        Track feed visits, newsletter opens, top stories, and source performance in real-time.
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-tighter text-white mb-2">03 — Analytics dashboard</h3>
+                    <p className="text-white/60 font-light leading-relaxed">
+                      Track feed visits, newsletter opens, top stories, and source performance in real-time.
+                    </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="bg-[hsl(214,50%,12%)] rounded-3xl p-8 border border-white/10">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                    <span className="text-white/60 text-sm">Pipeline overview</span>
-                    <span className="text-[hsl(155,100%,67%)] text-sm font-medium">Live demo</span>
+              <motion.div variants={reveal} className="bg-white/5 rounded-2xl p-8 border border-white/10">
+                <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-2">
+                  <span className="text-white/40 text-xs font-semibold uppercase tracking-widest">Pipeline overview</span>
+                  <span className="text-[hsl(155,100%,67%)] text-xs font-bold">Live demo</span>
+                </div>
+                <div className="space-y-4 pt-4">
+                  <div className="flex items-end justify-between">
+                    <span className="text-white/60">Pending review</span>
+                    <span className="text-3xl font-display text-[hsl(270,100%,68%)]">12</span>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between py-2">
-                      <span className="text-white">Pending review</span>
-                      <span className="text-[hsl(270,100%,68%)] font-mono">12</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2">
-                      <span className="text-white">Published today</span>
-                      <span className="text-[hsl(155,100%,67%)] font-mono">8</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2">
-                      <span className="text-white">Active sources</span>
-                      <span className="text-white/70 font-mono">16</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2">
-                      <span className="text-white">Newsletter subs</span>
-                      <span className="text-white/70 font-mono">142</span>
-                    </div>
+                  <div className="flex items-end justify-between">
+                    <span className="text-white/60">Published today</span>
+                    <span className="text-3xl font-display text-[hsl(155,100%,67%)]">8</span>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <span className="text-white/60">Active sources</span>
+                    <span className="text-3xl font-display text-white">16</span>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <span className="text-white/60">Newsletter subs</span>
+                    <span className="text-3xl font-display text-white">142</span>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
-          </section>
+          </motion.section>
 
           {/* Demo Overlay */}
           <DemoOverlay open={demoOpen} onClose={() => setDemoOpen(false)} />
 
           {/* Use Cases */}
-          <section className="max-w-7xl mx-auto py-24">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-display font-semibold tracking-tight text-white mb-4">
+          <motion.section
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={container}
+            className="max-w-7xl mx-auto py-24 border-t border-white/10"
+          >
+            <motion.div variants={reveal} className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4">
                 Built for curators
               </h2>
-              <p className="text-xl text-white/60 max-w-2xl mx-auto">
+              <p className="text-xl text-white/50 max-w-2xl mx-auto">
                 Whether you're building a local news service, industry newsletter, or community hub.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-gradient-to-b from-[hsl(155,100%,67%)]/5 to-transparent rounded-2xl p-8 border border-[hsl(155,100%,67%)]/20">
-                <h3 className="text-xl font-semibold text-white mb-3">Local news feeds</h3>
-                <p className="text-white/60 leading-relaxed">
+            <div className="grid md:grid-cols-3 gap-12">
+              <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
+                <h3 className="text-2xl font-display text-white mb-3">Local news feeds</h3>
+                <p className="text-white/50 text-sm font-light leading-relaxed">
                   Aggregate hyperlocal news from multiple sources. Perfect for town-focused digests, community newsletters, or regional news apps.
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="bg-gradient-to-b from-[hsl(270,100%,68%)]/5 to-transparent rounded-2xl p-8 border border-[hsl(270,100%,68%)]/20">
-                <h3 className="text-xl font-semibold text-white mb-3">Industry newsletters</h3>
-                <p className="text-white/60 leading-relaxed">
+              <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl border border-[hsl(270,100%,68%)]/20">
+                <h3 className="text-2xl font-display text-white mb-3">Industry newsletters</h3>
+                <p className="text-white/50 text-sm font-light leading-relaxed">
                   Curate the best content from your industry. Build authority and grow a subscriber base with zero content creation overhead.
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="bg-gradient-to-b from-[hsl(155,100%,67%)]/5 to-transparent rounded-2xl p-8 border border-[hsl(155,100%,67%)]/20">
-                <h3 className="text-xl font-semibold text-white mb-3">Niche communities</h3>
-                <p className="text-white/60 leading-relaxed">
+              <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
+                <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
+                <p className="text-white/50 text-sm font-light leading-relaxed">
                   Create engaging feeds for any interest—sports, tech, culture, or hobbies. Gamification keeps readers coming back.
                 </p>
-              </div>
+              </motion.div>
             </div>
-          </section>
+          </motion.section>
 
           {/* CTA Section */}
           <section className="max-w-3xl mx-auto py-24 text-center">
             {/* Roadmap */}
-            <div className="bg-[hsl(214,50%,12%)]/60 rounded-3xl p-8 border border-white/10 mb-12 text-left">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-xs font-medium uppercase tracking-wider text-[hsl(155,100%,67%)] bg-[hsl(155,100%,67%)]/10 border border-[hsl(155,100%,67%)]/30 rounded-full px-3 py-1">
-                  On the roadmap
-                </span>
-              </div>
-              <p className="text-white/60 text-sm leading-relaxed">
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={viewport}
+              variants={reveal}
+              className="bg-[hsl(155,100%,67%)]/5 border border-[hsl(155,100%,67%)]/20 rounded-2xl p-6 mb-12 text-left flex flex-col md:flex-row md:items-center gap-6"
+            >
+              <span className="px-3 py-1 bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] text-[10px] font-bold uppercase tracking-wider rounded self-start">
+                On the roadmap
+              </span>
+              <p className="text-[hsl(155,100%,67%)] text-sm leading-relaxed font-medium">
                 We're building toward native one-click publishing to social platforms (today: carousel export),
                 subscriptions &amp; monetization, team workspaces, and an API. These are in development — not yet available.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="bg-[hsl(214,50%,12%)] rounded-3xl p-12 border border-[hsl(270,100%,68%)]/20">
-              <h2 className="text-3xl md:text-4xl font-display font-semibold text-white mb-4">
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={viewport}
+              variants={reveal}
+              className="bg-gradient-to-br from-[hsl(214,50%,12%)] to-[hsl(214,50%,9%)] rounded-[2.5rem] p-12 border border-white/10"
+            >
+              <h2 className="text-4xl md:text-5xl font-display text-white mb-4">
                 Start building your feed today
               </h2>
-              <p className="text-white/60 mb-8 max-w-lg mx-auto">
+              <p className="text-white/50 mb-8 max-w-lg mx-auto font-light">
                 Free to start. Connect your sources, curate content, and launch your first newsletter in minutes.
               </p>
-              <div className="flex gap-4 justify-center">
-                <Button asChild size="lg" className="rounded-full px-8 h-12 bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
-                  <Link to={user ? '/dashboard' : '/auth'}>Get started free</Link>
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <motion.div {...hoverLift}>
+                  <Button asChild size="lg" className="rounded-full px-8 h-12 bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
+                    <Link to={user ? '/dashboard' : '/auth'}>Get started free</Link>
+                  </Button>
+                </motion.div>
                 <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-12 text-white hover:bg-white/10">
                   <Link to="/pricing">View pricing</Link>
                 </Button>
               </div>
-            </div>
+            </motion.div>
           </section>
 
         </main>

@@ -1,46 +1,30 @@
-## Investor-ready offer pass: honest, tight, no oversell
+# Home Page Editorial Refresh + Subtle Motion
 
-Goal: make `/` (Index.tsx) and `/pricing` (Pricing.tsx) read as confident where the product is genuinely solid, and honest-but-forward-looking where it isn't — so a buyer/investor sees credibility, not inflation. Frontend copy only; no backend or business-logic changes.
+Rebuild `src/pages/Index.tsx` to the selected "Editorial refresh" direction: same palette and type, stronger hierarchy, almost all iconography removed — plus restrained framer-motion delight that suits the editorial tone.
 
-### Verified backing (state these with full confidence — they're real)
-Each is backed by deployed edge functions / live app features:
-- **Aggregation 24-7** — `universal-scraper`, `unified-scraper`, `topic-aware-scraper` + cron schedulers (`automated-scheduler`, `drip-feed-scheduler`).
-- **AI rewrites with attribution** — `enhanced-content-generator`, `source-attributions`.
-- **Email newsletters (daily/weekly digests)** — `send-email-newsletter`, `generate-daily-roundup`, `generate-weekly-roundup`, `automated-roundup-notifier`.
-- **Carousel export** — `carouselExporter`, `CarouselExportButton`.
-- **Mobile-first branded feed, Play Mode, editorial pipeline, analytics dashboard** — live pages, hooks, tables.
-- **AI illustrations** — `story-illustrator`, `auto-illustrate-stories`.
-- **Quiz cards** — `generate-quiz-questions`, `submit-quiz-response`.
-- **Sentiment tracking** — `sentiment-detector`, `generate-sentiment-card`.
+## What stays the same
+- Colours: navy `hsl(214,50%,9%)` bg, mint `hsl(155,100%,67%)` and purple `hsl(270,100%,68%)` accents, white text.
+- Type: Playfair Display (`font-display`) headlines + Inter body.
+- All existing copy, sections, routing, auth logic, demo overlay, cookie consent, and footer links.
 
-### Where we're currently overselling (fix these)
+## Layout changes (icons removed)
+1. **Remove iconography** — delete the `lucide-react` import and every accent icon tile across value props, distribution, AI tools, and the "You stay in control" list.
+2. **Hero** — centred, italic Playfair "powered by AI", soft purple glow behind the headline; existing buttons kept.
+3. **Value props (01–03)** — oversized Playfair numerals (mint / purple / muted white) instead of icon tiles, with a top hairline divider.
+4. **Reach your audience everywhere** — editorial hairline grid: three bordered cells, "Channel 01/02/03" eyebrow labels, Playfair titles that go mint on hover.
+5. **AI tools that drive engagement** — four `border-l` columns with italic Playfair sub-titles, no icon tiles.
+6. **You stay in control** — split layout kept; the three icon rows become numbered text labels ("01 — Editorial pipeline", etc.); live-demo pipeline panel kept with Playfair numbers.
+7. **Built for curators** — three use-case cards (already icon-free).
+8. **Roadmap + final CTA + footer** — content/links kept, styling aligned to the editorial treatment; dynamic year and getlit.pro links preserved.
 
-1. **Social distribution implies auto-posting.**
-   - Reality: `social-media-publisher` does **not** post to any social API — it only flags a DB record (code comment: *"In a real implementation, this would integrate with social media APIs"*). Only carousel *export* works.
-   - Fix: keep the feature, but make the verb unambiguous — "**Export** ready-to-post carousels for Instagram, LinkedIn, and X" — and avoid any "publish/schedule to social" phrasing. Frame native auto-posting as roadmap (see below).
+## Motion (framer-motion — subtle, not showy)
+- A small reusable `Reveal` wrapper using `whileInView` (fade + ~12px rise, `once: true`, soft ease, ~0.5s) applied to section headings and content blocks.
+- Light stagger on the value-prop numerals and distribution cells so they settle in sequence rather than all at once.
+- Hero text/buttons do a gentle entrance fade-up on load.
+- Buttons keep a quiet `whileHover` lift (small scale/translate) consistent with the current hover styles.
+- Respect `useReducedMotion()` — when the user prefers reduced motion, render static (no transforms), so it stays accessible.
 
-2. **Pricing tiers advertise unbuilt features as if included.**
-   - Not yet built: API access, team collaboration, multiple workspaces, custom branding, dedicated account manager, SLA, and the specific credit allotments (500 / 2,000 / 10,000).
-   - Buttons already say "Coming soon" + waitlist (good, honest). But the bullet lists read as live promises.
-   - Fix: add a clear caption to the pricing section — "Pricing is in development. Tiers, features, and credit limits below are indicative and may change before launch." Optionally tag not-yet-shipped bullets as "Planned".
-
-3. **"Free to start" / "Start curating free".**
-   - Currently true only because nothing is billed yet. Fine to keep for now, but pair it with the "pricing in development" framing so it doesn't read as a permanent free-tier commitment.
-
-### Where we should undersell-but-mention (confident roadmap, not claims)
-Add a short, restrained "On the roadmap" line/section so the investor sees ambition without us pretending it's shipped:
-- Native one-click publishing to social platforms (today: export).
-- Subscriptions & monetization (Stripe), team workspaces, API access.
-Keep it to 1–2 sentences or a compact list — clearly labelled as upcoming, not available.
-
-### Files to change
-- `src/pages/Index.tsx` — tighten social-carousel verb to "export"; optionally add a small, clearly-labelled "Roadmap" note near the CTA.
-- `src/pages/Pricing.tsx` — add "pricing in development / indicative" caption; optionally mark unbuilt bullets as "Planned".
-
-### Out of scope
-- No new backend (no real social auto-posting, no billing). Those stay as labelled roadmap items.
-
-### One decision for you
-Tone of the unbuilt items — pick one:
-- **(A) Lean & confident:** soften pricing with the "indicative" caption, fix the social verb, no separate roadmap section. Shortest, tightest.
-- **(B) Lean + visible roadmap:** all of A, plus a compact labelled "On the roadmap" block so the investor sees the forward plan explicitly.
+## Technical notes
+- `index.html`: extend the Playfair Display Google Fonts import to include italic axes (currently only upright 500–700) so italic display text renders correctly.
+- Keep the inline `hsl(...)` accent values already used in this file for consistency.
+- `framer-motion` is already installed (^12). No backend, routing, or business-logic changes — purely presentational.
