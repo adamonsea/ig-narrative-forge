@@ -71,6 +71,16 @@ const tiers: PricingTier[] = [
 ];
 
 const Pricing = () => {
+  // Features advertised in tiers that are not yet built — labelled honestly as "Planned".
+  const PLANNED_FEATURES = new Set<string>([
+    'API access',
+    'Team collaboration',
+    'Multiple workspaces',
+    'Custom branding',
+    'Dedicated account manager',
+    'SLA guarantee',
+  ]);
+
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   
