@@ -161,7 +161,7 @@ export const ReelStudioModal = ({
 
             <p className="text-xs text-muted-foreground">
               Renders a 9:16 teaser video in your browser and downloads it. Takes
-              about {Math.round(13)} seconds to capture the full animation.
+              about 13 seconds to capture the full animation.
             </p>
           </div>
         </div>
