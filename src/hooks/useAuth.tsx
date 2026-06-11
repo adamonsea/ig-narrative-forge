@@ -16,6 +16,7 @@ interface AuthContextType {
   signInWithMagicLink: (email: string, displayName?: string, redirectTo?: string) => Promise<{ error: any }>;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isProductOwner: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
