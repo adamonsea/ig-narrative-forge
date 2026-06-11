@@ -87,20 +87,18 @@ const Index = () => {
             <motion.div initial="hidden" animate="show" variants={container} className="space-y-8">
               <motion.h1 variants={maskWordContainer} className="text-6xl md:text-8xl font-display font-medium tracking-tight leading-[1.05] text-white">
                 {['Your', 'niche', 'news', 'feed,'].map((word, i) => (
-                  <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em]">
+                  <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em] mr-[0.25em]">
                     <motion.span variants={maskWord} className="inline-block">
                       {word}
                     </motion.span>
-                    {' '}
                   </span>
                 ))}
                 <br />
                 {['powered', 'by', 'AI'].map((word, i) => (
-                  <span key={`l2-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em]">
+                  <span key={`l2-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em] mr-[0.25em]">
                     <motion.span variants={maskWord} className="inline-block italic pr-[0.04em]">
                       {word}
                     </motion.span>
-                    {' '}
                   </span>
                 ))}
               </motion.h1>
