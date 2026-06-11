@@ -95,7 +95,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
     if (generatingIllustrations.has(story.id)) return;
     
     // Check credits (bypass for super admin)
-    if (!isSuperAdmin && (!credits || credits.credits_balance < model.credits)) {
+    if (!isAdmin && (!credits || credits.credits_balance < model.credits)) {
       toast({
         title: 'Insufficient Credits',
         description: `You need ${model.credits} credits to generate with ${model.name}.`,
@@ -146,7 +146,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
     const creditCost = quality === 'fast' ? 1 : 2;
     
     // Check credits based on quality tier
-    if (!isSuperAdmin && (!credits || credits.credits_balance < creditCost)) {
+    if (!isAdmin && (!credits || credits.credits_balance < creditCost)) {
       toast({ title: 'Insufficient Credits', description: `You need ${creditCost} credit${creditCost > 1 ? 's' : ''} to animate this illustration.`, variant: 'destructive' });
       return;
     }

@@ -303,7 +303,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     if (generatingIllustrations.has(story.id)) return;
 
     // Check credits
-    if (!credits || credits.credits_balance < model.credits) {
+    if (!isAdmin && (!credits || credits.credits_balance < model.credits)) {
       toast({
         title: 'Insufficient Credits',
         description: `You need ${model.credits} credits to generate with ${model.name}.`,
@@ -362,7 +362,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     const creditCost = quality === 'fast' ? 1 : 2;
     
     // Check credits
-    if (!isSuperAdmin && (!credits || credits.credits_balance < creditCost)) {
+    if (!isAdmin && (!credits || credits.credits_balance < creditCost)) {
       toast({
         title: 'Insufficient Credits',
         description: `You need ${creditCost} credit${creditCost > 1 ? 's' : ''} to animate this illustration.`,
