@@ -109,6 +109,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const pageSize = 10;
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
   const [animationModalStory, setAnimationModalStory] = useState<PublishedStory | null>(null);
+  const [reelStory, setReelStory] = useState<PublishedStory | null>(null);
 
   const handleCancelQueueItem = async (queueId: string) => {
     if (!onCancelProcessing) return;
