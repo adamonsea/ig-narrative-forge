@@ -71,6 +71,16 @@ const tiers: PricingTier[] = [
 ];
 
 const Pricing = () => {
+  // Features advertised in tiers that are not yet built — labelled honestly as "Planned".
+  const PLANNED_FEATURES = new Set<string>([
+    'API access',
+    'Team collaboration',
+    'Multiple workspaces',
+    'Custom branding',
+    'Dedicated account manager',
+    'SLA guarantee',
+  ]);
+
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   
@@ -121,6 +131,11 @@ const Pricing = () => {
             <p className="text-xl text-white/70 max-w-2xl mx-auto">
               Choose the plan that fits your needs. All plans include AI-powered curation tools with flexible credit allocation.
             </p>
+            <div className="inline-block bg-[hsl(270,100%,68%)]/10 border border-[hsl(270,100%,68%)]/30 rounded-full px-5 py-2">
+              <p className="text-sm text-white/70">
+                Pricing is in development — tiers, features, and credit limits below are indicative and may change before launch.
+              </p>
+            </div>
           </section>
 
           {/* Credit explainer */}
@@ -204,15 +219,25 @@ const Pricing = () => {
 
                     {/* Features */}
                     <ul className="space-y-3 pt-4 border-t border-white/10">
-                      {tier.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-3">
-                          <Check 
-                            className="h-5 w-5 shrink-0 mt-0.5" 
-                            style={{ color: tier.accentColor }}
-                          />
-                          <span className="text-white/70 text-sm">{feature}</span>
-                        </li>
-                      ))}
+                      {tier.features.map((feature) => {
+                        const isPlanned = PLANNED_FEATURES.has(feature);
+                        return (
+                          <li key={feature} className="flex items-start gap-3">
+                            <Check 
+                              className="h-5 w-5 shrink-0 mt-0.5" 
+                              style={{ color: isPlanned ? 'hsl(0,0%,60%)' : tier.accentColor }}
+                            />
+                            <span className="text-white/70 text-sm">
+                              {feature}
+                              {isPlanned && (
+                                <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white/40 border border-white/20 rounded px-1.5 py-0.5 align-middle">
+                                  Planned
+                                </span>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 </div>

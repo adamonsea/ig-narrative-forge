@@ -145,7 +145,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-lg font-semibold text-white">Social carousels</h3>
                 <p className="text-white/60 text-sm leading-relaxed">
-                  Export stories as swipeable image carousels for Instagram, LinkedIn, or Twitter. Drive traffic back to your feed.
+                  Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post in seconds — driving traffic back to your feed.
                 </p>
               </div>
 
@@ -331,6 +331,19 @@ const Index = () => {
 
           {/* CTA Section */}
           <section className="max-w-3xl mx-auto py-24 text-center">
+            {/* Roadmap */}
+            <div className="bg-[hsl(214,50%,12%)]/60 rounded-3xl p-8 border border-white/10 mb-12 text-left">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-xs font-medium uppercase tracking-wider text-[hsl(155,100%,67%)] bg-[hsl(155,100%,67%)]/10 border border-[hsl(155,100%,67%)]/30 rounded-full px-3 py-1">
+                  On the roadmap
+                </span>
+              </div>
+              <p className="text-white/60 text-sm leading-relaxed">
+                We're building toward native one-click publishing to social platforms (today: carousel export),
+                subscriptions &amp; monetization, team workspaces, and an API. These are in development — not yet available.
+              </p>
+            </div>
+
             <div className="bg-[hsl(214,50%,12%)] rounded-3xl p-12 border border-[hsl(270,100%,68%)]/20">
               <h2 className="text-3xl md:text-4xl font-display font-semibold text-white mb-4">
                 Start building your feed today
