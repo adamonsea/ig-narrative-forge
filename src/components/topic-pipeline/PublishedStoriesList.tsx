@@ -21,6 +21,8 @@ import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector"
 import { AnimationQualitySelector, AnimationQuality } from "@/components/topic-pipeline/AnimationQualitySelector";
 import { AnimationInstructionsModal } from "@/components/topic-pipeline/AnimationInstructionsModal";
 import { LinkEditor } from "@/components/LinkEditor";
+import { ReelExportButton } from "@/components/reels/ReelExportButton";
+import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 
 interface Link {
@@ -107,6 +109,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const pageSize = 10;
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
   const [animationModalStory, setAnimationModalStory] = useState<PublishedStory | null>(null);
+  const [reelStory, setReelStory] = useState<PublishedStory | null>(null);
 
   const handleCancelQueueItem = async (queueId: string) => {
     if (!onCancelProcessing) return;
@@ -597,7 +600,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   </Button>
                 )}
 
-
+                {isLive && (
+                  <ReelExportButton onClick={() => setReelStory(story)} />
+                )}
 
                 <div className="ml-auto flex items-center gap-1">
                   <Button
@@ -756,6 +761,26 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         creditBalance={credits?.credits_balance}
         isSuperAdmin={isSuperAdmin}
       />
+
+      {reelStory && (
+        <ReelStudioModal
+          open={!!reelStory}
+          onOpenChange={(o) => !o && setReelStory(null)}
+          story={{
+            id: reelStory.id,
+            title: reelStory.title || reelStory.headline || 'Untitled',
+            cover_illustration_url: reelStory.cover_illustration_url,
+            slides: reelStory.slides?.map((s) => ({
+              slide_number: s.slide_number,
+              content: s.content,
+            })) || null,
+          }}
+          brandName={topicSlug || 'curatr'}
+          feedUrl={topicSlug ? `curatr.pro/feed/${topicSlug}` : 'curatr.pro'}
+          sourceLabel={reelStory.author || ''}
+          featureUnlocked={isSuperAdmin}
+        />
+      )}
     </div>
   );
 };
