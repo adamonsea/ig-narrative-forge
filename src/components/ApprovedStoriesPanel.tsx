@@ -845,7 +845,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
           }}
           isAnimating={animationModalStory ? generatingIllustrations.has(animationModalStory.id) : false}
           creditBalance={credits?.credits_balance}
-          isSuperAdmin={isSuperAdmin}
+          isAdmin={isAdmin}
         />
 
         {/* Reel Studio Modal */}

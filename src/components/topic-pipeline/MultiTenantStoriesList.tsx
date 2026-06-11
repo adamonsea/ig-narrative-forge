@@ -722,7 +722,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         }}
         isAnimating={animationModalStory ? animatingVideos.has(animationModalStory.id) : false}
         creditBalance={credits?.credits_balance}
-        isSuperAdmin={isSuperAdmin}
+        isAdmin={isAdmin}
       />
     </div>
   );
