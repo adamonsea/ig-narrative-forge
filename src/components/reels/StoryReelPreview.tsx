@@ -76,6 +76,7 @@ export const StoryReelPreview = ({
         background: 'hsl(214, 50%, 9%)',
         color: 'hsl(0, 0%, 100%)',
         fontFamily: "'Inter', system-ui, sans-serif",
+        containerType: 'inline-size',
       }}
     >
       {/* Background image with slow Ken-Burns drift */}
@@ -158,7 +159,6 @@ export const StoryReelPreview = ({
           alignItems: 'center',
           padding: '0 8%',
           zIndex: 2,
-          containerType: 'inline-size',
         }}
       >
         <AnimatePresence mode="wait">
