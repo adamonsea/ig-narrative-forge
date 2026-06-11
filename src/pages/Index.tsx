@@ -145,7 +145,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-lg font-semibold text-white">Social carousels</h3>
                 <p className="text-white/60 text-sm leading-relaxed">
-                  Export stories as swipeable image carousels for Instagram, LinkedIn, or Twitter. Drive traffic back to your feed.
+                  Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post in seconds — driving traffic back to your feed.
                 </p>
               </div>
 
