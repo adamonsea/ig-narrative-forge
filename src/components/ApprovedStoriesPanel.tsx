@@ -14,6 +14,8 @@ import { AnimationInstructionsModal } from '@/components/topic-pipeline/Animatio
 import { CarouselExportButton } from '@/components/CarouselExportButton';
 import { useCarouselExport } from '@/hooks/useCarouselExport';
 import { ExportableSlideRenderer } from '@/components/ExportableSlideRenderer';
+import { ReelExportButton } from '@/components/reels/ReelExportButton';
+import { ReelStudioModal } from '@/components/reels/ReelStudioModal';
 import { 
   CheckCircle2,
   X, 
