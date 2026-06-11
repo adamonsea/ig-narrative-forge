@@ -209,15 +209,25 @@ const Pricing = () => {
 
                     {/* Features */}
                     <ul className="space-y-3 pt-4 border-t border-white/10">
-                      {tier.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-3">
-                          <Check 
-                            className="h-5 w-5 shrink-0 mt-0.5" 
-                            style={{ color: tier.accentColor }}
-                          />
-                          <span className="text-white/70 text-sm">{feature}</span>
-                        </li>
-                      ))}
+                      {tier.features.map((feature) => {
+                        const isPlanned = PLANNED_FEATURES.has(feature);
+                        return (
+                          <li key={feature} className="flex items-start gap-3">
+                            <Check 
+                              className="h-5 w-5 shrink-0 mt-0.5" 
+                              style={{ color: isPlanned ? 'hsl(0,0%,60%)' : tier.accentColor }}
+                            />
+                            <span className="text-white/70 text-sm">
+                              {feature}
+                              {isPlanned && (
+                                <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white/40 border border-white/20 rounded px-1.5 py-0.5 align-middle">
+                                  Planned
+                                </span>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 </div>
