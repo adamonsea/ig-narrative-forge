@@ -5,6 +5,7 @@ export interface CreditUsage {
   IMAGE_GENERATION: number;
   STORY_ILLUSTRATION: number;
   PREMIUM_FEATURES: number;
+  STORY_REEL: number;
 }
 
 export const CREDIT_COSTS: CreditUsage = {
@@ -12,6 +13,7 @@ export const CREDIT_COSTS: CreditUsage = {
   IMAGE_GENERATION: 3,
   STORY_ILLUSTRATION: 10,
   PREMIUM_FEATURES: 2,
+  STORY_REEL: 12,
 };
 
 export class CreditService {

@@ -14,6 +14,8 @@ import { AnimationInstructionsModal } from '@/components/topic-pipeline/Animatio
 import { CarouselExportButton } from '@/components/CarouselExportButton';
 import { useCarouselExport } from '@/hooks/useCarouselExport';
 import { ExportableSlideRenderer } from '@/components/ExportableSlideRenderer';
+import { ReelExportButton } from '@/components/reels/ReelExportButton';
+import { ReelStudioModal } from '@/components/reels/ReelStudioModal';
 import { 
   CheckCircle2,
   X, 
@@ -105,10 +107,12 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     selectedCoverId?: string;
   }>({ isOpen: false });
   const [animationModalStory, setAnimationModalStory] = useState<Story | null>(null);
+  const [reelStory, setReelStory] = useState<Story | null>(null);
+  const [topicInfo, setTopicInfo] = useState<{ slug: string; name: string } | null>(null);
   
   const { toast } = useToast();
   const { credits } = useCredits();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isAdmin } = useAuth();
   const { exportStory, isExporting, exportingStoryId, progress } = useCarouselExport();
 
   useEffect(() => {
@@ -121,12 +125,13 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
       const fetchIllustrationStyle = async () => {
         const { data, error } = await supabase
           .from('topics')
-          .select('illustration_style')
+          .select('illustration_style, slug, name')
           .eq('id', selectedTopicId)
           .single();
         
         if (data && !error) {
           setIllustrationStyle(data.illustration_style || 'editorial_illustrative');
+          setTopicInfo({ slug: data.slug, name: data.name });
         }
       };
       fetchIllustrationStyle();
@@ -777,6 +782,8 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                               'Local News'
                             )}
                           />
+                          {/* Reel teaser export */}
+                          <ReelExportButton onClick={() => setReelStory(story)} />
                           {/* Source Link Button */}
                           {story.article?.source_url && story.article.source_url !== '#' && (
                             <Button
@@ -840,6 +847,31 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
           creditBalance={credits?.credits_balance}
           isSuperAdmin={isSuperAdmin}
         />
+
+        {/* Reel Studio Modal */}
+        {reelStory && (
+          <ReelStudioModal
+            open={!!reelStory}
+            onOpenChange={(o) => !o && setReelStory(null)}
+            story={{
+              id: reelStory.id,
+              title: reelStory.title,
+              cover_illustration_url: reelStory.cover_illustration_url,
+              slides: reelStory.slides?.map((s) => ({
+                slide_number: s.slide_number,
+                content: s.content,
+              })),
+            }}
+            brandName={topicInfo?.name || 'Curatr'}
+            feedUrl={
+              topicInfo?.slug
+                ? `curatr.pro/feed/${topicInfo.slug}`
+                : 'curatr.pro'
+            }
+            sourceLabel={reelStory.article?.author || reelStory.article?.region || ''}
+            featureUnlocked={isAdmin}
+          />
+        )}
       </CardContent>
     </Card>
   );
