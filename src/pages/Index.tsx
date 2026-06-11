@@ -360,10 +360,10 @@ const Index = () => {
         {/* Footer */}
         <footer className="border-t border-white/10 py-8 mt-12">
           <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/50">
-            <p>
+          <p>
               © {new Date().getFullYear()}{' '}
               <a 
-                href="https://getlit.pro" 
+                href="https://adammd.me" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-white/70 hover:text-white transition-colors underline underline-offset-2"
@@ -375,12 +375,12 @@ const Index = () => {
             <p>
               A{' '}
               <a 
-                href="https://getlit.pro" 
+                href="https://adammd.me" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-white/70 hover:text-white transition-colors underline underline-offset-2"
               >
-                getlit.pro
+                adammd.me
               </a>
               {' '}product
             </p>
