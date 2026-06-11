@@ -52,7 +52,7 @@ export const ReelStudioModal = ({
   );
 
   const balance = credits?.credits_balance ?? 0;
-  const hasEnough = balance >= REEL_COST;
+  const hasEnough = featureUnlocked || balance >= REEL_COST;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

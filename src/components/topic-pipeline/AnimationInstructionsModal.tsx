@@ -32,7 +32,7 @@ interface AnimationInstructionsModalProps {
   }) => Promise<void>;
   isAnimating: boolean;
   creditBalance?: number;
-  isSuperAdmin: boolean;
+  isAdmin: boolean;
 }
 
 const ANIMATION_CREDITS = 2; // Comparable to low-tier image generation
@@ -44,7 +44,7 @@ export function AnimationInstructionsModal({
   onAnimate,
   isAnimating,
   creditBalance,
-  isSuperAdmin,
+  isAdmin,
 }: AnimationInstructionsModalProps) {
   const [customPrompt, setCustomPrompt] = useState('');
   
@@ -69,7 +69,7 @@ export function AnimationInstructionsModal({
     setCustomPrompt('');
   }, [story?.id]);
   
-  const hasInsufficientCredits = !isSuperAdmin && 
+  const hasInsufficientCredits = !isAdmin && 
     creditBalance !== undefined && 
     creditBalance < ANIMATION_CREDITS;
   
@@ -160,7 +160,7 @@ export function AnimationInstructionsModal({
           {/* Cost display */}
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Cost: {ANIMATION_CREDITS} credits</span>
-            {!isSuperAdmin && creditBalance !== undefined && (
+            {!isAdmin && creditBalance !== undefined && (
               <span className={`text-xs ${hasInsufficientCredits ? 'text-destructive' : 'text-muted-foreground'}`}>
                 Balance: {creditBalance}
               </span>
