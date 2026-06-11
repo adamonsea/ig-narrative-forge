@@ -847,6 +847,31 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
           creditBalance={credits?.credits_balance}
           isSuperAdmin={isSuperAdmin}
         />
+
+        {/* Reel Studio Modal */}
+        {reelStory && (
+          <ReelStudioModal
+            open={!!reelStory}
+            onOpenChange={(o) => !o && setReelStory(null)}
+            story={{
+              id: reelStory.id,
+              title: reelStory.title,
+              cover_illustration_url: reelStory.cover_illustration_url,
+              slides: reelStory.slides?.map((s) => ({
+                slide_number: s.slide_number,
+                content: s.content,
+              })),
+            }}
+            brandName={topicInfo?.name || 'Curatr'}
+            feedUrl={
+              topicInfo?.slug
+                ? `curatr.pro/feed/${topicInfo.slug}`
+                : 'curatr.pro'
+            }
+            sourceLabel={reelStory.article?.author || reelStory.article?.region || ''}
+            featureUnlocked={isAdmin}
+          />
+        )}
       </CardContent>
     </Card>
   );
