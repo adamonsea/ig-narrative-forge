@@ -782,6 +782,8 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                               'Local News'
                             )}
                           />
+                          {/* Reel teaser export */}
+                          <ReelExportButton onClick={() => setReelStory(story)} />
                           {/* Source Link Button */}
                           {story.article?.source_url && story.article.source_url !== '#' && (
                             <Button
