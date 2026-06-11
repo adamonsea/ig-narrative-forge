@@ -1,30 +1,39 @@
-# Home Page Editorial Refresh + Subtle Motion
+# Kinetic H1 Reveal for the Landing Hero
 
-Rebuild `src/pages/Index.tsx` to the selected "Editorial refresh" direction: same palette and type, stronger hierarchy, almost all iconography removed — plus restrained framer-motion delight that suits the editorial tone.
+## Goal
+Make the landing page headline animation noticeably more dynamic. Apply the selected "Kinetic editorial reveal" motion — a per-word masked slide-up where each word rises from behind a clipping mask in sequence — to the existing hero H1, without changing the current dark theme, typography, colors, or copy.
 
-## What stays the same
-- Colours: navy `hsl(214,50%,9%)` bg, mint `hsl(155,100%,67%)` and purple `hsl(270,100%,68%)` accents, white text.
-- Type: Playfair Display (`font-display`) headlines + Inter body.
-- All existing copy, sections, routing, auth logic, demo overlay, cookie consent, and footer links.
+## Scope
+File: `src/pages/Index.tsx` (hero section only, lines ~75–102).
 
-## Layout changes (icons removed)
-1. **Remove iconography** — delete the `lucide-react` import and every accent icon tile across value props, distribution, AI tools, and the "You stay in control" list.
-2. **Hero** — centred, italic Playfair "powered by AI", soft purple glow behind the headline; existing buttons kept.
-3. **Value props (01–03)** — oversized Playfair numerals (mint / purple / muted white) instead of icon tiles, with a top hairline divider.
-4. **Reach your audience everywhere** — editorial hairline grid: three bordered cells, "Channel 01/02/03" eyebrow labels, Playfair titles that go mint on hover.
-5. **AI tools that drive engagement** — four `border-l` columns with italic Playfair sub-titles, no icon tiles.
-6. **You stay in control** — split layout kept; the three icon rows become numbered text labels ("01 — Editorial pipeline", etc.); live-demo pipeline panel kept with Playfair numbers.
-7. **Built for curators** — three use-case cards (already icon-free).
-8. **Roadmap + final CTA + footer** — content/links kept, styling aligned to the editorial treatment; dynamic year and getlit.pro links preserved.
+Current H1:
+```
+Your niche news feed,
+powered by AI   (italic)
+```
+It animates with a single fade + 12px slide. We replace that with a word-by-word masked reveal.
 
-## Motion (framer-motion — subtle, not showy)
-- A small reusable `Reveal` wrapper using `whileInView` (fade + ~12px rise, `once: true`, soft ease, ~0.5s) applied to section headings and content blocks.
-- Light stagger on the value-prop numerals and distribution cells so they settle in sequence rather than all at once.
-- Hero text/buttons do a gentle entrance fade-up on load.
-- Buttons keep a quiet `whileHover` lift (small scale/translate) consistent with the current hover styles.
-- Respect `useReducedMotion()` — when the user prefers reduced motion, render static (no transforms), so it stays accessible.
+## What changes
+1. **Add motion variants** for the kinetic reveal near the existing `reveal`/`container` definitions:
+   - A `maskWordContainer` variant that staggers children (~0.09s stagger, small initial delay).
+   - A `maskWord` variant: `hidden { y: '110%' }` → `show { y: 0 }` with the editorial easing `[0.19, 1, 0.22, 1]` and ~0.9s duration.
+   - Respect `useReducedMotion`: when reduced, words appear with no transform (instant/opacity only).
+
+2. **Restructure the H1** so each word is wrapped for masking:
+   - Outer `motion.h1` keeps current classes (`text-6xl md:text-8xl font-display ... text-white`) and uses `variants={maskWordContainer}`.
+   - Each word becomes a `<span>` with `overflow-hidden inline-block` (the mask) containing a `motion.span` (`inline-block`, `variants={maskWord}`).
+   - Preserve the existing line break and the italic styling on "powered by AI".
+   - Add small horizontal padding/`pb` on word spans if needed so descenders/italics aren't clipped.
+
+3. **Keep** the subtitle, CTA buttons, and their existing `reveal`/`hoverLift` motion unchanged so the staggered cascade still flows hero → buttons.
 
 ## Technical notes
-- `index.html`: extend the Playfair Display Google Fonts import to include italic axes (currently only upright 500–700) so italic display text renders correctly.
-- Keep the inline `hsl(...)` accent values already used in this file for consistency.
-- `framer-motion` is already installed (^12). No backend, routing, or business-logic changes — purely presentational.
+- Reuse the existing `initial="hidden" animate="show"` driver on the hero `motion.div`; the H1 gets its own nested container variant so words stagger independently of the paragraph/buttons.
+- A helper to split each line into word spans keeps JSX clean (e.g. map over an array of words per line), while keeping the `<br />` and italic span intact.
+- No new dependencies — `framer-motion` is already imported and in use.
+- No backend, routing, or content changes.
+
+## Verification
+- Load the preview landing page and confirm each word of the headline rises into place in sequence, then the subtitle and buttons follow.
+- Toggle OS "reduce motion" and confirm the headline appears without the slide.
+- Confirm italics/descenders on "powered by AI" are not visually clipped by the mask.

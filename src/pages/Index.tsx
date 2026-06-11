@@ -24,6 +24,16 @@ const Index = () => {
     hidden: {},
     show: { transition: { staggerChildren: reduce ? 0 : 0.08 } },
   };
+  // Kinetic editorial reveal: words rise from behind a clipping mask
+  const editorialEase = [0.19, 1, 0.22, 1] as const;
+  const maskWordContainer: Variants = {
+    hidden: {},
+    show: { transition: { delayChildren: 0.1, staggerChildren: reduce ? 0 : 0.09 } },
+  };
+  const maskWord: Variants = {
+    hidden: { y: reduce ? 0 : '110%', opacity: reduce ? 0 : 1 },
+    show: { y: 0, opacity: 1, transition: { duration: reduce ? 0.3 : 0.9, ease: editorialEase } },
+  };
   const viewport = { once: true, margin: '-80px' } as const;
   const hoverLift = reduce ? {} : { whileHover: { y: -2 }, whileTap: { y: 0 } };
 
@@ -75,8 +85,24 @@ const Index = () => {
           <section className="max-w-5xl mx-auto text-center py-24 relative">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[hsl(270,100%,68%)]/10 blur-[120px] rounded-full -z-10" />
             <motion.div initial="hidden" animate="show" variants={container} className="space-y-8">
-              <motion.h1 variants={reveal} className="text-6xl md:text-8xl font-display font-medium tracking-tight leading-[1.05] text-white">
-                Your niche news feed,<br /><span className="italic">powered by AI</span>
+              <motion.h1 variants={maskWordContainer} className="text-6xl md:text-8xl font-display font-medium tracking-tight leading-[1.05] text-white">
+                {['Your', 'niche', 'news', 'feed,'].map((word, i) => (
+                  <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em]">
+                    <motion.span variants={maskWord} className="inline-block">
+                      {word}
+                    </motion.span>
+                    {' '}
+                  </span>
+                ))}
+                <br />
+                {['powered', 'by', 'AI'].map((word, i) => (
+                  <span key={`l2-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em]">
+                    <motion.span variants={maskWord} className="inline-block italic pr-[0.04em]">
+                      {word}
+                    </motion.span>
+                    {' '}
+                  </span>
+                ))}
               </motion.h1>
               <motion.p variants={reveal} className="text-xl md:text-2xl text-white/60 font-light max-w-2xl mx-auto leading-relaxed">
                 Aggregate content from any source, transform it into beautiful stories, and deliver via newsletters, social carousels, or your own branded feed.
