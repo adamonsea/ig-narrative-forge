@@ -4724,6 +4724,18 @@ export type Database = {
           story_count: number
         }[]
       }
+      get_discover_feeds: {
+        Args: never
+        Returns: {
+          description: string
+          id: string
+          name: string
+          published_count: number
+          region: string
+          slug: string
+          topic_type: string
+        }[]
+      }
       get_legacy_articles_awaiting_simplification: {
         Args: { p_topic_id: string }
         Returns: number
