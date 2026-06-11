@@ -121,6 +121,11 @@ const Pricing = () => {
             <p className="text-xl text-white/70 max-w-2xl mx-auto">
               Choose the plan that fits your needs. All plans include AI-powered curation tools with flexible credit allocation.
             </p>
+            <div className="inline-block bg-[hsl(270,100%,68%)]/10 border border-[hsl(270,100%,68%)]/30 rounded-full px-5 py-2">
+              <p className="text-sm text-white/70">
+                Pricing is in development — tiers, features, and credit limits below are indicative and may change before launch.
+              </p>
+            </div>
           </section>
 
           {/* Credit explainer */}
