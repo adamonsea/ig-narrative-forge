@@ -21,6 +21,8 @@ import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector"
 import { AnimationQualitySelector, AnimationQuality } from "@/components/topic-pipeline/AnimationQualitySelector";
 import { AnimationInstructionsModal } from "@/components/topic-pipeline/AnimationInstructionsModal";
 import { LinkEditor } from "@/components/LinkEditor";
+import { ReelExportButton } from "@/components/reels/ReelExportButton";
+import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 
 interface Link {
