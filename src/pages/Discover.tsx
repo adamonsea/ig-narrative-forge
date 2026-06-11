@@ -8,12 +8,7 @@ const Discover = () => {
   const { data: topics, isLoading } = useQuery({
     queryKey: ['discover-topics'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('safe_public_topics')
-        .select('id, name, slug, description, topic_type, region')
-        .eq('is_active', true)
-        .eq('is_public', true)
-        .order('name');
+      const { data, error } = await supabase.rpc('get_discover_feeds');
       if (error) throw error;
       return data;
     },
