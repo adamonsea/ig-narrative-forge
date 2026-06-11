@@ -1,39 +1,73 @@
-# Kinetic H1 Reveal for the Landing Hero
+# Story Reels — Premium Admin Teaser Export (9:16 Kinetic Video)
 
-## Goal
-Make the landing page headline animation noticeably more dynamic. Apply the selected "Kinetic editorial reveal" motion — a per-word masked slide-up where each word rises from behind a clipping mask in sequence — to the existing hero H1, without changing the current dark theme, typography, colors, or copy.
+## What this is
+A **premium feature for signed-up curatr users** (curators/admins), not feed/reader users. From the **published story queue in the admin**, a curator manually previews and downloads a single story as a short, paced **9:16 (1080×1920) kinetic-typography MP4** — a *teaser*, not the whole story.
 
-## Scope
-File: `src/pages/Index.tsx` (hero section only, lines ~75–102).
+Phase 1 = manual per-story preview + download. Bulk/automation comes later.
 
-Current H1:
+## Reel structure (locked v1 — 3 beats, ~12–15s)
+Deliberately paced for readability and credibility, never gimmicky:
+
+```text
+Beat 1 — HEADLINE      ~4s   Story headline, kinetic per-word reveal,
+                              feed/topic brand mark + source attribution.
+Beat 2 — DETAIL        ~5s   One supporting detail slide (the hook /
+                              key fact). Single idea, calm entrance.
+Beat 3 — CTA           ~4s   "Read the full story" + the published feed
+                              web address (e.g. curatr.pro/@user/feed-name),
+                              brand mark, subtle motion only.
 ```
-Your niche news feed,
-powered by AI   (italic)
-```
-It animates with a single fade + 12px slide. We replace that with a word-by-word masked reveal.
 
-## What changes
-1. **Add motion variants** for the kinetic reveal near the existing `reveal`/`container` definitions:
-   - A `maskWordContainer` variant that staggers children (~0.09s stagger, small initial delay).
-   - A `maskWord` variant: `hidden { y: '110%' }` → `show { y: 0 }` with the editorial easing `[0.19, 1, 0.22, 1]` and ~0.9s duration.
-   - Respect `useReducedMotion`: when reduced, words appear with no transform (instant/opacity only).
+- Pull headline from `stories.title`; detail from the **first body slide** (`slides` ordered by `slide_number`, skipping the title slide); CTA URL = the story's published feed/topic URL + source attribution.
+- One well-timed entrance per beat (masked per-word rise reusing the landing-H1 easing), gentle crossfades between beats, optional slow Ken-Burns on a background image. No bouncing, no rapid cuts.
+- Respects reduced-motion: simple fades only when `useReducedMotion` is set.
 
-2. **Restructure the H1** so each word is wrapped for masking:
-   - Outer `motion.h1` keeps current classes (`text-6xl md:text-8xl font-display ... text-white`) and uses `variants={maskWordContainer}`.
-   - Each word becomes a `<span>` with `overflow-hidden inline-block` (the mask) containing a `motion.span` (`inline-block`, `variants={maskWord}`).
-   - Preserve the existing line break and the italic styling on "powered by AI".
-   - Add small horizontal padding/`pb` on word spans if needed so descenders/italics aren't clipped.
+## Engine
+- **Browser preview** (free): React + Framer-style motion using the same slide content, played in a modal — instant, no render cost. This is the pacing/readability proof.
+- **High-res MP4** (paid): **Remotion** rendered server-side on **Remotion Lambda (AWS)** from the *same* composition, so preview == download.
+- No generative AI video in v1; existing Wan 2.2 pipeline untouched.
 
-3. **Keep** the subtitle, CTA buttons, and their existing `reveal`/`hoverLift` motion unchanged so the staggered cascade still flows hero → buttons.
+## Access model (two-layer gate)
+1. **Feature unlock — subscription tier**: only paid curatr users see/use Reel export (role/subscriber check). Reader/feed users never see it (UI + server enforced).
+2. **Per-render funding — credits**: each MP4 render deducts credits via existing `deduct_user_credits` RPC / `CreditService` (add `STORY_REEL` to `CREDIT_COSTS`). Browser preview is free; only the server render costs credits. Server re-checks tier + balance before triggering Lambda.
 
-## Technical notes
-- Reuse the existing `initial="hidden" animate="show"` driver on the hero `motion.div`; the H1 gets its own nested container variant so words stagger independently of the paragraph/buttons.
-- A helper to split each line into word spans keeps JSX clean (e.g. map over an array of words per line), while keeping the `<br />` and italic span intact.
-- No new dependencies — `framer-motion` is already imported and in use.
-- No backend, routing, or content changes.
+## Where it lives (admin published queue)
+- Add a **"Reel" action** to each story in the admin published queue (`ApprovedQueue` / `ApprovedStoriesPanel` / `QueueManager` — confirm the live one in build), alongside the existing `CarouselExportButton`.
+- Opens a **Reel Studio modal**:
+  - Live 9:16 preview (play/replay) of the 3 beats.
+  - Credit cost + balance; "Render & Download MP4" (disabled when tier-locked or low credits, with upsell copy).
+  - After render: progress → final MP4 preview → Download.
+
+## Data model (migration)
+`public.reel_renders`: `id`, `story_id`, `created_by`, `status` (queued|rendering|ready|failed), `lambda_render_id`, `lambda_bucket`, `output_url`, `error`, `credits_spent`, `created_at`, `updated_at`.
+- Standard grants (authenticated + service_role, no anon) + RLS with `(select auth.uid())`: owner manages own rows, admins read all via `has_role`, service_role full.
+- Public-read `story-reels` storage bucket (matches existing bucket pattern).
+
+## Remotion project (`/remotion`)
+Single reusable composition (mirrors video-creator conventions — no per-story files):
+- `StoryTeaser.tsx` — composition `story-teaser`, 1080×1920, 30fps, the fixed 3-beat sequence + `pace.ts` for timing.
+- `Root.tsx` registers only `story-teaser`. Props via zod: brand name/colors, headline, detail text, feed URL, source label, optional bg image.
+- Browser preview imports the **same** beat components so preview matches render.
+
+## Edge functions
+1. `render-story-reel` (JWT; verifies paid tier + credits): zod-validate `{ story_id }`, load story+slides (service role), map to teaser props, deduct credits, trigger `renderMediaOnLambda`, insert row, return `render_id` (refund on trigger failure).
+2. `reel-render-status` (JWT; owner/admin): `getRenderProgress`; on completion copy MP4 → `story-reels`, set `output_url` + `status=ready`. Client polls or uses Realtime.
+
+## Secrets / infra (one-time)
+- `REMOTION_AWS_ACCESS_KEY_ID`, `REMOTION_AWS_SECRET_ACCESS_KEY`, `REMOTION_AWS_REGION`.
+- After one-time Lambda deploy: `REMOTION_LAMBDA_FUNCTION`, `REMOTION_SERVE_URL`.
+
+## Scope guardrails
+- 9:16 only; 3-beat teaser only (headline → detail → CTA); never the full story.
+- Manual per-story only; no bulk/auto in v1.
+- Multi-tenant: brand/colors/feed URL/source resolved per story+topic, no hardcoded topic IDs.
+- Reader/feed users have zero access.
 
 ## Verification
-- Load the preview landing page and confirm each word of the headline rises into place in sequence, then the subtitle and buttons follow.
-- Toggle OS "reduce motion" and confirm the headline appears without the slide.
-- Confirm italics/descenders on "powered by AI" are not visually clipped by the mask.
+- Sandbox render via Remotion CLI to validate the 3-beat pacing/readability before Lambda wiring.
+- Tier gate: reader/free user can't see or call export; server rejects unauthorized callers.
+- Credits: render deducts configured cost; low balance blocks with upsell; failed render refunds.
+- E2E: published queue → Reel Studio → preview → render → MP4 (1080×1920) downloads and plays, ending on the feed URL CTA.
+
+## Decision needed before build
+Remotion Lambda needs an AWS account. Confirm AWS is fine, or say so and I'll swap the render host to a small dedicated Node worker (Railway/Render/Fly) — same composition, no AWS. The browser-preview phase can be built immediately either way.
