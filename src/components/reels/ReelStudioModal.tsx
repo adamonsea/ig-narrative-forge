@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, RotateCcw, Film, Coins, Lock, Sparkles } from 'lucide-react';
+import { RotateCcw, Film, Coins, Lock, Sparkles } from 'lucide-react';
 import { useCredits } from '@/hooks/useCredits';
 import { CREDIT_COSTS } from '@/lib/creditService';
 import { StoryReelPreview } from './StoryReelPreview';
