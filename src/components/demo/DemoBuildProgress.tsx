@@ -12,7 +12,7 @@ interface DemoBuildProgressProps {
 
 const STEPS = [
   { key: 'gather', label: 'Gathering stories from', duration: 3000 },
-  { key: 'rewrite', label: 'AI is rewriting in your voice', duration: 4000 },
+  { key: 'summary', label: 'AI is summarising in your voice', duration: 4000 },
   { key: 'images', label: 'Generating cover images', duration: 3000 },
 ];
 
@@ -50,7 +50,7 @@ export const DemoBuildProgress = ({ sourceName, tone, imageStyle, onComplete }: 
 
   const getStepBadge = (stepKey: string) => {
     if (stepKey === 'gather') return sourceName;
-    if (stepKey === 'rewrite') return tone;
+    if (stepKey === 'summary') return tone;
     if (stepKey === 'images') return imageStyle === 'editorial_illustrative' ? 'Illustrative' : 'Photographic';
     return '';
   };
