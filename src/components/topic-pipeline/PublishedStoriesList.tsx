@@ -600,7 +600,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   </Button>
                 )}
 
-
+                {isLive && (
+                  <ReelExportButton onClick={() => setReelStory(story)} />
+                )}
 
                 <div className="ml-auto flex items-center gap-1">
                   <Button
