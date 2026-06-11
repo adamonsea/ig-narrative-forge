@@ -259,6 +259,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithMagicLink,
     isAdmin: userRole === 'admin' || userRole === 'superadmin',
     isSuperAdmin: userRole === 'superadmin',
+    isProductOwner: (user?.email || '').toLowerCase() === 'adamonsea@gmail.com',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
