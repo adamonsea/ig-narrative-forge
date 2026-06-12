@@ -126,12 +126,25 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Brand label (always on)
+    // Brand bar (always on)
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     ctx.globalAlpha = 0.85;
     ctx.fillStyle = '#ffffff';
     ctx.font = '600 38px system-ui, sans-serif';
-    ctx.fillText(content.brandName.toUpperCase(), W / 2, 120);
+    ctx.fillText(content.brandName.toUpperCase(), 60, 120);
     ctx.globalAlpha = 1;
+
+    if (content.sourceLabel) {
+      ctx.textAlign = 'right';
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = '#dddddd';
+      ctx.font = '400 34px system-ui, sans-serif';
+      ctx.fillText(content.sourceLabel, W - 60, 120);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.textAlign = 'center';
 
     // Beat 1: Headline
     const aHead = envelope(t, 0, tHeadlineEnd);
@@ -169,14 +182,6 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
       ctx.globalAlpha = 1;
     }
 
-    // Source attribution footer
-    if (content.sourceLabel) {
-      ctx.globalAlpha = 0.75;
-      ctx.fillStyle = '#dddddd';
-      ctx.font = '400 34px system-ui, sans-serif';
-      ctx.fillText(`Source: ${content.sourceLabel}`, W / 2, H - 110);
-      ctx.globalAlpha = 1;
-    }
   };
 
   return new Promise<void>((resolve, reject) => {
