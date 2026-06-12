@@ -29,16 +29,20 @@ function wrapText(
   return lines;
 }
 
+// Horizontal padding mirrors the preview's `padding: 0 8%`.
+const MARGIN = Math.round(W * 0.08);
+
 function drawLines(
   ctx: CanvasRenderingContext2D,
   lines: string[],
+  x: number,
   centerY: number,
   lineHeight: number
 ) {
   const totalH = lines.length * lineHeight;
   let y = centerY - totalH / 2 + lineHeight / 2;
   for (const line of lines) {
-    ctx.fillText(line, W / 2, y);
+    ctx.fillText(line, x, y);
     y += lineHeight;
   }
 }
