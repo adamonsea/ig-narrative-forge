@@ -63,7 +63,7 @@ export const MaskRevealHeading = ({
       {words.map((w) => (
         <span
           key={w.key}
-          className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] mr-[0.25em]"
+          className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] px-[0.14em] -mx-[0.14em] mr-[0.11em]"
         >
           <motion.span variants={word} className={cn('inline-block', w.italic && 'italic pr-[0.06em]', w.className)}>
             {w.text}
