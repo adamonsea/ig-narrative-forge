@@ -13,7 +13,7 @@ export const CREDIT_COSTS: CreditUsage = {
   IMAGE_GENERATION: 3,
   STORY_ILLUSTRATION: 10,
   PREMIUM_FEATURES: 2,
-  STORY_REEL: 12,
+  STORY_REEL: 4,
 };
 
 export class CreditService {
