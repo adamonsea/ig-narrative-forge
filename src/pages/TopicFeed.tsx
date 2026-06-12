@@ -842,7 +842,7 @@ const TopicFeed = () => {
   // Show mobile-friendly error overlay when load fails
   if (loadError && !topic && !loading) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <MobileLoadErrorOverlay 
           error={loadError}
           onRetry={retryLoad}
@@ -855,7 +855,7 @@ const TopicFeed = () => {
 
   if (!topic) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold">Topic Not Found</h1>
@@ -869,7 +869,7 @@ const TopicFeed = () => {
   }
 
   return (
-    <div className="min-h-screen feed-background">
+    <div className="min-h-dvh feed-background">
       {/* SEO Meta Tags */}
       <TopicFeedSEO
         topicName={topic.name}
