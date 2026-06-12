@@ -188,7 +188,8 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `reel-${content.brandName.toLowerCase().replace(/\s+/g, '-')}.${ext}`;
+        const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+        a.download = `reel-${content.brandName.toLowerCase().replace(/\s+/g, '-')}-${stamp}.${ext}`;
         document.body.appendChild(a);
         a.click();
         a.remove();
