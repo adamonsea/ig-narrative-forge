@@ -1305,7 +1305,7 @@ const TopicFeed = () => {
             </div>
           </div>
         ) : null}
-      </div>
+      </main>
 
       {/* Notification Preferences Modal */}
       <NotificationPreferencesModal
