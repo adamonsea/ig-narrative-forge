@@ -92,7 +92,7 @@ export const StoryCard = ({ story, topicSlug, index = 0 }: StoryCardProps) => {
 
           {sourceDomain && (
             <CardFooter className="p-4 pt-0">
-              <Badge variant="secondary" className="text-[10px] font-normal">
+              <Badge variant="secondary" className="text-xs font-normal">
                 <span itemProp="publisher" itemScope itemType="https://schema.org/Organization">
                   <span itemProp="name">{sourceDomain}</span>
                 </span>

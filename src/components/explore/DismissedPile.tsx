@@ -53,7 +53,7 @@ export function DismissedPile({ stories, onRestore, onRestoreAll }: DismissedPil
             </div>
           </div>
           
-          <span className="text-[10px] text-muted-foreground mt-1 block text-center">
+          <span className="text-xs text-muted-foreground mt-1 block text-center">
             Viewed
           </span>
         </div>
