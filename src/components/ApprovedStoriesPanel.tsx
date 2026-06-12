@@ -69,6 +69,7 @@ interface Story {
   animation_suggestions?: string[] | null;
   slides: Slide[];
   article?: StoryArticle;
+  publication_name?: string | null;
 }
 
 interface CarouselExport {

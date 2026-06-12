@@ -48,6 +48,7 @@ interface PublishedStory {
   headline?: string;
   summary?: string;
   author?: string;
+  publication_name?: string | null;
   status: string;
   is_published: boolean;
   created_at: string;
