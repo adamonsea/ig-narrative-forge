@@ -1110,7 +1110,7 @@ const TopicFeed = () => {
         </div>
       </div>
 
-      <div className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
+      <main className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
 
         {/* Active filters banner with clear button */}
         {hasActiveFilters && (
