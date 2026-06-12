@@ -7,6 +7,7 @@ import { CookieConsent } from '@/components/CookieConsent';
 import { DemoOverlay } from '@/components/demo/DemoOverlay';
 import { useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
+import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -87,7 +88,7 @@ const Index = () => {
             <motion.div initial="hidden" animate="show" variants={container} className="space-y-8">
               <motion.h1 variants={maskWordContainer} className="text-6xl md:text-8xl font-display font-medium tracking-tight leading-[1.05] text-white">
                 {['Your', 'niche', 'news', 'feed,'].map((word, i) => (
-                  <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em] mr-[0.25em]">
+                  <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] mr-[0.25em]">
                     <motion.span variants={maskWord} className="inline-block">
                       {word}
                     </motion.span>
@@ -95,7 +96,7 @@ const Index = () => {
                 ))}
                 <br />
                 {['powered', 'by', 'AI'].map((word, i) => (
-                  <span key={`l2-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.08em] mr-[0.25em]">
+                  <span key={`l2-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] mr-[0.25em]">
                     <motion.span variants={maskWord} className="inline-block italic pr-[0.04em]">
                       {word}
                     </motion.span>
@@ -169,9 +170,11 @@ const Index = () => {
             className="max-w-7xl mx-auto py-24"
           >
             <motion.div variants={reveal} className="mb-16">
-              <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4">
-                Reach your audience everywhere
-              </h2>
+              <MaskRevealHeading
+                as="h2"
+                segments={[{ text: 'Reach your audience' }, { text: 'everywhere', italic: true }]}
+                className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
+              />
               <p className="text-xl text-white/40 max-w-xl">
                 One curation workflow, multiple distribution channels. Grow your audience on the platforms they use.
               </p>
@@ -205,9 +208,11 @@ const Index = () => {
             className="max-w-7xl mx-auto py-24"
           >
             <motion.div variants={reveal} className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4">
-                AI tools that drive engagement
-              </h2>
+              <MaskRevealHeading
+                as="h2"
+                segments={[{ text: 'AI tools that drive' }, { text: 'engagement', italic: true }]}
+                className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
+              />
               <p className="text-xl text-white/50 max-w-2xl mx-auto">
                 Go beyond curation with intelligent features that transform passive readers into active communities.
               </p>
@@ -238,9 +243,11 @@ const Index = () => {
           >
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <motion.div variants={reveal} className="space-y-12">
-                <h2 className="text-5xl md:text-6xl font-display tracking-tight text-white">
-                  You stay in control
-                </h2>
+                <MaskRevealHeading
+                  as="h2"
+                  segments={[{ text: 'You stay in' }, { text: 'control', italic: true }]}
+                  className="text-5xl md:text-6xl font-display tracking-tight text-white leading-[1.1]"
+                />
                 <div className="space-y-8">
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-tighter text-[hsl(155,100%,67%)] mb-2">01 — Editorial pipeline</h3>
@@ -302,9 +309,11 @@ const Index = () => {
             className="max-w-7xl mx-auto py-24 border-t border-white/10"
           >
             <motion.div variants={reveal} className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4">
-                Built for curators
-              </h2>
+              <MaskRevealHeading
+                as="h2"
+                segments={[{ text: 'Built for' }, { text: 'curators', italic: true }]}
+                className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
+              />
               <p className="text-xl text-white/50 max-w-2xl mx-auto">
                 Whether you're building a local news service, industry newsletter, or community hub.
               </p>
@@ -360,9 +369,11 @@ const Index = () => {
               variants={reveal}
               className="bg-gradient-to-br from-[hsl(214,50%,12%)] to-[hsl(214,50%,9%)] rounded-[2.5rem] p-12 border border-white/10"
             >
-              <h2 className="text-4xl md:text-5xl font-display text-white mb-4">
-                Start building your feed today
-              </h2>
+              <MaskRevealHeading
+                as="h2"
+                segments={[{ text: 'Start building your' }, { text: 'feed today', italic: true }]}
+                className="text-4xl md:text-5xl font-display text-white mb-4 leading-[1.1]"
+              />
               <p className="text-white/50 mb-8 max-w-lg mx-auto font-light">
                 Free to start. Connect your sources, curate content, and launch your first newsletter in minutes.
               </p>
