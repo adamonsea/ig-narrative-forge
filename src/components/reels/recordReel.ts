@@ -279,15 +279,9 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
       try {
         const blob = new Blob(chunks, { type: mimeType });
         const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
         const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
-        a.download = `reel-${content.brandName.toLowerCase().replace(/\s+/g, '-')}-${stamp}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        const slug = content.brandName.toLowerCase().replace(/\s+/g, '-');
+        triggerDownload(blob, `reel-${slug}-${stamp}.${ext}`);
         resolve();
       } catch (err) {
         reject(err);
