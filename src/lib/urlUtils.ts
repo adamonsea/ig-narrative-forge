@@ -56,3 +56,38 @@ export const buildShareUrl = (path: string): string => {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${baseUrl}${cleanPath}`;
 };
+
+/**
+ * Derive a human-friendly publication name from a URL or bare domain.
+ * e.g. "https://www.theargus.co.uk/news/123" -> "Theargus"
+ *      "bbc.co.uk" -> "BBC"
+ * Returns '' when nothing usable can be derived.
+ */
+const KNOWN_PUBLICATIONS: Record<string, string> = {
+  'bbc.co.uk': 'BBC',
+  'bbc.com': 'BBC',
+  'theguardian.com': 'The Guardian',
+  'theargus.co.uk': 'The Argus',
+  'sussexexpress.co.uk': 'Sussex Express',
+  'eastbourneherald.co.uk': 'Eastbourne Herald',
+};
+
+export const publicationFromUrl = (input?: string | null): string => {
+  if (!input) return '';
+  let host = input.trim();
+  try {
+    host = new URL(input.includes('://') ? input : `https://${input}`).hostname;
+  } catch {
+    // input may already be a bare domain; fall through
+  }
+  host = host.replace(/^www\./i, '').toLowerCase();
+  if (!host) return '';
+
+  if (KNOWN_PUBLICATIONS[host]) return KNOWN_PUBLICATIONS[host];
+
+  // Take the registrable name (segment before the public suffix).
+  const parts = host.split('.');
+  const name = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+  if (!name) return '';
+  return name.charAt(0).toUpperCase() + name.slice(1);
+};

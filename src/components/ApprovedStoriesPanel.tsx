@@ -16,6 +16,7 @@ import { useCarouselExport } from '@/hooks/useCarouselExport';
 import { ExportableSlideRenderer } from '@/components/ExportableSlideRenderer';
 import { ReelExportButton } from '@/components/reels/ReelExportButton';
 import { ReelStudioModal } from '@/components/reels/ReelStudioModal';
+import { publicationFromUrl } from '@/lib/urlUtils';
 import { 
   CheckCircle2,
   X, 
@@ -870,7 +871,11 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                 : 'curatr.pro'
             }
             sourceLabel={
-              [reelStory.article?.author, reelStory.publication_name]
+              [
+                reelStory.article?.author,
+                reelStory.publication_name ||
+                  publicationFromUrl(reelStory.article?.source_url),
+              ]
                 .filter(Boolean)
                 .join(' · ') ||
               reelStory.article?.region ||

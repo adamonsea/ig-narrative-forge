@@ -24,6 +24,7 @@ import { LinkEditor } from "@/components/LinkEditor";
 import { ReelExportButton } from "@/components/reels/ReelExportButton";
 import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
+import { publicationFromUrl } from "@/lib/urlUtils";
 
 interface Link {
   start: number;
@@ -779,7 +780,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           brandName={topicSlug || 'curatr'}
           feedUrl={topicSlug ? `curatr.pro/feed/${topicSlug}` : 'curatr.pro'}
           sourceLabel={
-            [reelStory.author, reelStory.publication_name]
+            [
+              reelStory.author,
+              reelStory.publication_name ||
+                publicationFromUrl(reelStory.source_url),
+            ]
               .filter(Boolean)
               .join(' · ') || ''
           }
