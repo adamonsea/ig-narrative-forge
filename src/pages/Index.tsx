@@ -7,6 +7,7 @@ import { CookieConsent } from '@/components/CookieConsent';
 import { DemoOverlay } from '@/components/demo/DemoOverlay';
 import { useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
+import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 
 const Index = () => {
   const { user, loading } = useAuth();
