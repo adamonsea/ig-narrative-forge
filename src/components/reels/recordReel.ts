@@ -182,14 +182,6 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
       ctx.globalAlpha = 1;
     }
 
-    // Source attribution footer
-    if (content.sourceLabel) {
-      ctx.globalAlpha = 0.75;
-      ctx.fillStyle = '#dddddd';
-      ctx.font = '400 34px system-ui, sans-serif';
-      ctx.fillText(`Source: ${content.sourceLabel}`, W / 2, H - 110);
-      ctx.globalAlpha = 1;
-    }
   };
 
   return new Promise<void>((resolve, reject) => {
