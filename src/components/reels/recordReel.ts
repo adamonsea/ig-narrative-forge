@@ -127,37 +127,13 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    // Brand bar (always on)
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '600 38px system-ui, sans-serif';
-    ctx.fillText(content.brandName.toUpperCase(), 60, 120);
-    ctx.globalAlpha = 1;
-
-    if (content.sourceLabel) {
-      ctx.textAlign = 'right';
-      ctx.globalAlpha = 0.7;
-      ctx.fillStyle = '#dddddd';
-      ctx.font = '400 34px system-ui, sans-serif';
-      ctx.fillText(content.sourceLabel, W - 60, 120);
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.textAlign = 'center';
+    drawBrandBar(ctx, content);
 
     // Beat 1: Headline
     const aHead = envelope(t, 0, tHeadlineEnd);
     if (aHead > 0) {
       ctx.globalAlpha = aHead;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '800 78px Georgia, serif';
-      const lines = wrapText(ctx, content.headline, W - 160);
-      drawLines(ctx, lines, H / 2, 96);
+      drawHeadline(ctx, content);
       ctx.globalAlpha = 1;
     }
 
@@ -165,10 +141,7 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
     const aDetail = envelope(t, tHeadlineEnd, REEL_PACE.detail);
     if (aDetail > 0 && content.detail) {
       ctx.globalAlpha = aDetail;
-      ctx.fillStyle = '#f2f2f2';
-      ctx.font = '500 56px system-ui, sans-serif';
-      const lines = wrapText(ctx, content.detail, W - 180);
-      drawLines(ctx, lines, H / 2, 78);
+      drawDetail(ctx, content);
       ctx.globalAlpha = 1;
     }
 
@@ -176,16 +149,9 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
     const aCta = envelope(t, tDetailEnd, REEL_PACE.cta);
     if (aCta > 0) {
       ctx.globalAlpha = aCta;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '600 52px system-ui, sans-serif';
-      ctx.fillText('Read the full story', W / 2, H / 2 - 60);
-      ctx.fillStyle = '#7c5cff';
-      ctx.font = '700 58px system-ui, sans-serif';
-      const urlLines = wrapText(ctx, content.feedUrl, W - 160);
-      drawLines(ctx, urlLines, H / 2 + 60, 70);
+      drawCta(ctx, content);
       ctx.globalAlpha = 1;
     }
-
   };
 
   return new Promise<void>((resolve, reject) => {
