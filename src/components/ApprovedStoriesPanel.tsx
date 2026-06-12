@@ -871,7 +871,11 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                 : 'curatr.pro'
             }
             sourceLabel={
-              [reelStory.article?.author, reelStory.publication_name]
+              [
+                reelStory.article?.author,
+                reelStory.publication_name ||
+                  publicationFromUrl(reelStory.article?.source_url),
+              ]
                 .filter(Boolean)
                 .join(' · ') ||
               reelStory.article?.region ||
