@@ -813,7 +813,7 @@ const TopicFeed = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           {/* Loading skeleton for header */}
           <div className="text-center mb-8">
