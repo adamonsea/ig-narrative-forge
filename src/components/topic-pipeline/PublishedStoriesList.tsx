@@ -24,6 +24,7 @@ import { LinkEditor } from "@/components/LinkEditor";
 import { ReelExportButton } from "@/components/reels/ReelExportButton";
 import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
+import { publicationFromUrl } from "@/lib/urlUtils";
 
 interface Link {
   start: number;
