@@ -244,6 +244,15 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
   const tHeadlineEnd = REEL_PACE.headline;
   const tDetailEnd = REEL_PACE.headline + REEL_PACE.detail;
 
+  // Encoders have start-up latency and need a moment to flush the final
+  // frames, otherwise the last beat (CTA) gets cut off on export — most
+  // noticeably on desktop Chrome. We add a short lead-in before the first
+  // beat and a tail hold that keeps the CTA fully visible while the encoder
+  // catches up before we stop.
+  const LEAD_IN = 0.4;
+  const TAIL_HOLD = 1.0;
+  const RECORD_SECONDS = LEAD_IN + REEL_TOTAL_SECONDS + TAIL_HOLD;
+
   const drawFrame = (t: number) => {
     drawBackground(ctx, bg);
     drawBrandBar(ctx, content);
@@ -264,9 +273,12 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
       ctx.globalAlpha = 1;
     }
 
-    // Beat 3: CTA
-    const aCta = envelope(t, tDetailEnd, REEL_PACE.cta);
-    if (aCta > 0) {
+    // Beat 3: CTA — fade in, then hold fully visible through the tail so it
+    // never fades out / gets clipped at the end of the recording.
+    if (t >= tDetailEnd) {
+      const local = t - tDetailEnd;
+      const fadeIn = Math.min(0.6, REEL_PACE.cta * 0.2);
+      const aCta = local < fadeIn ? local / fadeIn : 1;
       ctx.globalAlpha = aCta;
       drawCta(ctx, content);
       ctx.globalAlpha = 1;
@@ -274,7 +286,6 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
   };
 
   return new Promise<void>((resolve, reject) => {
-    const start = performance.now();
     recorder.onstop = () => {
       try {
         const blob = new Blob(chunks, { type: mimeType });
@@ -290,16 +301,35 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
 
     recorder.onerror = (e) => reject((e as ErrorEvent).error ?? new Error('Recording failed'));
 
-    recorder.start();
+    // Draw the first frame before starting so the encoder never opens on a
+    // blank canvas, then request periodic chunks (timeslice) so data is
+    // flushed continuously rather than only at stop().
+    drawFrame(0);
+    recorder.start(250);
+
+    const start = performance.now();
+    let stopping = false;
 
     const tick = () => {
       const elapsed = (performance.now() - start) / 1000;
-      drawFrame(Math.min(elapsed, REEL_TOTAL_SECONDS));
-      if (elapsed >= REEL_TOTAL_SECONDS) {
-        recorder.stop();
+      // Hold the first frame during the lead-in, then advance the timeline.
+      const beatTime = Math.min(
+        Math.max(0, elapsed - LEAD_IN),
+        REEL_TOTAL_SECONDS
+      );
+      drawFrame(beatTime);
+
+      if (elapsed >= RECORD_SECONDS && !stopping) {
+        stopping = true;
+        // Flush any buffered data, then stop on the next macrotask so the
+        // final frames are captured before finalization.
+        try { recorder.requestData(); } catch { /* not all browsers */ }
+        setTimeout(() => {
+          if (recorder.state !== 'inactive') recorder.stop();
+        }, 200);
         return;
       }
-      requestAnimationFrame(tick);
+      if (!stopping) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   });
