@@ -1125,6 +1125,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{keyword}</span>
                   <button
                     onClick={() => removeKeyword(keyword)}
+                    aria-label={`Remove ${keyword} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -1140,6 +1141,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{landmark}</span>
                   <button
                     onClick={() => toggleLandmark(landmark)}
+                    aria-label={`Remove ${landmark} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -1155,6 +1157,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{org}</span>
                   <button
                     onClick={() => toggleOrganization(org)}
+                    aria-label={`Remove ${org} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -1170,6 +1173,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{source.split('.')[0]}</span>
                   <button
                     onClick={() => removeSource(source)}
+                    aria-label={`Remove ${source.split('.')[0]} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
