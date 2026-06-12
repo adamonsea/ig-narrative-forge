@@ -821,6 +821,7 @@ export default function StoryCarousel({
                 onClick={handleWhatsAppShare}
                 data-onboarding="whatsapp-share"
                 className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                aria-label="Share on WhatsApp"
                 title="Share on WhatsApp"
               >
                 <MessageCircle className="h-4 w-4" />
