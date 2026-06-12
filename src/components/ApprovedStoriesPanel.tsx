@@ -16,6 +16,7 @@ import { useCarouselExport } from '@/hooks/useCarouselExport';
 import { ExportableSlideRenderer } from '@/components/ExportableSlideRenderer';
 import { ReelExportButton } from '@/components/reels/ReelExportButton';
 import { ReelStudioModal } from '@/components/reels/ReelStudioModal';
+import { publicationFromUrl } from '@/lib/urlUtils';
 import { 
   CheckCircle2,
   X, 
