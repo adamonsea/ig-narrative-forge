@@ -780,7 +780,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           brandName={topicSlug || 'curatr'}
           feedUrl={topicSlug ? `curatr.pro/feed/${topicSlug}` : 'curatr.pro'}
           sourceLabel={
-            [reelStory.author, reelStory.publication_name]
+            [
+              reelStory.author,
+              reelStory.publication_name ||
+                publicationFromUrl(reelStory.source_url),
+            ]
               .filter(Boolean)
               .join(' · ') || ''
           }
