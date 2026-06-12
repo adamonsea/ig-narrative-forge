@@ -245,25 +245,7 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
   const tDetailEnd = REEL_PACE.headline + REEL_PACE.detail;
 
   const drawFrame = (t: number) => {
-    // Background
-    ctx.fillStyle = '#0f0f12';
-    ctx.fillRect(0, 0, W, H);
-    if (bg) {
-      const scale = Math.max(W / bg.width, H / bg.height);
-      const dw = bg.width * scale;
-      const dh = bg.height * scale;
-      ctx.globalAlpha = 0.4;
-      ctx.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh);
-      ctx.globalAlpha = 1;
-    }
-    // Dark gradient overlay for legibility
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
-    grad.addColorStop(0.5, 'rgba(0,0,0,0.35)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.7)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-
+    drawBackground(ctx, bg);
     drawBrandBar(ctx, content);
 
     // Beat 1: Headline
