@@ -8,12 +8,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RotateCcw, Film, Coins, Lock, Sparkles, Loader2 } from 'lucide-react';
+import { RotateCcw, Film, Coins, Lock, Sparkles, Loader2, Images } from 'lucide-react';
 import { useCredits } from '@/hooks/useCredits';
 import { CREDIT_COSTS } from '@/lib/creditService';
 import { StoryReelPreview } from './StoryReelPreview';
 import { buildReelContent } from './storyReelContent';
-import { recordReel } from './recordReel';
+import { recordReel, exportReelSlides } from './recordReel';
 import { useToast } from '@/hooks/use-toast';
 
 interface ReelStudioStory {
@@ -48,6 +48,7 @@ export const ReelStudioModal = ({
   const { credits } = useCredits();
   const [playKey, setPlayKey] = useState(1);
   const [rendering, setRendering] = useState(false);
+  const [exportingSlides, setExportingSlides] = useState(false);
   const { toast } = useToast();
 
   const content = useMemo(
@@ -73,6 +74,24 @@ export const ReelStudioModal = ({
       });
     } finally {
       setRendering(false);
+    }
+  };
+
+  const handleExportSlides = async () => {
+    if (exportingSlides) return;
+    setExportingSlides(true);
+    try {
+      await exportReelSlides(content);
+      toast({ title: 'Slides downloaded', description: 'Three static slides have been saved.' });
+    } catch (err) {
+      console.error('Slide export failed:', err);
+      toast({
+        title: 'Export failed',
+        description: err instanceof Error ? err.message : 'Could not export the slides.',
+        variant: 'destructive',
+      });
+    } finally {
+      setExportingSlides(false);
     }
   };
 
@@ -158,6 +177,20 @@ export const ReelStudioModal = ({
                 You need {REEL_COST} credits to render this reel.
               </p>
             )}
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleExportSlides}
+              disabled={exportingSlides}
+            >
+              {exportingSlides ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Images className="w-4 h-4 mr-1" />
+              )}
+              {exportingSlides ? 'Exporting…' : 'Download static slides (3 PNGs)'}
+            </Button>
 
             <p className="text-xs text-muted-foreground">
               Renders a 9:16 teaser video in your browser and downloads it. Takes
