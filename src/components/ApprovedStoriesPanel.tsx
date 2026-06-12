@@ -69,6 +69,7 @@ interface Story {
   animation_suggestions?: string[] | null;
   slides: Slide[];
   article?: StoryArticle;
+  publication_name?: string | null;
 }
 
 interface CarouselExport {
@@ -868,7 +869,13 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                 ? `curatr.pro/feed/${topicInfo.slug}`
                 : 'curatr.pro'
             }
-            sourceLabel={reelStory.article?.author || reelStory.article?.region || ''}
+            sourceLabel={
+              [reelStory.article?.author, reelStory.publication_name]
+                .filter(Boolean)
+                .join(' · ') ||
+              reelStory.article?.region ||
+              ''
+            }
             featureUnlocked={isProductOwner}
           />
         )}

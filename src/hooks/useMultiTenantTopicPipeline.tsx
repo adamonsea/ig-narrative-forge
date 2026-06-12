@@ -73,6 +73,7 @@ export interface MultiTenantStory {
   title?: string;
   url?: string;
   author?: string;
+  publication_name?: string | null;
   word_count?: number;
   cover_illustration_url?: string;
   cover_illustration_prompt?: string;
@@ -666,6 +667,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           url: story.article_url,
           source_url: story.article_url,
           author: story.article_author,
+          publication_name: story.publication_name || null,
           word_count: story.word_count,
           cover_illustration_url: story.cover_illustration_url,
           cover_illustration_prompt: story.cover_illustration_prompt,

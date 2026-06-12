@@ -48,6 +48,7 @@ interface PublishedStory {
   headline?: string;
   summary?: string;
   author?: string;
+  publication_name?: string | null;
   status: string;
   is_published: boolean;
   created_at: string;
@@ -777,7 +778,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           }}
           brandName={topicSlug || 'curatr'}
           feedUrl={topicSlug ? `curatr.pro/feed/${topicSlug}` : 'curatr.pro'}
-          sourceLabel={reelStory.author || ''}
+          sourceLabel={
+            [reelStory.author, reelStory.publication_name]
+              .filter(Boolean)
+              .join(' · ') || ''
+          }
           featureUnlocked={isProductOwner}
         />
       )}
