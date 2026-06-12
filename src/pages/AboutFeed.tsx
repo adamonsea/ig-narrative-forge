@@ -139,7 +139,7 @@ const AboutFeed = () => {
           ) : topic.description ? (
             <p className="text-zinc-300 leading-relaxed">{topic.description}</p>
           ) : (
-            <p className="text-zinc-500 italic">
+            <p className="text-zinc-400 italic">
               No additional information available about this feed.
             </p>
           )}
