@@ -73,6 +73,7 @@ export interface MultiTenantStory {
   title?: string;
   url?: string;
   author?: string;
+  publication_name?: string | null;
   word_count?: number;
   cover_illustration_url?: string;
   cover_illustration_prompt?: string;
