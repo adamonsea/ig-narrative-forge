@@ -29,16 +29,20 @@ function wrapText(
   return lines;
 }
 
+// Horizontal padding mirrors the preview's `padding: 0 8%`.
+const MARGIN = Math.round(W * 0.08);
+
 function drawLines(
   ctx: CanvasRenderingContext2D,
   lines: string[],
+  x: number,
   centerY: number,
   lineHeight: number
 ) {
   const totalH = lines.length * lineHeight;
   let y = centerY - totalH / 2 + lineHeight / 2;
   for (const line of lines) {
-    ctx.fillText(line, W / 2, y);
+    ctx.fillText(line, x, y);
     y += lineHeight;
   }
 }
@@ -78,6 +82,143 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
+// ---- Shared scene drawing (used by both the recorder and static export) ----
+
+function drawBackground(
+  ctx: CanvasRenderingContext2D,
+  bg: HTMLImageElement | null
+) {
+  ctx.fillStyle = '#0f0f12';
+  ctx.fillRect(0, 0, W, H);
+  if (bg) {
+    const scale = Math.max(W / bg.width, H / bg.height);
+    const dw = bg.width * scale;
+    const dh = bg.height * scale;
+    ctx.globalAlpha = 0.4;
+    ctx.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    ctx.globalAlpha = 1;
+  }
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+  grad.addColorStop(0.5, 'rgba(0,0,0,0.35)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.7)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawBrandBar(
+  ctx: CanvasRenderingContext2D,
+  content: ReelTeaserContent
+) {
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 38px system-ui, sans-serif';
+  ctx.fillText(content.brandName.toUpperCase(), MARGIN, 120);
+  ctx.globalAlpha = 1;
+
+  if (content.sourceLabel) {
+    ctx.textAlign = 'right';
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#dddddd';
+    ctx.font = '400 34px system-ui, sans-serif';
+    ctx.fillText(content.sourceLabel, W - MARGIN, 120);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawHeadline(
+  ctx: CanvasRenderingContext2D,
+  content: ReelTeaserContent
+) {
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 102px Georgia, serif';
+  const lines = wrapText(ctx, content.headline, W - MARGIN * 2);
+  drawLines(ctx, lines, MARGIN, H / 2, 116);
+}
+
+function drawDetail(
+  ctx: CanvasRenderingContext2D,
+  content: ReelTeaserContent
+) {
+  if (!content.detail) return;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f2f2f2';
+  ctx.font = '500 64px system-ui, sans-serif';
+  const lines = wrapText(ctx, content.detail, W - MARGIN * 2);
+  drawLines(ctx, lines, MARGIN, H / 2, 90);
+}
+
+function drawCta(
+  ctx: CanvasRenderingContext2D,
+  content: ReelTeaserContent
+) {
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 52px system-ui, sans-serif';
+  ctx.fillText('Read the full story', MARGIN, H / 2 - 90);
+  ctx.fillStyle = '#7c5cff';
+  ctx.font = '700 58px system-ui, sans-serif';
+  const urlLines = wrapText(ctx, content.feedUrl, W - MARGIN * 2);
+  drawLines(ctx, urlLines, MARGIN, H / 2 + 40, 70);
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/**
+ * Renders the three teaser beats (headline, detail, CTA) as static 9:16 PNG
+ * slides and downloads each one.
+ */
+export async function exportReelSlides(content: ReelTeaserContent): Promise<void> {
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas not supported');
+
+  const bg = content.backgroundImage
+    ? await loadImage(content.backgroundImage)
+    : null;
+
+  const slug = content.brandName.toLowerCase().replace(/\s+/g, '-');
+  const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+
+  const beats: Array<[string, () => void]> = [
+    ['headline', () => drawHeadline(ctx, content)],
+    ['detail', () => drawDetail(ctx, content)],
+    ['cta', () => drawCta(ctx, content)],
+  ];
+
+  for (let i = 0; i < beats.length; i++) {
+    const [name, draw] = beats[i];
+    drawBackground(ctx, bg);
+    drawBrandBar(ctx, content);
+    draw();
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), 'image/png')
+    );
+    if (blob) {
+      triggerDownload(blob, `slide-${i + 1}-${name}-${slug}-${stamp}.png`);
+      // Small gap so browsers don't drop rapid sequential downloads.
+      await new Promise((r) => setTimeout(r, 350));
+    }
+  }
+}
+
 export async function recordReel(content: ReelTeaserContent): Promise<void> {
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -104,56 +245,14 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
   const tDetailEnd = REEL_PACE.headline + REEL_PACE.detail;
 
   const drawFrame = (t: number) => {
-    // Background
-    ctx.fillStyle = '#0f0f12';
-    ctx.fillRect(0, 0, W, H);
-    if (bg) {
-      const scale = Math.max(W / bg.width, H / bg.height);
-      const dw = bg.width * scale;
-      const dh = bg.height * scale;
-      ctx.globalAlpha = 0.4;
-      ctx.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh);
-      ctx.globalAlpha = 1;
-    }
-    // Dark gradient overlay for legibility
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
-    grad.addColorStop(0.5, 'rgba(0,0,0,0.35)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.7)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    // Brand bar (always on)
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '600 38px system-ui, sans-serif';
-    ctx.fillText(content.brandName.toUpperCase(), 60, 120);
-    ctx.globalAlpha = 1;
-
-    if (content.sourceLabel) {
-      ctx.textAlign = 'right';
-      ctx.globalAlpha = 0.7;
-      ctx.fillStyle = '#dddddd';
-      ctx.font = '400 34px system-ui, sans-serif';
-      ctx.fillText(content.sourceLabel, W - 60, 120);
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.textAlign = 'center';
+    drawBackground(ctx, bg);
+    drawBrandBar(ctx, content);
 
     // Beat 1: Headline
     const aHead = envelope(t, 0, tHeadlineEnd);
     if (aHead > 0) {
       ctx.globalAlpha = aHead;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '800 78px Georgia, serif';
-      const lines = wrapText(ctx, content.headline, W - 160);
-      drawLines(ctx, lines, H / 2, 96);
+      drawHeadline(ctx, content);
       ctx.globalAlpha = 1;
     }
 
@@ -161,10 +260,7 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
     const aDetail = envelope(t, tHeadlineEnd, REEL_PACE.detail);
     if (aDetail > 0 && content.detail) {
       ctx.globalAlpha = aDetail;
-      ctx.fillStyle = '#f2f2f2';
-      ctx.font = '500 56px system-ui, sans-serif';
-      const lines = wrapText(ctx, content.detail, W - 180);
-      drawLines(ctx, lines, H / 2, 78);
+      drawDetail(ctx, content);
       ctx.globalAlpha = 1;
     }
 
@@ -172,16 +268,9 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
     const aCta = envelope(t, tDetailEnd, REEL_PACE.cta);
     if (aCta > 0) {
       ctx.globalAlpha = aCta;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '600 52px system-ui, sans-serif';
-      ctx.fillText('Read the full story', W / 2, H / 2 - 60);
-      ctx.fillStyle = '#7c5cff';
-      ctx.font = '700 58px system-ui, sans-serif';
-      const urlLines = wrapText(ctx, content.feedUrl, W - 160);
-      drawLines(ctx, urlLines, H / 2 + 60, 70);
+      drawCta(ctx, content);
       ctx.globalAlpha = 1;
     }
-
   };
 
   return new Promise<void>((resolve, reject) => {
@@ -190,15 +279,9 @@ export async function recordReel(content: ReelTeaserContent): Promise<void> {
       try {
         const blob = new Blob(chunks, { type: mimeType });
         const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
         const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
-        a.download = `reel-${content.brandName.toLowerCase().replace(/\s+/g, '-')}-${stamp}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        const slug = content.brandName.toLowerCase().replace(/\s+/g, '-');
+        triggerDownload(blob, `reel-${slug}-${stamp}.${ext}`);
         resolve();
       } catch (err) {
         reject(err);
