@@ -813,7 +813,7 @@ const TopicFeed = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           {/* Loading skeleton for header */}
           <div className="text-center mb-8">
@@ -842,7 +842,7 @@ const TopicFeed = () => {
   // Show mobile-friendly error overlay when load fails
   if (loadError && !topic && !loading) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <MobileLoadErrorOverlay 
           error={loadError}
           onRetry={retryLoad}
@@ -855,7 +855,7 @@ const TopicFeed = () => {
 
   if (!topic) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold">Topic Not Found</h1>
@@ -869,7 +869,7 @@ const TopicFeed = () => {
   }
 
   return (
-    <div className="min-h-screen feed-background">
+    <div className="min-h-dvh feed-background">
       {/* SEO Meta Tags */}
       <TopicFeedSEO
         topicName={topic.name}
@@ -1110,7 +1110,7 @@ const TopicFeed = () => {
         </div>
       </div>
 
-      <div className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
+      <main className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
 
         {/* Active filters banner with clear button */}
         {hasActiveFilters && (
@@ -1125,6 +1125,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{keyword}</span>
                   <button
                     onClick={() => removeKeyword(keyword)}
+                    aria-label={`Remove ${keyword} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -1140,6 +1141,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{landmark}</span>
                   <button
                     onClick={() => toggleLandmark(landmark)}
+                    aria-label={`Remove ${landmark} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -1155,6 +1157,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{org}</span>
                   <button
                     onClick={() => toggleOrganization(org)}
+                    aria-label={`Remove ${org} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -1170,6 +1173,7 @@ const TopicFeed = () => {
                   <span className="capitalize">{source.split('.')[0]}</span>
                   <button
                     onClick={() => removeSource(source)}
+                    aria-label={`Remove ${source.split('.')[0]} filter`}
                     className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -1305,7 +1309,7 @@ const TopicFeed = () => {
             </div>
           </div>
         ) : null}
-      </div>
+      </main>
 
       {/* Notification Preferences Modal */}
       <NotificationPreferencesModal
