@@ -12,6 +12,7 @@ import { useSiteVisitorTracking } from "@/hooks/useSiteVisitorTracking";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import LocalNewsFeedsGuide from "./pages/guides/LocalNewsFeeds";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
