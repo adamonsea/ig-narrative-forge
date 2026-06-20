@@ -147,6 +147,7 @@ Deno.serve(async (req) => {
         .eq('processing_status', 'new')
         .gte('content_quality_score', quality_threshold)
         .order('content_quality_score', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(maxPerTopic);
 
       if (articlesError) {
