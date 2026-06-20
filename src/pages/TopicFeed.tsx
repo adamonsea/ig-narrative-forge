@@ -858,7 +858,7 @@ const TopicFeed = () => {
       <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold">Topic Not Found</h1>
+            <h1 className="text-4xl font-bold">Topic not found — Curatr</h1>
             <p className="text-muted-foreground">
               The topic you're looking for doesn't exist, has been deactivated, or is not publicly available.
             </p>
