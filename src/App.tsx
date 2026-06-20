@@ -12,6 +12,7 @@ import { useSiteVisitorTracking } from "@/hooks/useSiteVisitorTracking";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import LocalNewsFeedsGuide from "./pages/guides/LocalNewsFeeds";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
@@ -86,6 +87,7 @@ const App = () => {
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/cookies" element={<Cookies />} />
+                <Route path="/guides/local-news-feeds" element={<LocalNewsFeedsGuide />} />
                 <Route path="/health" element={<Health />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
