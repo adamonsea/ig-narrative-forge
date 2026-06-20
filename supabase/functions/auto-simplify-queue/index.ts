@@ -147,6 +147,7 @@ Deno.serve(async (req) => {
         .eq('processing_status', 'new')
         .gte('content_quality_score', quality_threshold)
         .order('content_quality_score', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(maxPerTopic);
 
       if (articlesError) {
@@ -198,19 +199,22 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Check if already queued (by topic_article_id)
-        const { data: existingQueue } = await supabase
+        // Check for an ACTIVE queue item only (pending/processing).
+        // A finished (completed/failed) row must NOT block re-evaluation —
+        // otherwise "zombie" articles permanently clog the top-of-queue fetch.
+        const { data: activeQueue } = await supabase
           .from('content_generation_queue')
           .select('id')
           .eq('topic_article_id', article.id)
+          .in('status', ['pending', 'processing'])
           .maybeSingle();
 
-        if (existingQueue) {
-          console.log(`  ⏭️  Skipping article ${article.id}: already queued`);
+        if (activeQueue) {
+          console.log(`  ⏭️  Skipping article ${article.id}: active queue item in progress`);
           continue;
         }
 
-        // Check if story already exists for this topic_article
+        // Check if a story already exists for this topic_article
         const { data: existingStory } = await supabase
           .from('stories')
           .select('id')
@@ -226,6 +230,13 @@ Deno.serve(async (req) => {
             .eq('id', article.id);
           continue;
         }
+
+        // No active queue item and no story. If a stale (completed/failed) queue
+        // row exists for this article, remove it so we can re-queue cleanly.
+        await supabase
+          .from('content_generation_queue')
+          .delete()
+          .eq('topic_article_id', article.id);
 
         // Insert into queue with topic voice defaults
         const defaults = topicDefaultsMap[article.topic_id] || {};
