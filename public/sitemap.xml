@@ -32,6 +32,14 @@
     <priority>0.3</priority>
   </url>
 
+  <!-- Guides -->
+  <url>
+    <loc>https://curatr.pro/guides/local-news-feeds</loc>
+    <lastmod>2026-06-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- Eastbourne Feed -->
   <url>
     <loc>https://curatr.pro/feed/eastbourne</loc>
