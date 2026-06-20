@@ -831,6 +831,8 @@ export default function StoryCarousel({
                 size="sm"
                 onClick={handleShare}
                 className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                aria-label="Share this story"
+                title="Share this story"
               >
                 <Share2 className="h-4 w-4" />
                 Share
