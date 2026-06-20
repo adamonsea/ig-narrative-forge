@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Spinner } from '@/components/ui/spinner';
 import { TopicManager } from "@/components/TopicManager";
 import { AppLayout } from "@/components/AppLayout";
@@ -38,6 +39,14 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
+      <Helmet>
+        <title>Your Topics | Curatr</title>
+        <meta name="description" content="Manage your curated news feeds, sources, and editorial pipeline from your Curatr dashboard." />
+        <link rel="canonical" href="https://curatr.pro/dashboard" />
+        <meta property="og:title" content="Your Topics | Curatr" />
+        <meta property="og:description" content="Manage your curated news feeds, sources, and editorial pipeline from your Curatr dashboard." />
+        <meta property="og:url" content="https://curatr.pro/dashboard" />
+      </Helmet>
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}

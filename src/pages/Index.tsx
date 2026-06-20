@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,6 +49,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-[hsl(214,50%,9%)]">
+      <Helmet>
+        <title>Curatr — AI-Powered News Feed Curation</title>
+        <meta name="description" content="Build and publish your own niche news feeds. Curatr uses AI to gather, rewrite, and curate stories with strong source attribution." />
+        <link rel="canonical" href="https://curatr.pro/" />
+        <meta property="og:title" content="Curatr — AI-Powered News Feed Curation" />
+        <meta property="og:description" content="Build and publish your own niche news feeds with AI-assisted curation and strong source attribution." />
+        <meta property="og:url" content="https://curatr.pro/" />
+      </Helmet>
       {/* Background gradients */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[hsl(270,80%,25%)] rounded-full blur-[150px] opacity-20" />
