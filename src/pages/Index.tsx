@@ -147,7 +147,7 @@ const Index = () => {
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-[hsl(155,100%,67%)] opacity-60">01</span>
                 <h3 className="text-2xl font-display text-white">Aggregate anything</h3>
-                <p className="text-white/50 leading-relaxed font-light">
+                <p className="text-white/70 leading-relaxed font-light">
                   Connect RSS feeds, news sites, blogs, or any web source. AI monitors and pulls relevant content 24/7, so you never miss a story.
                 </p>
               </motion.div>
@@ -155,7 +155,7 @@ const Index = () => {
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-[hsl(270,100%,68%)] opacity-60">02</span>
                 <h3 className="text-2xl font-display text-white">AI-powered summaries</h3>
-                <p className="text-white/50 leading-relaxed font-light">
+                <p className="text-white/70 leading-relaxed font-light">
                   Transform dry articles into engaging stories with your tone and style. Full attribution to original sources always preserved.
                 </p>
               </motion.div>
@@ -163,7 +163,7 @@ const Index = () => {
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-white/25">03</span>
                 <h3 className="text-2xl font-display text-white">Multi-channel delivery</h3>
-                <p className="text-white/50 leading-relaxed font-light">
+                <p className="text-white/70 leading-relaxed font-light">
                   Publish to your branded web feed, send automated newsletters, or export carousels for Instagram, LinkedIn, and more.
                 </p>
               </motion.div>
@@ -184,7 +184,7 @@ const Index = () => {
                 segments={[{ text: 'Reach your audience' }, { text: 'everywhere', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
               />
-              <p className="text-xl text-white/40 max-w-xl">
+              <p className="text-xl text-white/70 max-w-xl">
                 One curation workflow, multiple distribution channels. Grow your audience on the platforms they use.
               </p>
             </motion.div>
@@ -202,7 +202,7 @@ const Index = () => {
                 >
                   <h4 className="text-[hsl(270,100%,68%)] font-semibold uppercase tracking-widest text-xs mb-6">{c.label}</h4>
                   <h3 className="text-3xl font-display mb-4 text-white group-hover:text-[hsl(155,100%,67%)] transition-colors">{c.title}</h3>
-                  <p className="text-white/50 font-light leading-relaxed">{c.body}</p>
+                  <p className="text-white/70 font-light leading-relaxed">{c.body}</p>
                 </motion.div>
               ))}
             </div>
@@ -222,7 +222,7 @@ const Index = () => {
                 segments={[{ text: 'AI tools that drive' }, { text: 'engagement', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
               />
-              <p className="text-xl text-white/50 max-w-2xl mx-auto">
+              <p className="text-xl text-white/70 max-w-2xl mx-auto">
                 Go beyond curation with intelligent features that transform passive readers into active communities.
               </p>
             </motion.div>
@@ -236,7 +236,7 @@ const Index = () => {
               ].map((f) => (
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
                   <h4 className="text-xl font-display italic mb-4 text-white">{f.title}</h4>
-                  <p className="text-sm text-white/40 leading-relaxed">{f.body}</p>
+                  <p className="text-sm text-white/70 leading-relaxed">{f.body}</p>
                 </motion.div>
               ))}
             </div>
@@ -281,7 +281,7 @@ const Index = () => {
 
               <motion.div variants={reveal} className="bg-white/5 rounded-2xl p-8 border border-white/10">
                 <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-2">
-                  <span className="text-white/40 text-xs font-semibold uppercase tracking-widest">Pipeline overview</span>
+                  <span className="text-white/70 text-xs font-semibold uppercase tracking-widest">Pipeline overview</span>
                   <span className="text-[hsl(155,100%,67%)] text-xs font-bold">Live demo</span>
                 </div>
                 <div className="space-y-4 pt-4">
@@ -323,7 +323,7 @@ const Index = () => {
                 segments={[{ text: 'Built for' }, { text: 'curators', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
               />
-              <p className="text-xl text-white/50 max-w-2xl mx-auto">
+              <p className="text-xl text-white/70 max-w-2xl mx-auto">
                 Whether you're building a local news service, industry newsletter, or community hub.
               </p>
             </motion.div>
@@ -331,21 +331,21 @@ const Index = () => {
             <div className="grid md:grid-cols-3 gap-12">
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Local news feeds</h3>
-                <p className="text-white/50 text-sm font-light leading-relaxed">
+                <p className="text-white/70 text-sm font-light leading-relaxed">
                   Aggregate hyperlocal news from multiple sources. Perfect for town-focused digests, community newsletters, or regional news apps.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl border border-[hsl(270,100%,68%)]/20">
                 <h3 className="text-2xl font-display text-white mb-3">Industry newsletters</h3>
-                <p className="text-white/50 text-sm font-light leading-relaxed">
+                <p className="text-white/70 text-sm font-light leading-relaxed">
                   Curate the best content from your industry. Build authority and grow a subscriber base with zero content creation overhead.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
-                <p className="text-white/50 text-sm font-light leading-relaxed">
+                <p className="text-white/70 text-sm font-light leading-relaxed">
                   Create engaging feeds for any interest—sports, tech, culture, or hobbies. Gamification keeps readers coming back.
                 </p>
               </motion.div>
@@ -383,7 +383,7 @@ const Index = () => {
                 segments={[{ text: 'Start building your' }, { text: 'feed today', italic: true }]}
                 className="text-4xl md:text-5xl font-display text-white mb-4 leading-[1.1]"
               />
-              <p className="text-white/50 mb-8 max-w-lg mx-auto font-light">
+              <p className="text-white/70 mb-8 max-w-lg mx-auto font-light">
                 Free to start. Connect your sources, curate content, and launch your first newsletter in minutes.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -403,7 +403,7 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="border-t border-white/10 py-8 mt-12">
-          <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/50">
+          <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/70">
           <p>
               © {new Date().getFullYear()}{' '}
               <a 
