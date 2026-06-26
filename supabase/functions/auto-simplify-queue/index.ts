@@ -19,6 +19,23 @@ interface TopicArticle {
   topic_id: string;
 }
 
+/**
+ * Locality gate: for regional topics, require at least one strong local anchor
+ * (region name, landmark, postcode, organization) in the title or opening of
+ * the article. Generic keyword matches alone do NOT qualify a story for
+ * automation. Matching is case-insensitive with word-boundary precision.
+ */
+function passesLocalityGate(title: string, body: string, anchors: string[]): boolean {
+  if (!anchors || anchors.length === 0) return true; // no anchors configured → don't block
+  const haystack = `${title || ''} ${(body || '').slice(0, 500)}`.toLowerCase();
+  return anchors.some((anchor) => {
+    if (!anchor) return false;
+    const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    return regex.test(haystack);
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -120,16 +137,26 @@ Deno.serve(async (req) => {
     const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     const { data: topicDefaults } = await supabase
       .from('topics')
-      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords')
+      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations')
       .in('id', topicIds);
     
-    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[] }> = {};
+    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[]; topic_type?: string; localityAnchors?: string[] }> = {};
     for (const t of (topicDefaults || [])) {
+      const anchors = [
+        t.region,
+        ...(t.landmarks || []),
+        ...(t.postcodes || []),
+        ...(t.organizations || []),
+      ]
+        .filter((a: string | null) => !!a && String(a).trim().length > 0)
+        .map((a: string) => String(a).toLowerCase().trim());
       topicDefaultsMap[t.id] = {
         tone: t.default_tone,
         writing_style: t.default_writing_style,
         audience_expertise: t.audience_expertise,
         negative_keywords: t.negative_keywords || [],
+        topic_type: t.topic_type,
+        localityAnchors: Array.from(new Set(anchors)),
       };
     }
 
@@ -165,37 +192,59 @@ Deno.serve(async (req) => {
       let topicQueued = 0;
 
       const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
+      const topicType = topicDefaultsMap[topic_id]?.topic_type;
+      const localityAnchors = topicDefaultsMap[topic_id]?.localityAnchors || [];
+      const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
+      let topicHeldForLocality = 0;
 
       for (const article of articles as TopicArticle[]) {
-        // Negative keyword check: fetch content and reject matches
-        if (negativeKeywords.length > 0) {
-          const { data: sharedContent } = await supabase
+        // Fetch shared content once and reuse for negative-keyword + locality checks.
+        let sharedContent: { title: string | null; body: string | null; source_url: string | null } | null = null;
+        if (negativeKeywords.length > 0 || localityGateActive) {
+          const { data } = await supabase
             .from('shared_article_content')
             .select('title, body, source_url')
             .eq('id', article.shared_content_id)
             .maybeSingle();
+          sharedContent = data;
+        }
 
-          if (sharedContent) {
-            const fullText = `${(sharedContent.title || '').toLowerCase()} ${(sharedContent.body || '').toLowerCase()}`;
-            const matchedKeyword = negativeKeywords.find((kw: string) => fullText.includes(kw.toLowerCase()));
-            if (matchedKeyword) {
-              console.log(`  🚫 Discarding article ${article.id}: negative keyword "${matchedKeyword}"`);
-              await supabase
-                .from('topic_articles')
-                .update({ processing_status: 'discarded' })
-                .eq('id', article.id);
-              // Record in discarded_articles for suppression
-              const sourceUrl = sharedContent.source_url || article.shared_content_id;
-              await supabase.from('discarded_articles').upsert({
-                topic_id: topic_id,
-                url: sourceUrl,
-                normalized_url: sourceUrl.toLowerCase().trim(),
-                title: sharedContent.title,
-                discarded_reason: `Negative keyword: ${matchedKeyword}`,
-                discarded_by: 'auto-simplify-queue',
-              }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
-              continue;
-            }
+        // Negative keyword check: reject matches
+        if (negativeKeywords.length > 0 && sharedContent) {
+          const fullText = `${(sharedContent.title || '').toLowerCase()} ${(sharedContent.body || '').toLowerCase()}`;
+          const matchedKeyword = negativeKeywords.find((kw: string) => fullText.includes(kw.toLowerCase()));
+          if (matchedKeyword) {
+            console.log(`  🚫 Discarding article ${article.id}: negative keyword "${matchedKeyword}"`);
+            await supabase
+              .from('topic_articles')
+              .update({ processing_status: 'discarded' })
+              .eq('id', article.id);
+            // Record in discarded_articles for suppression
+            const sourceUrl = sharedContent.source_url || article.shared_content_id;
+            await supabase.from('discarded_articles').upsert({
+              topic_id: topic_id,
+              url: sourceUrl,
+              normalized_url: sourceUrl.toLowerCase().trim(),
+              title: sharedContent.title,
+              discarded_reason: `Negative keyword: ${matchedKeyword}`,
+              discarded_by: 'auto-simplify-queue',
+            }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
+            continue;
+          }
+        }
+
+        // Locality gate (regional topics only): hold for manual review if no local
+        // anchor appears in the title or opening. Story stays 'new' in Arrivals.
+        if (localityGateActive) {
+          const passes = passesLocalityGate(
+            sharedContent?.title || '',
+            sharedContent?.body || '',
+            localityAnchors,
+          );
+          if (!passes) {
+            console.log(`  🧭 Locality gate: article ${article.id} held for review — no local anchor in title/opening`);
+            topicHeldForLocality++;
+            continue; // leave processing_status = 'new'
           }
         }
 
@@ -272,6 +321,10 @@ Deno.serve(async (req) => {
 
       if (topicQueued > 0) {
         topicsWithNewItems.push(topic_id);
+      }
+
+      if (topicHeldForLocality > 0) {
+        console.log(`  🧭 Locality gate held ${topicHeldForLocality} article(s) for manual review in topic ${topic_id}`);
       }
     }
 
