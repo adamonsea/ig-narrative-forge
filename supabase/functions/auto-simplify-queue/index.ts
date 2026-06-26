@@ -322,6 +322,10 @@ Deno.serve(async (req) => {
       if (topicQueued > 0) {
         topicsWithNewItems.push(topic_id);
       }
+
+      if (topicHeldForLocality > 0) {
+        console.log(`  🧭 Locality gate held ${topicHeldForLocality} article(s) for manual review in topic ${topic_id}`);
+      }
     }
 
     // 3. If we queued anything, invoke queue-processor to generate stories immediately
