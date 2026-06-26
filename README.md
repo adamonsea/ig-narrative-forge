@@ -60,6 +60,11 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Documentation
+
+- [API Reference (Public)](docs/API_REFERENCE_PUBLIC.md) — Endpoint contracts, auth requirements, and request/response examples for public and owner/admin endpoints.
+- [Internal Appendix](docs/INTERNAL_APPENDIX.md) — Confidential documentation covering proprietary gatekeeping logic, scoring thresholds, scraping intelligence, and prompt configurations. (Internal use only.)
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/65bbd18a-918e-4c43-a124-21fdf7b60408) and click on Share -> Publish.
