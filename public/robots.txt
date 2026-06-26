@@ -56,6 +56,10 @@ Disallow: /
 # Default rule for all other bots
 User-agent: *
 Allow: /
+# Private / authenticated routes - intentionally excluded from indexing & sitemap
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /health
 
 # Sitemap location
 Sitemap: https://curatr.pro/sitemap.xml
