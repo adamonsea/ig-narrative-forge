@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
+import { getUser, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +36,30 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const user = await getUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
+    // Resolve owning topic from either topic_articles or articles
+    let topicId: string | null = null;
+    const { data: ta } = await supabase
+      .from('topic_articles')
+      .select('topic_id')
+      .eq('id', articleId)
+      .maybeSingle();
+    topicId = ta?.topic_id ?? null;
+    if (!topicId) {
+      const { data: art } = await supabase
+        .from('articles')
+        .select('topic_id')
+        .eq('id', articleId)
+        .maybeSingle();
+      topicId = art?.topic_id ?? null;
+    }
+    if (!topicId || !(await userOwnsTopic(supabase, user.id, topicId))) {
+      return forbidden(corsHeaders);
+    }
+
     const dbOps = new DatabaseOperations(supabase);
 
     // Mark the article as manually discarded
@@ -56,8 +81,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error marking article as discarded:', error);
     return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : String(error) 
+      error: 'An internal error occurred'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

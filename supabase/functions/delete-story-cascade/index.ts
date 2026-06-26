@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getUser, userOwnsTopic, topicIdForStory, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,13 @@ serve(async (req) => {
       );
     }
 
+    const user = await getUser(req);
+    if (!user) return unauthorized(corsHeaders);
+    const topicId = await topicIdForStory(supabase, story_id);
+    if (!topicId || !(await userOwnsTopic(supabase, user.id, topicId))) {
+      return forbidden(corsHeaders);
+    }
+
     console.log(`Attempting to delete story: ${story_id}`);
 
     // Use the existing delete_story_cascade function
@@ -51,7 +59,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Database error: ${error.message}` 
+          error: 'An internal error occurred' 
         }),
         { 
           status: 500, 
@@ -95,7 +103,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'An unexpected error occurred' 
+        error: 'An internal error occurred' 
       }),
       { 
         status: 500, 

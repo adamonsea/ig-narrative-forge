@@ -12,13 +12,13 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const title = url.searchParams.get('title') || 'Curated News';
-    const subtitle = url.searchParams.get('subtitle') || '';
-    const theme = url.searchParams.get('theme') || 'light';
-    const topicName = url.searchParams.get('topic_name') || subtitle;
-    const logoUrl = url.searchParams.get('logo_url');
-    const primaryColor = url.searchParams.get('primary_color') || 'rgb(59,130,246)';
-    const secondaryColor = url.searchParams.get('secondary_color') || 'rgb(147,51,234)';
+    const title = xmlEscape(url.searchParams.get('title') || 'Curated News');
+    const subtitle = xmlEscape(url.searchParams.get('subtitle') || '');
+    const theme = url.searchParams.get('theme') === 'dark' ? 'dark' : 'light';
+    const topicName = xmlEscape(url.searchParams.get('topic_name') || (url.searchParams.get('subtitle') || ''));
+    const logoUrl = sanitizeImageUrl(url.searchParams.get('logo_url'));
+    const primaryColor = sanitizeColor(url.searchParams.get('primary_color'), 'rgb(59,130,246)');
+    const secondaryColor = sanitizeColor(url.searchParams.get('secondary_color'), 'rgb(147,51,234)');
 
     // Generate SVG-based OG image with topic branding
     const svg = `
@@ -78,7 +78,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error generating OG image:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'An internal error occurred' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -86,6 +86,39 @@ serve(async (req) => {
     );
   }
 });
+
+/** Escape XML/SVG special characters to prevent injection. */
+function xmlEscape(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/** Only allow https image URLs; reject javascript:/data: and other schemes. */
+function sanitizeImageUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const u = new URL(value);
+    if (u.protocol !== 'https:') return null;
+    return xmlEscape(u.toString());
+  } catch {
+    return null;
+  }
+}
+
+/** Allow only simple color formats (hex, rgb/rgba, or basic named colors). */
+function sanitizeColor(value: string | null, fallback: string): string {
+  if (!value) return fallback;
+  const v = value.trim();
+  const ok =
+    /^#[0-9a-fA-F]{3,8}$/.test(v) ||
+    /^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+\s*)?\)$/.test(v) ||
+    /^[a-zA-Z]{3,20}$/.test(v);
+  return ok ? v : fallback;
+}
 
 function wrapText(text: string, maxLength: number): string[] {
   const words = text.split(' ');

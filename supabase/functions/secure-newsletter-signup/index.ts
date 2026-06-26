@@ -11,7 +11,6 @@ interface NewsletterSignupRequest {
   name?: string;
   topicId: string;
   notificationType?: 'daily' | 'weekly';
-  clientIP?: string;
 }
 
 // SHA-256 hash function using Web Crypto API
@@ -51,7 +50,14 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email, name, topicId, notificationType = 'daily', clientIP }: NewsletterSignupRequest = await req.json();
+    const { email, name, topicId, notificationType = 'daily' }: NewsletterSignupRequest = await req.json();
+
+    // Extract client IP server-side from trusted headers (never trust the body)
+    const clientIP =
+      req.headers.get('cf-connecting-ip') ||
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('x-real-ip') ||
+      null;
 
     // Validate input
     if (!email || !topicId) {

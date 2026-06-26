@@ -22,6 +22,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ArrowLeft, Heart, Loader2, ExternalLink, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { createSafeHTML } from '@/lib/sanitizer';
 
 type AuthVariant = 'curiosity' | 'agency' | 'belonging';
 
@@ -406,7 +407,7 @@ export default function SwipeMode() {
                             '--tw-prose-bold': 'hsl(var(--foreground))',
                             '--tw-prose-links': 'hsl(var(--primary))',
                           } as React.CSSProperties}
-                          dangerouslySetInnerHTML={{ __html: slide.content }} 
+                          dangerouslySetInnerHTML={createSafeHTML(slide.content)} 
                         />
                       </div>
                     ))

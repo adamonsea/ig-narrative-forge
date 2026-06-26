@@ -144,7 +144,7 @@ serve(async (req: Request) => {
 
   } catch (error) {
     console.error("[RSS Feed] Unexpected error:", error);
-    return new Response(`Server error: ${error.message}`, { 
+    return new Response(`Server error`, { 
       status: 500, 
       headers: { ...corsHeaders, "Content-Type": "text/plain" } 
     });

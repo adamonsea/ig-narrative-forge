@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getUser, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,10 +20,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const user = await getUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const { topicId, region, eventTypes = ['events', 'music', 'comedy', 'shows'] } = await req.json();
 
     if (!topicId) {
       throw new Error('Topic ID is required');
+    }
+
+    if (!(await userOwnsTopic(supabase, user.id, topicId))) {
+      return forbidden(corsHeaders);
     }
 
     console.log(`🎪 Collecting events for topic ${topicId} in region: ${region}`);
@@ -185,10 +193,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Error in API event collector:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: errorMessage 
+      error: 'An internal error occurred' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
