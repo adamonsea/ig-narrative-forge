@@ -120,16 +120,26 @@ Deno.serve(async (req) => {
     const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     const { data: topicDefaults } = await supabase
       .from('topics')
-      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords')
+      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations')
       .in('id', topicIds);
     
-    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[] }> = {};
+    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[]; topic_type?: string; localityAnchors?: string[] }> = {};
     for (const t of (topicDefaults || [])) {
+      const anchors = [
+        t.region,
+        ...(t.landmarks || []),
+        ...(t.postcodes || []),
+        ...(t.organizations || []),
+      ]
+        .filter((a: string | null) => !!a && String(a).trim().length > 0)
+        .map((a: string) => String(a).toLowerCase().trim());
       topicDefaultsMap[t.id] = {
         tone: t.default_tone,
         writing_style: t.default_writing_style,
         audience_expertise: t.audience_expertise,
         negative_keywords: t.negative_keywords || [],
+        topic_type: t.topic_type,
+        localityAnchors: Array.from(new Set(anchors)),
       };
     }
 
