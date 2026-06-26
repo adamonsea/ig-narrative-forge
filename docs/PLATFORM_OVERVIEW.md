@@ -1,6 +1,6 @@
 # Platform Description — Curatr (eeZee News)
 
-This is a description deliverable. Approving this plan saves the document below to `docs/PLATFORM_OVERVIEW.md` (no application code changes). It deliberately covers **what** has been built and is in active use, stays general about **how**, and omits experimental or unverified features.
+This document covers **what** has been built and is in active use, stays general about **how**, and omits experimental or unverified features.
 
 ---
 
@@ -56,8 +56,3 @@ It is live in production at `curatr.pro` (published mirror at `breefly.lovable.a
 - **Defense in depth** — security enforced at multiple layers (auth, RLS, grants, edge-function tiers, input validation, output sanitization) rather than any single gate.
 - **Multi-tenant by construction** — universal, topic-scoped design avoids per-customer special-casing and supports horizontal growth.
 - **Operational tooling** — extensive automation, health checks, source-health monitoring, and recovery functions support day-to-day reliability.
-
-## Technical notes
-
-- Document will be created at `docs/PLATFORM_OVERVIEW.md`; nothing else is modified.
-- Scope intentionally excludes features that are experimental, partially implemented, or not yet verified in production, to avoid overstating capabilities.
