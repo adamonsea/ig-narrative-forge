@@ -192,37 +192,59 @@ Deno.serve(async (req) => {
       let topicQueued = 0;
 
       const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
+      const topicType = topicDefaultsMap[topic_id]?.topic_type;
+      const localityAnchors = topicDefaultsMap[topic_id]?.localityAnchors || [];
+      const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
+      let topicHeldForLocality = 0;
 
       for (const article of articles as TopicArticle[]) {
-        // Negative keyword check: fetch content and reject matches
-        if (negativeKeywords.length > 0) {
-          const { data: sharedContent } = await supabase
+        // Fetch shared content once and reuse for negative-keyword + locality checks.
+        let sharedContent: { title: string | null; body: string | null; source_url: string | null } | null = null;
+        if (negativeKeywords.length > 0 || localityGateActive) {
+          const { data } = await supabase
             .from('shared_article_content')
             .select('title, body, source_url')
             .eq('id', article.shared_content_id)
             .maybeSingle();
+          sharedContent = data;
+        }
 
-          if (sharedContent) {
-            const fullText = `${(sharedContent.title || '').toLowerCase()} ${(sharedContent.body || '').toLowerCase()}`;
-            const matchedKeyword = negativeKeywords.find((kw: string) => fullText.includes(kw.toLowerCase()));
-            if (matchedKeyword) {
-              console.log(`  🚫 Discarding article ${article.id}: negative keyword "${matchedKeyword}"`);
-              await supabase
-                .from('topic_articles')
-                .update({ processing_status: 'discarded' })
-                .eq('id', article.id);
-              // Record in discarded_articles for suppression
-              const sourceUrl = sharedContent.source_url || article.shared_content_id;
-              await supabase.from('discarded_articles').upsert({
-                topic_id: topic_id,
-                url: sourceUrl,
-                normalized_url: sourceUrl.toLowerCase().trim(),
-                title: sharedContent.title,
-                discarded_reason: `Negative keyword: ${matchedKeyword}`,
-                discarded_by: 'auto-simplify-queue',
-              }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
-              continue;
-            }
+        // Negative keyword check: reject matches
+        if (negativeKeywords.length > 0 && sharedContent) {
+          const fullText = `${(sharedContent.title || '').toLowerCase()} ${(sharedContent.body || '').toLowerCase()}`;
+          const matchedKeyword = negativeKeywords.find((kw: string) => fullText.includes(kw.toLowerCase()));
+          if (matchedKeyword) {
+            console.log(`  🚫 Discarding article ${article.id}: negative keyword "${matchedKeyword}"`);
+            await supabase
+              .from('topic_articles')
+              .update({ processing_status: 'discarded' })
+              .eq('id', article.id);
+            // Record in discarded_articles for suppression
+            const sourceUrl = sharedContent.source_url || article.shared_content_id;
+            await supabase.from('discarded_articles').upsert({
+              topic_id: topic_id,
+              url: sourceUrl,
+              normalized_url: sourceUrl.toLowerCase().trim(),
+              title: sharedContent.title,
+              discarded_reason: `Negative keyword: ${matchedKeyword}`,
+              discarded_by: 'auto-simplify-queue',
+            }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
+            continue;
+          }
+        }
+
+        // Locality gate (regional topics only): hold for manual review if no local
+        // anchor appears in the title or opening. Story stays 'new' in Arrivals.
+        if (localityGateActive) {
+          const passes = passesLocalityGate(
+            sharedContent?.title || '',
+            sharedContent?.body || '',
+            localityAnchors,
+          );
+          if (!passes) {
+            console.log(`  🧭 Locality gate: article ${article.id} held for review — no local anchor in title/opening`);
+            topicHeldForLocality++;
+            continue; // leave processing_status = 'new'
           }
         }
 
