@@ -19,6 +19,23 @@ interface TopicArticle {
   topic_id: string;
 }
 
+/**
+ * Locality gate: for regional topics, require at least one strong local anchor
+ * (region name, landmark, postcode, organization) in the title or opening of
+ * the article. Generic keyword matches alone do NOT qualify a story for
+ * automation. Matching is case-insensitive with word-boundary precision.
+ */
+function passesLocalityGate(title: string, body: string, anchors: string[]): boolean {
+  if (!anchors || anchors.length === 0) return true; // no anchors configured → don't block
+  const haystack = `${title || ''} ${(body || '').slice(0, 500)}`.toLowerCase();
+  return anchors.some((anchor) => {
+    if (!anchor) return false;
+    const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    return regex.test(haystack);
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
