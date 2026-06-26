@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { createSafeHTML } from '@/lib/sanitizer';
 import { StoryRatingCard } from '@/components/swipe-mode/StoryRatingCard';
 
 interface Story {
@@ -101,7 +102,7 @@ export function ExploreStoryModal({ story, open, onOpenChange, topicSlug }: Expl
                         '--tw-prose-bold': 'hsl(var(--foreground))',
                         '--tw-prose-links': 'hsl(var(--primary))',
                       } as React.CSSProperties}
-                      dangerouslySetInnerHTML={{ __html: slide.content }} 
+                      dangerouslySetInnerHTML={createSafeHTML(slide.content)} 
                     />
                   </div>
                 ))

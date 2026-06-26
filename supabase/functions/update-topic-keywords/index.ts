@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { getUser, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +16,9 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const user = await getUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const { topicId, keywords } = await req.json();
 
     if (!topicId || !keywords || !Array.isArray(keywords)) {
@@ -22,6 +26,10 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'topicId and keywords array required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (!(await userOwnsTopic(supabase, user.id, topicId))) {
+      return forbidden(corsHeaders);
     }
 
     // Update the topic keywords
@@ -38,7 +46,7 @@ Deno.serve(async (req) => {
     if (error) {
       console.error('Error updating keywords:', error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: 'An internal error occurred' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -56,7 +64,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in update-topic-keywords:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'An internal error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

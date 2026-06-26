@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getUser, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,7 +21,24 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    const user = await getUser(req)
+    if (!user) return unauthorized(corsHeaders)
+
     const { topic_ids }: BackupRequest = await req.json()
+
+    if (!Array.isArray(topic_ids) || topic_ids.length === 0) {
+      return new Response(JSON.stringify({ success: false, error: 'topic_ids required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Authorization: caller must own every requested topic (or be admin)
+    for (const topicId of topic_ids) {
+      if (!(await userOwnsTopic(supabase, user.id, topicId))) {
+        return forbidden(corsHeaders)
+      }
+    }
 
     console.log(`📦 Backing up ${topic_ids.length} topics`)
 
@@ -140,10 +158,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Backup error:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
     return new Response(JSON.stringify({
       success: false,
-      error: errorMessage
+      error: 'An internal error occurred'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500

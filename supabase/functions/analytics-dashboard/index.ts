@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { getUser, isAdmin, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,6 +39,13 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const _supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const _serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const _authClient = createClient(_supabaseUrl, _serviceKey);
+  const _user = await getUser(req);
+  if (!_user) return unauthorized(corsHeaders);
+  if (!(await isAdmin(_authClient, _user.id))) return forbidden(corsHeaders);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');

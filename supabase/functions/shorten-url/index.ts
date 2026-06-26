@@ -19,6 +19,24 @@ function generateCode(): string {
   return code;
 }
 
+/** Only allow shortening URLs that point to our own trusted origins. */
+function isAllowedUrl(raw: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  const host = parsed.hostname.toLowerCase();
+  return (
+    host === "curatr.pro" ||
+    host.endsWith(".curatr.pro") ||
+    host === "breefly.lovable.app" ||
+    host.endsWith(".supabase.co")
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -29,6 +47,13 @@ Deno.serve(async (req) => {
 
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "Missing url" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!isAllowedUrl(url)) {
+      return new Response(JSON.stringify({ error: "URL not allowed" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -77,7 +102,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("shorten-url error:", err);
+    return new Response(JSON.stringify({ error: "An internal error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

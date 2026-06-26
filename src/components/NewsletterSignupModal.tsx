@@ -75,21 +75,11 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
         }
       } else {
         // Regular email-only signup
-        let clientIP: string | undefined;
-        try {
-          const ipResponse = await fetch('https://api.ipify.org?format=json');
-          const ipData = await ipResponse.json();
-          clientIP = ipData.ip;
-        } catch {
-          clientIP = undefined;
-        }
-
         const { data, error } = await supabase.functions.invoke('secure-newsletter-signup', {
           body: {
             email: email.trim(),
             name: name.trim() || undefined,
-            topicId: topicId,
-            clientIP: clientIP
+            topicId: topicId
           }
         });
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getUser, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const user = await getUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const { sourceId, newFeedUrl, scrapingMethod } = await req.json();
 
     if (!sourceId) {
@@ -23,6 +27,16 @@ serve(async (req) => {
         JSON.stringify({ error: 'sourceId is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Verify ownership of the source's topic
+    const { data: source } = await supabase
+      .from('content_sources')
+      .select('topic_id')
+      .eq('id', sourceId)
+      .maybeSingle();
+    if (!source?.topic_id || !(await userOwnsTopic(supabase, user.id, source.topic_id))) {
+      return forbidden(corsHeaders);
     }
 
     // Build update object
@@ -73,7 +87,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error updating source feed URL:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'An internal error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

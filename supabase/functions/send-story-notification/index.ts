@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import webpush from "npm:web-push@3.6.7";
+import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,6 +48,15 @@ serve(async (req: Request) => {
       keywordPhrase,
       sentimentScore
     }: NotificationRequest = await req.json();
+
+    // Authorization: allow internal/cron (service role) callers, otherwise require topic owner
+    if (!isServiceRole(req)) {
+      const user = await getUser(req);
+      if (!user) return unauthorized(corsHeaders);
+      if (!topicId || !(await userOwnsTopic(supabase, user.id, topicId))) {
+        return forbidden(corsHeaders);
+      }
+    }
 
     console.log(`📬 Sending ${notificationType} notification for topic ${topicId}`);
 

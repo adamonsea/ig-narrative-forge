@@ -5,6 +5,7 @@ import { Resend } from 'npm:resend@4.0.0';
 import { renderAsync } from 'npm:@react-email/components@0.0.22';
 import { DailyRoundupEmail } from './_templates/daily-roundup.tsx';
 import { WeeklyRoundupEmail } from './_templates/weekly-roundup.tsx';
+import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,6 +68,15 @@ serve(async (req) => {
     const { topicId, notificationType, testEmail, testDate }: SendEmailRequest = await req.json();
 
     console.log(`📧 Sending ${notificationType} email newsletter for topic ${topicId}`);
+
+    // Authorization: allow internal/cron (service role) callers, otherwise require topic owner
+    if (!isServiceRole(req)) {
+      const user = await getUser(req);
+      if (!user) return unauthorized(corsHeaders);
+      if (!topicId || !(await userOwnsTopic(supabase, user.id, topicId))) {
+        return forbidden(corsHeaders);
+      }
+    }
 
     if (!resendApiKey) {
       console.warn('⚠️ RESEND_API_KEY not configured, skipping email send');
