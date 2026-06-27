@@ -391,8 +391,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
         const uniqueStoriesMap = new Map<string, any>();
         storiesData.forEach((story: any) => {
-          if (story?.id && !uniqueStoriesMap.has(story.id)) {
-            uniqueStoriesMap.set(story.id, story);
+          const storyId = story?.story_id || story?.id;
+          if (storyId && !uniqueStoriesMap.has(storyId)) {
+            uniqueStoriesMap.set(storyId, { ...story, id: storyId });
           }
         });
 
@@ -466,7 +467,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
 
         const transformedStories: Story[] = deduplicatedStories.map((story: any) => {
-          const storySlides = (slidesData || [])
+          const rpcSlides = storiesData
+            .filter((row: any) => (row.story_id || row.id) === story.id && row.slide_id)
+            .map((row: any) => ({
+              id: row.slide_id,
+              story_id: story.id,
+              slide_number: row.slide_number,
+              content: row.slide_content,
+              word_count: row.slide_word_count || 0,
+            }));
+
+          const storySlides = (rpcSlides.length > 0 ? rpcSlides : slidesData || [])
             .filter((slide: any) => slide.story_id === story.id)
             .map((slide: any) => ({
               id: slide.id,
@@ -481,12 +492,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           return {
             id: story.id,
             slug: meta?.slug || story.slug,
-            title: story.title,
-            author: story.author || 'Unknown',
-            publication_name: story.publication_name || '',
-            created_at: story.created_at,
-            updated_at: story.updated_at,
-            cover_illustration_url: story.cover_illustration_url || meta?.cover_illustration_url,
+            title: story.title || story.story_title || story.article_title || '',
+            author: story.author || story.article_author || 'Unknown',
+            publication_name: story.publication_name || story.source_name || '',
+            created_at: story.created_at || story.story_created_at,
+            updated_at: story.updated_at || story.story_updated_at || story.story_created_at,
+            cover_illustration_url: story.cover_illustration_url || story.story_cover_illustration_url || meta?.cover_illustration_url,
             animated_illustration_url: story.animated_illustration_url || meta?.animated_illustration_url,
             cover_illustration_prompt: story.cover_illustration_prompt,
             slides: storySlides,
@@ -497,8 +508,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             constituency: meta?.constituency,
             tone: meta?.tone,
             article: {
-              source_url: story.article_source_url || '#',
-              published_at: story.article_published_at || story.created_at,
+              source_url: story.article_source_url || story.article_url || '#',
+              published_at: story.article_published_at || story.created_at || story.story_created_at,
               region: topicData.region || 'Unknown'
             }
           };
