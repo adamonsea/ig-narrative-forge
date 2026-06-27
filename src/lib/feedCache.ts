@@ -270,6 +270,69 @@ export const setCachedFeed = (
 };
 
 /**
+ * Remove one story from a topic cache after realtime confirms it is no longer public.
+ */
+export const removeStoryFromCachedFeed = (slug: string, storyId: string): void => {
+  if (!slug || !storyId) return;
+
+  try {
+    const entry = getCachedFeed(slug);
+    if (!entry) return;
+
+    const stories = entry.stories.filter(story => story.id !== storyId);
+    if (stories.length === entry.stories.length) return;
+
+    const nextEntry: FeedCacheEntry = {
+      ...entry,
+      timestamp: Date.now(),
+      stories,
+    };
+
+    localStorage.setItem(getCacheKey(slug), JSON.stringify(nextEntry));
+    updateCacheIndex(slug);
+  } catch {
+    // Caching is non-critical; never block feed state updates.
+  }
+};
+
+/**
+ * Insert or replace one story in a topic cache without waiting for a full feed reload.
+ */
+export const upsertStoryInCachedFeed = (slug: string, story: any): void => {
+  if (!slug || !story?.id) return;
+
+  try {
+    const entry = getCachedFeed(slug);
+    if (!entry) return;
+
+    const cachedStory = toCachedStory(story);
+    if (!cachedStory.slides?.length) return;
+
+    const stories = [
+      cachedStory,
+      ...entry.stories.filter(existing => existing.id !== cachedStory.id),
+    ]
+      .sort((a, b) => {
+        const aTime = new Date(a.created_at).getTime();
+        const bTime = new Date(b.created_at).getTime();
+        return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+      })
+      .slice(0, MAX_STORIES_PER_TOPIC);
+
+    const nextEntry: FeedCacheEntry = {
+      ...entry,
+      timestamp: Date.now(),
+      stories,
+    };
+
+    localStorage.setItem(getCacheKey(slug), JSON.stringify(nextEntry));
+    updateCacheIndex(slug);
+  } catch {
+    // Caching is non-critical; never block feed state updates.
+  }
+};
+
+/**
  * Clear the oldest cached topic
  */
 const clearOldestCache = (): void => {
