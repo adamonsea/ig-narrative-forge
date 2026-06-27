@@ -2417,6 +2417,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       if (filterIndexTimeoutRef.current) {
         clearTimeout(filterIndexTimeoutRef.current);
       }
+      if (slideRefreshDebounceRef.current) {
+        clearTimeout(slideRefreshDebounceRef.current);
+      }
       if (prefetchRpcRef.current?.abortController) {
         prefetchRpcRef.current.abortController.abort();
       }
