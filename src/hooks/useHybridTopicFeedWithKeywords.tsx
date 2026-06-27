@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
-import { getCachedFeed, setCachedFeed, isCacheFresh, CachedStory, CachedTopic } from '@/lib/feedCache';
+import { getCachedFeed, setCachedFeed, removeStoryFromCachedFeed, upsertStoryInCachedFeed } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
 
 // Optimization #3: Strip production console.log - noop in prod, real log in dev
@@ -144,20 +144,24 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   
   // Keyword filtering state
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const selectedKeywordsRef = useRef<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isServerFiltering, setIsServerFiltering] = useState(false);
   const [availableKeywords, setAvailableKeywords] = useState<KeywordCount[]>([]);
   
   // Landmark filtering state
   const [selectedLandmarks, setSelectedLandmarks] = useState<string[]>([]);
+  const selectedLandmarksRef = useRef<string[]>([]);
   const [availableLandmarks, setAvailableLandmarks] = useState<KeywordCount[]>([]);
   
   // Organization filtering state
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
+  const selectedOrganizationsRef = useRef<string[]>([]);
   const [availableOrganizations, setAvailableOrganizations] = useState<KeywordCount[]>([]);
   
   // Source filtering state
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const selectedSourcesRef = useRef<string[]>([]);
   const [availableSources, setAvailableSources] = useState<SourceCount[]>([]);
   
   // Refs for debouncing
