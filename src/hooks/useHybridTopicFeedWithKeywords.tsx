@@ -170,6 +170,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const refreshIndexDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const allContentRef = useRef<FeedContent[]>([]);
   const isServerFilteringRef = useRef(false);
+  const slideRefreshDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
   
   // Filter version tracking to prevent stale server responses from overwriting active filters
@@ -2315,15 +2316,30 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         },
         (payload) => {
           console.log('🔄 Slide updated in real-time:', payload);
-          
-          // Invalidate React Query cache to force refetch
-          queryClient.invalidateQueries({ queryKey: ['topic-feed'] });
-          queryClient.invalidateQueries({ queryKey: ['hybrid-topic-feed'] });
-          
-          // Also refresh the hook's internal state
-          setTimeout(() => {
+
+          // CRITICAL: The slides subscription is platform-wide (slides have no
+          // topic_id, so we can't filter at the DB level). Without scoping this,
+          // ANY slide update on ANY topic triggered a full feed refresh — during
+          // active content generation this fires constantly and leaves the feed
+          // perpetually "stuck updating". Only react to slides that belong to a
+          // story already in THIS feed, and debounce bursts into a single refresh.
+          const updatedSlide = payload.new as any;
+          const storyId = updatedSlide?.story_id;
+          if (!storyId) return;
+
+          const belongsToFeed = allContentRef.current.some(
+            (item) => item.type === 'story' && item.id === storyId
+          );
+          if (!belongsToFeed) return;
+
+          if (slideRefreshDebounceRef.current) {
+            clearTimeout(slideRefreshDebounceRef.current);
+          }
+          slideRefreshDebounceRef.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['topic-feed'] });
+            queryClient.invalidateQueries({ queryKey: ['hybrid-topic-feed'] });
             refresh();
-          }, 500);
+          }, 1500);
         }
       )
       .on(
@@ -2400,6 +2416,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
       if (filterIndexTimeoutRef.current) {
         clearTimeout(filterIndexTimeoutRef.current);
+      }
+      if (slideRefreshDebounceRef.current) {
+        clearTimeout(slideRefreshDebounceRef.current);
       }
       if (prefetchRpcRef.current?.abortController) {
         prefetchRpcRef.current.abortController.abort();
