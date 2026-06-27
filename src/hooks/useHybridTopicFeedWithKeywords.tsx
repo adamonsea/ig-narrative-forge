@@ -1407,6 +1407,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             `)
             .eq('topic_article.topic_id', topicData.id)
             .eq('is_published', true)
+            .in('status', ['published', 'ready'])
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
