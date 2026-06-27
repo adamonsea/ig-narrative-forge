@@ -170,6 +170,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const refreshIndexDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const allContentRef = useRef<FeedContent[]>([]);
   const isServerFilteringRef = useRef(false);
+  const slideRefreshDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
   
   // Filter version tracking to prevent stale server responses from overwriting active filters
