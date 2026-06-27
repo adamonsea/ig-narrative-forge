@@ -2630,6 +2630,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       if (slideRefreshDebounceRef.current) {
         clearTimeout(slideRefreshDebounceRef.current);
       }
+      if (refreshIndexDebounceRef.current) {
+        clearTimeout(refreshIndexDebounceRef.current);
+      }
       if (prefetchRpcRef.current?.abortController) {
         prefetchRpcRef.current.abortController.abort();
       }
