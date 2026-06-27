@@ -1046,7 +1046,7 @@ const TopicFeed = () => {
                 <div className="flex justify-center w-full animate-fade-in">
                   <div className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl flex justify-center">
                     <img
-                      src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
+                      src={logoSrc}
                       alt={`${topic.name} logo`}
                       className="h-[68px] sm:h-[103px] object-contain"
                     />
