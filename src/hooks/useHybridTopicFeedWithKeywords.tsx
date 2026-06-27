@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
 import { getCachedFeed, setCachedFeed, isCacheFresh, CachedStory, CachedTopic } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
@@ -137,7 +136,6 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [retryCount, setRetryCount] = useState(0);
   const [autoRetryCount, setAutoRetryCount] = useState(0);
   const autoRetryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const queryClient = useQueryClient();
   const [isLive, setIsLive] = useState(false);
   
   // Cache state
@@ -171,6 +169,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const allContentRef = useRef<FeedContent[]>([]);
   const isServerFilteringRef = useRef(false);
   const slideRefreshDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const activeRealtimeTopicRef = useRef<string | null>(null);
+  const lastSlideRefreshAtRef = useRef(0);
   const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
   
   // Filter version tracking to prevent stale server responses from overwriting active filters
@@ -195,6 +195,22 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   useEffect(() => {
     isServerFilteringRef.current = isServerFiltering;
   }, [isServerFiltering]);
+
+  // Failsafe: a background refresh should never leave the public feed showing
+  // "Updating..." indefinitely if a request is interrupted or superseded.
+  useEffect(() => {
+    if (!isRefreshing) return;
+
+    const timeout = setTimeout(() => {
+      console.warn('⚠️ Refresh indicator exceeded 20s; clearing stale updating state');
+      setIsRefreshing(false);
+      setLoadingMore(false);
+      setIsServerFiltering(false);
+      isServerFilteringRef.current = false;
+    }, 20000);
+
+    return () => clearTimeout(timeout);
+  }, [isRefreshing]);
 
   // Normalize MP names by removing honorifics and titles
   const normalizeMPName = useCallback((name: string | null | undefined) => {
@@ -1892,7 +1908,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       // Reset and reload fresh unfiltered content
       setPage(1);
       setHasMore(true);
-      loadStories(topic.slug, 1, false);
+      loadStories(topic, 0, false, null, null);
     } else {
       // Just reset to unfiltered view of current content
       setFilteredContent(allContent);
@@ -2222,9 +2238,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   // Real-time subscription for new stories and slide updates
   useEffect(() => {
-    if (!topic || hasSetupRealtimeRef.current) return;
+    if (!topic) return;
+    if (hasSetupRealtimeRef.current && activeRealtimeTopicRef.current === topic.id) return;
     
     hasSetupRealtimeRef.current = true;
+    activeRealtimeTopicRef.current = topic.id;
     console.log('📡 Setting up realtime subscription for topic:', topic.id);
 
     const channel = supabase
@@ -2327,18 +2345,72 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           const storyId = updatedSlide?.story_id;
           if (!storyId) return;
 
-          const belongsToFeed = allContentRef.current.some(
+          const existingItem = allContentRef.current.find(
             (item) => item.type === 'story' && item.id === storyId
           );
-          if (!belongsToFeed) return;
+          if (!existingItem) return;
+
+          const existingSlides = (existingItem.data as Story)?.slides || [];
+          const needsSlideRepair =
+            existingSlides.length === 0 ||
+            existingSlides.length < 3 ||
+            existingSlides.some(slide =>
+              !slide?.content ||
+              slide.content === 'Loading...' ||
+              slide.id?.startsWith('placeholder-')
+            );
+
+          // Complete stories should not live-refresh on every slide edit. Those
+          // updates can happen frequently during generation/admin work and were
+          // still able to create a visible update loop on public feeds.
+          if (!needsSlideRepair) return;
+
+          const now = Date.now();
+          if (now - lastSlideRefreshAtRef.current < 30000) return;
+          lastSlideRefreshAtRef.current = now;
 
           if (slideRefreshDebounceRef.current) {
             clearTimeout(slideRefreshDebounceRef.current);
           }
-          slideRefreshDebounceRef.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['topic-feed'] });
-            queryClient.invalidateQueries({ queryKey: ['hybrid-topic-feed'] });
-            refresh();
+          slideRefreshDebounceRef.current = setTimeout(async () => {
+            const { data: freshSlides, error } = await supabase
+              .from('slides')
+              .select('id, story_id, slide_number, content, word_count')
+              .eq('story_id', storyId)
+              .order('slide_number', { ascending: true });
+
+            if (error || !freshSlides?.length) {
+              if (error) console.warn('⚠️ Failed to refresh story slides:', error);
+              return;
+            }
+
+            const normalizedSlides = freshSlides.map((slide: any) => ({
+              id: slide.id,
+              slide_number: slide.slide_number,
+              content: slide.content,
+              word_count: slide.word_count || 0,
+            }));
+
+            const replaceSlides = (items: FeedContent[]) => items.map(item => {
+              if (item.type !== 'story' || item.id !== storyId) return item;
+              return {
+                ...item,
+                data: {
+                  ...(item.data as Story),
+                  slides: normalizedSlides,
+                },
+              };
+            });
+
+            setAllStories(prev => prev.map(story =>
+              story.id === storyId ? { ...story, slides: normalizedSlides } : story
+            ));
+            setAllContent(prev => {
+              const next = replaceSlides(prev);
+              allContentRef.current = next;
+              return next;
+            });
+            setFilteredContent(prev => replaceSlides(prev));
           }, 1500);
         }
       )
@@ -2374,6 +2446,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       console.log('🔌 Cleaning up realtime subscription');
       setIsLive(false);
       hasSetupRealtimeRef.current = false;
+      activeRealtimeTopicRef.current = null;
       supabase.removeChannel(channel);
     };
   }, [topic?.id, slug]);
@@ -2402,11 +2475,6 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [topic, refresh]);
-
-  // Force re-subscription when topic changes
-  useEffect(() => {
-    hasSetupRealtimeRef.current = false;
-  }, [topic?.id]);
 
   // Cleanup debounce, filter timeout, and prefetch on unmount
   useEffect(() => {
