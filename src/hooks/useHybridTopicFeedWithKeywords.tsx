@@ -2314,7 +2314,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           .filter(item => item.type === 'story')
           .map(item => item.data);
         
-        if (topicData && currentStories.length > 0) {
+        if (topicData) {
           setCachedFeed(slug, topicData, currentStories);
           console.log('💾 Feed cached for instant loading');
         }
