@@ -2419,10 +2419,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             return;
           }
 
-          if (await storyBelongsToCurrentTopic(newStory)) {
-            console.log('✅ Story belongs to current topic, patching feed in-place');
-            await upsertPublicStoryInFeed(newStory.id);
-          }
+          await upsertPublicStoryInFeed(newStory.id);
         }
       )
       .on(
@@ -2449,10 +2446,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             return;
           }
 
-          if (isCurrentlyRendered || await storyBelongsToCurrentTopic(updatedStory)) {
-            console.log('✅ Public story changed, patching feed in-place');
-            await upsertPublicStoryInFeed(updatedStory.id);
-          }
+          await upsertPublicStoryInFeed(updatedStory.id);
         }
       )
       .on(
