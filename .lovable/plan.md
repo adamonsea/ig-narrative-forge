@@ -1,63 +1,45 @@
-# Platform Description — Curatr (eeZee News)
+## Diagnosis
 
-This is a description deliverable. Approving this plan saves the document below to `docs/PLATFORM_OVERVIEW.md` (no application code changes). It deliberately covers **what** has been built and is in active use, stays general about **how**, and omits experimental or unverified features.
+The public feed is likely showing stale or mismatched state from three related paths:
 
----
+1. **Cached feed content can remain visible while refresh is cycling.** The feed intentionally shows `localStorage` cache first, then refreshes in the background. On a home-screen/PWA install this can make deleted stories appear to remain if the fresh refresh fails, times out, or does not replace the cached list.
+2. **Realtime currently flags new stories but does not actually patch the feed list.** For `stories` INSERT/UPDATE it only sets the “new stories” state; it does not remove unpublished/deleted stories, and it does not add the new published story into the visible list unless a full refresh succeeds.
+3. **Some dashboard removal actions only change `status`, not `is_published`.** The feed RPCs require `status = 'published'`, so these should eventually disappear from the fresh feed, but stale cache/realtime behavior can keep old story cards visible on device. The safer invariant is: if a story is returned to review or archived, `is_published` must also become `false`.
 
-## 1. What it is
+I also checked Eastbourne: recent added stories are currently mostly `status = ready` and `is_published = false`, so they correctly do not appear in the public feed yet. There are thousands of older published Eastbourne stories; the primary feed RPC is returning a capped first page/offset window, so refresh correctness depends on fully replacing the client state.
 
-Curatr (curatr.pro) is a multi-tenant editorial platform that lets independent curators build, manage, and publish niche local or topic-based news feeds. Each curator owns one or more topics, connects sources, and runs a lightweight approve/publish pipeline. Readers consume feeds on the web, via social-style carousels, email newsletters, embeddable widgets, and interactive "play" modes.
+## Plan
 
-It is live in production at `curatr.pro` (published mirror at `breefly.lovable.app`).
+1. **Make public feed refresh authoritative**
+   - On every successful fresh load for page 0, fully replace the visible feed state and overwrite the cache.
+   - If a fresh load returns zero or fails after showing cache, keep the error/retry signal clear instead of presenting stale content as if it is fully current.
+   - Add a small cache freshness guard so a PWA can show cached content instantly, but the “Live” state only reflects realtime connection, not data freshness.
 
-## 2. Core capabilities (in active use)
+2. **Patch realtime to reflect story lifecycle changes**
+   - For story updates belonging to the current topic:
+     - If a story becomes unpublished, archived, draft, or otherwise not public, remove it from `allStories`, `allContent`, `filteredContent`, and cached feed.
+     - If a story becomes public, fetch its full public story/slides and insert or update it in-place.
+   - Keep the previous slide-update loop fix: slide updates should only repair incomplete current stories, not full-refresh the feed.
 
-- **Multi-tenant topics/feeds** — every feature is topic-scoped; no hardcoded topics. Public feed routes under `/feed/:slug` with archive, briefings, about, and per-story pages.
-- **Content ingestion pipeline** — sources are scraped/ingested, deduplicated, quality-scored, and rewritten/summarized before entering an Arrivals → Approved → Published flow. Strong source attribution (author · publication) is preserved throughout.
-- **Locality gatekeeper** — regional topics require a local anchor (region, landmark, postcode, organisation) before stories auto-advance, keeping geographically loose stories out of automated publishing.
-- **Editorial dashboard** — per-topic management of sources, keywords, pipeline queues, voice/tone settings, and publishing controls, with a minimalist SaaS-style UI.
-- **Reader surfaces** — web feed, story pages, daily/weekly roundups, audio briefings, swipe and explore "play" modes, and social carousel/slide exports.
-- **Reel studio** — client-side 9:16 video and static-slide generation for social sharing, with on-frame source attribution.
-- **Newsletter & notifications** — email signup (server-side, hardened), token-based unsubscribe, and story notifications.
-- **Embeddable widgets** — public widget builder with compact/wide layouts and embed analytics.
-- **Discovery** — public `/discover` directory of feeds plus dynamic sitemaps and SEO/structured-data tooling.
-- **Analytics** — visitor, engagement-funnel, source/story, and sentiment metrics for curators, with crawler traffic filtered out.
+3. **Fix dashboard/story removal invariants**
+   - Update “Return to Review” and “Archive” paths so they always set `is_published: false` as well as the intended status.
+   - Keep delete cascade behavior intact.
+   - Avoid broad changes to story ranking, queue processing, or automation thresholds.
 
-## 3. Technology stack
+4. **Add a minimal feed cache invalidation helper**
+   - Add a targeted function in `feedCache.ts` to remove/update individual cached stories for a slug.
+   - Use it only when realtime confirms a story was unpublished/deleted or when fresh page-0 data is loaded.
 
-**Frontend**
-- React 18 + TypeScript 5, built with Vite 5.
-- Tailwind CSS v3 with shadcn-ui (Radix primitives) and a centralized semantic design-token system (`src/lib/designTokens.ts`) — no hardcoded colors.
-- TanStack Query for data fetching/caching; React Router v6 for routing.
-- Framer Motion for animation; Recharts for analytics; DOMPurify for HTML sanitization; React Helmet Async for metadata/SEO.
+5. **Verify with live behavior**
+   - Use Playwright against `/feed/eastbourne` to confirm:
+     - cached content is replaced after fresh load,
+     - the feed reaches stable Live state,
+     - no endless Updating loop,
+     - visible story IDs match the public RPC result after refresh.
+   - Query the database read-only before/after to confirm no unintended published stories are changed.
 
-**Backend (Lovable Cloud / Supabase)**
-- Supabase Postgres with Row-Level Security throughout.
-- ~160 Deno edge functions covering scraping, content generation, scheduling/automation, analytics, notifications, media generation, and maintenance.
-- Supabase Storage for assets (illustrations, audio briefings, OG images, widget avatars, exports).
-- AI via the Lovable AI Gateway and configured providers for text rewriting, image generation, and text-to-speech (ElevenLabs voice for briefings).
+## What I will not change
 
-**Hosting & delivery**
-- Production on Netlify at `curatr.pro`, with bot-aware delivery (semantic HTML/SSR to crawlers) and redirect-based proxying to edge functions.
-
-## 4. Security model
-
-- **Authentication & roles** — Supabase Auth (email/password + magic link). Roles (`superadmin`, `admin`, `user`) are stored in a dedicated `user_roles` table, never on profiles, and checked via a `SECURITY DEFINER` `has_role` function to avoid privilege escalation and RLS recursion. Product-owner-only capabilities are gated to a single owner account.
-- **Row-Level Security** — enabled across tables; policies are topic-ownership / role scoped, with `auth.uid()` wrapped in subqueries for performance. Public-readable data (published stories, public feeds) is explicitly scoped; internal/system tables are restricted to owners, admins, or the service role.
-- **Edge function tiers** — a shared auth helper enforces three tiers: public (Zod-validated input), mixed (JWT-authenticated), and internal (service-role only). Mutation, deletion, notification, analytics, and upload functions verify JWT and topic ownership.
-- **Hardening already applied** — sanitized generic error responses (no internal leakage), trusted-origin allowlists on URL shortener/redirects, XML-escaped and HTTPS-restricted OG image inputs, server-side client-IP extraction for newsletter signups, DOMPurify on rendered slide/story HTML, scoped Realtime channel policies, and revoked public EXECUTE on internal maintenance functions.
-- **Secrets** — credentials live in Supabase/edge secrets, never in the database or client. The frontend uses only the anon/publishable key; the service role key never reaches the browser.
-- **Compliance posture** — attribution and source links preserved for fair-use credibility; GDPR/UK-DPA-aware data handling; accessibility work toward WCAG 2.1 AA on reader surfaces (landmarks, headings, labeled controls, contrast, dynamic-viewport sizing).
-
-## 5. Why it is stable and valid for developers
-
-- **Conventional, well-supported stack** — standard Vite/React/TypeScript/Tailwind/shadcn foundation with mainstream libraries, making the codebase approachable and maintainable.
-- **Clear separation of concerns** — presentation in React components, business logic and privileged operations in edge functions, data integrity enforced at the database via RLS and validation triggers (not brittle check constraints).
-- **Defense in depth** — security enforced at multiple layers (auth, RLS, grants, edge-function tiers, input validation, output sanitization) rather than any single gate.
-- **Multi-tenant by construction** — universal, topic-scoped design avoids per-customer special-casing and supports horizontal growth.
-- **Operational tooling** — extensive automation, health checks, source-health monitoring, and recovery functions support day-to-day reliability.
-
-## Technical notes
-
-- Document will be created at `docs/PLATFORM_OVERVIEW.md`; nothing else is modified.
-- Scope intentionally excludes features that are experimental, partially implemented, or not yet verified in production, to avoid overstating capabilities.
+- No changes to ranking/scoring/locality thresholds in this pass.
+- No bulk data edits unless we find a specific corrupted row set.
+- No loosening of RLS/security policies.
