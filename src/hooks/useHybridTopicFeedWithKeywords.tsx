@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
 import { getCachedFeed, setCachedFeed, isCacheFresh, CachedStory, CachedTopic } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
@@ -137,7 +136,6 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [retryCount, setRetryCount] = useState(0);
   const [autoRetryCount, setAutoRetryCount] = useState(0);
   const autoRetryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const queryClient = useQueryClient();
   const [isLive, setIsLive] = useState(false);
   
   // Cache state
