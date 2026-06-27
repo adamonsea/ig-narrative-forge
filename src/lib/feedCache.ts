@@ -9,7 +9,7 @@
  * - Lightweight: only essential story fields stored
  */
 
-const CACHE_VERSION = 2; // v2 clears pre-lifecycle-patching PWA caches that could retain removed stories
+const CACHE_VERSION = 3; // v3 clears stale PWA caches after feed RPC/story_id fallback fixes
 const FRESH_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const STALE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_TOPICS_CACHED = 5;
