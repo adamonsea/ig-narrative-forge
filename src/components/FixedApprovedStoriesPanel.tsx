@@ -235,6 +235,7 @@ export const FixedApprovedStoriesPanel = () => {
         .from('stories')
         .update({ 
           status: 'draft',
+          is_published: false,
           updated_at: new Date().toISOString()
         })
         .eq('id', storyId);

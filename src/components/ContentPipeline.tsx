@@ -192,10 +192,11 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         throw new Error('Story not found');
       }
 
-      // Update story status to ready
+      // Update story status to ready and make it visible to the public feed.
+      // The feed RPCs require both status IN ('ready', 'published') and is_published=true.
       const { error } = await supabase
         .from('stories')
-        .update({ status: 'ready' })
+        .update({ status: 'ready', is_published: true, updated_at: new Date().toISOString() })
         .eq('id', storyId);
 
       if (error) throw error;
@@ -263,7 +264,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     try {
       const { error } = await supabase
         .from('stories')
-        .update({ status: 'draft' })
+        .update({ status: 'draft', is_published: false })
         .eq('id', storyId);
 
       if (error) throw error;

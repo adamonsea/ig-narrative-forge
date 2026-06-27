@@ -9,7 +9,7 @@
  * - Lightweight: only essential story fields stored
  */
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 3; // v3 clears stale PWA caches after feed RPC/story_id fallback fixes
 const FRESH_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const STALE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_TOPICS_CACHED = 5;
@@ -266,6 +266,69 @@ export const setCachedFeed = (
         // Give up - caching is non-critical
       }
     }
+  }
+};
+
+/**
+ * Remove one story from a topic cache after realtime confirms it is no longer public.
+ */
+export const removeStoryFromCachedFeed = (slug: string, storyId: string): void => {
+  if (!slug || !storyId) return;
+
+  try {
+    const entry = getCachedFeed(slug);
+    if (!entry) return;
+
+    const stories = entry.stories.filter(story => story.id !== storyId);
+    if (stories.length === entry.stories.length) return;
+
+    const nextEntry: FeedCacheEntry = {
+      ...entry,
+      timestamp: Date.now(),
+      stories,
+    };
+
+    localStorage.setItem(getCacheKey(slug), JSON.stringify(nextEntry));
+    updateCacheIndex(slug);
+  } catch {
+    // Caching is non-critical; never block feed state updates.
+  }
+};
+
+/**
+ * Insert or replace one story in a topic cache without waiting for a full feed reload.
+ */
+export const upsertStoryInCachedFeed = (slug: string, story: any): void => {
+  if (!slug || !story?.id) return;
+
+  try {
+    const entry = getCachedFeed(slug);
+    if (!entry) return;
+
+    const cachedStory = toCachedStory(story);
+    if (!cachedStory.slides?.length) return;
+
+    const stories = [
+      cachedStory,
+      ...entry.stories.filter(existing => existing.id !== cachedStory.id),
+    ]
+      .sort((a, b) => {
+        const aTime = new Date(a.created_at).getTime();
+        const bTime = new Date(b.created_at).getTime();
+        return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+      })
+      .slice(0, MAX_STORIES_PER_TOPIC);
+
+    const nextEntry: FeedCacheEntry = {
+      ...entry,
+      timestamp: Date.now(),
+      stories,
+    };
+
+    localStorage.setItem(getCacheKey(slug), JSON.stringify(nextEntry));
+    updateCacheIndex(slug);
+  } catch {
+    // Caching is non-critical; never block feed state updates.
   }
 };
 

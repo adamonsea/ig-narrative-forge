@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
-import { getCachedFeed, setCachedFeed, isCacheFresh, CachedStory, CachedTopic } from '@/lib/feedCache';
+import { getCachedFeed, setCachedFeed, removeStoryFromCachedFeed, upsertStoryInCachedFeed } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
 
 // Optimization #3: Strip production console.log - noop in prod, real log in dev
@@ -144,20 +144,24 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   
   // Keyword filtering state
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const selectedKeywordsRef = useRef<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isServerFiltering, setIsServerFiltering] = useState(false);
   const [availableKeywords, setAvailableKeywords] = useState<KeywordCount[]>([]);
   
   // Landmark filtering state
   const [selectedLandmarks, setSelectedLandmarks] = useState<string[]>([]);
+  const selectedLandmarksRef = useRef<string[]>([]);
   const [availableLandmarks, setAvailableLandmarks] = useState<KeywordCount[]>([]);
   
   // Organization filtering state
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
+  const selectedOrganizationsRef = useRef<string[]>([]);
   const [availableOrganizations, setAvailableOrganizations] = useState<KeywordCount[]>([]);
   
   // Source filtering state
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const selectedSourcesRef = useRef<string[]>([]);
   const [availableSources, setAvailableSources] = useState<SourceCount[]>([]);
   
   // Refs for debouncing
@@ -172,6 +176,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const activeRealtimeTopicRef = useRef<string | null>(null);
   const lastSlideRefreshAtRef = useRef(0);
   const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
+
+  useEffect(() => {
+    selectedKeywordsRef.current = selectedKeywords;
+    selectedLandmarksRef.current = selectedLandmarks;
+    selectedOrganizationsRef.current = selectedOrganizations;
+    selectedSourcesRef.current = selectedSources;
+  }, [selectedKeywords, selectedLandmarks, selectedOrganizations, selectedSources]);
   
   // Filter version tracking to prevent stale server responses from overwriting active filters
   const filterVersionRef = useRef(0);
@@ -380,8 +391,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
         const uniqueStoriesMap = new Map<string, any>();
         storiesData.forEach((story: any) => {
-          if (story?.id && !uniqueStoriesMap.has(story.id)) {
-            uniqueStoriesMap.set(story.id, story);
+          const storyId = story?.story_id || story?.id;
+          if (storyId && !uniqueStoriesMap.has(storyId)) {
+            uniqueStoriesMap.set(storyId, { ...story, id: storyId });
           }
         });
 
@@ -455,7 +467,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
 
         const transformedStories: Story[] = deduplicatedStories.map((story: any) => {
-          const storySlides = (slidesData || [])
+          const rpcSlides = storiesData
+            .filter((row: any) => (row.story_id || row.id) === story.id && row.slide_id)
+            .map((row: any) => ({
+              id: row.slide_id,
+              story_id: story.id,
+              slide_number: row.slide_number,
+              content: row.slide_content,
+              word_count: row.slide_word_count || 0,
+            }));
+
+          const storySlides = (rpcSlides.length > 0 ? rpcSlides : slidesData || [])
             .filter((slide: any) => slide.story_id === story.id)
             .map((slide: any) => ({
               id: slide.id,
@@ -470,12 +492,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           return {
             id: story.id,
             slug: meta?.slug || story.slug,
-            title: story.title,
-            author: story.author || 'Unknown',
-            publication_name: story.publication_name || '',
-            created_at: story.created_at,
-            updated_at: story.updated_at,
-            cover_illustration_url: story.cover_illustration_url || meta?.cover_illustration_url,
+            title: story.title || story.story_title || story.article_title || '',
+            author: story.author || story.article_author || 'Unknown',
+            publication_name: story.publication_name || story.source_name || '',
+            created_at: story.created_at || story.story_created_at,
+            updated_at: story.updated_at || story.story_updated_at || story.story_created_at,
+            cover_illustration_url: story.cover_illustration_url || story.story_cover_illustration_url || meta?.cover_illustration_url,
             animated_illustration_url: story.animated_illustration_url || meta?.animated_illustration_url,
             cover_illustration_prompt: story.cover_illustration_prompt,
             slides: storySlides,
@@ -486,8 +508,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             constituency: meta?.constituency,
             tone: meta?.tone,
             article: {
-              source_url: story.article_source_url || '#',
-              published_at: story.article_published_at || story.created_at,
+              source_url: story.article_source_url || story.article_url || '#',
+              published_at: story.article_published_at || story.created_at || story.story_created_at,
               region: topicData.region || 'Unknown'
             }
           };
@@ -1396,6 +1418,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             `)
             .eq('topic_article.topic_id', topicData.id)
             .eq('is_published', true)
+            .in('status', ['published', 'ready'])
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -1755,6 +1778,125 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
   }, [normalizeMPName]);
+
+  const sortFeedContent = useCallback((content: FeedContent[]) => {
+    return [...content]
+      .filter(item => !!item?.id)
+      .sort((a, b) => {
+        const aTime = new Date(a.content_date).getTime();
+        const bTime = new Date(b.content_date).getTime();
+        return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+      });
+  }, []);
+
+  const removeStoryFromVisibleFeed = useCallback((storyId: string) => {
+    if (!storyId) return;
+
+    setAllStories(prev => prev.filter(story => story.id !== storyId));
+    setAllContent(prev => {
+      const next = prev.filter(item => item.id !== storyId);
+      allContentRef.current = next;
+      return next;
+    });
+    setFilteredContent(prev => prev.filter(item => item.id !== storyId));
+    setFilterStoryIndex(prev => prev.filter(item => item.id !== storyId));
+    setNewStoryCount(prev => Math.max(0, prev - 1));
+    removeStoryFromCachedFeed(slug, storyId);
+  }, [slug]);
+
+  const normalizePublicStory = useCallback((story: any): Story | null => {
+    if (!story?.id || !Array.isArray(story.slides) || story.slides.length === 0) {
+      return null;
+    }
+
+    const createdAt = story.created_at || new Date().toISOString();
+    return {
+      id: story.id,
+      title: story.title || '',
+      author: story.author || 'Unknown',
+      publication_name: story.publication_name || '',
+      created_at: createdAt,
+      updated_at: story.updated_at || createdAt,
+      cover_illustration_url: story.cover_illustration_url || undefined,
+      animated_illustration_url: story.animated_illustration_url || undefined,
+      slides: story.slides
+        .map((slide: any) => ({
+          id: slide.id,
+          slide_number: slide.slide_number,
+          content: slide.content || '',
+          word_count: slide.word_count || 0,
+        }))
+        .sort((a: any, b: any) => a.slide_number - b.slide_number),
+      article: {
+        source_url: story.article?.source_url || '#',
+        published_at: story.article?.published_at || createdAt,
+        region: story.article?.region || topic?.region || 'Unknown',
+      },
+      is_parliamentary: story.is_parliamentary || false,
+      mp_name: story.mp_name || undefined,
+      mp_names: Array.isArray(story.mp_names) ? story.mp_names : [],
+      mp_party: story.mp_party || undefined,
+      constituency: story.constituency || undefined,
+      tone: story.tone || undefined,
+    };
+  }, [topic?.region]);
+
+  const upsertPublicStoryInFeed = useCallback(async (storyId: string) => {
+    const topicSlug = topic?.slug || slug;
+    if (!storyId || !topicSlug) return false;
+
+    const { data, error } = await supabase.rpc('get_public_story_by_slug_and_id', {
+      p_slug: topicSlug,
+      p_story_id: storyId,
+    } as any);
+
+    if (error) {
+      console.warn('⚠️ Failed to fetch realtime story patch:', error);
+      return false;
+    }
+
+    const normalizedStory = normalizePublicStory(data);
+    if (!normalizedStory) {
+      removeStoryFromVisibleFeed(storyId);
+      return false;
+    }
+
+    const storyItem: FeedContent = {
+      type: 'story',
+      id: normalizedStory.id,
+      content_date: normalizedStory.created_at,
+      data: normalizedStory,
+    };
+
+    const nextAllContent = sortFeedContent([
+      storyItem,
+      ...allContentRef.current.filter(item => item.id !== normalizedStory.id),
+    ]);
+
+    setAllStories(nextAllContent.map(item => item.data as Story));
+    setAllContent(nextAllContent);
+    allContentRef.current = nextAllContent;
+    setFilteredContent(applyClientSideFiltering(
+      nextAllContent,
+      [...selectedKeywordsRef.current, ...selectedLandmarksRef.current, ...selectedOrganizationsRef.current],
+      selectedSourcesRef.current
+    ));
+    setHasNewStories(false);
+    setNewStoryCount(0);
+    setUsingCachedContent(false);
+    upsertStoryInCachedFeed(slug, normalizedStory);
+
+    if (topic && refreshIndexDebounceRef.current) {
+      clearTimeout(refreshIndexDebounceRef.current);
+    }
+    if (topic) {
+      refreshIndexDebounceRef.current = setTimeout(() => {
+        loadFilterStoryIndex(topic, true);
+      }, 2000);
+    }
+
+    return true;
+  }, [applyClientSideFiltering, loadFilterStoryIndex, normalizePublicStory, removeStoryFromVisibleFeed, slug, sortFeedContent, topic]);
 
   // Prefetch server filter results in background (for "More like this" optimization)
   const prefetchForFilter = useCallback(async (keywords: string[], sources: string[]) => {
@@ -2184,7 +2326,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           .filter(item => item.type === 'story')
           .map(item => item.data);
         
-        if (topicData && currentStories.length > 0) {
+        if (topicData) {
           setCachedFeed(slug, topicData, currentStories);
           console.log('💾 Feed cached for instant loading');
         }
@@ -2245,6 +2387,33 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     activeRealtimeTopicRef.current = topic.id;
     console.log('📡 Setting up realtime subscription for topic:', topic.id);
 
+    const storyBelongsToCurrentTopic = async (story: any): Promise<boolean> => {
+      if (!story) return false;
+      if (allContentRef.current.some(item => item.type === 'story' && item.id === story.id)) {
+        return true;
+      }
+
+      if (story.topic_article_id) {
+        const { data: topicArticle } = await supabase
+          .from('topic_articles')
+          .select('topic_id')
+          .eq('id', story.topic_article_id)
+          .maybeSingle();
+        return topicArticle?.topic_id === topic.id;
+      }
+
+      if (story.article_id) {
+        const { data: article } = await supabase
+          .from('articles')
+          .select('topic_id')
+          .eq('id', story.article_id)
+          .maybeSingle();
+        return article?.topic_id === topic.id;
+      }
+
+      return false;
+    };
+
     const channel = supabase
       .channel(`topic-feed-realtime-${topic.id}`)
       .on(
@@ -2252,36 +2421,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'stories',
-          filter: `is_published=eq.true`
+          table: 'stories'
         },
         async (payload) => {
           console.log('🔄 New published story detected:', payload);
           const newStory = payload.new as any;
-          
-          // Verify story belongs to this topic
-          let belongsToTopic = false;
-          if (newStory.topic_article_id) {
-            const { data: topicArticle } = await supabase
-              .from('topic_articles')
-              .select('topic_id')
-              .eq('id', newStory.topic_article_id)
-              .single();
-            belongsToTopic = topicArticle?.topic_id === topic.id;
-          } else if (newStory.article_id) {
-            const { data: article } = await supabase
-              .from('articles')
-              .select('topic_id')
-              .eq('id', newStory.article_id)
-              .single();
-            belongsToTopic = article?.topic_id === topic.id;
+
+          if (!newStory?.is_published || !['published', 'ready'].includes(newStory?.status)) {
+            return;
           }
-          
-          if (belongsToTopic) {
-            console.log('✅ Story belongs to current topic, showing new stories button');
-            setNewStoryCount(prev => prev + 1);
-            setHasNewStories(true);
-          }
+
+          await upsertPublicStoryInFeed(newStory.id);
         }
       )
       .on(
@@ -2289,39 +2439,43 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'stories',
-          filter: `is_published=eq.true`
+          table: 'stories'
         },
         async (payload) => {
           console.log('🔄 Story published/updated in real-time:', payload);
           const updatedStory = payload.new as any;
-          const oldStory = payload.old as any;
-          
-          // Only handle if story was just published
-          if (!oldStory.is_published && updatedStory.is_published) {
-            // Verify story belongs to this topic
-            let belongsToTopic = false;
-            if (updatedStory.topic_article_id) {
-              const { data: topicArticle } = await supabase
-                .from('topic_articles')
-                .select('topic_id')
-                .eq('id', updatedStory.topic_article_id)
-                .single();
-              belongsToTopic = topicArticle?.topic_id === topic.id;
-            } else if (updatedStory.article_id) {
-              const { data: article } = await supabase
-                .from('articles')
-                .select('topic_id')
-                .eq('id', updatedStory.article_id)
-                .single();
-              belongsToTopic = article?.topic_id === topic.id;
+
+          if (!updatedStory?.id) return;
+
+          const isVisibleNow = updatedStory.is_published === true && ['published', 'ready'].includes(updatedStory.status);
+          const isCurrentlyRendered = allContentRef.current.some(item => item.type === 'story' && item.id === updatedStory.id);
+
+          if (!isVisibleNow) {
+            if (isCurrentlyRendered || await storyBelongsToCurrentTopic(updatedStory)) {
+              console.log('🧹 Story no longer public, removing from feed/cache');
+              removeStoryFromVisibleFeed(updatedStory.id);
             }
-            
-            if (belongsToTopic) {
-              console.log('✅ Story was published, showing new stories button');
-              setNewStoryCount(prev => prev + 1);
-              setHasNewStories(true);
-            }
+            return;
+          }
+
+          await upsertPublicStoryInFeed(updatedStory.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'stories'
+        },
+        (payload) => {
+          const deletedStory = payload.old as any;
+          const deletedStoryId = deletedStory?.id;
+          if (!deletedStoryId) return;
+
+          if (allContentRef.current.some(item => item.type === 'story' && item.id === deletedStoryId)) {
+            console.log('🧹 Story deleted, removing from feed/cache:', deletedStoryId);
+            removeStoryFromVisibleFeed(deletedStoryId);
           }
         }
       )
@@ -2449,7 +2603,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       activeRealtimeTopicRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [topic?.id, slug]);
+  }, [loadTopic, removeStoryFromVisibleFeed, slug, topic, upsertPublicStoryInFeed]);
 
   // Page Visibility API - Auto-refresh when tab becomes visible after 5+ minutes
   useEffect(() => {
@@ -2487,6 +2641,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
       if (slideRefreshDebounceRef.current) {
         clearTimeout(slideRefreshDebounceRef.current);
+      }
+      if (refreshIndexDebounceRef.current) {
+        clearTimeout(refreshIndexDebounceRef.current);
       }
       if (prefetchRpcRef.current?.abortController) {
         prefetchRpcRef.current.abortController.abort();
