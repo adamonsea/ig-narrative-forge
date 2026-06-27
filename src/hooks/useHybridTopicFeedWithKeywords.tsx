@@ -1767,6 +1767,125 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
   }, [normalizeMPName]);
 
+  const sortFeedContent = useCallback((content: FeedContent[]) => {
+    return [...content]
+      .filter(item => !!item?.id)
+      .sort((a, b) => {
+        const aTime = new Date(a.content_date).getTime();
+        const bTime = new Date(b.content_date).getTime();
+        return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+      });
+  }, []);
+
+  const removeStoryFromVisibleFeed = useCallback((storyId: string) => {
+    if (!storyId) return;
+
+    setAllStories(prev => prev.filter(story => story.id !== storyId));
+    setAllContent(prev => {
+      const next = prev.filter(item => item.id !== storyId);
+      allContentRef.current = next;
+      return next;
+    });
+    setFilteredContent(prev => prev.filter(item => item.id !== storyId));
+    setFilterStoryIndex(prev => prev.filter(item => item.id !== storyId));
+    setNewStoryCount(prev => Math.max(0, prev - 1));
+    removeStoryFromCachedFeed(slug, storyId);
+  }, [slug]);
+
+  const normalizePublicStory = useCallback((story: any): Story | null => {
+    if (!story?.id || !Array.isArray(story.slides) || story.slides.length === 0) {
+      return null;
+    }
+
+    const createdAt = story.created_at || new Date().toISOString();
+    return {
+      id: story.id,
+      title: story.title || '',
+      author: story.author || 'Unknown',
+      publication_name: story.publication_name || '',
+      created_at: createdAt,
+      updated_at: story.updated_at || createdAt,
+      cover_illustration_url: story.cover_illustration_url || undefined,
+      animated_illustration_url: story.animated_illustration_url || undefined,
+      slides: story.slides
+        .map((slide: any) => ({
+          id: slide.id,
+          slide_number: slide.slide_number,
+          content: slide.content || '',
+          word_count: slide.word_count || 0,
+        }))
+        .sort((a: any, b: any) => a.slide_number - b.slide_number),
+      article: {
+        source_url: story.article?.source_url || '#',
+        published_at: story.article?.published_at || createdAt,
+        region: story.article?.region || topic?.region || 'Unknown',
+      },
+      is_parliamentary: story.is_parliamentary || false,
+      mp_name: story.mp_name || undefined,
+      mp_names: Array.isArray(story.mp_names) ? story.mp_names : [],
+      mp_party: story.mp_party || undefined,
+      constituency: story.constituency || undefined,
+      tone: story.tone || undefined,
+    };
+  }, [topic?.region]);
+
+  const upsertPublicStoryInFeed = useCallback(async (storyId: string) => {
+    const topicSlug = topic?.slug || slug;
+    if (!storyId || !topicSlug) return false;
+
+    const { data, error } = await supabase.rpc('get_public_story_by_slug_and_id', {
+      p_slug: topicSlug,
+      p_story_id: storyId,
+    } as any);
+
+    if (error) {
+      console.warn('⚠️ Failed to fetch realtime story patch:', error);
+      return false;
+    }
+
+    const normalizedStory = normalizePublicStory(data);
+    if (!normalizedStory) {
+      removeStoryFromVisibleFeed(storyId);
+      return false;
+    }
+
+    const storyItem: FeedContent = {
+      type: 'story',
+      id: normalizedStory.id,
+      content_date: normalizedStory.created_at,
+      data: normalizedStory,
+    };
+
+    const nextAllContent = sortFeedContent([
+      storyItem,
+      ...allContentRef.current.filter(item => item.id !== normalizedStory.id),
+    ]);
+
+    setAllStories(nextAllContent.map(item => item.data as Story));
+    setAllContent(nextAllContent);
+    allContentRef.current = nextAllContent;
+    setFilteredContent(applyClientSideFiltering(
+      nextAllContent,
+      [...selectedKeywordsRef.current, ...selectedLandmarksRef.current, ...selectedOrganizationsRef.current],
+      selectedSourcesRef.current
+    ));
+    setHasNewStories(false);
+    setNewStoryCount(0);
+    setUsingCachedContent(false);
+    upsertStoryInCachedFeed(slug, normalizedStory);
+
+    if (topic && refreshIndexDebounceRef.current) {
+      clearTimeout(refreshIndexDebounceRef.current);
+    }
+    if (topic) {
+      refreshIndexDebounceRef.current = setTimeout(() => {
+        loadFilterStoryIndex(topic, true);
+      }, 2000);
+    }
+
+    return true;
+  }, [applyClientSideFiltering, loadFilterStoryIndex, normalizePublicStory, removeStoryFromVisibleFeed, slug, sortFeedContent, topic]);
+
   // Prefetch server filter results in background (for "More like this" optimization)
   const prefetchForFilter = useCallback(async (keywords: string[], sources: string[]) => {
     if (!topic) return;
