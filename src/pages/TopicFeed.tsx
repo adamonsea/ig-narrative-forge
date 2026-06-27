@@ -173,6 +173,14 @@ const TopicFeed = () => {
     prefetchForFilter
   } = useHybridTopicFeedWithKeywords(slug || '');
 
+  // Stable logo URL with a cache-buster computed once per logo (NOT per render).
+  // Using Date.now() inline in src caused a new URL every render, triggering an
+  // endless image re-fetch loop that stalled the feed on production.
+  const logoSrc = React.useMemo(() => {
+    const url = topic?.branding_config?.logo_url;
+    return url ? `${url}?t=${Date.now()}` : undefined;
+  }, [topic?.branding_config?.logo_url]);
+
   // OPTIMIZED: Fetch all secondary metadata in parallel via cached React Query
   const { data: topicMetadata } = useTopicMetadata(topic?.id, slug);
   const avgDailyStories = topicMetadata.avgDailyStories;
