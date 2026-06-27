@@ -176,6 +176,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const activeRealtimeTopicRef = useRef<string | null>(null);
   const lastSlideRefreshAtRef = useRef(0);
   const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
+
+  useEffect(() => {
+    selectedKeywordsRef.current = selectedKeywords;
+    selectedLandmarksRef.current = selectedLandmarks;
+    selectedOrganizationsRef.current = selectedOrganizations;
+    selectedSourcesRef.current = selectedSources;
+  }, [selectedKeywords, selectedLandmarks, selectedOrganizations, selectedSources]);
   
   // Filter version tracking to prevent stale server responses from overwriting active filters
   const filterVersionRef = useRef(0);
