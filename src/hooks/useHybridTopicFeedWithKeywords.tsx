@@ -2375,6 +2375,33 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     activeRealtimeTopicRef.current = topic.id;
     console.log('📡 Setting up realtime subscription for topic:', topic.id);
 
+    const storyBelongsToCurrentTopic = async (story: any): Promise<boolean> => {
+      if (!story) return false;
+      if (allContentRef.current.some(item => item.type === 'story' && item.id === story.id)) {
+        return true;
+      }
+
+      if (story.topic_article_id) {
+        const { data: topicArticle } = await supabase
+          .from('topic_articles')
+          .select('topic_id')
+          .eq('id', story.topic_article_id)
+          .maybeSingle();
+        return topicArticle?.topic_id === topic.id;
+      }
+
+      if (story.article_id) {
+        const { data: article } = await supabase
+          .from('articles')
+          .select('topic_id')
+          .eq('id', story.article_id)
+          .maybeSingle();
+        return article?.topic_id === topic.id;
+      }
+
+      return false;
+    };
+
     const channel = supabase
       .channel(`topic-feed-realtime-${topic.id}`)
       .on(
@@ -2382,35 +2409,19 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'stories',
-          filter: `is_published=eq.true`
+          table: 'stories'
         },
         async (payload) => {
           console.log('🔄 New published story detected:', payload);
           const newStory = payload.new as any;
-          
-          // Verify story belongs to this topic
-          let belongsToTopic = false;
-          if (newStory.topic_article_id) {
-            const { data: topicArticle } = await supabase
-              .from('topic_articles')
-              .select('topic_id')
-              .eq('id', newStory.topic_article_id)
-              .single();
-            belongsToTopic = topicArticle?.topic_id === topic.id;
-          } else if (newStory.article_id) {
-            const { data: article } = await supabase
-              .from('articles')
-              .select('topic_id')
-              .eq('id', newStory.article_id)
-              .single();
-            belongsToTopic = article?.topic_id === topic.id;
+
+          if (!newStory?.is_published || !['published', 'ready'].includes(newStory?.status)) {
+            return;
           }
-          
-          if (belongsToTopic) {
-            console.log('✅ Story belongs to current topic, showing new stories button');
-            setNewStoryCount(prev => prev + 1);
-            setHasNewStories(true);
+
+          if (await storyBelongsToCurrentTopic(newStory)) {
+            console.log('✅ Story belongs to current topic, patching feed in-place');
+            await upsertPublicStoryInFeed(newStory.id);
           }
         }
       )
@@ -2419,39 +2430,46 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'stories',
-          filter: `is_published=eq.true`
+          table: 'stories'
         },
         async (payload) => {
           console.log('🔄 Story published/updated in real-time:', payload);
           const updatedStory = payload.new as any;
-          const oldStory = payload.old as any;
-          
-          // Only handle if story was just published
-          if (!oldStory.is_published && updatedStory.is_published) {
-            // Verify story belongs to this topic
-            let belongsToTopic = false;
-            if (updatedStory.topic_article_id) {
-              const { data: topicArticle } = await supabase
-                .from('topic_articles')
-                .select('topic_id')
-                .eq('id', updatedStory.topic_article_id)
-                .single();
-              belongsToTopic = topicArticle?.topic_id === topic.id;
-            } else if (updatedStory.article_id) {
-              const { data: article } = await supabase
-                .from('articles')
-                .select('topic_id')
-                .eq('id', updatedStory.article_id)
-                .single();
-              belongsToTopic = article?.topic_id === topic.id;
+
+          if (!updatedStory?.id) return;
+
+          const isVisibleNow = updatedStory.is_published === true && ['published', 'ready'].includes(updatedStory.status);
+          const isCurrentlyRendered = allContentRef.current.some(item => item.type === 'story' && item.id === updatedStory.id);
+
+          if (!isVisibleNow) {
+            if (isCurrentlyRendered || await storyBelongsToCurrentTopic(updatedStory)) {
+              console.log('🧹 Story no longer public, removing from feed/cache');
+              removeStoryFromVisibleFeed(updatedStory.id);
             }
-            
-            if (belongsToTopic) {
-              console.log('✅ Story was published, showing new stories button');
-              setNewStoryCount(prev => prev + 1);
-              setHasNewStories(true);
-            }
+            return;
+          }
+
+          if (isCurrentlyRendered || await storyBelongsToCurrentTopic(updatedStory)) {
+            console.log('✅ Public story changed, patching feed in-place');
+            await upsertPublicStoryInFeed(updatedStory.id);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'stories'
+        },
+        (payload) => {
+          const deletedStory = payload.old as any;
+          const deletedStoryId = deletedStory?.id;
+          if (!deletedStoryId) return;
+
+          if (allContentRef.current.some(item => item.type === 'story' && item.id === deletedStoryId)) {
+            console.log('🧹 Story deleted, removing from feed/cache:', deletedStoryId);
+            removeStoryFromVisibleFeed(deletedStoryId);
           }
         }
       )
