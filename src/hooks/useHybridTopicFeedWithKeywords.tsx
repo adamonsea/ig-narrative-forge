@@ -2591,7 +2591,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       activeRealtimeTopicRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [topic?.id, slug]);
+  }, [loadTopic, removeStoryFromVisibleFeed, slug, topic, upsertPublicStoryInFeed]);
 
   // Page Visibility API - Auto-refresh when tab becomes visible after 5+ minutes
   useEffect(() => {
