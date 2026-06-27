@@ -2374,10 +2374,45 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           if (slideRefreshDebounceRef.current) {
             clearTimeout(slideRefreshDebounceRef.current);
           }
-          slideRefreshDebounceRef.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['topic-feed'] });
-            queryClient.invalidateQueries({ queryKey: ['hybrid-topic-feed'] });
-            refresh();
+          slideRefreshDebounceRef.current = setTimeout(async () => {
+            const { data: freshSlides, error } = await supabase
+              .from('slides')
+              .select('id, story_id, slide_number, content, word_count')
+              .eq('story_id', storyId)
+              .order('slide_number', { ascending: true });
+
+            if (error || !freshSlides?.length) {
+              if (error) console.warn('⚠️ Failed to refresh story slides:', error);
+              return;
+            }
+
+            const normalizedSlides = freshSlides.map((slide: any) => ({
+              id: slide.id,
+              slide_number: slide.slide_number,
+              content: slide.content,
+              word_count: slide.word_count || 0,
+            }));
+
+            const replaceSlides = (items: FeedContent[]) => items.map(item => {
+              if (item.type !== 'story' || item.id !== storyId) return item;
+              return {
+                ...item,
+                data: {
+                  ...(item.data as Story),
+                  slides: normalizedSlides,
+                },
+              };
+            });
+
+            setAllStories(prev => prev.map(story =>
+              story.id === storyId ? { ...story, slides: normalizedSlides } : story
+            ));
+            setAllContent(prev => {
+              const next = replaceSlides(prev);
+              allContentRef.current = next;
+              return next;
+            });
+            setFilteredContent(prev => replaceSlides(prev));
           }, 1500);
         }
       )
