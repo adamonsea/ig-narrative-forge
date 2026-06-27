@@ -475,7 +475,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     try {
       const { error } = await supabase
         .from('stories')
-        .update({ status: 'draft' })
+        .update({ status: 'draft', is_published: false })
         .eq('id', storyId);
 
       if (error) throw error;
