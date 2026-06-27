@@ -909,7 +909,7 @@ const TopicFeed = () => {
               <div className="flex items-center gap-3">
                 {topic.branding_config?.logo_url ? (
                   <img
-                    src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
+                    src={logoSrc}
                     alt={`${topic.name} logo`}
                     className="h-[34px] w-auto object-contain"
                   />
