@@ -772,16 +772,27 @@ export class FastTrackScraper {
 
     const articleUrl = this.resolveUrl(link, baseUrl);
 
-    // For fast processing, use RSS description as content if available (skip full extraction)
-    let finalContent = description || '';
+    // Prefer the full article body embedded in the feed (WordPress <content:encoded>,
+    // Atom <content>). This avoids a follow-up page fetch that anti-bot WAFs often block.
+    const richContent = this.extractRichXMLContent(itemXml, 'content:encoded') ||
+                        this.extractRichXMLContent(itemXml, 'content');
+    const descWordCount = this.countWords(description || '');
+    const richWordCount = this.countWords(richContent || '');
+    const useRich = richWordCount > descWordCount && richWordCount >= 60;
+
+    // For fast processing, use embedded full content when available, else RSS description
+    let finalContent = useRich ? richContent : (description || '');
+    if (useRich) {
+      console.log(`📰 Using embedded RSS full content: ${richWordCount} words (description had ${descWordCount})`);
+    }
     let finalTitle = title;
     let wordCount = this.countWords(finalContent);
     let usedSnippetFallback = false;
     let snippetReason: string | undefined;
 
     // Enhanced snippet acceptance logic with regional source prioritization
-    const isLikelySnippet = this.isContentSnippet(description || '', title);
-    const hasEllipsis = (description || '').includes('[&#8230;') || (description || '').includes('…') || (description || '').includes('[...]');
+    const isLikelySnippet = this.isContentSnippet(finalContent, title);
+    const hasEllipsis = !useRich && ((description || '').includes('[&#8230;') || (description || '').includes('…') || (description || '').includes('[...]'));
     const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
     const isWhitelistedDomain = this.isWhitelistedDomain(articleUrl);
     
@@ -1294,6 +1305,41 @@ export class FastTrackScraper {
     const match = new RegExp(`<${tag}[^>]*>([^<]+)`, 'i').exec(xml) ||
                   new RegExp(`<${tag}[^>]*><\\!\\[CDATA\\[([^\\]]+)`, 'i').exec(xml);
     return match ? match[1].trim() : '';
+  }
+
+  // Robust extractor for rich/long fields (e.g. <content:encoded>) that may contain
+  // full HTML inside CDATA. Unlike extractXMLContent it captures the WHOLE node body,
+  // including nested tags, then strips HTML to plain text.
+  private extractRichXMLContent(xml: string, tag: string): string {
+    const escaped = tag.replace(/[:]/g, '\\:');
+    const nodeMatch = new RegExp(`<${escaped}[^>]*>([\\s\\S]*?)<\\/${escaped}>`, 'i').exec(xml);
+    if (!nodeMatch) return '';
+    let raw = nodeMatch[1].trim();
+    // Unwrap CDATA if present
+    const cdata = /^<!\[CDATA\[([\s\S]*?)\]\]>$/.exec(raw);
+    if (cdata) raw = cdata[1];
+    return this.stripHtmlToText(raw);
+  }
+
+  private stripHtmlToText(html: string): string {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<\/(p|div|li|h[1-6]|br)>/gi, '\n')
+      .replace(/<br\s*\/?>(?=)/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&#8217;|&#8216;|&rsquo;|&lsquo;/gi, "'")
+      .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;/gi, '"')
+      .replace(/&#8230;|&hellip;/gi, '…')
+      .replace(/&#8211;|&#8212;|&ndash;|&mdash;/gi, '-')
+      .replace(/&quot;/gi, '"')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   }
 
   private extractFeedLinks(html: string, baseUrl: string): string[] {
