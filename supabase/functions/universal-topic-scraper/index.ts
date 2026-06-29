@@ -171,12 +171,16 @@ async function autoLearnDomainProfile(
     // Detect domain family pattern
     const family = detectDomainFamily(hostname);
     
-    // Create optimized profile based on what worked
+    // Create optimized profile based on what worked.
+    // GUARDRAIL: auto-learning may only ADD a `preferred` hint — it must NEVER
+    // populate `skip` to disable a discovery method. A single success on one
+    // method is not proof another method (e.g. RSS) is broken. Disabling RSS
+    // here previously caused silent, permanent ingestion outages.
     const profile = {
       family: family,
       scrapingStrategy: {
-        preferred: 'html',  // Beautiful Soup succeeded
-        skip: ['rss'],      // RSS failed/empty, skip next time
+        preferred: 'html',  // Hint only: Beautiful Soup succeeded this time
+        skip: [] as string[], // Never disable fallbacks from a single success
         timeout: 30000
       }
     };
@@ -197,14 +201,14 @@ async function autoLearnDomainProfile(
       return;
     }
     
-    console.log(`🧠 Auto-created domain profile for ${hostname} (family: ${family}, preferred: html)`);
+    console.log(`🧠 Auto-created domain profile for ${hostname} (family: ${family}, preferred: html, RSS fallback preserved)`);
     
-    // Update source record with successful method
+    // Record the successful method as a hint. Do NOT reset success_rate to 100 —
+    // that masked subsequent zero-article runs and hid the outage.
     await supabase
       .from('content_sources')
       .update({
-        scraping_method: 'beautiful-soup-scraper',
-        success_rate: 100  // Fresh start with new method
+        scraping_method: 'beautiful-soup-scraper'
       })
       .eq('id', options.sourceId);
     
@@ -683,9 +687,29 @@ serve(async (req) => {
                 e.includes('HTTP error')
               );
               
-              // If the feed was accessible but just empty, mark as success with 0 articles
+              // If the feed was accessible but just empty, mark as success with 0 articles.
+              // GUARDRAIL: a run that fetched the page but extracted ZERO article links
+              // across all methods is suspicious — it is the exact signature of the
+              // silent-outage bug (working path disabled, brittle extractor). We still
+              // return success so the feed isn't disrupted, but we surface a health
+              // warning so a regression can't sit unnoticed for weeks.
               if (!hasAccessibilityErrors && scrapeResult.articlesFound === 0) {
-                console.log(`✅ ${source.source_name}: Feed accessible but no new articles found`);
+                console.warn(`⚠️ ZERO-EXTRACTION: ${source.source_name} fetched OK but found 0 article links (method: ${scrapeResult.method || 'unknown'}). Flagging for review.`);
+                try {
+                  await supabase.from('source_status_audit').insert({
+                    source_id: source.source_id,
+                    old_status: true,
+                    new_status: true,
+                    change_reason: 'zero_extraction_health_warning',
+                    metadata: {
+                      method: scrapeResult.method || 'unknown',
+                      topic_id: topicId,
+                      detected_at: new Date().toISOString()
+                    }
+                  });
+                } catch (auditError) {
+                  console.warn(`   (non-fatal) could not record zero-extraction audit: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+                }
                 return {
                   sourceId: source.source_id,
                   sourceName: source.source_name,

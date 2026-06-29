@@ -1100,10 +1100,19 @@ export class FastTrackScraper {
       // Newsquest pattern: /news/12345678.article-slug/
       articlePatterns.push(/\/news\/\d{6,}\.[^\/]+\/?$/);
       console.log('🎯 Added Newsquest article pattern');
+    } else if (this.domainProfile?.family === 'uk_local') {
+      // UK local sites commonly use slug-style article URLs without an
+      // /article|/story|/post prefix (e.g. /eastbourne-pier-reopens-after-fire/).
+      // Match a path segment that looks like a multi-word hyphenated slug.
+      articlePatterns.push(/\/[a-z0-9]+(?:-[a-z0-9]+){2,}\/?$/);
+      console.log('🎯 Added uk_local slug article pattern');
     } else if (articlePatterns.length === 0) {
-      // Generic pattern: look for URLs with article/story/post + slug
-      articlePatterns.push(/\/(article|story|post)\/[a-z0-9-]{10,}\/?$/);
-      console.log('🎯 Using generic article pattern');
+      // Generic patterns: prefixed article URLs OR slug-style article URLs.
+      // The slug fallback (3+ hyphenated words) catches the many local-news
+      // CMSes that don't use an /article|/story|/post prefix.
+      articlePatterns.push(/\/(article|story|post|news)\/[a-z0-9-]{10,}\/?$/);
+      articlePatterns.push(/\/[a-z0-9]+(?:-[a-z0-9]+){3,}\/?$/);
+      console.log('🎯 Using generic article + slug fallback patterns');
     }
     
     for (const linkMatch of linkMatches) {
