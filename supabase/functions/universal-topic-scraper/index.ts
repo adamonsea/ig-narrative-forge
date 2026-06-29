@@ -687,9 +687,29 @@ serve(async (req) => {
                 e.includes('HTTP error')
               );
               
-              // If the feed was accessible but just empty, mark as success with 0 articles
+              // If the feed was accessible but just empty, mark as success with 0 articles.
+              // GUARDRAIL: a run that fetched the page but extracted ZERO article links
+              // across all methods is suspicious — it is the exact signature of the
+              // silent-outage bug (working path disabled, brittle extractor). We still
+              // return success so the feed isn't disrupted, but we surface a health
+              // warning so a regression can't sit unnoticed for weeks.
               if (!hasAccessibilityErrors && scrapeResult.articlesFound === 0) {
-                console.log(`✅ ${source.source_name}: Feed accessible but no new articles found`);
+                console.warn(`⚠️ ZERO-EXTRACTION: ${source.source_name} fetched OK but found 0 article links (method: ${scrapeResult.method || 'unknown'}). Flagging for review.`);
+                try {
+                  await supabase.from('source_status_audit').insert({
+                    source_id: source.source_id,
+                    old_status: true,
+                    new_status: true,
+                    change_reason: 'zero_extraction_health_warning',
+                    metadata: {
+                      method: scrapeResult.method || 'unknown',
+                      topic_id: topicId,
+                      detected_at: new Date().toISOString()
+                    }
+                  });
+                } catch (auditError) {
+                  console.warn(`   (non-fatal) could not record zero-extraction audit: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+                }
                 return {
                   sourceId: source.source_id,
                   sourceName: source.source_name,
