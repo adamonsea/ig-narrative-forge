@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
       // held at random ("intermittent" gate failures).
       const { data: articles, error: articlesError } = await supabase
         .from('topic_articles')
-        .select('id, shared_content_id, content_quality_score, topic_id, shared_article_content(title, body, source_url)')
+        .select('id, shared_content_id, content_quality_score, topic_id, shared_article_content(title, body, url)')
         .eq('topic_id', topic_id)
         .eq('processing_status', 'new')
         .gte('content_quality_score', quality_threshold)
@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
         // Content comes from the JOIN above. Supabase returns the embedded row as
         // an object (or null). Normalise to a single record.
         const embedded = article.shared_article_content;
-        let sharedContent: { title: string | null; body: string | null; source_url: string | null } | null =
+        let sharedContent: { title: string | null; body: string | null; url: string | null } | null =
           Array.isArray(embedded) ? (embedded[0] ?? null) : (embedded ?? null);
 
         // Defensive fallback: if the JOIN somehow returned no content but we need
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
         if (!sharedContent && (negativeKeywords.length > 0 || localityGateActive) && article.shared_content_id) {
           const { data } = await supabase
             .from('shared_article_content')
-            .select('title, body, source_url')
+            .select('title, body, url')
             .eq('id', article.shared_content_id)
             .maybeSingle();
           sharedContent = data;
@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
               .update({ processing_status: 'discarded' })
               .eq('id', article.id);
             // Record in discarded_articles for suppression
-            const sourceUrl = sharedContent.source_url || article.shared_content_id;
+            const sourceUrl = sharedContent.url || article.shared_content_id;
             await supabase.from('discarded_articles').upsert({
               topic_id: topic_id,
               url: sourceUrl,
