@@ -24,16 +24,32 @@ interface TopicArticle {
  * (region name, landmark, postcode, organization) in the title or opening of
  * the article. Generic keyword matches alone do NOT qualify a story for
  * automation. Matching is case-insensitive with word-boundary precision.
+ * Returns the matched anchor (string) or null if no anchor was found.
  */
-function passesLocalityGate(title: string, body: string, anchors: string[]): boolean {
-  if (!anchors || anchors.length === 0) return true; // no anchors configured → don't block
-  const haystack = `${title || ''} ${(body || '').slice(0, 500)}`.toLowerCase();
-  return anchors.some((anchor) => {
-    if (!anchor) return false;
+function stripBoilerplate(body: string): string {
+  return (body || '')
+    // Common scraped chrome / nav prefixes
+    .replace(/sign in\s+subscribe/gi, ' ')
+    .replace(/\bsubscribe\b/gi, ' ')
+    // "Published 27th Jun 2026, 18:02 BST" / "Updated ... BST"
+    .replace(/\b(published|updated)\b[^.]*?\bbst\b/gi, ' ')
+    // Bylines: "By Sam Morton Chief Reporter"
+    .replace(/\bby\s+[A-Z][a-z]+\s+[A-Z][a-z]+(\s+[A-Z][a-z]+){0,2}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchLocalityAnchor(title: string, body: string, anchors: string[]): string | null {
+  if (!anchors || anchors.length === 0) return 'no-anchors-configured'; // don't block
+  const cleanedBody = stripBoilerplate(body).slice(0, 1200);
+  const haystack = `${title || ''} ${cleanedBody}`.toLowerCase();
+  for (const anchor of anchors) {
+    if (!anchor) continue;
     const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-    return regex.test(haystack);
-  });
+    if (regex.test(haystack)) return anchor;
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -140,7 +156,7 @@ Deno.serve(async (req) => {
       .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations')
       .in('id', topicIds);
     
-    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[]; topic_type?: string; localityAnchors?: string[] }> = {};
+    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[]; topic_type?: string; region?: string; localityAnchors?: string[] }> = {};
     for (const t of (topicDefaults || [])) {
       const anchors = [
         t.region,
@@ -156,6 +172,7 @@ Deno.serve(async (req) => {
         audience_expertise: t.audience_expertise,
         negative_keywords: t.negative_keywords || [],
         topic_type: t.topic_type,
+        region: t.region || '',
         localityAnchors: Array.from(new Set(anchors)),
       };
     }
@@ -166,10 +183,14 @@ Deno.serve(async (req) => {
 
       console.log(`\n🔍 Processing topic: ${topic_id} (threshold: ${quality_threshold}%)`);
 
-      // Fetch articles that are new and above threshold
+      // Fetch articles that are new and above threshold.
+      // IMPORTANT: title/body are JOINED here (not fetched per-row later) so the
+      // locality gate always sees real content. A per-row fetch that silently
+      // returns null on transient errors was causing valid local stories to be
+      // held at random ("intermittent" gate failures).
       const { data: articles, error: articlesError } = await supabase
         .from('topic_articles')
-        .select('id, shared_content_id, content_quality_score, topic_id')
+        .select('id, shared_content_id, content_quality_score, topic_id, shared_article_content(title, body, url)')
         .eq('topic_id', topic_id)
         .eq('processing_status', 'new')
         .gte('content_quality_score', quality_threshold)
@@ -197,13 +218,19 @@ Deno.serve(async (req) => {
       const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
       let topicHeldForLocality = 0;
 
-      for (const article of articles as TopicArticle[]) {
-        // Fetch shared content once and reuse for negative-keyword + locality checks.
-        let sharedContent: { title: string | null; body: string | null; source_url: string | null } | null = null;
-        if (negativeKeywords.length > 0 || localityGateActive) {
+      for (const article of articles as any[]) {
+        // Content comes from the JOIN above. Supabase returns the embedded row as
+        // an object (or null). Normalise to a single record.
+        const embedded = article.shared_article_content;
+        let sharedContent: { title: string | null; body: string | null; url: string | null } | null =
+          Array.isArray(embedded) ? (embedded[0] ?? null) : (embedded ?? null);
+
+        // Defensive fallback: if the JOIN somehow returned no content but we need
+        // it for gating, fetch once. On failure we DO NOT hold (fail-open) below.
+        if (!sharedContent && (negativeKeywords.length > 0 || localityGateActive) && article.shared_content_id) {
           const { data } = await supabase
             .from('shared_article_content')
-            .select('title, body, source_url')
+            .select('title, body, url')
             .eq('id', article.shared_content_id)
             .maybeSingle();
           sharedContent = data;
@@ -220,7 +247,7 @@ Deno.serve(async (req) => {
               .update({ processing_status: 'discarded' })
               .eq('id', article.id);
             // Record in discarded_articles for suppression
-            const sourceUrl = sharedContent.source_url || article.shared_content_id;
+            const sourceUrl = sharedContent.url || article.shared_content_id;
             await supabase.from('discarded_articles').upsert({
               topic_id: topic_id,
               url: sourceUrl,
@@ -236,16 +263,33 @@ Deno.serve(async (req) => {
         // Locality gate (regional topics only): hold for manual review if no local
         // anchor appears in the title or opening. Story stays 'new' in Arrivals.
         if (localityGateActive) {
-          const passes = passesLocalityGate(
-            sharedContent?.title || '',
-            sharedContent?.body || '',
-            localityAnchors,
-          );
-          if (!passes) {
-            console.log(`  🧭 Locality gate: article ${article.id} held for review — no local anchor in title/opening`);
+          const title = sharedContent?.title || '';
+          const body = sharedContent?.body || '';
+          const region = (topicDefaultsMap[topic_id]?.region || '').toLowerCase().trim();
+
+          // FAIL-OPEN: never hold an at/above-threshold story that literally names
+          // the region anywhere in title or body. A 100%-score "Eastbourne …"
+          // headline must always pass.
+          const regionPresent = !!region &&
+            `${title} ${body}`.toLowerCase().includes(region);
+
+          const matchedAnchor = matchLocalityAnchor(title, body, localityAnchors);
+
+          if (!matchedAnchor && !regionPresent) {
+            // Diagnostic: log WHY it was held (content presence + a title snippet).
+            console.log(
+              `  🧭 Locality gate HELD article ${article.id} — ` +
+              `hasContent=${!!sharedContent} anchors=${localityAnchors.length} ` +
+              `title="${title.slice(0, 80)}"`
+            );
             topicHeldForLocality++;
             continue; // leave processing_status = 'new'
           }
+
+          console.log(
+            `  ✅ Locality gate PASSED article ${article.id} via ` +
+            `${matchedAnchor ? `anchor "${matchedAnchor}"` : `region "${region}"`}`
+          );
         }
 
         // Check for an ACTIVE queue item only (pending/processing).
