@@ -171,12 +171,16 @@ async function autoLearnDomainProfile(
     // Detect domain family pattern
     const family = detectDomainFamily(hostname);
     
-    // Create optimized profile based on what worked
+    // Create optimized profile based on what worked.
+    // GUARDRAIL: auto-learning may only ADD a `preferred` hint — it must NEVER
+    // populate `skip` to disable a discovery method. A single success on one
+    // method is not proof another method (e.g. RSS) is broken. Disabling RSS
+    // here previously caused silent, permanent ingestion outages.
     const profile = {
       family: family,
       scrapingStrategy: {
-        preferred: 'html',  // Beautiful Soup succeeded
-        skip: ['rss'],      // RSS failed/empty, skip next time
+        preferred: 'html',  // Hint only: Beautiful Soup succeeded this time
+        skip: [] as string[], // Never disable fallbacks from a single success
         timeout: 30000
       }
     };
@@ -197,14 +201,14 @@ async function autoLearnDomainProfile(
       return;
     }
     
-    console.log(`🧠 Auto-created domain profile for ${hostname} (family: ${family}, preferred: html)`);
+    console.log(`🧠 Auto-created domain profile for ${hostname} (family: ${family}, preferred: html, RSS fallback preserved)`);
     
-    // Update source record with successful method
+    // Record the successful method as a hint. Do NOT reset success_rate to 100 —
+    // that masked subsequent zero-article runs and hid the outage.
     await supabase
       .from('content_sources')
       .update({
-        scraping_method: 'beautiful-soup-scraper',
-        success_rate: 100  // Fresh start with new method
+        scraping_method: 'beautiful-soup-scraper'
       })
       .eq('id', options.sourceId);
     
