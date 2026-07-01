@@ -559,3 +559,10 @@ verify_jwt = false
 
 [functions.seo-page]
 verify_jwt = false
+
+# ========================================
+# SOURCE HEALTH MONITOR
+# ========================================
+
+[functions.source-health-monitor]
+verify_jwt = false

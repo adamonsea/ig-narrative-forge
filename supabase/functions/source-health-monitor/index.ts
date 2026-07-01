@@ -1,291 +1,233 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
-import { EnhancedRetryStrategies } from '../_shared/enhanced-retry-strategies.ts';
+import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend@4.0.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface SourceHealthMetrics {
-  sourceId: string;
-  sourceName: string;
-  isHealthy: boolean;
-  successRate: number;
-  avgResponseTime: number;
-  lastError?: string;
-  recommendedAction: 'none' | 'monitor' | 'method_change' | 'deactivate' | 'investigate';
-  alternativeMethod?: string;
-  healthScore: number;
+const OWNER_EMAIL = "adamonsea@gmail.com";
+const WINDOW_DAYS = 7;
+
+type ReasonCode =
+  | "feed_404"
+  | "blocked"
+  | "needs_bypass_head"
+  | "age_cutoff"
+  | "no_new_urls"
+  | "inactive"
+  | "healthy"
+  | "unknown";
+
+interface Classification {
+  reason_code: ReasonCode;
+  reason_detail: string;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+// Classify why a source produced 0 articles based on the strongest available signal.
+function classifyReason(source: any, latestDaily: any): Classification {
+  const failure = (source.last_failure_reason || "").toString();
+  const dailyErr = (latestDaily?.error_message || "").toString();
+  const blob = `${failure} ${dailyErr}`.toLowerCase();
+
+  if (/(404|not found|feed url|no feed|invalid feed|xml parse|not xml)/.test(blob)) {
+    return { reason_code: "feed_404", reason_detail: failure || dailyErr || "Feed URL returns 404 / no valid feed found" };
+  }
+  if (/(403|forbidden|blocked|captcha|cloudflare|waf|anti-?bot|access denied)/.test(blob)) {
+    return { reason_code: "blocked", reason_detail: failure || dailyErr || "Blocked by anti-bot / WAF (403)" };
+  }
+  if (/(head request|bypasshead|method not allowed|405)/.test(blob)) {
+    return { reason_code: "needs_bypass_head", reason_detail: failure || dailyErr || "HEAD probe rejected — needs bypassHead" };
+  }
+  if (/(too old|age|expired|max_age|cutoff|older than)/.test(blob)) {
+    return { reason_code: "age_cutoff", reason_detail: failure || dailyErr || "All articles rejected by age cutoff" };
+  }
+  if (latestDaily && (latestDaily.total_urls_discovered || 0) > 0 && (latestDaily.new_urls_found || 0) === 0) {
+    return { reason_code: "no_new_urls", reason_detail: "URLs discovered but none new (all previously seen)" };
+  }
+  if (dailyErr) {
+    return { reason_code: "unknown", reason_detail: dailyErr };
+  }
+  if (failure) {
+    return { reason_code: "unknown", reason_detail: failure };
+  }
+  return { reason_code: "no_new_urls", reason_detail: "No articles ingested and no error recorded — likely no new content published" };
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  const supabase = createClient(supabaseUrl, serviceKey);
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Missing Supabase environment variables');
-    }
+    let sendEmail = true;
+    try {
+      const body = await req.json();
+      if (body && body.sendEmail === false) sendEmail = false;
+    } catch (_) { /* no body */ }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-    const retryStrategy = new EnhancedRetryStrategies();
+    const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const sinceDate = since.split("T")[0];
 
-    console.log('🏥 Starting source health monitoring...');
-
-    // Get all active sources for monitoring
+    // 1. Active sources
     const { data: sources, error: sourcesError } = await supabase
-      .from('content_sources')
-      .select('*')
-      .eq('is_active', true)
-      .order('last_scraped_at', { ascending: true, nullsFirst: true });
+      .from("content_sources")
+      .select("id, source_name, canonical_domain, topic_id, is_active, last_failure_reason")
+      .eq("is_active", true);
+    if (sourcesError) throw sourcesError;
 
-    if (sourcesError) {
-      throw sourcesError;
+    // 2. Article counts per source in window.
+    // articles.source_id is unreliable, so match by the host of source_url
+    // against each source's canonical_domain (normalised, www-stripped).
+    const normDomain = (raw: string | null | undefined): string => {
+      if (!raw) return "";
+      let host = raw.toString().trim().toLowerCase();
+      try {
+        if (host.includes("://")) host = new URL(host).hostname;
+        else if (host.includes("/")) host = new URL(`https://${host}`).hostname;
+      } catch (_) { /* keep as-is */ }
+      return host.replace(/^www\./, "");
+    };
+
+    const { data: recentArticles, error: articlesError } = await supabase
+      .from("articles")
+      .select("source_url")
+      .gte("created_at", since)
+      .not("source_url", "is", null)
+      .limit(20000);
+    if (articlesError) throw articlesError;
+
+    const countByDomain: Record<string, number> = {};
+    for (const a of recentArticles || []) {
+      const host = normDomain(a.source_url);
+      if (host) countByDomain[host] = (countByDomain[host] || 0) + 1;
     }
 
-    const healthMetrics: SourceHealthMetrics[] = [];
-    let sourcesProcessed = 0;
-    let sourcesDeactivated = 0;
-    let methodsChanged = 0;
+    // 3. Latest daily availability per source in window (for reason signals)
+    const { data: daily } = await supabase
+      .from("daily_content_availability")
+      .select("source_id, error_message, new_urls_found, total_urls_discovered, check_date")
+      .gte("check_date", sinceDate)
+      .order("check_date", { ascending: false });
 
-    for (const source of sources || []) {
+    const latestDailyBySource: Record<string, any> = {};
+    for (const d of daily || []) {
+      if (d.source_id && !latestDailyBySource[d.source_id]) latestDailyBySource[d.source_id] = d;
+    }
+
+    const rows: any[] = [];
+    const flagged: any[] = [];
+
+    for (const s of sources || []) {
+      const count = countByDomain[normDomain(s.canonical_domain)] || 0;
+      let status = "healthy";
+      let reason_code: ReasonCode = "healthy";
+      let reason_detail = `${count} article(s) in last ${WINDOW_DAYS} days`;
+
+      if (count === 0) {
+        const classified = classifyReason(s, latestDailyBySource[s.id]);
+        reason_code = classified.reason_code;
+        reason_detail = classified.reason_detail;
+        status = reason_code === "blocked" || reason_code === "feed_404" || reason_code === "needs_bypass_head"
+          ? "failing"
+          : "zero_articles";
+      }
+
+      const row = {
+        source_id: s.id,
+        topic_id: s.topic_id,
+        source_name: s.source_name,
+        canonical_domain: s.canonical_domain,
+        status,
+        reason_code,
+        reason_detail,
+        articles_last_window: count,
+        window_days: WINDOW_DAYS,
+        checked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      rows.push(row);
+      if (status !== "healthy") flagged.push(row);
+    }
+
+    // 4. Persist (upsert on source_id)
+    if (rows.length > 0) {
+      const { error: upsertError } = await supabase
+        .from("source_health_checks")
+        .upsert(rows, { onConflict: "source_id" });
+      if (upsertError) throw upsertError;
+    }
+
+    // 5. Email the owner a summary if anything is flagged
+    let emailed = false;
+    if (sendEmail && flagged.length > 0 && resendApiKey) {
+      const resend = new Resend(resendApiKey);
+      const rowsHtml = flagged
+        .sort((a, b) => a.status.localeCompare(b.status))
+        .map(
+          (f) => `
+            <tr>
+              <td style="padding:8px;border-bottom:1px solid #eee;">${f.source_name}${f.canonical_domain ? ` <span style="color:#888;">(${f.canonical_domain})</span>` : ""}</td>
+              <td style="padding:8px;border-bottom:1px solid #eee;"><span style="font-weight:600;color:${f.status === "failing" ? "#c0392b" : "#b7791f"}">${f.status}</span></td>
+              <td style="padding:8px;border-bottom:1px solid #eee;">${f.reason_code}</td>
+              <td style="padding:8px;border-bottom:1px solid #eee;color:#555;">${f.reason_detail}</td>
+            </tr>`
+        )
+        .join("");
+
+      const html = `
+        <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:720px;margin:0 auto;">
+          <h2 style="color:#111;">Source Health Report</h2>
+          <p style="color:#555;">${flagged.length} source(s) produced <strong>0 articles</strong> in the last ${WINDOW_DAYS} days.</p>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead>
+              <tr style="text-align:left;background:#fafafa;">
+                <th style="padding:8px;border-bottom:2px solid #eee;">Source</th>
+                <th style="padding:8px;border-bottom:2px solid #eee;">Status</th>
+                <th style="padding:8px;border-bottom:2px solid #eee;">Reason</th>
+                <th style="padding:8px;border-bottom:2px solid #eee;">Detail</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <p style="color:#888;font-size:12px;margin-top:24px;">Generated ${new Date().toUTCString()} · View details in the Admin panel.</p>
+        </div>`;
+
       try {
-        console.log(`🔍 Analyzing health for: ${source.source_name}`);
-        
-        const metrics = await analyzeSourceHealth(supabase, source, retryStrategy);
-        healthMetrics.push(metrics);
-        
-        // Take action based on health analysis
-        if (metrics.recommendedAction === 'deactivate') {
-          await supabase
-            .from('content_sources')
-            .update({ 
-              is_active: false,
-              last_error: `Auto-deactivated: ${metrics.lastError || 'Consistently failing'}`,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', source.id);
-            
-          console.log(`🚫 Deactivated failing source: ${source.source_name}`);
-          sourcesDeactivated++;
-          
-        } else if (metrics.recommendedAction === 'method_change' && metrics.alternativeMethod) {
-          await supabase
-            .from('content_sources')
-            .update({ 
-              scraping_method: metrics.alternativeMethod,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', source.id);
-            
-          console.log(`🔄 Changed gathering method for ${source.source_name} to ${metrics.alternativeMethod}`);
-          methodsChanged++;
-        }
-        
-        sourcesProcessed++;
-        
-      } catch (error) {
-        console.error(`❌ Error analyzing source ${source.source_name}:`, error);
-        
-        healthMetrics.push({
-          sourceId: source.id,
-          sourceName: source.source_name,
-          isHealthy: false,
-          successRate: 0,
-          avgResponseTime: 0,
-          lastError: error instanceof Error ? error.message : String(error),
-          recommendedAction: 'investigate',
-          healthScore: 0
+        await resend.emails.send({
+          from: "Curatr Health <noreply@curatr.pro>",
+          to: [OWNER_EMAIL],
+          subject: `⚠️ ${flagged.length} source(s) producing 0 articles`,
+          html,
         });
+        emailed = true;
+      } catch (mailErr) {
+        console.error("Failed to send health email:", mailErr);
       }
     }
 
-    // Log summary to system logs
-    await supabase.from('system_logs').insert({
-      level: 'info',
-      message: `Source health monitoring completed`,
-      context: {
-        sources_processed: sourcesProcessed,
-        sources_deactivated: sourcesDeactivated,
-        methods_changed: methodsChanged,
-        healthy_sources: healthMetrics.filter(m => m.isHealthy).length,
-        unhealthy_sources: healthMetrics.filter(m => !m.isHealthy).length,
-        avg_health_score: healthMetrics.length > 0 
-          ? healthMetrics.reduce((sum, m) => sum + m.healthScore, 0) / healthMetrics.length 
-          : 0
-      },
-      function_name: 'source-health-monitor'
-    });
+    console.log(`[source-health-monitor] checked ${rows.length}, flagged ${flagged.length}, emailed=${emailed}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        summary: {
-          sources_processed: sourcesProcessed,
-          sources_deactivated: sourcesDeactivated,
-          methods_changed: methodsChanged,
-          healthy_sources: healthMetrics.filter(m => m.isHealthy).length,
-          unhealthy_sources: healthMetrics.filter(m => !m.isHealthy).length
-        },
-        health_metrics: healthMetrics
+        checked: rows.length,
+        flagged: flagged.length,
+        emailed,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
-    console.error('❌ Source health monitoring error:', error);
+    console.error("[source-health-monitor] error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : String(error) }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ success: false, error: "Health check failed" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
-
-async function analyzeSourceHealth(
-  supabase: any, 
-  source: any, 
-  retryStrategy: EnhancedRetryStrategies
-): Promise<SourceHealthMetrics> {
-  
-  // Quick accessibility check
-  const accessCheck = await retryStrategy.quickAccessibilityCheck(source.feed_url);
-  
-  // Get ACTUAL article counts from database instead of potentially stale cached values
-  const { count: actualArticleCount } = await supabase
-    .from('articles')
-    .select('*', { count: 'exact', head: true })
-    .eq('source_id', source.id);
-    
-  const { count: topicArticleCount } = await supabase
-    .from('topic_articles')
-    .select('*', { count: 'exact', head: true })
-    .eq('source_id', source.id);
-  
-  const totalArticlesStored = (actualArticleCount || 0) + (topicArticleCount || 0);
-  
-  // Calculate health score (0-100) with heavy emphasis on actual content storage
-  let healthScore = 0;
-  const successRate = source.success_rate || 0;
-  
-  // Accessibility check (20 points max)
-  if (accessCheck.accessible) {
-    healthScore += 20;
-  }
-  
-  // CRITICAL: Actual content storage is the most important factor (50 points max)
-  if (totalArticlesStored >= 5 && successRate >= 80) {
-    healthScore += 50; // Productive source
-  } else if (totalArticlesStored >= 3 && successRate >= 50) {
-    healthScore += 35; // Active source
-  } else if (totalArticlesStored > 0 && successRate > 0) {
-    healthScore += 20; // Some success
-  } else if (successRate >= 70 && totalArticlesStored === 0) {
-    healthScore += 15; // Filtered but connected
-  }
-  // No points for sources that never store articles
-  
-  // Response time bonus (10 points max)
-  if (source.avg_response_time_ms && source.avg_response_time_ms < 10000) {
-    healthScore += 10;
-  }
-  
-  // Recent activity bonus (20 points max)
-  if (source.last_scraped_at) {
-    const daysSinceLastScrape = (Date.now() - new Date(source.last_scraped_at).getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSinceLastScrape < 1) {
-      healthScore += 20;
-    } else if (daysSinceLastScrape < 7) {
-      healthScore += 10;
-    }
-  }
-
-  // Determine recommended action based on actual content performance
-  let recommendedAction: 'none' | 'monitor' | 'method_change' | 'deactivate' | 'investigate' = 'none';
-  let alternativeMethod: string | undefined;
-
-  if (!accessCheck.accessible) {
-    if (totalArticlesStored >= 3 && successRate === 0) {
-      recommendedAction = 'deactivate';
-    } else {
-      recommendedAction = 'investigate';
-    }
-  } else if (totalArticlesStored >= 5 && successRate < 20) {
-    // Look for better scraping method
-    const betterMethod = await findBetterScrapingMethod(supabase, source);
-    if (betterMethod) {
-      recommendedAction = 'method_change';
-      alternativeMethod = betterMethod;
-    } else {
-      recommendedAction = 'deactivate';
-    }
-  } else if (totalArticlesStored >= 3 && successRate < 50) {
-    recommendedAction = 'monitor';
-  } else if (totalArticlesStored === 0 && successRate >= 70) {
-    // High connection success but no stored articles - needs monitoring
-    recommendedAction = 'monitor';
-  }
-
-  // A source is only "healthy" if it actually contributes content regularly
-  const isHealthy = healthScore >= 70 && totalArticlesStored >= 3 && successRate >= 50;
-
-  return {
-    sourceId: source.id,
-    sourceName: source.source_name,
-    isHealthy,
-    successRate: successRate,
-    avgResponseTime: source.avg_response_time_ms || 0,
-    lastError: accessCheck.error || source.last_error,
-    recommendedAction,
-    alternativeMethod,
-    healthScore: Math.round(healthScore)
-  };
-}
-
-async function findBetterScrapingMethod(supabase: any, source: any): Promise<string | null> {
-  // Get performance data for similar sources (same domain pattern)
-  const domain = source.canonical_domain;
-  if (!domain) return null;
-
-  const { data: similarSources } = await supabase
-    .from('content_sources')
-    .select('scraping_method, success_rate, articles_scraped')
-    .ilike('canonical_domain', `%${domain}%`)
-    .neq('id', source.id)
-    .gte('articles_scraped', 3)
-    .gt('success_rate', source.success_rate || 0);
-
-  if (!similarSources || similarSources.length === 0) {
-    return null;
-  }
-
-  // Find the method with the best success rate
-  const methodPerformance = new Map<string, { total: number, count: number }>();
-  
-  for (const similar of similarSources) {
-    const method = similar.scraping_method || 'rss';
-    const current = methodPerformance.get(method) || { total: 0, count: 0 };
-    current.total += similar.success_rate;
-    current.count += 1;
-    methodPerformance.set(method, current);
-  }
-
-  let bestMethod: string | null = null;
-  let bestAverage = 0;
-
-  for (const [method, stats] of methodPerformance) {
-    const average = stats.total / stats.count;
-    if (average > bestAverage && stats.count >= 2 && method !== source.scraping_method) {
-      bestMethod = method;
-      bestAverage = average;
-    }
-  }
-
-  return bestMethod;
-}

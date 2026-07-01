@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { QueueManager } from '@/components/QueueManager';
 import { SourceCleanup } from '@/components/SourceCleanup';
+import { SourceHealthMonitor } from '@/components/SourceHealthMonitor';
 import { LifecycleAudit } from '@/components/LifecycleAudit';
 import { ABTestDashboard } from '@/components/admin/ABTestDashboard';
 import { SectionLabel } from '@/components/ui/section-label';
@@ -40,6 +41,7 @@ export default function AdminPanel() {
             <SectionLabel>Operations</SectionLabel>
             <div className="space-y-6">
               <QueueManager />
+              <SourceHealthMonitor />
               <LifecycleAudit />
               <SourceCleanup />
             </div>

@@ -2795,6 +2795,54 @@ export type Database = {
         }
         Relationships: []
       }
+      source_health_checks: {
+        Row: {
+          articles_last_window: number
+          canonical_domain: string | null
+          checked_at: string
+          created_at: string
+          id: string
+          reason_code: string
+          reason_detail: string | null
+          source_id: string
+          source_name: string
+          status: string
+          topic_id: string | null
+          updated_at: string
+          window_days: number
+        }
+        Insert: {
+          articles_last_window?: number
+          canonical_domain?: string | null
+          checked_at?: string
+          created_at?: string
+          id?: string
+          reason_code?: string
+          reason_detail?: string | null
+          source_id: string
+          source_name: string
+          status?: string
+          topic_id?: string | null
+          updated_at?: string
+          window_days?: number
+        }
+        Update: {
+          articles_last_window?: number
+          canonical_domain?: string | null
+          checked_at?: string
+          created_at?: string
+          id?: string
+          reason_code?: string
+          reason_detail?: string | null
+          source_id?: string
+          source_name?: string
+          status?: string
+          topic_id?: string | null
+          updated_at?: string
+          window_days?: number
+        }
+        Relationships: []
+      }
       source_status_audit: {
         Row: {
           change_reason: string | null
