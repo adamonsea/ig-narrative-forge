@@ -82,18 +82,31 @@ serve(async (req) => {
       .eq("is_active", true);
     if (sourcesError) throw sourcesError;
 
-    // 2. Article counts per source in window
+    // 2. Article counts per source in window.
+    // articles.source_id is unreliable, so match by the host of source_url
+    // against each source's canonical_domain (normalised, www-stripped).
+    const normDomain = (raw: string | null | undefined): string => {
+      if (!raw) return "";
+      let host = raw.toString().trim().toLowerCase();
+      try {
+        if (host.includes("://")) host = new URL(host).hostname;
+        else if (host.includes("/")) host = new URL(`https://${host}`).hostname;
+      } catch (_) { /* keep as-is */ }
+      return host.replace(/^www\./, "");
+    };
+
     const { data: recentArticles, error: articlesError } = await supabase
       .from("articles")
-      .select("source_id")
+      .select("source_url")
       .gte("created_at", since)
-      .not("source_id", "is", null)
-      .limit(10000);
+      .not("source_url", "is", null)
+      .limit(20000);
     if (articlesError) throw articlesError;
 
-    const countBySource: Record<string, number> = {};
+    const countByDomain: Record<string, number> = {};
     for (const a of recentArticles || []) {
-      if (a.source_id) countBySource[a.source_id] = (countBySource[a.source_id] || 0) + 1;
+      const host = normDomain(a.source_url);
+      if (host) countByDomain[host] = (countByDomain[host] || 0) + 1;
     }
 
     // 3. Latest daily availability per source in window (for reason signals)
@@ -112,7 +125,7 @@ serve(async (req) => {
     const flagged: any[] = [];
 
     for (const s of sources || []) {
-      const count = countBySource[s.id] || 0;
+      const count = countByDomain[normDomain(s.canonical_domain)] || 0;
       let status = "healthy";
       let reason_code: ReasonCode = "healthy";
       let reason_detail = `${count} article(s) in last ${WINDOW_DAYS} days`;
