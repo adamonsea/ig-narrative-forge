@@ -560,6 +560,3 @@ verify_jwt = false
 [functions.seo-page]
 verify_jwt = false
 
-
-[functions.source-health-monitor]
-verify_jwt = false
