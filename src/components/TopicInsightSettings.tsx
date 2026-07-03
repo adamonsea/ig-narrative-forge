@@ -35,7 +35,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
     mutationFn: async (updates: Record<string, boolean>) => {
       const { error } = await supabase
         .from('topic_insight_settings')
-        .update(updates)
+        .update(updates as any)
         .eq('topic_id', topicId);
 
       if (error) throw error;

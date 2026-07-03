@@ -521,7 +521,7 @@ const TopicDashboard = () => {
   const handleChannelToggle = async (field: string, checked: boolean, label: string) => {
     const { error } = await supabase
       .from('topics')
-      .update({ [field]: checked })
+      .update({ [field]: checked } as any)
       .eq('id', topic!.id);
     if (!error) {
       loadTopicAndStats();
