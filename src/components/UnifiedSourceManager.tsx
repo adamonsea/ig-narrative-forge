@@ -836,7 +836,7 @@ export const UnifiedSourceManager = ({
       setLoading(true);
       const { error } = await supabase
         .from('content_sources')
-        .update(updates)
+        .update(updates as any)
         .eq('id', sourceId);
 
       if (error) throw error;
