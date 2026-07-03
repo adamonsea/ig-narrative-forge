@@ -405,7 +405,7 @@ export const AICostDashboard: React.FC = () => {
                         cx="50%"
                         cy="50%"
                         outerRadius={100}
-                        label={({ provider, percent }) => 
+                        label={({ provider, percent }: any) => 
                           `${provider} (${(percent * 100).toFixed(0)}%)`
                         }
                       >
