@@ -341,6 +341,30 @@ serve(async (req) => {
 
     // Determine topic_id from either architecture
     const topicId = (story as any).article?.topic_id || (story as any).topic_article?.topic_id
+
+    // Editorial anonymity guard (defense-in-depth): in automated modes, never
+    // attach an AI-generated image to a story about a sexual offence, since
+    // victims have lifelong anonymity and an invented figure could be read as
+    // the victim. Manual illustration is still allowed for editorial judgement.
+    if (isAutomated) {
+      const check = checkAnonymity(
+        (story as any).title,
+        (story as any).summary,
+        (story as any).content,
+      )
+      if (check.requiresAnonymity) {
+        console.log(`Anonymity guard: skipping automated illustration for story ${storyId} (matched "${check.matched}")`)
+        return new Response(
+          JSON.stringify({
+            success: true,
+            skipped: true,
+            reason: 'anonymity_protected',
+            message: 'Automated illustration skipped: sexual-offence stories require victim anonymity.',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
     
     // Fetch topic's illustration_style, primary color, and landmarks
     let illustrationStyle: IllustrationStyle = 'editorial_illustrative' // default
