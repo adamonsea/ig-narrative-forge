@@ -164,7 +164,8 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           dryRun: true,
-          eligibleStories: eligibleStories || [],
+          eligibleStories: filteredStories,
+          anonymitySkipped,
           topicsScanned: topicsToProcess.length,
           ageFilterDays: 7,
         }),
@@ -191,7 +192,7 @@ Deno.serve(async (req) => {
     let failureCount = 0;
 
     // Generate illustrations for each eligible story
-    for (const story of eligibleStories || []) {
+    for (const story of filteredStories) {
       try {
         console.log(`Generating illustration for story ${story.id} (score: ${story.quality_score})`);
 
