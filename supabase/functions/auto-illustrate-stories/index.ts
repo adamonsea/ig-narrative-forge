@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     
     let query = supabase
       .from('stories')
-      .select('id, title, quality_score, created_at, topic_article_id, is_parliamentary, topic_articles!inner(topic_id)')
+      .select('id, title, summary, content, quality_score, created_at, topic_article_id, is_parliamentary, topic_articles!inner(topic_id)')
       .is('cover_illustration_url', null)
       .in('status', ['ready', 'published'])
       .neq('is_parliamentary', true)
@@ -145,6 +145,19 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Found ${eligibleStories?.length || 0} eligible stories for illustration across ${topicsToProcess.length} topic(s)`);
+
+    // Editorial anonymity guard: sexual-offence victims have lifelong anonymity,
+    // so these stories must never receive an auto-generated image. Hold them for
+    // manual review instead of illustrating.
+    const filteredStories = (eligibleStories || []).filter((story: any) => {
+      const check = checkAnonymity(story.title, story.summary, story.content);
+      if (check.requiresAnonymity) {
+        console.log(`Skipping story ${story.id} — anonymity-protected topic (matched "${check.matched}")`);
+        return false;
+      }
+      return true;
+    });
+    const anonymitySkipped = (eligibleStories?.length || 0) - filteredStories.length;
 
     if (dryRun) {
       return new Response(
