@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { checkAnonymity } from '../_shared/anonymity-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
