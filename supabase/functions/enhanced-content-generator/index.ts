@@ -1255,7 +1255,8 @@ Return in JSON format:
             storyId,
             model: 'gpt-image-1.5-low', // Quick tier - 2 credits
             forceRegenerate: true,
-            skipExistingImages: false
+            skipExistingImages: false,
+            isAutomated: autoSimplifyEnabled // anonymity guard: block auto images for sexual-offence stories
           })
         }
       );
