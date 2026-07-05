@@ -8,6 +8,7 @@ import {
   buildIllustrativePrompt, 
   buildPhotographicPrompt 
 } from '../_shared/prompt-helpers.ts'
+import { checkAnonymity } from '../_shared/anonymity-guard.ts'
 
 /**
  * Generate context-aware animation suggestions using GPT-4o-mini
