@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { checkAnonymity } from '../_shared/anonymity-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
     
     let query = supabase
       .from('stories')
-      .select('id, title, quality_score, created_at, topic_article_id, is_parliamentary, topic_articles!inner(topic_id)')
+      .select('id, title, summary, content, quality_score, created_at, topic_article_id, is_parliamentary, topic_articles!inner(topic_id)')
       .is('cover_illustration_url', null)
       .in('status', ['ready', 'published'])
       .neq('is_parliamentary', true)
@@ -145,12 +146,26 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${eligibleStories?.length || 0} eligible stories for illustration across ${topicsToProcess.length} topic(s)`);
 
+    // Editorial anonymity guard: sexual-offence victims have lifelong anonymity,
+    // so these stories must never receive an auto-generated image. Hold them for
+    // manual review instead of illustrating.
+    const filteredStories = (eligibleStories || []).filter((story: any) => {
+      const check = checkAnonymity(story.title, story.summary, story.content);
+      if (check.requiresAnonymity) {
+        console.log(`Skipping story ${story.id} — anonymity-protected topic (matched "${check.matched}")`);
+        return false;
+      }
+      return true;
+    });
+    const anonymitySkipped = (eligibleStories?.length || 0) - filteredStories.length;
+
     if (dryRun) {
       return new Response(
         JSON.stringify({
           success: true,
           dryRun: true,
-          eligibleStories: eligibleStories || [],
+          eligibleStories: filteredStories,
+          anonymitySkipped,
           topicsScanned: topicsToProcess.length,
           ageFilterDays: 7,
         }),
@@ -177,7 +192,7 @@ Deno.serve(async (req) => {
     let failureCount = 0;
 
     // Generate illustrations for each eligible story
-    for (const story of eligibleStories || []) {
+    for (const story of filteredStories) {
       try {
         console.log(`Generating illustration for story ${story.id} (score: ${story.quality_score})`);
 
@@ -230,6 +245,7 @@ Deno.serve(async (req) => {
         topicId: topicId || 'all_holiday_topics',
         topicsScanned: topicsToProcess.length,
         eligibleStories: eligibleStories?.length || 0,
+        anonymitySkipped,
         successCount,
         failureCount,
         ageFilterDays: 7,
@@ -242,6 +258,7 @@ Deno.serve(async (req) => {
         success: true,
         topicsScanned: topicsToProcess.length,
         eligibleStories: eligibleStories?.length || 0,
+        anonymitySkipped,
         successCount,
         failureCount,
         results,
