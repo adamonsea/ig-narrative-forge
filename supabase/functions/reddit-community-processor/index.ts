@@ -583,7 +583,7 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-v4-flash',
           messages: [{ role: 'user', content: keywordPrompt }],
           max_tokens: 700,
           temperature: 0.3
@@ -596,7 +596,7 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-v4-flash',
           messages: [{ role: 'user', content: insightsPrompt }],
           max_tokens: 500,
           temperature: 0.3
