@@ -348,8 +348,12 @@ Deno.serve(async (req) => {
           });
 
         if (insertError) {
-          console.error(`  ❌ Error queueing article ${article.id}:`, insertError);
-          continue;
+          // 23505 = an active queue job already exists for this article; safe to skip
+          if ((insertError as any).code !== '23505') {
+            console.error(`  ❌ Error queueing article ${article.id}:`, insertError);
+            continue;
+          }
+          console.log(`  ↩︎ Article ${article.id} already has an active queue job — skipping`);
         }
 
         // Mark topic_article as processed

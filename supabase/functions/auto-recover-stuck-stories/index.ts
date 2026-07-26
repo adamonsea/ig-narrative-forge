@@ -104,15 +104,17 @@ serve(async (req) => {
           created_at: new Date().toISOString()
         }));
 
-        const { error: queueError } = await supabase
-          .from('content_generation_queue')
-          .insert(reQueueData);
-
-        if (queueError) {
-          console.error('❌ Error re-queuing stories:', queueError);
-        } else {
-          console.log(`✅ Re-queued ${stuckStories.length} stories for processing`);
+        // Insert one-by-one so unique-conflict on a single article (23505 —
+        // already has an active job) doesn't abort the whole batch.
+        let requeued = 0;
+        let skippedDup = 0;
+        for (const row of reQueueData) {
+          const { error: qErr } = await supabase.from('content_generation_queue').insert(row);
+          if (!qErr) requeued++;
+          else if ((qErr as any).code === '23505') skippedDup++;
+          else console.error('❌ Error re-queuing story:', qErr);
         }
+        console.log(`✅ Re-queued ${requeued} stories (${skippedDup} already queued, skipped)`);
       }
     } else {
       console.log('✨ No stuck stories found');

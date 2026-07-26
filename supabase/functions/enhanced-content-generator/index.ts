@@ -146,22 +146,15 @@ serve(async (req) => {
         .update({ status: 'draft', updated_at: new Date().toISOString() })
         .in('id', stuckStories.map(s => s.id));
       
-      // Re-queue them
+      // Re-queue them — idempotent: 23505 means an active job already exists
       for (const story of stuckStories) {
-        if (story.article_id) {
-          await supabase.from('content_generation_queue')
-            .insert({ 
-              article_id: story.article_id, 
-              status: 'pending',
-              created_at: new Date().toISOString()
-            });
-        } else if (story.topic_article_id) {
-          await supabase.from('content_generation_queue')
-            .insert({ 
-              topic_article_id: story.topic_article_id,
-              status: 'pending',
-              created_at: new Date().toISOString()
-            });
+        const payload: any = { status: 'pending', created_at: new Date().toISOString() };
+        if (story.article_id) payload.article_id = story.article_id;
+        else if (story.topic_article_id) payload.topic_article_id = story.topic_article_id;
+        else continue;
+        const { error: reqErr } = await supabase.from('content_generation_queue').insert(payload);
+        if (reqErr && (reqErr as any).code !== '23505') {
+          console.warn('⚠️ Re-queue insert failed (non-dup):', reqErr);
         }
       }
       
@@ -1178,10 +1171,33 @@ Return in JSON format:
         .single();
 
       if (storyError || !newStory) {
-        throw new Error(`Failed to create story: ${storyError?.message || 'unknown error'}`);
+        // Race: another worker created the story for the same article between
+        // our lookup and insert. Re-fetch and reuse instead of duplicating.
+        if ((storyError as any)?.code === '23505') {
+          console.warn('⚠️ Story insert hit unique conflict — reusing existing story to keep slide generation idempotent');
+          let recovered: any = null;
+          if (isMultiTenant && topicArticleId) {
+            const { data } = await supabase
+              .from('stories').select('id').eq('topic_article_id', topicArticleId).maybeSingle();
+            recovered = data;
+          }
+          if (!recovered && articleId) {
+            const { data } = await supabase
+              .from('stories').select('id').eq('article_id', articleId).maybeSingle();
+            recovered = data;
+          }
+          if (!recovered?.id) {
+            throw new Error(`Story unique conflict but no existing row found: ${storyError?.message}`);
+          }
+          storyId = recovered.id;
+          console.log(`♻️ Recovered existing story ${storyId} after race`);
+        } else {
+          throw new Error(`Failed to create story: ${storyError?.message || 'unknown error'}`);
+        }
+      } else {
+        storyId = newStory.id;
+        console.log(`📖 Created ${isMultiTenant ? 'multi-tenant' : 'legacy'} story with ID: ${storyId}`);
       }
-      storyId = newStory.id;
-      console.log(`📖 Created ${isMultiTenant ? 'multi-tenant' : 'legacy'} story with ID: ${storyId}`);
     }
 
     // Replace slides atomically (delete then insert)
