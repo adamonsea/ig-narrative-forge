@@ -381,8 +381,20 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   try {
                     const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
                     if (error) throw error;
-                    toast({ title: "Recovery Triggered", description: `Recovered ${data?.totalRecovered || 0} stuck items` });
+                    const recovered = data?.totalRecovered || 0;
+                    const processed = data?.processedNow || 0;
+                    toast({
+                      title: recovered ? "Processing stuck items…" : "Nothing to recover",
+                      description: recovered
+                        ? `Requeued ${recovered} · processed ${processed} now. Watch the Published tab.`
+                        : "No stuck items were found.",
+                    });
                     refreshContent();
+                    // Poll a few times so the user sees items drain live.
+                    for (let i = 0; i < 6; i++) {
+                      await new Promise((r) => setTimeout(r, 5000));
+                      refreshContent();
+                    }
                   } catch (error) {
                     toast({ title: "Recovery Failed", description: error instanceof Error ? error.message : "Failed to recover stuck items", variant: "destructive" });
                   }
