@@ -246,7 +246,7 @@ async function tryUrlRecovery(failedUrl: string, source: any, apiKey: string): P
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         messages: [
           {
             role: 'user',
@@ -376,7 +376,7 @@ async function tryAIContentExtraction(url: string, source: any, region?: string,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         messages: [
           {
             role: 'user',

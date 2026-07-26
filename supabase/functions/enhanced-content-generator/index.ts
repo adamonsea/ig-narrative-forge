@@ -489,7 +489,7 @@ OUTPUT FORMAT (JSON):
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-v4-flash',
           messages: [
             {
               role: 'system',
@@ -604,7 +604,7 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'deepseek-chat',
+            model: 'deepseek-v4-flash',
             messages: [
               { role: 'system', content: 'You are a precise JSON generator. Output valid JSON only.' },
               { role: 'user', content: repairPrompt }
@@ -687,7 +687,7 @@ Return in JSON format:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-v4-flash',
           messages: [
             {
               role: 'system',

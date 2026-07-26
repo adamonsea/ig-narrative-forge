@@ -175,7 +175,7 @@ Focus on expanding and building upon what has already been successful rather tha
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         messages: [
           {
             role: 'system',

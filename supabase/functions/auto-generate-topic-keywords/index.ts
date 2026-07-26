@@ -125,7 +125,7 @@ Ensure:
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'deepseek-chat',
+            model: 'deepseek-v4-flash',
             messages: [
               { role: 'system', content: 'You are a keyword generation expert. Return only valid JSON.' },
               { role: 'user', content: prompt }
