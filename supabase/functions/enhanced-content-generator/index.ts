@@ -54,6 +54,48 @@ const expertiseGuidance: Record<string, string> = {
 
 const getGuidance = (map: Record<string, string>, key: string, fallback: string) => map[key] || fallback;
 
+// DeepSeek call with automatic fallback: deepseek-v4-flash → deepseek-v4-pro on HTTP 400.
+// Flash is the cheap default; pro is the higher-capability, more expensive backup used only
+// when the request is rejected by flash (e.g. context/quality-related 400s).
+async function deepseekChatWithFallback(
+  apiKey: string,
+  body: Record<string, any>,
+  context: string = 'deepseek'
+): Promise<Response> {
+  const primaryModel = body.model ?? 'deepseek-v4-flash';
+  const fallbackModel = 'deepseek-v4-pro';
+  const url = 'https://api.deepseek.com/chat/completions';
+  const headers = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+
+  const firstResp = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ ...body, model: primaryModel }),
+  });
+
+  if (firstResp.status !== 400 || primaryModel === fallbackModel) {
+    return firstResp;
+  }
+
+  // Peek at the error so we log why we fell back, but preserve body for the caller if needed.
+  let errSnippet = '';
+  try {
+    errSnippet = (await firstResp.clone().text()).slice(0, 500);
+  } catch { /* ignore */ }
+  console.warn(
+    `⚠️ [${context}] DeepSeek ${primaryModel} returned 400 — retrying with ${fallbackModel}. Detail: ${errSnippet}`
+  );
+
+  return await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ ...body, model: fallbackModel }),
+  });
+}
+
 interface PromptTemplate {
   id: string;
   template_name: string;
