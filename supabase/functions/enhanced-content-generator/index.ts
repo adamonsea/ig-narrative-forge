@@ -1171,10 +1171,33 @@ Return in JSON format:
         .single();
 
       if (storyError || !newStory) {
-        throw new Error(`Failed to create story: ${storyError?.message || 'unknown error'}`);
+        // Race: another worker created the story for the same article between
+        // our lookup and insert. Re-fetch and reuse instead of duplicating.
+        if ((storyError as any)?.code === '23505') {
+          console.warn('⚠️ Story insert hit unique conflict — reusing existing story to keep slide generation idempotent');
+          let recovered: any = null;
+          if (isMultiTenant && topicArticleId) {
+            const { data } = await supabase
+              .from('stories').select('id').eq('topic_article_id', topicArticleId).maybeSingle();
+            recovered = data;
+          }
+          if (!recovered && articleId) {
+            const { data } = await supabase
+              .from('stories').select('id').eq('article_id', articleId).maybeSingle();
+            recovered = data;
+          }
+          if (!recovered?.id) {
+            throw new Error(`Story unique conflict but no existing row found: ${storyError?.message}`);
+          }
+          storyId = recovered.id;
+          console.log(`♻️ Recovered existing story ${storyId} after race`);
+        } else {
+          throw new Error(`Failed to create story: ${storyError?.message || 'unknown error'}`);
+        }
+      } else {
+        storyId = newStory.id;
+        console.log(`📖 Created ${isMultiTenant ? 'multi-tenant' : 'legacy'} story with ID: ${storyId}`);
       }
-      storyId = newStory.id;
-      console.log(`📖 Created ${isMultiTenant ? 'multi-tenant' : 'legacy'} story with ID: ${storyId}`);
     }
 
     // Replace slides atomically (delete then insert)
