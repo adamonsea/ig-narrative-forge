@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCw, PlayCircle, RotateCcw } from 'lucide-react';
+import { RefreshCw, PlayCircle, RotateCcw, Zap } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface QueueStats {
   pending: number;
@@ -18,7 +20,53 @@ export function QueueManager() {
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [regions, setRegions] = useState<string[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState<string>('all');
+  const [isRetriggering, setIsRetriggering] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('topics')
+        .select('region')
+        .not('region', 'is', null);
+      const uniq = Array.from(
+        new Set((data || []).map((r: any) => (r.region || '').trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+      setRegions(uniq);
+    })();
+  }, []);
+
+  const retriggerRegion = async () => {
+    setIsRetriggering(true);
+    try {
+      const payload: Record<string, unknown> = { manual: true };
+      if (selectedRegion && selectedRegion !== 'all') payload.region = selectedRegion;
+
+      const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories', {
+        body: payload,
+      });
+      if (error) throw error;
+
+      const total = data?.totalRecovered ?? 0;
+      const processed = data?.processedNow ?? 0;
+      toast({
+        title: 'Retrigger started',
+        description: `${selectedRegion === 'all' ? 'All regions' : selectedRegion}: reset ${total} jobs, processed ${processed} now.`,
+      });
+      setTimeout(loadStats, 2000);
+    } catch (err: any) {
+      console.error('Retrigger failed:', err);
+      toast({
+        title: 'Retrigger failed',
+        description: err?.message || 'Could not retrigger the queue',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRetriggering(false);
+    }
+  };
 
   const loadStats = async () => {
     setIsLoading(true);
@@ -176,6 +224,35 @@ export function QueueManager() {
               {isResetting ? 'Resetting...' : 'Reset Failed'}
             </Button>
           )}
+        </div>
+
+        <div className="border-t pt-4 space-y-2">
+          <div className="text-sm font-medium">Retrigger stuck jobs by region</div>
+          <div className="text-xs text-muted-foreground">
+            Resets pending/processing/failed jobs to pending and immediately runs the processor.
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Select region" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All regions</SelectItem>
+                {regions.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={retriggerRegion}
+              disabled={isRetriggering}
+              variant="secondary"
+              className="flex items-center gap-2"
+            >
+              <Zap className={`h-4 w-4 ${isRetriggering ? 'animate-pulse' : ''}`} />
+              {isRetriggering ? 'Retriggering...' : 'Retrigger'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

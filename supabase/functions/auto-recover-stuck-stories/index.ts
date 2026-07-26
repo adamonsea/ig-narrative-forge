@@ -16,17 +16,64 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Optional scoping / manual retrigger controls
+    let body: any = {};
+    if (req.method === 'POST') {
+      try { body = await req.json(); } catch { body = {}; }
+    }
+    const region: string | undefined = body?.region?.trim() || undefined;
+    const topicId: string | undefined = body?.topicId || undefined;
+    const manual: boolean = body?.manual === true || !!region || !!topicId;
+
+    // In manual mode we ignore the 10-minute "stuck" cutoff and requeue
+    // anything not currently completed/processing successfully.
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    
-    console.log('🔄 Auto-recovery started at:', new Date().toISOString());
-    console.log('🕐 Looking for stories/queue items stuck before:', tenMinutesAgo);
+    const cutoff = manual ? new Date().toISOString() : tenMinutesAgo;
+
+    // Resolve topic scope from region if provided
+    let scopedTopicIds: string[] | null = null;
+    if (topicId) {
+      scopedTopicIds = [topicId];
+    } else if (region) {
+      const { data: topicsInRegion, error: topicsErr } = await supabase
+        .from('topics')
+        .select('id')
+        .ilike('region', region);
+      if (topicsErr) console.error('❌ Error resolving region topics:', topicsErr);
+      scopedTopicIds = (topicsInRegion || []).map((t: any) => t.id);
+      if (!scopedTopicIds.length) {
+        return new Response(
+          JSON.stringify({ success: true, note: `No topics found for region "${region}"`, totalRecovered: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // If scoped, resolve topic_article_ids belonging to those topics
+    let scopedTopicArticleIds: string[] | null = null;
+    if (scopedTopicIds) {
+      const { data: tas, error: taErr } = await supabase
+        .from('topic_articles')
+        .select('id')
+        .in('topic_id', scopedTopicIds);
+      if (taErr) console.error('❌ Error resolving topic_articles:', taErr);
+      scopedTopicArticleIds = (tas || []).map((r: any) => r.id);
+    }
+
+    console.log('🔄 Recovery started', { manual, region, topicId, scopedTopicArticleIds: scopedTopicArticleIds?.length });
 
     // === PART 1: Recover Stuck Stories ===
-    const { data: stuckStories, error: storiesError } = await supabase
+    let storiesQuery = supabase
       .from('stories')
       .select('id, article_id, topic_article_id, title, status, updated_at')
       .eq('status', 'processing')
-      .lt('updated_at', tenMinutesAgo);
+      .lt('updated_at', cutoff);
+    if (scopedTopicArticleIds) {
+      storiesQuery = scopedTopicArticleIds.length
+        ? storiesQuery.in('topic_article_id', scopedTopicArticleIds)
+        : storiesQuery.eq('id', '00000000-0000-0000-0000-000000000000');
+    }
+    const { data: stuckStories, error: storiesError } = await storiesQuery;
 
     if (storiesError) {
       console.error('❌ Error finding stuck stories:', storiesError);
@@ -72,13 +119,24 @@ serve(async (req) => {
     }
 
     // === PART 2: Recover Stuck Queue Items ===
-    const { data: stuckQueue, error: queueError } = await supabase
+    let queueSelect = supabase
       .from('content_generation_queue')
-      .select('id, article_id, topic_article_id, status, started_at')
-      .or(
+      .select('id, article_id, topic_article_id, status, started_at');
+    if (manual) {
+      // In manual mode, requeue anything not completed (pending stuck, processing, failed).
+      queueSelect = queueSelect.in('status', ['pending', 'processing', 'failed']);
+    } else {
+      queueSelect = queueSelect.or(
         `and(status.eq.processing,started_at.lt.${tenMinutesAgo}),` +
         `and(status.eq.pending,attempts.gte.3)`
       );
+    }
+    if (scopedTopicArticleIds) {
+      queueSelect = scopedTopicArticleIds.length
+        ? queueSelect.in('topic_article_id', scopedTopicArticleIds)
+        : queueSelect.eq('id', '00000000-0000-0000-0000-000000000000');
+    }
+    const { data: stuckQueue, error: queueError } = await queueSelect;
 
     if (queueError) {
       console.error('❌ Error finding stuck queue items:', queueError);
