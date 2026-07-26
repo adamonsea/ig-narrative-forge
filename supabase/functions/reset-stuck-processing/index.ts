@@ -78,12 +78,12 @@ serve(async (req) => {
           slidetype: 'tabloid'
         }));
 
-        const { error: queueError } = await supabase
-          .from('content_generation_queue')
-          .insert(queueJobs);
-
-        if (queueError) {
-          console.error('Failed to create queue jobs:', queueError.message);
+        // Insert per-row so an existing active job (23505) doesn't abort the batch
+        for (const row of queueJobs) {
+          const { error: qErr } = await supabase.from('content_generation_queue').insert(row);
+          if (qErr && (qErr as any).code !== '23505') {
+            console.error('Failed to create queue job:', qErr.message);
+          }
         }
 
         result = {
