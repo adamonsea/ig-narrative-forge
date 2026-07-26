@@ -146,22 +146,15 @@ serve(async (req) => {
         .update({ status: 'draft', updated_at: new Date().toISOString() })
         .in('id', stuckStories.map(s => s.id));
       
-      // Re-queue them
+      // Re-queue them — idempotent: 23505 means an active job already exists
       for (const story of stuckStories) {
-        if (story.article_id) {
-          await supabase.from('content_generation_queue')
-            .insert({ 
-              article_id: story.article_id, 
-              status: 'pending',
-              created_at: new Date().toISOString()
-            });
-        } else if (story.topic_article_id) {
-          await supabase.from('content_generation_queue')
-            .insert({ 
-              topic_article_id: story.topic_article_id,
-              status: 'pending',
-              created_at: new Date().toISOString()
-            });
+        const payload: any = { status: 'pending', created_at: new Date().toISOString() };
+        if (story.article_id) payload.article_id = story.article_id;
+        else if (story.topic_article_id) payload.topic_article_id = story.topic_article_id;
+        else continue;
+        const { error: reqErr } = await supabase.from('content_generation_queue').insert(payload);
+        if (reqErr && (reqErr as any).code !== '23505') {
+          console.warn('⚠️ Re-queue insert failed (non-dup):', reqErr);
         }
       }
       
