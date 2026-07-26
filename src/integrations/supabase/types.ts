@@ -1736,6 +1736,30 @@ export type Database = {
         }
         Relationships: []
       }
+      queue_alert_log: {
+        Row: {
+          alert_key: string
+          created_at: string
+          id: string
+          job_id: string | null
+          last_notified_at: string
+        }
+        Insert: {
+          alert_key: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          last_notified_at?: string
+        }
+        Update: {
+          alert_key?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          last_notified_at?: string
+        }
+        Relationships: []
+      }
       quiz_questions: {
         Row: {
           category: string | null
