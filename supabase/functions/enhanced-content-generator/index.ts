@@ -524,28 +524,18 @@ OUTPUT FORMAT (JSON):
 
       const maxTokens = slideCount >= 12 ? 3600 : slideCount >= 8 ? 2600 : 2000;
 
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek-v4-flash',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: maxTokens
-        })
-      });
+      const response = await deepseekChatWithFallback(apiKey, {
+        model: 'deepseek-v4-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokens,
+      }, 'slide-generation');
 
       if (!response.ok) {
         throw new Error(`DeepSeek API error: ${response.status}`);
@@ -639,22 +629,15 @@ Here is your partial prior output (use it as the starting point):
 ${JSON.stringify({ slides: normalized }, null, 2)}
 `;
 
-        const repairResp = await fetch('https://api.deepseek.com/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'deepseek-v4-flash',
-            messages: [
-              { role: 'system', content: 'You are a precise JSON generator. Output valid JSON only.' },
-              { role: 'user', content: repairPrompt }
-            ],
-            temperature: 0.3,
-            max_tokens: slideCount >= 12 ? 3600 : slideCount >= 8 ? 2600 : 2000
-          })
-        });
+        const repairResp = await deepseekChatWithFallback(apiKey, {
+          model: 'deepseek-v4-flash',
+          messages: [
+            { role: 'system', content: 'You are a precise JSON generator. Output valid JSON only.' },
+            { role: 'user', content: repairPrompt }
+          ],
+          temperature: 0.3,
+          max_tokens: slideCount >= 12 ? 3600 : slideCount >= 8 ? 2600 : 2000,
+        }, 'slide-repair');
 
         if (repairResp.ok) {
           const repairData = await repairResp.json();
@@ -722,28 +705,18 @@ Return in JSON format:
 }`;
 
     try {
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek-v4-flash',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a web content expert. Create engaging captions and hashtags appropriate for web feed sharing.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1000
-        })
-      });
+      const response = await deepseekChatWithFallback(apiKey, {
+        model: 'deepseek-v4-flash',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a web content expert. Create engaging captions and hashtags appropriate for web feed sharing.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      }, 'post-copy');
 
       if (!response.ok) {
         throw new Error(`DeepSeek API error: ${response.status}`);
