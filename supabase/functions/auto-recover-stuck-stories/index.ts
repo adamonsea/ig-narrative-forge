@@ -75,9 +75,10 @@ serve(async (req) => {
     const { data: stuckQueue, error: queueError } = await supabase
       .from('content_generation_queue')
       .select('id, article_id, topic_article_id, status, started_at')
-      .eq('status', 'processing')
-      .not('started_at', 'is', null)
-      .lt('started_at', tenMinutesAgo);
+      .or(
+        `and(status.eq.processing,started_at.lt.${tenMinutesAgo}),` +
+        `and(status.eq.pending,attempts.gte.3)`
+      );
 
     if (queueError) {
       console.error('❌ Error finding stuck queue items:', queueError);
@@ -91,7 +92,8 @@ serve(async (req) => {
         .update({ 
           status: 'pending',
           started_at: null,
-          attempts: 0 // Reset attempts to give it a fresh start
+          attempts: 0, // Reset attempts to give it a fresh start
+          error_message: null
         })
         .in('id', stuckQueue.map(q => q.id));
 
@@ -104,11 +106,37 @@ serve(async (req) => {
       console.log('✨ No stuck queue items found');
     }
 
+    // Kick the processor immediately so the user sees progress right away.
+    // Process in a few passes since queue-processor handles 5 at a time.
+    const totalReset = (stuckStories?.length || 0) + (stuckQueue?.length || 0);
+    const passes = Math.min(6, Math.max(1, Math.ceil(totalReset / 5)));
+    let processed = 0;
+    for (let i = 0; i < passes; i++) {
+      try {
+        const { data: procData, error: procError } = await supabase.functions.invoke(
+          'queue-processor',
+          { body: {} }
+        );
+        if (procError) {
+          console.warn('⚠️ queue-processor invoke error on pass', i + 1, procError);
+          break;
+        }
+        const done = procData?.processed ?? procData?.jobsProcessed ?? 0;
+        processed += done;
+        console.log(`▶️ queue-processor pass ${i + 1}: processed=${done}`);
+        if (!done) break;
+      } catch (e) {
+        console.warn('⚠️ queue-processor invoke threw on pass', i + 1, e);
+        break;
+      }
+    }
+
     const summary = {
       timestamp: new Date().toISOString(),
       stuckStoriesRecovered: stuckStories?.length || 0,
       stuckQueueItemsRecovered: stuckQueue?.length || 0,
-      totalRecovered: (stuckStories?.length || 0) + (stuckQueue?.length || 0)
+      totalRecovered: totalReset,
+      processedNow: processed
     };
 
     console.log('📊 Auto-recovery summary:', summary);
