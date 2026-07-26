@@ -251,6 +251,9 @@ verify_jwt = false
 [functions.source-health-monitor]
 verify_jwt = false
 
+[functions.queue-alert-monitor]
+verify_jwt = false
+
 [functions.daily-content-monitor]
 verify_jwt = false
 
