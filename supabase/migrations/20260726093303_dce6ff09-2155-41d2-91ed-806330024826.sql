@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.get_story_reaction_counts_batch(p_story_ids uuid[], p_visitor_id text, p_user_id uuid);
