@@ -25,10 +25,14 @@ serve(async (req) => {
     const topicId: string | undefined = body?.topicId || undefined;
     const manual: boolean = body?.manual === true || !!region || !!topicId;
 
-    // In manual mode we ignore the 10-minute "stuck" cutoff and requeue
-    // anything not currently completed/processing successfully.
+    // Safety: never requeue work that may still be actively running.
+    // Auto mode uses the 10-minute stuck cutoff. Manual mode is more eager for
+    // pending/failed items (no age filter) but still refuses to touch anything
+    // that entered `processing` within the last 5 minutes — otherwise the
+    // retrigger can start a second concurrent generation for the same article.
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const cutoff = manual ? new Date().toISOString() : tenMinutesAgo;
+    const inFlightGuard = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const cutoff = manual ? inFlightGuard : tenMinutesAgo;
 
     // Resolve topic scope from region if provided
     let scopedTopicIds: string[] | null = null;
