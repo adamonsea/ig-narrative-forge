@@ -518,7 +518,8 @@ serve(async (req) => {
 
     // Analyze story tone, extract location details, and subject matter using shared helpers
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || ''
-    
+    const prepStart = Date.now()
+
     // Run tone analysis and location extraction in parallel
     const [storyTone, locationDetails] = await Promise.all([
       analyzeStoryTone(slides || [], OPENAI_API_KEY),
@@ -537,6 +538,17 @@ serve(async (req) => {
       story.title,
       locationDetails
     )
+
+    const prepMs = Date.now() - prepStart
+    console.log(`⏱️ Prompt pre-processing took ${prepMs}ms`)
+
+    // Kick off animation suggestions now so the call overlaps image generation
+    // instead of adding latency after it. Same call, same cost, awaited later.
+    const animationSuggestionsPromise = generateAnimationSuggestions(
+      subjectMatter,
+      story.title || story.headline || '',
+      OPENAI_API_KEY
+    ).catch(() => [] as string[])
 
     // Build appropriate prompt based on illustration style, passing region and location hint for place accuracy
     const illustrationPrompt = illustrationStyle === 'editorial_photographic'
