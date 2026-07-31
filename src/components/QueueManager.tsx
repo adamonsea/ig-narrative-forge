@@ -229,7 +229,8 @@ export function QueueManager() {
         <div className="border-t pt-4 space-y-2">
           <div className="text-sm font-medium">Retrigger stuck jobs by region</div>
           <div className="text-xs text-muted-foreground">
-            Resets pending/processing/failed jobs to pending and immediately runs the processor.
+            Resets pending and failed jobs to pending and immediately runs the processor.
+            Jobs that started processing in the last 5 minutes are left alone so they aren't generated twice.
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <Select value={selectedRegion} onValueChange={setSelectedRegion}>
