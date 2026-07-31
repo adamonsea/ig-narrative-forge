@@ -129,8 +129,15 @@ serve(async (req) => {
       .from('content_generation_queue')
       .select('id, article_id, topic_article_id, status, started_at');
     if (manual) {
-      // In manual mode, requeue anything not completed (pending stuck, processing, failed).
-      queueSelect = queueSelect.in('status', ['pending', 'processing', 'failed']);
+      // In manual mode, requeue pending/failed at any age, but only reset
+      // `processing` rows that have been in flight longer than the guard so we
+      // never double-run a job whose generator invocation is still live.
+      queueSelect = queueSelect.or(
+        `status.eq.pending,` +
+        `status.eq.failed,` +
+        `and(status.eq.processing,started_at.lt.${inFlightGuard}),` +
+        `and(status.eq.processing,started_at.is.null)`
+      );
     } else {
       queueSelect = queueSelect.or(
         `and(status.eq.processing,started_at.lt.${tenMinutesAgo}),` +
