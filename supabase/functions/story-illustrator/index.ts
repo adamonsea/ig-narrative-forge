@@ -1182,12 +1182,31 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
     const imageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/visuals/${fileName}`
 
-    // Generate AI-powered animation suggestions (non-blocking, cheap ~$0.00005)
-    const animationSuggestions = await generateAnimationSuggestions(
-      subjectMatter,
-      story.title || story.headline || '',
-      OPENAI_API_KEY
-    );
+    // Animation suggestions were started before image generation, so this
+    // usually resolves immediately (no added latency).
+    const animationSuggestions = await animationSuggestionsPromise;
+
+    // Record generation metrics (non-critical) so admin can see real cost/latency
+    try {
+      await supabase.from('image_generation_metrics').insert({
+        story_id: storyId,
+        topic_id: topicId ?? null,
+        model,
+        provider: actualServiceName,
+        quality: modelConfig.quality ?? null,
+        size: modelConfig.provider === 'openai' ? '1536x1024' : null,
+        is_automated: isAutomated,
+        used_fallback: usedFallback,
+        prep_ms: prepMs,
+        generation_ms: generationTime,
+        total_ms: prepMs + generationTime,
+        output_bytes: imageData.length,
+        credits: isSuperAdmin ? 0 : modelConfig.credits,
+        cost_usd: actualCostUsd,
+      })
+    } catch (metricsError) {
+      console.warn('Failed to log image generation metrics (non-critical):', metricsError)
+    }
 
     // Update story with illustration, animation suggestions (clearing any existing animation)
     const updateData: Record<string, any> = {
