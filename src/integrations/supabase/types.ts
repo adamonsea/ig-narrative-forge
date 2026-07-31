@@ -1295,6 +1295,63 @@ export type Database = {
         }
         Relationships: []
       }
+      image_generation_metrics: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          credits: number | null
+          generation_ms: number | null
+          id: string
+          is_automated: boolean
+          model: string
+          output_bytes: number | null
+          prep_ms: number | null
+          provider: string | null
+          quality: string | null
+          size: string | null
+          story_id: string | null
+          topic_id: string | null
+          total_ms: number | null
+          used_fallback: boolean
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          credits?: number | null
+          generation_ms?: number | null
+          id?: string
+          is_automated?: boolean
+          model: string
+          output_bytes?: number | null
+          prep_ms?: number | null
+          provider?: string | null
+          quality?: string | null
+          size?: string | null
+          story_id?: string | null
+          topic_id?: string | null
+          total_ms?: number | null
+          used_fallback?: boolean
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          credits?: number | null
+          generation_ms?: number | null
+          id?: string
+          is_automated?: boolean
+          model?: string
+          output_bytes?: number | null
+          prep_ms?: number | null
+          provider?: string | null
+          quality?: string | null
+          size?: string | null
+          story_id?: string | null
+          topic_id?: string | null
+          total_ms?: number | null
+          used_fallback?: boolean
+        }
+        Relationships: []
+      }
       image_generation_tests: {
         Row: {
           api_provider: string
