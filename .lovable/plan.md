@@ -1,66 +1,52 @@
-## What happened (plain English)
+# Scraping: observe-first, change-almost-nothing
 
-This was **not** a security fix and **not** something you specifically requested. It came from the **Scraping Intelligence System** — the feature that "learns" the best scrape method per domain. After one successful HTML scrape, that auto-learner silently wrote a domain profile that **turned RSS off forever** for that source, based on a single data point and no actual evidence that RSS was broken.
+Honest answer to your question: **no, I would not claim 100% confidence in the earlier list.** That list was an audit, not a safe change set. Several items on it (consolidating the seven scrapers, moving filters earlier, replacing the regex parser, switching schedulers) are exactly the class of change that has broken harvesting for you before. They touch the paths that decide *whether an article is seen at all*, and a regression there is silent — you don't get an error, you get fewer stories, and you notice days later.
 
-From June 19 onward the scraper "succeeded" every run while returning **0 articles** — no error, `success_rate: 100%`, no discards. A background process quietly broke ingestion and nothing raised an alarm. That's why it felt like it came out of nowhere.
+So this plan throws most of that out. The system works. We measure first, change last.
 
-So the honest framing: it wasn't one manual change cascading — it was an **autonomous self-configuring system making a bad permanent decision and failing silently.** Preventing recurrence is therefore as important as the fix itself.
+## Principle for this work
 
-## Root cause chain (confirmed in live logs)
+Nothing in Phase 1 may alter which articles are discovered, fetched, kept, or scored. If a change could plausibly reduce article counts, it does not belong in Phase 1.
 
-```text
-autoLearnDomainProfile writes  preferred:'html' + skip:['rss']   (1 success → permanent)
-  → next run: "Domain profile prefers html (skipping: rss)"
-  → "Skipping RSS feed discovery"                  ← the working path is disabled
-  → fast HTML index parser runs
-  → generic link pattern /(article|story|post)/    ← doesn't match these sites' slug URLs
-  → "Found 0 article links from index page"
-  → "Feed accessible but no new articles found"    ← logged as success
-```
+## Phase 1 — Instrumentation only (zero behaviour change)
 
-Evidence: `eastbournereporter.co.uk` profile was created **2026-06-19 14:01** — exactly when its feed went silent. `bournefreelive.co.uk` dropped the same day and will be re-validated against the broadened extractor / RSS path.
+The problem with the audit is that it's a list of theories. We don't know which theoretical gaps are costing you real articles. Before touching any scraping logic, make the pipeline legible.
 
-## The fix (4 parts)
+1. **Per-stage funnel logging.** For every scrape run, record: URLs discovered, URLs fetched, extractions succeeded, articles rejected by negative keyword, articles rejected by relevance threshold, articles stored. Written to existing `system_logs` — no new decision code, only counters around code that already runs.
+2. **Surface the funnel in the admin Source Health view.** You already have `SourceHealthMonitor.tsx` and `source_health_checks`. Add the funnel numbers per source so a source producing zero articles shows *which stage* dropped them.
+3. **Confirm, don't assume, the two open questions.** Read-only checks: does the cron path (`universal-topic-scraper`) apply negative keywords the way `topic-aware-scraper` does, and is `getAdaptiveStrategyHint` actually called anywhere. Both are code reads, no edits.
 
-**1. Clean up the poisoned data**
-Remove/repair the auto-generated `scraper_domain_profiles` rows carrying `skip:['rss']` + `preferred:'html'` so RSS is reconsidered immediately. Restores eastbournereporter and any siblings created the same way.
+Nothing here can reduce harvest. If Phase 1 shows the funnel is healthy across sources, we stop and do nothing else.
 
-**2. Stop the auto-learner from disabling the working path** (`universal-topic-scraper/index.ts`)
-`autoLearnDomainProfile` must no longer write `skip:['rss']` off a single success. A success on one method is **not** proof another method is broken. Record `preferred` as a *hint* only; never let learning subtract a discovery method.
+## Phase 2 — Only what the data justifies, one change at a time
 
-**3. Keep RSS as a fallback even when `html` is preferred** (`_shared/fast-track-scraper.ts`)
-A preferred/learned `html` strategy must never hard-block RSS. If HTML parsing yields 0 articles, RSS still runs as a fallback unless RSS has been *explicitly and repeatedly* proven empty.
+Each candidate below ships alone, behind a per-source or per-topic flag where possible, with the Phase 1 funnel as the before/after check. If article counts drop for any source, revert that one change without touching the others.
 
-**4. Make index link-extraction less brittle** (`_shared/fast-track-scraper.ts`)
-Broaden `extractArticleLinksFromIndex` so `uk_local` slug-style article URLs are detected (slug fallback like `regional_slug`), instead of only `/article|story|post/`.
+Ordered by lowest risk:
 
-## Making the plan foolproof — prevention (the part you asked for)
+- **Delete the fake residential-IP headers.** `X-Forwarded-For` spoofing cannot change your origin IP; this code has no effect on whether a fetch succeeds. Removing it is provably inert. Lowest-risk cleanup available.
+- **Reason-aware deactivation.** Today `auto-deactivate-failing-sources` kills a source on a blunt success-rate rule while `source-health-monitor` separately knows *why* it failed. Make deactivation respect the reason code — a `feed_404` should trigger feed re-discovery, not death. This makes the system *less* likely to lose sources, not more.
+- **Conditional GET (ETag / If-Modified-Since).** Purely a cost saving, but it changes fetch behaviour, so it goes one source at a time with a kill switch and the funnel watched.
 
-These changes ensure a silent self-inflicted outage like this can't recur unnoticed:
+## Explicitly not doing
 
-**A. "0 articles" is no longer a success.**
-A run that fetches a page successfully but extracts **0 article links across all methods** should be recorded as a *soft failure / health warning* on the source, not `success_rate: 100%`. This is the single most important guardrail — it makes the failure visible instead of silent.
+These stay off the table unless you ask, because the risk profile is wrong for a working system:
 
-**B. Auto-learning can only ADD capability, never REMOVE it.**
-Codify the rule: learning may set a `preferred` hint or add patterns, but may **never** populate a `skip` list that disables RSS/HTML discovery. Removing a method requires repeated, explicit proven-empty results — not one success.
+- Consolidating the seven scraper functions. High blast radius, no article-count upside.
+- Moving keyword filtering to the discovery stage. Saves money, but changes what gets fetched — the precise failure mode you described.
+- Replacing regex discovery with cheerio.
+- Picking one scheduler and migrating the others.
+- Headless browser fallback.
 
-**C. Stall detection on previously-stable sources.**
-A source with prior steady volume that drops to 0 for N consecutive runs gets flagged for review (surfaced in source status / audit), so a future regression is caught in days, not weeks.
+Each is defensible on its own; none is worth destabilising a functioning harvest.
 
-**D. Regression guard.**
-Add a focused test in `supabase/functions/.../*_test.ts` covering: (i) a learned `html` profile still falls back to RSS when HTML yields 0 links, and (ii) `extractArticleLinksFromIndex` returns links for a slug-style `uk_local` index page. This locks the behaviour so a later "intelligence" tweak can't silently reintroduce the bug.
+## Technical detail
 
-**E. Memory guardrail.**
-Update the Scraping Intelligence memory so future work never encodes `skip:['rss']` from a single success and treats "0 articles extracted" as a failure signal.
+- Funnel counters added around existing branches in `topic-aware-scraper/index.ts` (the filter loop at 168-242 already computes everything needed — it just doesn't persist the counts) and the equivalent path in `universal-topic-scraper/index.ts`.
+- Storage: existing `system_logs` via `dbOps.logSystemEvent`, plus new columns on `source_health_checks` for the per-stage counts.
+- Admin surface: extend `SourceHealthMonitor.tsx`; no new route.
+- Phase 2 items each get their own turn and their own revert point.
 
-## Verification
+## What I need from you
 
-After the changes:
-1. Force-rescrape `eastbournereporter.co.uk` and `bournefreelive.co.uk`.
-2. Confirm in edge-function logs that RSS/HTML now return article links and new rows land in `topic_articles`.
-3. Confirm a deliberately-empty extraction is now logged as a soft failure (guardrail A working).
-4. Spot-check a few other sources to confirm no profiles were over-pruned.
-
-## Risk / blast radius
-
-Low and contained. Changes only widen discovery (re-enable a fallback, broaden a URL pattern, downgrade a misleading "success") — they don't remove any currently-working path. The data cleanup is scoped to profiles matching the exact poison signature. Other sources keep their existing behaviour.
+Confirm Phase 1 only, and I'll build the instrumentation and report back with real numbers before proposing any behavioural change.
