@@ -355,7 +355,6 @@ export default function WaitlistWelcome() {
         <AnimatePresence mode="wait">
           {step === 0 && (
             <Screen
-              context="Curatr runs a live feed on a subject or place — and you can run as many as you like."
               question="What kind of feed would you run?"
               hint="Pick more than one if you'd run several."
             >
@@ -392,7 +391,6 @@ export default function WaitlistWelcome() {
 
           {step === 1 && (
             <Screen
-              context="Each feed can be public, or built for a specific audience."
               question="Who's it for?"
               hint="Pick as many as apply."
             >
@@ -412,7 +410,6 @@ export default function WaitlistWelcome() {
 
           {step === 2 && (
             <Screen
-              context="Curatr replaces the trawling, writing and image-making."
               question="What are you doing about it today?"
               hint="Pick as many as apply."
             >
@@ -432,7 +429,6 @@ export default function WaitlistWelcome() {
 
           {step === 3 && (
             <Screen
-              context="Curatr gathers local stories, rewrites them, and illustrates them daily."
               question="What made you sign up?"
               hint="Pick up to two."
             >
@@ -452,7 +448,6 @@ export default function WaitlistWelcome() {
 
           {step === 4 && (
             <Screen
-              context="Honest answers here shape what we build next."
               question="What would make this a no?"
               hint="Tap any that apply."
             >
@@ -490,7 +485,6 @@ export default function WaitlistWelcome() {
 
           {step === 5 && (
             <Screen
-              context="Plans aren't fixed yet — this genuinely sets the price."
               question="If it worked exactly as you hoped, what's it worth a month?"
               hint="Pick the closest band."
             >
@@ -510,7 +504,6 @@ export default function WaitlistWelcome() {
 
           {step === 6 && (
             <Screen
-              context="Last one, and it's optional."
               question="Anything you'd want it to do that we haven't mentioned?"
             >
               <Textarea
