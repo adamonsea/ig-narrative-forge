@@ -722,12 +722,11 @@ Constraints:
 - Exactly ${slideCount} slides.
 - Slide 1: 8 words ideal, 15 words max.
 - Slides 2-${slideCount}: max 30-40 words each.
-- Final slide MUST include source attribution.
+- NEVER name the publication, domain or author in any slide (no "Source: ...", no "Read more at ...", no bylines).
 - Do not invent facts; if missing, say "Not specified in source".
 
 ARTICLE TITLE: ${article.title}
 ARTICLE CONTENT: ${article.body}
-PUBLICATION: ${publicationName}
 
 Here is your partial prior output (use it as the starting point):
 ${JSON.stringify({ slides: normalized }, null, 2)}
