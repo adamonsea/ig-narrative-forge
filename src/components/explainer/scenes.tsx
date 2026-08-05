@@ -28,6 +28,9 @@ const useBeats = (beats: Array<[number, () => void]>) => {
  * Responsive scene unit. Derived from the larger viewport edge so portrait
  * phones get the same visual weight as landscape desktops.
  */
+const isPortrait = () =>
+  typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+
 export const useUnit = () => {
   const read = () => Math.max(window.innerWidth, window.innerHeight) * 0.0085;
   const [u, setU] = useState(() => (typeof window === 'undefined' ? 10 : read()));
@@ -100,6 +103,9 @@ const CLIPPINGS = [
 
 export const SceneProblem = ({ reduced, cue }: SceneProps) => {
   const u = useUnit();
+  const tall = isPortrait();
+  const sx = tall ? 0.42 : 1.05;
+  const sy = tall ? 1.75 : 0.85;
   useBeats([[200, () => cue('rustle')]]);
   return (
     <Stage>
@@ -107,15 +113,15 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
         {CLIPPINGS.map((c, i) => (
           <motion.div
             key={c.t}
-            className="absolute left-1/2 top-1/2 w-[calc(var(--u)*38)] max-w-[300px] -translate-x-1/2 -translate-y-1/2 px-[calc(var(--u)*2.4)] py-[calc(var(--u)*2)] shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
+            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*38),72vw)] max-w-[300px] -translate-x-1/2 -translate-y-1/2 px-[calc(var(--u)*2.4)] py-[calc(var(--u)*2)] shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
             style={{ background: PAPER, color: INK }}
             initial={{
-              x: c.x * 1.6 * u,
-              y: (c.y * 1.2 - 70) * u,
+              x: c.x * sx * 1.5 * u,
+              y: (c.y * sy - 70) * u,
               rotate: reduced ? c.r : c.r * 3,
               opacity: 0,
             }}
-            animate={{ x: c.x * 1.05 * u, y: c.y * 0.85 * u, rotate: reduced ? 0 : c.r, opacity: 1 }}
+            animate={{ x: c.x * sx * u, y: c.y * sy * u, rotate: reduced ? 0 : c.r, opacity: 1 }}
             transition={{
               duration: reduced ? 0.35 : 0.9,
               delay: reduced ? 0 : i * 0.22,
@@ -193,6 +199,7 @@ const SOURCES = ['Local paper', 'Council', 'Community blog', 'Radio', 'Listings'
 
 export const SceneSources = ({ reduced, cue }: SceneProps) => {
   const u = useUnit();
+  const tall = isPortrait();
   const [count, setCount] = useState(reduced ? 47 : 0);
 
   useEffect(() => {
@@ -220,11 +227,11 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
           return (
             <motion.div
               key={s}
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*3)] py-[calc(var(--u)*1.6)] text-[calc(var(--u)*2.2)] font-medium text-white/85"
+              className="absolute left-1/2 top-1/2 max-w-[46vw] -translate-x-1/2 -translate-y-1/2 truncate rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*3)] py-[calc(var(--u)*1.6)] text-[calc(var(--u)*2.2)] font-medium text-white/85"
               initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
               animate={{
-                x: Math.cos(angle) * u * (reduced ? 17 : 24),
-                y: Math.sin(angle) * u * (reduced ? 11 : 16),
+                x: Math.cos(angle) * u * (tall ? 12 : 24),
+                y: Math.sin(angle) * u * (tall ? 22 : 16),
                 opacity: 1,
                 scale: 1,
               }}
@@ -359,11 +366,14 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
   useBeats(
     DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
   );
+  const tall = isPortrait();
+  const dx = (tall ? 17 : 30) * u;
+  const dy = (tall ? 26 : 21) * u;
   const spots = [
-    { x: -30 * u, y: -21 * u },
-    { x: 30 * u, y: -21 * u },
-    { x: -30 * u, y: 21 * u },
-    { x: 30 * u, y: 21 * u },
+    { x: -dx, y: -dy },
+    { x: dx, y: -dy },
+    { x: -dx, y: dy },
+    { x: dx, y: dy },
   ];
   return (
     <Stage>
@@ -378,7 +388,7 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
         {DESTINATIONS.map((d, i) => (
           <motion.div
             key={d}
-            className="absolute left-1/2 top-1/2 w-[calc(var(--u)*30)] -translate-x-1/2 -translate-y-1/2 rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*2)] py-[calc(var(--u)*2)] text-center text-[calc(var(--u)*2.2)] font-medium text-white/90"
+            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*30),42vw)] -translate-x-1/2 -translate-y-1/2 rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*2)] py-[calc(var(--u)*2)] text-center text-[calc(var(--u)*2.2)] font-medium text-white/90"
             initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
             animate={{ x: spots[i].x, y: spots[i].y, opacity: 1, scale: 1 }}
             transition={{
