@@ -169,9 +169,20 @@ const Index = () => {
                   <Button
                     onClick={() => setExplainerOpen(true)}
                     size="lg"
-                    className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
+                    className="rounded-full pl-2 pr-7 h-14 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
                   >
-                    <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
+                    <span className="relative mr-3 inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-[hsl(214,50%,9%)]/20">
+                      <img
+                        src={presenterThumb.url}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center bg-[hsl(214,50%,9%)]/35">
+                        <Play className="h-4 w-4 fill-white text-white" aria-hidden="true" />
+                      </span>
+                    </span>
                     Introducing Curatr
                   </Button>
                 </motion.div>
