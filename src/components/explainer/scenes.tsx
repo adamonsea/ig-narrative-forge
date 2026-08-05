@@ -104,8 +104,8 @@ const CLIPPINGS = [
 export const SceneProblem = ({ reduced, cue }: SceneProps) => {
   const u = useUnit();
   const tall = isPortrait();
-  const sx = tall ? 0.3 : 1.05;
-  const sy = tall ? 1.0 : 0.85;
+  const sx = tall ? 0.2 : 1.05;
+  const sy = tall ? 0.85 : 0.85;
   useBeats([[200, () => cue('rustle')]]);
   return (
     <Stage>
@@ -113,7 +113,7 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
         {CLIPPINGS.map((c, i) => (
           <motion.div
             key={c.t}
-            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*38),66vw)] max-w-[300px] px-[calc(var(--u)*2.4)] py-[calc(var(--u)*2)] shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
+            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*38),58vw)] max-w-[300px] px-[calc(var(--u)*2.4)] py-[calc(var(--u)*2)] shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
             style={{ background: PAPER, color: INK, translate: '-50% -50%' }}
             initial={{
               x: c.x * sx * 1.5 * u,
