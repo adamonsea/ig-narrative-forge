@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { Check } from 'lucide-react';
+import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 
 const FN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/waitlist-questionnaire`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -142,6 +143,7 @@ export default function WaitlistWelcome() {
   const [submitting, setSubmitting] = useState(false);
   const [phase, setPhase] = useState<'statement' | 'question'>('statement');
   const [typed, setTyped] = useState(false);
+  const [explainerOpen, setExplainerOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -255,13 +257,25 @@ export default function WaitlistWelcome() {
             That's genuinely useful. We're inviting people in small batches — you'll get an email from us
             with your sign-in link when it's your turn.
           </p>
-          <Button asChild>
-            <Link to="/discover">See a live feed while you wait</Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button onClick={() => setExplainerOpen(true)}>Watch the 75-second tour</Button>
+            <Button asChild variant="outline">
+              <Link to="/discover">See a live feed while you wait</Link>
+            </Button>
+          </div>
           {isPreview && (
             <p className="text-xs text-muted-foreground">Preview run — this answer set is not counted.</p>
           )}
         </div>
+        <ExplainerOverlay
+          open={explainerOpen}
+          onClose={() => setExplainerOpen(false)}
+          endCta={
+            <Button asChild className="rounded-full px-6">
+              <Link to="/discover">See a live feed</Link>
+            </Button>
+          }
+        />
       </main>
     );
   }

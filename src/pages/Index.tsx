@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CookieConsent } from '@/components/CookieConsent';
 import { DemoOverlay } from '@/components/demo/DemoOverlay';
+import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 import { useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
@@ -13,6 +14,7 @@ import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 const Index = () => {
   const { user, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
+  const [explainerOpen, setExplainerOpen] = useState(false);
   usePageFavicon();
   const reduce = useReducedMotion();
 
@@ -129,6 +131,16 @@ const Index = () => {
                     className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
                   >
                     Try the demo
+                  </Button>
+                </motion.div>
+                <motion.div {...hoverLift}>
+                  <Button
+                    onClick={() => setExplainerOpen(true)}
+                    variant="ghost"
+                    size="lg"
+                    className="rounded-full px-8 h-12 text-base border-2 border-white/25 bg-transparent text-white hover:bg-white/10"
+                  >
+                    Watch the 75-second tour
                   </Button>
                 </motion.div>
               </motion.div>
@@ -308,6 +320,18 @@ const Index = () => {
 
           {/* Demo Overlay */}
           <DemoOverlay open={demoOpen} onClose={() => setDemoOpen(false)} />
+          <ExplainerOverlay
+            open={explainerOpen}
+            onClose={() => setExplainerOpen(false)}
+            endCta={
+              <Button
+                asChild
+                className="rounded-full bg-[hsl(155,100%,67%)] px-6 text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
+              >
+                <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
+              </Button>
+            }
+          />
 
           {/* Use Cases */}
           <motion.section
