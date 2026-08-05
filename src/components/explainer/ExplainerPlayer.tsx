@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Pause, Play, RotateCcw, SkipForward, Volume2, VolumeX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TIMELINE, TOTAL_MS } from './timeline';
+import { TIMELINE, TOTAL_MS, sceneDuration } from './timeline';
 import { haptic, playCue, type CueName } from './sfx';
 import { clipForScene } from './avatar';
 
@@ -26,13 +26,24 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
   const [muted, setMuted] = useState(false);
   const [finished, setFinished] = useState(false);
   const finishedRef = useRef(false);
+  /** True once this scene's presenter clip is actually rolling (or none exists). */
+  const [clipRolling, setClipRolling] = useState(false);
+  const tailTimer = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const scene = TIMELINE[index];
+  const avatarClipSrc = scene.avatarClip ?? clipForScene(scene.id) ?? avatarSrc;
+  const hasClip = !!avatarClipSrc;
+  const beatMs = sceneDuration(scene);
 
   const cue = useCallback((name: CueName) => playCue(name, muted), [muted]);
   const tap = useCallback((ms: number) => haptic(ms, !prefersReduced), [prefersReduced]);
 
   const goTo = useCallback((next: number) => {
+    if (tailTimer.current) {
+      window.clearTimeout(tailTimer.current);
+      tailTimer.current = null;
+    }
     if (next >= TIMELINE.length) {
       setFinished(true);
       setPlaying(false);
@@ -46,12 +57,22 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
     setElapsed(0);
   }, [onFinished]);
 
+  // Hold the beat clock until the presenter clip has begun, so buffering
+  // delays push the beat out rather than eating the end of the narration.
   useEffect(() => {
-    if (!playing || finished) return;
+    setClipRolling(!hasClip);
+    if (!hasClip) return;
+    // Failsafe: if the clip never reports playback, start the clock anyway.
+    const id = window.setTimeout(() => setClipRolling(true), 2500);
+    return () => window.clearTimeout(id);
+  }, [scene.id, hasClip]);
+
+  useEffect(() => {
+    if (!playing || finished || !clipRolling) return;
     const id = window.setInterval(() => {
       setElapsed((e) => {
         const next = e + TICK;
-        if (next >= scene.duration) {
+        if (next >= beatMs) {
           goTo(index + 1);
           return 0;
         }
@@ -59,7 +80,19 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
       });
     }, TICK);
     return () => window.clearInterval(id);
-  }, [playing, finished, scene.duration, index, goTo]);
+  }, [playing, finished, clipRolling, beatMs, index, goTo]);
+
+  useEffect(() => () => {
+    if (tailTimer.current) window.clearTimeout(tailTimer.current);
+  }, []);
+
+  // Keep the presenter clip in step with play/pause.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (playing) void v.play().catch(() => undefined);
+    else v.pause();
+  }, [playing, index]);
 
   const replay = () => {
     finishedRef.current = false;
@@ -82,12 +115,12 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
   }, [onClose]);
 
   const progress = useMemo(() => {
-    const before = TIMELINE.slice(0, index).reduce((s, x) => s + x.duration, 0);
+    const before = TIMELINE.slice(0, index).reduce((s, x) => s + sceneDuration(x), 0);
     return finished ? 100 : ((before + elapsed) / TOTAL_MS) * 100;
   }, [index, elapsed, finished]);
 
   const SceneComponent = scene.Component;
-  const avatarClip = scene.avatarClip ?? clipForScene(scene.id) ?? avatarSrc;
+  const avatarClip = avatarClipSrc;
 
   return (
     <div className="relative flex h-full w-full flex-col bg-[hsl(214,50%,7%)] text-white">
@@ -133,11 +166,20 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
         {avatarClip && !finished && (
           <video
             key={scene.id}
+            ref={videoRef}
             src={avatarClip}
             autoPlay
             muted={muted}
             playsInline
             aria-hidden="true"
+            onPlaying={() => setClipRolling(true)}
+            onEnded={() => {
+              if (!playing) return;
+              // Let the last syllable land before the crossfade.
+              if (tailTimer.current) window.clearTimeout(tailTimer.current);
+              tailTimer.current = window.setTimeout(() => goTo(index + 1), 400);
+            }}
+            onError={() => setClipRolling(true)}
             className="absolute bottom-[max(0.75rem,2.5vw)] right-[max(0.75rem,2.5vw)] h-[clamp(96px,17vw,220px)] w-[clamp(96px,17vw,220px)] rounded-full border-2 border-white/25 object-cover shadow-[0_2vmin_5vmin_rgba(0,0,0,0.5)]"
           />
         )}
