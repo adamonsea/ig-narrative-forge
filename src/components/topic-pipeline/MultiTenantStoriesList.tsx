@@ -8,6 +8,7 @@ import { StyleTooltip } from "@/components/ui/style-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/lib/creditService";
+import { edgeErrorMessage } from "@/lib/edgeError";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
