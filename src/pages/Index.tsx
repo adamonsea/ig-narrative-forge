@@ -171,22 +171,23 @@ const Index = () => {
                 </motion.div>
                 <motion.div {...hoverLift}>
                   <Button
+                    onClick={() => setExplainerOpen(true)}
+                    variant="ghost"
+                    size="lg"
+                    className="rounded-full px-8 h-12 text-base border-2 border-white/25 bg-transparent text-white hover:bg-white/10"
+                  >
+                    <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
+                    Introducing Curatr
+                  </Button>
+                </motion.div>
+                <motion.div {...hoverLift}>
+                  <Button
                     asChild
                     variant="ghost"
                     size="lg"
                     className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
                   >
                     <Link to="/feed/eastbourne">See a feed</Link>
-                  </Button>
-                </motion.div>
-                <motion.div {...hoverLift}>
-                  <Button
-                    onClick={() => setExplainerOpen(true)}
-                    variant="ghost"
-                    size="lg"
-                    className="rounded-full px-8 h-12 text-base border-2 border-white/25 bg-transparent text-white hover:bg-white/10"
-                  >
-                    Watch the 75-second tour
                   </Button>
                 </motion.div>
               </motion.div>
