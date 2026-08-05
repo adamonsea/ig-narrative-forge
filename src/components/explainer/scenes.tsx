@@ -99,6 +99,7 @@ const CLIPPINGS = [
 ];
 
 export const SceneProblem = ({ reduced, cue }: SceneProps) => {
+  const u = useUnit();
   useBeats([[200, () => cue('rustle')]]);
   return (
     <Stage>
@@ -109,12 +110,12 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
             className="absolute left-1/2 top-1/2 w-[calc(var(--u)*38)] max-w-[300px] -translate-x-1/2 -translate-y-1/2 px-[calc(var(--u)*2.4)] py-[calc(var(--u)*2)] shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
             style={{ background: PAPER, color: INK }}
             initial={{
-              x: `${c.x * 1.6}vmin`,
-              y: `${c.y * 1.2 - 70}vmin`,
+              x: c.x * 1.6 * u,
+              y: (c.y * 1.2 - 70) * u,
               rotate: reduced ? c.r : c.r * 3,
               opacity: 0,
             }}
-            animate={{ x: `${c.x * 1.05}vmin`, y: `${c.y * 0.85}vmin`, rotate: reduced ? 0 : c.r, opacity: 1 }}
+            animate={{ x: c.x * 1.05 * u, y: c.y * 0.85 * u, rotate: reduced ? 0 : c.r, opacity: 1 }}
             transition={{
               duration: reduced ? 0.35 : 0.9,
               delay: reduced ? 0 : i * 0.22,
@@ -191,6 +192,7 @@ export const SceneSubject = ({ reduced, cue, tap }: SceneProps) => {
 const SOURCES = ['Local paper', 'Council', 'Community blog', 'Radio', 'Listings'];
 
 export const SceneSources = ({ reduced, cue }: SceneProps) => {
+  const u = useUnit();
   const [count, setCount] = useState(reduced ? 47 : 0);
 
   useEffect(() => {
@@ -221,8 +223,8 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*3)] py-[calc(var(--u)*1.6)] text-[calc(var(--u)*2.2)] font-medium text-white/85"
               initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
               animate={{
-                x: Math.cos(angle) * (reduced ? 180 : 260),
-                y: Math.sin(angle) * (reduced ? 110 : 170),
+                x: Math.cos(angle) * u * (reduced ? 17 : 24),
+                y: Math.sin(angle) * u * (reduced ? 11 : 16),
                 opacity: 1,
                 scale: 1,
               }}
@@ -250,6 +252,7 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
 /* ---------------------------------------------------------------- 4. Filter */
 
 export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
+  const u = useUnit();
   useBeats([
     [1400, () => cue('thud')],
     [2000, () => { cue('thud'); tap(14); }],
@@ -263,7 +266,7 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
             className="absolute h-[calc(var(--u)*7)] w-[calc(var(--u)*22)] rounded-[calc(var(--u)*1.5)] border-[calc(var(--u)*0.4)] border-white/15 bg-white/[0.06]"
             style={{ left: `${4 + i * 18}%` }}
             initial={{ y: 0, opacity: 0.8 }}
-            animate={{ y: reduced ? 90 : 'calc(var(--u)*55)', opacity: 0 }}
+            animate={{ y: reduced ? 90 : u * 55, opacity: 0 }}
             transition={{ duration: reduced ? 0.4 : 1.7, delay: i * 0.16, ease: 'easeIn' }}
           />
         ))}
@@ -352,6 +355,7 @@ export const SceneWritten = ({ reduced, cue }: SceneProps) => {
 const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels'];
 
 export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
+  const u = useUnit();
   useBeats(
     DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
   );
