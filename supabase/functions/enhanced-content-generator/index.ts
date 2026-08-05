@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { stripGeneratedAttribution } from '../_shared/attribution-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -364,7 +365,7 @@ REQUIREMENTS:
 - Include visual prompts for each slide
 - Make it shareable and engaging for web readers
 - Include alt text for accessibility
-- Final slide should include source attribution
+- NEVER name the publication, website, domain or author in any slide. Attribution is added automatically from the real article URL, so writing it yourself risks mis-crediting. Do not write "Source: ...", "Read more at <site>", "By <name>", or any publication name.
 - CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
@@ -722,12 +723,11 @@ Constraints:
 - Exactly ${slideCount} slides.
 - Slide 1: 8 words ideal, 15 words max.
 - Slides 2-${slideCount}: max 30-40 words each.
-- Final slide MUST include source attribution.
+- NEVER name the publication, domain or author in any slide (no "Source: ...", no "Read more at ...", no bylines).
 - Do not invent facts; if missing, say "Not specified in source".
 
 ARTICLE TITLE: ${article.title}
 ARTICLE CONTENT: ${article.body}
-PUBLICATION: ${publicationName}
 
 Here is your partial prior output (use it as the starting point):
 ${JSON.stringify({ slides: normalized }, null, 2)}
@@ -774,7 +774,10 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
         }
       }
 
-      return normalized.slice(0, slideCount);
+      return normalized.slice(0, slideCount).map((s: any) => ({
+        ...s,
+        content: stripGeneratedAttribution(s.content || ''),
+      }));
 
       
     } catch (error) {
@@ -1252,6 +1255,16 @@ Return in JSON format:
         slide_type: finalSlideType,
         quality_score: article.content_quality_score,
         cover_illustration_url: article.image_url || null,
+        // Attribution must come from the real article, not the topic's source list
+        publication_name: (() => {
+          try {
+            const u = article.source_url || (article as any).canonical_url;
+            return u ? new URL(u).hostname.replace(/^www\./, '') : publicationName;
+          } catch {
+            return publicationName;
+          }
+        })(),
+        author: article.author && article.author !== 'contributor' ? article.author : null,
         // Lifecycle tracking
         simplified_at: new Date().toISOString(),
         is_auto_simplified: autoSimplifyEnabled, // Flag if automated
