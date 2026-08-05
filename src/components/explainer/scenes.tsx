@@ -104,8 +104,8 @@ const CLIPPINGS = [
 export const SceneProblem = ({ reduced, cue }: SceneProps) => {
   const u = useUnit();
   const tall = isPortrait();
-  const sx = tall ? 0.42 : 1.05;
-  const sy = tall ? 1.75 : 0.85;
+  const sx = tall ? 0.3 : 1.05;
+  const sy = tall ? 1.0 : 0.85;
   useBeats([[200, () => cue('rustle')]]);
   return (
     <Stage>
@@ -113,7 +113,7 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
         {CLIPPINGS.map((c, i) => (
           <motion.div
             key={c.t}
-            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*38),72vw)] max-w-[300px] -translate-x-1/2 -translate-y-1/2 px-[calc(var(--u)*2.4)] py-[calc(var(--u)*2)] shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
+            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*38),66vw)] max-w-[300px] -translate-x-1/2 -translate-y-1/2 px-[calc(var(--u)*2.4)] py-[calc(var(--u)*2)] shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
             style={{ background: PAPER, color: INK }}
             initial={{
               x: c.x * sx * 1.5 * u,
@@ -231,7 +231,7 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
               initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
               animate={{
                 x: Math.cos(angle) * u * (tall ? 12 : 24),
-                y: Math.sin(angle) * u * (tall ? 22 : 16),
+                y: Math.sin(angle) * u * (tall ? 18 : 16),
                 opacity: 1,
                 scale: 1,
               }}
@@ -368,7 +368,7 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
   );
   const tall = isPortrait();
   const dx = (tall ? 17 : 30) * u;
-  const dy = (tall ? 26 : 21) * u;
+  const dy = (tall ? 22 : 21) * u;
   const spots = [
     { x: -dx, y: -dy },
     { x: dx, y: -dy },
