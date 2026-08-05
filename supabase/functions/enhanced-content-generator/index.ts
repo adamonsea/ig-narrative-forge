@@ -579,8 +579,73 @@ OUTPUT FORMAT (JSON):
         return readContent(await resp.json(), 'slide-generation-openai');
       };
 
+      // Non-throwing parser. Handles complete JSON, bare arrays, and truncated
+      // responses (finish_reason=length) by salvaging whole slide objects.
+      const tryExtractSlides = (raw: string): any[] => {
+        if (!raw) return [];
+        const unwrap = (value: any): any[] => {
+          if (Array.isArray(value)) return value;
+          if (value && Array.isArray(value.slides)) return value.slides;
+          return [];
+        };
+
+        const objMatch = raw.match(/\{[\s\S]*\}/);
+        if (objMatch) {
+          try {
+            const out = unwrap(JSON.parse(objMatch[0]));
+            if (out.length) return out;
+          } catch { /* fall through */ }
+        }
+
+        const arrMatch = raw.match(/\[[\s\S]*\]/);
+        if (arrMatch) {
+          try {
+            const out = unwrap(JSON.parse(arrMatch[0]));
+            if (out.length) return out;
+          } catch { /* fall through */ }
+        }
+
+        // Salvage: pull each complete `{ ... }` slide object out of a truncated payload.
+        const salvaged: any[] = [];
+        let depth = 0;
+        let start = -1;
+        let inString = false;
+        let escaped = false;
+        for (let i = 0; i < raw.length; i++) {
+          const ch = raw[i];
+          if (inString) {
+            if (escaped) escaped = false;
+            else if (ch === '\\') escaped = true;
+            else if (ch === '"') inString = false;
+            continue;
+          }
+          if (ch === '"') { inString = true; continue; }
+          if (ch === '{') { if (depth === 0) start = i; depth++; continue; }
+          if (ch === '}') {
+            depth--;
+            if (depth === 0 && start >= 0) {
+              const chunk = raw.slice(start, i + 1);
+              start = -1;
+              if (/"content"\s*:/.test(chunk)) {
+                try {
+                  const obj = JSON.parse(chunk);
+                  if (obj && typeof obj === 'object' && !Array.isArray(obj) && obj.content) {
+                    salvaged.push(obj);
+                  }
+                } catch { /* skip malformed chunk */ }
+              }
+            }
+          }
+        }
+        if (salvaged.length) {
+          console.warn(`🩹 Salvaged ${salvaged.length} slide(s) from a truncated response.`);
+        }
+        return salvaged;
+      };
+
       // Try flash → pro → OpenAI. Only escalate when the previous attempt gave us nothing usable.
       let content = '';
+      let parsedSlides: any[] = [];
       const attempts: Array<[string, () => Promise<string>]> = [
         ['deepseek-v4-flash', () => callDeepSeek('deepseek-v4-flash', 'slide-generation')],
         ['deepseek-v4-pro', () => callDeepSeek('deepseek-v4-pro', 'slide-generation-pro')],
@@ -590,7 +655,8 @@ OUTPUT FORMAT (JSON):
       for (const [label, run] of attempts) {
         try {
           content = await run();
-          if (content && /[{[]/.test(content)) break;
+          parsedSlides = tryExtractSlides(content);
+          if (parsedSlides.length) break;
           console.warn(`⚠️ ${label} returned no usable slide JSON — escalating.`);
           content = '';
         } catch (err) {
@@ -599,42 +665,19 @@ OUTPUT FORMAT (JSON):
           content = '';
         }
       }
-      if (!content) {
+      if (!parsedSlides.length) {
         throw new Error(
           `All slide providers returned empty output${lastError ? `: ${String(lastError)}` : ''}`
         );
       }
 
       const extractSlides = (raw: string): any[] => {
-        let extracted: any;
-
-        // Try full object first
-        try {
-          const jsonMatch = raw.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            extracted = parsed.slides ?? parsed;
-          }
-        } catch {
-          // ignore and try next strategy
+        const out = tryExtractSlides(raw);
+        if (!out.length) {
+          console.error('Failed to extract slides from model response:', raw.slice(0, 800));
+          throw new Error('Could not parse JSON from model response');
         }
-
-        // Try array-only extraction
-        if (!extracted) {
-          const slidesMatch = raw.match(/\[[\s\S]*\]/);
-          if (slidesMatch) {
-            extracted = JSON.parse(slidesMatch[0]);
-          }
-        }
-
-        if (!extracted) {
-          console.error('Failed to extract slides from DeepSeek response:', raw);
-          throw new Error('Could not parse JSON from DeepSeek response');
-        }
-
-        if (Array.isArray(extracted)) return extracted;
-        if (Array.isArray(extracted.slides)) return extracted.slides;
-        return extracted;
+        return out;
       };
 
       const normalizeSlides = (rawSlides: any[]): SlideContent[] =>
@@ -654,7 +697,7 @@ OUTPUT FORMAT (JSON):
             `Slide ${index + 1}: ${(slide.content || '').substring(0, 50)}...`,
         }));
 
-      let rawSlides = extractSlides(content);
+      let rawSlides = parsedSlides;
       let normalized = normalizeSlides(rawSlides);
 
       // Hard cap in case the model over-produces
