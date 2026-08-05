@@ -9,7 +9,7 @@ const corsHeaders = {
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-const waitlistEmailHtml = (plan: string) => `
+const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
 <!DOCTYPE html>
 <html>
   <body style="margin:0;padding:0;background-color:#f5f5f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
@@ -29,9 +29,12 @@ const waitlistEmailHtml = (plan: string) => `
                   Thanks for joining the Curatr waitlist${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're building a simple way to run your own curated news feed — choose your sources, approve what matters, publish to your audience.
                 </p>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#3f3f46;">
-                  We'll email you as soon as your invite is ready. In the meantime, have a look at a live feed to see what Curatr produces.
+                  One quick thing: tell us what you'd curate and we'll prioritise your invite. It takes about two minutes.
                 </p>
-                <a href="https://curatr.pro/discover" style="display:inline-block;background-color:#0f172a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:500;padding:13px 24px;border-radius:999px;">Explore live feeds</a>
+                <a href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0f172a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:500;padding:13px 24px;border-radius:999px;">Answer 5 quick questions</a>
+                <p style="margin:20px 0 0 0;font-size:14px;line-height:1.6;color:#71717a;">
+                  Prefer to browse first? <a href="https://curatr.pro/discover" style="color:#0f172a;">Explore live feeds</a>.
+                </p>
               </td>
             </tr>
             <tr>
@@ -49,7 +52,7 @@ const waitlistEmailHtml = (plan: string) => `
   </body>
 </html>`
 
-async function sendWaitlistEmail(email: string, plan: string) {
+async function sendWaitlistEmail(email: string, plan: string, inviteToken: string) {
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
   if (!resendApiKey) {
     console.warn('RESEND_API_KEY not configured - skipping waitlist confirmation email')
@@ -57,11 +60,12 @@ async function sendWaitlistEmail(email: string, plan: string) {
   }
   try {
     const resend = new Resend(resendApiKey)
+    const questionnaireUrl = `https://curatr.pro/waitlist/welcome?token=${encodeURIComponent(inviteToken)}`
     const { error } = await resend.emails.send({
       from: 'Curatr <noreply@curatr.pro>',
       to: [email],
       subject: "You're on the Curatr waitlist",
-      html: waitlistEmailHtml(plan),
+      html: waitlistEmailHtml(plan, questionnaireUrl),
     })
     if (error) console.error('Waitlist confirmation email error:', error)
   } catch (err) {
@@ -111,7 +115,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from('waitlist')
       .insert({ email, plan: plan || 'general' })
-      .select()
+      .select('id, email, invite_token')
 
     if (error) {
       console.error('Waitlist signup error:', error)
@@ -138,7 +142,7 @@ Deno.serve(async (req) => {
 
     console.log('Waitlist signup successful:', data)
 
-    await sendWaitlistEmail(email, plan || 'general')
+    await sendWaitlistEmail(email, plan || 'general', data?.[0]?.invite_token ?? '')
 
     return new Response(
       JSON.stringify({ 

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import { Resend } from 'npm:resend@4.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,65 @@ const json = (body: unknown, status = 200) =>
   });
 
 const PREVIEW_PREFIX = 'preview-';
+const ADMIN_EMAIL = 'adamonsea@gmail.com';
+
+const esc = (s: string) =>
+  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const LABELS: Record<string, string> = {
+  feed_kind: 'Feed type',
+  feed_name: 'Feed name',
+  audience: 'Audience',
+  today: 'How they do it today',
+  resonated: 'What resonated',
+  blockers: 'Blockers',
+  blockers_detail: 'Blocker detail',
+  price_band: 'Price band',
+  wishlist: 'Wishlist',
+};
+
+async function notifyAdmin(
+  email: string | null,
+  answers: Record<string, unknown>,
+  wantsEarlyAccess: boolean,
+  isPreview: boolean,
+) {
+  const key = Deno.env.get('RESEND_API_KEY');
+  if (!key) {
+    console.warn('RESEND_API_KEY not configured - skipping questionnaire notification');
+    return;
+  }
+  try {
+    const rows = Object.entries(LABELS)
+      .map(([field, label]) => {
+        const raw = answers[field];
+        const value = Array.isArray(raw) ? raw.join(', ') : (raw ?? '');
+        if (!value) return '';
+        return `<tr><td style="padding:8px 12px;border-bottom:1px solid #ececE7;font-size:13px;color:#71717a;white-space:nowrap;vertical-align:top;">${esc(label)}</td><td style="padding:8px 12px;border-bottom:1px solid #ececE7;font-size:14px;color:#0f172a;">${esc(String(value))}</td></tr>`;
+      })
+      .join('');
+
+    const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f5f5f3;padding:32px 16px;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border:1px solid #e6e6e1;border-radius:14px;padding:28px;">
+    <h1 style="margin:0 0 4px 0;font-size:20px;color:#0f172a;">Questionnaire completed${isPreview ? ' (preview)' : ''}</h1>
+    <p style="margin:0 0 20px 0;font-size:14px;color:#71717a;">${esc(email ?? 'Anonymous preview')} · early access: ${wantsEarlyAccess ? 'yes' : 'no'}</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows}</table>
+    <p style="margin:20px 0 0 0;font-size:13px;color:#71717a;">View all responses in the admin waitlist panel.</p>
+  </div>
+</div>`;
+
+    const { error } = await new Resend(key).emails.send({
+      from: 'Curatr <noreply@curatr.pro>',
+      to: [ADMIN_EMAIL],
+      subject: `Waitlist questionnaire: ${email ?? 'preview'}`,
+      html,
+    });
+    if (error) console.error('Questionnaire notification error:', error);
+  } catch (err) {
+    console.error('Questionnaire notification failed:', err);
+  }
+}
 
 const AnswersSchema = z.object({
   feed_kind: z.array(z.string().max(60)).max(6).default([]),
@@ -95,7 +155,7 @@ Deno.serve(async (req) => {
 
       const { data: entry } = await supabase
         .from('waitlist')
-        .select('id')
+        .select('id, email')
         .eq('invite_token', token)
         .maybeSingle();
 
@@ -113,6 +173,8 @@ Deno.serve(async (req) => {
         console.error('waitlist-questionnaire insert failed:', error);
         return json({ error: 'Could not save your answers' }, 500);
       }
+
+      await notifyAdmin(entry.email ?? null, answers as Record<string, unknown>, wants_early_access, false);
 
       return json({ success: true });
     }
