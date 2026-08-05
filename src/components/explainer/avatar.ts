@@ -21,8 +21,7 @@ export const AVATAR_CLIPS: Partial<Record<string, string>> = {
   problem: '/__l5e/assets-v1/9cf31c20-f8d3-484d-9527-5f04f6b56eba/explainer-1-problem.mp4',
   subject: '/__l5e/assets-v1/b91dfdc2-aece-4a2c-a267-cb80b35854dd/explainer-2-subject.mp4',
   sources: '/__l5e/assets-v1/73187b3e-5623-461e-b6b0-3a1ed546626b/explainer-3-sources.mp4',
-  // 'filter' has no live-action line in the take — keeps the HeyGen render.
-  filter: '/__l5e/assets-v1/9af5cd91-ba43-48ec-8aac-d6500386be3b/explainer-4-filter.mp4',
+  // 'filter' has no line in the live-action take, so it runs caption-only.
   written: '/__l5e/assets-v1/16ac7a05-a9ad-4027-ad4a-1820cb3088f9/explainer-5-written.mp4',
   publish: '/__l5e/assets-v1/0c3b533e-553d-4fa4-9eb2-6d278ea9b832/explainer-6-publish.mp4',
   editor: '/__l5e/assets-v1/c443afa9-738d-43bb-a49c-d7eb33243373/explainer-7-editor.mp4',
