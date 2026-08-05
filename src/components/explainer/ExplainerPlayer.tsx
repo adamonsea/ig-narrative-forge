@@ -4,12 +4,13 @@ import { Pause, Play, RotateCcw, SkipForward, Volume2, VolumeX, X } from 'lucide
 import { Button } from '@/components/ui/button';
 import { TIMELINE, TOTAL_MS } from './timeline';
 import { haptic, playCue, type CueName } from './sfx';
+import { clipForScene } from './avatar';
 
 const ACCENT = 'hsl(155,100%,67%)';
 const TICK = 50;
 
 interface ExplainerPlayerProps {
-  /** Optional HeyGen (or any) avatar video URL, rendered as a corner presenter. */
+  /** Fallback presenter clip used for any scene without its own clip. */
   avatarSrc?: string;
   onClose?: () => void;
   onFinished?: () => void;
@@ -86,6 +87,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
   }, [index, elapsed, finished]);
 
   const SceneComponent = scene.Component;
+  const avatarClip = scene.avatarClip ?? clipForScene(scene.id) ?? avatarSrc;
 
   return (
     <div className="relative flex h-full w-full flex-col bg-[hsl(214,50%,7%)] text-white">
@@ -127,13 +129,15 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
           )}
         </AnimatePresence>
 
-        {/* Avatar slot (HeyGen or similar) */}
-        {avatarSrc && !finished && (
+        {/* Presenter slot — one clip per scene, restarted on scene change */}
+        {avatarClip && !finished && (
           <video
-            src={avatarSrc}
+            key={scene.id}
+            src={avatarClip}
             autoPlay
             muted={muted}
             playsInline
+            aria-hidden="true"
             className="absolute bottom-4 right-4 h-32 w-32 rounded-full border border-white/20 object-cover shadow-lg md:h-40 md:w-40"
           />
         )}
