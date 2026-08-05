@@ -515,7 +515,7 @@ OUTPUT FORMAT (JSON):
   ]
 }`;
 
-      const maxTokens = slideCount >= 12 ? 3600 : slideCount >= 8 ? 2600 : 2000;
+      const maxTokens = slideCount >= 12 ? 5200 : slideCount >= 8 ? 4200 : 3200;
 
       const systemPrompt = `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms. Always reply with a single valid JSON object and nothing else.`;
       const chatMessages = [
