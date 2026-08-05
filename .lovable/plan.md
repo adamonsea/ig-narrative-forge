@@ -29,7 +29,7 @@ Visual: five source pills fan out around the subject, thin lines pulse inward, a
 Sound: soft pulses in time with the lines.
 
 **4 — The filter (0:27–0:36)**
-"It keeps what's genuinely local and relevant. The rest never reaches you."
+"It keeps what's genuinely local and relevant. The rest never reaches your audience."
 Visual: cards fall through a sieve — most fade, four land bright and stacked.
 Sound: two dull thuds. Haptic: one medium tap when the four land.
 
