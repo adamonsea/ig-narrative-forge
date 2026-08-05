@@ -17,7 +17,8 @@ export const VOICE_ID = '06b68c4dbb544935b9af984e80efa4fb';
  * Populate with Lovable asset URLs once the clips are rendered.
  */
 export const AVATAR_CLIPS: Partial<Record<string, string>> = {
-  problem: '/__l5e/assets-v1/e5cfacaa-d54d-4ec6-b2a0-dd24a83ff729/explainer-1-problem.mp4',
+  // Scene 1 uses the live-action presenter (cropped head & shoulders), not the HeyGen avatar.
+  problem: '/__l5e/assets-v1/fb8d59b4-f590-4bbf-904e-489fa1c43a28/explainer-1-problem.mp4',
   filter: '/__l5e/assets-v1/9af5cd91-ba43-48ec-8aac-d6500386be3b/explainer-4-filter.mp4',
   written: '/__l5e/assets-v1/7d20fb29-e30e-4a6a-912c-ee5aab678bf9/explainer-5-written.mp4',
   // subject / sources / publish / editor / close: pending — HeyGen monthly render quota reached.
