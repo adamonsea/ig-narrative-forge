@@ -256,13 +256,25 @@ export default function WaitlistWelcome() {
             That's genuinely useful. We're inviting people in small batches — you'll get an email from us
             with your sign-in link when it's your turn.
           </p>
-          <Button asChild>
-            <Link to="/discover">See a live feed while you wait</Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button onClick={() => setExplainerOpen(true)}>Watch the 75-second tour</Button>
+            <Button asChild variant="outline">
+              <Link to="/discover">See a live feed while you wait</Link>
+            </Button>
+          </div>
           {isPreview && (
             <p className="text-xs text-muted-foreground">Preview run — this answer set is not counted.</p>
           )}
         </div>
+        <ExplainerOverlay
+          open={explainerOpen}
+          onClose={() => setExplainerOpen(false)}
+          endCta={
+            <Button asChild className="rounded-full px-6">
+              <Link to="/discover">See a live feed</Link>
+            </Button>
+          }
+        />
       </main>
     );
   }
