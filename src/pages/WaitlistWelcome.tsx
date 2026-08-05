@@ -59,6 +59,50 @@ const OPTIONS = {
 
 const TOTAL_STEPS = 7;
 
+// Full-screen statements shown between questions
+const STATEMENTS: string[] = [
+  'Curatr runs a live feed on a subject or place — and you can run as many as you like.',
+  'Each feed can be public, or built for a specific audience.',
+  'Curatr replaces the trawling, writing and image-making.',
+  'Curatr gathers local stories, rewrites them, and illustrates them daily.',
+  'Honest answers here shape what we build next.',
+  "Plans aren't fixed yet — this genuinely sets the price.",
+  "Last one, and it's optional.",
+];
+
+const Typewriter = ({ text, onDone }: { text: string; onDone?: () => void }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    setCount(0);
+  }, [text]);
+
+  useEffect(() => {
+    if (count >= text.length) {
+      onDone?.();
+      return;
+    }
+    const char = text[count];
+    // reading-speed cadence, with a natural pause on punctuation
+    const delay = /[.,—?!]/.test(char) ? 220 : 34;
+    const t = window.setTimeout(() => setCount((c) => c + 1), delay);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, text]);
+
+  return (
+    <span aria-label={text}>
+      <span aria-hidden="true">{text.slice(0, count)}</span>
+      {count < text.length && (
+        <span
+          aria-hidden="true"
+          className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-[0.12em] bg-[hsl(155,100%,67%)] animate-pulse"
+        />
+      )}
+    </span>
+  );
+};
+
 const Choice = ({
   label,
   selected,
@@ -96,6 +140,8 @@ export default function WaitlistWelcome() {
   const [answers, setAnswers] = useState<Answers>(EMPTY);
   const [showDetail, setShowDetail] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [phase, setPhase] = useState<'statement' | 'question'>('statement');
+  const [typed, setTyped] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -140,7 +186,11 @@ export default function WaitlistWelcome() {
     });
   };
 
-  const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  const next = () => {
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    setPhase('statement');
+    setTyped(false);
+  };
 
   const submit = async (wantsEarlyAccess: boolean) => {
     setSubmitting(true);
@@ -217,12 +267,10 @@ export default function WaitlistWelcome() {
   }
 
   const Screen = ({
-    context,
     question,
     hint,
     children,
   }: {
-    context: string;
     question: string;
     hint?: string;
     children: React.ReactNode;
@@ -235,9 +283,6 @@ export default function WaitlistWelcome() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className="space-y-6"
     >
-      <p className="text-xs uppercase tracking-wide text-muted-foreground border-l-2 border-[hsl(155,100%,67%)] pl-3">
-        {context}
-      </p>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{question}</h1>
         {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
@@ -248,6 +293,40 @@ export default function WaitlistWelcome() {
 
   return (
     <main className="min-h-dvh bg-background px-6 py-10">
+      <AnimatePresence>
+        {phase === 'statement' && step < TOTAL_STEPS && (
+          <motion.div
+            key={`statement-${step}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-8"
+          >
+            <div className="w-full max-w-xl space-y-10 text-center">
+              <Brand className="justify-center" />
+              <p className="text-2xl sm:text-3xl font-display font-light leading-snug tracking-tight text-foreground">
+                <Typewriter text={STATEMENTS[step]} onDone={() => setTyped(true)} />
+              </p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: typed ? 1 : 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Button
+                  size="lg"
+                  className="min-w-48"
+                  tabIndex={typed ? 0 : -1}
+                  onClick={() => setPhase('question')}
+                >
+                  {step === 0 ? 'First question' : 'Next question'}
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="mx-auto w-full max-w-lg space-y-8">
         <div className="flex items-center justify-between border-b border-border/60 pb-4">
           <Brand />
@@ -276,7 +355,6 @@ export default function WaitlistWelcome() {
         <AnimatePresence mode="wait">
           {step === 0 && (
             <Screen
-              context="Curatr runs a live feed on a subject or place — and you can run as many as you like."
               question="What kind of feed would you run?"
               hint="Pick more than one if you'd run several."
             >
@@ -313,7 +391,6 @@ export default function WaitlistWelcome() {
 
           {step === 1 && (
             <Screen
-              context="Each feed can be public, or built for a specific audience."
               question="Who's it for?"
               hint="Pick as many as apply."
             >
@@ -333,7 +410,6 @@ export default function WaitlistWelcome() {
 
           {step === 2 && (
             <Screen
-              context="Curatr replaces the trawling, writing and image-making."
               question="What are you doing about it today?"
               hint="Pick as many as apply."
             >
@@ -353,7 +429,6 @@ export default function WaitlistWelcome() {
 
           {step === 3 && (
             <Screen
-              context="Curatr gathers local stories, rewrites them, and illustrates them daily."
               question="What made you sign up?"
               hint="Pick up to two."
             >
@@ -373,7 +448,6 @@ export default function WaitlistWelcome() {
 
           {step === 4 && (
             <Screen
-              context="Honest answers here shape what we build next."
               question="What would make this a no?"
               hint="Tap any that apply."
             >
@@ -411,7 +485,6 @@ export default function WaitlistWelcome() {
 
           {step === 5 && (
             <Screen
-              context="Plans aren't fixed yet — this genuinely sets the price."
               question="If it worked exactly as you hoped, what's it worth a month?"
               hint="Pick the closest band."
             >
@@ -431,7 +504,6 @@ export default function WaitlistWelcome() {
 
           {step === 6 && (
             <Screen
-              context="Last one, and it's optional."
               question="Anything you'd want it to do that we haven't mentioned?"
             >
               <Textarea
