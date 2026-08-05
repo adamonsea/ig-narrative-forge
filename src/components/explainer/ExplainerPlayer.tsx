@@ -112,11 +112,11 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <h2 className="font-display text-[8vmin] leading-none tracking-tight">
+              <h2 className="font-display text-[clamp(2rem,7vw,4.5rem)] leading-none tracking-tight">
                 Curatr<span style={{ color: ACCENT }}>.</span>
                 <span className="text-2xl opacity-70">pro</span>
               </h2>
-              <p className="max-w-[42ch] text-[clamp(1rem,2.4vmin,1.5rem)] text-white/70">
+              <p className="max-w-[42ch] text-[clamp(0.95rem,2.6vw,1.4rem)] text-white/70">
                 A live feed on any subject or place — trawled, written, illustrated and published for you.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
@@ -138,7 +138,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
             muted={muted}
             playsInline
             aria-hidden="true"
-            className="absolute bottom-[3vmin] right-[3vmin] h-[24vmin] w-[24vmin] min-h-[112px] min-w-[112px] max-h-[240px] max-w-[240px] rounded-full border-[0.4vmin] border-white/25 object-cover shadow-[0_2vmin_5vmin_rgba(0,0,0,0.5)]"
+            className="absolute bottom-[max(0.75rem,2.5vw)] right-[max(0.75rem,2.5vw)] h-[clamp(96px,17vw,220px)] w-[clamp(96px,17vw,220px)] rounded-full border-2 border-white/25 object-cover shadow-[0_2vmin_5vmin_rgba(0,0,0,0.5)]"
           />
         )}
 
@@ -155,7 +155,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
       </div>
 
       {/* Caption */}
-      <div className="px-[5vmin] pb-[1vmin]">
+      <div className="px-[max(1rem,4vw)] pb-2">
         <AnimatePresence mode="wait">
           {!finished && (
             <motion.p
@@ -164,7 +164,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3 }}
-              className="mx-auto max-w-[46ch] text-center font-display text-[clamp(1.15rem,2.9vmin,2.1rem)] leading-snug text-white"
+              className="mx-auto max-w-[46ch] text-center font-display text-[clamp(1.05rem,3.6vw,2.1rem)] leading-snug text-white"
               aria-live="polite"
             >
               {scene.caption}
@@ -174,7 +174,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
       </div>
 
       {/* Controls */}
-      <div className="space-y-2 px-[5vmin] pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2">
+      <div className="space-y-2 px-[max(1rem,4vw)] pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2">
         <div className="h-1 w-full overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Explainer progress">
           <div className="h-full rounded-full transition-[width] duration-100" style={{ width: `${progress}%`, background: ACCENT }} />
         </div>
