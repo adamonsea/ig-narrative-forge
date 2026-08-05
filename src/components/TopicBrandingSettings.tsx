@@ -334,7 +334,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                 <img
                   src={iconPreview}
                   alt="Icon preview"
-                  className="w-24 h-24 object-cover border rounded-lg"
+                  className="w-24 h-24 object-contain border rounded-lg bg-muted/30"
                 />
                 <Button
                   variant="destructive"
