@@ -77,6 +77,9 @@ const Index = () => {
               <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
                 Discover
               </Link>
+              <Link to="/features" className="text-white/70 hover:text-white transition-colors">
+                Features
+              </Link>
               <Link to="/pricing" className="text-white/70 hover:text-white transition-colors">
                 Pricing
               </Link>
@@ -254,6 +257,12 @@ const Index = () => {
                 </motion.div>
               ))}
             </div>
+
+            <motion.div variants={reveal} className="mt-12 text-center">
+              <Button asChild variant="secondary" size="lg">
+                <Link to="/features">Explore every feature</Link>
+              </Button>
+            </motion.div>
           </motion.section>
 
           {/* Editorial Control Section */}
