@@ -477,7 +477,40 @@ export default function WaitlistWelcome() {
             </Screen>
           )}
 
-          {step === 4 && (
+          {step === 4 && rebuttal && (
+            (() => {
+              const answered = answers.blockers.filter((b) => BLOCKER_ANSWERS[b]);
+              return (
+                <Screen
+                  question={answered.length ? 'Did you know…' : 'Thanks for the feedback'}
+                  hint={
+                    answered.length
+                      ? 'A quick word on what you flagged.'
+                      : "That's noted — it goes straight to the people building this."
+                  }
+                >
+                  {answered.map((b) => (
+                    <div key={b} className="rounded-xl border border-border bg-card px-5 py-4">
+                      <p className="text-sm font-medium text-foreground">{b}</p>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                        {BLOCKER_ANSWERS[b]}
+                      </p>
+                    </div>
+                  ))}
+                  {answered.length > 0 && answered.length < answers.blockers.length && (
+                    <p className="text-sm text-muted-foreground">
+                      Thanks for the rest of the feedback too — we've logged it.
+                    </p>
+                  )}
+                  <Button className="w-full" onClick={next}>
+                    Continue
+                  </Button>
+                </Screen>
+              );
+            })()
+          )}
+
+          {step === 4 && !rebuttal && (
             <Screen
               question="What would make this a no?"
               hint="Tap any that apply."
@@ -508,7 +541,7 @@ export default function WaitlistWelcome() {
                   Say more
                 </button>
               )}
-              <Button className="w-full" onClick={next}>
+              <Button className="w-full" onClick={() => setRebuttal(true)}>
                 Continue
               </Button>
             </Screen>
