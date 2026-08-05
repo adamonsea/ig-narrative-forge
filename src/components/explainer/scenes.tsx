@@ -10,6 +10,8 @@ export interface SceneProps {
 
 const ACCENT = 'hsl(155,100%,67%)';
 const VIOLET = 'hsl(270,100%,68%)';
+const PAPER = '#fafaf8';
+const INK = 'hsl(214,50%,9%)';
 
 /** Fire timed cues for a scene; cleared automatically when the scene unmounts. */
 const useBeats = (beats: Array<[number, () => void]>) => {
@@ -22,69 +24,88 @@ const useBeats = (beats: Array<[number, () => void]>) => {
   }, []);
 };
 
+/** Full-bleed stage: every scene fills the device, scaling with viewport. */
 const Stage = ({ children }: { children: React.ReactNode }) => (
-  <div className="absolute inset-0 flex items-center justify-center px-6">{children}</div>
+  <div className="absolute inset-0 flex items-center justify-center p-[4vmin]">
+    <div className="w-full max-w-[min(1100px,92vw)]">{children}</div>
+  </div>
 );
 
-const Card = ({
+/** Chunky card — thick border, soft radius, no fussy detail. */
+const Chunk = ({
   children,
   className = '',
+  style,
 }: {
   children?: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }) => (
-  <div className={`rounded-xl border border-white/15 bg-white/[0.06] backdrop-blur-sm ${className}`}>{children}</div>
+  <div
+    className={`rounded-[2vmin] border-[0.4vmin] border-white/25 bg-white/[0.08] ${className}`}
+    style={style}
+  >
+    {children}
+  </div>
 );
 
-const Lines = ({ count = 3, width = 'w-full' }: { count?: number; width?: string }) => (
-  <div className="space-y-1.5">
+const Bars = ({ count = 3 }: { count?: number }) => (
+  <div className="space-y-[1vmin]">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className={`h-1.5 rounded-full bg-white/20 ${i === count - 1 ? 'w-2/3' : width}`} />
+      <div
+        key={i}
+        className={`h-[1.2vmin] rounded-full bg-white/25 ${i === count - 1 ? 'w-2/3' : 'w-full'}`}
+      />
     ))}
   </div>
 );
 
 /* ---------------------------------------------------------------- 1. Problem */
 
-const FRAGMENTS = [
-  'Council votes on seafront plan',
-  'Pier repairs delayed again',
-  'New bus route consultation',
-  'School wins county award',
-  'Flood defence funding gap',
-  'Market traders speak out',
-  'Hospital waiting times rise',
-  'Festival line-up announced',
+const CLIPPINGS = [
+  { t: 'Council votes on seafront plan', x: -34, y: -26, r: -9 },
+  { t: 'Pier repairs delayed again', x: 22, y: -30, r: 7 },
+  { t: 'New bus route consultation', x: -8, y: -4, r: -3 },
+  { t: 'School wins county award', x: 34, y: 4, r: 11 },
+  { t: 'Flood defence funding gap', x: -36, y: 20, r: 6 },
+  { t: 'Market traders speak out', x: 6, y: 26, r: -8 },
+  { t: 'Hospital waiting times rise', x: 32, y: 30, r: -12 },
+  { t: 'Festival line-up announced', x: -18, y: 6, r: 13 },
 ];
 
 export const SceneProblem = ({ reduced, cue }: SceneProps) => {
   useBeats([[200, () => cue('rustle')]]);
   return (
     <Stage>
-      <div className="relative w-full max-w-2xl h-64">
-        {FRAGMENTS.map((f, i) => {
-          const angle = (i / FRAGMENTS.length) * Math.PI * 2;
-          return (
-            <motion.div
-              key={f}
-              className="absolute left-1/2 top-1/2 whitespace-nowrap text-white/25 text-sm md:text-base font-light"
-              initial={{
-                x: Math.cos(angle) * 420 - 80,
-                y: Math.sin(angle) * 280,
-                opacity: 0,
-                rotate: reduced ? 0 : (i % 2 ? -4 : 4),
-              }}
-              animate={{
-                x: Math.cos(angle) * (reduced ? 180 : 110) - 80,
-                y: Math.sin(angle) * (reduced ? 90 : 70),
-                opacity: 1,
-              }}
-              transition={{ duration: reduced ? 0.4 : 3.2, delay: i * 0.12, ease: 'easeOut' }}
-            >
-              {f}
-            </motion.div>
-          );
-        })}
+      <div className="relative mx-auto h-[62vmin] w-full">
+        {CLIPPINGS.map((c, i) => (
+          <motion.div
+            key={c.t}
+            className="absolute left-1/2 top-1/2 w-[38vmin] max-w-[300px] -translate-x-1/2 -translate-y-1/2 px-[2.4vmin] py-[2vmin] shadow-[0_2vmin_4vmin_rgba(0,0,0,0.45)]"
+            style={{ background: PAPER, color: INK }}
+            initial={{
+              x: `${c.x * 3}%`,
+              y: `${c.y * 4 - 120}%`,
+              rotate: reduced ? c.r : c.r * 3,
+              opacity: 0,
+            }}
+            animate={{ x: `${c.x}%`, y: `${c.y}%`, rotate: reduced ? 0 : c.r, opacity: 1 }}
+            transition={{
+              duration: reduced ? 0.35 : 0.9,
+              delay: reduced ? 0 : i * 0.22,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            <p className="text-[1.2vmin] font-semibold uppercase tracking-[0.3em] opacity-45">
+              Local news
+            </p>
+            <p className="mt-[1vmin] font-display text-[2.6vmin] leading-tight">{c.t}</p>
+            <div className="mt-[1.6vmin] space-y-[0.7vmin]">
+              <div className="h-[0.8vmin] w-full rounded-full bg-black/10" />
+              <div className="h-[0.8vmin] w-3/4 rounded-full bg-black/10" />
+            </div>
+          </motion.div>
+        ))}
       </div>
     </Stage>
   );
@@ -113,25 +134,25 @@ export const SceneSubject = ({ reduced, cue, tap }: SceneProps) => {
           tap(12);
         }, 380);
       }
-    }, 110);
+    }, 130);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Stage>
-      <div className="w-full max-w-md space-y-5">
-        <p className="text-xs uppercase tracking-[0.2em] text-white/40">Your subject</p>
-        <div className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-4">
-          <span className="text-2xl md:text-3xl font-display text-white">{text}</span>
-          {!chip && <span className="inline-block h-7 w-[2px] animate-pulse bg-white/70" />}
-        </div>
+      <div className="mx-auto w-full max-w-[80vmin] space-y-[4vmin]">
+        <p className="text-[1.8vmin] uppercase tracking-[0.35em] text-white/45">Your subject</p>
+        <Chunk className="flex items-center gap-[2vmin] px-[4vmin] py-[5vmin]">
+          <span className="font-display text-[8vmin] leading-none text-white">{text}</span>
+          {!chip && <span className="inline-block h-[8vmin] w-[0.8vmin] animate-pulse bg-white/80" />}
+        </Chunk>
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.7 }}
           animate={chip ? { opacity: 1, scale: 1 } : {}}
-          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-          className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium"
-          style={{ background: ACCENT, color: 'hsl(214,50%,9%)' }}
+          transition={{ type: 'spring', stiffness: 380, damping: 16 }}
+          className="inline-flex items-center gap-2 rounded-full px-[4vmin] py-[1.8vmin] text-[2.6vmin] font-semibold"
+          style={{ background: ACCENT, color: INK }}
         >
           Feed created
         </motion.div>
@@ -151,35 +172,43 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
     if (reduced) return;
     const id = window.setInterval(() => {
       setCount((c) => (c >= 47 ? (window.clearInterval(id), 47) : c + 1));
-    }, 130);
+    }, 90);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useBeats(SOURCES.map((_, i) => [500 + i * 700, () => cue('pulse')] as [number, () => void]));
+  useBeats(SOURCES.map((_, i) => [400 + i * 600, () => cue('pulse')] as [number, () => void]));
 
   return (
     <Stage>
-      <div className="relative w-full max-w-2xl h-72">
+      <div className="relative mx-auto h-[62vmin] w-full">
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-          <div className="font-display text-5xl md:text-6xl text-white tabular-nums">{count}</div>
-          <div className="text-xs uppercase tracking-[0.2em] text-white/40 mt-1">articles today</div>
+          <div className="font-display text-[16vmin] leading-none text-white tabular-nums">{count}</div>
+          <div className="mt-[1.5vmin] text-[1.8vmin] uppercase tracking-[0.3em] text-white/45">
+            articles today
+          </div>
         </div>
         {SOURCES.map((s, i) => {
           const angle = (i / SOURCES.length) * Math.PI * 2 - Math.PI / 2;
-          const x = Math.cos(angle) * 190;
-          const y = Math.sin(angle) * 110;
           return (
             <motion.div
               key={s}
-              className="absolute left-1/2 top-1/2 rounded-full border border-white/20 bg-white/[0.07] px-3 py-1.5 text-xs text-white/80 whitespace-nowrap"
-              style={{ marginLeft: -40, marginTop: -14 }}
-              initial={{ x: 0, y: 0, opacity: 0 }}
-              animate={{ x, y, opacity: 1 }}
-              transition={{ duration: reduced ? 0.3 : 0.8, delay: reduced ? 0 : 0.15 * i, ease: 'easeOut' }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border-[0.4vmin] border-white/25 bg-white/[0.08] px-[3vmin] py-[1.6vmin] text-[2.2vmin] font-medium text-white/85"
+              initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
+              animate={{
+                x: Math.cos(angle) * (reduced ? 180 : 260),
+                y: Math.sin(angle) * (reduced ? 110 : 170),
+                opacity: 1,
+                scale: 1,
+              }}
+              transition={{
+                duration: reduced ? 0.3 : 0.7,
+                delay: reduced ? 0 : 0.15 * i,
+                ease: [0.22, 1, 0.36, 1],
+              }}
             >
               <motion.span
-                className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                className="mr-[1.2vmin] inline-block h-[1.4vmin] w-[1.4vmin] rounded-full align-middle"
                 style={{ background: ACCENT }}
                 animate={reduced ? {} : { opacity: [1, 0.2, 1] }}
                 transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
@@ -197,43 +226,51 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
 
 export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
   useBeats([
-    [1500, () => cue('thud')],
-    [2100, () => { cue('thud'); tap(14); }],
+    [1400, () => cue('thud')],
+    [2000, () => { cue('thud'); tap(14); }],
   ]);
-  const dropped = [0, 1, 2, 3, 4, 5];
   return (
     <Stage>
-      <div className="relative w-full max-w-xl h-72">
-        {/* falling, discarded cards */}
-        {dropped.map((i) => (
+      <div className="relative mx-auto h-[62vmin] w-full max-w-[80vmin]">
+        {[0, 1, 2, 3, 4].map((i) => (
           <motion.div
             key={`d-${i}`}
-            className="absolute h-9 w-28 rounded-md border border-white/10 bg-white/[0.05]"
-            style={{ left: `${8 + i * 15}%` }}
-            initial={{ y: -40, opacity: 0.7 }}
-            animate={{ y: reduced ? 40 : 230, opacity: 0 }}
-            transition={{ duration: reduced ? 0.4 : 1.8, delay: i * 0.12, ease: 'easeIn' }}
+            className="absolute h-[7vmin] w-[22vmin] rounded-[1.5vmin] border-[0.4vmin] border-white/15 bg-white/[0.06]"
+            style={{ left: `${4 + i * 18}%` }}
+            initial={{ y: 0, opacity: 0.8 }}
+            animate={{ y: reduced ? 90 : '55vmin', opacity: 0 }}
+            transition={{ duration: reduced ? 0.4 : 1.7, delay: i * 0.16, ease: 'easeIn' }}
           />
         ))}
-        {/* the sieve */}
-        <div className="absolute left-0 right-0 top-1/2 flex items-center gap-2">
-          <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)' }} />
-          <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">local relevance</span>
-          <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)' }} />
+
+        <div className="absolute left-0 right-0 top-1/2 flex items-center gap-[2vmin]">
+          <div
+            className="h-[0.5vmin] flex-1 rounded-full"
+            style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent)' }}
+          />
+          <span className="text-[1.6vmin] uppercase tracking-[0.3em] text-white/50">relevance</span>
+          <div
+            className="h-[0.5vmin] flex-1 rounded-full"
+            style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent)' }}
+          />
         </div>
-        {/* the keepers */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-64 space-y-2">
-          {[0, 1, 2, 3].map((i) => (
+
+        <div className="absolute bottom-0 left-1/2 w-[56vmin] -translate-x-1/2 space-y-[2vmin]">
+          {[0, 1, 2].map((i) => (
             <motion.div
               key={`k-${i}`}
               initial={{ y: -160, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: reduced ? 0.3 : 0.6, delay: reduced ? 0 : 1.2 + i * 0.18, ease: [0.22, 1, 0.36, 1] }}
+              transition={{
+                duration: reduced ? 0.3 : 0.6,
+                delay: reduced ? 0 : 1.2 + i * 0.3,
+                ease: [0.22, 1, 0.36, 1],
+              }}
             >
-              <Card className="flex items-center gap-3 px-3 py-2">
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT }} />
-                <span className="h-1.5 flex-1 rounded-full bg-white/30" />
-              </Card>
+              <Chunk className="flex items-center gap-[2.5vmin] px-[3vmin] py-[2.6vmin]">
+                <span className="h-[2vmin] w-[2vmin] rounded-full" style={{ background: ACCENT }} />
+                <span className="h-[1.4vmin] flex-1 rounded-full bg-white/35" />
+              </Chunk>
             </motion.div>
           ))}
         </div>
@@ -263,60 +300,63 @@ export const SceneWritten = ({ reduced, cue }: SceneProps) => {
 
   return (
     <Stage>
-      <Card className="w-full max-w-sm overflow-hidden">
-        {/* illustration paints in */}
-        <div className="relative h-32 overflow-hidden">
+      <Chunk className="mx-auto w-full max-w-[62vmin] overflow-hidden">
+        <div className="relative h-[26vmin] overflow-hidden">
           <motion.div
             className="absolute inset-0"
-            style={{ background: `linear-gradient(135deg, ${VIOLET}, ${ACCENT})`, opacity: 0.75 }}
+            style={{ background: `linear-gradient(135deg, ${VIOLET}, ${ACCENT})` }}
             initial={{ clipPath: 'inset(0 100% 0 0)' }}
             animate={{ clipPath: 'inset(0 0% 0 0)' }}
-            transition={{ duration: reduced ? 0.3 : 1.4, delay: reduced ? 0 : 1.2, ease: 'easeOut' }}
+            transition={{ duration: reduced ? 0.3 : 1.4, delay: reduced ? 0 : 1.1, ease: 'easeOut' }}
           />
-          <div className="absolute inset-0 bg-[hsl(214,50%,9%)]/25" />
         </div>
-        <div className="space-y-3 p-4">
-          <h3 className="text-lg font-display leading-snug text-white min-h-[3rem]">{typed}</h3>
-          <Lines count={3} />
-          <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">Source credited on every story</p>
+        <div className="space-y-[2.5vmin] p-[3.5vmin]">
+          <h3 className="min-h-[9vmin] font-display text-[4vmin] leading-tight text-white">{typed}</h3>
+          <Bars count={3} />
+          <p className="text-[1.5vmin] uppercase tracking-[0.25em] text-white/40">
+            Source credited on every story
+          </p>
         </div>
-      </Card>
+      </Chunk>
     </Stage>
   );
 };
 
 /* ---------------------------------------------------------------- 6. Publish */
 
-const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousel'];
+const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels'];
 
 export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
   useBeats(
-    DESTINATIONS.map((_, i) => [700 + i * 450, () => { cue('land'); tap(8); }] as [number, () => void]),
+    DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
   );
   const spots = [
-    { x: -190, y: -80 },
-    { x: 190, y: -80 },
-    { x: -190, y: 80 },
-    { x: 190, y: 80 },
+    { x: '-32vmin', y: '-20vmin' },
+    { x: '32vmin', y: '-20vmin' },
+    { x: '-32vmin', y: '20vmin' },
+    { x: '32vmin', y: '20vmin' },
   ];
   return (
     <Stage>
-      <div className="relative w-full max-w-2xl h-72">
-        <Card className="absolute left-1/2 top-1/2 -ml-16 -mt-12 w-32 space-y-2 p-3">
-          <div className="h-8 rounded" style={{ background: `linear-gradient(135deg, ${VIOLET}, ${ACCENT})`, opacity: 0.7 }} />
-          <Lines count={2} />
-        </Card>
+      <div className="relative mx-auto h-[62vmin] w-full">
+        <Chunk className="absolute left-1/2 top-1/2 w-[24vmin] -translate-x-1/2 -translate-y-1/2 space-y-[1.5vmin] p-[2vmin]">
+          <div
+            className="h-[8vmin] rounded-[1vmin]"
+            style={{ background: `linear-gradient(135deg, ${VIOLET}, ${ACCENT})` }}
+          />
+          <Bars count={2} />
+        </Chunk>
         {DESTINATIONS.map((d, i) => (
           <motion.div
             key={d}
-            className="absolute left-1/2 top-1/2 -ml-[70px] -mt-4 w-[140px] rounded-full border border-white/20 bg-white/[0.07] px-3 py-2 text-center text-xs text-white/85"
-            initial={{ x: 0, y: 0, opacity: 0, scale: 0.6 }}
+            className="absolute left-1/2 top-1/2 w-[30vmin] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.4vmin] border-white/25 bg-white/[0.08] px-[2vmin] py-[2vmin] text-center text-[2.2vmin] font-medium text-white/90"
+            initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
             animate={{ x: spots[i].x, y: spots[i].y, opacity: 1, scale: 1 }}
             transition={{
               duration: reduced ? 0.3 : 0.7,
-              delay: reduced ? 0 : 0.5 + i * 0.45,
+              delay: reduced ? 0 : 0.6 + i * 0.5,
               type: reduced ? 'tween' : 'spring',
-              stiffness: 220,
+              stiffness: 200,
               damping: 16,
             }}
           >
@@ -337,45 +377,47 @@ export const SceneEditor = ({ reduced, cue, tap }: SceneProps) => {
     [900, () => { setApproved(true); cue('land'); tap(12); }],
     [2100, () => { setSwiped(true); cue('whoosh'); }],
   ]);
+  const Row = ({ label, children }: { label: string; children?: React.ReactNode }) => (
+    <Chunk className="flex items-center gap-[2.5vmin] p-[2.6vmin]">
+      <div className="flex-1 space-y-[1.2vmin]">
+        <div className="h-[1.8vmin] w-3/4 rounded-full bg-white/30" />
+        <div className="h-[1.2vmin] w-1/2 rounded-full bg-white/15" />
+      </div>
+      {children ?? (
+        <span className="rounded-full bg-white/10 px-[2.5vmin] py-[1.2vmin] text-[2vmin] text-white/70">
+          {label}
+        </span>
+      )}
+    </Chunk>
+  );
   return (
     <Stage>
-      <div className="w-full max-w-sm space-y-3">
-        <motion.div animate={approved ? { borderColor: ACCENT } : {}} transition={{ duration: 0.3 }}>
-          <Card className="flex items-center gap-3 p-3" >
-            <div className="flex-1 space-y-1.5">
-              <div className="h-2 w-3/4 rounded-full bg-white/30" />
-              <div className="h-1.5 w-1/2 rounded-full bg-white/15" />
-            </div>
-            <motion.span
-              className="rounded-full px-3 py-1 text-xs font-medium"
-              animate={
-                approved
-                  ? { background: ACCENT, color: 'hsl(214,50%,9%)', scale: [1, 1.12, 1] }
-                  : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }
-              }
-              transition={{ duration: 0.35 }}
-            >
-              {approved ? 'Published' : 'Approve'}
-            </motion.span>
-          </Card>
-        </motion.div>
-        <motion.div animate={swiped ? { x: reduced ? 0 : 420, opacity: 0 } : {}} transition={{ duration: 0.45, ease: 'easeIn' }}>
-          <Card className="flex items-center gap-3 p-3">
-            <div className="flex-1 space-y-1.5">
-              <div className="h-2 w-2/3 rounded-full bg-white/20" />
-              <div className="h-1.5 w-1/3 rounded-full bg-white/10" />
-            </div>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/60">Spike</span>
-          </Card>
+      <div className="mx-auto w-full max-w-[64vmin] space-y-[2.5vmin]">
+        <Chunk className="flex items-center gap-[2.5vmin] p-[2.6vmin]">
+          <div className="flex-1 space-y-[1.2vmin]">
+            <div className="h-[1.8vmin] w-3/4 rounded-full bg-white/30" />
+            <div className="h-[1.2vmin] w-1/2 rounded-full bg-white/15" />
+          </div>
+          <motion.span
+            className="rounded-full px-[2.5vmin] py-[1.2vmin] text-[2vmin] font-semibold"
+            animate={
+              approved
+                ? { background: ACCENT, color: INK, scale: [1, 1.12, 1] }
+                : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }
+            }
+            transition={{ duration: 0.35 }}
+          >
+            {approved ? 'Published' : 'Approve'}
+          </motion.span>
+        </Chunk>
+        <motion.div
+          animate={swiped ? { x: reduced ? 0 : 600, opacity: 0 } : {}}
+          transition={{ duration: 0.45, ease: 'easeIn' }}
+        >
+          <Row label="Spike" />
         </motion.div>
         <motion.div layout>
-          <Card className="flex items-center gap-3 p-3">
-            <div className="flex-1 space-y-1.5">
-              <div className="h-2 w-4/5 rounded-full bg-white/20" />
-              <div className="h-1.5 w-2/5 rounded-full bg-white/10" />
-            </div>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/60">Edit</span>
-          </Card>
+          <Row label="Edit" />
         </motion.div>
       </div>
     </Stage>
@@ -388,31 +430,34 @@ export const SceneClose = ({ reduced, cue }: SceneProps) => {
   useBeats([[1500, () => cue('chime')]]);
   return (
     <Stage>
-      <div className="w-full max-w-2xl space-y-8">
-        <div className="grid grid-cols-3 gap-3">
+      <div className="mx-auto w-full max-w-[86vmin] space-y-[6vmin]">
+        <div className="grid grid-cols-3 gap-[2.5vmin]">
           {['Eastbourne', 'Cycling culture', 'AI & ethics'].map((t, i) => (
             <motion.div
               key={t}
-              initial={{ opacity: 0, y: 18 }}
+              initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduced ? 0.3 : 0.5, delay: reduced ? 0 : i * 0.18 }}
+              transition={{ duration: reduced ? 0.3 : 0.55, delay: reduced ? 0 : i * 0.2 }}
             >
-              <Card className="space-y-2 p-3">
-                <div className="h-6 rounded" style={{ background: `linear-gradient(135deg, ${VIOLET}, ${ACCENT})`, opacity: 0.6 }} />
-                <p className="truncate text-xs text-white/70">{t}</p>
-                <Lines count={2} />
-              </Card>
+              <Chunk className="space-y-[1.5vmin] p-[2vmin]">
+                <div
+                  className="h-[10vmin] rounded-[1vmin]"
+                  style={{ background: `linear-gradient(135deg, ${VIOLET}, ${ACCENT})` }}
+                />
+                <p className="truncate text-[2vmin] font-medium text-white/80">{t}</p>
+                <Bars count={2} />
+              </Chunk>
             </motion.div>
           ))}
         </div>
         <motion.div
-          className="text-center font-display text-4xl md:text-5xl tracking-tight text-white"
-          initial={{ opacity: 0, y: 10 }}
+          className="text-center font-display text-[9vmin] leading-none tracking-tight text-white"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: reduced ? 0.1 : 0.9 }}
         >
           Curatr<span style={{ color: ACCENT }}>.</span>
-          <span className="text-2xl opacity-70">pro</span>
+          <span className="text-[5vmin] opacity-70">pro</span>
         </motion.div>
       </div>
     </Stage>
