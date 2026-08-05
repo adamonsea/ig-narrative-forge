@@ -9,22 +9,18 @@
 /** HeyGen public avatar look ID used for every scene (Tahlia, white shirt). */
 export const AVATAR_LOOK_ID = 'Tahlia_public_5';
 
-/** HeyGen designed voice ID (calm, dry, British editorial). */
-export const VOICE_ID = '';
+/** HeyGen voice ID — Pippa, British female, calm and unhurried. */
+export const VOICE_ID = '06b68c4dbb544935b9af984e80efa4fb';
 
 /**
  * Scene id -> hosted clip URL. Keys match the ids in `timeline.ts`.
  * Populate with Lovable asset URLs once the clips are rendered.
  */
 export const AVATAR_CLIPS: Partial<Record<string, string>> = {
-  // problem: '/__l5e/assets-v1/.../explainer-1-problem.mp4',
-  // subject: '...',
-  // sources: '...',
-  // filter: '...',
-  // written: '...',
-  // publish: '...',
-  // editor: '...',
-  // close: '...',
+  problem: '/__l5e/assets-v1/e5cfacaa-d54d-4ec6-b2a0-dd24a83ff729/explainer-1-problem.mp4',
+  filter: '/__l5e/assets-v1/9af5cd91-ba43-48ec-8aac-d6500386be3b/explainer-4-filter.mp4',
+  written: '/__l5e/assets-v1/7d20fb29-e30e-4a6a-912c-ee5aab678bf9/explainer-5-written.mp4',
+  // subject / sources / publish / editor / close: pending — HeyGen monthly render quota reached.
 };
 
 export const clipForScene = (sceneId: string): string | undefined => AVATAR_CLIPS[sceneId];
