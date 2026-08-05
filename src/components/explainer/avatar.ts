@@ -6,8 +6,8 @@
  * caption-only, so the film works before any clip exists.
  */
 
-/** HeyGen public avatar look ID used for every scene. */
-export const AVATAR_LOOK_ID = '';
+/** HeyGen public avatar look ID used for every scene (Tahlia, white shirt). */
+export const AVATAR_LOOK_ID = 'Tahlia_public_5';
 
 /** HeyGen designed voice ID (calm, dry, British editorial). */
 export const VOICE_ID = '';
