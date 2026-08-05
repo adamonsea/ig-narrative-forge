@@ -109,7 +109,7 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
   useBeats([[200, () => cue('rustle')]]);
   return (
     <Stage>
-      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full">
+      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full">
         {CLIPPINGS.map((c, i) => (
           <motion.div
             key={c.t}
@@ -215,7 +215,7 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
 
   return (
     <Stage>
-      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full">
+      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full">
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
           <div className="font-display text-[calc(var(--u)*16)] leading-none text-white tabular-nums">{count}</div>
           <div className="mt-[calc(var(--u)*1.5)] text-[calc(var(--u)*1.8)] uppercase tracking-[0.3em] text-white/45">
@@ -267,7 +267,7 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
   ]);
   return (
     <Stage>
-      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-[calc(var(--u)*80)]">
+      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full max-w-[calc(var(--u)*80)]">
         {[0, 1, 2, 3, 4].map((i) => (
           <motion.div
             key={`d-${i}`}
@@ -291,7 +291,7 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
           />
         </div>
 
-        <div className="absolute bottom-0 left-1/2 w-[calc(var(--u)*56)] -translate-x-1/2 space-y-[calc(var(--u)*2)]">
+        <div className="absolute bottom-0 left-1/2 w-[min(calc(var(--u)*56),86vw)] -translate-x-1/2 space-y-[calc(var(--u)*2)]">
           {[0, 1, 2].map((i) => (
             <motion.div
               key={`k-${i}`}
@@ -378,7 +378,7 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
   ];
   return (
     <Stage>
-      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full">
+      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full">
         <Chunk className="absolute left-1/2 top-1/2 w-[calc(var(--u)*24)] -translate-x-1/2 -translate-y-1/2 space-y-[calc(var(--u)*1.5)] p-[calc(var(--u)*2)]">
           <div
             className="h-[calc(var(--u)*8)] rounded-[calc(var(--u)*1)]"
