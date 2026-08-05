@@ -108,13 +108,13 @@ const LoopQuiz = ({ reduced }: { reduced: boolean }) => (
 const LoopSentiment = ({ reduced }: { reduced: boolean }) => (
   <Frame label="A sentiment trend rising across a small bar chart">
     <div className="absolute inset-0 flex items-end justify-center gap-2 px-5 pb-5 pt-6">
-      {[0.35, 0.55, 0.4, 0.75, 0.6, 0.95].map((h, i) => (
+      {[0.45, 0.62, 0.5, 0.8, 0.68, 1].map((h, i) => (
         <motion.span
           key={i}
           className="w-3 rounded-full sm:w-4"
           style={{ background: i === 5 ? ACCENT : 'rgba(255,255,255,0.18)' }}
           initial={{ height: `${h * 100}%` }}
-          animate={reduced ? {} : { height: [`${h * 55}%`, `${h * 100}%`, `${h * 70}%`, `${h * 55}%`] }}
+          animate={reduced ? {} : { height: [`${h * 72}%`, `${h * 100}%`, `${h * 82}%`, `${h * 72}%`] }}
           transition={reduced ? { duration: 0 } : loop(4, i * 0.15)}
         />
       ))}
