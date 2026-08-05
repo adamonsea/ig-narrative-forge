@@ -12,7 +12,7 @@ export const ExplainerOverlay = ({ open, onClose, avatarSrc, endCta }: Explainer
   <AnimatePresence>
     {open && (
       <motion.div
-        className="fixed inset-0 z-[70] bg-[hsl(214,50%,5%)]/95 backdrop-blur-md"
+        className="fixed inset-0 z-[70] h-[100dvh] w-screen bg-[hsl(214,50%,5%)]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -21,7 +21,7 @@ export const ExplainerOverlay = ({ open, onClose, avatarSrc, endCta }: Explainer
         aria-modal="true"
         aria-label="Curatr explainer film"
       >
-        <div className="mx-auto h-full w-full max-w-4xl">
+        <div className="h-full w-full">
           <ExplainerPlayer onClose={onClose} avatarSrc={avatarSrc} endCta={endCta} />
         </div>
       </motion.div>
