@@ -19,13 +19,13 @@ Tone: one question per screen, progress dots, big tap targets, around 45 seconds
 Nothing is asked directly. Each question is a natural thing to ask a curator, and each one carries a signal underneath.
 
 **1. What kind of feed?**
-Context: *Curatr builds a running feed on one subject or place.*
-Tap one: a town or area / an industry or beat / a cause or campaign / a hobby or scene / not decided yet.
+Context: *Curatr runs a live feed on a subject or place — and you can run as many as you like.*
+Tap one, or more if they'd run several: a town or area / an industry or beat / a cause or campaign / a hobby or scene / not decided yet.
 Then an optional one-line "name it" box, pre-focused but skippable.
-*Tells us:* fit, and your topic taxonomy. A named subject is a strong intent signal.
+*Tells us:* fit, and your topic taxonomy. A named subject is a strong intent signal; multiple selections flag a power user or an agency-style account.
 
 **2. Who's it for?**
-Context: *Feeds can be public, or built for a specific audience.*
+Context: *Each feed can be public, or built for a specific audience.*
 Tap one: my town or community / my members or clients / my industry peers / just me for now.
 *Tells us:* segment and monetisation path. "Members or clients" signals willingness to pay.
 
@@ -63,6 +63,10 @@ Answers save against the waitlist entry. A new **Waitlist** panel in the admin d
 ### 3. Outreach email (drafted, not sent)
 
 Copy for a short, personal invite email carrying their unique questionnaire link, written for the two genuine signups (`mylesford030@gmail.com`, `social@mohartmusic.com`). Delivered to you in chat as ready-to-paste text, plus a "Copy invite link" button beside each signup in the admin panel so you send from your own inbox.
+
+### 4. A way for you to test it
+
+The Waitlist panel gets a **"Preview questionnaire"** button at the top. It opens the real questionnaire in a new tab using a disposable preview token, so you can run the whole flow end to end as a candidate would see it. Preview runs are tagged and never appear in your results or tallies, and the panel shows a small "preview mode" ribbon so there's no confusing it with a real response.
 
 ## Technical notes
 
