@@ -12,6 +12,10 @@ const corsHeaders = {
 
 const ALERT_TO = "adamonsea@gmail.com";
 const PROBE_TIMEOUT_MS = 12000;
+const PROJECT_REF = "fpoywkjgdapgjtdeooak";
+const RESTART_URL = `https://supabase.com/dashboard/project/${PROJECT_REF}/settings/general`;
+const HEALTH_URL = `https://supabase.com/dashboard/project/${PROJECT_REF}/reports/database`;
+const STATUS_URL = "https://status.supabase.com";
 
 async function probeDataApi(): Promise<{ ok: boolean; status?: number; latencyMs: number; error?: string }> {
   const url = Deno.env.get("SUPABASE_URL");
@@ -44,7 +48,7 @@ async function probeDataApi(): Promise<{ ok: boolean; status?: number; latencyMs
   }
 }
 
-async function sendAlertEmail(subject: string, body: string): Promise<boolean> {
+async function sendAlertEmail(subject: string, body: string, html: string): Promise<boolean> {
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (!resendKey) {
     console.error("[platform-outage-alert] RESEND_API_KEY missing — cannot email");
@@ -61,7 +65,8 @@ async function sendAlertEmail(subject: string, body: string): Promise<boolean> {
       from: "Curatr Alerts <alerts@curatr.pro>",
       to: [ALERT_TO],
       subject,
-      html: `<pre style="font:14px/1.5 ui-monospace,monospace;white-space:pre-wrap">${body}</pre>`,
+      text: body,
+      html,
     }),
   });
 
@@ -112,11 +117,38 @@ Deno.serve(async (req) => {
     `Latency:     ${probe.latencyMs}ms`,
     `Error:       ${probe.error ?? "none"}`,
     "",
-    "Supabase status page: https://status.supabase.com",
-    "Project dashboard:    https://supabase.com/dashboard/project/fpoywkjgdapgjtdeooak",
+    "FIRST ACTION — restart the project (no data loss, ~1-2 min):",
+    `${RESTART_URL}   → scroll to "Restart project"`,
+    "",
+    `Database health/load: ${HEALTH_URL}`,
+    `Supabase status page: ${STATUS_URL}`,
   ].join("\n");
 
-  const emailed = await sendAlertEmail(subject, body);
+  const html = `
+    <div style="font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111">
+      <h2 style="margin:0 0 12px;font-size:18px">${subject}</h2>
+      <p style="margin:0 0 16px">
+        <a href="${RESTART_URL}"
+           style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">
+          Restart the Supabase project →
+        </a>
+      </p>
+      <p style="margin:0 0 20px;font-size:13px;color:#555">
+        On that page scroll to <strong>Restart project</strong>. It bounces Postgres and the
+        connection pooler, clears stuck connections, and does not lose any data (~1–2 minutes).
+      </p>
+      <pre style="font:13px/1.6 ui-monospace,monospace;white-space:pre-wrap;background:#f6f6f4;padding:14px;border-radius:8px;margin:0 0 16px">Checked at:  ${checkedAt}
+Data API:    ${probe.ok ? "responding" : "FAILED"}
+HTTP status: ${probe.status ?? "n/a"}
+Latency:     ${probe.latencyMs}ms
+Error:       ${probe.error ?? "none"}</pre>
+      <p style="margin:0;font-size:13px">
+        <a href="${HEALTH_URL}">Database health &amp; load</a> ·
+        <a href="${STATUS_URL}">Supabase status page</a>
+      </p>
+    </div>`;
+
+  const emailed = await sendAlertEmail(subject, body, html);
   console.error(`[platform-outage-alert] ${subject} (emailed=${emailed})`);
 
   return new Response(
