@@ -167,10 +167,21 @@ export default function WaitlistWelcome() {
     );
   }
 
+  const Brand = ({ className = '' }: { className?: string }) => (
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <img src="/curatr-icon.png" alt="" aria-hidden="true" className="h-6 w-6 rounded-md" />
+      <span className="text-sm font-semibold tracking-tight text-foreground">
+        Curatr<span className="text-[hsl(155,100%,67%)]">.</span>
+        <span className="font-light opacity-60">pro</span>
+      </span>
+    </span>
+  );
+
   if (state === 'invalid') {
     return (
       <main className="min-h-dvh flex items-center justify-center bg-background px-6">
-        <div className="max-w-md text-center space-y-4">
+        <div className="max-w-md text-center space-y-4 flex flex-col items-center">
+          <Brand />
           <h1 className="text-2xl font-semibold text-foreground">This link has expired</h1>
           <p className="text-muted-foreground">
             Ask us for a fresh one, or take a look at a live feed in the meantime.
@@ -186,7 +197,8 @@ export default function WaitlistWelcome() {
   if (state === 'done') {
     return (
       <main className="min-h-dvh flex items-center justify-center bg-background px-6">
-        <div className="max-w-md text-center space-y-5">
+        <div className="max-w-md text-center space-y-5 flex flex-col items-center">
+          <Brand />
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Thank you</h1>
           <p className="text-muted-foreground leading-relaxed">
             That's genuinely useful. We're inviting people in small batches — you'll get an email from us
