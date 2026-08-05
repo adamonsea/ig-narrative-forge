@@ -4713,6 +4713,10 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
+      archive_old_article_bodies: {
+        Args: { cutoff_months?: number }
+        Returns: number
+      }
       archive_title_duplicates: {
         Args: never
         Returns: {
