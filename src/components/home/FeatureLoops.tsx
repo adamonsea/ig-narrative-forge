@@ -107,8 +107,8 @@ const LoopQuiz = ({ reduced }: { reduced: boolean }) => (
 /* 4 — Sentiment tracking: bars breathe as a trend builds */
 const LoopSentiment = ({ reduced }: { reduced: boolean }) => (
   <Frame label="A sentiment trend rising across a small bar chart">
-    <div className="absolute inset-0 flex items-end justify-center gap-2 px-5 pb-5 pt-6">
-      {[0.45, 0.62, 0.5, 0.8, 0.68, 1].map((h, i) => (
+    <div className="absolute inset-0 flex items-end justify-center gap-2 px-5 pb-4 pt-4">
+      {[0.6, 0.75, 0.65, 0.88, 0.78, 1].map((h, i) => (
         <motion.span
           key={i}
           className="w-3 rounded-full sm:w-4"
