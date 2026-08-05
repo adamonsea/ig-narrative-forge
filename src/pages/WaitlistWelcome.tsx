@@ -234,7 +234,9 @@ export default function WaitlistWelcome() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className="space-y-6"
     >
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{context}</p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground border-l-2 border-[hsl(155,100%,67%)] pl-3">
+        {context}
+      </p>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{question}</h1>
         {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
@@ -246,15 +248,19 @@ export default function WaitlistWelcome() {
   return (
     <main className="min-h-dvh bg-background px-6 py-10">
       <div className="mx-auto w-full max-w-lg space-y-8">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold tracking-tight text-foreground">
-            Curatr<span className="font-light opacity-60">.pro</span>
-          </span>
+        <div className="flex items-center justify-between border-b border-border/60 pb-4">
+          <Brand />
           <div className="flex gap-1.5" aria-hidden="true">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <span
                 key={i}
-                className={`h-1.5 w-1.5 rounded-full ${i <= progress ? 'bg-foreground' : 'bg-border'}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === progress
+                    ? 'w-4 bg-[hsl(155,100%,67%)]'
+                    : i < progress
+                    ? 'w-1.5 bg-foreground'
+                    : 'w-1.5 bg-border'
+                }`}
               />
             ))}
           </div>
