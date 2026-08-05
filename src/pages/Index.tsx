@@ -126,12 +126,12 @@ const Index = () => {
                 </motion.div>
                 <motion.div {...hoverLift}>
                   <Button
-                    onClick={() => setDemoOpen(true)}
+                    asChild
                     variant="ghost"
                     size="lg"
                     className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
                   >
-                    Try the demo
+                    <Link to="/feed/eastbourne">See a feed</Link>
                   </Button>
                 </motion.div>
                 <motion.div {...hoverLift}>
