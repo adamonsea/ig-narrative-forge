@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import { Check, Zap, Crown, Building2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { WaitlistModal } from '@/components/WaitlistModal';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 
@@ -11,7 +11,6 @@ interface PricingTier {
   price: string;
   credits: string;
   description: string;
-  icon: React.ReactNode;
   features: string[];
   highlight?: boolean;
   accentColor: string;
@@ -23,7 +22,6 @@ const tiers: PricingTier[] = [
     price: '$19',
     credits: '500 AI credits/mo',
     description: 'Perfect for individual creators getting started',
-    icon: <Zap className="h-6 w-6" />,
     accentColor: 'hsl(155,100%,67%)',
     features: [
       'Up to 3 feeds',
@@ -38,7 +36,6 @@ const tiers: PricingTier[] = [
     price: '$49',
     credits: '2,000 AI credits/mo',
     description: 'For serious curators building engaged audiences',
-    icon: <Crown className="h-6 w-6" />,
     accentColor: 'hsl(270,100%,68%)',
     highlight: true,
     features: [
@@ -56,7 +53,6 @@ const tiers: PricingTier[] = [
     price: '$149',
     credits: '10,000 AI credits/mo',
     description: 'For organizations with multiple editorial teams',
-    icon: <Building2 className="h-6 w-6" />,
     accentColor: 'hsl(155,100%,67%)',
     features: [
       'Everything in Pro',
@@ -141,18 +137,13 @@ const Pricing = () => {
           {/* Credit explainer */}
           <section className="max-w-3xl mx-auto mb-16">
             <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-[hsl(270,100%,68%)]/20">
-              <div className="flex items-start gap-4">
-                <div className="rounded-xl bg-[hsl(270,100%,68%)]/10 w-12 h-12 flex items-center justify-center border border-[hsl(270,100%,68%)]/30 shrink-0">
-                  <Zap className="h-6 w-6 text-[hsl(270,100%,68%)]" />
-                </div>
-                <div>
+              <div>
                   <h3 className="text-lg font-semibold text-white mb-2">How AI credits work</h3>
                   <p className="text-white/60 text-sm leading-relaxed">
                     Credits power AI features like content simplification, illustration generation, quiz creation, and sentiment analysis. 
                     Usage varies by feature—simple summaries use fewer credits, while image generation uses more. 
                     Unused credits don't roll over, but you can always add more.
                   </p>
-                </div>
               </div>
             </div>
           </section>
@@ -176,20 +167,7 @@ const Pricing = () => {
                   )}
                   
                   <div className="space-y-6">
-                    {/* Icon and name */}
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="rounded-xl w-12 h-12 flex items-center justify-center border"
-                        style={{ 
-                          backgroundColor: `${tier.accentColor}15`,
-                          borderColor: `${tier.accentColor}40`,
-                          color: tier.accentColor
-                        }}
-                      >
-                        {tier.icon}
-                      </div>
-                      <h3 className="text-2xl font-semibold text-white">{tier.name}</h3>
-                    </div>
+                    <h3 className="text-2xl font-semibold text-white">{tier.name}</h3>
 
                     {/* Price */}
                     <div>
