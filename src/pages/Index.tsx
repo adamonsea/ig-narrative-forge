@@ -10,6 +10,7 @@ import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 import { useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
+import { Play } from 'lucide-react';
 import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoops';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -165,16 +166,10 @@ const Index = () => {
               </motion.p>
               <motion.div variants={reveal} className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 <motion.div {...hoverLift}>
-                  <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
-                    <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
-                  </Button>
-                </motion.div>
-                <motion.div {...hoverLift}>
                   <Button
                     onClick={() => setExplainerOpen(true)}
-                    variant="ghost"
                     size="lg"
-                    className="rounded-full px-8 h-12 text-base border-2 border-white/25 bg-transparent text-white hover:bg-white/10"
+                    className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
                   >
                     <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
                     Introducing Curatr
@@ -188,6 +183,16 @@ const Index = () => {
                     className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
                   >
                     <Link to="/feed/eastbourne">See a feed</Link>
+                  </Button>
+                </motion.div>
+                <motion.div {...hoverLift}>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="lg"
+                    className="rounded-full px-8 h-12 text-base border-2 border-white/25 bg-transparent text-white hover:bg-white/10"
+                  >
+                    <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
                   </Button>
                 </motion.div>
               </motion.div>
