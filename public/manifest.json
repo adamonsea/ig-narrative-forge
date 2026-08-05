@@ -10,8 +10,8 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/curatr-icon.png",
-      "sizes": "192x192",
+      "src": "/favicon.png",
+      "sizes": "64x64",
       "type": "image/png",
       "purpose": "any"
     },
@@ -20,6 +20,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/curatr-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
