@@ -168,11 +168,12 @@ export default function WaitlistWelcome() {
   }
 
   const Brand = ({ className = '' }: { className?: string }) => (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <img src="/curatr-icon.png" alt="" aria-hidden="true" className="h-6 w-6 rounded-md" />
-      <span className="text-sm font-semibold tracking-tight text-foreground">
-        Curatr<span className="text-[hsl(155,100%,67%)]">.</span>
-        <span className="font-light opacity-60">pro</span>
+    <span className={`inline-flex items-baseline ${className}`}>
+      <span className="font-display font-semibold tracking-tight text-foreground text-2xl">
+        Curatr
+      </span>
+      <span className="font-display font-light tracking-tight text-[hsl(155,100%,67%)] text-lg">
+        .pro
       </span>
     </span>
   );
