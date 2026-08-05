@@ -159,6 +159,7 @@ export default function WaitlistWelcome() {
   const [phase, setPhase] = useState<'statement' | 'question'>('statement');
   const [typed, setTyped] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
+  const [rebuttal, setRebuttal] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -207,6 +208,7 @@ export default function WaitlistWelcome() {
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
     setPhase('statement');
     setTyped(false);
+    setRebuttal(false);
   };
 
   const submit = async (wantsEarlyAccess: boolean) => {
