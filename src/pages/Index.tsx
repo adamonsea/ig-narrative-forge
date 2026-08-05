@@ -98,7 +98,15 @@ const Index = () => {
             </div>
 
             {/* Mobile menu */}
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <div className="flex items-center gap-2 md:hidden">
+              <Button
+                asChild
+                size="sm"
+                className="rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
+              >
+                <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
+              </Button>
+              <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
                 <button
                   className="md:hidden flex items-center justify-center h-10 w-10 rounded-full border border-white/20 text-white"
@@ -123,17 +131,10 @@ const Index = () => {
                       {item.label}
                     </Link>
                   ))}
-                  <Button
-                    asChild
-                    size="lg"
-                    onClick={() => setMenuOpen(false)}
-                    className="mt-4 rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
-                  >
-                    <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
-                  </Button>
                 </nav>
               </SheetContent>
-            </Sheet>
+              </Sheet>
+            </div>
           </nav>
         </header>
 
