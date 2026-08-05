@@ -140,6 +140,8 @@ export default function WaitlistWelcome() {
   const [answers, setAnswers] = useState<Answers>(EMPTY);
   const [showDetail, setShowDetail] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [phase, setPhase] = useState<'statement' | 'question'>('statement');
+  const [typed, setTyped] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -184,7 +186,11 @@ export default function WaitlistWelcome() {
     });
   };
 
-  const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  const next = () => {
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    setPhase('statement');
+    setTyped(false);
+  };
 
   const submit = async (wantsEarlyAccess: boolean) => {
     setSubmitting(true);
