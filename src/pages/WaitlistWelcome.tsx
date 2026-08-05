@@ -143,6 +143,7 @@ export default function WaitlistWelcome() {
   const [submitting, setSubmitting] = useState(false);
   const [phase, setPhase] = useState<'statement' | 'question'>('statement');
   const [typed, setTyped] = useState(false);
+  const [explainerOpen, setExplainerOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
