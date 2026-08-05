@@ -17,6 +17,8 @@ export interface SceneDef {
   duration: number;
   /** Narration line, also used as the on-screen caption. */
   caption: string;
+  /** Optional presenter clip for this beat; falls back to AVATAR_CLIPS by id. */
+  avatarClip?: string;
   Component: ComponentType<SceneProps>;
 }
 
