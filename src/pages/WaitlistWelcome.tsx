@@ -60,6 +60,21 @@ const OPTIONS = {
 
 const TOTAL_STEPS = 7;
 
+// "Did you know" answers to each stated objection. Objections without an
+// honest answer are deliberately absent — we just thank them and move on.
+const BLOCKER_ANSWERS: Record<string, string> = {
+  'Too expensive':
+    'Curatr runs one feed end to end for less than a couple of freelance hours a month, and there will be a free tier for a single feed while you test it.',
+  "Not sure I'd trust the writing":
+    'Nothing publishes itself unless you switch that on. Every story keeps its original source attached, and you can read, edit or bin it before it goes out.',
+  'No time to run it':
+    'The gathering, writing and illustrating happen without you. A typical day is a couple of minutes of approving or rejecting in the pipeline.',
+  'Needs to carry my own brand':
+    'Feeds carry your name, colours and logo — on the web feed, the email and the shareable cards.',
+  'Needs to sit on my own site':
+    'There is an embeddable widget and an RSS feed, so your Curatr feed can live inside your own site rather than beside it.',
+};
+
 // Full-screen statements shown between questions
 const STATEMENTS: string[] = [
   'Curatr runs a live feed on a subject or place — and you can run as many as you like.',
@@ -144,6 +159,7 @@ export default function WaitlistWelcome() {
   const [phase, setPhase] = useState<'statement' | 'question'>('statement');
   const [typed, setTyped] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
+  const [rebuttal, setRebuttal] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -192,6 +208,7 @@ export default function WaitlistWelcome() {
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
     setPhase('statement');
     setTyped(false);
+    setRebuttal(false);
   };
 
   const submit = async (wantsEarlyAccess: boolean) => {
@@ -460,7 +477,40 @@ export default function WaitlistWelcome() {
             </Screen>
           )}
 
-          {step === 4 && (
+          {step === 4 && rebuttal && (
+            (() => {
+              const answered = answers.blockers.filter((b) => BLOCKER_ANSWERS[b]);
+              return (
+                <Screen
+                  question={answered.length ? 'Did you know…' : 'Thanks for the feedback'}
+                  hint={
+                    answered.length
+                      ? 'A quick word on what you flagged.'
+                      : "That's noted — it goes straight to the people building this."
+                  }
+                >
+                  {answered.map((b) => (
+                    <div key={b} className="rounded-xl border border-border bg-card px-5 py-4">
+                      <p className="text-sm font-medium text-foreground">{b}</p>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                        {BLOCKER_ANSWERS[b]}
+                      </p>
+                    </div>
+                  ))}
+                  {answered.length > 0 && answered.length < answers.blockers.length && (
+                    <p className="text-sm text-muted-foreground">
+                      Thanks for the rest of the feedback too — we've logged it.
+                    </p>
+                  )}
+                  <Button className="w-full" onClick={next}>
+                    Continue
+                  </Button>
+                </Screen>
+              );
+            })()
+          )}
+
+          {step === 4 && !rebuttal && (
             <Screen
               question="What would make this a no?"
               hint="Tap any that apply."
@@ -491,7 +541,7 @@ export default function WaitlistWelcome() {
                   Say more
                 </button>
               )}
-              <Button className="w-full" onClick={next}>
+              <Button className="w-full" onClick={() => setRebuttal(true)}>
                 Continue
               </Button>
             </Screen>
