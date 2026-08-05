@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { Check } from 'lucide-react';
+import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 
 const FN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/waitlist-questionnaire`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
