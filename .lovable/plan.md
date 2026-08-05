@@ -1,45 +1,33 @@
-# Shrink the Curatr database
+# Fix the story animation feature
 
-Images are not the problem. I measured the database, and the growth is almost entirely **job history logs**, not content.
+## What we know
 
-## What's actually on disk
+- No animation has been produced since 29 June (latest `animation_generated_at` in `stories`).
+- The `animate-illustration` edge function has **no logs at all** in the retention window, even though you just tried it. That means requests are being rejected before the function runs, not failing inside it.
+- A direct call to the deployed function is rejected at the platform gateway with `401 UNAUTHORIZED_NO_AUTH_HEADER`. The function is configured with `verify_jwt = true` in `supabase/config.toml`, so the gateway validates the token before the code ever boots.
+- Two secondary risks are visible in the code but unconfirmed as the cause: the Replicate model version hashes are hardcoded (they go stale when a model is re-published), and the function waits up to 60s at Replicate plus polls for another 90s, which can exceed the function's wall clock.
 
-| What | Size | Notes |
-|---|---|---|
-| `cron.job_run_details` (scheduler history) | **571 MB** | 664,851 rows going back to 19 Aug 2025. 651,347 are older than 7 days. Nothing reads them. |
-| Write-ahead log (WAL) | **1 GB** | Grows with churn; shrinks once churn drops |
-| `net._http_response` (pg_net replies) | 66 MB | Only 522 live rows — the rest is bloat |
-| Everything your app owns (`public`) | **247 MB** | The whole product: articles, stories, slides, sources |
-| Storage bucket (images) | 3.4 GB | Billed as Storage, **not** on this 8 GB disk |
+The gateway rejection is the confirmed blocker. The other two only become visible once calls reach the function again.
 
-Within `public`, the largest items are `articles` (54 MB), `shared_article_content` (48 MB of scraped article bodies), `slides` (19 MB), `stories` (16 MB) and `visuals` (12 MB — only 42 rows, so that is dead-row bloat left over from the earlier base64 clean-up).
+## Plan
 
-So one scheduler log table is more than twice the size of the entire product.
+1. **Move auth into the function (fixes the 401).**
+   Set `verify_jwt = false` for `animate-illustration` and validate the caller inside the function using the existing shared helper (`supabase/functions/_shared/auth.ts`), the same pattern as the already-hardened functions. Behaviour is unchanged for legitimate users: a missing or invalid token still returns 401 — but from our code, with a log line, instead of silently at the gateway.
 
-## The fix
+2. **Surface the real error in the UI.**
+   In the three callers (`MultiTenantStoriesList`, `PublishedStoriesList`, `ApprovedStoriesPanel`), show the message returned by the function in the error toast instead of a generic "failed". Today every failure looks identical.
 
-**1. Purge and cap the cron history (frees ~560 MB)**
-Delete `cron.job_run_details` rows older than 7 days, then add a nightly job that keeps only the last 7 days. There are 29 cron jobs, several running every minute — that is roughly 50k rows a week, so the ongoing cap matters more than the one-off delete.
+3. **Stop hardcoding the Replicate model version.**
+   Resolve the current version for the Wan 2.2 i2v standard and fast models at call time from Replicate's model endpoint (cached per boot), with the existing hashes as fallback. This removes a class of silent 422 failures.
 
-**2. Cap pg_net response history (frees ~60 MB)**
-Same pattern on `net._http_response`: nightly delete of anything older than a day, plus a reclaim.
+4. **Make long renders survive the function timeout.**
+   Drop the blocking `Prefer: wait=60` header, keep only the poll loop, and extend it to ~4 minutes with a clear timeout message so a slow render reports honestly instead of failing anonymously.
 
-**3. Reclaim bloat on the churny tables**
-Run a full reclaim on `visuals`, `articles`, `shared_article_content` and `net._http_response` so freed pages go back to the operating system instead of sitting as empty space. This takes brief table locks, so it runs once, off-peak.
-
-**4. Archive retention for scraped article bodies (frees ~30-40 MB and stops future growth)**
-`shared_article_content` keeps the full scraped body of every article forever — 5,745 rows are over 180 days old, and 3,786 rows in `articles` are too. Once a story is published, the body is only needed for duplicate detection, which works off the checksum and title. A nightly job blanks the body on rows older than 180 days that have no unpublished story attached, keeping the row, URL, title, checksum and attribution intact. Duplicate detection, feeds and published stories are unaffected.
-
-**5. Storage-side image trim (optional, separate budget)**
-The 3.4 GB of images sits in Storage, not on this disk, so it does nothing for the 8 GB warning — but if you want that bill down, a job can delete original-size renders for stories older than 12 months and keep only the WebP feed variant. Worth doing second, after the disk issue is closed.
-
-## Expected result
-
-Disk usage drops from roughly 1.9 GB of real data to about **300-400 MB**, with retention jobs holding it there. You can then manually resize the disk back down from 12 GB once usage settles.
+5. **Verify end to end.**
+   Deploy, animate one story from the pipeline, and confirm the logs show the full path (auth → prompt → Replicate → upload) and the video appears on the story.
 
 ## Technical notes
 
-- One migration adds three retention functions plus `cron.schedule` entries for them, staggered off the busy minute slots.
-- The one-off purge and `VACUUM FULL` run as separate direct statements rather than inside the migration, since VACUUM cannot run in a transaction.
-- The body-blanking job checks story status before clearing, so nothing in the pipeline loses source text mid-flight.
-- No changes to feeds, the scraper, RLS or any UI.
+- No database schema changes and no credit-logic changes. Credits are still deducted only for non-superadmin callers, and only after auth succeeds.
+- `_shared/auth.ts` already provides the JWT-validation helper, so step 1 reuses existing code rather than adding a new auth path.
+- Step 3 adds one extra Replicate API call per cold boot, cached thereafter.
