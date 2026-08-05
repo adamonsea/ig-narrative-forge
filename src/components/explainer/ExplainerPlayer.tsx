@@ -29,6 +29,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
   /** True once this scene's presenter clip is actually rolling (or none exists). */
   const [clipRolling, setClipRolling] = useState(false);
   const tailTimer = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const scene = TIMELINE[index];
   const avatarClipSrc = scene.avatarClip ?? clipForScene(scene.id) ?? avatarSrc;
@@ -84,6 +85,14 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
   useEffect(() => () => {
     if (tailTimer.current) window.clearTimeout(tailTimer.current);
   }, []);
+
+  // Keep the presenter clip in step with play/pause.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (playing) void v.play().catch(() => undefined);
+    else v.pause();
+  }, [playing, index]);
 
   const replay = () => {
     finishedRef.current = false;
@@ -157,6 +166,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
         {avatarClip && !finished && (
           <video
             key={scene.id}
+            ref={videoRef}
             src={avatarClip}
             autoPlay
             muted={muted}
