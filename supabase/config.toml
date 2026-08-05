@@ -563,3 +563,10 @@ verify_jwt = false
 [functions.seo-page]
 verify_jwt = false
 
+
+# ========================================
+# PLATFORM OUTAGE WATCHDOG (external cron)
+# ========================================
+
+[functions.platform-outage-alert]
+verify_jwt = false
