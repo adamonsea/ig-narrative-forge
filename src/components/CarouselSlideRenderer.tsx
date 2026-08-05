@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { createSafeHTML } from '@/lib/sanitizer';
+import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
 import { ExternalLink } from 'lucide-react';
 
 interface Slide {
@@ -66,6 +67,9 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
       mainContent = content.substring(0, splitIndex).trim();
       ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
     }
+
+    // Discard any AI-written source credit — real attribution comes from source_url
+    mainContent = stripGeneratedSourceAttribution(mainContent);
     
     // Always add source attribution with original article date on final slide
     const sourceDomain = story.article.source_url && story.article.source_url !== '#' ? 

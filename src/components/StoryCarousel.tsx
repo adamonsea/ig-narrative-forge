@@ -10,6 +10,7 @@ import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFla
 import { format } from 'date-fns';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
+import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
@@ -466,6 +467,9 @@ export default function StoryCarousel({
       mainContent = content.substring(0, splitIndex).trim();
       ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
     }
+
+    // Discard any AI-written source credit — real attribution comes from source_url
+    mainContent = stripGeneratedSourceAttribution(mainContent);
     
     // Safe URL parsing with try/catch for source attribution
     let sourceDomain = 'source';
