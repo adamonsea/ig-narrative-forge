@@ -766,7 +766,7 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
           normalized.push({
             slideNumber: n,
             content: isLast
-              ? `Source: ${publicationName}. Read the original article for full details.`
+              ? 'Read the original article for full details.'
               : 'Not specified in source. Read the original article for full context.',
             visualPrompt: `Simple, neutral editorial illustration for "${article.title}" (slide ${n}).`,
             altText: `Slide ${n}: Additional context not specified in source.`,
