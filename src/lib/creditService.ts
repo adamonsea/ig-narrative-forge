@@ -126,7 +126,7 @@ export class CreditService {
       const { data, error } = await supabase.functions.invoke('story-illustrator', {
         body: { 
           storyId,
-          model: model || 'gpt-image-1'
+          model: model || 'gpt-image-1.5-medium'
         }
       });
 
