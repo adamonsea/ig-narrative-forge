@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { padImageToSquare } from '@/lib/squareImage';
 
 interface TopicBrandingSettingsProps {
   topic: {
@@ -170,7 +171,9 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
   };
 
   const uploadIcon = async (file: File): Promise<string> => {
-    return uploadAndOptimizeImage(file, 'icon');
+    // Browsers stretch non-square favicons/app icons — pad to a square first
+    const squared = await padImageToSquare(file);
+    return uploadAndOptimizeImage(squared, 'icon');
   };
 
   const handleSave = async () => {
@@ -331,7 +334,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                 <img
                   src={iconPreview}
                   alt="Icon preview"
-                  className="w-24 h-24 object-cover border rounded-lg"
+                  className="w-24 h-24 object-contain border rounded-lg bg-muted/30"
                 />
                 <Button
                   variant="destructive"
