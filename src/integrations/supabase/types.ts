@@ -4423,21 +4423,65 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          invite_token: string
           plan: string | null
         }
         Insert: {
           created_at?: string
           email: string
           id?: string
+          invite_token?: string
           plan?: string | null
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
+          invite_token?: string
           plan?: string | null
         }
         Relationships: []
+      }
+      waitlist_responses: {
+        Row: {
+          answers: Json
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_preview: boolean
+          updated_at: string
+          waitlist_id: string | null
+          wants_early_access: boolean
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_preview?: boolean
+          updated_at?: string
+          waitlist_id?: string | null
+          wants_early_access?: boolean
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_preview?: boolean
+          updated_at?: string
+          waitlist_id?: string | null
+          wants_early_access?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_responses_waitlist_id_fkey"
+            columns: ["waitlist_id"]
+            isOneToOne: false
+            referencedRelation: "waitlist"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_digest_history: {
         Row: {

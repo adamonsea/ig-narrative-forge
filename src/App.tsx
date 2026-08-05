@@ -38,6 +38,7 @@ import WidgetsPage from "./pages/dashboard/Widgets";
 import WidgetTestPage from "./pages/dashboard/WidgetTest";
 import Health from "./pages/Health";
 import Unsubscribe from "./pages/Unsubscribe";
+import WaitlistWelcome from "./pages/WaitlistWelcome";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -90,6 +91,7 @@ const App = () => {
                 <Route path="/guides/local-news-feeds" element={<LocalNewsFeedsGuide />} />
                 <Route path="/health" element={<Health />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/waitlist/welcome" element={<WaitlistWelcome />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
                 <Route path="/dashboard/widgets" element={<WidgetsPage />} />

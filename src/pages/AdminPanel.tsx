@@ -10,6 +10,7 @@ import { SourceHealthMonitor } from '@/components/SourceHealthMonitor';
 import { LifecycleAudit } from '@/components/LifecycleAudit';
 import { ImageGenerationMetricsPanel } from '@/components/ImageGenerationMetricsPanel';
 import { ABTestDashboard } from '@/components/admin/ABTestDashboard';
+import { WaitlistPanel } from '@/components/admin/WaitlistPanel';
 import { SectionLabel } from '@/components/ui/section-label';
 
 export default function AdminPanel() {
@@ -36,6 +37,11 @@ export default function AdminPanel() {
           <section>
             <SectionLabel>Experiments</SectionLabel>
             <ABTestDashboard />
+          </section>
+
+          <section>
+            <SectionLabel>Waitlist</SectionLabel>
+            <WaitlistPanel />
           </section>
 
           <section>
