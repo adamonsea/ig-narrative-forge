@@ -360,10 +360,10 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
     DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
   );
   const spots = [
-    { x: '-calc(var(--u)*32)', y: '-calc(var(--u)*20)' },
-    { x: 'calc(var(--u)*32)', y: '-calc(var(--u)*20)' },
-    { x: '-calc(var(--u)*32)', y: 'calc(var(--u)*20)' },
-    { x: 'calc(var(--u)*32)', y: 'calc(var(--u)*20)' },
+    { x: -30 * u, y: -21 * u },
+    { x: 30 * u, y: -21 * u },
+    { x: -30 * u, y: 21 * u },
+    { x: 30 * u, y: 21 * u },
   ];
   return (
     <Stage>
