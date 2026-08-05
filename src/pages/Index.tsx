@@ -11,11 +11,14 @@ import { useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoops';
+import { Menu } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   usePageFavicon();
   const reduce = useReducedMotion();
 
