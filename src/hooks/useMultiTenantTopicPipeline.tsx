@@ -562,16 +562,33 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       let parliamentaryData: any[] = [];
       
       if (storyIds.length > 0) {
-        const { data: slidesResult, error: slidesError } = await supabase
-          .from('slides')
-          .select('*')
-          .in('story_id', storyIds)
-          .order('slide_number');
-        
-        if (slidesError) {
-          console.error('Error loading slides:', slidesError);
-        } else {
-          slidesData = slidesResult || [];
+        // PostgREST caps responses at 1000 rows. With ~6 slides per story this
+        // silently truncated the result (stories rendering with missing/no slides).
+        // Fetch in story-id chunks and page through each chunk until exhausted.
+        const CHUNK = 60;
+        const PAGE = 1000;
+        for (let i = 0; i < storyIds.length; i += CHUNK) {
+          const chunkIds = storyIds.slice(i, i + CHUNK);
+          let offset = 0;
+          // eslint-disable-next-line no-constant-condition
+          while (true) {
+            const { data: slidesResult, error: slidesError } = await supabase
+              .from('slides')
+              .select('*')
+              .in('story_id', chunkIds)
+              .order('slide_number')
+              .range(offset, offset + PAGE - 1);
+
+            if (slidesError) {
+              console.error('Error loading slides:', slidesError);
+              break;
+            }
+
+            const rows = slidesResult || [];
+            slidesData = slidesData.concat(rows);
+            if (rows.length < PAGE) break;
+            offset += PAGE;
+          }
         }
 
         // Load parliamentary mentions to identify parliamentary stories
