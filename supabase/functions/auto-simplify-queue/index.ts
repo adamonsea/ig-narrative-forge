@@ -101,6 +101,43 @@ Deno.serve(async (req) => {
 
     console.log(`📋 Found ${topicSettings.length} topics with auto-simplify enabled`);
 
+    // Helper: split an array into fixed-size chunks (keeps .in() filters small).
+    const chunk = <T,>(arr: T[], size: number): T[][] => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+
+    // Batched existence lookups: one query per chunk instead of one per article.
+    const fetchStoryLinkedIds = async (ids: string[]): Promise<Set<string>> => {
+      const found = new Set<string>();
+      for (const part of chunk(ids, 200)) {
+        const { data } = await supabase
+          .from('stories')
+          .select('topic_article_id')
+          .in('topic_article_id', part);
+        for (const row of (data || [])) {
+          if (row.topic_article_id) found.add(row.topic_article_id as string);
+        }
+      }
+      return found;
+    };
+
+    const fetchActiveQueueIds = async (ids: string[]): Promise<Set<string>> => {
+      const found = new Set<string>();
+      for (const part of chunk(ids, 200)) {
+        const { data } = await supabase
+          .from('content_generation_queue')
+          .select('topic_article_id')
+          .in('topic_article_id', part)
+          .in('status', ['pending', 'processing']);
+        for (const row of (data || [])) {
+          if (row.topic_article_id) found.add(row.topic_article_id as string);
+        }
+      }
+      return found;
+    };
+
     // 1b. Orphan recovery: reset 'processed' articles back to 'new' if they have no story and no active queue item
     const topicIdsForRecovery = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     for (const tid of topicIdsForRecovery) {
@@ -110,38 +147,32 @@ Deno.serve(async (req) => {
         .eq('topic_id', tid)
         .eq('processing_status', 'processed');
 
-      if (orphans && orphans.length > 0) {
-        for (const orphan of orphans) {
-          // Skip parliamentary articles — they have their own pipeline
-          const meta = orphan.import_metadata as Record<string, unknown> | null;
-          if (meta?.source === 'parliamentary_vote' || meta?.source === 'parliamentary_weekly_roundup') {
-            continue;
-          }
+      if (!orphans || orphans.length === 0) continue;
 
-          // Check if a story exists for this topic_article
-          const { data: existingStory } = await supabase
-            .from('stories')
-            .select('id')
-            .eq('topic_article_id', orphan.id)
-            .maybeSingle();
-          if (existingStory) continue;
+      // Skip parliamentary articles — they have their own pipeline
+      const candidateIds = orphans
+        .filter((o) => {
+          const meta = o.import_metadata as Record<string, unknown> | null;
+          return meta?.source !== 'parliamentary_vote' && meta?.source !== 'parliamentary_weekly_roundup';
+        })
+        .map((o) => o.id as string);
 
-          // Check if an active queue item exists
-          const { data: activeQueue } = await supabase
-            .from('content_generation_queue')
-            .select('id')
-            .eq('topic_article_id', orphan.id)
-            .in('status', ['pending', 'processing'])
-            .maybeSingle();
-          if (activeQueue) continue;
+      if (candidateIds.length === 0) continue;
 
-          // Orphan: no story, no active queue item — reset to 'new'
-          console.log(`🔁 Resetting orphaned article ${orphan.id} from 'processed' to 'new'`);
-          await supabase
-            .from('topic_articles')
-            .update({ processing_status: 'new' })
-            .eq('id', orphan.id);
-        }
+      const [storyLinked, activeQueued] = await Promise.all([
+        fetchStoryLinkedIds(candidateIds),
+        fetchActiveQueueIds(candidateIds),
+      ]);
+
+      const orphanIds = candidateIds.filter((id) => !storyLinked.has(id) && !activeQueued.has(id));
+      if (orphanIds.length === 0) continue;
+
+      console.log(`🔁 Resetting ${orphanIds.length} orphaned articles from 'processed' to 'new' (topic ${tid})`);
+      for (const part of chunk(orphanIds, 200)) {
+        await supabase
+          .from('topic_articles')
+          .update({ processing_status: 'new' })
+          .in('id', part);
       }
     }
 
