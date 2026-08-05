@@ -11,11 +11,14 @@ import { useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoops';
+import { Menu } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   usePageFavicon();
   const reduce = useReducedMotion();
 
@@ -73,7 +76,7 @@ const Index = () => {
             <div className="text-3xl font-display font-semibold tracking-tight text-white">
               Curatr<span className="text-[hsl(155,100%,67%)]">.</span><span className="text-xl opacity-70">pro</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
                 Discover
               </Link>
@@ -93,6 +96,44 @@ const Index = () => {
                 </Button>
               )}
             </div>
+
+            {/* Mobile menu */}
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <button
+                  className="md:hidden flex items-center justify-center h-10 w-10 rounded-full border border-white/20 text-white"
+                  aria-label="Open menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[78%] max-w-xs bg-[hsl(214,50%,9%)] border-white/10 text-white">
+                <nav className="mt-10 flex flex-col gap-2">
+                  {[
+                    { to: '/discover', label: 'Discover' },
+                    { to: '/features', label: 'Features' },
+                    { to: '/pricing', label: 'Pricing' },
+                  ].map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMenuOpen(false)}
+                      className="rounded-xl px-4 py-3 text-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                  <Button
+                    asChild
+                    size="lg"
+                    onClick={() => setMenuOpen(false)}
+                    className="mt-4 rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
+                  >
+                    <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </nav>
         </header>
 
