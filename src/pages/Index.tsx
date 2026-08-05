@@ -10,6 +10,7 @@ import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 import { useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
+import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoops';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -241,12 +242,13 @@ const Index = () => {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { title: 'AI illustrations', body: 'Generate unique editorial artwork for every story. No stock photos, no copyright concerns.' },
-                { title: 'Play Mode', body: 'Readers swipe through stories, rating content with hot-or-not mechanics that build habits.' },
-                { title: 'Quiz cards', body: 'Auto-generate knowledge quizzes from your content. Test and engage readers with gamification.' },
-                { title: 'Sentiment tracking', body: 'Monitor what topics resonate with your community. See trends emerge before they go mainstream.' },
+                { title: 'AI illustrations', loop: 'illustrations' as FeatureLoopName, body: 'Generate unique editorial artwork for every story. No stock photos, no copyright concerns.' },
+                { title: 'Play Mode', loop: 'play' as FeatureLoopName, body: 'Readers swipe through stories, rating content with hot-or-not mechanics that build habits.' },
+                { title: 'Quiz cards', loop: 'quiz' as FeatureLoopName, body: 'Auto-generate knowledge quizzes from your content. Test and engage readers with gamification.' },
+                { title: 'Sentiment tracking', loop: 'sentiment' as FeatureLoopName, body: 'Monitor what topics resonate with your community. See trends emerge before they go mainstream.' },
               ].map((f) => (
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
+                  <FeatureLoop name={f.loop} />
                   <h4 className="text-xl font-display italic mb-4 text-white">{f.title}</h4>
                   <p className="text-sm text-white/70 leading-relaxed">{f.body}</p>
                 </motion.div>
