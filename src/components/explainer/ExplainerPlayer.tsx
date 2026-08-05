@@ -162,6 +162,13 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
             muted={muted}
             playsInline
             aria-hidden="true"
+            onPlaying={() => setClipRolling(true)}
+            onEnded={() => {
+              // Let the last syllable land before the crossfade.
+              if (tailTimer.current) window.clearTimeout(tailTimer.current);
+              tailTimer.current = window.setTimeout(() => goTo(index + 1), 400);
+            }}
+            onError={() => setClipRolling(true)}
             className="absolute bottom-[max(0.75rem,2.5vw)] right-[max(0.75rem,2.5vw)] h-[clamp(96px,17vw,220px)] w-[clamp(96px,17vw,220px)] rounded-full border-2 border-white/25 object-cover shadow-[0_2vmin_5vmin_rgba(0,0,0,0.5)]"
           />
         )}
