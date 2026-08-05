@@ -364,7 +364,7 @@ REQUIREMENTS:
 - Include visual prompts for each slide
 - Make it shareable and engaging for web readers
 - Include alt text for accessibility
-- Final slide should include source attribution
+- NEVER name the publication, website, domain or author in any slide. Attribution is added automatically from the real article URL, so writing it yourself risks mis-crediting. Do not write "Source: ...", "Read more at <site>", "By <name>", or any publication name.
 - CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
