@@ -773,7 +773,10 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
         }
       }
 
-      return normalized.slice(0, slideCount);
+      return normalized.slice(0, slideCount).map((s: any) => ({
+        ...s,
+        content: stripGeneratedAttribution(s.content || ''),
+      }));
 
       
     } catch (error) {
