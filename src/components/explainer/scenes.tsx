@@ -227,12 +227,12 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
           return (
             <motion.div
               key={s}
-              className="absolute left-1/2 top-1/2 max-w-[52vw] truncate rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*3)] py-[calc(var(--u)*1.6)] text-[calc(var(--u)*2.2)] font-medium text-white/85"
+              className="absolute left-1/2 top-1/2 max-w-[42vw] truncate rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*3)] py-[calc(var(--u)*1.6)] text-[calc(var(--u)*2.2)] font-medium text-white/85"
               style={{ translate: '-50% -50%' }}
               initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
               animate={{
-                x: Math.cos(angle) * u * (tall ? 14 : 24),
-                y: Math.sin(angle) * u * (tall ? 18 : 16),
+                x: Math.cos(angle) * u * (tall ? 11 : 24),
+                y: Math.sin(angle) * u * (tall ? 27 : 16),
                 opacity: 1,
                 scale: 1,
               }}
@@ -368,8 +368,8 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
     DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
   );
   const tall = isPortrait();
-  const dx = (tall ? 17 : 30) * u;
-  const dy = (tall ? 22 : 21) * u;
+  const dx = (tall ? 11 : 30) * u;
+  const dy = (tall ? 24 : 21) * u;
   const spots = [
     { x: -dx, y: -dy },
     { x: dx, y: -dy },
@@ -389,7 +389,7 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
         {DESTINATIONS.map((d, i) => (
           <motion.div
             key={d}
-            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*30),44vw)] rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*2)] py-[calc(var(--u)*2)] text-center text-[calc(var(--u)*2.2)] font-medium text-white/90"
+            className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*30),42vw)] truncate rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*2)] py-[calc(var(--u)*2)] text-center text-[calc(var(--u)*2.2)] font-medium text-white/90"
             style={{ translate: '-50% -50%' }}
             initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
             animate={{ x: spots[i].x, y: spots[i].y, opacity: 1, scale: 1 }}
