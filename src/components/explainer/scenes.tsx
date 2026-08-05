@@ -84,12 +84,12 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
             className="absolute left-1/2 top-1/2 w-[38vmin] max-w-[300px] -translate-x-1/2 -translate-y-1/2 px-[2.4vmin] py-[2vmin] shadow-[0_2vmin_4vmin_rgba(0,0,0,0.45)]"
             style={{ background: PAPER, color: INK }}
             initial={{
-              x: `${c.x * 3}%`,
-              y: `${c.y * 4 - 120}%`,
+              x: `${c.x * 1.6}vmin`,
+              y: `${c.y * 1.2 - 70}vmin`,
               rotate: reduced ? c.r : c.r * 3,
               opacity: 0,
             }}
-            animate={{ x: `${c.x}%`, y: `${c.y}%`, rotate: reduced ? 0 : c.r, opacity: 1 }}
+            animate={{ x: `${c.x * 1.05}vmin`, y: `${c.y * 0.85}vmin`, rotate: reduced ? 0 : c.r, opacity: 1 }}
             transition={{
               duration: reduced ? 0.35 : 0.9,
               delay: reduced ? 0 : i * 0.22,
