@@ -59,6 +59,50 @@ const OPTIONS = {
 
 const TOTAL_STEPS = 7;
 
+// Full-screen statements shown between questions
+const STATEMENTS: string[] = [
+  'Curatr runs a live feed on a subject or place — and you can run as many as you like.',
+  'Each feed can be public, or built for a specific audience.',
+  'Curatr replaces the trawling, writing and image-making.',
+  'Curatr gathers local stories, rewrites them, and illustrates them daily.',
+  'Honest answers here shape what we build next.',
+  "Plans aren't fixed yet — this genuinely sets the price.",
+  "Last one, and it's optional.",
+];
+
+const Typewriter = ({ text, onDone }: { text: string; onDone?: () => void }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    setCount(0);
+  }, [text]);
+
+  useEffect(() => {
+    if (count >= text.length) {
+      onDone?.();
+      return;
+    }
+    const char = text[count];
+    // reading-speed cadence, with a natural pause on punctuation
+    const delay = /[.,—?!]/.test(char) ? 220 : 34;
+    const t = window.setTimeout(() => setCount((c) => c + 1), delay);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, text]);
+
+  return (
+    <span aria-label={text}>
+      <span aria-hidden="true">{text.slice(0, count)}</span>
+      {count < text.length && (
+        <span
+          aria-hidden="true"
+          className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-[0.12em] bg-[hsl(155,100%,67%)] animate-pulse"
+        />
+      )}
+    </span>
+  );
+};
+
 const Choice = ({
   label,
   selected,
