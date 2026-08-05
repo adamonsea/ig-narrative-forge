@@ -127,7 +127,11 @@ export default function WaitlistWelcome() {
   const set = <K extends keyof Answers>(key: K, value: Answers[K]) =>
     setAnswers((a) => ({ ...a, [key]: value }));
 
-  const toggle = (key: 'feed_kind' | 'resonated' | 'blockers', value: string, max?: number) => {
+  const toggle = (
+    key: 'feed_kind' | 'resonated' | 'blockers' | 'audience' | 'today',
+    value: string,
+    max?: number
+  ) => {
     setAnswers((a) => {
       const current = a[key];
       if (current.includes(value)) return { ...a, [key]: current.filter((v) => v !== value) };
@@ -292,18 +296,19 @@ export default function WaitlistWelcome() {
             <Screen
               context="Each feed can be public, or built for a specific audience."
               question="Who's it for?"
+              hint="Pick as many as apply."
             >
               {OPTIONS.audience.map((o) => (
                 <Choice
                   key={o}
                   label={o}
-                  selected={answers.audience === o}
-                  onClick={() => {
-                    set('audience', o);
-                    setTimeout(next, 180);
-                  }}
+                  selected={answers.audience.includes(o)}
+                  onClick={() => toggle('audience', o)}
                 />
               ))}
+              <Button className="w-full" disabled={answers.audience.length === 0} onClick={next}>
+                Continue
+              </Button>
             </Screen>
           )}
 
@@ -311,18 +316,19 @@ export default function WaitlistWelcome() {
             <Screen
               context="Curatr replaces the trawling, writing and image-making."
               question="What are you doing about it today?"
+              hint="Pick as many as apply."
             >
               {OPTIONS.today.map((o) => (
                 <Choice
                   key={o}
                   label={o}
-                  selected={answers.today === o}
-                  onClick={() => {
-                    set('today', o);
-                    setTimeout(next, 180);
-                  }}
+                  selected={answers.today.includes(o)}
+                  onClick={() => toggle('today', o)}
                 />
               ))}
+              <Button className="w-full" disabled={answers.today.length === 0} onClick={next}>
+                Continue
+              </Button>
             </Screen>
           )}
 
@@ -330,7 +336,7 @@ export default function WaitlistWelcome() {
             <Screen
               context="Curatr gathers local stories, rewrites them, and illustrates them daily."
               question="What made you sign up?"
-              hint="Up to two."
+              hint="Pick up to two."
             >
               {OPTIONS.resonated.map((o) => (
                 <Choice
@@ -388,18 +394,19 @@ export default function WaitlistWelcome() {
             <Screen
               context="Plans aren't fixed yet — this genuinely sets the price."
               question="If it worked exactly as you hoped, what's it worth a month?"
+              hint="Pick the closest band."
             >
               {OPTIONS.price_band.map((o) => (
                 <Choice
                   key={o}
                   label={o}
                   selected={answers.price_band === o}
-                  onClick={() => {
-                    set('price_band', o);
-                    setTimeout(next, 180);
-                  }}
+                  onClick={() => set('price_band', o)}
                 />
               ))}
+              <Button className="w-full" disabled={!answers.price_band} onClick={next}>
+                Continue
+              </Button>
             </Screen>
           )}
 
