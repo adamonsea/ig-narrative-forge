@@ -13,8 +13,8 @@ const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 type Answers = {
   feed_kind: string[];
   feed_name: string;
-  audience: string;
-  today: string;
+  audience: string[];
+  today: string[];
   resonated: string[];
   blockers: string[];
   blockers_detail: string;
@@ -25,8 +25,8 @@ type Answers = {
 const EMPTY: Answers = {
   feed_kind: [],
   feed_name: '',
-  audience: '',
-  today: '',
+  audience: [],
+  today: [],
   resonated: [],
   blockers: [],
   blockers_detail: '',
@@ -74,13 +74,13 @@ const Choice = ({
     aria-pressed={selected}
     className={`w-full text-left rounded-xl border px-5 py-4 text-base transition-colors ${
       selected
-        ? 'border-foreground bg-foreground text-background'
-        : 'border-border bg-card text-foreground hover:border-foreground/40'
+        ? 'border-foreground bg-foreground text-background shadow-sm'
+        : 'border-border bg-card text-foreground hover:border-foreground/40 hover:bg-accent/40'
     }`}
   >
     <span className="flex items-center justify-between gap-3">
       {label}
-      {selected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
+      {selected && <Check className="h-4 w-4 shrink-0 text-[hsl(155,100%,67%)]" aria-hidden="true" />}
     </span>
   </button>
 );
