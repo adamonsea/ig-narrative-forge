@@ -109,6 +109,33 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
   useBeats([[200, () => cue('rustle')]]);
   return (
     <Stage>
+      {tall ? (
+        <div className="mx-auto flex w-full flex-col items-center gap-[calc(var(--u)*2)]">
+          <div className="text-center">
+            <div className="font-display text-[calc(var(--u)*16)] leading-none text-white tabular-nums">{count}</div>
+            <div className="mt-[calc(var(--u)*1.5)] text-[calc(var(--u)*1.8)] uppercase tracking-[0.3em] text-white/45">
+              articles today
+            </div>
+          </div>
+          {SOURCES.map((s, i) => (
+            <motion.div
+              key={s}
+              className="flex w-[min(calc(var(--u)*40),74vw)] items-center justify-center rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*3)] py-[calc(var(--u)*1.6)] text-[calc(var(--u)*2.2)] font-medium text-white/85"
+              initial={{ opacity: 0, y: 12, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: reduced ? 0.3 : 0.5, delay: reduced ? 0 : 0.15 * i, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <motion.span
+                className="mr-[calc(var(--u)*1.2)] inline-block h-[calc(var(--u)*1.4)] w-[calc(var(--u)*1.4)] rounded-full"
+                style={{ background: ACCENT }}
+                animate={reduced ? {} : { opacity: [1, 0.2, 1] }}
+                transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
+              />
+              {s}
+            </motion.div>
+          ))}
+        </div>
+      ) : (
       <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full">
         {CLIPPINGS.map((c, i) => (
           <motion.div
@@ -253,6 +280,7 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
           );
         })}
       </div>
+      )}
     </Stage>
   );
 };
