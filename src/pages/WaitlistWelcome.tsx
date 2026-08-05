@@ -60,6 +60,21 @@ const OPTIONS = {
 
 const TOTAL_STEPS = 7;
 
+// "Did you know" answers to each stated objection. Objections without an
+// honest answer are deliberately absent — we just thank them and move on.
+const BLOCKER_ANSWERS: Record<string, string> = {
+  'Too expensive':
+    'Curatr runs one feed end to end for less than a couple of freelance hours a month, and there will be a free tier for a single feed while you test it.',
+  "Not sure I'd trust the writing":
+    'Nothing publishes itself unless you switch that on. Every story keeps its original source attached, and you can read, edit or bin it before it goes out.',
+  'No time to run it':
+    'The gathering, writing and illustrating happen without you. A typical day is a couple of minutes of approving or rejecting in the pipeline.',
+  'Needs to carry my own brand':
+    'Feeds carry your name, colours and logo — on the web feed, the email and the shareable cards.',
+  'Needs to sit on my own site':
+    'There is an embeddable widget and an RSS feed, so your Curatr feed can live inside your own site rather than beside it.',
+};
+
 // Full-screen statements shown between questions
 const STATEMENTS: string[] = [
   'Curatr runs a live feed on a subject or place — and you can run as many as you like.',
