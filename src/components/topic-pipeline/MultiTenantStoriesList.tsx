@@ -8,6 +8,7 @@ import { StyleTooltip } from "@/components/ui/style-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/lib/creditService";
+import { edgeErrorMessage } from "@/lib/edgeError";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
@@ -182,7 +183,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       console.error('Animation error:', e);
       toast({ 
         title: 'Animation Error', 
-        description: 'Failed to create animation', 
+        description: await edgeErrorMessage(e, 'Failed to create animation'), 
         variant: 'destructive' 
       });
     } finally {

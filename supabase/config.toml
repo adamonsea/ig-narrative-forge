@@ -163,7 +163,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.animate-illustration]
-verify_jwt = true
+verify_jwt = false
 
 [functions.auto-illustrate-stories]
 verify_jwt = false

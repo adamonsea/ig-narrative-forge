@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,7 @@ type AnimationQuality = 'standard' | 'fast';
 
 interface QualityConfig {
   modelVersion: string;
+  modelSlug: string;
   resolution: string;
   creditCost: number;
   estimatedApiCost: string;
@@ -22,6 +24,7 @@ const QUALITY_CONFIGS: Record<AnimationQuality, QualityConfig> = {
   standard: {
     // Alibaba Wan 2.2 i2v - 720p, higher quality
     modelVersion: '9c49fe41d6b2a0e62199dc96bee4a9dd3565a4c563f9b80998358f14322c34f6',
+    modelSlug: 'wan-video/wan-2.2-i2v-a14b',
     resolution: '720p',
     creditCost: 2,
     estimatedApiCost: '$1.00',
@@ -29,11 +32,39 @@ const QUALITY_CONFIGS: Record<AnimationQuality, QualityConfig> = {
   fast: {
     // Wan 2.2 i2v Fast - 480p, optimized for speed and cost
     modelVersion: 'febae7d9656309cf8c5df4842b27ae4768c0e47a0e1ce443a5ae81f896956134',
+    modelSlug: 'wan-video/wan-2.2-i2v-fast',
     resolution: '480p',
     creditCost: 1,
     estimatedApiCost: '$0.05',
   },
 };
+
+// Cache resolved Replicate model versions for the lifetime of this isolate
+const versionCache = new Map<string, string>();
+
+async function resolveModelVersion(config: QualityConfig, apiKey: string): Promise<string> {
+  const cached = versionCache.get(config.modelSlug);
+  if (cached) return cached;
+  try {
+    const res = await fetch(`https://api.replicate.com/v1/models/${config.modelSlug}`, {
+      headers: { 'Authorization': `Token ${apiKey}` },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const version = json?.latest_version?.id;
+      if (typeof version === 'string' && version.length > 0) {
+        console.log(`🔖 Resolved ${config.modelSlug} version: ${version}`);
+        versionCache.set(config.modelSlug, version);
+        return version;
+      }
+    } else {
+      console.warn(`⚠️ Could not resolve model version (${res.status}), using pinned hash`);
+    }
+  } catch (e) {
+    console.warn('⚠️ Model version lookup failed, using pinned hash:', e);
+  }
+  return config.modelVersion;
+}
 
 // 🔄 FEATURE FLAG: Toggle AI-driven vs keyword-based animation prompts
 // Set to false to rollback to Phase 1 keyword matching
@@ -80,22 +111,13 @@ serve(async (req) => {
 
     console.log(`📖 Story ID: ${storyId}, Quality: ${quality} (${qualityConfig.resolution}), Image: ${staticImageUrl}`);
 
-    // Get user from request
-    const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Validate the caller in-code (verify_jwt = false at the gateway)
+    const user = await getUser(req);
+    if (!user) {
+      console.warn('🚫 Unauthorized animate request (missing or invalid token)');
+      return unauthorized(corsHeaders);
     }
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader);
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log(`👤 Authenticated user: ${user.id}`);
 
     // Check if user is superadmin (bypass credit check)
     const { data: userRole } = await supabase
@@ -194,16 +216,16 @@ serve(async (req) => {
     console.log(`🎬 Final animation prompt: ${animationPrompt}`);
 
     // Call Replicate API with selected quality tier
+    const modelVersion = await resolveModelVersion(qualityConfig, replicateApiKey);
     console.log(`🚀 Calling Replicate API (${quality} tier: ${qualityConfig.resolution})...`);
     const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${replicateApiKey}`,
         'Content-Type': 'application/json',
-        'Prefer': 'wait=60'
       },
       body: JSON.stringify({
-        version: qualityConfig.modelVersion,
+        version: modelVersion,
         input: {
           image: staticImageUrl,
           prompt: animationPrompt,
@@ -227,9 +249,9 @@ serve(async (req) => {
     const predictionId = predictionData.id;
     console.log(`⏳ Prediction created: ${predictionId}, polling for completion...`);
 
-    // Poll for prediction completion (max 90 seconds)
+    // Poll for prediction completion (max ~4 minutes)
     let videoUrl: string | null = null;
-    const maxAttempts = 18; // 90 seconds (5-second intervals)
+    const maxAttempts = 48; // 240 seconds (5-second intervals)
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
@@ -258,7 +280,7 @@ serve(async (req) => {
     }
 
     if (!videoUrl) {
-      throw new Error('Video generation timed out after 90 seconds');
+      throw new Error('Video generation timed out after 4 minutes — the Replicate render is still running, try again shortly');
     }
 
     console.log('✅ Video generated:', videoUrl);

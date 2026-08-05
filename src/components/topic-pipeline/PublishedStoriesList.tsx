@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
+import { edgeErrorMessage } from "@/lib/edgeError";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { AnimationQualitySelector, AnimationQuality } from "@/components/topic-pipeline/AnimationQualitySelector";
 import { AnimationInstructionsModal } from "@/components/topic-pipeline/AnimationInstructionsModal";
@@ -238,7 +239,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       }
     } catch (e) {
       console.error('Animation error:', e);
-      toast({ title: 'Animation Error', description: 'Failed to create animation', variant: 'destructive' });
+      toast({ title: 'Animation Error', description: await edgeErrorMessage(e, 'Failed to create animation'), variant: 'destructive' });
     } finally {
       setAnimatingVideos(prev => { const next = new Set(prev); next.delete(story.id); return next; });
     }
