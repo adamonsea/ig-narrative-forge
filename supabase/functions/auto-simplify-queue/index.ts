@@ -249,6 +249,13 @@ Deno.serve(async (req) => {
       const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
       let topicHeldForLocality = 0;
 
+      // Batched pre-checks for this page of articles (2 queries instead of 2/article)
+      const batchArticleIds = (articles as any[]).map((a) => a.id as string);
+      const [batchStoryLinked, batchActiveQueued] = await Promise.all([
+        fetchStoryLinkedIds(batchArticleIds),
+        fetchActiveQueueIds(batchArticleIds),
+      ]);
+
       for (const article of articles as any[]) {
         // Content comes from the JOIN above. Supabase returns the embedded row as
         // an object (or null). Normalise to a single record.
@@ -326,26 +333,13 @@ Deno.serve(async (req) => {
         // Check for an ACTIVE queue item only (pending/processing).
         // A finished (completed/failed) row must NOT block re-evaluation —
         // otherwise "zombie" articles permanently clog the top-of-queue fetch.
-        const { data: activeQueue } = await supabase
-          .from('content_generation_queue')
-          .select('id')
-          .eq('topic_article_id', article.id)
-          .in('status', ['pending', 'processing'])
-          .maybeSingle();
-
-        if (activeQueue) {
+        if (batchActiveQueued.has(article.id)) {
           console.log(`  ⏭️  Skipping article ${article.id}: active queue item in progress`);
           continue;
         }
 
         // Check if a story already exists for this topic_article
-        const { data: existingStory } = await supabase
-          .from('stories')
-          .select('id')
-          .eq('topic_article_id', article.id)
-          .maybeSingle();
-
-        if (existingStory) {
+        if (batchStoryLinked.has(article.id)) {
           console.log(`  ⏭️  Skipping article ${article.id}: story already exists`);
           // Mark as processed so we don't re-evaluate
           await supabase
