@@ -164,6 +164,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
             aria-hidden="true"
             onPlaying={() => setClipRolling(true)}
             onEnded={() => {
+              if (!playing) return;
               // Let the last syllable land before the crossfade.
               if (tailTimer.current) window.clearTimeout(tailTimer.current);
               tailTimer.current = window.setTimeout(() => goTo(index + 1), 400);
