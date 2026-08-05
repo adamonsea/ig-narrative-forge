@@ -111,22 +111,13 @@ serve(async (req) => {
 
     console.log(`📖 Story ID: ${storyId}, Quality: ${quality} (${qualityConfig.resolution}), Image: ${staticImageUrl}`);
 
-    // Get user from request
-    const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Validate the caller in-code (verify_jwt = false at the gateway)
+    const user = await getUser(req);
+    if (!user) {
+      console.warn('🚫 Unauthorized animate request (missing or invalid token)');
+      return unauthorized(corsHeaders);
     }
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader);
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log(`👤 Authenticated user: ${user.id}`);
 
     // Check if user is superadmin (bypass credit check)
     const { data: userRole } = await supabase
@@ -225,16 +216,16 @@ serve(async (req) => {
     console.log(`🎬 Final animation prompt: ${animationPrompt}`);
 
     // Call Replicate API with selected quality tier
+    const modelVersion = await resolveModelVersion(qualityConfig, replicateApiKey);
     console.log(`🚀 Calling Replicate API (${quality} tier: ${qualityConfig.resolution})...`);
     const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${replicateApiKey}`,
         'Content-Type': 'application/json',
-        'Prefer': 'wait=60'
       },
       body: JSON.stringify({
-        version: qualityConfig.modelVersion,
+        version: modelVersion,
         input: {
           image: staticImageUrl,
           prompt: animationPrompt,
@@ -258,9 +249,9 @@ serve(async (req) => {
     const predictionId = predictionData.id;
     console.log(`⏳ Prediction created: ${predictionId}, polling for completion...`);
 
-    // Poll for prediction completion (max 90 seconds)
+    // Poll for prediction completion (max ~4 minutes)
     let videoUrl: string | null = null;
-    const maxAttempts = 18; // 90 seconds (5-second intervals)
+    const maxAttempts = 48; // 240 seconds (5-second intervals)
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
@@ -289,7 +280,7 @@ serve(async (req) => {
     }
 
     if (!videoUrl) {
-      throw new Error('Video generation timed out after 90 seconds');
+      throw new Error('Video generation timed out after 4 minutes — the Replicate render is still running, try again shortly');
     }
 
     console.log('✅ Video generated:', videoUrl);
