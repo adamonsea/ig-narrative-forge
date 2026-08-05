@@ -517,25 +517,93 @@ OUTPUT FORMAT (JSON):
 
       const maxTokens = slideCount >= 12 ? 3600 : slideCount >= 8 ? 2600 : 2000;
 
-      const response = await deepseekChatWithFallback(apiKey, {
-        model: 'deepseek-v4-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
+      const systemPrompt = `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms. Always reply with a single valid JSON object and nothing else.`;
+      const chatMessages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ];
+
+      // Some DeepSeek responses come back with an empty `content` (reasoning-only or
+      // truncated). Read every field the API may put text in before giving up.
+      const readContent = (data: any, label: string): string => {
+        const choice = data?.choices?.[0];
+        const msg = choice?.message ?? {};
+        const text: string =
+          (typeof msg.content === 'string' && msg.content.trim()) ||
+          (Array.isArray(msg.content)
+            ? msg.content.map((p: any) => p?.text ?? '').join('').trim()
+            : '') ||
+          (typeof msg.reasoning_content === 'string' ? msg.reasoning_content.trim() : '') ||
+          '';
+        console.log(
+          `📝 [${label}] finish_reason=${choice?.finish_reason ?? 'unknown'} chars=${text.length} completion_tokens=${data?.usage?.completion_tokens ?? '?'}`
+        );
+        return text;
+      };
+
+      const callDeepSeek = async (model: string, label: string): Promise<string> => {
+        const resp = await deepseekChatWithFallback(apiKey, {
+          model,
+          messages: chatMessages,
+          temperature: 0.7,
+          max_tokens: maxTokens,
+          response_format: { type: 'json_object' },
+        }, label);
+        if (!resp.ok) {
+          const detail = (await resp.text().catch(() => '')).slice(0, 300);
+          throw new Error(`DeepSeek API error: ${resp.status} ${detail}`);
+        }
+        return readContent(await resp.json(), label);
+      };
+
+      const callOpenAI = async (): Promise<string> => {
+        if (!openaiApiKey) throw new Error('OPENAI_API_KEY not configured for slide fallback');
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
           },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: maxTokens,
-      }, 'slide-generation');
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: chatMessages,
+            temperature: 0.7,
+            max_tokens: maxTokens,
+            response_format: { type: 'json_object' },
+          }),
+        });
+        if (!resp.ok) {
+          const detail = (await resp.text().catch(() => '')).slice(0, 300);
+          throw new Error(`OpenAI slide fallback error: ${resp.status} ${detail}`);
+        }
+        return readContent(await resp.json(), 'slide-generation-openai');
+      };
 
-      if (!response.ok) {
-        throw new Error(`DeepSeek API error: ${response.status}`);
+      // Try flash → pro → OpenAI. Only escalate when the previous attempt gave us nothing usable.
+      let content = '';
+      const attempts: Array<[string, () => Promise<string>]> = [
+        ['deepseek-v4-flash', () => callDeepSeek('deepseek-v4-flash', 'slide-generation')],
+        ['deepseek-v4-pro', () => callDeepSeek('deepseek-v4-pro', 'slide-generation-pro')],
+        ['openai-gpt-4o-mini', callOpenAI],
+      ];
+      let lastError: unknown = null;
+      for (const [label, run] of attempts) {
+        try {
+          content = await run();
+          if (content && /[{[]/.test(content)) break;
+          console.warn(`⚠️ ${label} returned no usable slide JSON — escalating.`);
+          content = '';
+        } catch (err) {
+          lastError = err;
+          console.warn(`⚠️ ${label} slide generation failed — escalating.`, err);
+          content = '';
+        }
       }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
+      if (!content) {
+        throw new Error(
+          `All slide providers returned empty output${lastError ? `: ${String(lastError)}` : ''}`
+        );
+      }
 
       const extractSlides = (raw: string): any[] => {
         let extracted: any;
