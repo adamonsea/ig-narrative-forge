@@ -774,6 +774,69 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
         }
       }
 
+      // Clipped-slide guard: we don't enforce a word count, we only catch copy that
+      // was cut off mid-thought (truncated JSON, token limit, salvage parser).
+      const isClipped = (s: SlideContent, i: number): boolean => {
+        const text = (s.content || '').trim();
+        if (!text) return true;
+        if (i > 0 && text.length < 40) return true;          // body slide with almost nothing on it
+        if (/[,;:\-–—]$/.test(text)) return true;            // ends on a connector
+        if (/(\.\.\.|…)$/.test(text)) return true;           // ends on an ellipsis
+        if (i > 0 && !/[.!?"')\]]$/.test(text)) return true; // body slide with no sentence end
+        return false;
+      };
+
+      const clippedIdx = normalized
+        .map((s, i) => (isClipped(s, i) ? i + 1 : 0))
+        .filter((n) => n > 0);
+
+      if (clippedIdx.length) {
+        console.warn(`✂️ Slide(s) ${clippedIdx.join(', ')} look clipped — requesting a rewrite of those slides.`);
+        const fixPrompt = `Some slides in this carousel were cut off mid-sentence. Rewrite ONLY the listed slides so each one is a complete, self-contained thought that ends with proper punctuation.
+
+Rewrite slides: ${clippedIdx.join(', ')}
+
+Rules:
+- Keep the natural length the story needs — do not pad and do not compress. Just make sure nothing is cut off.
+- Do not invent facts; if information is missing, say "Not specified in source".
+- NEVER name the publication, domain or author (no "Source: ...", no "Read more at ...", no bylines).
+- Return ALL ${slideCount} slides as valid JSON: { "slides": [ { "slideNumber": 1, "content": "...", "visualPrompt": "...", "altText": "..." } ] }
+
+ARTICLE TITLE: ${article.title}
+ARTICLE CONTENT: ${article.body}
+
+CURRENT SLIDES:
+${JSON.stringify({ slides: normalized }, null, 2)}
+`;
+        try {
+          const fixResp = await deepseekChatWithFallback(apiKey, {
+            model: 'deepseek-v4-flash',
+            messages: [
+              { role: 'system', content: 'You are a precise JSON generator. Output valid JSON only.' },
+              { role: 'user', content: fixPrompt }
+            ],
+            temperature: 0.3,
+            max_tokens: slideCount >= 12 ? 4000 : slideCount >= 8 ? 3000 : 2400,
+          }, 'slide-clip-repair');
+
+          if (fixResp.ok) {
+            const fixData = await fixResp.json();
+            const fixed = normalizeSlides(tryExtractSlides(fixData.choices?.[0]?.message?.content || ''))
+              .slice(0, slideCount);
+            if (fixed.length === normalized.length) {
+              // Only swap in slides that actually improved
+              normalized = normalized.map((orig, i) =>
+                isClipped(orig, i) && !isClipped(fixed[i], i) ? fixed[i] : orig
+              );
+            }
+          } else {
+            console.warn(`⚠️ Clip repair request failed: ${fixResp.status}`);
+          }
+        } catch (e) {
+          console.warn('⚠️ Clip repair failed, keeping original slides.', e);
+        }
+      }
+
       return normalized.slice(0, slideCount).map((s: any) => ({
         ...s,
         content: stripGeneratedAttribution(s.content || ''),
