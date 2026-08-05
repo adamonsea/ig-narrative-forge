@@ -1,44 +1,35 @@
-# Image generation: measure, then cut cost and latency
+# Waitlist qualification questionnaire
 
-The OpenAI announcement changes nothing for us — it only repriced text models (Luna/Terra/Sol). Our image spend and speed are governed by our own settings, so this plan measures them first, then makes two low-risk changes.
+Turn raw waitlist signups into qualified pilot candidates with a short, branded questionnaire, plus an admin view where you review answers and decide who to invite.
 
-## Phase 1 — Audit (no behaviour change)
+## What gets built
 
-Add lightweight timing and cost fields to each illustration run so we can see real numbers instead of guessing:
+### 1. A five-question questionnaire page
 
-- Record per generation: model tier used, image size, wall-clock duration, output bytes, whether it was auto or manual, and how many pre-processing LLM calls ran before it.
-- Surface a simple table in the admin view: last 30 days grouped by tier, with count, average duration, and estimated spend.
-- Report back with the actual split of low vs medium tier and the average seconds per image.
+New route `/waitlist/welcome?token=...`. Each waitlist entry gets a unique token, so the page can greet them, can't be spammed by strangers, and every answer set ties back to a real signup.
 
-Nothing about generation changes in this phase.
+Tone: one question per screen, progress dots, big tap targets, around 45 seconds. Between questions a single line of benefit copy resurfaces what Curatr does — a whisper, not a sales page.
 
-## Phase 2 — Cost cuts (only where Phase 1 justifies them)
+The five questions:
+1. What subject or place would your feed cover? (short text)
+2. Who is it for? (my community / my clients or members / my industry peers / just me for now)
+3. Do you already publish anything? (newsletter / social account / website or blog / not yet)
+4. Where do your stories come from today? (multi-select: local press, RSS, social, press releases, my own reporting, not sure yet)
+5. How soon would you want to start? (this week / this month / just exploring)
 
-Verified current state:
+Closing screen: thanks, what happens next, and a link to a live feed as a working example.
 
-- Automated illustration already forces the cheapest tier (`gpt-image-1.5-low`, 2 credits).
-- Manual illustration defaults to `gpt-image-1.5-medium` (4 credits) — this is the default whenever a caller omits the model.
-- Every OpenAI image call requests `1536x1024`.
+### 2. Answers stored and reviewable
 
-Proposed changes, one at a time with a clear revert:
+Answers save against the waitlist entry. A new **Waitlist** panel in the admin dashboard lists every signup with email, plan interest, date, whether they completed the questionnaire, and their answers expanded inline. Includes CSV export and a copy-to-clipboard summary. No auto-scoring and no auto-invites — you read and decide.
 
-1. Flip the manual default from medium to low. Medium and high stay available as an explicit choice in the model selector, so nothing is removed — it just stops being the silent default.
-2. Trial `1024x683` (same 3:2 ratio) for the low tier only. Cheaper and faster; feed cards and OG crops are both well under this. Keep 1536x1024 for medium/high where the image is the point.
-3. Audit the pre-image `gpt-4o-mini` calls (landmark extraction, prompt enrichment). Where a story has no location detail to extract, skip the call rather than making it and discarding the result.
+### 3. Outreach email (drafted, not sent)
 
-## Phase 3 — Speed
-
-- Smaller size (Phase 2) is the real latency win — lower tiers at a smaller size render substantially faster.
-- Perceived speed: switch manual illustration to a streaming request so partial frames render progressively behind a blur instead of a spinner. Same cost, feels much faster.
-
-## Guardrails
-
-- The anonymity guard, illustration style guardrails, and auto-tier forcing are untouched.
-- Each Phase 2/3 item ships separately so any regression is a single revert.
-- No change to how images are stored, compressed, or served.
+Copy for a short, personal invite email carrying their unique questionnaire link, written for the two genuine signups (`mylesford030@gmail.com`, `social@mohartmusic.com`). Delivered to you in chat as ready-to-paste text, plus a "Copy invite link" button beside each signup in the admin panel so you send from your own inbox.
 
 ## Technical notes
 
-- Instrumentation lives in `supabase/functions/story-illustrator/index.ts` and `auto-illustrate-stories/index.ts`, written to a small metrics table read by the admin view.
-- Tier defaults are the `modelConfigs` fallback in `story-illustrator`; size is the `size` field on the OpenAI call.
-- Credit costs in `src/lib/creditService.ts` stay as they are — the saving comes from which tier gets used, not from repricing.
+- New table `waitlist_responses` (waitlist_id, answers jsonb, completed_at) and an `invite_token` column on `waitlist`, backfilled for existing rows. RLS: admins read; the questionnaire writes only through a token-scoped edge function, never a direct client insert.
+- New edge function `waitlist-questionnaire`: validates the token, returns the signup's email, validates the answer payload with zod, writes the response. Public but token-gated and rate-limited.
+- Frontend: `src/pages/WaitlistWelcome.tsx` (single-question stepper reusing existing motion and heading components), route registered in `App.tsx`, and `src/components/admin/WaitlistPanel.tsx` mounted in `AdminPanel.tsx` behind the existing product-owner check.
+- No change to the existing signup flow beyond appending the questionnaire link to the confirmation email, so future signups self-qualify on arrival.
