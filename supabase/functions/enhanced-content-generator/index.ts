@@ -1254,6 +1254,16 @@ Return in JSON format:
         slide_type: finalSlideType,
         quality_score: article.content_quality_score,
         cover_illustration_url: article.image_url || null,
+        // Attribution must come from the real article, not the topic's source list
+        publication_name: (() => {
+          try {
+            const u = article.source_url || (article as any).canonical_url;
+            return u ? new URL(u).hostname.replace(/^www\./, '') : publicationName;
+          } catch {
+            return publicationName;
+          }
+        })(),
+        author: article.author && article.author !== 'contributor' ? article.author : null,
         // Lifecycle tracking
         simplified_at: new Date().toISOString(),
         is_auto_simplified: autoSimplifyEnabled, // Flag if automated
