@@ -76,4 +76,14 @@ export const TIMELINE: SceneDef[] = [
   },
 ];
 
-export const TOTAL_MS = TIMELINE.reduce((sum, s) => sum + s.duration, 0);
+/**
+ * Extra hold after each presenter clip's nominal length. Clip durations are
+ * measured to the frame, so advancing exactly on `duration` clips the last
+ * syllable once decode/start latency is added. The pad keeps the tail intact.
+ */
+export const TAIL_PAD_MS = 600;
+
+/** Beat length including the tail pad — use this everywhere for timing. */
+export const sceneDuration = (scene: SceneDef) => scene.duration + TAIL_PAD_MS;
+
+export const TOTAL_MS = TIMELINE.reduce((sum, s) => sum + sceneDuration(s), 0);
