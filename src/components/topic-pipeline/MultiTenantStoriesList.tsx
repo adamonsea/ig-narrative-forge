@@ -182,7 +182,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       console.error('Animation error:', e);
       toast({ 
         title: 'Animation Error', 
-        description: 'Failed to create animation', 
+        description: await edgeErrorMessage(e, 'Failed to create animation'), 
         variant: 'destructive' 
       });
     } finally {
