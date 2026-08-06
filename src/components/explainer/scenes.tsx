@@ -90,15 +90,16 @@ const Bars = ({ count = 3 }: { count?: number }) => (
 
 /* ---------------------------------------------------------------- 1. Problem */
 
+// A mix of place-based and subject-based clippings: Curatr feeds can be either.
 const CLIPPINGS = [
-  { t: 'Council votes on seafront plan', x: -34, y: -26, r: -9 },
-  { t: 'Pier repairs delayed again', x: 22, y: -30, r: 7 },
-  { t: 'New bus route consultation', x: -8, y: -4, r: -3 },
-  { t: 'School wins county award', x: 34, y: 4, r: 11 },
-  { t: 'Flood defence funding gap', x: -36, y: 20, r: 6 },
-  { t: 'Market traders speak out', x: 6, y: 26, r: -8 },
-  { t: 'Hospital waiting times rise', x: 32, y: 30, r: -12 },
-  { t: 'Festival line-up announced', x: -18, y: 6, r: 13 },
+  { t: 'Council votes on seafront plan', k: 'Local news', x: -34, y: -26, r: -9 },
+  { t: 'New rules land for AI models', k: 'AI & ethics', x: 22, y: -30, r: 7 },
+  { t: 'New bus route consultation', k: 'Local news', x: -8, y: -4, r: -3 },
+  { t: 'Race organisers rethink routes', k: 'Cycling culture', x: 34, y: 4, r: 11 },
+  { t: 'Flood defence funding gap', k: 'Local news', x: -36, y: 20, r: 6 },
+  { t: 'Independent labels fight back', k: 'Music industry', x: 6, y: 26, r: -8 },
+  { t: 'Hospital waiting times rise', k: 'Local news', x: 32, y: 30, r: -12 },
+  { t: 'Festival line-up announced', k: 'Arts & culture', x: -18, y: 6, r: 13 },
 ];
 
 export const SceneProblem = ({ reduced, cue }: SceneProps) => {
@@ -129,7 +130,7 @@ export const SceneProblem = ({ reduced, cue }: SceneProps) => {
             }}
           >
             <p className="text-[calc(var(--u)*1.2)] font-semibold uppercase tracking-[0.3em] opacity-45">
-              Local news
+              {c.k}
             </p>
             <p className="mt-[calc(var(--u)*1)] font-display text-[calc(var(--u)*2.6)] leading-tight">{c.t}</p>
             <div className="mt-[calc(var(--u)*1.6)] space-y-[calc(var(--u)*0.7)]">
