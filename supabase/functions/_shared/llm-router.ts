@@ -1,8 +1,12 @@
 // Central LLM router.
 //
-// Why this exists: DeepSeek announced a significant price increase, so text
-// generation now defaults to the Lovable AI Gateway (Gemini) and only falls
-// back to DeepSeek when the gateway is unavailable or the key is missing.
+// DeepSeek remains the primary provider on cost grounds (v4-flash is roughly
+// 5-9x cheaper per token than Gemini 2.5 Flash today). The Lovable AI Gateway
+// (Gemini) is kept wired up as an automatic fallback for outages/errors.
+//
+// Order is configurable without a code change: set the `LLM_PRIMARY` secret to
+// `gateway` to flip Gemini to primary (e.g. once DeepSeek publishes its price
+// rise). Any other value, or unset, keeps DeepSeek primary.
 //
 // All call sites stay OpenAI-compatible — `llmFetch` accepts the same body a
 // DeepSeek/OpenAI chat-completions call would use and returns a normal
@@ -44,7 +48,8 @@ export interface LlmFetchOptions {
 
 /**
  * Drop-in replacement for `fetch('https://api.deepseek.com/chat/completions', init)`.
- * Routes to the Lovable AI Gateway first, then DeepSeek.
+ * Routes to DeepSeek first, falling back to the Lovable AI Gateway (Gemini).
+ * Set `LLM_PRIMARY=gateway` to reverse the order.
  */
 export async function llmFetch(
   init: { body: any; headers?: Record<string, string>; [key: string]: any },
@@ -55,52 +60,68 @@ export async function llmFetch(
     typeof init.body === 'string' ? JSON.parse(init.body) : init.body;
 
   const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+  const headerKey = (init.headers?.['Authorization'] ?? '').replace(/^Bearer\s+/i, '');
   const deepseekKey =
-    options.deepseekApiKey ??
-    (init.headers?.['Authorization'] ?? '').replace(/^Bearer\s+/i, '') ??
-    Deno.env.get('DEEPSEEK_API_KEY');
+    options.deepseekApiKey || headerKey || Deno.env.get('DEEPSEEK_API_KEY') || '';
 
-  if (lovableKey) {
-    try {
-      const resp = await fetch(GATEWAY_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${lovableKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(gatewayBody(body)),
-      });
+  const gatewayFirst = (Deno.env.get('LLM_PRIMARY') ?? '').toLowerCase() === 'gateway';
 
-      if (resp.ok) return resp;
+  const callDeepseek = () =>
+    fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${deepseekKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...body, model: body.model ?? 'deepseek-v4-flash' }),
+    });
 
-      const detail = await resp.clone().text().catch(() => '');
-      console.warn(
-        `⚠️ [${context}] AI gateway ${resp.status}: ${detail.slice(0, 300)}`
-      );
+  const callGateway = () =>
+    fetch(GATEWAY_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(gatewayBody(body)),
+    });
 
-      // Rate limit / payment issues are worth surfacing rather than silently
-      // paying DeepSeek prices, unless we have no fallback at all.
-      if (!deepseekKey) return resp;
-    } catch (err) {
-      console.warn(`⚠️ [${context}] AI gateway request failed:`, err);
-      if (!deepseekKey) throw err;
-    }
-  }
+  const providers: Array<{ name: string; key: string; call: () => Promise<Response> }> = [
+    { name: 'DeepSeek', key: deepseekKey, call: callDeepseek },
+    { name: 'AI gateway', key: lovableKey ?? '', call: callGateway },
+  ];
+  if (gatewayFirst) providers.reverse();
 
-  if (!deepseekKey) {
+  const available = providers.filter((p) => p.key);
+
+  if (available.length === 0) {
     return new Response(
-      JSON.stringify({ error: 'No LLM provider configured (LOVABLE_API_KEY or DEEPSEEK_API_KEY)' }),
+      JSON.stringify({ error: 'No LLM provider configured (DEEPSEEK_API_KEY or LOVABLE_API_KEY)' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  console.log(`↩️ [${context}] Falling back to DeepSeek (${body.model ?? 'deepseek-v4-flash'})`);
-  return await fetch(DEEPSEEK_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${deepseekKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ ...body, model: body.model ?? 'deepseek-v4-flash' }),
-  });
+  let lastError: unknown = null;
+
+  for (let i = 0; i < available.length; i++) {
+    const provider = available[i];
+    const isLast = i === available.length - 1;
+
+    try {
+      const resp = await provider.call();
+      if (resp.ok) return resp;
+
+      const detail = await resp.clone().text().catch(() => '');
+      console.warn(`⚠️ [${context}] ${provider.name} ${resp.status}: ${detail.slice(0, 300)}`);
+      if (isLast) return resp;
+      console.log(`↩️ [${context}] Falling back to ${available[i + 1].name}`);
+    } catch (err) {
+      lastError = err;
+      console.warn(`⚠️ [${context}] ${provider.name} request failed:`, err);
+      if (isLast) throw err;
+      console.log(`↩️ [${context}] Falling back to ${available[i + 1].name}`);
+    }
+  }
+
+  throw lastError ?? new Error('LLM router exhausted all providers');
 }
