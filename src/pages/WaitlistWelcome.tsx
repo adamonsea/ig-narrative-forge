@@ -441,7 +441,7 @@ export default function WaitlistWelcome() {
               ) : (
                 <button
                   type="button"
-                  className="text-sm text-muted-foreground underline underline-offset-4"
+                  className="text-base text-muted-foreground underline underline-offset-4"
                   onClick={() => setShowDetail((s) => ({ ...s, feed_name: true }))}
                 >
                   Add a detail
@@ -568,7 +568,7 @@ export default function WaitlistWelcome() {
               ) : (
                 <button
                   type="button"
-                  className="text-sm text-muted-foreground underline underline-offset-4"
+                  className="text-base text-muted-foreground underline underline-offset-4"
                   onClick={() => setShowDetail((s) => ({ ...s, blockers: true }))}
                 >
                   Say more
