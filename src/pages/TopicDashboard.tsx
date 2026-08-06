@@ -577,11 +577,9 @@ const TopicDashboard = () => {
     );
   }
 
-  const isNewFeed =
-    topic.created_by === user.id &&
-    (stats.sources || 0) === 0 &&
-    (stats.articles || 0) === 0 &&
-    (stats.stories || 0) === 0;
+  const isOwner = topic.created_by === user.id;
+  const isNewFeed = isOwner && setupActive;
+  const setupIncomplete = isOwner && (stats.sources || 0) === 0;
 
   return (
     <AppLayout>
