@@ -682,7 +682,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                       {buildError && !topicId ? (
                         <div className="text-center py-16 space-y-4">
                           <p className="text-destructive font-medium">{buildError}</p>
-                          <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                          <Button variant="outline" onClick={() => resetForm(true)}>
                             Start over
                           </Button>
                         </div>
@@ -692,6 +692,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                           topicSlug={topicSlug}
                           topicName={topicName}
                           sourceIds={createdSourceIds}
+                          connectedNote={
+                            sourceFailures > 0
+                              ? `${createdSourceIds.length} of ${attemptedSourceCount} sources connected`
+                              : undefined
+                          }
                           onComplete={handleBuildComplete}
                           onError={handleBuildError}
                         />
@@ -701,8 +706,12 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                           setTimeout(() => setCurrentStep(4), 1500);
                           return (
                             <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
-                              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                              <p className="text-muted-foreground">Setting up your feed…</p>
+                              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
+                              <p className="text-muted-foreground">
+                                {sourceFailures > 0
+                                  ? "We couldn't connect those sources — setting up your feed so you can add sources from the dashboard…"
+                                  : 'Setting up your feed…'}
+                              </p>
                             </div>
                           );
                         })()
