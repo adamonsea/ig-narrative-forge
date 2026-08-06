@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -182,6 +182,9 @@ export default function WaitlistWelcome() {
           return;
         }
         setEmail(data.email ?? null);
+        if (data.answers && typeof data.answers === 'object') {
+          setAnswers((a) => ({ ...a, ...(data.answers as Partial<Answers>) }));
+        }
         setState('ready');
       } catch {
         setState('invalid');
@@ -191,6 +194,25 @@ export default function WaitlistWelcome() {
 
   const set = <K extends keyof Answers>(key: K, value: Answers[K]) =>
     setAnswers((a) => ({ ...a, [key]: value }));
+
+  // Save answers progressively so partial runs are never lost.
+  const savedRef = useRef('');
+  useEffect(() => {
+    if (state !== 'ready' || !token) return;
+    const payload = JSON.stringify(answers);
+    if (payload === savedRef.current || payload === JSON.stringify(EMPTY)) return;
+    const t = setTimeout(() => {
+      savedRef.current = payload;
+      fetch(FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${ANON}` },
+        body: JSON.stringify({ token, answers, wants_early_access: false, partial: true }),
+      }).catch(() => {
+        savedRef.current = '';
+      });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [answers, state, token]);
 
   const toggle = (
     key: 'feed_kind' | 'resonated' | 'blockers' | 'audience' | 'today',
