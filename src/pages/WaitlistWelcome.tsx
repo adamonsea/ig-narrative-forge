@@ -96,12 +96,16 @@ const STATEMENTS: string[] = [
   'Last one — it helps us know where to spend our time.',
 ];
 
-const Typewriter = ({ text, onDone }: { text: string; onDone?: () => void }) => {
+const Typewriter = ({ text, instant, onDone }: { text: string; instant?: boolean; onDone?: () => void }) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
     setCount(0);
   }, [text]);
+
+  useEffect(() => {
+    if (instant) setCount(text.length);
+  }, [instant, text]);
 
   useEffect(() => {
     if (count >= text.length) {
