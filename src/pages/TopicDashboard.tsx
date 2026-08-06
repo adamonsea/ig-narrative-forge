@@ -632,9 +632,12 @@ const TopicDashboard = () => {
             </div>
           )}
 
-          {!(isNewFeed && !setupDismissed) && (
           {/* 2 Tabs: Feed + Settings */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className={`space-y-6 ${isNewFeed && !setupDismissed ? "hidden" : ""}`}
+          >
             <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
               <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Feed
