@@ -21,6 +21,7 @@ interface PhotoCardProps {
   story: Story;
   position: CardPosition;
   index: number;
+  cardWidth?: number;
   totalCards: number;
   isAnimating: boolean;
   isHolding?: boolean;
@@ -43,6 +44,7 @@ const PhotoCardComponent = ({
   story,
   position,
   index,
+  cardWidth = 170,
   isAnimating,
   isHolding = false,
   loadPriority = 'lazy',
@@ -73,7 +75,11 @@ const PhotoCardComponent = ({
   
   // Dynamic scale based on state - larger scale for holding/preview (desktop uses hover)
   const showPreview = isHolding || localHolding || (isDesktop && isHovering);
-  const targetScale = showPreview ? 1.6 : isDragging ? 1.06 : 1;
+  const targetScale = showPreview ? 1.35 : isDragging ? 1.04 : 1;
+
+  // Type scales with the card so headlines stay readable at any size
+  const headlineSize = Math.round(Math.max(14, cardWidth * 0.082));
+  const datelineSize = Math.round(Math.max(10, cardWidth * 0.048));
   
   // Use spring for smooth scale animation on release - tighter for responsiveness
   const scale = useSpring(targetScale, {
@@ -318,7 +324,7 @@ const PhotoCardComponent = ({
       <div 
         className="relative overflow-visible transition-all duration-200"
         style={{
-          width: 170,
+          width: cardWidth,
           ...gpuStyles,
         }}
         onContextMenu={handleContextMenu}
@@ -399,14 +405,15 @@ const PhotoCardComponent = ({
           </div>
           
           {/* Newspaper-style headline and dateline */}
-          <div className="px-2 py-2 pointer-events-none" style={{ background: '#f5f0e1' }}>
+          <div className="px-3 py-3 pointer-events-none" style={{ background: '#f5f0e1' }}>
             {/* Dateline - newspaper style */}
             <div className="flex items-center gap-1 mb-1">
               <span 
-                className="text-[8px] uppercase tracking-wider"
+                className="uppercase tracking-wider"
                 style={{ 
                   color: '#8b7765',
                   fontFamily: 'Georgia, "Times New Roman", serif',
+                  fontSize: `${datelineSize}px`,
                 }}
               >
                 {new Date(story.created_at).toLocaleDateString('en-GB', { 
@@ -419,10 +426,10 @@ const PhotoCardComponent = ({
             
             {/* Headline - condensed newspaper style */}
             <h3 
-              className="line-clamp-2 leading-tight"
+              className="line-clamp-3 leading-tight"
               style={{
                 fontFamily: 'Georgia, "Times New Roman", serif',
-                fontSize: '11px',
+                fontSize: `${headlineSize}px`,
                 fontWeight: 700,
                 letterSpacing: '-0.02em',
                 color: '#1a1a1a',
