@@ -15,6 +15,7 @@ import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager"
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { OnboardingSettings } from "@/components/onboarding";
+import { FeedSetupGuide, storageKeyFor } from "@/components/onboarding/FeedSetupGuide";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
