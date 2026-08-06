@@ -523,15 +523,15 @@ export default function WaitlistWelcome() {
                   }
                 >
                   {answered.map((b) => (
-                    <div key={b} className="rounded-xl border border-border bg-card px-5 py-4">
-                      <p className="text-sm font-medium text-foreground">{b}</p>
-                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    <div key={b} className="rounded-2xl border border-border bg-card px-5 py-4 sm:px-6 sm:py-5">
+                      <p className="text-base sm:text-lg font-medium text-foreground">{b}</p>
+                      <p className="mt-2 text-base sm:text-lg leading-relaxed text-muted-foreground">
                         {BLOCKER_ANSWERS[b]}
                       </p>
                     </div>
                   ))}
                   {answered.length > 0 && answered.length < answers.blockers.length && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-base text-muted-foreground">
                       Thanks for the rest of the feedback too — we've logged it.
                     </p>
                   )}
@@ -621,20 +621,23 @@ export default function WaitlistWelcome() {
               key="close"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-5"
+              className="space-y-6 sm:space-y-8"
             >
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">That's everything</h1>
-              <p className="text-muted-foreground leading-relaxed">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
+                That's everything
+              </h1>
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
                 We're opening access in small batches{email ? ` — we'll write to ${email}` : ''}. If you'd
                 like to be in the first one, say so and we'll bump you up.
               </p>
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" disabled={submitting} onClick={() => submit(true)}>
                   I'd like early access — put me at the front
                 </Button>
                 <Button
                   variant="ghost"
-                  className="w-full"
+                  size="lg"
+                  className="w-full h-14 rounded-full text-base sm:text-lg"
                   disabled={submitting}
                   onClick={() => submit(false)}
                 >
