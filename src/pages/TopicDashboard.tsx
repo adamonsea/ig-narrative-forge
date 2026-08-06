@@ -427,6 +427,7 @@ const TopicDashboard = () => {
   const [jobRunId, setJobRunId] = useState<string | null>(null);
   const [showGatheringProgress, setShowGatheringProgress] = useState(false);
   const [setupDismissed, setSetupDismissed] = useState(false);
+  const [setupActive, setSetupActive] = useState(false);
 
   useEffect(() => {
     if (!topic?.id || typeof window === "undefined") return;
@@ -437,6 +438,15 @@ const TopicDashboard = () => {
       setSetupDismissed(false);
     }
   }, [topic?.id]);
+
+  // Latch the guide open once a feed is detected as empty, so adding a source
+  // mid-flow doesn't make it vanish.
+  useEffect(() => {
+    if (!topic?.id) return;
+    if ((stats.sources || 0) === 0 && (stats.articles || 0) === 0 && (stats.stories || 0) === 0) {
+      setSetupActive(true);
+    }
+  }, [topic?.id, stats.sources, stats.articles, stats.stories]);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [maxAgeDays, setMaxAgeDays] = useState(30);
   const [forceRescrape, setForceRescrape] = useState(true);
