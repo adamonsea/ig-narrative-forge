@@ -615,17 +615,26 @@ export default function WaitlistWelcome() {
 
           {step === 6 && (
             <Screen
-              question="Anything you'd want it to do that we haven't mentioned?"
+              question="How did you find us?"
+              hint="Tap the closest one."
             >
+              {OPTIONS.found_us.map((o) => (
+                <Choice
+                  key={o}
+                  label={o}
+                  selected={answers.found_us === o}
+                  onClick={() => set('found_us', o)}
+                />
+              ))}
               <Textarea
-                rows={4}
-                placeholder="Optional"
+                rows={3}
+                placeholder="Anything else you'd want it to do? (optional)"
                 value={answers.wishlist}
                 onChange={(e) => set('wishlist', e.target.value)}
                 maxLength={1000}
               />
               <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" onClick={next}>
-                Continue
+                Finish
               </Button>
             </Screen>
           )}
