@@ -275,25 +275,29 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   // Step 2 → Step 3: Create topic + sources, then start build
   const handleStep2Continue = async () => {
-    if (!user) return;
+    if (!user || isCreating) return;
+    setIsCreating(true);
     setCurrentStep(3);
 
     try {
-      const slug = topicName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const cleanName = topicName.trim().slice(0, MAX_NAME_LENGTH);
+      const slug = slugify(cleanName);
+      if (!slug) throw new Error('Please choose a name with at least one letter or number.');
       setTopicSlug(slug);
 
       // Create the topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
         .insert({
-          name: topicName,
+          name: cleanName,
           slug,
           topic_type: autoTopicType,
           region: autoRegion || null,
           description: autoDescription || null,
-          keywords: autoKeywords.length > 0 ? autoKeywords : topicName.split(' ').filter((w: string) => w.length > 2),
+          keywords: autoKeywords.length > 0 ? autoKeywords : cleanName.split(' ').filter((w: string) => w.length > 2),
           audience_expertise: 'beginner' as any,
           is_active: true,
+          is_public: true,
           created_by: user.id,
         })
         .select('id')
@@ -311,17 +315,21 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
       // Create sources for selected ones
       const selectedSourceList = sources.filter(s => selectedSources.has(s.url));
       const sourceIds: string[] = [];
+      let failures = 0;
+      setAttemptedSourceCount(selectedSourceList.length);
 
       for (const source of selectedSourceList) {
         try {
           const domain = new URL(source.url).hostname.replace('www.', '');
-          
-          // Check if source already exists
-          const { data: existing } = await supabase
+
+          // Check if a source we can already see matches (first match wins —
+          // a single-row read here throws when a domain has several rows).
+          const { data: existingRows } = await supabase
             .from('content_sources')
             .select('id')
             .or(`feed_url.eq.${source.url},canonical_domain.eq.${domain}`)
-            .maybeSingle();
+            .limit(1);
+          const existing = existingRows?.[0];
 
           if (existing) {
             sourceIds.push(existing.id);
@@ -331,7 +339,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
             if (source.platform_reliability === 'medium') credibility += 10;
             credibility = Math.min(95, credibility);
 
-            const { data: newSource } = await supabase
+            const { data: newSource, error: sourceError } = await supabase
               .from('content_sources')
               .insert({
                 source_name: source.source_name,
@@ -342,17 +350,23 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                 is_active: true,
                 source_type: source.type === 'RSS' ? 'rss' : 'website',
                 region: autoTopicType === 'regional' ? autoRegion : null,
+                // Required: the insert policy only allows rows tied to a topic
+                // the signed-in user owns.
+                topic_id: topicData.id,
               })
               .select('id')
               .single();
 
+            if (sourceError) throw sourceError;
             if (newSource) sourceIds.push(newSource.id);
           }
         } catch (e) {
-          console.warn('Source creation error:', e);
+          failures += 1;
+          console.error('Source creation failed:', source.url, e);
         }
       }
 
+      setSourceFailures(failures);
       setCreatedSourceIds(sourceIds);
     } catch (error) {
       console.error('Topic creation error:', error);
@@ -362,6 +376,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         description: error instanceof Error ? error.message : "Failed to create feed",
         variant: "destructive",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -376,9 +392,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setCurrentStep(4);
   }, []);
 
-  const resetForm = () => {
+  const resetForm = (keepName = false) => {
     setCurrentStep(1);
-    setTopicName("");
+    if (!keepName) setTopicName("");
     setNameError(null);
     setIsValidatingName(false);
     setSources([]);
@@ -389,6 +405,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setCreatedSourceIds([]);
     setCompletedStories([]);
     setBuildError(null);
+    setSourceFailures(0);
+    setAttemptedSourceCount(0);
+    setIsCreating(false);
+    setManualUrl("");
+    setManualUrlError(null);
     setAutoKeywords([]);
     setAutoDescription("");
     setAutoTopicType('keyword');
