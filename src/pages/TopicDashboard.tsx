@@ -589,6 +589,50 @@ const TopicDashboard = () => {
             </Button>
           </div>
 
+          {isNewFeed && !setupDismissed && (
+            <FeedSetupGuide
+              topic={topic as any}
+              sourceCount={stats.sources || 0}
+              negativeKeywords={negativeKeywords}
+              competingRegions={competingRegions}
+              onNegativeKeywordsChange={setNegativeKeywords}
+              onCompetingRegionsChange={setCompetingRegions}
+              onTopicChange={(updatedTopic) => setTopic((prev) => ({ ...prev!, ...updatedTopic }))}
+              onUpdate={loadTopicAndStats}
+              onGather={handleStartScraping}
+              gathering={gatheringAll}
+              onSkip={() => {
+                try {
+                  window.localStorage.setItem(storageKeyFor(topic.id), JSON.stringify({ done: true }));
+                } catch {
+                  /* ignore */
+                }
+                setSetupDismissed(true);
+              }}
+            />
+          )}
+
+          {isNewFeed && setupDismissed && (
+            <div className="mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  try {
+                    window.localStorage.setItem(storageKeyFor(topic.id), JSON.stringify({ step: 1 }));
+                  } catch {
+                    /* ignore */
+                  }
+                  setSetupDismissed(false);
+                }}
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                Finish setup
+              </Button>
+            </div>
+          )}
+
+          {!(isNewFeed && !setupDismissed) && (
           {/* 2 Tabs: Feed + Settings */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
