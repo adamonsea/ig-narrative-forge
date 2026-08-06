@@ -91,6 +91,7 @@ const SubmitSchema = z.object({
   token: z.string().min(6).max(120),
   answers: AnswersSchema,
   wants_early_access: z.boolean().default(false),
+  partial: z.boolean().default(false),
 });
 
 Deno.serve(async (req) => {
@@ -122,16 +123,16 @@ Deno.serve(async (req) => {
 
       const { data: existing } = await supabase
         .from('waitlist_responses')
-        .select('id, completed_at')
+        .select('id, completed_at, answers')
         .eq('waitlist_id', entry.id)
-        .not('completed_at', 'is', null)
         .maybeSingle();
 
       return json({
         valid: true,
         preview: false,
         email: entry.email,
-        completed: !!existing,
+        completed: !!existing?.completed_at,
+        answers: existing?.answers ?? null,
       });
     }
 
@@ -140,9 +141,10 @@ Deno.serve(async (req) => {
       if (!parsed.success) {
         return json({ error: 'Invalid submission', details: parsed.error.flatten().fieldErrors }, 400);
       }
-      const { token, answers, wants_early_access } = parsed.data;
+      const { token, answers, wants_early_access, partial } = parsed.data;
 
       if (token.startsWith(PREVIEW_PREFIX)) {
+        if (partial) return json({ success: true, preview: true, partial: true });
         await supabase.from('waitlist_responses').insert({
           waitlist_id: null,
           answers,
@@ -161,22 +163,35 @@ Deno.serve(async (req) => {
 
       if (!entry) return json({ error: 'This link is no longer valid' }, 404);
 
-      const { error } = await supabase.from('waitlist_responses').insert({
+      const { data: prior } = await supabase
+        .from('waitlist_responses')
+        .select('id, completed_at')
+        .eq('waitlist_id', entry.id)
+        .maybeSingle();
+
+      const row = {
         waitlist_id: entry.id,
         answers,
         wants_early_access,
         is_preview: false,
-        completed_at: new Date().toISOString(),
-      });
+        completed_at: partial ? (prior?.completed_at ?? null) : new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = prior
+        ? await supabase.from('waitlist_responses').update(row).eq('id', prior.id)
+        : await supabase.from('waitlist_responses').insert(row);
 
       if (error) {
         console.error('waitlist-questionnaire insert failed:', error);
         return json({ error: 'Could not save your answers' }, 500);
       }
 
-      await notifyAdmin(entry.email ?? null, answers as Record<string, unknown>, wants_early_access, false);
+      if (!partial && !prior?.completed_at) {
+        await notifyAdmin(entry.email ?? null, answers as Record<string, unknown>, wants_early_access, false);
+      }
 
-      return json({ success: true });
+      return json({ success: true, partial });
     }
 
     return json({ error: 'Method not allowed' }, 405);
