@@ -846,11 +846,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   ) : (
                     <Button
                       onClick={handleStep2Continue}
-                      disabled={selectedSources.size === 0 && sources.length > 0}
+                      disabled={isCreating || (selectedSources.size === 0 && sources.length > 0)}
                       className="gap-2"
                     >
-                      {selectedSources.size === 0 ? 'Skip — add later' : `Build with ${selectedSources.size} sources`}
-                      <ArrowRight className="w-4 h-4" />
+                      {isCreating
+                        ? 'Creating…'
+                        : selectedSources.size === 0
+                        ? 'Skip — add later'
+                        : `Build with ${selectedSources.size} sources`}
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   )}
                 </div>
