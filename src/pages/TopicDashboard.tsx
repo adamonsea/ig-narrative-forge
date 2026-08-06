@@ -567,6 +567,12 @@ const TopicDashboard = () => {
     );
   }
 
+  const isNewFeed =
+    topic.created_by === user.id &&
+    (stats.sources || 0) === 0 &&
+    (stats.articles || 0) === 0 &&
+    (stats.stories || 0) === 0;
+
   return (
     <AppLayout>
       <div className="min-h-screen bg-background">
