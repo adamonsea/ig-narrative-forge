@@ -11,14 +11,14 @@ export function stripGeneratedAttribution(content: string): string {
   let cleaned = content
     // Whole lines that are just a credit: "Source: Sussex Express"
     .split('\n')
-    .filter((line) => !/^\s*(?:\*\*)?\s*(?:source|via|credit)\s*:\s*[^\n]{0,80}$/i.test(line))
+    .filter((line) => !/^\s*(?:\*\*)?\s*(?:source|via|credit)\s*:\s*[^\n.]{0,80}$/i.test(line))
     .join('\n')
-    // Leading credit prefix: "Source: site.co.uk | ..."
+    // Leading credit prefix: "Source: site.co.uk | ..." / "Source: Sussex Express. ..."
     .replace(/^\s*(?:\*\*)?\s*[Ss]ource\s*[:\-—]\s*[^|\n.]{0,60}(?:\s*\|\s*|\.\s+|\n)/, '')
-    // Trailing credit: "... Source: Sussex Express."
-    .replace(/(?:\s*\|\s*|\s)[Ss]ource\s*[:\-—]\s*[^|\n.]{0,60}\.?\s*$/, '')
-    // "Read more at example.co.uk." — only as a trailing sentence
-    .replace(/(?:^|\s)(?:Read (?:more|the full (?:story|article|details))|Learn more|Find out more)\s+(?:at|on|via)\s+[^|\n.]{0,60}\.?\s*$/, '')
+    // Trailing credit, only after a pipe or a completed sentence
+    .replace(/(?:\s*\|\s*|(?<=[.!?]\s))[Ss]ource\s*[:\-—]\s*[^|\n]{0,60}$/, '')
+    // "Read more at example.co.uk." — only as a trailing fragment
+    .replace(/(?:^|\s)(?:Read (?:more|the full (?:story|article|details))|Learn more|Find out more)\s+(?:at|on|via)\s+[^|\n]{0,60}$/, '')
     // Trailing byline that is a standalone sentence: "By Peter Lindsey."
     .replace(/(?:^|(?<=[.!?]\s))By [A-Z][A-Za-z'\-]+(?: [A-Z][A-Za-z'\-]+){0,2}\.\s*$/, '')
     .replace(/[ \t]{2,}/g, ' ')
