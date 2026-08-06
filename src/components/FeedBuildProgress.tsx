@@ -199,6 +199,9 @@ export const FeedBuildProgress = ({
         >
           {ENCOURAGING_MESSAGES[messageIndex]}
         </motion.p>
+        {connectedNote && (
+          <p className="text-sm text-muted-foreground/80">{connectedNote}</p>
+        )}
       </div>
 
       {/* Progress bar */}
