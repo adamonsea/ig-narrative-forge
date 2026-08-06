@@ -625,13 +625,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                                       : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/40"
                                   )}
                                   title={source.rationale}
+                                  aria-pressed={isSelected}
                                 >
-                                  <span className="text-sm">{getTypeIcon(source.type)}</span>
+                                  <span className="text-sm" aria-hidden="true">{getTypeIcon(source.type)}</span>
+                                  <span className="sr-only">{TYPE_LABELS[source.type] || 'Website'}: </span>
                                   <span className="text-sm font-medium max-w-[180px] truncate">
                                     {source.source_name}
                                   </span>
                                   {isSelected && (
-                                    <CheckCircle className="w-3.5 h-3.5 text-primary" />
+                                    <CheckCircle className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
                                   )}
                                 </button>
                               );
@@ -639,8 +641,30 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                           </div>
                         </>
                       ) : (
-                        <div className="text-center py-16 space-y-4">
-                          <p className="text-muted-foreground">No sources found — you can add them later from your dashboard.</p>
+                        <div className="py-12 space-y-4 text-center">
+                          <p className="text-muted-foreground">
+                            No sources found automatically. Paste a website address to add one now.
+                          </p>
+                          <div className="flex gap-2 max-w-sm mx-auto">
+                            <Input
+                              value={manualUrl}
+                              onChange={(e) => { setManualUrl(e.target.value); setManualUrlError(null); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') addManualSource(); }}
+                              placeholder="example.com"
+                              aria-label="Website address of a source"
+                              className="h-11"
+                            />
+                            <Button onClick={addManualSource} disabled={!manualUrl.trim()} className="h-11 gap-1">
+                              <Plus className="w-4 h-4" aria-hidden="true" />
+                              Add
+                            </Button>
+                          </div>
+                          {manualUrlError && (
+                            <p className="text-sm text-destructive">{manualUrlError}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Or skip — you can add sources later from your dashboard.
+                          </p>
                         </div>
                       )}
                     </motion.div>
