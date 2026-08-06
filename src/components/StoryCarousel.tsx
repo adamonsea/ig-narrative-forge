@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
+import { buildBylineLine, buildShareCta } from '@/lib/storyAttribution';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
@@ -493,11 +494,24 @@ export default function StoryCarousel({
     const sourceLinkHtml = validSourceUrl
       ? `<a href="${validSourceUrl}" target="_blank" rel="noopener noreferrer" class="underline text-primary hover:text-primary/80">Read the full story at ${sourceDomain}${originalDateText}</a>`
       : `Read the full story at ${sourceDomain}${originalDateText}`;
-    
-    // If we have existing CTA content, append source link; otherwise, use source link as CTA content
-    const finalCtaContent = ctaContent 
-      ? `${ctaContent}\n\n${sourceLinkHtml}` 
-      : sourceLinkHtml;
+
+    // Rebuild credit from the story's own database fields so it can never
+    // contradict the article we link to, then add the share prompt.
+    const bylineLine = buildBylineLine(
+      story.author,
+      story.publication_name,
+      story.article?.source_url
+    );
+    const shareLine = buildShareCta(topicName);
+
+    const closingParts = [
+      ctaContent,
+      bylineLine,
+      shareLine,
+      sourceLinkHtml,
+    ].filter(Boolean);
+
+    const finalCtaContent = closingParts.join('\n\n');
     
     return {
       mainContent,
