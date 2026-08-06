@@ -4420,24 +4420,33 @@ export type Database = {
       }
       waitlist: {
         Row: {
+          confirmation_error: string | null
+          confirmation_sent_at: string | null
           created_at: string
           email: string
           id: string
           invite_token: string
+          last_digest_at: string | null
           plan: string | null
         }
         Insert: {
+          confirmation_error?: string | null
+          confirmation_sent_at?: string | null
           created_at?: string
           email: string
           id?: string
           invite_token?: string
+          last_digest_at?: string | null
           plan?: string | null
         }
         Update: {
+          confirmation_error?: string | null
+          confirmation_sent_at?: string | null
           created_at?: string
           email?: string
           id?: string
           invite_token?: string
+          last_digest_at?: string | null
           plan?: string | null
         }
         Relationships: []

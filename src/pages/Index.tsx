@@ -8,7 +8,7 @@ import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CookieConsent } from '@/components/CookieConsent';
 import { DemoOverlay } from '@/components/demo/DemoOverlay';
 import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { Play } from 'lucide-react';
@@ -23,6 +23,13 @@ const Index = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   usePageFavicon();
   const reduce = useReducedMotion();
+
+  // Allow emails to deep-link straight into the explainer film (?explainer=1)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('explainer') === '1') {
+      setExplainerOpen(true);
+    }
+  }, []);
 
   // Subtle, editorial-friendly motion
   const ease = [0.22, 1, 0.36, 1] as const;

@@ -70,6 +70,18 @@ const OPTIONS = {
 
 const TOTAL_STEPS = 7;
 
+// Which step should a returning visitor land on? First one with no answer.
+const firstUnansweredStep = (a: Answers) => {
+  if (a.feed_kind.length === 0) return 0;
+  if (a.audience.length === 0) return 1;
+  if (a.today.length === 0) return 2;
+  if (a.resonated.length === 0) return 3;
+  if (a.blockers.length === 0 && !a.blockers_detail) return 4;
+  if (!a.price_band) return 5;
+  if (!a.found_us && !a.wishlist) return 6;
+  return 7;
+};
+
 // "Did you know" answers to each stated objection. Objections without an
 // honest answer are deliberately absent — we just thank them and move on.
 const BLOCKER_ANSWERS: Record<string, string> = {
@@ -96,12 +108,16 @@ const STATEMENTS: string[] = [
   'Last one — it helps us know where to spend our time.',
 ];
 
-const Typewriter = ({ text, onDone }: { text: string; onDone?: () => void }) => {
+const Typewriter = ({ text, instant, onDone }: { text: string; instant?: boolean; onDone?: () => void }) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
     setCount(0);
   }, [text]);
+
+  useEffect(() => {
+    if (instant) setCount(text.length);
+  }, [instant, text]);
 
   useEffect(() => {
     if (count >= text.length) {
@@ -175,6 +191,8 @@ export default function WaitlistWelcome() {
   const [explainerOpen, setExplainerOpen] = useState(false);
   const [rebuttal, setRebuttal] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [skipTyping, setSkipTyping] = useState(false);
+  const [resumed, setResumed] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -197,7 +215,14 @@ export default function WaitlistWelcome() {
         }
         setEmail(data.email ?? null);
         if (data.answers && typeof data.answers === 'object') {
-          setAnswers((a) => ({ ...a, ...(data.answers as Partial<Answers>) }));
+          const restored = { ...EMPTY, ...(data.answers as Partial<Answers>) };
+          setAnswers(restored);
+          const resume = firstUnansweredStep(restored);
+          if (resume > 0) {
+            setStep(Math.min(resume, TOTAL_STEPS));
+            setPhase(resume >= TOTAL_STEPS ? 'question' : 'statement');
+            setResumed(true);
+          }
         }
         setState('ready');
       } catch {
@@ -245,6 +270,19 @@ export default function WaitlistWelcome() {
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
     setPhase('statement');
     setTyped(false);
+    setSkipTyping(false);
+    setRebuttal(false);
+  };
+
+  // Going back always lands on the question itself, never the statement again.
+  const back = () => {
+    if (rebuttal) {
+      setRebuttal(false);
+      return;
+    }
+    setStep((s) => Math.max(0, s - 1));
+    setPhase('question');
+    setTyped(true);
     setRebuttal(false);
   };
 
@@ -359,6 +397,15 @@ export default function WaitlistWelcome() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
     className="space-y-7 sm:space-y-9"
     >
+      {(step > 0 || rebuttal) && (
+        <button
+          type="button"
+          onClick={back}
+          className="text-sm sm:text-base text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Back
+        </button>
+      )}
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-foreground text-balance">
           {question}
@@ -380,11 +427,17 @@ export default function WaitlistWelcome() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="dark fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 py-12 sm:px-10"
+            onClick={() => (typed ? setPhase('question') : setSkipTyping(true))}
           >
             <div className="w-full max-w-3xl space-y-10 sm:space-y-14 text-left">
               <Brand />
+              {step === 0 && (
+                <p className="text-sm sm:text-base uppercase tracking-widest text-muted-foreground">
+                  {resumed ? 'Picking up where you left off' : 'About a minute · 7 quick questions'}
+                </p>
+              )}
               <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground">
-                <Typewriter text={STATEMENTS[step]} onDone={() => setTyped(true)} />
+                <Typewriter text={STATEMENTS[step]} instant={skipTyping} onDone={() => setTyped(true)} />
               </p>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -395,11 +448,17 @@ export default function WaitlistWelcome() {
                   size="lg"
                   className="min-w-56 h-14 rounded-full px-10 text-base sm:text-lg"
                   tabIndex={typed ? 0 : -1}
-                  onClick={() => setPhase('question')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhase('question');
+                  }}
                 >
                   {step === 0 ? 'First question' : 'Next question'}
                 </Button>
               </motion.div>
+              {!typed && (
+                <p className="text-sm text-muted-foreground">Tap anywhere to skip ahead</p>
+              )}
             </div>
           </motion.div>
         )}
@@ -408,7 +467,11 @@ export default function WaitlistWelcome() {
       <div className="mx-auto w-full max-w-lg sm:max-w-2xl space-y-8 sm:space-y-12">
         <div className="flex items-center justify-between border-b border-border/60 pb-4 sm:pb-6">
           <Brand />
-          <div className="flex gap-1.5" aria-hidden="true">
+          <div className="flex items-center gap-3">
+            <span className="text-xs sm:text-sm text-muted-foreground tabular-nums">
+              {Math.min(step + 1, TOTAL_STEPS)} of {TOTAL_STEPS}
+            </span>
+            <div className="flex gap-1.5" aria-hidden="true">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <span
                 key={i}
@@ -421,6 +484,7 @@ export default function WaitlistWelcome() {
                 }`}
               />
             ))}
+            </div>
           </div>
         </div>
 

@@ -1,95 +1,94 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { Resend } from 'npm:resend@4.0.0'
+import {
+  buildWaitlistEmailHtml,
+  buildWaitlistEmailText,
+  WAITLIST_FROM,
+  WAITLIST_HEADERS,
+  WAITLIST_REPLY_TO,
+  WAITLIST_SUBJECT,
+  type WaitlistStoryPreview,
+} from '../_shared/waitlist-email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+// Pull a real, recently published story so the email shows the product working.
+async function fetchStoryPreview(
+  supabase: ReturnType<typeof createClient>,
+): Promise<WaitlistStoryPreview | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_public_topic_feed', {
+      topic_slug_param: 'eastbourne',
+      p_limit: 6,
+      p_offset: 0,
+      p_sort_by: 'newest',
+    })
+    if (error || !Array.isArray(data)) return null
+    const row = (data as Record<string, unknown>[]).find(
+      (r) => typeof r.story_cover_illustration_url === 'string' && r.story_cover_illustration_url,
+    )
+    if (!row) return null
+    const raw = String(row.story_cover_illustration_url)
+    // Serve a width-capped render so the email stays light.
+    const imageUrl = raw.includes('/storage/v1/object/public/')
+      ? `${raw.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')}?width=1040&quality=75`
+      : raw
+    return {
+      title: String(row.story_title ?? ''),
+      imageUrl,
+      sourceName: (row.source_name as string) ?? null,
+    }
+  } catch (err) {
+    console.warn('Story preview lookup failed:', err)
+    return null
+  }
+}
 
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
-const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="color-scheme" content="light dark" />
-    <meta name="supported-color-schemes" content="light dark" />
-    <style>
-      .cta-primary { background-color:#0c1522 !important; color:#ffffff !important; border:2px solid #0c1522 !important; }
-      .cta-secondary { background-color:#ffffff !important; color:#0c1522 !important; border:2px solid #0c1522 !important; }
-      @media (prefers-color-scheme: dark) {
-        .cta-primary { background-color:#20D693 !important; color:#0c1522 !important; border:2px solid #20D693 !important; }
-        .cta-secondary { background-color:transparent !important; color:#ffffff !important; border:2px solid #ffffff !important; }
-      }
-      [data-ogsc] .cta-primary { background-color:#20D693 !important; color:#0c1522 !important; border:2px solid #20D693 !important; }
-      [data-ogsc] .cta-secondary { background-color:transparent !important; color:#ffffff !important; border:2px solid #ffffff !important; }
-    </style>
-  </head>
-  <body style="margin:0;padding:0;background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;padding:40px 16px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;">
-            <tr>
-              <td style="padding:8px 0 24px 0;">
-                <div style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;font-weight:600;letter-spacing:-0.5px;color:#0c1522;">Curatr<span style="color:#20D693;">.</span><span style="font-size:20px;opacity:0.6;">pro</span></div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:0;">
-                <h1 style="margin:0 0 20px 0;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;font-weight:600;color:#0c1522;">You're on the list</h1>
-                <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Hi — thanks for signing up to Curatr${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're speaking to everyone on the waitlist before we open up, to make sure it offers what people want. Please help us by answering a few questions.
-                </p>
-                <a class="cta-primary" href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0c1522;color:#ffffff;border:2px solid #0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
-                <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the stories and illustrates them daily.
-                </p>
-                <p style="margin:0 0 28px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  If you'd rather just see it working, here's a live feed: <a href="https://curatr.pro/feed/eastbourne" style="color:#0c1522;">curatr.pro/feed/eastbourne</a>
-                </p>
-                <p style="margin:0;font-size:16px;line-height:1.65;color:#0c1522;">
-                  Adam<br /><span style="font-size:14px;color:#71717a;">Curatr maker</span>
-                </p>
-                <p style="margin:20px 0 0 0;">
-                  <a class="cta-secondary" href="https://wa.me/447810546694" style="display:inline-block;background-color:#ffffff;color:#0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:13px 25px;border-radius:999px;border:2px solid #0c1522;">WhatsApp Adam</a>
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:32px 0 0 0;">
-                <hr style="border:none;border-top:1px solid #ececE7;margin:0 0 16px 0;" />
-                <p style="margin:0;font-size:13px;line-height:1.6;color:#71717a;">
-                  You received this because you joined the waitlist at curatr.pro. No further emails until we launch.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`
-
-async function sendWaitlistEmail(email: string, plan: string, inviteToken: string) {
+async function sendWaitlistEmail(
+  supabase: ReturnType<typeof createClient>,
+  waitlistId: string | null,
+  email: string,
+  plan: string,
+  inviteToken: string,
+) {
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
   if (!resendApiKey) {
     console.warn('RESEND_API_KEY not configured - skipping waitlist confirmation email')
     return
   }
+
+  const recordStatus = async (patch: Record<string, unknown>) => {
+    if (!waitlistId) return
+    await supabase.from('waitlist').update(patch).eq('id', waitlistId)
+  }
+
   try {
     const resend = new Resend(resendApiKey)
     const questionnaireUrl = `https://curatr.pro/waitlist/welcome?token=${encodeURIComponent(inviteToken)}`
+    const story = await fetchStoryPreview(supabase)
+    const payload = { plan, questionnaireUrl, story }
+
     const { error } = await resend.emails.send({
-      from: 'Curatr <noreply@curatr.pro>',
+      from: WAITLIST_FROM,
       to: [email],
-      subject: "You're on the Curatr waitlist",
-      html: waitlistEmailHtml(plan, questionnaireUrl),
+      replyTo: WAITLIST_REPLY_TO,
+      subject: WAITLIST_SUBJECT,
+      html: buildWaitlistEmailHtml(payload),
+      text: buildWaitlistEmailText(payload),
+      headers: WAITLIST_HEADERS,
     })
-    if (error) console.error('Waitlist confirmation email error:', error)
+
+    if (error) {
+      console.error('Waitlist confirmation email error:', error)
+      await recordStatus({ confirmation_error: String(error.message ?? error) })
+      return
+    }
+    await recordStatus({ confirmation_sent_at: new Date().toISOString(), confirmation_error: null })
   } catch (err) {
     console.error('Waitlist confirmation email failed:', err)
+    await recordStatus({ confirmation_error: err instanceof Error ? err.message : String(err) })
   }
 }
 
@@ -140,12 +139,32 @@ Deno.serve(async (req) => {
     if (error) {
       console.error('Waitlist signup error:', error)
       
-      // Handle duplicate email error
+      // Duplicate signup: re-send the same confirmation rather than going silent.
       if (error.code === '23505') {
+        const { data: existing } = await supabase
+          .from('waitlist')
+          .select('id, plan, invite_token')
+          .eq('email', email)
+          .maybeSingle()
+
+        if (existing?.invite_token) {
+          await sendWaitlistEmail(
+            supabase,
+            existing.id,
+            email,
+            existing.plan || 'general',
+            existing.invite_token,
+          )
+        }
+
         return new Response(
-          JSON.stringify({ error: 'Email already registered for waitlist' }),
+          JSON.stringify({
+            success: true,
+            already_registered: true,
+            message: "You're already on the list — we've re-sent your confirmation email.",
+          }),
           { 
-            status: 409, 
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         )
@@ -162,7 +181,13 @@ Deno.serve(async (req) => {
 
     console.log('Waitlist signup successful:', data)
 
-    await sendWaitlistEmail(email, plan || 'general', data?.[0]?.invite_token ?? '')
+    await sendWaitlistEmail(
+      supabase,
+      data?.[0]?.id ?? null,
+      email,
+      plan || 'general',
+      data?.[0]?.invite_token ?? '',
+    )
 
     return new Response(
       JSON.stringify({ 
