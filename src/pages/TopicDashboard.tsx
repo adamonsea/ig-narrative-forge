@@ -426,6 +426,17 @@ const TopicDashboard = () => {
 
   const [jobRunId, setJobRunId] = useState<string | null>(null);
   const [showGatheringProgress, setShowGatheringProgress] = useState(false);
+  const [setupDismissed, setSetupDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!topic?.id || typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(storageKeyFor(topic.id));
+      setSetupDismissed(raw ? !!JSON.parse(raw).done : false);
+    } catch {
+      setSetupDismissed(false);
+    }
+  }, [topic?.id]);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [maxAgeDays, setMaxAgeDays] = useState(30);
   const [forceRescrape, setForceRescrape] = useState(true);
