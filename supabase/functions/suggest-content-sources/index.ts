@@ -18,6 +18,89 @@ interface SourceSuggestion {
   type: 'RSS' | 'News' | 'Blog' | 'Publication' | 'Official';
   confidence_score: number;
   rationale: string;
+  verified?: boolean;
+  feed_url?: string | null;
+}
+
+const UA = 'Mozilla/5.0 (compatible; CuratrSourceFinder/1.0; +https://curatr.pro)';
+
+async function fetchWithTimeout(url: string, ms = 6000, method: 'GET' | 'HEAD' = 'GET') {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, {
+      method,
+      redirect: 'follow',
+      signal: ctrl.signal,
+      headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml, text/html;q=0.8' },
+    });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function looksLikeFeed(body: string, contentType: string) {
+  if (/xml|rss|atom/i.test(contentType)) {
+    return /<rss[\s>]|<feed[\s>]|<rdf:RDF/i.test(body);
+  }
+  return /^\s*(<\?xml|<rss|<feed)/i.test(body);
+}
+
+/** Try to resolve a working RSS/Atom feed for a candidate URL. */
+async function resolveFeed(rawUrl: string): Promise<{ reachable: boolean; feedUrl: string | null }> {
+  let base: URL;
+  try {
+    base = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
+  } catch {
+    return { reachable: false, feedUrl: null };
+  }
+
+  // 1) The suggested URL itself
+  let homepageHtml = '';
+  try {
+    const res = await fetchWithTimeout(base.toString());
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      const body = (await res.text()).slice(0, 200_000);
+      if (looksLikeFeed(body, ct)) return { reachable: true, feedUrl: res.url || base.toString() };
+      homepageHtml = body;
+    }
+  } catch (_) { /* fall through */ }
+
+  // 2) <link rel="alternate" type="application/rss+xml">
+  const linkMatch = homepageHtml.match(
+    /<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]*>/gi
+  );
+  const candidates: string[] = [];
+  if (linkMatch) {
+    for (const tag of linkMatch.slice(0, 3)) {
+      const href = tag.match(/href=["']([^"']+)["']/i)?.[1];
+      if (href) candidates.push(new URL(href, base).toString());
+    }
+  }
+
+  // 3) Common feed paths
+  const origin = base.origin;
+  candidates.push(
+    `${origin}/feed/`,
+    `${origin}/rss`,
+    `${origin}/rss.xml`,
+    `${origin}/feed.xml`,
+    `${origin}/atom.xml`,
+    `${origin}/index.xml`,
+  );
+
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      const res = await fetchWithTimeout(candidate, 5000);
+      if (!res.ok) continue;
+      const ct = res.headers.get('content-type') || '';
+      const body = (await res.text()).slice(0, 100_000);
+      if (looksLikeFeed(body, ct)) return { reachable: true, feedUrl: res.url || candidate };
+    } catch (_) { /* next */ }
+  }
+
+  return { reachable: homepageHtml.length > 0, feedUrl: null };
 }
 
 // Verify user is authenticated and owns the topic
