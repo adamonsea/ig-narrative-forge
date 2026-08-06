@@ -740,20 +740,22 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                         (() => {
                           setTimeout(() => setCurrentStep(4), 1500);
                           return (
-                            <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
-                              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
-                              <p className="text-muted-foreground">
+                            <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-6" aria-live="polite">
+                              <ClippingStackLoop />
+                              <p className="text-muted-foreground text-center max-w-sm">
                                 {sourceFailures > 0
                                   ? "We couldn't connect those sources — setting up your feed so you can add sources from the dashboard…"
                                   : 'Setting up your feed…'}
                               </p>
+                              <PulsingDots />
                             </div>
                           );
                         })()
                       ) : (
-                        <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
-                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-6" aria-live="polite">
+                          <ClippingStackLoop />
                           <p className="text-muted-foreground">Creating your feed…</p>
+                          <PulsingDots />
                         </div>
                       )}
                     </motion.div>
