@@ -447,7 +447,7 @@ export default function WaitlistWelcome() {
                   Add a detail
                 </button>
               )}
-              <Button className="w-full" disabled={answers.feed_kind.length === 0} onClick={next}>
+              <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" disabled={answers.feed_kind.length === 0} onClick={next}>
                 Continue
               </Button>
             </Screen>
@@ -466,7 +466,7 @@ export default function WaitlistWelcome() {
                   onClick={() => toggle('audience', o)}
                 />
               ))}
-              <Button className="w-full" disabled={answers.audience.length === 0} onClick={next}>
+              <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" disabled={answers.audience.length === 0} onClick={next}>
                 Continue
               </Button>
             </Screen>
@@ -485,7 +485,7 @@ export default function WaitlistWelcome() {
                   onClick={() => toggle('today', o)}
                 />
               ))}
-              <Button className="w-full" disabled={answers.today.length === 0} onClick={next}>
+              <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" disabled={answers.today.length === 0} onClick={next}>
                 Continue
               </Button>
             </Screen>
@@ -504,7 +504,7 @@ export default function WaitlistWelcome() {
                   onClick={() => toggle('resonated', o, 2)}
                 />
               ))}
-              <Button className="w-full" disabled={answers.resonated.length === 0} onClick={next}>
+              <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" disabled={answers.resonated.length === 0} onClick={next}>
                 Continue
               </Button>
             </Screen>
@@ -535,7 +535,7 @@ export default function WaitlistWelcome() {
                       Thanks for the rest of the feedback too — we've logged it.
                     </p>
                   )}
-                  <Button className="w-full" onClick={next}>
+                  <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" onClick={next}>
                     Continue
                   </Button>
                 </Screen>
@@ -574,7 +574,7 @@ export default function WaitlistWelcome() {
                   Say more
                 </button>
               )}
-              <Button className="w-full" onClick={() => setRebuttal(true)}>
+              <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" onClick={() => setRebuttal(true)}>
                 Continue
               </Button>
             </Screen>
@@ -593,7 +593,7 @@ export default function WaitlistWelcome() {
                   onClick={() => set('price_band', o)}
                 />
               ))}
-              <Button className="w-full" disabled={!answers.price_band} onClick={next}>
+              <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" disabled={!answers.price_band} onClick={next}>
                 Continue
               </Button>
             </Screen>
@@ -610,7 +610,7 @@ export default function WaitlistWelcome() {
                 onChange={(e) => set('wishlist', e.target.value)}
                 maxLength={1000}
               />
-              <Button className="w-full" onClick={next}>
+              <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" onClick={next}>
                 Continue
               </Button>
             </Screen>
@@ -629,7 +629,7 @@ export default function WaitlistWelcome() {
                 like to be in the first one, say so and we'll bump you up.
               </p>
               <div className="space-y-2.5">
-                <Button className="w-full" disabled={submitting} onClick={() => submit(true)}>
+                <Button size="lg" className="w-full h-14 rounded-full text-base sm:text-lg" disabled={submitting} onClick={() => submit(true)}>
                   I'd like early access — put me at the front
                 </Button>
                 <Button
