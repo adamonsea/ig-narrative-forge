@@ -132,15 +132,15 @@ const Choice = ({
     type="button"
     onClick={onClick}
     aria-pressed={selected}
-    className={`w-full text-left rounded-xl border px-5 py-4 text-base transition-colors ${
+    className={`w-full text-left rounded-xl border px-5 py-4 sm:px-6 sm:py-5 text-base sm:text-lg md:text-xl transition-colors ${
       selected
         ? 'border-foreground bg-foreground text-background shadow-sm'
         : 'border-border bg-card text-foreground hover:border-foreground/40 hover:bg-accent/40'
     }`}
   >
-    <span className="flex items-center justify-between gap-3">
+    <span className="flex items-center justify-between gap-4">
       {label}
-      {selected && <Check className="h-4 w-4 shrink-0 text-[hsl(155,100%,67%)]" aria-hidden="true" />}
+      {selected && <Check className="h-5 w-5 shrink-0 text-[hsl(155,100%,67%)]" aria-hidden="true" />}
     </span>
   </button>
 );
@@ -269,10 +269,10 @@ export default function WaitlistWelcome() {
 
   const Brand = ({ className = '' }: { className?: string }) => (
     <span className={`inline-flex items-baseline ${className}`}>
-      <span className="font-display font-semibold tracking-tight text-foreground text-2xl">
+      <span className="font-display font-semibold tracking-tight text-foreground text-2xl sm:text-3xl">
         Curatr
       </span>
-      <span className="font-display font-light tracking-tight text-[hsl(155,100%,67%)] text-lg">
+      <span className="font-display font-light tracking-tight text-[hsl(155,100%,67%)] text-lg sm:text-xl">
         .pro
       </span>
     </span>
@@ -343,18 +343,20 @@ export default function WaitlistWelcome() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className="space-y-6"
+    className="space-y-7 sm:space-y-9"
     >
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{question}</h1>
-        {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-foreground text-balance">
+          {question}
+        </h1>
+        {hint && <p className="text-base sm:text-lg text-muted-foreground">{hint}</p>}
       </div>
-      <div className="space-y-2.5">{children}</div>
+      <div className="space-y-3 sm:space-y-4">{children}</div>
     </motion.div>
   );
 
   return (
-    <main className="min-h-dvh bg-background px-6 py-10">
+    <main className="min-h-dvh bg-background px-6 py-10 sm:py-14">
       <AnimatePresence>
         {phase === 'statement' && step < TOTAL_STEPS && (
           <motion.div
@@ -363,11 +365,11 @@ export default function WaitlistWelcome() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-8"
+            className="dark fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 py-12 sm:px-10"
           >
-            <div className="w-full max-w-xl space-y-10 text-center">
+            <div className="w-full max-w-3xl space-y-10 sm:space-y-14 text-center">
               <Brand className="justify-center" />
-              <p className="text-2xl sm:text-3xl font-display font-light leading-snug tracking-tight text-foreground">
+              <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground text-balance">
                 <Typewriter text={STATEMENTS[step]} onDone={() => setTyped(true)} />
               </p>
               <motion.div
@@ -377,7 +379,7 @@ export default function WaitlistWelcome() {
               >
                 <Button
                   size="lg"
-                  className="min-w-48"
+                  className="min-w-56 h-14 rounded-full px-10 text-base sm:text-lg"
                   tabIndex={typed ? 0 : -1}
                   onClick={() => setPhase('question')}
                 >
@@ -389,8 +391,8 @@ export default function WaitlistWelcome() {
         )}
       </AnimatePresence>
 
-      <div className="mx-auto w-full max-w-lg space-y-8">
-        <div className="flex items-center justify-between border-b border-border/60 pb-4">
+      <div className="mx-auto w-full max-w-lg sm:max-w-2xl space-y-8 sm:space-y-12">
+        <div className="flex items-center justify-between border-b border-border/60 pb-4 sm:pb-6">
           <Brand />
           <div className="flex gap-1.5" aria-hidden="true">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
