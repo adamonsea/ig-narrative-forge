@@ -593,12 +593,21 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                       className="space-y-6 pt-8"
                     >
                       {isDiscoveringSources ? (
-                        <div className="flex flex-col items-center justify-center py-16 space-y-6">
-                          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                        <div className="flex flex-col items-center justify-center py-10 space-y-8" aria-live="polite">
+                          <SourceScanLoop />
                           <div className="text-center space-y-2">
                             <p className="text-lg font-medium">Finding sources for "{topicName}"</p>
-                            <p className="text-sm text-muted-foreground">Scanning RSS feeds, WordPress & Substack sites…</p>
+                            <motion.p
+                              key={discoverMessageIndex}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.35 }}
+                              className="text-sm text-muted-foreground"
+                            >
+                              {DISCOVER_MESSAGES[discoverMessageIndex]}
+                            </motion.p>
                           </div>
+                          <SourceChipSkeletons count={6} />
                         </div>
                       ) : sources.length > 0 ? (
                         <>
