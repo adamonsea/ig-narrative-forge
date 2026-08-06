@@ -107,14 +107,18 @@ const Typewriter = ({ text, onDone }: { text: string; onDone?: () => void }) => 
   }, [count, text]);
 
   return (
-    <span aria-label={text}>
-      <span aria-hidden="true">{text.slice(0, count)}</span>
-      {count < text.length && (
-        <span
-          aria-hidden="true"
-          className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-[0.12em] bg-[hsl(155,100%,67%)] animate-pulse"
-        />
-      )}
+    // The full text is always laid out (invisible) so line breaks and word
+    // positions never shift while typing — revealed characters sit on top.
+    <span aria-label={text} className="relative block">
+      <span aria-hidden="true" className="invisible">
+        {text}
+      </span>
+      <span aria-hidden="true" className="absolute inset-0">
+        {text.slice(0, count)}
+        {count < text.length && (
+          <span className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[0.1em] bg-[hsl(155,100%,67%)] animate-pulse align-baseline" />
+        )}
+      </span>
     </span>
   );
 };
