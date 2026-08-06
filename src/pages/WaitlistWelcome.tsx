@@ -20,6 +20,7 @@ type Answers = {
   blockers: string[];
   blockers_detail: string;
   price_band: string;
+  found_us: string;
   wishlist: string;
 };
 
@@ -32,6 +33,7 @@ const EMPTY: Answers = {
   blockers: [],
   blockers_detail: '',
   price_band: '',
+  found_us: '',
   wishlist: '',
 };
 
@@ -56,6 +58,14 @@ const OPTIONS = {
     'Nothing springs to mind',
   ],
   price_band: ['Under £10', '£10–25', '£25–60', '£60+', 'Only if free'],
+  found_us: [
+    'Search',
+    'Social media',
+    'A Curatr feed I came across',
+    'Word of mouth',
+    'Newsletter or article',
+    'Somewhere else',
+  ],
 };
 
 const TOTAL_STEPS = 7;
@@ -83,7 +93,7 @@ const STATEMENTS: string[] = [
   'Curatr gathers local stories, rewrites them, and illustrates them daily.',
   'Honest answers here shape what we build next.',
   "Plans aren't fixed yet — this genuinely sets the price.",
-  "Last one, and it's optional.",
+  'Last one — it helps us know where to spend our time.',
 ];
 
 const Typewriter = ({ text, onDone }: { text: string; onDone?: () => void }) => {

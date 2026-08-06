@@ -29,6 +29,7 @@ const LABELS: Record<string, string> = {
   blockers: 'Blockers',
   blockers_detail: 'Blocker detail',
   price_band: 'Price band',
+  found_us: 'How they found us',
   wishlist: 'Wishlist',
 };
 
@@ -84,6 +85,7 @@ const AnswersSchema = z.object({
   blockers: z.array(z.string().max(60)).max(6).default([]),
   blockers_detail: z.string().max(600).optional().default(''),
   price_band: z.string().max(30).optional().default(''),
+  found_us: z.string().max(60).optional().default(''),
   wishlist: z.string().max(1000).optional().default(''),
 });
 
