@@ -626,7 +626,7 @@ const TopicDashboard = () => {
             />
           )}
 
-          {isNewFeed && setupDismissed && (
+          {setupDismissed && setupIncomplete && (
             <div className="mb-4">
               <Button
                 variant="outline"
