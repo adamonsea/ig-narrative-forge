@@ -397,6 +397,15 @@ export default function WaitlistWelcome() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
     className="space-y-7 sm:space-y-9"
     >
+      {(step > 0 || rebuttal) && (
+        <button
+          type="button"
+          onClick={back}
+          className="text-sm sm:text-base text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Back
+        </button>
+      )}
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-foreground text-balance">
           {question}
