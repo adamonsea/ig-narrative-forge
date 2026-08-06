@@ -15,6 +15,7 @@ import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager"
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { OnboardingSettings } from "@/components/onboarding";
+import { FeedSetupGuide, storageKeyFor } from "@/components/onboarding/FeedSetupGuide";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
@@ -425,6 +426,27 @@ const TopicDashboard = () => {
 
   const [jobRunId, setJobRunId] = useState<string | null>(null);
   const [showGatheringProgress, setShowGatheringProgress] = useState(false);
+  const [setupDismissed, setSetupDismissed] = useState(false);
+  const [setupActive, setSetupActive] = useState(false);
+
+  useEffect(() => {
+    if (!topic?.id || typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(storageKeyFor(topic.id));
+      setSetupDismissed(raw ? !!JSON.parse(raw).done : false);
+    } catch {
+      setSetupDismissed(false);
+    }
+  }, [topic?.id]);
+
+  // Latch the guide open once a feed is detected as empty, so adding a source
+  // mid-flow doesn't make it vanish.
+  useEffect(() => {
+    if (!topic?.id) return;
+    if ((stats.sources || 0) === 0 && (stats.articles || 0) === 0 && (stats.stories || 0) === 0) {
+      setSetupActive(true);
+    }
+  }, [topic?.id, stats.sources, stats.articles, stats.stories]);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [maxAgeDays, setMaxAgeDays] = useState(30);
   const [forceRescrape, setForceRescrape] = useState(true);
@@ -555,6 +577,10 @@ const TopicDashboard = () => {
     );
   }
 
+  const isOwner = topic.created_by === user.id;
+  const isNewFeed = isOwner && setupActive;
+  const setupIncomplete = isOwner && (stats.sources || 0) === 0;
+
   return (
     <AppLayout>
       <div className="min-h-screen bg-background">
@@ -577,8 +603,55 @@ const TopicDashboard = () => {
             </Button>
           </div>
 
+          {isNewFeed && !setupDismissed && (
+            <FeedSetupGuide
+              topic={topic as any}
+              sourceCount={stats.sources || 0}
+              negativeKeywords={negativeKeywords}
+              competingRegions={competingRegions}
+              onNegativeKeywordsChange={setNegativeKeywords}
+              onCompetingRegionsChange={setCompetingRegions}
+              onTopicChange={(updatedTopic) => setTopic((prev) => ({ ...prev!, ...updatedTopic }))}
+              onUpdate={loadTopicAndStats}
+              onGather={handleStartScraping}
+              gathering={gatheringAll}
+              onSkip={() => {
+                try {
+                  window.localStorage.setItem(storageKeyFor(topic.id), JSON.stringify({ done: true }));
+                } catch {
+                  /* ignore */
+                }
+                setSetupDismissed(true);
+              }}
+            />
+          )}
+
+          {setupDismissed && setupIncomplete && (
+            <div className="mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  try {
+                    window.localStorage.setItem(storageKeyFor(topic.id), JSON.stringify({ step: 1 }));
+                  } catch {
+                    /* ignore */
+                  }
+                  setSetupDismissed(false);
+                }}
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                Finish setup
+              </Button>
+            </div>
+          )}
+
           {/* 2 Tabs: Feed + Settings */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className={`space-y-6 ${isNewFeed && !setupDismissed ? "hidden" : ""}`}
+          >
             <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
               <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Feed
