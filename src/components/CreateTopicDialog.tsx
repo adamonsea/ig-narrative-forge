@@ -8,6 +8,12 @@ import { ArrowRight, ArrowLeft, X, Loader2, Plus, Sparkles, CheckCircle, Externa
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { FeedBuildProgress } from "@/components/FeedBuildProgress";
+import {
+  SourceScanLoop,
+  ClippingStackLoop,
+  SourceChipSkeletons,
+  PulsingDots,
+} from "@/components/onboarding/WaitingAnimations";
 
 interface SourceSuggestion {
   url: string;
@@ -51,6 +57,13 @@ const TYPE_LABELS: Record<string, string> = {
   News: 'News site',
 };
 
+const DISCOVER_MESSAGES = [
+  "Scanning RSS feeds, WordPress & Substack sites…",
+  "Checking which publishers cover this…",
+  "Testing feeds for fresh stories…",
+  "Ranking the most reliable sources…",
+];
+
 export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: CreateTopicDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -66,6 +79,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [sources, setSources] = useState<SourceSuggestion[]>([]);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [isDiscoveringSources, setIsDiscoveringSources] = useState(false);
+  const [discoverMessageIndex, setDiscoverMessageIndex] = useState(0);
   const [addingSource, setAddingSource] = useState<string | null>(null);
   const [manualUrl, setManualUrl] = useState("");
   const [manualUrlError, setManualUrlError] = useState<string | null>(null);
@@ -95,6 +109,18 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // Rotate reassuring copy while sources are being discovered
+  useEffect(() => {
+    if (!isDiscoveringSources) {
+      setDiscoverMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setDiscoverMessageIndex((prev) => (prev + 1) % DISCOVER_MESSAGES.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [isDiscoveringSources]);
 
   // Lock body scroll
   useEffect(() => {
@@ -593,12 +619,21 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                       className="space-y-6 pt-8"
                     >
                       {isDiscoveringSources ? (
-                        <div className="flex flex-col items-center justify-center py-16 space-y-6">
-                          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                        <div className="flex flex-col items-center justify-center py-10 space-y-8" aria-live="polite">
+                          <SourceScanLoop />
                           <div className="text-center space-y-2">
                             <p className="text-lg font-medium">Finding sources for "{topicName}"</p>
-                            <p className="text-sm text-muted-foreground">Scanning RSS feeds, WordPress & Substack sites…</p>
+                            <motion.p
+                              key={discoverMessageIndex}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.35 }}
+                              className="text-sm text-muted-foreground"
+                            >
+                              {DISCOVER_MESSAGES[discoverMessageIndex]}
+                            </motion.p>
                           </div>
+                          <SourceChipSkeletons count={6} />
                         </div>
                       ) : sources.length > 0 ? (
                         <>
@@ -705,20 +740,22 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                         (() => {
                           setTimeout(() => setCurrentStep(4), 1500);
                           return (
-                            <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
-                              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
-                              <p className="text-muted-foreground">
+                            <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-6" aria-live="polite">
+                              <ClippingStackLoop />
+                              <p className="text-muted-foreground text-center max-w-sm">
                                 {sourceFailures > 0
                                   ? "We couldn't connect those sources — setting up your feed so you can add sources from the dashboard…"
                                   : 'Setting up your feed…'}
                               </p>
+                              <PulsingDots />
                             </div>
                           );
                         })()
                       ) : (
-                        <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
-                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-6" aria-live="polite">
+                          <ClippingStackLoop />
                           <p className="text-muted-foreground">Creating your feed…</p>
+                          <PulsingDots />
                         </div>
                       )}
                     </motion.div>

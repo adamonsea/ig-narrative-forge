@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Check, Newspaper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { ClippingStackLoop } from '@/components/onboarding/WaitingAnimations';
 
 interface BuildPhase {
   key: string;
@@ -185,9 +186,12 @@ export const FeedBuildProgress = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-10">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+      {/* Looping visual */}
+      <ClippingStackLoop />
+
       {/* Title */}
-      <div className="text-center space-y-3">
+      <div className="text-center space-y-3" aria-live="polite">
         <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
           Building your feed…
         </h2>
