@@ -8,6 +8,12 @@ import { ArrowRight, ArrowLeft, X, Loader2, Plus, Sparkles, CheckCircle, Externa
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { FeedBuildProgress } from "@/components/FeedBuildProgress";
+import {
+  SourceScanLoop,
+  ClippingStackLoop,
+  SourceChipSkeletons,
+  PulsingDots,
+} from "@/components/onboarding/WaitingAnimations";
 
 interface SourceSuggestion {
   url: string;
@@ -51,6 +57,13 @@ const TYPE_LABELS: Record<string, string> = {
   News: 'News site',
 };
 
+const DISCOVER_MESSAGES = [
+  "Scanning RSS feeds, WordPress & Substack sites…",
+  "Checking which publishers cover this…",
+  "Testing feeds for fresh stories…",
+  "Ranking the most reliable sources…",
+];
+
 export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: CreateTopicDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -66,6 +79,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [sources, setSources] = useState<SourceSuggestion[]>([]);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [isDiscoveringSources, setIsDiscoveringSources] = useState(false);
+  const [discoverMessageIndex, setDiscoverMessageIndex] = useState(0);
   const [addingSource, setAddingSource] = useState<string | null>(null);
   const [manualUrl, setManualUrl] = useState("");
   const [manualUrlError, setManualUrlError] = useState<string | null>(null);
