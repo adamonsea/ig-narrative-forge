@@ -109,11 +109,11 @@ const Typewriter = ({ text, onDone }: { text: string; onDone?: () => void }) => 
   return (
     // The full text is always laid out (invisible) so line breaks and word
     // positions never shift while typing — revealed characters sit on top.
-    <span aria-label={text} className="relative block">
+    <span aria-label={text} className="relative block text-left">
       <span aria-hidden="true" className="invisible">
         {text}
       </span>
-      <span aria-hidden="true" className="absolute inset-0">
+      <span aria-hidden="true" className="absolute inset-0 text-left">
         {text.slice(0, count)}
         {count < text.length && (
           <span className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[0.1em] bg-[hsl(155,100%,67%)] animate-pulse align-baseline" />
@@ -371,9 +371,9 @@ export default function WaitlistWelcome() {
             transition={{ duration: 0.3 }}
             className="dark fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 py-12 sm:px-10"
           >
-            <div className="w-full max-w-3xl space-y-10 sm:space-y-14 text-center">
-              <Brand className="justify-center" />
-              <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground text-balance">
+            <div className="w-full max-w-3xl space-y-10 sm:space-y-14 text-left">
+              <Brand />
+              <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground">
                 <Typewriter text={STATEMENTS[step]} onDone={() => setTyped(true)} />
               </p>
               <motion.div
