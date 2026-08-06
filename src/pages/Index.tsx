@@ -8,7 +8,7 @@ import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CookieConsent } from '@/components/CookieConsent';
 import { DemoOverlay } from '@/components/demo/DemoOverlay';
 import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { Play } from 'lucide-react';
