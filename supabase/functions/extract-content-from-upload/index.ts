@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -93,7 +94,7 @@ async function processContentWithDeepSeek(rawContent: string, contentType: strin
 
   console.log('🤖 Processing content with DeepSeek API');
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
+  const response = await llmFetch({
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${deepseekApiKey}`,

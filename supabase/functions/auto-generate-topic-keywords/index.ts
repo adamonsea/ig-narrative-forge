@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -118,7 +119,7 @@ Ensure:
 - No duplicates with existing keywords
 - Return pure JSON array, no markdown formatting`;
 
-        const aiResponse = await fetch('https://api.deepseek.com/chat/completions', {
+        const aiResponse = await llmFetch({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

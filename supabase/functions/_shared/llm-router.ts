@@ -47,7 +47,7 @@ export interface LlmFetchOptions {
  * Routes to the Lovable AI Gateway first, then DeepSeek.
  */
 export async function llmFetch(
-  init: { body: string | Record<string, any>; headers?: Record<string, string> },
+  init: { body: any; headers?: Record<string, string>; [key: string]: any },
   options: LlmFetchOptions = {}
 ): Promise<Response> {
   const context = options.context ?? 'llm';

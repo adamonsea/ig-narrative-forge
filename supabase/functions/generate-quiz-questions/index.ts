@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -293,7 +294,7 @@ Generate a single multiple-choice question with 4 options (A, B, C, D) where exa
   try {
     console.log('Calling DeepSeek Reasoner API for quiz generation...');
     
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await llmFetch({
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
