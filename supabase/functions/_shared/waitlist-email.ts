@@ -87,7 +87,7 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
               <td style="padding:0;">
                 <h1 style="margin:0 0 20px 0;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;font-weight:600;color:#0c1522;">You're on the list</h1>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Hi — thanks for signing up to Curatr${planLine(plan)}. We're speaking to everyone on the waitlist before we open up, to make sure it offers what people want. Please help us by answering a few questions — it takes about a minute.
+                  Hi, Adam here — I make Curatr. Thanks for joining the waitlist${planLine(plan)}. I'm speaking to everyone on the list before we open up, to make sure Curatr offers what people actually want. Could you answer a few questions? It takes about a minute.
                 </p>
                 <a class="cta-primary" href="${url}" style="display:inline-block;background-color:#0c1522;color:#ffffff;border:2px solid #0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
@@ -98,10 +98,10 @@ ${storyBlock}
                   Rather watch than read? <a href="https://curatr.pro/?explainer=1" style="color:#0c1522;font-weight:600;">Take the 75-second tour</a> — or browse a live feed at <a href="https://curatr.pro/feed/eastbourne" style="color:#0c1522;">curatr.pro/feed/eastbourne</a>.
                 </p>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  If you only do one thing, <a href="${url}" style="color:#0c1522;font-weight:600;">answer the questions</a> — it genuinely shapes what we build next.
+                  If you only do one thing, <a href="${url}" style="color:#0c1522;font-weight:600;">answer the questions</a> — it genuinely shapes what I build next.
                 </p>
                 <p style="margin:0;font-size:16px;line-height:1.65;color:#0c1522;">
-                  Adam<br /><span style="font-size:14px;color:#71717a;">Curatr maker · just hit reply, I read everything</span>
+                  Adam<br /><span style="font-size:14px;color:#71717a;">Just hit reply, I read everything</span>
                 </p>
                 <p style="margin:20px 0 0 0;">
                   <a class="cta-secondary" href="https://wa.me/447810546694" style="display:inline-block;background-color:#ffffff;color:#0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:13px 25px;border-radius:999px;border:2px solid #0c1522;">WhatsApp Adam</a>
@@ -128,9 +128,9 @@ export const buildWaitlistEmailText = ({ plan, questionnaireUrl, story }: Waitli
   [
     "You're on the list",
     '',
-    `Hi — thanks for signing up to Curatr${plan && plan !== 'general' ? ` for the ${plan} plan` : ''}.`,
-    "We're speaking to everyone on the waitlist before we open up, to make sure it offers what",
-    'people want. Please help us by answering a few questions — it takes about a minute:',
+    `Hi, Adam here — I make Curatr. Thanks for joining the waitlist${plan && plan !== 'general' ? ` for the ${plan} plan` : ''}.`,
+    "I'm speaking to everyone on the list before we open up, to make sure Curatr offers what",
+    'people actually want. Could you answer a few questions? It takes about a minute:',
     '',
     questionnaireUrl,
     '',
@@ -142,7 +142,7 @@ export const buildWaitlistEmailText = ({ plan, questionnaireUrl, story }: Waitli
     'Or browse a live feed: https://curatr.pro/feed/eastbourne',
     '',
     'Adam',
-    'Curatr maker — just hit reply, I read everything.',
+    'Just hit reply, I read everything.',
     'WhatsApp: https://wa.me/447810546694',
     '',
     '---',
