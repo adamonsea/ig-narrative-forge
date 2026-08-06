@@ -37,10 +37,21 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
   const deviceTier = getDevicePerformanceTier();
   const isLegacy = deviceTier.includes('legacy') || deviceTier.includes('old');
 
-  // Card dimensions - memoize to prevent recalculation
-  const CARD_WIDTH = 160;
-  const CARD_HEIGHT = 145;
-  const PADDING = 20;
+  // Responsive card dimensions — big enough to read headlines on any screen.
+  // Cards are allowed to hang over the edges (negative padding) so the pile
+  // feels like a real stack of clippings on a table.
+  const { CARD_WIDTH, CARD_HEIGHT, PADDING } = useMemo(() => {
+    const w = dimensions.width || (typeof window !== 'undefined' ? window.innerWidth : 375);
+    const h = dimensions.height || (typeof window !== 'undefined' ? window.innerHeight : 700);
+    // Mobile: ~68% of viewport width. Desktop: capped for a denser pile.
+    const raw = w < 640 ? w * 0.68 : w < 1024 ? w * 0.4 : w * 0.24;
+    const cardWidth = Math.round(Math.max(220, Math.min(raw, 360)));
+    // image (4:3) + headline block
+    const cardHeight = Math.round(cardWidth * 0.75 + cardWidth * 0.42);
+    // Negative padding lets cards overlap the screen edges
+    const padding = Math.round(-cardWidth * 0.18);
+    return { CARD_WIDTH: cardWidth, CARD_HEIGHT: Math.min(cardHeight, h * 0.72), PADDING: padding };
+  }, [dimensions.width, dimensions.height]);
   
   // Limit visible cards for performance on legacy devices
   const MAX_VISIBLE_CARDS = isLegacy ? 15 : 30;
@@ -83,8 +94,12 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
     
-    const safeWidth = dimensions.width - CARD_WIDTH - PADDING * 2;
-    const safeHeight = dimensions.height - CARD_HEIGHT - PADDING * 2;
+    const minX = PADDING;
+    const maxX = Math.max(minX, dimensions.width - CARD_WIDTH - PADDING);
+    const minY = PADDING;
+    const maxY = Math.max(minY, dimensions.height - CARD_HEIGHT - PADDING);
+    const safeWidth = maxX - minX;
+    const safeHeight = maxY - minY;
 
     currentWeekStories.forEach((story, index) => {
       // More recent stories closer to center
@@ -97,8 +112,8 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
       const x = centerX - CARD_WIDTH / 2 + Math.cos(angle) * distance * (0.4 + Math.random() * 0.6);
       const y = centerY - CARD_HEIGHT / 2 + Math.sin(angle) * distance * (0.4 + Math.random() * 0.6);
       
-      const clampedX = Math.max(PADDING, Math.min(x, safeWidth + PADDING));
-      const clampedY = Math.max(PADDING, Math.min(y, safeHeight + PADDING));
+      const clampedX = Math.max(minX, Math.min(x, maxX));
+      const clampedY = Math.max(minY, Math.min(y, maxY));
       const rotation = (Math.random() - 0.5) * 35;
 
       newPositions.set(story.id, {
@@ -119,7 +134,7 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
       : currentWeekStories.length * 12 + 300;
     const timer = setTimeout(() => setIsAnimating(false), animDuration);
     return () => clearTimeout(timer);
-  }, [dimensions, currentWeekStories, selectedWeekIndex]);
+  }, [dimensions, currentWeekStories, selectedWeekIndex, CARD_WIDTH, CARD_HEIGHT, PADDING]);
 
   const handleDragStart = useCallback((storyId: string) => {
     setHighestZ(prev => {
@@ -141,18 +156,20 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
       const newMap = new Map(prev);
       const current = newMap.get(storyId);
       if (current) {
-        const safeWidth = dimensions.width - CARD_WIDTH - PADDING * 2;
-        const safeHeight = dimensions.height - CARD_HEIGHT - PADDING * 2;
-        
+        const minX = PADDING;
+        const maxX = Math.max(minX, dimensions.width - CARD_WIDTH - PADDING);
+        const minY = PADDING;
+        const maxY = Math.max(minY, dimensions.height - CARD_HEIGHT - PADDING);
+
         newMap.set(storyId, {
           ...current,
-          x: Math.max(PADDING, Math.min(x, safeWidth + PADDING)),
-          y: Math.max(PADDING, Math.min(y, safeHeight + PADDING))
+          x: Math.max(minX, Math.min(x, maxX)),
+          y: Math.max(minY, Math.min(y, maxY))
         });
       }
       return newMap;
     });
-  }, [dimensions]);
+  }, [dimensions, CARD_WIDTH, CARD_HEIGHT, PADDING]);
 
   const handleLongPress = useCallback((storyId: string) => {
     setHoldingCardId(storyId);
@@ -250,6 +267,7 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
               story={story}
               position={position}
               index={index}
+              cardWidth={CARD_WIDTH}
               totalCards={currentWeekStories.length}
               isAnimating={isAnimating}
               isHolding={holdingCardId === story.id}
