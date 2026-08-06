@@ -18,6 +18,89 @@ interface SourceSuggestion {
   type: 'RSS' | 'News' | 'Blog' | 'Publication' | 'Official';
   confidence_score: number;
   rationale: string;
+  verified?: boolean;
+  feed_url?: string | null;
+}
+
+const UA = 'Mozilla/5.0 (compatible; CuratrSourceFinder/1.0; +https://curatr.pro)';
+
+async function fetchWithTimeout(url: string, ms = 6000, method: 'GET' | 'HEAD' = 'GET') {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, {
+      method,
+      redirect: 'follow',
+      signal: ctrl.signal,
+      headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml, text/html;q=0.8' },
+    });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function looksLikeFeed(body: string, contentType: string) {
+  if (/xml|rss|atom/i.test(contentType)) {
+    return /<rss[\s>]|<feed[\s>]|<rdf:RDF/i.test(body);
+  }
+  return /^\s*(<\?xml|<rss|<feed)/i.test(body);
+}
+
+/** Try to resolve a working RSS/Atom feed for a candidate URL. */
+async function resolveFeed(rawUrl: string): Promise<{ reachable: boolean; feedUrl: string | null }> {
+  let base: URL;
+  try {
+    base = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
+  } catch {
+    return { reachable: false, feedUrl: null };
+  }
+
+  // 1) The suggested URL itself
+  let homepageHtml = '';
+  try {
+    const res = await fetchWithTimeout(base.toString());
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      const body = (await res.text()).slice(0, 200_000);
+      if (looksLikeFeed(body, ct)) return { reachable: true, feedUrl: res.url || base.toString() };
+      homepageHtml = body;
+    }
+  } catch (_) { /* fall through */ }
+
+  // 2) <link rel="alternate" type="application/rss+xml">
+  const linkMatch = homepageHtml.match(
+    /<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]*>/gi
+  );
+  const candidates: string[] = [];
+  if (linkMatch) {
+    for (const tag of linkMatch.slice(0, 3)) {
+      const href = tag.match(/href=["']([^"']+)["']/i)?.[1];
+      if (href) candidates.push(new URL(href, base).toString());
+    }
+  }
+
+  // 3) Common feed paths
+  const origin = base.origin;
+  candidates.push(
+    `${origin}/feed/`,
+    `${origin}/rss`,
+    `${origin}/rss.xml`,
+    `${origin}/feed.xml`,
+    `${origin}/atom.xml`,
+    `${origin}/index.xml`,
+  );
+
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      const res = await fetchWithTimeout(candidate, 5000);
+      if (!res.ok) continue;
+      const ct = res.headers.get('content-type') || '';
+      const body = (await res.text()).slice(0, 100_000);
+      if (looksLikeFeed(body, ct)) return { reachable: true, feedUrl: res.url || candidate };
+    } catch (_) { /* next */ }
+  }
+
+  return { reachable: homepageHtml.length > 0, feedUrl: null };
 }
 
 // Verify user is authenticated and owns the topic
@@ -195,18 +278,56 @@ Return ONLY a valid JSON array of suggestions, no other text or formatting.`;
       throw new Error('Invalid JSON response from AI');
     }
 
-    // Validate and clean suggestions
-    const validSuggestions = suggestions
-      .filter(s => s.url && s.source_name && s.type && s.confidence_score)
+    // Normalise + dedupe by hostname before we spend network calls verifying
+    const seenHosts = new Set<string>();
+    const candidates = suggestions
+      .filter(s => s?.url && s?.source_name && s?.type)
       .map(s => ({
         ...s,
-        confidence_score: Math.min(100, Math.max(1, s.confidence_score)),
+        confidence_score: Math.min(100, Math.max(1, Number(s.confidence_score) || 50)),
         rationale: s.rationale?.substring(0, 50) || 'Relevant source'
       }))
-      .slice(0, 10); // Limit to 10 suggestions
+      .filter(s => {
+        try {
+          const host = new URL(s.url.startsWith('http') ? s.url : `https://${s.url}`).hostname.replace(/^www\./, '');
+          if (seenHosts.has(host)) return false;
+          if (/facebook|twitter|x\.com|instagram|linkedin|tiktok/i.test(host)) return false;
+          seenHosts.add(host);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 14);
 
-    console.log(`✅ Generated ${validSuggestions.length} source suggestions`);
+    // Live-check every candidate so we never hand the user a hallucinated URL
+    const checked = await Promise.all(
+      candidates.map(async (s) => {
+        const { reachable, feedUrl } = await resolveFeed(s.url);
+        return {
+          ...s,
+          url: feedUrl || s.url,
+          feed_url: feedUrl,
+          verified: reachable,
+          type: feedUrl ? 'RSS' : s.type,
+          confidence_score: feedUrl
+            ? Math.min(100, s.confidence_score + 15)
+            : reachable
+              ? Math.max(20, s.confidence_score - 20)
+              : s.confidence_score,
+          rationale: (feedUrl ? 'RSS feed verified' : reachable ? 'Site reachable, no RSS' : s.rationale).substring(0, 50),
+        };
+      })
+    );
 
+    const validSuggestions = checked
+      .filter(s => s.verified)
+      .sort((a, b) => Number(!!b.feed_url) - Number(!!a.feed_url) || b.confidence_score - a.confidence_score)
+      .slice(0, 10);
+
+    console.log(
+      `✅ ${validSuggestions.length}/${candidates.length} suggestions verified (${validSuggestions.filter(s => s.feed_url).length} with live RSS)`
+    );
     return new Response(JSON.stringify({ 
       success: true,
       suggestions: validSuggestions,
