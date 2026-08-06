@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { stripGeneratedAttribution } from '../_shared/attribution-guard.ts';
+import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,9 +56,10 @@ const expertiseGuidance: Record<string, string> = {
 
 const getGuidance = (map: Record<string, string>, key: string, fallback: string) => map[key] || fallback;
 
-// DeepSeek call with automatic fallback: deepseek-v4-flash → deepseek-v4-pro on HTTP 400.
-// Flash is the cheap default; pro is the higher-capability, more expensive backup used only
-// when the request is rejected by flash (e.g. context/quality-related 400s).
+// Chat call with automatic escalation. Requests are routed by the shared LLM router:
+// Lovable AI Gateway (Gemini) first, DeepSeek only as a fallback — DeepSeek pricing is
+// rising sharply, so it is no longer the default provider.
+// Tier escalation on HTTP 400: flash-class → pro-class model.
 async function deepseekChatWithFallback(
   apiKey: string,
   body: Record<string, any>,
@@ -65,17 +67,11 @@ async function deepseekChatWithFallback(
 ): Promise<Response> {
   const primaryModel = body.model ?? 'deepseek-v4-flash';
   const fallbackModel = 'deepseek-v4-pro';
-  const url = 'https://api.deepseek.com/chat/completions';
-  const headers = {
-    'Authorization': `Bearer ${apiKey}`,
-    'Content-Type': 'application/json',
-  };
 
-  const firstResp = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ ...body, model: primaryModel }),
-  });
+  const firstResp = await llmFetch(
+    { body: { ...body, model: primaryModel } },
+    { deepseekApiKey: apiKey, context }
+  );
 
   if (firstResp.status !== 400 || primaryModel === fallbackModel) {
     return firstResp;
@@ -87,14 +83,13 @@ async function deepseekChatWithFallback(
     errSnippet = (await firstResp.clone().text()).slice(0, 500);
   } catch { /* ignore */ }
   console.warn(
-    `⚠️ [${context}] DeepSeek ${primaryModel} returned 400 — retrying with ${fallbackModel}. Detail: ${errSnippet}`
+    `⚠️ [${context}] ${primaryModel} tier returned 400 — retrying with ${fallbackModel} tier. Detail: ${errSnippet}`
   );
 
-  return await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ ...body, model: fallbackModel }),
-  });
+  return await llmFetch(
+    { body: { ...body, model: fallbackModel } },
+    { deepseekApiKey: apiKey, context: `${context}-escalated` }
+  );
 }
 
 interface PromptTemplate {
