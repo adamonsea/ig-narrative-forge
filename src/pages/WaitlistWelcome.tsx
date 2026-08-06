@@ -102,7 +102,7 @@ const STATEMENTS: string[] = [
   'Curatr runs a live feed on a subject or place — and you can run as many as you like.',
   'Each feed can be public, or built for a specific audience.',
   'Curatr replaces the trawling, writing and image-making.',
-  'Curatr gathers local stories, rewrites them, and illustrates them daily.',
+  'Curatr gathers the stories — a town or a topic — rewrites them, and illustrates them daily.',
   'Honest answers here shape what we build next.',
   "Plans aren't fixed yet — this genuinely sets the price.",
   'Last one — it helps us know where to spend our time.',
