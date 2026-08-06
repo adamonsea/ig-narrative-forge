@@ -26,7 +26,7 @@ const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
               <td style="padding:0;">
                 <h1 style="margin:0 0 20px 0;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;font-weight:600;color:#0c1522;">You're on the list</h1>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Hi — thanks for signing up to Curatr${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're speaking to everyone on the waitlist before we open up, to make sure it offers what people want. Please answer a few questions.
+                  Hi — thanks for signing up to Curatr${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're speaking to everyone on the waitlist before we open up, to make sure it offers what people want. Please help us by answering a few questions.
                 </p>
                 <a href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0c1522;color:#ffffff;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
