@@ -371,9 +371,9 @@ export default function WaitlistWelcome() {
             transition={{ duration: 0.3 }}
             className="dark fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 py-12 sm:px-10"
           >
-            <div className="w-full max-w-3xl space-y-10 sm:space-y-14 text-center">
-              <Brand className="justify-center" />
-              <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground text-balance">
+            <div className="w-full max-w-3xl space-y-10 sm:space-y-14 text-left">
+              <Brand />
+              <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground">
                 <Typewriter text={STATEMENTS[step]} onDone={() => setTyped(true)} />
               </p>
               <motion.div
