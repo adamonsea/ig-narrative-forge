@@ -29,6 +29,7 @@ const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
                   Hi — thanks for signing up to Curatr${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're speaking to everyone on the waitlist before we open up, to make sure it offers what people want. Please help us by answering a few questions.
                 </p>
                 <a href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0c1522;color:#ffffff;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
+                <a href="https://wa.me/447810546694" style="display:inline-block;margin-left:10px;background-color:#ffffff;color:#0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:13px 25px;border-radius:999px;border:1px solid #d4d4d0;">Chat to Adam</a>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the stories and illustrates them daily.
                 </p>
