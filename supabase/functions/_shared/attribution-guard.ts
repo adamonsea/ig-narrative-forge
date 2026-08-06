@@ -13,8 +13,10 @@ export function stripGeneratedAttribution(content: string): string {
     .split('\n')
     .filter((line) => !/^\s*(?:\*\*)?\s*(?:source|via|credit)\s*:\s*[^\n.]{0,80}$/i.test(line))
     .join('\n')
-    // Leading credit prefix: "Source: site.co.uk | ..." / "Source: Sussex Express. ..."
-    .replace(/^\s*(?:\*\*)?\s*[Ss]ource\s*[:\-—]\s*[^|\n.]{0,60}(?:\s*\|\s*|\.\s+|\n)/, '')
+    // Leading credit prefix: "Source: site.co.uk | ..."
+    .replace(/^\s*(?:\*\*)?\s*[Ss]ource\s*[:\-—]\s*[^|\n]{0,60}?\s*\|\s*/, '')
+    // Leading credit sentence: "Source: Sussex Express. ..."
+    .replace(/^\s*(?:\*\*)?\s*[Ss]ource\s*[:\-—]\s*[^|\n.]{0,60}(?:\.\s+|\n)/, '')
     // Trailing credit, only after a pipe or a completed sentence
     .replace(/(?:\s*\|\s*|(?<=[.!?]\s))[Ss]ource\s*[:\-—]\s*[^|\n]{0,60}$/, '')
     // "Read more at example.co.uk." — only as a trailing fragment
