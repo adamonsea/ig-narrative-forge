@@ -1,49 +1,33 @@
-# Feature deep-dive page (/features)
+# Save questionnaire answers as they go + preview the waitlist email
 
-A dedicated page cataloguing what Curatr does, tiered so the headline capabilities lead and the long tail sits underneath. Each entry carries a short narration script written now, plus a slot for an avatar clip that can be rendered and dropped in later without touching the layout.
+## 1. Progressive saving
 
-## Structure
+Right now nothing is stored until the final screen. If someone drops out at question 3, that useful signal is lost.
 
-```text
-/features
-  Hero            "Everything Curatr does"  + one-line promise
-  Tier 1  (6)     Large rows: animated loop / avatar slot + 40-word script
-  Tier 2  (~10)   Compact 3-col grid: title + one line, expandable to script
-  Tier 3  (~8)    Plain checklist by category (admin, compliance, infra)
-  CTA             Start curating free / See a feed / Watch the tour
-```
+Change: every answer is saved the moment it's made.
 
-## Tier 1 — headline features (avatar clip + animation each)
+- Each time an option is tapped (or an optional text box is left), the current answer set is sent to the questionnaire function and written against that person's waitlist entry.
+- One row per signup, updated in place — so a partial run and a completed run never create duplicates, and someone returning to the link picks up where their answers left off.
+- `completed_at` is only stamped on the final screen, so the admin panel can still tell finished from partial.
+- The admin notification email still fires once, on completion only — no drip of partial emails.
+- Saving is silent and non-blocking: a failed autosave never interrupts the flow, and the final submit still surfaces an error if it fails.
 
-1. Source trawling — connect any RSS feed, news site or blog; scraped daily in the background.
-2. Relevance filtering — keyword, locality and negative-keyword gatekeeping so only on-topic stories survive.
-3. AI briefings — dry articles rewritten into clean, readable stories in your tone, always attributed.
-4. AI illustrations — original editorial artwork per story, no stock photos, no rights headaches.
-5. Multi-channel publishing — branded feed, newsletter, embeddable widget, social carousels.
-6. Editorial control — every story queued for approve / edit / spike before it goes live.
+Partial responses appear in the Waitlist panel marked "in progress" so drop-off points are visible.
 
-## Tier 2 — depth features (animated loop, no avatar)
+## 2. Email preview
 
-Play Mode swipe reader, quiz cards, sentiment tracking, daily and weekly briefings with audio, Reel Studio (9:16 video + static slide export), story archive and search, widget builder with domain analytics, subscriber and newsletter management, source health monitoring, duplicate and fresh-angle detection.
+Two emails exist for waitlist signups. I'll show both in chat:
 
-## Tier 3 — platform checklist
+- **Confirmation email** (sent on signup, carries the questionnaire link) — current copy plus a rendered screenshot of the design.
+- **Admin completion notification** (sent to you when someone finishes) — same treatment.
 
-Multi-tenant feeds, role-based access, per-topic branding, custom domains, SEO and structured data, bot-aware SSR, RSS out, URL shortener, anonymity guard for sensitive stories, GDPR-compliant analytics, automated queue alerts.
+Plus the short personal invite copy scoped earlier for the two existing genuine signups, ready to paste and send from your own inbox.
 
-## Scripts
-
-Every tier-1 and tier-2 entry gets a 15-25 word narration line in the same voice as the explainer film — plain, concrete, no marketing throat-clearing. Scripts are the visible caption immediately; when an avatar clip is added later, the caption becomes its subtitle. No wording changes needed at clip time.
-
-## Avatar clips — deferred
-
-The page ships with animation + caption only. A per-feature clip map (same shape as the explainer's `AVATAR_CLIPS`) is created empty, so adding a clip is a one-line change per feature. Once the scripts are approved, clips get rendered in a batch using the existing presenter (Tahlia_public_5) and British voice (Pippa A) for continuity with the tour film.
+No changes to either email in this step — review first, then tweak.
 
 ## Technical notes
 
-- New route `/features` rendering `src/pages/Features.tsx`; registered in `App.tsx`.
-- Content lives in one data file, `src/components/features/featureCatalog.ts` — id, tier, title, body, script, loop name, optional clip URL. Page renders from it; nothing hardcoded in JSX.
-- Animated loops reuse and extend `src/components/home/FeatureLoops.tsx` (Framer Motion, mobile-safe, loops already exist for illustrations, play, quiz, sentiment). New loops added as needed for tier 1, reusing the same chunky flat visual language.
-- `src/components/features/FeatureAvatar.tsx` renders the clip when present, otherwise the loop plus caption — same fallback pattern as `ExplainerPlayer`.
-- Homepage: teaser link from the "AI tools that drive engagement" section to `/features`; nav gets a Features link.
-- SEO: page title under 60 chars, single H1, semantic `<main>`, meta description, JSON-LD ItemList of features.
-- Accessibility: `prefers-reduced-motion` freezes loops; scripts are real text, not baked into video.
+- Migration: unique partial index on `waitlist_responses(waitlist_id) where is_preview = false`, allowing upsert.
+- `supabase/functions/waitlist-questionnaire/index.ts`: POST accepts a `partial: boolean`; upserts on `waitlist_id`, sets `completed_at` and sends the admin email only when `partial` is false. GET returns any saved `answers` so the form can resume.
+- `src/pages/WaitlistWelcome.tsx`: debounced (~600ms) autosave effect on the answers object; hydrate initial state from the GET response; keep existing error handling on final submit.
+- Preview screenshots rendered from the existing HTML templates in `waitlist-signup` and `waitlist-questionnaire` — no template edits.
