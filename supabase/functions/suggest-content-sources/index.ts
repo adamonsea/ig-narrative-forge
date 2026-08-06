@@ -278,18 +278,56 @@ Return ONLY a valid JSON array of suggestions, no other text or formatting.`;
       throw new Error('Invalid JSON response from AI');
     }
 
-    // Validate and clean suggestions
-    const validSuggestions = suggestions
-      .filter(s => s.url && s.source_name && s.type && s.confidence_score)
+    // Normalise + dedupe by hostname before we spend network calls verifying
+    const seenHosts = new Set<string>();
+    const candidates = suggestions
+      .filter(s => s?.url && s?.source_name && s?.type)
       .map(s => ({
         ...s,
-        confidence_score: Math.min(100, Math.max(1, s.confidence_score)),
+        confidence_score: Math.min(100, Math.max(1, Number(s.confidence_score) || 50)),
         rationale: s.rationale?.substring(0, 50) || 'Relevant source'
       }))
-      .slice(0, 10); // Limit to 10 suggestions
+      .filter(s => {
+        try {
+          const host = new URL(s.url.startsWith('http') ? s.url : `https://${s.url}`).hostname.replace(/^www\./, '');
+          if (seenHosts.has(host)) return false;
+          if (/facebook|twitter|x\.com|instagram|linkedin|tiktok/i.test(host)) return false;
+          seenHosts.add(host);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 14);
 
-    console.log(`✅ Generated ${validSuggestions.length} source suggestions`);
+    // Live-check every candidate so we never hand the user a hallucinated URL
+    const checked = await Promise.all(
+      candidates.map(async (s) => {
+        const { reachable, feedUrl } = await resolveFeed(s.url);
+        return {
+          ...s,
+          url: feedUrl || s.url,
+          feed_url: feedUrl,
+          verified: reachable,
+          type: feedUrl ? 'RSS' : s.type,
+          confidence_score: feedUrl
+            ? Math.min(100, s.confidence_score + 15)
+            : reachable
+              ? Math.max(20, s.confidence_score - 20)
+              : s.confidence_score,
+          rationale: (feedUrl ? 'RSS feed verified' : reachable ? 'Site reachable, no RSS' : s.rationale).substring(0, 50),
+        };
+      })
+    );
 
+    const validSuggestions = checked
+      .filter(s => s.verified)
+      .sort((a, b) => Number(!!b.feed_url) - Number(!!a.feed_url) || b.confidence_score - a.confidence_score)
+      .slice(0, 10);
+
+    console.log(
+      `✅ ${validSuggestions.length}/${candidates.length} suggestions verified (${validSuggestions.filter(s => s.feed_url).length} with live RSS)`
+    );
     return new Response(JSON.stringify({ 
       success: true,
       suggestions: validSuggestions,
