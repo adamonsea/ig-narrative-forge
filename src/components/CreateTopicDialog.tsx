@@ -106,6 +106,19 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
+  // Close on Escape (except mid-build, where closing would abandon the topic)
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && currentStep <= 2) {
+        resetForm();
+        onOpenChange(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, currentStep]);
+
   // Name validation (debounced) — server-side so collisions with other
   // people's private feeds are caught before any AI spend.
   useEffect(() => {
