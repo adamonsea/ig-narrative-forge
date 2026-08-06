@@ -24,6 +24,13 @@ const Index = () => {
   usePageFavicon();
   const reduce = useReducedMotion();
 
+  // Allow emails to deep-link straight into the explainer film (?explainer=1)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('explainer') === '1') {
+      setExplainerOpen(true);
+    }
+  }, []);
+
   // Subtle, editorial-friendly motion
   const ease = [0.22, 1, 0.36, 1] as const;
   const reveal: Variants = {
