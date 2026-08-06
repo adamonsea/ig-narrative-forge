@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { createSafeHTML } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
+import { buildBylineLine, buildShareCta } from '@/lib/storyAttribution';
 import { ExternalLink } from 'lucide-react';
 
 interface Slide {
@@ -89,11 +90,19 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
       '';
     
     const sourceAttribution = `Read the full story at ${sourceDomain}${originalDateText}`;
-    
-    // If we have existing CTA content, append source; otherwise, use source as CTA content
-    const finalCtaContent = ctaContent ? 
-      `${ctaContent}\n\n${sourceAttribution}` : 
-      sourceAttribution;
+
+    // Credit rebuilt from stored story fields — never from model-written copy.
+    const bylineLine = buildBylineLine(
+      story.author,
+      story.publication_name,
+      story.article.source_url
+    );
+    const shareLine = buildShareCta(topicName);
+
+    const finalCtaContent = [ctaContent, bylineLine, shareLine, sourceAttribution]
+      .filter(Boolean)
+      .map((line) => `<p class="mb-2 last:mb-0">${line}</p>`)
+      .join('');
     
     return {
       mainContent,
