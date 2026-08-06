@@ -55,11 +55,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [isDiscoveringSources, setIsDiscoveringSources] = useState(false);
   const [addingSource, setAddingSource] = useState<string | null>(null);
+  const [manualUrl, setManualUrl] = useState("");
+  const [manualUrlError, setManualUrlError] = useState<string | null>(null);
 
   // Step 3: Build progress
   const [topicId, setTopicId] = useState<string | null>(null);
   const [topicSlug, setTopicSlug] = useState<string>("");
   const [createdSourceIds, setCreatedSourceIds] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [sourceFailures, setSourceFailures] = useState(0);
+  const [attemptedSourceCount, setAttemptedSourceCount] = useState(0);
 
   // Step 4: Complete
   const [completedStories, setCompletedStories] = useState<StoryPreview[]>([]);
@@ -89,22 +94,29 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  // Name validation (debounced)
+  // Name validation (debounced) — server-side so collisions with other
+  // people's private feeds are caught before any AI spend.
   useEffect(() => {
-    if (!topicName || topicName.length < 3) {
+    const trimmed = topicName.trim();
+    if (!trimmed || trimmed.length < 3) {
       setNameError(null);
       return;
     }
-    const slug = topicName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    if (trimmed.length > MAX_NAME_LENGTH) {
+      setNameError(`Keep the name under ${MAX_NAME_LENGTH} characters`);
+      return;
+    }
+    const slug = slugify(trimmed);
+    if (!slug) {
+      setNameError("Use at least one letter or number");
+      return;
+    }
     const timeout = setTimeout(async () => {
       setIsValidatingName(true);
       try {
-        const { data } = await supabase
-          .from('topics')
-          .select('id, name')
-          .eq('slug', slug)
-          .maybeSingle();
-        setNameError(data ? `A feed called "${data.name}" already exists` : null);
+        const { data, error } = await supabase.rpc('check_topic_slug_available', { p_slug: slug });
+        if (error) throw error;
+        setNameError(data === false ? `A feed called "${trimmed}" already exists` : null);
       } catch {
         setNameError(null);
       } finally {
@@ -133,7 +145,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => clearTimeout(timeout);
   }, [topicName]);
 
-  const canProceedStep1 = topicName.length >= 3 && !nameError && !isValidatingName;
+  const canProceedStep1 =
+    topicName.trim().length >= 3 && !!slugify(topicName) && !nameError && !isValidatingName;
 
   // Step 1 → Step 2: auto-generate keywords + discover sources in parallel
   const handleStep1Continue = async () => {
