@@ -110,6 +110,18 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => clearInterval(interval);
   }, []);
 
+  // Rotate reassuring copy while sources are being discovered
+  useEffect(() => {
+    if (!isDiscoveringSources) {
+      setDiscoverMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setDiscoverMessageIndex((prev) => (prev + 1) % DISCOVER_MESSAGES.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [isDiscoveringSources]);
+
   // Lock body scroll
   useEffect(() => {
     if (open) {
