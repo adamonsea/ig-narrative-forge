@@ -156,13 +156,15 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
       const newMap = new Map(prev);
       const current = newMap.get(storyId);
       if (current) {
-        const safeWidth = dimensions.width - CARD_WIDTH - PADDING * 2;
-        const safeHeight = dimensions.height - CARD_HEIGHT - PADDING * 2;
-        
+        const minX = PADDING;
+        const maxX = Math.max(minX, dimensions.width - CARD_WIDTH - PADDING);
+        const minY = PADDING;
+        const maxY = Math.max(minY, dimensions.height - CARD_HEIGHT - PADDING);
+
         newMap.set(storyId, {
           ...current,
-          x: Math.max(PADDING, Math.min(x, safeWidth + PADDING)),
-          y: Math.max(PADDING, Math.min(y, safeHeight + PADDING))
+          x: Math.max(minX, Math.min(x, maxX)),
+          y: Math.max(minY, Math.min(y, maxY))
         });
       }
       return newMap;
