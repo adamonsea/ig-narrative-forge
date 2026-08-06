@@ -427,11 +427,17 @@ export default function WaitlistWelcome() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="dark fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 py-12 sm:px-10"
+            onClick={() => (typed ? setPhase('question') : setSkipTyping(true))}
           >
             <div className="w-full max-w-3xl space-y-10 sm:space-y-14 text-left">
               <Brand />
+              {step === 0 && (
+                <p className="text-sm sm:text-base uppercase tracking-widest text-muted-foreground">
+                  {resumed ? 'Picking up where you left off' : 'About a minute · 7 quick questions'}
+                </p>
+              )}
               <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground">
-                <Typewriter text={STATEMENTS[step]} onDone={() => setTyped(true)} />
+                <Typewriter text={STATEMENTS[step]} instant={skipTyping} onDone={() => setTyped(true)} />
               </p>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -442,11 +448,17 @@ export default function WaitlistWelcome() {
                   size="lg"
                   className="min-w-56 h-14 rounded-full px-10 text-base sm:text-lg"
                   tabIndex={typed ? 0 : -1}
-                  onClick={() => setPhase('question')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhase('question');
+                  }}
                 >
                   {step === 0 ? 'First question' : 'Next question'}
                 </Button>
               </motion.div>
+              {!typed && (
+                <p className="text-sm text-muted-foreground">Tap anywhere to skip ahead</p>
+              )}
             </div>
           </motion.div>
         )}
