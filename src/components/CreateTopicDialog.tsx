@@ -498,10 +498,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
             {/* Header with progress (hidden on steps 3-4) */}
             {currentStep <= 2 && (
               <div className="flex-shrink-0 pt-16 pb-8 px-6">
-                <div className="flex justify-center gap-2 mb-8">
+                <div
+                  className="flex justify-center gap-2 mb-8"
+                  role="group"
+                  aria-label={`Step ${currentStep} of 4: ${stepTitles[currentStep]}`}
+                >
+                  <span className="sr-only">Step {currentStep} of 4</span>
                   {[1, 2, 3, 4].map((step) => (
                     <div
                       key={step}
+                      aria-hidden="true"
                       className={cn(
                         "h-1.5 rounded-full transition-all duration-500",
                         currentStep === step
