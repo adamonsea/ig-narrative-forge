@@ -504,14 +504,10 @@ export default function StoryCarousel({
     );
     const shareLine = buildShareCta(topicName);
 
-    const closingParts = [
-      ctaContent,
-      bylineLine,
-      shareLine,
-      sourceLinkHtml,
-    ].filter(Boolean);
-
-    const finalCtaContent = closingParts.join('\n\n');
+    const finalCtaContent = [ctaContent, bylineLine, shareLine, sourceLinkHtml]
+      .filter(Boolean)
+      .map((line) => `<p class="mb-2 last:mb-0">${line}</p>`)
+      .join('');
     
     return {
       mainContent,
