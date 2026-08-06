@@ -39,6 +39,18 @@ const EXAMPLE_NAMES = [
   "Tech Innovation",
 ];
 
+const MAX_NAME_LENGTH = 60;
+
+const slugify = (value: string) =>
+  value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const TYPE_LABELS: Record<string, string> = {
+  RSS: 'RSS feed',
+  WordPress: 'WordPress site',
+  Substack: 'Substack',
+  News: 'News site',
+};
+
 export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: CreateTopicDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
