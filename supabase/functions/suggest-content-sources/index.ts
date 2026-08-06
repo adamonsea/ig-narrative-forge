@@ -21,7 +21,7 @@ interface SourceSuggestion {
 }
 
 // Verify user is authenticated and owns the topic
-async function verifyTopicOwnership(authHeader: string, topicId: string): Promise<{ userId: string | null; error: string | null }> {
+async function verifyTopicOwnership(authHeader: string, topicId?: string | null): Promise<{ userId: string | null; error: string | null }> {
   if (!authHeader?.startsWith('Bearer ')) {
     return { userId: null, error: 'Missing or invalid Authorization header' };
   }
@@ -39,10 +39,16 @@ async function verifyTopicOwnership(authHeader: string, topicId: string): Promis
 
   const userId = claimsData.claims.sub as string;
 
+  // Discovery mode: the topic doesn't exist yet (create-feed wizard).
+  // Any authenticated user may request suggestions.
+  if (!topicId) {
+    return { userId, error: null };
+  }
+
   // Verify topic ownership
   const { data: topic, error: topicError } = await supabase
     .from('topics')
-    .select('id, owner_id')
+    .select('id, created_by')
     .eq('id', topicId)
     .single();
 
@@ -50,7 +56,7 @@ async function verifyTopicOwnership(authHeader: string, topicId: string): Promis
     return { userId: null, error: 'Topic not found' };
   }
 
-  if (topic.owner_id !== userId) {
+  if (topic.created_by !== userId) {
     // Check if user is admin
     const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
     if (!isAdmin) {
