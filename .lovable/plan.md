@@ -6,7 +6,7 @@ Right now the email opens with an anonymous "Hi — thanks for signing up to Cur
 
 Replace the opening paragraph with a first-person introduction:
 
-> Hi, Adam here — I make Curatr. Thanks for joining the waitlist[ for the Pro plan]. I'm speaking to everyone on the waitlist before we open up, so I build the thing people actually want. Could you answer a few questions? It takes about a minute.
+> Hi, Adam here — I make Curatr. Thanks for joining the waitlist. I'm speaking to everyone on the waitlist before we open up, so I build the thing people actually want. Could you answer a few questions? It takes about a minute.
 
 Two knock-on tweaks so the email doesn't repeat itself:
 
