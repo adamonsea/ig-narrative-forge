@@ -12,33 +12,36 @@ const escapeHtml = (s: string) =>
 const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
 <!DOCTYPE html>
 <html>
-  <body style="margin:0;padding:0;background-color:#f5f5f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f3;padding:40px 16px;">
+  <body style="margin:0;padding:0;background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;padding:40px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:14px;border:1px solid #e6e6e1;overflow:hidden;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;">
             <tr>
-              <td style="padding:32px 32px 8px 32px;">
-                <div style="font-size:24px;font-weight:600;letter-spacing:-0.5px;color:#0f172a;">Curatr<span style="font-weight:300;opacity:0.6;">.pro</span></div>
+              <td style="padding:8px 0 24px 0;">
+                <div style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;font-weight:600;letter-spacing:-0.5px;color:#0c1522;">Curatr<span style="color:#20D693;">.</span><span style="font-size:20px;opacity:0.6;">pro</span></div>
               </td>
             </tr>
             <tr>
-              <td style="padding:8px 32px 0 32px;">
-                <h1 style="margin:0 0 16px 0;font-size:26px;line-height:1.25;font-weight:600;color:#0f172a;">You're on the list</h1>
-                <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#3f3f46;">
-                  Thanks for joining the Curatr waitlist${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're building a simple way to run your own curated news feed — choose your sources, approve what matters, publish to your audience.
+              <td style="padding:0;">
+                <h1 style="margin:0 0 20px 0;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;font-weight:600;color:#0c1522;">You're on the list</h1>
+                <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
+                  Hi — thanks for signing up to Curatr${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're speaking to everyone on the waitlist before we open up, to make sure it offers what people want. Please answer a few questions.
                 </p>
-                <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#3f3f46;">
-                  One quick thing: tell us what you'd curate and we'll prioritise your invite. It takes about two minutes.
+                <a href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0c1522;color:#ffffff;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
+                <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
+                  Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the stories and illustrates them daily.
                 </p>
-                <a href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0f172a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:500;padding:13px 24px;border-radius:999px;">Answer 5 quick questions</a>
-                <p style="margin:20px 0 0 0;font-size:14px;line-height:1.6;color:#71717a;">
-                  Prefer to browse first? <a href="https://curatr.pro/discover" style="color:#0f172a;">Explore live feeds</a>.
+                <p style="margin:0 0 28px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
+                  If you'd rather just see it working, here's a live feed: <a href="https://curatr.pro/feed/eastbourne" style="color:#0c1522;">curatr.pro/feed/eastbourne</a>
+                </p>
+                <p style="margin:0;font-size:16px;line-height:1.65;color:#0c1522;">
+                  Adam<br /><span style="font-size:14px;color:#71717a;">Curatr maker</span>
                 </p>
               </td>
             </tr>
             <tr>
-              <td style="padding:32px;">
+              <td style="padding:32px 0 0 0;">
                 <hr style="border:none;border-top:1px solid #ececE7;margin:0 0 16px 0;" />
                 <p style="margin:0;font-size:13px;line-height:1.6;color:#71717a;">
                   You received this because you joined the waitlist at curatr.pro. No further emails until we launch.
