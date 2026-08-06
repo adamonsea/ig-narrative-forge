@@ -20,6 +20,8 @@ interface FeedBuildProgressProps {
   topicSlug: string;
   topicName: string;
   sourceIds: string[];
+  /** Shown when only some of the chosen sources could be connected. */
+  connectedNote?: string;
   onComplete: (stories: StoryPreview[]) => void;
   onError: (error: string) => void;
 }
@@ -37,6 +39,7 @@ export const FeedBuildProgress = ({
   topicSlug,
   topicName,
   sourceIds,
+  connectedNote,
   onComplete,
   onError,
 }: FeedBuildProgressProps) => {
@@ -87,6 +90,7 @@ export const FeedBuildProgress = ({
   }, []);
 
   const runBuild = async () => {
+    let foundStories: StoryPreview[] = [];
     try {
       // Phase 1: Link sources
       updatePhase('sources', 'active');
@@ -147,7 +151,6 @@ export const FeedBuildProgress = ({
         }
 
         // Poll for stories
-        let foundStories: StoryPreview[] = [];
         for (let i = 0; i < 10; i++) {
           await new Promise((r) => setTimeout(r, 2000));
           
@@ -174,7 +177,7 @@ export const FeedBuildProgress = ({
       
       // Small delay for the animation to settle
       await new Promise((r) => setTimeout(r, 800));
-      onComplete(stories);
+      onComplete(foundStories);
     } catch (error) {
       console.error('Build error:', error);
       onError(error instanceof Error ? error.message : 'Build failed');
@@ -196,6 +199,9 @@ export const FeedBuildProgress = ({
         >
           {ENCOURAGING_MESSAGES[messageIndex]}
         </motion.p>
+        {connectedNote && (
+          <p className="text-sm text-muted-foreground/80">{connectedNote}</p>
+        )}
       </div>
 
       {/* Progress bar */}

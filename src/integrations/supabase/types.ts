@@ -4759,6 +4759,7 @@ export type Database = {
         Args: { p_email_hash: string; p_ip_hash?: string }
         Returns: boolean
       }
+      check_topic_slug_available: { Args: { p_slug: string }; Returns: boolean }
       cleanup_diane_abbott_stories_eastbourne: { Args: never; Returns: Json }
       cleanup_duplicate_articles: { Args: never; Returns: Json }
       cleanup_existing_duplicates: { Args: never; Returns: Json }

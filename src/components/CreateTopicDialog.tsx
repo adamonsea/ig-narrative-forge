@@ -39,6 +39,18 @@ const EXAMPLE_NAMES = [
   "Tech Innovation",
 ];
 
+const MAX_NAME_LENGTH = 60;
+
+const slugify = (value: string) =>
+  value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const TYPE_LABELS: Record<string, string> = {
+  RSS: 'RSS feed',
+  WordPress: 'WordPress site',
+  Substack: 'Substack',
+  News: 'News site',
+};
+
 export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: CreateTopicDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -55,11 +67,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [isDiscoveringSources, setIsDiscoveringSources] = useState(false);
   const [addingSource, setAddingSource] = useState<string | null>(null);
+  const [manualUrl, setManualUrl] = useState("");
+  const [manualUrlError, setManualUrlError] = useState<string | null>(null);
 
   // Step 3: Build progress
   const [topicId, setTopicId] = useState<string | null>(null);
   const [topicSlug, setTopicSlug] = useState<string>("");
   const [createdSourceIds, setCreatedSourceIds] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [sourceFailures, setSourceFailures] = useState(0);
+  const [attemptedSourceCount, setAttemptedSourceCount] = useState(0);
 
   // Step 4: Complete
   const [completedStories, setCompletedStories] = useState<StoryPreview[]>([]);
@@ -89,22 +106,42 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  // Name validation (debounced)
+  // Close on Escape (except mid-build, where closing would abandon the topic)
   useEffect(() => {
-    if (!topicName || topicName.length < 3) {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && currentStep <= 2) {
+        resetForm();
+        onOpenChange(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, currentStep]);
+
+  // Name validation (debounced) — server-side so collisions with other
+  // people's private feeds are caught before any AI spend.
+  useEffect(() => {
+    const trimmed = topicName.trim();
+    if (!trimmed || trimmed.length < 3) {
       setNameError(null);
       return;
     }
-    const slug = topicName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    if (trimmed.length > MAX_NAME_LENGTH) {
+      setNameError(`Keep the name under ${MAX_NAME_LENGTH} characters`);
+      return;
+    }
+    const slug = slugify(trimmed);
+    if (!slug) {
+      setNameError("Use at least one letter or number");
+      return;
+    }
     const timeout = setTimeout(async () => {
       setIsValidatingName(true);
       try {
-        const { data } = await supabase
-          .from('topics')
-          .select('id, name')
-          .eq('slug', slug)
-          .maybeSingle();
-        setNameError(data ? `A feed called "${data.name}" already exists` : null);
+        const { data, error } = await supabase.rpc('check_topic_slug_available', { p_slug: slug });
+        if (error) throw error;
+        setNameError(data === false ? `A feed called "${trimmed}" already exists` : null);
       } catch {
         setNameError(null);
       } finally {
@@ -133,7 +170,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => clearTimeout(timeout);
   }, [topicName]);
 
-  const canProceedStep1 = topicName.length >= 3 && !nameError && !isValidatingName;
+  const canProceedStep1 =
+    topicName.trim().length >= 3 && !!slugify(topicName) && !nameError && !isValidatingName;
 
   // Step 1 → Step 2: auto-generate keywords + discover sources in parallel
   const handleStep1Continue = async () => {
@@ -240,6 +278,38 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setSelectedSources(new Set(sources.map(s => s.url)));
   };
 
+  const addManualSource = () => {
+    const raw = manualUrl.trim();
+    if (!raw) return;
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    let parsed: URL;
+    try {
+      parsed = new URL(withScheme);
+      if (!parsed.hostname.includes('.')) throw new Error('bad host');
+    } catch {
+      setManualUrlError("That doesn't look like a website address");
+      return;
+    }
+    if (sources.some(s => s.url === parsed.toString())) {
+      setManualUrlError('That source is already in the list');
+      return;
+    }
+    setManualUrlError(null);
+    const domain = parsed.hostname.replace('www.', '');
+    setSources(prev => [
+      ...prev,
+      {
+        url: parsed.toString(),
+        source_name: domain,
+        type: 'News',
+        confidence_score: 70,
+        rationale: 'Added manually',
+      },
+    ]);
+    setSelectedSources(prev => new Set(prev).add(parsed.toString()));
+    setManualUrl("");
+  };
+
   const getTypeIcon = (type: string) => {
     if (type === 'RSS') return '📡';
     if (type === 'WordPress') return '📝';
@@ -250,25 +320,29 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   // Step 2 → Step 3: Create topic + sources, then start build
   const handleStep2Continue = async () => {
-    if (!user) return;
+    if (!user || isCreating) return;
+    setIsCreating(true);
     setCurrentStep(3);
 
     try {
-      const slug = topicName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const cleanName = topicName.trim().slice(0, MAX_NAME_LENGTH);
+      const slug = slugify(cleanName);
+      if (!slug) throw new Error('Please choose a name with at least one letter or number.');
       setTopicSlug(slug);
 
       // Create the topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
         .insert({
-          name: topicName,
+          name: cleanName,
           slug,
           topic_type: autoTopicType,
           region: autoRegion || null,
           description: autoDescription || null,
-          keywords: autoKeywords.length > 0 ? autoKeywords : topicName.split(' ').filter((w: string) => w.length > 2),
+          keywords: autoKeywords.length > 0 ? autoKeywords : cleanName.split(' ').filter((w: string) => w.length > 2),
           audience_expertise: 'beginner' as any,
           is_active: true,
+          is_public: true,
           created_by: user.id,
         })
         .select('id')
@@ -286,17 +360,21 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
       // Create sources for selected ones
       const selectedSourceList = sources.filter(s => selectedSources.has(s.url));
       const sourceIds: string[] = [];
+      let failures = 0;
+      setAttemptedSourceCount(selectedSourceList.length);
 
       for (const source of selectedSourceList) {
         try {
           const domain = new URL(source.url).hostname.replace('www.', '');
-          
-          // Check if source already exists
-          const { data: existing } = await supabase
+
+          // Check if a source we can already see matches (first match wins —
+          // a single-row read here throws when a domain has several rows).
+          const { data: existingRows } = await supabase
             .from('content_sources')
             .select('id')
             .or(`feed_url.eq.${source.url},canonical_domain.eq.${domain}`)
-            .maybeSingle();
+            .limit(1);
+          const existing = existingRows?.[0];
 
           if (existing) {
             sourceIds.push(existing.id);
@@ -306,7 +384,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
             if (source.platform_reliability === 'medium') credibility += 10;
             credibility = Math.min(95, credibility);
 
-            const { data: newSource } = await supabase
+            const { data: newSource, error: sourceError } = await supabase
               .from('content_sources')
               .insert({
                 source_name: source.source_name,
@@ -317,17 +395,23 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                 is_active: true,
                 source_type: source.type === 'RSS' ? 'rss' : 'website',
                 region: autoTopicType === 'regional' ? autoRegion : null,
+                // Required: the insert policy only allows rows tied to a topic
+                // the signed-in user owns.
+                topic_id: topicData.id,
               })
               .select('id')
               .single();
 
+            if (sourceError) throw sourceError;
             if (newSource) sourceIds.push(newSource.id);
           }
         } catch (e) {
-          console.warn('Source creation error:', e);
+          failures += 1;
+          console.error('Source creation failed:', source.url, e);
         }
       }
 
+      setSourceFailures(failures);
       setCreatedSourceIds(sourceIds);
     } catch (error) {
       console.error('Topic creation error:', error);
@@ -337,6 +421,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         description: error instanceof Error ? error.message : "Failed to create feed",
         variant: "destructive",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -351,9 +437,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setCurrentStep(4);
   }, []);
 
-  const resetForm = () => {
+  const resetForm = (keepName = false) => {
     setCurrentStep(1);
-    setTopicName("");
+    if (!keepName) setTopicName("");
     setNameError(null);
     setIsValidatingName(false);
     setSources([]);
@@ -364,6 +450,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setCreatedSourceIds([]);
     setCompletedStories([]);
     setBuildError(null);
+    setSourceFailures(0);
+    setAttemptedSourceCount(0);
+    setIsCreating(false);
+    setManualUrl("");
+    setManualUrlError(null);
     setAutoKeywords([]);
     setAutoDescription("");
     setAutoTopicType('keyword');
@@ -407,10 +498,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
             {/* Header with progress (hidden on steps 3-4) */}
             {currentStep <= 2 && (
               <div className="flex-shrink-0 pt-16 pb-8 px-6">
-                <div className="flex justify-center gap-2 mb-8">
+                <div
+                  className="flex justify-center gap-2 mb-8"
+                  role="group"
+                  aria-label={`Step ${currentStep} of 4: ${stepTitles[currentStep]}`}
+                >
+                  <span className="sr-only">Step {currentStep} of 4</span>
                   {[1, 2, 3, 4].map((step) => (
                     <div
                       key={step}
+                      aria-hidden="true"
                       className={cn(
                         "h-1.5 rounded-full transition-all duration-500",
                         currentStep === step
@@ -528,13 +625,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                                       : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/40"
                                   )}
                                   title={source.rationale}
+                                  aria-pressed={isSelected}
                                 >
-                                  <span className="text-sm">{getTypeIcon(source.type)}</span>
+                                  <span className="text-sm" aria-hidden="true">{getTypeIcon(source.type)}</span>
+                                  <span className="sr-only">{TYPE_LABELS[source.type] || 'Website'}: </span>
                                   <span className="text-sm font-medium max-w-[180px] truncate">
                                     {source.source_name}
                                   </span>
                                   {isSelected && (
-                                    <CheckCircle className="w-3.5 h-3.5 text-primary" />
+                                    <CheckCircle className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
                                   )}
                                 </button>
                               );
@@ -542,8 +641,30 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                           </div>
                         </>
                       ) : (
-                        <div className="text-center py-16 space-y-4">
-                          <p className="text-muted-foreground">No sources found — you can add them later from your dashboard.</p>
+                        <div className="py-12 space-y-4 text-center">
+                          <p className="text-muted-foreground">
+                            No sources found automatically. Paste a website address to add one now.
+                          </p>
+                          <div className="flex gap-2 max-w-sm mx-auto">
+                            <Input
+                              value={manualUrl}
+                              onChange={(e) => { setManualUrl(e.target.value); setManualUrlError(null); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') addManualSource(); }}
+                              placeholder="example.com"
+                              aria-label="Website address of a source"
+                              className="h-11"
+                            />
+                            <Button onClick={addManualSource} disabled={!manualUrl.trim()} className="h-11 gap-1">
+                              <Plus className="w-4 h-4" aria-hidden="true" />
+                              Add
+                            </Button>
+                          </div>
+                          {manualUrlError && (
+                            <p className="text-sm text-destructive">{manualUrlError}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Or skip — you can add sources later from your dashboard.
+                          </p>
                         </div>
                       )}
                     </motion.div>
@@ -561,7 +682,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                       {buildError && !topicId ? (
                         <div className="text-center py-16 space-y-4">
                           <p className="text-destructive font-medium">{buildError}</p>
-                          <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                          <Button variant="outline" onClick={() => resetForm(true)}>
                             Start over
                           </Button>
                         </div>
@@ -571,6 +692,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                           topicSlug={topicSlug}
                           topicName={topicName}
                           sourceIds={createdSourceIds}
+                          connectedNote={
+                            sourceFailures > 0
+                              ? `${createdSourceIds.length} of ${attemptedSourceCount} sources connected`
+                              : undefined
+                          }
                           onComplete={handleBuildComplete}
                           onError={handleBuildError}
                         />
@@ -580,8 +706,12 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                           setTimeout(() => setCurrentStep(4), 1500);
                           return (
                             <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
-                              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                              <p className="text-muted-foreground">Setting up your feed…</p>
+                              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
+                              <p className="text-muted-foreground">
+                                {sourceFailures > 0
+                                  ? "We couldn't connect those sources — setting up your feed so you can add sources from the dashboard…"
+                                  : 'Setting up your feed…'}
+                              </p>
                             </div>
                           );
                         })()
@@ -620,7 +750,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                         <p className="text-muted-foreground">
                           {completedStories.length > 0
                             ? `${completedStories.length} stories already curated`
-                            : "Stories will appear as sources are scraped"}
+                            : "We're still gathering — stories will appear in your dashboard as your sources are scraped."}
                         </p>
                       </div>
 
@@ -644,28 +774,44 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
                       {/* CTAs */}
                       <div className="flex flex-col items-center gap-3 w-full max-w-xs pt-4">
-                        <Button
-                          size="lg"
-                          className="w-full gap-2"
-                          onClick={() => {
-                            handleClose();
-                            window.open(`/feed/${topicSlug}`, '_blank');
-                          }}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View your feed
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="gap-2 text-muted-foreground"
-                          onClick={() => {
-                            onTopicCreated(topicSlug);
-                            handleClose();
-                          }}
-                        >
-                          <Settings className="w-4 h-4" />
-                          Go to dashboard
-                        </Button>
+                        {completedStories.length > 0 ? (
+                          <>
+                            <Button
+                              size="lg"
+                              className="w-full gap-2"
+                              onClick={() => {
+                                handleClose();
+                                window.open(`/feed/${topicSlug}`, '_blank');
+                              }}
+                            >
+                              <ExternalLink className="w-4 h-4" aria-hidden="true" />
+                              View your feed
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="gap-2 text-muted-foreground"
+                              onClick={() => {
+                                onTopicCreated(topicSlug);
+                                handleClose();
+                              }}
+                            >
+                              <Settings className="w-4 h-4" aria-hidden="true" />
+                              Go to dashboard
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="lg"
+                            className="w-full gap-2"
+                            onClick={() => {
+                              onTopicCreated(topicSlug);
+                              handleClose();
+                            }}
+                          >
+                            <Settings className="w-4 h-4" aria-hidden="true" />
+                            Go to dashboard
+                          </Button>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -700,11 +846,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   ) : (
                     <Button
                       onClick={handleStep2Continue}
-                      disabled={selectedSources.size === 0 && sources.length > 0}
+                      disabled={isCreating || (selectedSources.size === 0 && sources.length > 0)}
                       className="gap-2"
                     >
-                      {selectedSources.size === 0 ? 'Skip — add later' : `Build with ${selectedSources.size} sources`}
-                      <ArrowRight className="w-4 h-4" />
+                      {isCreating
+                        ? 'Creating…'
+                        : selectedSources.size === 0
+                        ? 'Skip — add later'
+                        : `Build with ${selectedSources.size} sources`}
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   )}
                 </div>
