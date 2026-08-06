@@ -17,7 +17,7 @@ export const WAITLIST_FROM = 'Curatr <noreply@curatr.pro>';
 export const WAITLIST_REPLY_TO = 'adamonsea@gmail.com';
 export const WAITLIST_SUBJECT = "You're on the Curatr waitlist";
 export const WAITLIST_PREHEADER =
-  "A few questions so we build the feed you'd actually use — takes about a minute.";
+  "The 1-minute early adopter questionnaire — it shapes what we build next.";
 
 // mailto unsubscribe: honest for a pre-launch list of this size, and satisfies
 // bulk-sender expectations without a public one-click endpoint.
@@ -87,9 +87,9 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
               <td style="padding:0;">
                 <h1 style="margin:0 0 20px 0;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;font-weight:600;color:#0c1522;">You're on the list</h1>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Hi, Adam here — I make Curatr. Thanks for joining the waitlist${planLine(plan)}. I'm speaking to everyone on the list before we open up, to make sure Curatr offers what people actually want. Could you answer a few questions? It takes about a minute.
+                  Hi, Adam here — I make Curatr. Thanks for joining the waitlist${planLine(plan)}. I'm speaking to every early adopter before we open up, to make sure Curatr offers what people actually want. Would you take the questionnaire below? It's one minute.
                 </p>
-                <a class="cta-primary" href="${url}" style="display:inline-block;background-color:#0c1522;color:#ffffff;border:2px solid #0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
+                <a class="cta-primary" href="${url}" style="display:inline-block;background-color:#0c1522;color:#ffffff;border:2px solid #0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Early adopter questionnaire · 1 min</a>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the stories and illustrates them daily.
                 </p>
@@ -98,7 +98,7 @@ ${storyBlock}
                   Rather watch than read? <a href="https://curatr.pro/?explainer=1" style="color:#0c1522;font-weight:600;">Take the 75-second tour</a> — or browse a live feed at <a href="https://curatr.pro/feed/eastbourne" style="color:#0c1522;">curatr.pro/feed/eastbourne</a>.
                 </p>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  If you only do one thing, <a href="${url}" style="color:#0c1522;font-weight:600;">answer the questions</a> — it genuinely shapes what I build next.
+                  If you only do one thing, <a href="${url}" style="color:#0c1522;font-weight:600;">take the questionnaire</a> — it genuinely shapes what I build next.
                 </p>
                 <p style="margin:0;font-size:16px;line-height:1.65;color:#0c1522;">
                   Adam<br /><span style="font-size:14px;color:#71717a;">Just hit reply, I read everything</span>
@@ -129,8 +129,8 @@ export const buildWaitlistEmailText = ({ plan, questionnaireUrl, story }: Waitli
     "You're on the list",
     '',
     `Hi, Adam here — I make Curatr. Thanks for joining the waitlist${plan && plan !== 'general' ? ` for the ${plan} plan` : ''}.`,
-    "I'm speaking to everyone on the list before we open up, to make sure Curatr offers what",
-    'people actually want. Could you answer a few questions? It takes about a minute:',
+    "I'm speaking to every early adopter before we open up, to make sure Curatr offers what",
+    'people actually want. Would you take the questionnaire? It takes one minute:',
     '',
     questionnaireUrl,
     '',
