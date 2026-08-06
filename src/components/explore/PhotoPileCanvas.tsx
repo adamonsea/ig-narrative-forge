@@ -94,8 +94,12 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
     
-    const safeWidth = dimensions.width - CARD_WIDTH - PADDING * 2;
-    const safeHeight = dimensions.height - CARD_HEIGHT - PADDING * 2;
+    const minX = PADDING;
+    const maxX = Math.max(minX, dimensions.width - CARD_WIDTH - PADDING);
+    const minY = PADDING;
+    const maxY = Math.max(minY, dimensions.height - CARD_HEIGHT - PADDING);
+    const safeWidth = maxX - minX;
+    const safeHeight = maxY - minY;
 
     currentWeekStories.forEach((story, index) => {
       // More recent stories closer to center
@@ -108,8 +112,8 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
       const x = centerX - CARD_WIDTH / 2 + Math.cos(angle) * distance * (0.4 + Math.random() * 0.6);
       const y = centerY - CARD_HEIGHT / 2 + Math.sin(angle) * distance * (0.4 + Math.random() * 0.6);
       
-      const clampedX = Math.max(PADDING, Math.min(x, safeWidth + PADDING));
-      const clampedY = Math.max(PADDING, Math.min(y, safeHeight + PADDING));
+      const clampedX = Math.max(minX, Math.min(x, maxX));
+      const clampedY = Math.max(minY, Math.min(y, maxY));
       const rotation = (Math.random() - 0.5) * 35;
 
       newPositions.set(story.id, {
