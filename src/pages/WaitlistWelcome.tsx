@@ -70,6 +70,18 @@ const OPTIONS = {
 
 const TOTAL_STEPS = 7;
 
+// Which step should a returning visitor land on? First one with no answer.
+const firstUnansweredStep = (a: Answers) => {
+  if (a.feed_kind.length === 0) return 0;
+  if (a.audience.length === 0) return 1;
+  if (a.today.length === 0) return 2;
+  if (a.resonated.length === 0) return 3;
+  if (a.blockers.length === 0 && !a.blockers_detail) return 4;
+  if (!a.price_band) return 5;
+  if (!a.found_us && !a.wishlist) return 6;
+  return 7;
+};
+
 // "Did you know" answers to each stated objection. Objections without an
 // honest answer are deliberately absent — we just thank them and move on.
 const BLOCKER_ANSWERS: Record<string, string> = {
@@ -179,6 +191,8 @@ export default function WaitlistWelcome() {
   const [explainerOpen, setExplainerOpen] = useState(false);
   const [rebuttal, setRebuttal] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [skipTyping, setSkipTyping] = useState(false);
+  const [resumed, setResumed] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -201,7 +215,14 @@ export default function WaitlistWelcome() {
         }
         setEmail(data.email ?? null);
         if (data.answers && typeof data.answers === 'object') {
-          setAnswers((a) => ({ ...a, ...(data.answers as Partial<Answers>) }));
+          const restored = { ...EMPTY, ...(data.answers as Partial<Answers>) };
+          setAnswers(restored);
+          const resume = firstUnansweredStep(restored);
+          if (resume > 0) {
+            setStep(Math.min(resume, TOTAL_STEPS));
+            setPhase(resume >= TOTAL_STEPS ? 'question' : 'statement');
+            setResumed(true);
+          }
         }
         setState('ready');
       } catch {
@@ -249,6 +270,19 @@ export default function WaitlistWelcome() {
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
     setPhase('statement');
     setTyped(false);
+    setSkipTyping(false);
+    setRebuttal(false);
+  };
+
+  // Going back always lands on the question itself, never the statement again.
+  const back = () => {
+    if (rebuttal) {
+      setRebuttal(false);
+      return;
+    }
+    setStep((s) => Math.max(0, s - 1));
+    setPhase('question');
+    setTyped(true);
     setRebuttal(false);
   };
 
