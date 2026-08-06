@@ -101,7 +101,8 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
 
     const finalCtaContent = [ctaContent, bylineLine, shareLine, sourceAttribution]
       .filter(Boolean)
-      .join('\n\n');
+      .map((line) => `<p class="mb-2 last:mb-0">${line}</p>`)
+      .join('');
     
     return {
       mainContent,
