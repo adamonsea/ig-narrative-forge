@@ -14,6 +14,20 @@ const escapeHtml = (s: string) =>
 const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <style>
+      .cta-primary { background-color:#0c1522 !important; color:#ffffff !important; border:2px solid #0c1522 !important; }
+      .cta-secondary { background-color:#ffffff !important; color:#0c1522 !important; border:2px solid #0c1522 !important; }
+      @media (prefers-color-scheme: dark) {
+        .cta-primary { background-color:#20D693 !important; color:#0c1522 !important; border:2px solid #20D693 !important; }
+        .cta-secondary { background-color:transparent !important; color:#ffffff !important; border:2px solid #ffffff !important; }
+      }
+      [data-ogsc] .cta-primary { background-color:#20D693 !important; color:#0c1522 !important; border:2px solid #20D693 !important; }
+      [data-ogsc] .cta-secondary { background-color:transparent !important; color:#ffffff !important; border:2px solid #ffffff !important; }
+    </style>
+  </head>
   <body style="margin:0;padding:0;background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;padding:40px 16px;">
       <tr>
@@ -30,7 +44,7 @@ const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Hi — thanks for signing up to Curatr${plan && plan !== 'general' ? ` for the <strong>${escapeHtml(plan)}</strong> plan` : ''}. We're speaking to everyone on the waitlist before we open up, to make sure it offers what people want. Please help us by answering a few questions.
                 </p>
-                <a href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0c1522;color:#ffffff;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
+                <a class="cta-primary" href="${escapeHtml(questionnaireUrl)}" style="display:inline-block;background-color:#0c1522;color:#ffffff;border:2px solid #0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Answer a few questions</a>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the stories and illustrates them daily.
                 </p>
@@ -41,7 +55,7 @@ const waitlistEmailHtml = (plan: string, questionnaireUrl: string) => `
                   Adam<br /><span style="font-size:14px;color:#71717a;">Curatr maker</span>
                 </p>
                 <p style="margin:20px 0 0 0;">
-                  <a href="https://wa.me/447810546694" style="display:inline-block;background-color:#ffffff;color:#0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:13px 25px;border-radius:999px;border:1px solid #d4d4d0;">WhatsApp Adam</a>
+                  <a class="cta-secondary" href="https://wa.me/447810546694" style="display:inline-block;background-color:#ffffff;color:#0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:13px 25px;border-radius:999px;border:2px solid #0c1522;">WhatsApp Adam</a>
                 </p>
               </td>
             </tr>
