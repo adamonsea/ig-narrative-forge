@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -87,13 +88,13 @@ If no meaningful text is found, return "NO_TEXT_FOUND".`
 // Process and rewrite content using DeepSeek API for consistency
 async function processContentWithDeepSeek(rawContent: string, contentType: string): Promise<string> {
   const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-  if (!deepseekApiKey) {
+  if (!deepseekApiKey && !Deno.env.get('LOVABLE_API_KEY')) {
     throw new Error('DeepSeek API key not configured');
   }
 
   console.log('🤖 Processing content with DeepSeek API');
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
+  const response = await llmFetch({
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${deepseekApiKey}`,

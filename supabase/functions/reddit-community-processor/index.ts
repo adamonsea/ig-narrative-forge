@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -576,7 +577,7 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
 
     // Call both analyses
     const [keywordResponse, insightsResponse] = await Promise.all([
-      fetch('https://api.deepseek.com/chat/completions', {
+      llmFetch({
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${deepseekApiKey}`,
@@ -589,7 +590,7 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
           temperature: 0.3
         })
       }),
-      fetch('https://api.deepseek.com/chat/completions', {
+      llmFetch({
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${deepseekApiKey}`,

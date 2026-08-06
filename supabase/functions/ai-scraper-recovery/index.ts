@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from 'https://deno.land/std@0.192.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -239,7 +240,7 @@ async function tryUrlRecovery(failedUrl: string, source: any, apiKey: string): P
       })
       .build();
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await llmFetch({
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -369,7 +370,7 @@ async function tryAIContentExtraction(url: string, source: any, region?: string,
       })
       .build();
 
-    const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const aiResponse = await llmFetch({
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
