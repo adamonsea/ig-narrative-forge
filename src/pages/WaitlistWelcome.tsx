@@ -467,7 +467,11 @@ export default function WaitlistWelcome() {
       <div className="mx-auto w-full max-w-lg sm:max-w-2xl space-y-8 sm:space-y-12">
         <div className="flex items-center justify-between border-b border-border/60 pb-4 sm:pb-6">
           <Brand />
-          <div className="flex gap-1.5" aria-hidden="true">
+          <div className="flex items-center gap-3">
+            <span className="text-xs sm:text-sm text-muted-foreground tabular-nums">
+              {Math.min(step + 1, TOTAL_STEPS)} of {TOTAL_STEPS}
+            </span>
+            <div className="flex gap-1.5" aria-hidden="true">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <span
                 key={i}
@@ -480,6 +484,7 @@ export default function WaitlistWelcome() {
                 }`}
               />
             ))}
+            </div>
           </div>
         </div>
 
