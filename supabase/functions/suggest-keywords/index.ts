@@ -85,7 +85,7 @@ serve(async (req) => {
 
     console.log(`🔑 Authorized user ${userId} for topic ${topicId}`);
 
-    if (!DEEPSEEK_API_KEY) {
+    if (!DEEPSEEK_API_KEY && !Deno.env.get('LOVABLE_API_KEY')) {
       throw new Error('DEEPSEEK_API_KEY is not configured');
     }
 

@@ -45,8 +45,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
 
-    if (!deepSeekApiKey) {
-      throw new Error('DEEPSEEK_API_KEY not configured');
+    if (!deepSeekApiKey && !Deno.env.get('LOVABLE_API_KEY')) {
+      throw new Error('No AI provider configured (LOVABLE_API_KEY or DEEPSEEK_API_KEY)');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);

@@ -1118,8 +1118,8 @@ Return in JSON format:
     const actualProvider = 'deepseek';
 
     try {
-      if (!deepseekApiKey) {
-        throw new Error('DeepSeek API key not configured');
+      if (!deepseekApiKey && !Deno.env.get('LOVABLE_API_KEY')) {
+        throw new Error('No AI provider configured (LOVABLE_API_KEY or DEEPSEEK_API_KEY)');
       }
       
       console.log('🤖 Using DeepSeek for slide generation...', {
@@ -1159,8 +1159,8 @@ Return in JSON format:
     let postCopy: { caption: string; hashtags: string[] };
     
     try {
-      if (!deepseekApiKey) {
-        throw new Error('DeepSeek API key not configured');
+      if (!deepseekApiKey && !Deno.env.get('LOVABLE_API_KEY')) {
+        throw new Error('No AI provider configured (LOVABLE_API_KEY or DEEPSEEK_API_KEY)');
       }
       
       console.log('📱 Generating post copy with DeepSeek...');

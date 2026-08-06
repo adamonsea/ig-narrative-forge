@@ -88,7 +88,7 @@ If no meaningful text is found, return "NO_TEXT_FOUND".`
 // Process and rewrite content using DeepSeek API for consistency
 async function processContentWithDeepSeek(rawContent: string, contentType: string): Promise<string> {
   const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-  if (!deepseekApiKey) {
+  if (!deepseekApiKey && !Deno.env.get('LOVABLE_API_KEY')) {
     throw new Error('DeepSeek API key not configured');
   }
 
