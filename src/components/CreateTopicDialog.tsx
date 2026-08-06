@@ -265,6 +265,38 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setSelectedSources(new Set(sources.map(s => s.url)));
   };
 
+  const addManualSource = () => {
+    const raw = manualUrl.trim();
+    if (!raw) return;
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    let parsed: URL;
+    try {
+      parsed = new URL(withScheme);
+      if (!parsed.hostname.includes('.')) throw new Error('bad host');
+    } catch {
+      setManualUrlError("That doesn't look like a website address");
+      return;
+    }
+    if (sources.some(s => s.url === parsed.toString())) {
+      setManualUrlError('That source is already in the list');
+      return;
+    }
+    setManualUrlError(null);
+    const domain = parsed.hostname.replace('www.', '');
+    setSources(prev => [
+      ...prev,
+      {
+        url: parsed.toString(),
+        source_name: domain,
+        type: 'News',
+        confidence_score: 70,
+        rationale: 'Added manually',
+      },
+    ]);
+    setSelectedSources(prev => new Set(prev).add(parsed.toString()));
+    setManualUrl("");
+  };
+
   const getTypeIcon = (type: string) => {
     if (type === 'RSS') return '📡';
     if (type === 'WordPress') return '📝';
