@@ -9,16 +9,18 @@ export const stripGeneratedSourceAttribution = (content: string): string => {
 
   let cleaned = content;
 
-  // Leading "Source: domain.tld |" / "Source: The Example — " style prefixes
+  // Leading "Source: domain.tld |" / "Originally published by X — " style prefixes.
+  // The colon (or explicit "published by") is required so ordinary prose that
+  // merely starts with "Via" or "Source" is never truncated.
   cleaned = cleaned.replace(
-    /^\s*(?:\*\*)?\s*(?:source|via|originally (?:from|published by)|read more at)\s*:?\s*\*{0,2}\s*[^\n|—–-]{0,80}?(?:\s*(?:\||—|–|-)\s*|\n+|$)/i,
+    /^\s*(?:\*\*)?\s*(?:(?:source|via|credit)\s*:|originally (?:from|published by)|read more at)\s*\*{0,2}\s*[^\n|—–]{0,80}?(?:\s*(?:\||—|–)\s*|\n+|$)/i,
     ''
   );
 
   // Standalone attribution lines anywhere in the block
   cleaned = cleaned
     .split('\n')
-    .filter((line) => !/^\s*(?:\*\*)?\s*(?:source|via)\s*:\s*[^\n]{0,80}$/i.test(line))
+    .filter((line) => !/^\s*(?:\*\*)?\s*(?:source|via|credit)\s*:\s*[^\n]{0,80}$/i.test(line))
     .join('\n');
 
   return cleaned.trim();

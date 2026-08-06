@@ -160,6 +160,7 @@ export default function WaitlistWelcome() {
   const [typed, setTyped] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
   const [rebuttal, setRebuttal] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
     document.title = 'Your Curatr feed — a few quick questions';
@@ -213,14 +214,22 @@ export default function WaitlistWelcome() {
 
   const submit = async (wantsEarlyAccess: boolean) => {
     setSubmitting(true);
+    setSubmitError(false);
     try {
-      await fetch(FN_URL, {
+      const res = await fetch(FN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${ANON}` },
         body: JSON.stringify({ token, answers, wants_early_access: wantsEarlyAccess }),
       });
+      if (!res.ok) {
+        setSubmitting(false);
+        setSubmitError(true);
+        return;
+      }
     } catch {
-      /* answers are best-effort; never block the thank-you */
+      setSubmitting(false);
+      setSubmitError(true);
+      return;
     }
     setSubmitting(false);
     setState('done');
@@ -608,6 +617,11 @@ export default function WaitlistWelcome() {
                   Happy to wait my turn
                 </Button>
               </div>
+              {submitError && (
+                <p className="text-sm text-destructive">
+                  We couldn't save your answers just then — please try again.
+                </p>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

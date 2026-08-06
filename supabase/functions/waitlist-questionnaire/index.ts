@@ -78,8 +78,8 @@ async function notifyAdmin(
 const AnswersSchema = z.object({
   feed_kind: z.array(z.string().max(60)).max(6).default([]),
   feed_name: z.string().max(160).optional().default(''),
-  audience: z.string().max(60).optional().default(''),
-  today: z.string().max(60).optional().default(''),
+  audience: z.array(z.string().max(60)).max(6).default([]),
+  today: z.array(z.string().max(60)).max(6).default([]),
   resonated: z.array(z.string().max(60)).max(2).default([]),
   blockers: z.array(z.string().max(60)).max(6).default([]),
   blockers_detail: z.string().max(600).optional().default(''),
