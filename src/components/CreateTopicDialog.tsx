@@ -750,7 +750,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                         <p className="text-muted-foreground">
                           {completedStories.length > 0
                             ? `${completedStories.length} stories already curated`
-                            : "Stories will appear as sources are scraped"}
+                            : "We're still gathering — stories will appear in your dashboard as your sources are scraped."}
                         </p>
                       </div>
 
@@ -774,28 +774,44 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
                       {/* CTAs */}
                       <div className="flex flex-col items-center gap-3 w-full max-w-xs pt-4">
-                        <Button
-                          size="lg"
-                          className="w-full gap-2"
-                          onClick={() => {
-                            handleClose();
-                            window.open(`/feed/${topicSlug}`, '_blank');
-                          }}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View your feed
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="gap-2 text-muted-foreground"
-                          onClick={() => {
-                            onTopicCreated(topicSlug);
-                            handleClose();
-                          }}
-                        >
-                          <Settings className="w-4 h-4" />
-                          Go to dashboard
-                        </Button>
+                        {completedStories.length > 0 ? (
+                          <>
+                            <Button
+                              size="lg"
+                              className="w-full gap-2"
+                              onClick={() => {
+                                handleClose();
+                                window.open(`/feed/${topicSlug}`, '_blank');
+                              }}
+                            >
+                              <ExternalLink className="w-4 h-4" aria-hidden="true" />
+                              View your feed
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="gap-2 text-muted-foreground"
+                              onClick={() => {
+                                onTopicCreated(topicSlug);
+                                handleClose();
+                              }}
+                            >
+                              <Settings className="w-4 h-4" aria-hidden="true" />
+                              Go to dashboard
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="lg"
+                            className="w-full gap-2"
+                            onClick={() => {
+                              onTopicCreated(topicSlug);
+                              handleClose();
+                            }}
+                          >
+                            <Settings className="w-4 h-4" aria-hidden="true" />
+                            Go to dashboard
+                          </Button>
+                        )}
                       </div>
                     </motion.div>
                   )}
