@@ -127,11 +127,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const handlePublishNow = async (storyId: string, title: string) => {
     setPublishingNow(prev => new Set(prev.add(storyId)));
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('stories')
         .update({ scheduled_publish_at: null, status: 'published', is_published: true })
-        .eq('id', storyId);
+        .eq('id', storyId)
+        .select('id')
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error('No story was updated. Check topic ownership and access.');
       toast({ title: 'Published Immediately', description: `"${title}" is now live.` });
       onRefresh();
     } catch (e) {
