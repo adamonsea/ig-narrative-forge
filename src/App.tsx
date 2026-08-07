@@ -38,6 +38,7 @@ import VerifySubscription from "./pages/VerifySubscription";
 import WidgetsPage from "./pages/dashboard/Widgets";
 import WidgetTestPage from "./pages/dashboard/WidgetTest";
 import Health from "./pages/Health";
+import ExplainerExport from "./pages/ExplainerExport";
 import Unsubscribe from "./pages/Unsubscribe";
 import WaitlistWelcome from "./pages/WaitlistWelcome";
 
@@ -92,6 +93,7 @@ const App = () => {
                 <Route path="/cookies" element={<Cookies />} />
                 <Route path="/guides/local-news-feeds" element={<LocalNewsFeedsGuide />} />
                 <Route path="/health" element={<Health />} />
+                <Route path="/explainer-export" element={<ExplainerExport />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/waitlist/welcome" element={<WaitlistWelcome />} />
                 <Route path="/dashboard" element={<Dashboard />} />
