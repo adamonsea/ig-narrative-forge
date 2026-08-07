@@ -4424,6 +4424,9 @@ export type Database = {
           confirmation_sent_at: string | null
           created_at: string
           email: string
+          follow_up_error: string | null
+          follow_up_opted_out: boolean
+          follow_up_sent_at: string | null
           id: string
           invite_token: string
           last_digest_at: string | null
@@ -4434,6 +4437,9 @@ export type Database = {
           confirmation_sent_at?: string | null
           created_at?: string
           email: string
+          follow_up_error?: string | null
+          follow_up_opted_out?: boolean
+          follow_up_sent_at?: string | null
           id?: string
           invite_token?: string
           last_digest_at?: string | null
@@ -4444,6 +4450,9 @@ export type Database = {
           confirmation_sent_at?: string | null
           created_at?: string
           email?: string
+          follow_up_error?: string | null
+          follow_up_opted_out?: boolean
+          follow_up_sent_at?: string | null
           id?: string
           invite_token?: string
           last_digest_at?: string | null
