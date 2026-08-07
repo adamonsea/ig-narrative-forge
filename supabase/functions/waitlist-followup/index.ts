@@ -101,6 +101,8 @@ Deno.serve(async (req) => {
       .lte('confirmation_sent_at', cutoff)
       .is('follow_up_sent_at', null)
       .eq('follow_up_opted_out', false)
+      .is('bounced_at', null)
+      .is('complained_at', null)
       .not('invite_token', 'is', null)
       .limit(200)
 
