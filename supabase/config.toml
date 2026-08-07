@@ -570,3 +570,6 @@ verify_jwt = false
 
 [functions.platform-outage-alert]
 verify_jwt = false
+
+[functions.resend-webhook]
+verify_jwt = false
