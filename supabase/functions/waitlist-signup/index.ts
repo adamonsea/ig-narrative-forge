@@ -3,47 +3,16 @@ import { Resend } from 'npm:resend@4.0.0'
 import {
   buildWaitlistEmailHtml,
   buildWaitlistEmailText,
+  fetchWaitlistStoryPreview,
   WAITLIST_FROM,
   WAITLIST_HEADERS,
   WAITLIST_REPLY_TO,
   WAITLIST_SUBJECT,
-  type WaitlistStoryPreview,
 } from '../_shared/waitlist-email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-// Pull a real, recently published story so the email shows the product working.
-async function fetchStoryPreview(
-  supabase: ReturnType<typeof createClient>,
-): Promise<WaitlistStoryPreview | null> {
-  try {
-    const { data, error } = await supabase.rpc('get_public_topic_feed', {
-      topic_slug_param: 'eastbourne',
-      p_limit: 6,
-      p_offset: 0,
-      p_sort_by: 'newest',
-    })
-    if (error || !Array.isArray(data)) return null
-    const row = (data as Record<string, unknown>[]).find(
-      (r) => typeof r.story_cover_illustration_url === 'string' && r.story_cover_illustration_url,
-    )
-    if (!row) return null
-    const raw = String(row.story_cover_illustration_url)
-    // Serve a width-capped render so the email stays light.
-    const imageUrl = raw.includes('/storage/v1/object/public/')
-      ? `${raw.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')}?width=1040&quality=75`
-      : raw
-    return {
-      title: String(row.story_title ?? ''),
-      imageUrl,
-      sourceName: (row.source_name as string) ?? null,
-    }
-  } catch (err) {
-    console.warn('Story preview lookup failed:', err)
-    return null
-  }
 }
 
 async function sendWaitlistEmail(
@@ -67,7 +36,7 @@ async function sendWaitlistEmail(
   try {
     const resend = new Resend(resendApiKey)
     const questionnaireUrl = `https://curatr.pro/waitlist/welcome?token=${encodeURIComponent(inviteToken)}`
-    const story = await fetchStoryPreview(supabase)
+    const story = await fetchWaitlistStoryPreview(supabase)
     const payload = { plan, questionnaireUrl, story }
 
     const { error } = await resend.emails.send({
