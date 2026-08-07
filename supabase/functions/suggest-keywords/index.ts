@@ -37,20 +37,25 @@ async function verifyTopicOwnership(authHeader: string, topicId: string): Promis
 
   const userId = claimsData.claims.sub as string;
 
-  // Verify topic ownership
-  const { data: topic, error: topicError } = await supabase
-    .from('topics')
-    .select('id, owner_id')
-    .eq('id', topicId)
-    .single();
+  // No topic yet (creation wizard) — any authenticated user may get suggestions
+  if (!topicId) {
+    return { userId, error: null };
+  }
 
-  if (topicError || !topic) {
+  // Verify topic ownership using a service client (bypasses RLS visibility gaps)
+  const service = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const { data: topic } = await service
+    .from('topics')
+    .select('id, created_by')
+    .eq('id', topicId)
+    .maybeSingle();
+
+  if (!topic) {
     return { userId: null, error: 'Topic not found' };
   }
 
-  if (topic.owner_id !== userId) {
-    // Check if user is admin
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+  if (topic.created_by !== userId) {
+    const { data: isAdmin } = await service.rpc('has_role', { _user_id: userId, _role: 'admin' });
     if (!isAdmin) {
       return { userId: null, error: 'Not authorized to manage this topic' };
     }
