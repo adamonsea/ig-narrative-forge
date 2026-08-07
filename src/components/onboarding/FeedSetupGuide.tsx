@@ -357,7 +357,10 @@ export const FeedSetupGuide = ({
           )}
           {step < TOTAL_STEPS ? (
             <Button size="sm" onClick={() => goTo(step + 1)} disabled={!canAdvance}>
-              {step === 3 ? "Skip for now" : "Continue"} <ArrowRight className="w-4 h-4 ml-1.5" />
+              {step === 3 && negativeKeywords.length === 0 && competingRegions.length === 0
+                ? "Skip for now"
+                : "Continue"}{" "}
+              <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           ) : (
             <Button size="sm" onClick={finish} disabled={gathering || savingMode || !automationMode}>
