@@ -70,6 +70,9 @@ export const FeedSetupGuide = ({
   const [automationMode, setAutomationMode] = useState<"manual" | "auto_simplify" | null>(null);
   const [savingMode, setSavingMode] = useState(false);
   const [started, setStarted] = useState(false);
+  const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(
+    topic.illustration_style || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE
+  );
 
   useEffect(() => {
     try {
