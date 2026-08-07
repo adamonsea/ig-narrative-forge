@@ -306,6 +306,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   return (
     <div className="space-y-4">
+      {(() => {
+        const visibleStories = stories.filter(s => ['draft', 'ready', 'published'].includes(s.status));
+        return (
       {/* Two-tab pipeline */}
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -317,7 +320,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           </TabsTrigger>
           <TabsTrigger value="published">
             <div className="flex items-center gap-2">
-              <span>Published</span>
+              <span>Stories ({visibleStories.length})</span>
               {queueItems.length > 0 && (
                 <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -407,15 +410,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
           </div>
           
-          {stories.filter(s => ['ready', 'published'].includes(s.status)).length === 0 && queueItems.length === 0 ? (
+          {visibleStories.length === 0 && queueItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No published stories</p>
-              <p className="text-sm mt-2">Approved stories will appear here when published to the feed</p>
+              <p>No generated stories</p>
+              <p className="text-sm mt-2">Approved arrivals will appear here while they are generated and published.</p>
             </div>
           ) : (
             <PublishedStoriesList 
-              stories={stories.filter(s => ['ready', 'published'].includes(s.status))}
+              stories={visibleStories}
               processingItems={queueItems}
               onArchive={handleArchiveStory}
               onReturnToReview={handleMultiTenantRejectStory}
@@ -430,6 +433,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
         </TabsContent>
       </Tabs>
+        );
+      })()}
 
       {/* Article Preview Dialog */}
       <Dialog open={previewArticle !== null} onOpenChange={(open) => !open && setPreviewArticle(null)}>
