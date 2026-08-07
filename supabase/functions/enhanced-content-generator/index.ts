@@ -511,7 +511,10 @@ OUTPUT FORMAT (JSON):
   ]
 }`;
 
-      const maxTokens = slideCount >= 12 ? 5200 : slideCount >= 8 ? 4200 : 3200;
+      // DeepSeek Flash spends a large share of the budget on internal reasoning before
+      // emitting JSON. Anything tighter than ~6k truncates (finish_reason=length) and
+      // forces a costly escalation to Pro.
+      const maxTokens = slideCount >= 12 ? 8000 : slideCount >= 8 ? 7000 : 6000;
 
       const systemPrompt = `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms. Always reply with a single valid JSON object and nothing else.`;
       const chatMessages = [

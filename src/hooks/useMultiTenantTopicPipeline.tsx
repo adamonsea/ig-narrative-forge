@@ -425,25 +425,40 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('🗳️ Tracked MPs for filtering:', trackedMPs?.length || 0);
 
-      // Use the new unified admin function for all stories (including published ones)
-      const topicStoriesResult = await supabase
-        .rpc('get_admin_topic_stories', {
-          p_topic_id: selectedTopicId,
-          p_status: null, // Get all stories - we'll filter on the frontend
-          p_limit: 200,
-          p_offset: 0
-        });
+      // Fetch per status so a large backlog of published stories can never push
+      // drafts (or vice versa) out of a single shared row window.
+      const STATUS_PAGE_SIZE = 50;
+      const STATUSES = ['draft', 'ready', 'published', 'archived'];
+      const perStatusResults = await Promise.all(
+        STATUSES.map((status) =>
+          supabase.rpc('get_admin_topic_stories', {
+            p_topic_id: selectedTopicId,
+            p_status: status,
+            p_limit: STATUS_PAGE_SIZE,
+            p_offset: 0
+          })
+        )
+      );
 
+      const failedStatus = perStatusResults.find((r) => r.error);
       console.log('📊 Admin stories query results:', {
-        stories: topicStoriesResult.data?.length || 0,
-        error: topicStoriesResult.error
+        byStatus: Object.fromEntries(
+          STATUSES.map((s, i) => [s, perStatusResults[i].data?.length || 0])
+        ),
+        error: failedStatus?.error
       });
 
-      if (topicStoriesResult.error) {
-        console.error('Error loading topic stories:', topicStoriesResult.error);
-        setStories([]);
+      if (failedStatus?.error) {
+        // Keep whatever is already on screen — blanking the list makes published
+        // stories flicker out of view on any transient RPC failure.
+        console.error('Error loading topic stories (keeping current list):', failedStatus.error);
         return;
       }
+
+      const topicStoriesResult = {
+        data: perStatusResults.flatMap((r) => r.data || []),
+        error: null as any
+      };
 
       // Use the clean, unified data with frontend deduplication as safety net
       // NOTE: get_admin_topic_stories may not include drip-feed "ready but not yet published" items.

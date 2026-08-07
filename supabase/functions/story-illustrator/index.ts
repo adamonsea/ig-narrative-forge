@@ -808,7 +808,9 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         promptLength: illustrationPrompt.length
       });
 
-      const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      // Transient upstream/Cloudflare failures (5xx, 520) are common on image
+      // generation. Retry with backoff instead of failing the whole job.
+      const requestOpenAIImage = () => fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${OPENAI_API_KEY}`,
@@ -824,6 +826,14 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           output_compression: 70 // Increased compression for <500KB target (WhatsApp limit is 600KB)
         }),
       });
+
+      let openaiResponse = await requestOpenAIImage();
+      for (let attempt = 1; attempt <= 3 && openaiResponse.status >= 500; attempt++) {
+        const backoffMs = attempt * 4000;
+        console.warn(`⚠️ OpenAI image call returned ${openaiResponse.status} - retry ${attempt}/3 in ${backoffMs}ms`);
+        await new Promise((r) => setTimeout(r, backoffMs));
+        openaiResponse = await requestOpenAIImage();
+      }
 
       if (!openaiResponse.ok) {
         const errorText = await openaiResponse.text();
