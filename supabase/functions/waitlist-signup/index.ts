@@ -15,6 +15,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const ADMIN_EMAIL = 'adamonsea@gmail.com'
+
+const escapeHtml = (s: string) =>
+  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+async function notifyAdminOfSignup(email: string, plan: string, alreadyRegistered: boolean) {
+  const resendApiKey = Deno.env.get('RESEND_API_KEY')
+  if (!resendApiKey) {
+    console.warn('RESEND_API_KEY not configured - skipping admin signup notification')
+    return
+  }
+  try {
+    const when = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' })
+    const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f5f5f3;padding:32px 16px;">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e6e6e1;border-radius:14px;padding:28px;">
+    <h1 style="margin:0 0 16px 0;font-size:20px;color:#0f172a;">New waitlist signup${alreadyRegistered ? ' (repeat)' : ''}</h1>
+    <p style="margin:0 0 8px 0;font-size:15px;color:#0f172a;"><strong>${escapeHtml(email)}</strong></p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#71717a;">Plan: ${escapeHtml(plan)}</p>
+    <p style="margin:0;font-size:14px;color:#71717a;">${escapeHtml(when)} (UK)</p>
+  </div>
+</div>`
+
+    const { error } = await new Resend(resendApiKey).emails.send({
+      from: 'Curatr <noreply@curatr.pro>',
+      to: [ADMIN_EMAIL],
+      replyTo: email,
+      subject: `New waitlist signup: ${email}`,
+      html,
+      text: `New waitlist signup${alreadyRegistered ? ' (repeat)' : ''}: ${email}\nPlan: ${plan}\n${when} (UK)`,
+    })
+    if (error) console.error('Admin signup notification error:', error)
+  } catch (err) {
+    console.error('Admin signup notification failed:', err)
+  }
+}
+
 async function sendWaitlistEmail(
   supabase: ReturnType<typeof createClient>,
   waitlistId: string | null,
@@ -126,6 +163,8 @@ Deno.serve(async (req) => {
           )
         }
 
+        await notifyAdminOfSignup(email, existing?.plan || plan || 'general', true)
+
         return new Response(
           JSON.stringify({
             success: true,
@@ -157,6 +196,8 @@ Deno.serve(async (req) => {
       plan || 'general',
       data?.[0]?.invite_token ?? '',
     )
+
+    await notifyAdminOfSignup(email, plan || 'general', false)
 
     return new Response(
       JSON.stringify({ 
