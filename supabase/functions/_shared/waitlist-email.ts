@@ -48,7 +48,7 @@ export async function fetchWaitlistStoryPreview(supabase: any): Promise<Waitlist
 export const WAITLIST_REPLY_TO = 'adamonsea@gmail.com';
 export const WAITLIST_SUBJECT = "You're on the Curatr waitlist";
 export const WAITLIST_PREHEADER =
-  "Six questions from early adopters help decide what we build next.";
+  "Seven questions from early adopters help decide what we build next.";
 
 // mailto unsubscribe: honest for a pre-launch list of this size, and satisfies
 // bulk-sender expectations without a public one-click endpoint.
@@ -121,7 +121,7 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
                   Hi, Adam here — I make Curatr. You're on the list${planLine(plan)}, and I'll email you the moment your spot opens.
                 </p>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Before then: I'm asking the first early adopters what they actually want, because your answers help decide what I build next. Six questions, tap to answer, no typing.
+                  Before then: I'm asking the first early adopters what they actually want, because your answers help decide what I build next. Seven questions, tap to answer, no typing.
                 </p>
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
                   <tr>
@@ -171,7 +171,7 @@ export const buildWaitlistEmailText = ({ plan, questionnaireUrl, story }: Waitli
     `Hi, Adam here — I make Curatr. You're on the list${plan && plan !== 'general' ? ` for the ${plan} plan` : ''}, and I'll email you the moment your spot opens.`,
     '',
     "Before then: I'm asking the first early adopters what they actually want, because your",
-    'answers help decide what I build next. Six questions, tap to answer, no typing:',
+    'answers help decide what I build next. Seven questions, tap to answer, no typing:',
     '',
     questionnaireUrl,
     '',
