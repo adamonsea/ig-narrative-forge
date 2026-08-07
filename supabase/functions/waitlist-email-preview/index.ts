@@ -20,9 +20,11 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const token = typeof body.token === 'string' && /^[a-zA-Z0-9_-]{8,128}$/.test(body.token)
+    const rawToken = typeof body.token === 'string' && /^[a-zA-Z0-9_-]{4,120}$/.test(body.token)
       ? body.token
-      : 'preview'
+      : `${Date.now()}`
+    // Preview links must carry the `preview-` prefix or the questionnaire treats them as expired.
+    const token = rawToken.startsWith('preview-') ? rawToken : `preview-${rawToken}`
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
     if (!resendApiKey) {
