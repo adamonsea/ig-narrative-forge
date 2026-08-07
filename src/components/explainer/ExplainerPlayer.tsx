@@ -16,9 +16,15 @@ interface ExplainerPlayerProps {
   onFinished?: () => void;
   /** Rendered on the end card, e.g. a "Join the waitlist" button. */
   endCta?: React.ReactNode;
+  /**
+   * Offline export mode: hides player chrome and the presenter bubble, mutes
+   * cues, and runs on a pure clock so a headless renderer can capture clean
+   * frames. The presenter clip is composited back in by the render script.
+   */
+  renderMode?: boolean;
 }
 
-export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: ExplainerPlayerProps) => {
+export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, renderMode = false }: ExplainerPlayerProps) => {
   const prefersReduced = !!useReducedMotion();
   const [index, setIndex] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -32,11 +38,11 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const scene = TIMELINE[index];
-  const avatarClipSrc = scene.avatarClip ?? clipForScene(scene.id) ?? avatarSrc;
+  const avatarClipSrc = renderMode ? undefined : (scene.avatarClip ?? clipForScene(scene.id) ?? avatarSrc);
   const hasClip = !!avatarClipSrc;
   const beatMs = sceneDuration(scene);
 
-  const cue = useCallback((name: CueName) => playCue(name, muted), [muted]);
+  const cue = useCallback((name: CueName) => playCue(name, muted || renderMode), [muted, renderMode]);
   const tap = useCallback((ms: number) => haptic(ms, !prefersReduced), [prefersReduced]);
 
   const goTo = useCallback((next: number) => {
@@ -184,7 +190,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
           />
         )}
 
-        {onClose && (
+        {onClose && !renderMode && (
           <button
             type="button"
             onClick={onClose}
@@ -216,6 +222,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
       </div>
 
       {/* Controls */}
+      {!renderMode && (
       <div className="space-y-2 px-[max(1rem,4vw)] pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2">
         <div className="h-1 w-full overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Explainer progress">
           <div className="h-full rounded-full transition-[width] duration-100" style={{ width: `${progress}%`, background: ACCENT }} />
@@ -254,6 +261,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta }: Expl
           </span>
         </div>
       </div>
+      )}
     </div>
   );
 };

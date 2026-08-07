@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""Offline high-resolution renderer for the Curatr explainer film.
+
+Captures the chrome-free /explainer-export stage frame-by-frame using Chromium
+virtual time (frame-accurate, not real-time), then composites the presenter
+clips back in as a circular bubble with their audio.
+
+Usage:
+    python3 scripts/render_explainer.py [--fps 30] [--scale 1] [--out PATH]
+
+--scale 1 => 1920x1080, --scale 2 => 3840x2160 (4K). Needs the dev server on
+:8080 (or --origin), ffmpeg, and the sandbox's Playwright.
+"""
+import argparse, asyncio, base64, re, shutil, subprocess, tempfile
+from pathlib import Path
+from playwright.async_api import async_playwright
+
+BASE_W, BASE_H = 1920, 1080
+END_HOLD_MS = 3000
+
+p = argparse.ArgumentParser()
+p.add_argument("--fps", type=int, default=30)
+p.add_argument("--scale", type=int, default=1)
+p.add_argument("--origin", default="http://localhost:8080")
+p.add_argument("--cdn", default="https://curatr.pro")
+p.add_argument("--out", default=None)
+p.add_argument("--stage", default="/explainer-export")
+args = p.parse_args()
+
+W, H = BASE_W * args.scale, BASE_H * args.scale
+OUT = Path(args.out or f"/mnt/documents/curatr-explainer-{H}p.mp4")
+WORK = Path(tempfile.mkdtemp(prefix="explainer-render-"))
+FRAMES = WORK / "frames"; FRAMES.mkdir()
+
+def log(*m): print("[render]", *m, flush=True)
+def ff(a): subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *a], check=True)
+
+async def capture():
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True, args=["--force-color-profile=srgb", "--font-render-hinting=none"])
+        ctx = await browser.new_context(viewport={"width": BASE_W, "height": BASE_H}, device_scale_factor=args.scale)
+        page = await ctx.new_page()
+        await page.goto(f"{args.origin}{args.stage}", wait_until="networkidle")
+        await page.wait_for_function("() => !!window.__explainerTiming", timeout=30000)
+        timing = await page.evaluate("window.__explainerTiming")
+        total_ms = timing["totalMs"] + END_HOLD_MS
+        frames = int(total_ms / 1000 * args.fps)
+        step = 1000 / args.fps
+        log(f"stage ready — {W}x{H} @ {args.fps}fps, {frames} frames ({total_ms/1000:.1f}s)")
+        cdp = await ctx.new_cdp_session(page)
+        budget_expired = asyncio.Event()
+        cdp.on("Emulation.virtualTimeBudgetExpired", lambda _: budget_expired.set())
+        await cdp.send("Emulation.setVirtualTimePolicy", {"policy": "pause"})
+        for i in range(frames):
+            budget_expired.clear()
+            await cdp.send("Emulation.setVirtualTimePolicy", {
+                "policy": "pauseIfNetworkFetchesPending",
+                "budget": step,
+                "maxVirtualTimeTaskStarvationCount": 5000,
+            })
+            try:
+                await asyncio.wait_for(budget_expired.wait(), timeout=10)
+            except asyncio.TimeoutError:
+                pass
+            # CDP capture rather than page.screenshot(): the latter waits for a
+            # stable compositor frame, which never arrives while time is paused.
+            shot = await cdp.send("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": False})
+            (FRAMES / f"f{i:06d}.png").write_bytes(base64.b64decode(shot["data"]))
+            if i % 150 == 0:
+                log(f"frame {i}/{frames}")
+        await browser.close()
+        return timing
+
+def fetch_clips(scenes):
+    src = Path("src/components/explainer/avatar.ts").read_text()
+    urls = dict(re.findall(r"(\w+):\s*'(/__l5e/[^']+)'", src))
+    out = []
+    for s in scenes:
+        rel = urls.get(s["id"])
+        if not rel:
+            out.append(None); continue
+        dest = WORK / f"{s['id']}.mp4"
+        subprocess.run(["curl", "-sfL", f"{args.cdn}{rel}", "-o", str(dest)], check=True)
+        out.append(dest)
+    return out
+
+def presenter_track(scenes, clips):
+    """Pad/trim each clip to its beat length so the bubble stays in step with captions."""
+    beats = []
+    for i, (scene, clip) in enumerate(zip(scenes, clips)):
+        secs = f"{scene['durationMs']/1000:.3f}"
+        dest = WORK / f"beat-{i}.mp4"
+        if clip:
+            ff(["-i", str(clip), "-vf", f"tpad=stop_mode=clone:stop_duration=30,fps={args.fps}",
+                "-af", "apad", "-t", secs, "-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-ar", "48000", "-ac", "2", str(dest)])
+        else:
+            ff(["-f", "lavfi", "-i", f"color=c=black:s=512x512:r={args.fps}",
+                "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", secs,
+                "-c:v", "libx264", "-crf", "30", "-pix_fmt", "yuv420p", "-c:a", "aac", str(dest)])
+        beats.append(dest)
+    lst = WORK / "beats.txt"
+    lst.write_text("\n".join(f"file '{b}'" for b in beats))
+    track = WORK / "presenter.mp4"
+    ff(["-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(track)])
+    return track
+
+def compose(track):
+    stage = WORK / "stage.mp4"
+    ff(["-framerate", str(args.fps), "-i", str(FRAMES / "f%06d.png"),
+        "-c:v", "libx264", "-crf", "16", "-preset", "slow", "-pix_fmt", "yuv420p", str(stage)])
+    S = round(220 * args.scale)   # matches the on-site bubble at 1080p
+    M = round(48 * args.scale)
+    R = S / 2
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    ff(["-i", str(stage), "-i", str(track), "-filter_complex",
+        f"[1:v]scale={S}:{S}:force_original_aspect_ratio=increase,crop={S}:{S},format=rgba,"
+        f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(gt(pow(X-{R},2)+pow(Y-{R},2),pow({R},2)),0,255)'[bub];"
+        f"[0:v][bub]overlay=W-w-{M}:H-h-{M}:shortest=0[v]",
+        "-map", "[v]", "-map", "1:a?", "-c:v", "libx264", "-crf", "16", "-preset", "slow",
+        "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(OUT)])
+
+timing = asyncio.run(capture())
+log("frames captured — fetching presenter clips")
+clips = fetch_clips(timing["scenes"])
+log("building presenter track")
+track = presenter_track(timing["scenes"], clips)
+log("composing final video")
+compose(track)
+shutil.rmtree(WORK, ignore_errors=True)
+log(f"done -> {OUT}")
