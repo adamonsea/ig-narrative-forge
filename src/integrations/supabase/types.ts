@@ -4420,6 +4420,10 @@ export type Database = {
       }
       waitlist: {
         Row: {
+          bounce_reason: string | null
+          bounce_type: string | null
+          bounced_at: string | null
+          complained_at: string | null
           confirmation_error: string | null
           confirmation_sent_at: string | null
           created_at: string
@@ -4430,9 +4434,15 @@ export type Database = {
           id: string
           invite_token: string
           last_digest_at: string | null
+          last_email_event: string | null
+          last_email_event_at: string | null
           plan: string | null
         }
         Insert: {
+          bounce_reason?: string | null
+          bounce_type?: string | null
+          bounced_at?: string | null
+          complained_at?: string | null
           confirmation_error?: string | null
           confirmation_sent_at?: string | null
           created_at?: string
@@ -4443,9 +4453,15 @@ export type Database = {
           id?: string
           invite_token?: string
           last_digest_at?: string | null
+          last_email_event?: string | null
+          last_email_event_at?: string | null
           plan?: string | null
         }
         Update: {
+          bounce_reason?: string | null
+          bounce_type?: string | null
+          bounced_at?: string | null
+          complained_at?: string | null
           confirmation_error?: string | null
           confirmation_sent_at?: string | null
           created_at?: string
@@ -4456,6 +4472,8 @@ export type Database = {
           id?: string
           invite_token?: string
           last_digest_at?: string | null
+          last_email_event?: string | null
+          last_email_event_at?: string | null
           plan?: string | null
         }
         Relationships: []

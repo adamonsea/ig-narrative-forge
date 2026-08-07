@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
     const { data: rows, error: rowsError } = await supabase
       .from('waitlist')
-      .select('id, email, plan, invite_token, confirmation_sent_at')
+      .select('id, email, plan, invite_token, confirmation_sent_at, bounced_at')
       .in('email', emails)
 
     if (rowsError) {
@@ -89,6 +89,10 @@ Deno.serve(async (req) => {
       }
       if (!row.invite_token) {
         results.push({ email, status: 'skipped', reason: 'no invite token' })
+        continue
+      }
+      if (mode === 'send' && row.bounced_at && !force) {
+        results.push({ email, status: 'skipped', reason: 'address bounced previously' })
         continue
       }
       if (mode === 'send' && row.confirmation_sent_at && !force) {
