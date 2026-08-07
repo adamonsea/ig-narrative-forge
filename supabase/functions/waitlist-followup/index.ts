@@ -28,29 +28,34 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401)
-    const bearer = authHeader.replace('Bearer ', '').trim()
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const adminToken = Deno.env.get('WAITLIST_ADMIN_TOKEN') ?? ''
-    const isServiceCaller =
-      (serviceKey.length > 0 && bearer === serviceKey) ||
-      (adminToken.length > 0 && bearer === adminToken)
-
-    if (!isServiceCaller) {
-      const authClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: authHeader } } },
-      )
-      const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(bearer)
-      const callerEmail = String(claimsData?.claims?.email ?? '').toLowerCase()
-      if (claimsError || callerEmail !== OWNER_EMAIL) return json({ error: 'Forbidden' }, 403)
-    }
-
     const body = await req.json().catch(() => ({}))
     const mode: 'dry' | 'preview' | 'send' =
       body.mode === 'send' ? 'send' : body.mode === 'preview' ? 'preview' : 'dry'
+
+    // 'preview' only ever mails the product owner, so it needs no caller auth.
+    // Anything that reads or mails real signups does.
+    if (mode !== 'preview') {
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401)
+      const bearer = authHeader.replace('Bearer ', '').trim()
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      const adminToken = Deno.env.get('WAITLIST_ADMIN_TOKEN') ?? ''
+      const isServiceCaller =
+        (serviceKey.length > 0 && bearer === serviceKey) ||
+        (adminToken.length > 0 && bearer === adminToken)
+
+      if (!isServiceCaller) {
+        const authClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          { global: { headers: { Authorization: authHeader } } },
+        )
+        const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(bearer)
+        const callerEmail = String(claimsData?.claims?.email ?? '').toLowerCase()
+        if (claimsError || callerEmail !== OWNER_EMAIL) return json({ error: 'Forbidden' }, 403)
+      }
+    }
+
     const delayDays = Number.isFinite(body.delay_days)
       ? Math.max(0, Math.min(60, Number(body.delay_days)))
       : DEFAULT_DELAY_DAYS
