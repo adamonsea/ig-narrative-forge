@@ -411,6 +411,7 @@ const TopicDashboard = () => {
         total_swipes: totalSwipes || 0,
         shared_stories: uniqueSharedStories,
       });
+      setStatsLoaded(true);
 
     } catch (error) {
       console.error('Error loading topic dashboard:', error);
