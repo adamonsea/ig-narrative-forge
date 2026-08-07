@@ -31,17 +31,20 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401)
+    const bearer = authHeader.replace('Bearer ', '').trim()
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const isServiceCaller = serviceKey.length > 0 && bearer === serviceKey
 
+    if (!isServiceCaller) {
     const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } },
     )
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(
-      authHeader.replace('Bearer ', ''),
-    )
-    const callerEmail = String(claimsData?.claims?.email ?? '').toLowerCase()
-    if (claimsError || callerEmail !== OWNER_EMAIL) return json({ error: 'Forbidden' }, 403)
+      const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(bearer)
+      const callerEmail = String(claimsData?.claims?.email ?? '').toLowerCase()
+      if (claimsError || callerEmail !== OWNER_EMAIL) return json({ error: 'Forbidden' }, 403)
+    }
 
     const body = await req.json().catch(() => ({}))
     const mode = body.mode === 'send' ? 'send' : 'preview'
