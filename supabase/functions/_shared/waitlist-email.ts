@@ -92,13 +92,11 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
     <meta name="color-scheme" content="light dark" />
     <meta name="supported-color-schemes" content="light dark" />
     <style>
-      .cta-primary { background-color:#0c1522 !important; color:#ffffff !important; border:2px solid #0c1522 !important; }
+      .cta-primary { background-color:#20D693 !important; color:#0c1522 !important; border:2px solid #20D693 !important; }
       .cta-secondary { background-color:#ffffff !important; color:#0c1522 !important; border:2px solid #0c1522 !important; }
       @media (prefers-color-scheme: dark) {
-        .cta-primary { background-color:#20D693 !important; color:#0c1522 !important; border:2px solid #20D693 !important; }
         .cta-secondary { background-color:transparent !important; color:#ffffff !important; border:2px solid #ffffff !important; }
       }
-      [data-ogsc] .cta-primary { background-color:#20D693 !important; color:#0c1522 !important; border:2px solid #20D693 !important; }
       [data-ogsc] .cta-secondary { background-color:transparent !important; color:#ffffff !important; border:2px solid #ffffff !important; }
     </style>
   </head>
@@ -120,7 +118,7 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Hi, Adam here — I make Curatr. Thanks for joining the waitlist${planLine(plan)}. I'm speaking to every early adopter before we open up, to make sure Curatr offers what people actually want. Would you take the questionnaire below? It's one minute.
                 </p>
-                <a class="cta-primary" href="${url}" style="display:inline-block;background-color:#0c1522;color:#ffffff;border:2px solid #0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:14px 26px;border-radius:999px;">Early adopter questionnaire · 1 min</a>
+                <a class="cta-primary" href="${url}" style="display:inline-block;background-color:#20D693;color:#0c1522;border:2px solid #20D693;text-decoration:none;font-size:16px;font-weight:600;padding:14px 28px;border-radius:999px;">Early adopter questionnaire</a>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the stories and illustrates them daily.
                 </p>
