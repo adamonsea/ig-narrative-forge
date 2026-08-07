@@ -428,6 +428,8 @@ const TopicDashboard = () => {
   const [showGatheringProgress, setShowGatheringProgress] = useState(false);
   const [setupDismissed, setSetupDismissed] = useState(false);
   const [setupActive, setSetupActive] = useState(false);
+  const [setupChecked, setSetupChecked] = useState(false);
+  const [statsLoaded, setStatsLoaded] = useState(false);
 
   useEffect(() => {
     if (!topic?.id || typeof window === "undefined") return;
@@ -437,16 +439,27 @@ const TopicDashboard = () => {
     } catch {
       setSetupDismissed(false);
     }
+    setSetupChecked(true);
   }, [topic?.id]);
 
   // Latch the guide open once a feed is detected as empty, so adding a source
   // mid-flow doesn't make it vanish.
   useEffect(() => {
-    if (!topic?.id) return;
-    if ((stats.sources || 0) === 0 && (stats.articles || 0) === 0 && (stats.stories || 0) === 0) {
+    if (!topic?.id || !setupChecked || !statsLoaded || setupDismissed) return;
+    const empty =
+      (stats.sources || 0) === 0 && (stats.articles || 0) === 0 && (stats.stories || 0) === 0;
+    if (empty) {
       setSetupActive(true);
+    } else if (!setupActive) {
+      // Feed already has content — setup is done for good.
+      try {
+        window.localStorage.setItem(storageKeyFor(topic.id), JSON.stringify({ done: true }));
+      } catch {
+        /* ignore */
+      }
+      setSetupDismissed(true);
     }
-  }, [topic?.id, stats.sources, stats.articles, stats.stories]);
+  }, [topic?.id, setupChecked, statsLoaded, setupDismissed, setupActive, stats.sources, stats.articles, stats.stories]);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [maxAgeDays, setMaxAgeDays] = useState(30);
   const [forceRescrape, setForceRescrape] = useState(true);
