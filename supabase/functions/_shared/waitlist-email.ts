@@ -14,6 +14,37 @@ export interface WaitlistEmailInput {
 }
 
 export const WAITLIST_FROM = 'Curatr <noreply@curatr.pro>';
+
+// Pull a real, recently published story so the email shows the product working.
+// deno-lint-ignore no-explicit-any
+export async function fetchWaitlistStoryPreview(supabase: any): Promise<WaitlistStoryPreview | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_public_topic_feed', {
+      topic_slug_param: 'eastbourne',
+      p_limit: 6,
+      p_offset: 0,
+      p_sort_by: 'newest',
+    });
+    if (error || !Array.isArray(data)) return null;
+    const row = (data as Record<string, unknown>[]).find(
+      (r) => typeof r.story_cover_illustration_url === 'string' && r.story_cover_illustration_url,
+    );
+    if (!row) return null;
+    const raw = String(row.story_cover_illustration_url);
+    // Serve a width-capped render so the email stays light.
+    const imageUrl = raw.includes('/storage/v1/object/public/')
+      ? `${raw.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')}?width=1040&quality=75`
+      : raw;
+    return {
+      title: String(row.story_title ?? ''),
+      imageUrl,
+      sourceName: (row.source_name as string) ?? null,
+    };
+  } catch (err) {
+    console.warn('Story preview lookup failed:', err);
+    return null;
+  }
+}
 export const WAITLIST_REPLY_TO = 'adamonsea@gmail.com';
 export const WAITLIST_SUBJECT = "You're on the Curatr waitlist";
 export const WAITLIST_PREHEADER =
