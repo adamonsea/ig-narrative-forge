@@ -10,6 +10,11 @@ import { KeywordManager } from "@/components/KeywordManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SourceScanLoop, ClippingStackLoop } from "@/components/onboarding/WaitingAnimations";
+import {
+  ILLUSTRATION_STYLES,
+  ILLUSTRATION_STYLE_DESCRIPTIONS,
+  type IllustrationStyle,
+} from "@/lib/constants/illustrationStyles";
 import { cn } from "@/lib/utils";
 
 export interface FeedSetupGuideTopic {
@@ -25,6 +30,7 @@ export interface FeedSetupGuideTopic {
   organizations?: string[];
   default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet";
   default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven";
+  illustration_style?: IllustrationStyle;
 }
 
 interface FeedSetupGuideProps {
@@ -95,7 +101,7 @@ export const FeedSetupGuide = ({
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const saveVoice = async (field: "default_tone" | "default_writing_style", value: string) => {
+  const saveVoice = async (field: "default_tone" | "default_writing_style" | "illustration_style", value: string) => {
     const { error } = await supabase
       .from("topics")
       .update({ [field]: value, updated_at: new Date().toISOString() } as any)
@@ -161,7 +167,7 @@ export const FeedSetupGuide = ({
       },
       {
         title: "Pick your voice",
-        why: "Every story is rewritten in this voice before it reaches your readers.",
+        why: "Every story is rewritten in this voice — and illustrated in this style — before it reaches your readers.",
       },
       {
         title: "Choose how stories publish",
