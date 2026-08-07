@@ -10,6 +10,11 @@ import { KeywordManager } from "@/components/KeywordManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SourceScanLoop, ClippingStackLoop } from "@/components/onboarding/WaitingAnimations";
+import {
+  ILLUSTRATION_STYLES,
+  ILLUSTRATION_STYLE_DESCRIPTIONS,
+  type IllustrationStyle,
+} from "@/lib/constants/illustrationStyles";
 import { cn } from "@/lib/utils";
 
 export interface FeedSetupGuideTopic {
@@ -25,6 +30,7 @@ export interface FeedSetupGuideTopic {
   organizations?: string[];
   default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet";
   default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven";
+  illustration_style?: IllustrationStyle;
 }
 
 interface FeedSetupGuideProps {
@@ -64,6 +70,9 @@ export const FeedSetupGuide = ({
   const [automationMode, setAutomationMode] = useState<"manual" | "auto_simplify" | null>(null);
   const [savingMode, setSavingMode] = useState(false);
   const [started, setStarted] = useState(false);
+  const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(
+    topic.illustration_style || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE
+  );
 
   useEffect(() => {
     try {
@@ -95,7 +104,7 @@ export const FeedSetupGuide = ({
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const saveVoice = async (field: "default_tone" | "default_writing_style", value: string) => {
+  const saveVoice = async (field: "default_tone" | "default_writing_style" | "illustration_style", value: string) => {
     const { error } = await supabase
       .from("topics")
       .update({ [field]: value, updated_at: new Date().toISOString() } as any)
@@ -161,7 +170,7 @@ export const FeedSetupGuide = ({
       },
       {
         title: "Pick your voice",
-        why: "Every story is rewritten in this voice before it reaches your readers.",
+        why: "Every story is rewritten in this voice — and illustrated in this style — before it reaches your readers.",
       },
       {
         title: "Choose how stories publish",
@@ -305,6 +314,38 @@ export const FeedSetupGuide = ({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">How each story is structured.</p>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Image style</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { value: ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE, title: "Illustrated" },
+                  { value: ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC, title: "Photographic" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      setIllustrationStyle(option.value);
+                      saveVoice("illustration_style", option.value);
+                    }}
+                    aria-pressed={illustrationStyle === option.value}
+                    className={cn(
+                      "text-left rounded-xl border p-4 transition-colors hover:border-primary/60",
+                      illustrationStyle === option.value ? "border-primary bg-primary/5" : "border-border"
+                    )}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      {illustrationStyle === option.value && <Check className="w-4 h-4 text-primary" />}
+                      {option.title}
+                    </span>
+                    <span className="block mt-1.5 text-xs text-muted-foreground">
+                      {ILLUSTRATION_STYLE_DESCRIPTIONS[option.value]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Used when Curatr generates artwork for a story.</p>
             </div>
           </div>
         )}
