@@ -495,21 +495,29 @@ export const useMultiTenantActions = () => {
 
       } else {
         // Immediate publish mode: set to 'published' status
-        const { error: updateError } = await supabase
+        const { data: updatedRow, error: updateError } = await supabase
           .from('stories')
           .update({
             status: 'published',
             is_published: true,
             updated_at: new Date().toISOString()
           })
-          .eq('id', storyId);
+          .eq('id', storyId)
+          .select('id, status, is_published')
+          .maybeSingle();
 
         if (updateError) {
           console.error('Error approving multi-tenant story:', updateError);
           throw new Error(`Failed to approve story: ${updateError.message}`);
         }
 
-        console.log('✅ Multi-tenant story published immediately');
+        // A silent zero-row update (permissions) reports success — treat it as failure.
+        if (!updatedRow) {
+          console.error('❌ Approve affected no rows (permission or missing story):', storyId);
+          throw new Error('Approval did not take effect — you may not have permission to publish this story.');
+        }
+
+        console.log('✅ Multi-tenant story published immediately', updatedRow);
 
         // Send push notifications to subscribers if topic is provided
         if (topicId) {
