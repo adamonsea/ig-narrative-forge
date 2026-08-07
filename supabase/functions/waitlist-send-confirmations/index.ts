@@ -33,7 +33,10 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401)
     const bearer = authHeader.replace('Bearer ', '').trim()
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const isServiceCaller = serviceKey.length > 0 && bearer === serviceKey
+    const adminToken = Deno.env.get('WAITLIST_ADMIN_TOKEN') ?? ''
+    const isServiceCaller =
+      (serviceKey.length > 0 && bearer === serviceKey) ||
+      (adminToken.length > 0 && bearer === adminToken)
 
     if (!isServiceCaller) {
     const authClient = createClient(
