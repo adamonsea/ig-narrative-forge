@@ -451,8 +451,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       if (failedStatus?.error) {
         // Keep whatever is already on screen — blanking the list makes published
         // stories flicker out of view on any transient RPC failure.
-        console.error('Error loading topic stories (keeping current list):', failedStatus.error);
-        return;
+        console.error('Error loading topic stories; using direct owner-scoped fallback:', failedStatus.error);
       }
 
       const topicStoriesResult = {
@@ -460,10 +459,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         error: null as any
       };
 
-      // Use the clean, unified data with frontend deduplication as safety net
-      // NOTE: get_admin_topic_stories may not include drip-feed "ready but not yet published" items.
-      // We explicitly include those so they appear in the Published tab as "Queued" (blue) or "Scheduled" (amber).
-      const { data: dripQueuedStories, error: dripQueuedError } = await supabase
+      // Always load the topic's current workspace rows directly as well. This is
+      // owner-scoped by stories/topic_articles RLS and prevents an unavailable or
+      // stale admin RPC from making real stories disappear from the dashboard.
+      const { data: directTopicStories, error: directTopicStoriesError } = await supabase
         .from('stories')
         .select(`
           id,
@@ -494,16 +493,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           )
         `)
         .eq('topic_articles.topic_id', selectedTopicId)
-        .eq('status', 'ready')
-        .eq('is_published', false)
+        .in('status', ['draft', 'ready', 'published'])
         .order('updated_at', { ascending: false })
         .limit(200);
 
-      if (dripQueuedError) {
-        console.warn('⚠️ Failed to load drip-queued stories (ready + not published):', dripQueuedError);
+      if (directTopicStoriesError) {
+        console.warn('⚠️ Failed direct topic-story fallback:', directTopicStoriesError);
       }
 
-      const dripQueuedAsAdminRows = (dripQueuedStories || []).map((s: any) => {
+      const directTopicAsAdminRows = (directTopicStories || []).map((s: any) => {
         const shared = s.topic_articles?.shared_content;
         // Include slides directly from the query
         const slides = (s.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number);
@@ -538,11 +536,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         };
       });
 
-      console.log('🟦 Drip-feed queued stories included:', {
-        count: dripQueuedAsAdminRows.length,
+      console.log('🟦 Direct topic stories included:', {
+        count: directTopicAsAdminRows.length,
       });
 
-      const allStories = [...(topicStoriesResult.data || []), ...dripQueuedAsAdminRows];
+      const allStories = [...(topicStoriesResult.data || []), ...directTopicAsAdminRows];
 
       // Frontend deduplication safety net
       const seenStoryIds = new Set();

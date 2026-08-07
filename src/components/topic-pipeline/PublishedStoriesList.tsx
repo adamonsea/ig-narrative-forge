@@ -130,7 +130,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       const { error } = await supabase
         .from('stories')
         .update({ scheduled_publish_at: null, status: 'published', is_published: true })
-        .eq('id', storyId);
+        .eq('id', storyId)
+        .select('id')
+        .maybeSingle();
       if (error) throw error;
       toast({ title: 'Published Immediately', description: `"${title}" is now live.` });
       onRefresh();
