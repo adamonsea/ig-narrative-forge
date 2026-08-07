@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Offline high-resolution renderer for the Curatr explainer film.
 
-Captures the chrome-free /explainer-export stage frame-by-frame using Chromium
-virtual time (frame-accurate, not real-time), then composites the presenter
-clips back in as a circular bubble with their audio.
+Plays the chrome-free /explainer-export stage in headless Chromium, captures
+every composited frame via CDP screencast (PNG, lossless), resamples to a
+constant frame rate, then composites the presenter clips back in as a circular
+bubble carrying the narration audio.
 
 Usage:
     python3 scripts/render_explainer.py [--fps 30] [--scale 1] [--out PATH]
@@ -35,41 +36,63 @@ FRAMES = WORK / "frames"; FRAMES.mkdir()
 def log(*m): print("[render]", *m, flush=True)
 def ff(a): subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *a], check=True)
 
+
 async def capture():
+    """Real-time screencast capture. Scenes run infinite looping animations,
+    so Chromium virtual time starves and stalls; playing at normal speed and
+    keeping each frame's timestamp gives clean, correctly paced output."""
+    captured = []
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True, args=["--force-color-profile=srgb", "--font-render-hinting=none"])
-        ctx = await browser.new_context(viewport={"width": BASE_W, "height": BASE_H}, device_scale_factor=args.scale)
+        browser = await pw.chromium.launch(headless=True, args=[
+            "--force-color-profile=srgb", "--font-render-hinting=none",
+            "--disable-frame-rate-limit", "--hide-scrollbars",
+        ])
+        ctx = await browser.new_context(viewport={"width": BASE_W, "height": BASE_H},
+                                        device_scale_factor=args.scale)
         page = await ctx.new_page()
         await page.goto(f"{args.origin}{args.stage}", wait_until="networkidle")
         await page.wait_for_function("() => !!window.__explainerTiming", timeout=30000)
         timing = await page.evaluate("window.__explainerTiming")
         total_ms = timing["totalMs"] + END_HOLD_MS
-        frames = int(total_ms / 1000 * args.fps)
-        step = 1000 / args.fps
-        log(f"stage ready — {W}x{H} @ {args.fps}fps, {frames} frames ({total_ms/1000:.1f}s)")
+        log(f"stage ready - {W}x{H}, capturing {total_ms/1000:.1f}s in real time")
+
         cdp = await ctx.new_cdp_session(page)
-        budget_expired = asyncio.Event()
-        cdp.on("Emulation.virtualTimeBudgetExpired", lambda _: budget_expired.set())
-        await cdp.send("Emulation.setVirtualTimePolicy", {"policy": "pause"})
-        for i in range(frames):
-            budget_expired.clear()
-            await cdp.send("Emulation.setVirtualTimePolicy", {
-                "policy": "pauseIfNetworkFetchesPending",
-                "budget": step,
-                "maxVirtualTimeTaskStarvationCount": 5000,
-            })
+        idx = 0
+
+        async def ack(sid):
             try:
-                await asyncio.wait_for(budget_expired.wait(), timeout=10)
-            except asyncio.TimeoutError:
+                await cdp.send("Page.screencastFrameAck", {"sessionId": sid})
+            except Exception:
                 pass
-            # CDP capture rather than page.screenshot(): the latter waits for a
-            # stable compositor frame, which never arrives while time is paused.
-            shot = await cdp.send("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": False})
-            (FRAMES / f"f{i:06d}.png").write_bytes(base64.b64decode(shot["data"]))
-            if i % 150 == 0:
-                log(f"frame {i}/{frames}")
+
+        def on_frame(ev):
+            nonlocal idx
+            dest = FRAMES / f"f{idx:06d}.png"
+            dest.write_bytes(base64.b64decode(ev["data"]))
+            captured.append((ev["metadata"]["timestamp"], dest))
+            idx += 1
+            asyncio.create_task(ack(ev["sessionId"]))
+
+        cdp.on("Page.screencastFrame", on_frame)
+        # Restart the film so capture begins on beat one.
+        await page.reload(wait_until="networkidle")
+        await cdp.send("Page.startScreencast",
+                       {"format": "png", "maxWidth": W, "maxHeight": H, "everyNthFrame": 1})
+        await asyncio.sleep(total_ms / 1000)
+        await cdp.send("Page.stopScreencast")
+        await asyncio.sleep(0.5)
         await browser.close()
-        return timing
+
+    log(f"captured {len(captured)} frames (~{len(captured)/(total_ms/1000):.1f}fps)")
+    lines = []
+    for i, (ts, dest) in enumerate(captured):
+        nxt = captured[i + 1][0] if i + 1 < len(captured) else ts + 1 / args.fps
+        lines.append(f"file '{dest}'")
+        lines.append(f"duration {max(nxt - ts, 1/240):.4f}")
+    lines.append(f"file '{captured[-1][1]}'")
+    (WORK / "stage.txt").write_text("\n".join(lines))
+    return timing
+
 
 def fetch_clips(scenes):
     src = Path("src/components/explainer/avatar.ts").read_text()
@@ -84,8 +107,9 @@ def fetch_clips(scenes):
         out.append(dest)
     return out
 
+
 def presenter_track(scenes, clips):
-    """Pad/trim each clip to its beat length so the bubble stays in step with captions."""
+    """Pad or trim each clip to its beat length so the bubble stays in step."""
     beats = []
     for i, (scene, clip) in enumerate(zip(scenes, clips)):
         secs = f"{scene['durationMs']/1000:.3f}"
@@ -105,23 +129,27 @@ def presenter_track(scenes, clips):
     ff(["-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(track)])
     return track
 
+
 def compose(track):
     stage = WORK / "stage.mp4"
-    ff(["-framerate", str(args.fps), "-i", str(FRAMES / "f%06d.png"),
-        "-c:v", "libx264", "-crf", "16", "-preset", "slow", "-pix_fmt", "yuv420p", str(stage)])
+    ff(["-f", "concat", "-safe", "0", "-i", str(WORK / "stage.txt"),
+        "-fps_mode", "cfr", "-r", str(args.fps),
+        "-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p", str(stage)])
     S = round(220 * args.scale)   # matches the on-site bubble at 1080p
     M = round(48 * args.scale)
     R = S / 2
     OUT.parent.mkdir(parents=True, exist_ok=True)
     ff(["-i", str(stage), "-i", str(track), "-filter_complex",
         f"[1:v]scale={S}:{S}:force_original_aspect_ratio=increase,crop={S}:{S},format=rgba,"
-        f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(gt(pow(X-{R},2)+pow(Y-{R},2),pow({R},2)),0,255)'[bub];"
+        f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
+        f"a='if(gt(pow(X-{R},2)+pow(Y-{R},2),pow({R},2)),0,255)'[bub];"
         f"[0:v][bub]overlay=W-w-{M}:H-h-{M}:shortest=0[v]",
-        "-map", "[v]", "-map", "1:a?", "-c:v", "libx264", "-crf", "16", "-preset", "slow",
+        "-map", "[v]", "-map", "1:a?", "-c:v", "libx264", "-crf", "16", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(OUT)])
 
+
 timing = asyncio.run(capture())
-log("frames captured — fetching presenter clips")
+log("frames captured - fetching presenter clips")
 clips = fetch_clips(timing["scenes"])
 log("building presenter track")
 track = presenter_track(timing["scenes"], clips)
