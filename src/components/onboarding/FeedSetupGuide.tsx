@@ -312,6 +312,38 @@ export const FeedSetupGuide = ({
               </Select>
               <p className="text-xs text-muted-foreground">How each story is structured.</p>
             </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Image style</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { value: ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE, title: "Illustrated" },
+                  { value: ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC, title: "Photographic" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      setIllustrationStyle(option.value);
+                      saveVoice("illustration_style", option.value);
+                    }}
+                    aria-pressed={illustrationStyle === option.value}
+                    className={cn(
+                      "text-left rounded-xl border p-4 transition-colors hover:border-primary/60",
+                      illustrationStyle === option.value ? "border-primary bg-primary/5" : "border-border"
+                    )}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      {illustrationStyle === option.value && <Check className="w-4 h-4 text-primary" />}
+                      {option.title}
+                    </span>
+                    <span className="block mt-1.5 text-xs text-muted-foreground">
+                      {ILLUSTRATION_STYLE_DESCRIPTIONS[option.value]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Used when Curatr generates artwork for a story.</p>
+            </div>
           </div>
         )}
 
