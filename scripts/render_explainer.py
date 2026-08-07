@@ -7,10 +7,11 @@ constant frame rate, then composites the presenter clips back in as a circular
 bubble carrying the narration audio.
 
 Usage:
-    python3 scripts/render_explainer.py [--fps 30] [--scale 1] [--out PATH]
+    python3 scripts/render_explainer.py [--fps 30] [--res 1080|1440|2160] [--out PATH]
 
---scale 1 => 1920x1080, --scale 2 => 3840x2160 (4K). Needs the dev server on
-:8080 (or --origin), ffmpeg, and the sandbox's Playwright.
+--res 1080 => 1920x1080, 1440 => 2560x1440, 2160 => 3840x2160 (4K).
+--scale is still accepted as the raw device-scale-factor equivalent.
+Needs the dev server on :8080 (or --origin), ffmpeg, and Playwright.
 """
 import argparse, asyncio, base64, re, shutil, subprocess, tempfile
 from pathlib import Path
@@ -21,14 +22,23 @@ END_HOLD_MS = 3000
 
 p = argparse.ArgumentParser()
 p.add_argument("--fps", type=int, default=30)
-p.add_argument("--scale", type=int, default=1)
+p.add_argument("--res", type=int, choices=[1080, 1440, 2160], default=None)
+p.add_argument("--scale", type=float, default=None)
 p.add_argument("--origin", default="http://localhost:8080")
 p.add_argument("--cdn", default="https://curatr.pro")
 p.add_argument("--out", default=None)
 p.add_argument("--stage", default="/explainer-export")
 args = p.parse_args()
 
-W, H = BASE_W * args.scale, BASE_H * args.scale
+RES_SCALE = {1080: 1.0, 1440: 4 / 3, 2160: 2.0}
+if args.scale is None:
+    res = args.res or 1080
+    args.scale = RES_SCALE[res]
+else:
+    res = round(BASE_H * args.scale)
+
+W, H = round(BASE_W * args.scale), round(BASE_H * args.scale)
+STAGE_URL = f"{args.origin}{args.stage}?res={res}&chrome=0"
 OUT = Path(args.out or f"/mnt/documents/curatr-explainer-{H}p.mp4")
 WORK = Path(tempfile.mkdtemp(prefix="explainer-render-"))
 FRAMES = WORK / "frames"; FRAMES.mkdir()
@@ -50,7 +60,7 @@ async def capture():
         ctx = await browser.new_context(viewport={"width": BASE_W, "height": BASE_H},
                                         device_scale_factor=args.scale)
         page = await ctx.new_page()
-        await page.goto(f"{args.origin}{args.stage}", wait_until="networkidle")
+        await page.goto(STAGE_URL, wait_until="networkidle")
         await page.wait_for_function("() => !!window.__explainerTiming", timeout=30000)
         timing = await page.evaluate("window.__explainerTiming")
         total_ms = timing["totalMs"] + END_HOLD_MS
