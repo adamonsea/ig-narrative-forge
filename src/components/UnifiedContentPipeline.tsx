@@ -304,11 +304,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     return highlightedText;
   };
 
+  const visibleStories = stories.filter(s => ['draft', 'ready', 'published'].includes(s.status));
+
   return (
     <div className="space-y-4">
-      {(() => {
-        const visibleStories = stories.filter(s => ['draft', 'ready', 'published'].includes(s.status));
-        return (
       {/* Two-tab pipeline */}
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -433,8 +432,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
         </TabsContent>
       </Tabs>
-        );
-      })()}
 
       {/* Article Preview Dialog */}
       <Dialog open={previewArticle !== null} onOpenChange={(open) => !open && setPreviewArticle(null)}>
