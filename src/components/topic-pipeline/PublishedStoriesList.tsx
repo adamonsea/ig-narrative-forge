@@ -127,9 +127,16 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const handlePublishNow = async (storyId: string, title: string) => {
     setPublishingNow(prev => new Set(prev.add(storyId)));
     try {
+      const publishedAt = new Date().toISOString();
       const { data, error } = await supabase
         .from('stories')
-        .update({ scheduled_publish_at: null, status: 'published', is_published: true })
+        .update({
+          scheduled_publish_at: null,
+          status: 'published',
+          is_published: true,
+          published_at: publishedAt,
+          updated_at: publishedAt,
+        })
         .eq('id', storyId)
         .select('id')
         .maybeSingle();

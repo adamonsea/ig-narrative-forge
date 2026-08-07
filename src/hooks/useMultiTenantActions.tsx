@@ -460,7 +460,7 @@ export const useMultiTenantActions = () => {
           .from('stories')
           .update({
             status: 'ready',
-            is_published: true,
+            is_published: false,
             updated_at: new Date().toISOString()
           })
           .eq('id', storyId)
@@ -507,6 +507,8 @@ export const useMultiTenantActions = () => {
           .update({
             status: 'published',
             is_published: true,
+            published_at: new Date().toISOString(),
+            scheduled_publish_at: null,
             updated_at: new Date().toISOString()
           })
           .eq('id', storyId)
