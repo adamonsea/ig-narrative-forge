@@ -433,7 +433,7 @@ export default function WaitlistWelcome() {
               <Brand />
               {step === 0 && (
                 <p className="text-sm sm:text-base uppercase tracking-widest text-muted-foreground">
-                  {resumed ? 'Picking up where you left off' : 'About a minute · 7 quick questions'}
+                  {resumed ? 'Picking up where you left off' : 'Seven quick questions · no typing'}
                 </p>
               )}
               <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground">
