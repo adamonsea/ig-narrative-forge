@@ -403,6 +403,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         const isScheduled = story.scheduled_publish_at && isFuture(new Date(story.scheduled_publish_at));
         const isLive = story.status === 'published';
         const isReady = story.status === 'ready' && !isScheduled;
+        const isDraft = story.status === 'draft';
         const storyTitle = story.title || story.headline || 'Untitled';
         
         return (
@@ -412,6 +413,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {isLive && <Badge variant="default" className="h-5 text-[10px] bg-green-600">Live</Badge>}
+                  {isDraft && <Badge variant="secondary" className="h-5 text-[10px]">Draft</Badge>}
                   {isScheduled && (
                     <>
                       <Badge variant="outline" className="h-5 text-[10px] border-amber-300 text-amber-700 bg-amber-50">
@@ -467,10 +469,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onReturnToReview(story.id)}>
-                      <RotateCcw className="w-3.5 h-3.5 mr-2" />
-                      Unpublish
-                    </DropdownMenuItem>
+                    {!isDraft && (
+                      <DropdownMenuItem onClick={() => onReturnToReview(story.id)}>
+                        <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                        Unpublish
+                      </DropdownMenuItem>
+                    )}
                     {story.source_url && (
                       <DropdownMenuItem onClick={() => window.open(story.source_url!, '_blank')}>
                         <Link className="w-3.5 h-3.5 mr-2" />
@@ -525,6 +529,15 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                         </DropdownMenuItem>
                       </>
                     )}
+                    {isDraft && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handlePublishNow(story.id, storyTitle)}>
+                          <Zap className="w-3.5 h-3.5 mr-2" />
+                          Publish Now
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -560,6 +573,17 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
               {/* Action bar */}
               <div className="flex items-center gap-1.5 pt-1 border-t border-border/40 flex-wrap">
+                {isDraft && (
+                  <Button
+                    size="sm"
+                    onClick={() => handlePublishNow(story.id, storyTitle)}
+                    disabled={publishingNow.has(story.id)}
+                    className="h-7 text-xs"
+                  >
+                    {publishingNow.has(story.id) ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" />}
+                    Publish
+                  </Button>
+                )}
                 {topicSlug && isLive && (
                   <Button size="sm" className="h-7 text-xs" asChild>
                     <a href={`/feed/${topicSlug}/story/${story.id}`} target="_blank" rel="noopener noreferrer">
