@@ -48,7 +48,7 @@ export async function fetchWaitlistStoryPreview(supabase: any): Promise<Waitlist
 export const WAITLIST_REPLY_TO = 'adamonsea@gmail.com';
 export const WAITLIST_SUBJECT = "You're on the Curatr waitlist";
 export const WAITLIST_PREHEADER =
-  "The 1-minute early adopter questionnaire — it shapes what we build next.";
+  "Six questions from early adopters help decide what we build next.";
 
 // mailto unsubscribe: honest for a pre-launch list of this size, and satisfies
 // bulk-sender expectations without a public one-click endpoint.
@@ -118,7 +118,10 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
               <td style="padding:0;">
                 <h1 style="margin:0 0 20px 0;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;font-weight:600;color:#0c1522;">You're on the list</h1>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Hi, Adam here — I make Curatr. Thanks for joining the waitlist${planLine(plan)}. I'm speaking to every early adopter before we open up, to make sure Curatr offers what people actually want. Would you take the questionnaire below? It's one minute.
+                  Hi, Adam here — I make Curatr. You're on the list${planLine(plan)}, and I'll email you the moment your spot opens.
+                </p>
+                <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
+                  Before then: I'm asking the first early adopters what they actually want, because your answers help decide what I build next. Six questions, tap to answer, no typing.
                 </p>
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
                   <tr>
@@ -128,17 +131,17 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
                   </tr>
                 </table>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the stories and illustrates them daily.
+                  Curatr runs a live news feed on a town or a topic: it trawls the sources, rewrites the stories and illustrates them daily. Here's one it made this week.
                 </p>
 ${storyBlock}
                 <p style="margin:0 0 28px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Rather watch than read? <a href="https://curatr.pro/?explainer=1" style="color:#0c1522;font-weight:600;">Take the 75-second tour</a> — or browse a live feed at <a href="https://curatr.pro/feed/eastbourne" style="color:#0c1522;">curatr.pro/feed/eastbourne</a>.
                 </p>
                 <p style="margin:0 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  If you only do one thing, <a href="${url}" style="color:#0c1522;font-weight:600;">take the questionnaire</a> — it genuinely shapes what I build next.
+                  One thing I'd love to know: what would your first feed be, a town or a topic? <a href="${url}" style="color:#0c1522;font-weight:600;">Tell me here</a>, or just hit reply.
                 </p>
                 <p style="margin:0;font-size:16px;line-height:1.65;color:#0c1522;">
-                  Adam<br /><span style="font-size:14px;color:#71717a;">Just hit reply, I read everything</span>
+                  Adam<br /><span style="font-size:14px;color:#71717a;">I read and answer everything myself</span>
                 </p>
                 <p style="margin:20px 0 0 0;">
                   <a class="cta-secondary" href="https://wa.me/447810546694" style="display:inline-block;background-color:#ffffff;color:#0c1522;text-decoration:none;font-size:15px;font-weight:500;padding:13px 25px;border-radius:999px;border:2px solid #0c1522;">WhatsApp Adam</a>
@@ -165,21 +168,24 @@ export const buildWaitlistEmailText = ({ plan, questionnaireUrl, story }: Waitli
   [
     "You're on the list",
     '',
-    `Hi, Adam here — I make Curatr. Thanks for joining the waitlist${plan && plan !== 'general' ? ` for the ${plan} plan` : ''}.`,
-    "I'm speaking to every early adopter before we open up, to make sure Curatr offers what",
-    'people actually want. Would you take the questionnaire? It takes one minute:',
+    `Hi, Adam here — I make Curatr. You're on the list${plan && plan !== 'general' ? ` for the ${plan} plan` : ''}, and I'll email you the moment your spot opens.`,
+    '',
+    "Before then: I'm asking the first early adopters what they actually want, because your",
+    'answers help decide what I build next. Six questions, tap to answer, no typing:',
     '',
     questionnaireUrl,
     '',
-    'Curatr runs a live news feed on a subject or place: it trawls the sources, rewrites the',
+    'Curatr runs a live news feed on a town or a topic: it trawls the sources, rewrites the',
     'stories and illustrates them daily.',
     ...(story?.title ? ['', `A story it made recently: ${story.title}`] : []),
     '',
     'Watch the 75-second tour: https://curatr.pro/?explainer=1',
     'Or browse a live feed: https://curatr.pro/feed/eastbourne',
     '',
+    'One thing I would love to know: what would your first feed be, a town or a topic?',
+    '',
     'Adam',
-    'Just hit reply, I read everything.',
+    'I read and answer everything myself.',
     'WhatsApp: https://wa.me/447810546694',
     '',
     '---',
