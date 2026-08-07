@@ -48,9 +48,6 @@ export const buildFollowupEmailHtml = ({ questionnaireUrl }: FollowupEmailInput)
                 <p style="margin:0 0 22px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
                   Hi again \u2014 Adam from Curatr. I sent you the early adopter questions a few days ago and didn\u2019t want them to get buried.
                 </p>
-                <p style="margin:0 0 26px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Seven questions, tap to answer, no typing. What the first people say genuinely decides what I build before launch.
-                </p>
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
                   <tr>
                     <td bgcolor="#20D693" style="background:#20D693;background-color:#20D693;border-radius:999px;mso-padding-alt:14px 28px;">
@@ -58,11 +55,8 @@ export const buildFollowupEmailHtml = ({ questionnaireUrl }: FollowupEmailInput)
                     </td>
                   </tr>
                 </table>
-                <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  And if it\u2019s not for you, just reply \u201Cno thanks\u201D and I won\u2019t chase again \u2014 you\u2019ll still get your invite when we open up.
-                </p>
-                <p style="margin:0;font-size:16px;line-height:1.65;color:#0c1522;">
-                  Adam<br /><span style="font-size:14px;color:#71717a;">I read and answer everything myself</span>
+                <p style="margin:28px 0 0 0;font-size:16px;line-height:1.65;color:#0c1522;">
+                  Adam
                 </p>
               </td>
             </tr>
@@ -87,16 +81,9 @@ export const buildFollowupEmailText = ({ questionnaireUrl }: FollowupEmailInput)
     'Hi again — Adam from Curatr. I sent you the early adopter questions a few days ago',
     "and didn't want them to get buried.",
     '',
-    'Seven questions, tap to answer, no typing. What the first people say genuinely decides',
-    'what I build before launch:',
-    '',
     questionnaireUrl,
     '',
-    'And if it is not for you, just reply "no thanks" and I will not chase again — you will',
-    'still get your invite when we open up.',
-    '',
     'Adam',
-    'I read and answer everything myself.',
     '',
     '---',
     'You received this because you joined the waitlist at curatr.pro.',
