@@ -60,7 +60,7 @@ async def capture():
         ctx = await browser.new_context(viewport={"width": BASE_W, "height": BASE_H},
                                         device_scale_factor=args.scale)
         page = await ctx.new_page()
-        await page.goto(f"{args.origin}{args.stage}", wait_until="networkidle")
+        await page.goto(STAGE_URL, wait_until="networkidle")
         await page.wait_for_function("() => !!window.__explainerTiming", timeout=30000)
         timing = await page.evaluate("window.__explainerTiming")
         total_ms = timing["totalMs"] + END_HOLD_MS
