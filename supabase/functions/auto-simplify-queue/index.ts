@@ -303,9 +303,23 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Per-category settings (guessed category + owner overrides).
+        const categoryDecision = applyCategoryGate(
+          categoryGate,
+          sharedContent?.title || '',
+          sharedContent?.body || '',
+          typeof article.content_quality_score === 'number' ? article.content_quality_score : null
+        );
+
+        if (categoryDecision.hold) {
+          console.log(`  🗂️ Category gate HELD article ${article.id} — ${categoryDecision.reason}`);
+          topicHeldForCategory++;
+          continue; // leave processing_status = 'new' for manual review
+        }
+
         // Locality gate (regional topics only): hold for manual review if no local
         // anchor appears in the title or opening. Story stays 'new' in Arrivals.
-        if (localityGateActive) {
+        if (localityGateActive && !categoryDecision.relaxLocality) {
           const title = sharedContent?.title || '';
           const body = sharedContent?.body || '';
           const region = (topicDefaultsMap[topic_id]?.region || '').toLowerCase().trim();
@@ -333,7 +347,12 @@ Deno.serve(async (req) => {
             `  ✅ Locality gate PASSED article ${article.id} via ` +
             `${matchedAnchor ? `anchor "${matchedAnchor}"` : `region "${region}"`}`
           );
+        } else if (localityGateActive && categoryDecision.relaxLocality) {
+          console.log(
+            `  🌍 Locality gate relaxed for article ${article.id} — wide radius on category "${categoryDecision.category?.slug}"`
+          );
         }
+
 
         // Check for an ACTIVE queue item only (pending/processing).
         // A finished (completed/failed) row must NOT block re-evaluation —
