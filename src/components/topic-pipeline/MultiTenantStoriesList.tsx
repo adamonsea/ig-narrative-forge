@@ -692,8 +692,10 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
               </CardContent>
             )}
           </Card>
+          </motion.div>
         );
       })}
+      </AnimatePresence>
 
       {/* Slide Editor Dialog */}
       {selectedSlideId && (
