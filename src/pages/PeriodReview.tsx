@@ -107,6 +107,15 @@ const PeriodReview = () => {
     }
   }, [review]);
 
+  useEffect(() => {
+    if (!loading && review && scrollRef.current) {
+      setScrollReady(true);
+    } else {
+      setScrollReady(false);
+    }
+  }, [loading, review]);
+
+
   if (loading) {
     return (
       <main className="min-h-dvh bg-background px-6 py-16">
