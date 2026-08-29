@@ -80,12 +80,25 @@ Deno.serve(async (req) => {
 
     const { data: topic } = await service.from('topics').select('name, region, slug').eq('id', topicId).maybeSingle();
 
-    const { data: topicArticles } = await service
-      .from('topic_articles')
-      .select('id')
-      .eq('topic_id', topicId)
-      .limit(20000);
-    const taIds = (topicArticles ?? []).map((r: any) => r.id);
+    // PostgREST caps a single response at 1000 rows regardless of .limit(),
+    // so page through the topic's articles explicitly — otherwise only a
+    // fraction of the archive is ever considered.
+    const taIds: string[] = [];
+    const PAGE = 1000;
+    for (let page = 0; page < 60; page++) {
+      const from = page * PAGE;
+      const { data: rows, error } = await service
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', topicId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) break;
+      const batch = rows ?? [];
+      taIds.push(...batch.map((r: any) => r.id));
+      if (batch.length < PAGE) break;
+    }
+
 
     // Fetch published stories in both the current and previous window.
     type Row = {
