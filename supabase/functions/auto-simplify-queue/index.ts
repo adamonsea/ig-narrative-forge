@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { loadCategoryGate, applyCategoryGate } from '../_shared/category-gate.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
