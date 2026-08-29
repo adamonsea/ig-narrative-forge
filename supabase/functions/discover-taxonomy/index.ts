@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { llmFetch } from '../_shared/llm-router.ts';
 import { getUser, isAdmin, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
-import { parseJson } from '../_shared/taxonomy.ts';
+import { parseJsonSalvage } from '../_shared/taxonomy.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -85,7 +85,7 @@ ${titles.map((t) => `- ${t}`).join('\n')}`;
           model: 'deepseek-v4-pro',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.2,
-          max_tokens: 6000,
+          max_tokens: 16000,
           response_format: { type: 'json_object' },
         },
       },
@@ -98,7 +98,7 @@ ${titles.map((t) => `- ${t}`).join('\n')}`;
     }
 
     const json = await resp.json();
-    const proposal = parseJson<any>(json?.choices?.[0]?.message?.content ?? '');
+    const proposal = parseJsonSalvage<any>(json?.choices?.[0]?.message?.content ?? '');
 
     if (runId) {
       await service
