@@ -525,7 +525,7 @@ const PeriodReview = () => {
         <ReviewSlide tone="accent" label="On the map">
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'Streets in ' }, { text: 'the news', italic: true }]}
+            segments={[{ text: 'Places in ' }, { text: 'the news', italic: true }]}
           />
           <div className="flex flex-wrap gap-2">
             {places.slice(0, 8).map((p, i) => (

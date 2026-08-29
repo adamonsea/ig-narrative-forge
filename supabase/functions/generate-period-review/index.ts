@@ -381,7 +381,7 @@ Deno.serve(async (req) => {
 
     // ---- Places and people ------------------------------------------------
     const places = Object.entries(termCounts)
-      .filter(([term, count]) => count >= 2 && PLACE_SUFFIX.test(term))
+      .filter(([term, count]) => count >= 2 && term.includes(' ') && PLACE_SUFFIX.test(term))
       .map(([term, count]) => ({ term, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 12);
