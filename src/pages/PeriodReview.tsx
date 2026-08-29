@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, useScroll, useSpring, useReducedMotion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, TrendingUp, TrendingDown, Zap } from 'lucide-react';
+import { ArrowLeft, ChevronDown, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
-import { ReviewChapter, Reveal, CountUp, GrowBar } from '@/components/review/ReviewChapter';
+import { Reveal, CountUp } from '@/components/review/ReviewChapter';
+import { ReviewSlide, BigStat, RankRows } from '@/components/review/ReviewSlide';
 
 interface Movement {
   name: string;
@@ -56,14 +57,18 @@ interface ReviewData {
 }
 
 const monthLabel = (m: string) =>
-  new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+  new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'short' });
+
+const compact = (n: number) =>
+  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}m` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
 
 const PeriodReview = () => {
   const { slug, reviewSlug } = useParams<{ slug: string; reviewSlug: string }>();
   const [review, setReview] = useState<{ label: string; narrative: string | null; data: ReviewData } | null>(null);
   const [loading, setLoading] = useState(true);
   const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ container: scrollRef });
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 });
 
   useEffect(() => {
@@ -102,10 +107,10 @@ const PeriodReview = () => {
 
   if (loading) {
     return (
-      <main className="min-h-dvh bg-background px-5 py-16">
-        <div className="mx-auto max-w-3xl space-y-6">
-          <Skeleton className="h-10 w-72" />
-          <Skeleton className="h-40 w-full" />
+      <main className="min-h-dvh bg-background px-6 py-16">
+        <div className="mx-auto max-w-lg space-y-6">
+          <Skeleton className="h-10 w-56" />
+          <Skeleton className="h-28 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
       </main>
@@ -115,7 +120,7 @@ const PeriodReview = () => {
   if (!review) {
     return (
       <main className="min-h-dvh bg-background px-4 py-16">
-        <div className="mx-auto max-w-2xl text-center space-y-3">
+        <div className="mx-auto max-w-md text-center space-y-3">
           <h1 className="text-2xl font-semibold">Review not found</h1>
           <p className="text-muted-foreground">This review may have been removed or is not public.</p>
           <Link to={`/feed/${slug}`} className="text-primary underline">
@@ -131,14 +136,10 @@ const PeriodReview = () => {
     summary,
     scale,
     categoryBreakdown,
-    crimeBreakdown,
-    councilBreakdown,
     anomalies = [],
     risingTerms = [],
-    fadingTerms = [],
     places = [],
     entities = [],
-    categoryPerformance = [],
     sourceScorecard = [],
     timeline,
     hotTopics,
@@ -148,23 +149,31 @@ const PeriodReview = () => {
 
   const place = topic?.name ?? 'the area';
   const maxMonth = Math.max(1, ...timeline.map((t) => t.count));
-  const maxCat = Math.max(1, ...categoryBreakdown.map((c) => c.count));
-  const movers = [...categoryBreakdown]
+  const peakMonth = timeline.reduce<{ month: string; count: number } | null>(
+    (best, t) => (!best || t.count > best.count ? t : best),
+    null
+  );
+  const topMover = [...categoryBreakdown]
     .filter((c) => c.change_percent != null && Math.abs(c.change_percent) >= 15 && c.count + c.previous >= 6)
-    .sort((a, b) => Math.abs(b.change_percent ?? 0) - Math.abs(a.change_percent ?? 0))
-    .slice(0, 5);
+    .sort((a, b) => Math.abs(b.change_percent ?? 0) - Math.abs(a.change_percent ?? 0))[0];
   const totalWords = scale?.total_words ?? summary.total_words ?? 0;
+  const spike = anomalies[0];
+  const names = (entities.length > 0 ? entities : hotTopics).slice(0, 6);
+  const pullQuote = (review.narrative ?? '').split(/\n{2,}/)[0]?.trim() ?? '';
 
   return (
-    <main className="min-h-dvh bg-background">
+    <main
+      ref={scrollRef}
+      className="h-dvh overflow-y-auto snap-y snap-mandatory bg-background scroll-smooth"
+    >
       <motion.div
         className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-primary"
         style={{ scaleX: progress }}
         aria-hidden
       />
 
-      {/* Chapter 1 — cover */}
-      <ReviewChapter className="min-h-[85dvh] flex flex-col justify-center">
+      {/* Cover */}
+      <ReviewSlide>
         <Link
           to={`/feed/${slug}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-10"
@@ -172,211 +181,103 @@ const PeriodReview = () => {
           <ArrowLeft className="h-3.5 w-3.5" />
           {topic?.name ?? 'Feed'}
         </Link>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">{review.label}</p>
+        <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground mb-4">{review.label}</p>
         <MaskRevealHeading
           as="h1"
           onScroll={false}
-          className="text-4xl sm:text-6xl font-semibold tracking-tight leading-[1.05]"
+          className="text-[clamp(2.5rem,11vw,4.5rem)] font-semibold tracking-tight leading-[1.02]"
           segments={[{ text: 'The state of ' }, { text: place, italic: true }]}
         />
-        {d.headline && (
-          <Reveal delay={0.35} className="mt-6">
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-xl">{d.headline}</p>
-          </Reveal>
-        )}
-        <Reveal delay={0.5} className="mt-12">
-          <div className="flex flex-wrap gap-x-10 gap-y-6">
+        <Reveal delay={0.4} className="mt-10">
+          <div className="flex items-end gap-8">
             <div>
-              <div className="text-4xl font-semibold">
+              <div className="text-5xl font-semibold tracking-tight">
                 <CountUp value={summary.total_stories} />
               </div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mt-1">Stories</div>
+              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">Stories</p>
             </div>
-            {totalWords > 0 && (
-              <div>
-                <div className="text-4xl font-semibold">
-                  <CountUp value={totalWords} />
-                </div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mt-1">Words written</div>
-              </div>
-            )}
             <div>
-              <div className="text-4xl font-semibold">
+              <div className="text-5xl font-semibold tracking-tight">
                 <CountUp value={summary.categories_covered} />
               </div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mt-1">Beats covered</div>
+              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">Beats</p>
             </div>
           </div>
         </Reveal>
-      </ReviewChapter>
+        <motion.div
+          className="mt-14 flex items-center gap-2 text-xs text-muted-foreground"
+          animate={reduce ? undefined : { y: [0, 6, 0] }}
+          transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+        >
+          <ChevronDown className="h-4 w-4" />
+          Scroll
+        </motion.div>
+      </ReviewSlide>
 
-      {/* Chapter 2 — scale */}
-      {scale && (
-        <ReviewChapter tone="inverted">
-          <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'The year ' }, { text: 'in numbers', italic: true }]}
-          />
-          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-8">
-            {[
-              { label: 'Avg words per story', value: scale.avg_words },
-              { label: 'Sources drawn on', value: scale.source_count },
-              { label: 'Days with news', value: scale.days_covered },
-              { label: 'Busiest day', value: scale.busiest_day?.count ?? 0 },
-            ].map((s, i) => (
-              <Reveal key={s.label} delay={i * 0.08}>
-                <div className="text-3xl font-semibold">
-                  <CountUp value={s.value} />
-                </div>
-                <div className="text-xs uppercase tracking-wide opacity-70 mt-1">{s.label}</div>
-              </Reveal>
-            ))}
-          </div>
-          {scale.busiest_day && (
-            <Reveal delay={0.4} className="mt-8">
-              <p className="text-sm opacity-70">
-                Busiest single day:{' '}
-                {new Date(scale.busiest_day.date).toLocaleDateString('en-GB', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-                .
-              </p>
+      {/* Words written */}
+      {totalWords > 0 && (
+        <ReviewSlide tone="inverted" label="The scale">
+          <BigStat value={<CountUp value={totalWords} />} caption={`words published about ${place}`} />
+          {scale && (
+            <Reveal delay={0.2} className="mt-10 flex gap-10 text-sm opacity-70">
+              <span>{scale.days_covered} days with news</span>
+              <span>{scale.source_count} sources</span>
             </Reveal>
           )}
-        </ReviewChapter>
+        </ReviewSlide>
       )}
 
-      {/* Chapter 3 — editor's note */}
-      {review.narrative && (
-        <ReviewChapter>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-6">Editor's note</p>
-          <div className="space-y-5">
-            {review.narrative.split(/\n{2,}/).map((para, i) => (
-              <Reveal key={i} delay={i * 0.1}>
-                <p className={i === 0 ? 'text-xl sm:text-2xl leading-relaxed font-medium' : 'text-base leading-relaxed text-muted-foreground'}>
-                  {para}
-                </p>
-              </Reveal>
-            ))}
-          </div>
-        </ReviewChapter>
+      {/* Pull quote */}
+      {pullQuote && (
+        <ReviewSlide label="In short">
+          <Reveal>
+            <p className="text-2xl sm:text-3xl font-medium leading-snug tracking-tight">{pullQuote}</p>
+          </Reveal>
+        </ReviewSlide>
       )}
 
-      {/* Chapter 4 — what we covered */}
-      <ReviewChapter tone="accent">
-        <MaskRevealHeading
-          className="text-3xl sm:text-4xl font-semibold tracking-tight"
-          segments={[{ text: 'What we ' }, { text: 'covered', italic: true }]}
-        />
-        <ul className="mt-10 space-y-5">
-          {categoryBreakdown.map((c, i) => (
-            <Reveal key={c.slug} delay={Math.min(0.4, i * 0.05)}>
-              <li className="space-y-2">
-                <div className="flex items-baseline justify-between text-sm">
-                  <span className="font-medium">{c.name}</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {c.count}
-                    {c.change_percent != null && (
-                      <span className={c.change_percent >= 0 ? 'text-primary ml-2' : 'text-muted-foreground ml-2'}>
-                        {c.change_percent > 0 ? '+' : ''}
-                        {c.change_percent}%
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <GrowBar ratio={c.count / maxCat} />
-              </li>
-            </Reveal>
-          ))}
-        </ul>
-      </ReviewChapter>
-
-      {/* Chapter 5 — movers */}
-      {movers.length > 0 && (
-        <ReviewChapter>
+      {/* Top beats */}
+      {categoryBreakdown.length > 0 && (
+        <ReviewSlide tone="accent" label="What we covered">
           <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'What ' }, { text: 'shifted', italic: true }]}
+            className="mb-8 text-3xl font-semibold tracking-tight"
+            segments={[{ text: 'The five ' }, { text: 'biggest beats', italic: true }]}
           />
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            {movers.map((m, i) => (
-              <Reveal key={m.slug} delay={i * 0.08}>
-                <div className="rounded-2xl border border-border p-5">
-                  <div className="flex items-center gap-2 text-3xl font-semibold">
-                    {(m.change_percent ?? 0) >= 0 ? (
-                      <TrendingUp className="h-6 w-6 text-primary" />
-                    ) : (
-                      <TrendingDown className="h-6 w-6 text-muted-foreground" />
-                    )}
-                    {(m.change_percent ?? 0) > 0 ? '+' : ''}
-                    {m.change_percent}%
-                  </div>
-                  <p className="mt-2 font-medium">{m.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {m.previous} → {m.count} stories
-                  </p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </ReviewChapter>
+          <RankRows
+            items={categoryBreakdown.slice(0, 5).map((c) => ({
+              key: c.slug,
+              label: c.name,
+              value: c.count,
+              note: c.change_percent != null ? `${c.change_percent > 0 ? '+' : ''}${c.change_percent}%` : undefined,
+            }))}
+          />
+        </ReviewSlide>
       )}
 
-      {/* Chapter 6 — crime and council deep dives */}
-      {[
-        { title: 'Crime', data: crimeBreakdown },
-        { title: 'Council & politics', data: councilBreakdown },
-      ]
-        .filter((b) => (b.data?.total ?? 0) > 0)
-        .map((b, bi) => (
-          <ReviewChapter key={b.title} tone={bi % 2 === 0 ? 'accent' : 'default'}>
-            <MaskRevealHeading
-              className="text-3xl sm:text-4xl font-semibold tracking-tight"
-              segments={[{ text: `${b.title} — ` }, { text: 'up close', italic: true }]}
+      {/* Biggest shift */}
+      {topMover && (
+        <ReviewSlide label="The shift">
+          <div className="flex items-center gap-3">
+            {(topMover.change_percent ?? 0) >= 0 ? (
+              <TrendingUp className="h-10 w-10 text-primary" />
+            ) : (
+              <TrendingDown className="h-10 w-10 text-muted-foreground" />
+            )}
+            <BigStat
+              value={`${(topMover.change_percent ?? 0) > 0 ? '+' : ''}${topMover.change_percent}`}
+              suffix="%"
+              caption={`${topMover.name} — ${topMover.previous} to ${topMover.count} stories`}
             />
-            <p className="mt-3 text-muted-foreground">
-              <CountUp value={b.data!.total} /> stories in this period.
-            </p>
-            <ul className="mt-8 space-y-4">
-              {b.data!.items.slice(0, 10).map((item, i) => {
-                const max = Math.max(1, ...b.data!.items.map((x) => x.count));
-                return (
-                  <Reveal key={item.name} delay={Math.min(0.4, i * 0.05)}>
-                    <li className="space-y-2">
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="font-medium">{item.name}</span>
-                        <span className="text-muted-foreground tabular-nums">
-                          {item.count}
-                          {item.change_percent != null && (
-                            <span className="ml-2">
-                              {item.change_percent > 0 ? '+' : ''}
-                              {item.change_percent}%
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <GrowBar ratio={item.count / max} />
-                    </li>
-                  </Reveal>
-                );
-              })}
-            </ul>
-          </ReviewChapter>
-        ))}
+          </div>
+        </ReviewSlide>
+      )}
 
-      {/* Chapter 7 — month by month */}
-      {timeline.length > 0 && (
-        <ReviewChapter tone="inverted">
-          <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'Month ' }, { text: 'by month', italic: true }]}
-          />
-          <div className="mt-12 flex items-end gap-2 h-48">
+      {/* Rhythm */}
+      {timeline.length > 1 && (
+        <ReviewSlide tone="inverted" label="Month by month">
+          <div className="flex h-56 items-end gap-1.5">
             {timeline.map((t, i) => (
-              <div key={t.month} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-                <span className="text-[10px] opacity-70 tabular-nums">{t.count}</span>
+              <div key={t.month} className="flex h-full flex-1 flex-col justify-end gap-2">
                 <motion.div
                   className="w-full rounded-t bg-background/90"
                   initial={{ height: reduce ? `${(t.count / maxMonth) * 100}%` : 0 }}
@@ -384,222 +285,145 @@ const PeriodReview = () => {
                   viewport={{ once: true, margin: '-40px' }}
                   transition={{ duration: reduce ? 0 : 0.9, delay: reduce ? 0 : i * 0.05, ease: [0.19, 1, 0.22, 1] }}
                 />
-                <span className="text-[10px] opacity-70">{monthLabel(t.month)}</span>
+                <span className="text-center text-[10px] opacity-60">{monthLabel(t.month)}</span>
               </div>
             ))}
           </div>
-        </ReviewChapter>
+          {peakMonth && (
+            <Reveal delay={0.3} className="mt-8">
+              <p className="text-sm opacity-70">
+                Busiest month: {monthLabel(peakMonth.month)} — {peakMonth.count} stories.
+              </p>
+            </Reveal>
+          )}
+        </ReviewSlide>
       )}
 
-      {/* Chapter 8 — anomalies */}
-      {anomalies.length > 0 && (
-        <ReviewChapter>
+      {/* Spike */}
+      {spike && (
+        <ReviewSlide tone="accent" label="Out of nowhere">
+          <Reveal>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              <Zap className="h-3.5 w-3.5 text-primary" />
+              {monthLabel(spike.month)}
+            </div>
+            <p className="mt-4 text-[clamp(2.5rem,12vw,4.5rem)] font-semibold leading-none tracking-tight">
+              {spike.term}
+            </p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {spike.multiple}× its usual level — {spike.count} stories that month
+            </p>
+          </Reveal>
+        </ReviewSlide>
+      )}
+
+      {/* Words of the period */}
+      {(risingTerms.length > 0 || names.length > 0) && (
+        <ReviewSlide label="The words">
           <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'Out of ' }, { text: 'nowhere', italic: true }]}
+            className="mb-8 text-3xl font-semibold tracking-tight"
+            segments={[{ text: 'Names that ' }, { text: 'kept coming up', italic: true }]}
           />
-          <p className="mt-3 text-muted-foreground">
-            Words that spiked well above their own normal level in a single month.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            {anomalies.map((a, i) => (
-              <Reveal key={`${a.term}-${a.month}`} delay={i * 0.07}>
-                <div className="rounded-2xl border border-border p-5">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                    <Zap className="h-3.5 w-3.5 text-primary" />
-                    {monthLabel(a.month)}
-                  </div>
-                  <p className="mt-2 text-xl font-semibold">{a.term}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {a.count} stories that month — {a.multiple}× its usual {a.baseline}
-                  </p>
-                </div>
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
+            {names.map((h, i) => (
+              <Reveal key={h.term} delay={Math.min(0.4, i * 0.06)}>
+                <span
+                  className="font-semibold tracking-tight"
+                  style={{ fontSize: `${Math.min(2.4, 1.1 + h.count / 22)}rem` }}
+                >
+                  {h.term}
+                </span>
               </Reveal>
             ))}
           </div>
-        </ReviewChapter>
-      )}
-
-      {/* Chapter 9 — rising and fading vocabulary */}
-      {(risingTerms.length > 0 || fadingTerms.length > 0) && (
-        <ReviewChapter tone="accent">
-          <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'New words, ' }, { text: 'old words', italic: true }]}
-          />
           {risingTerms.length > 0 && (
-            <div className="mt-10">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">Newly in the news</p>
-              <div className="flex flex-wrap gap-2">
-                {risingTerms.map((t, i) => (
-                  <Reveal key={t.term} delay={Math.min(0.5, i * 0.04)}>
-                    <span className="rounded-full bg-primary/10 border border-primary/30 px-3 py-1.5 text-sm">
-                      {t.term}
-                      <span className="text-muted-foreground ml-2 text-xs tabular-nums">{t.count}</span>
-                    </span>
-                  </Reveal>
-                ))}
-              </div>
-            </div>
-          )}
-          {fadingTerms.length > 0 && (
-            <div className="mt-10">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">Gone quiet</p>
-              <div className="flex flex-wrap gap-2">
-                {fadingTerms.map((t, i) => (
-                  <Reveal key={t.term} delay={Math.min(0.5, i * 0.04)}>
-                    <span className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground line-through decoration-muted-foreground/40">
-                      {t.term}
-                    </span>
-                  </Reveal>
-                ))}
-              </div>
-            </div>
-          )}
-        </ReviewChapter>
-      )}
-
-      {/* Chapter 10 — places and names */}
-      {(places.length > 0 || entities.length > 0 || hotTopics.length > 0) && (
-        <ReviewChapter>
-          <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'Places and ' }, { text: 'names', italic: true }]}
-          />
-          {places.length > 0 && (
-            <div className="mt-10">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">Streets and landmarks</p>
-              <div className="flex flex-wrap gap-2">
-                {places.map((p) => (
-                  <span key={p.term} className="rounded-full border border-border px-3 py-1.5 text-sm">
-                    {p.term}
-                    <span className="text-muted-foreground ml-2 text-xs tabular-nums">{p.count}</span>
+            <div className="mt-10 flex flex-wrap gap-2">
+              {risingTerms.slice(0, 6).map((t, i) => (
+                <Reveal key={t.term} delay={Math.min(0.4, i * 0.05)}>
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm">
+                    ↑ {t.term}
                   </span>
-                ))}
-              </div>
-            </div>
-          )}
-          {(entities.length > 0 ? entities : hotTopics).length > 0 && (
-            <div className="mt-10">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">Most named</p>
-              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-                {(entities.length > 0 ? entities : hotTopics).map((h) => (
-                  <span
-                    key={h.term}
-                    className="font-semibold tracking-tight"
-                    style={{ fontSize: `${Math.min(2.2, 1 + h.count / 25)}rem` }}
-                  >
-                    {h.term}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </ReviewChapter>
-      )}
-
-      {/* Chapter 11 — reader signal */}
-      {(topStories.length > 0 || categoryPerformance.length > 0) && (
-        <ReviewChapter tone="accent">
-          <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'What readers ' }, { text: 'cared about', italic: true }]}
-          />
-          {categoryPerformance.length > 0 && (
-            <div className="mt-10">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">Reads per story, by beat</p>
-              <ul className="space-y-3">
-                {categoryPerformance.map((c, i) => {
-                  const max = Math.max(1, ...categoryPerformance.map((x) => x.reads_per_story));
-                  return (
-                    <Reveal key={c.slug} delay={Math.min(0.4, i * 0.05)}>
-                      <li className="space-y-1.5">
-                        <div className="flex items-baseline justify-between text-sm">
-                          <span className="font-medium">{c.name}</span>
-                          <span className="text-muted-foreground tabular-nums">{c.reads_per_story}</span>
-                        </div>
-                        <GrowBar ratio={c.reads_per_story / max} className="h-1.5" />
-                      </li>
-                    </Reveal>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-          {topStories.length > 0 && (
-            <ul className="mt-10 space-y-3">
-              {topStories.map((s, i) => (
-                <Reveal key={s.id} delay={Math.min(0.4, i * 0.05)}>
-                  <li>
-                    <Link
-                      to={`/feed/${slug}/story/${s.slug ?? s.id}`}
-                      className="flex items-start gap-4 rounded-xl p-2 hover:bg-background transition-colors"
-                    >
-                      <span className="text-2xl font-semibold text-muted-foreground/50 tabular-nums w-8 shrink-0">
-                        {i + 1}
-                      </span>
-                      {s.cover_illustration_url && (
-                        <img
-                          src={s.cover_illustration_url}
-                          alt=""
-                          loading="lazy"
-                          className="h-14 w-14 rounded-lg object-cover shrink-0"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium line-clamp-2">{s.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {s.views} reads{s.shares > 0 ? ` · ${s.shares} shares` : ''}
-                        </p>
-                      </div>
-                    </Link>
-                  </li>
                 </Reveal>
               ))}
-            </ul>
+            </div>
           )}
-        </ReviewChapter>
+        </ReviewSlide>
       )}
 
-      {/* Chapter 12 — sources */}
-      {sourceScorecard.length > 0 && (
-        <ReviewChapter>
+      {/* Places */}
+      {places.length > 0 && (
+        <ReviewSlide tone="accent" label="On the map">
           <MaskRevealHeading
-            className="text-3xl sm:text-4xl font-semibold tracking-tight"
-            segments={[{ text: 'Where it ' }, { text: 'came from', italic: true }]}
+            className="mb-8 text-3xl font-semibold tracking-tight"
+            segments={[{ text: 'Streets in ' }, { text: 'the news', italic: true }]}
           />
-          <ul className="mt-10 space-y-3">
-            {sourceScorecard.map((s, i) => {
-              const max = Math.max(1, ...sourceScorecard.map((x) => x.count));
-              return (
-                <Reveal key={s.name} delay={Math.min(0.4, i * 0.05)}>
-                  <li className="space-y-1.5">
-                    <div className="flex items-baseline justify-between text-sm">
-                      <span className="font-medium">{s.name}</span>
-                      <span className="text-muted-foreground tabular-nums">{s.count}</span>
-                    </div>
-                    <GrowBar ratio={s.count / max} className="h-1.5" />
-                  </li>
-                </Reveal>
-              );
-            })}
-          </ul>
-        </ReviewChapter>
+          <div className="flex flex-wrap gap-2">
+            {places.slice(0, 8).map((p, i) => (
+              <Reveal key={p.term} delay={Math.min(0.4, i * 0.05)}>
+                <span className="rounded-full border border-border px-3 py-1.5 text-sm">{p.term}</span>
+              </Reveal>
+            ))}
+          </div>
+        </ReviewSlide>
       )}
 
-      <ReviewChapter tone="inverted" className="text-center">
+      {/* Most read */}
+      {topStories.length > 0 && (
+        <ReviewSlide label="Most read">
+          <ul className="space-y-4">
+            {topStories.slice(0, 3).map((s, i) => (
+              <Reveal key={s.id} delay={i * 0.08}>
+                <li>
+                  <Link
+                    to={`/feed/${slug}/story/${s.slug ?? s.id}`}
+                    className="flex items-center gap-4 rounded-2xl border border-border p-3 transition-colors hover:bg-muted"
+                  >
+                    {s.cover_illustration_url ? (
+                      <img
+                        src={s.cover_illustration_url}
+                        alt=""
+                        loading="lazy"
+                        className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <span className="w-8 shrink-0 text-2xl font-semibold tabular-nums text-muted-foreground/50">
+                        {i + 1}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-sm font-medium">{s.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{compact(s.views)} reads</p>
+                    </div>
+                  </Link>
+                </li>
+              </Reveal>
+            ))}
+          </ul>
+        </ReviewSlide>
+      )}
+
+      {/* Sources */}
+      {sourceScorecard.length > 0 && (
+        <ReviewSlide tone="inverted" label="Where it came from">
+          <RankRows
+            tone="inverted"
+            items={sourceScorecard.slice(0, 5).map((s) => ({ key: s.name, label: s.name, value: s.count }))}
+          />
+        </ReviewSlide>
+      )}
+
+      {/* Outro */}
+      <ReviewSlide className="text-center">
         <Reveal>
-          <p className="text-lg">
-            Every story above was gathered, checked and written for {place}.
-          </p>
+          <p className="text-xl font-medium tracking-tight">Every story, gathered and written for {place}.</p>
           <Link
             to={`/feed/${slug}`}
-            className="inline-block mt-6 rounded-full bg-background text-foreground px-6 py-3 text-sm font-medium"
+            className="mt-8 inline-block rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
           >
             Read the feed
           </Link>
         </Reveal>
-      </ReviewChapter>
+      </ReviewSlide>
     </main>
   );
 };
