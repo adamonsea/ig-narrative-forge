@@ -25,7 +25,7 @@ export const ReviewSlide = ({
   >
     <div className="mx-auto w-full max-w-lg">
       {label && (
-        <p className="mb-6 text-[11px] uppercase tracking-[0.24em] opacity-60">{label}</p>
+        <p className="mb-6 text-sm uppercase tracking-[0.22em] opacity-70">{label}</p>
       )}
       {children}
     </div>
@@ -47,7 +47,7 @@ export const BigStat = ({
       {value}
       {suffix && <span className="text-[0.35em] align-top ml-1 opacity-60">{suffix}</span>}
     </div>
-    <p className="mt-4 text-sm opacity-60">{caption}</p>
+    <p className="mt-5 text-lg leading-snug opacity-80">{caption}</p>
   </div>
 );
 
@@ -64,14 +64,15 @@ export const RankRows = ({
   return (
     <ul className="space-y-4">
       {items.map((item, i) => (
-        <li key={item.key} className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-4 text-sm">
+        <li key={item.key} className="space-y-2">
+          <div className="flex items-baseline justify-between gap-4 text-lg">
             <span className="font-medium truncate">{item.label}</span>
-            <span className="tabular-nums opacity-60">
+            <span className="tabular-nums opacity-70">
               {item.value}
               {item.note && <span className="ml-2">{item.note}</span>}
             </span>
           </div>
+
           <div
             className={cn(
               'h-1.5 overflow-hidden rounded-full',

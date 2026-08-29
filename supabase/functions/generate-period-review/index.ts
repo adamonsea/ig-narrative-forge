@@ -391,6 +391,155 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 12);
 
+    // ---- Distinctive terms: what was surprising, not what was expected ----
+    // Raw frequency surfaces the obvious (the town's own name, "police",
+    // "council"). Instead: drop terms that are generic or appear in a large
+    // share of headlines, then rank by volume × burstiness.
+    const totalStories = Math.max(1, current.length);
+    const topicWords = new Set(
+      `${topic?.name ?? ''} ${topic?.region ?? ''}`
+        .split(/\W+/)
+        .filter(Boolean)
+        .map((w) => w.toLowerCase())
+    );
+    const GENERIC_TERMS = new Set([
+      'police', 'council', 'court', 'news', 'update', 'live', 'video', 'watch', 'plans', 'plan',
+      'warning', 'appeal', 'death', 'died', 'crash', 'fire', 'road', 'roads', 'town', 'area',
+      'week', 'weekend', 'east', 'west', 'north', 'south', 'uk', 'britain', 'england', 'british',
+      'man', 'woman', 'men', 'women', 'people', 'family', 'local', 'residents', 'community',
+      'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september',
+      'october', 'november', 'december', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday',
+      'saturday', 'sunday', 'christmas', 'summer', 'winter', 'spring', 'autumn', 'best', 'top',
+      'here', 'what', 'when', 'where', 'why', 'how', 'now', 'still', 'back', 'again',
+    ]);
+    const isExpected = (term: string) =>
+      term
+        .toLowerCase()
+        .split(' ')
+        .every((w) => topicWords.has(w) || GENERIC_TERMS.has(w));
+
+    const scored = Object.entries(termCounts)
+      .map(([term, count]) => {
+        if (count < 4 || isExpected(term)) return null;
+        // A term in more than 12% of all headlines is the wallpaper, not the news.
+        if (count / totalStories > 0.12) return null;
+        const series = months.map((m) => termMonth[term]?.[m] ?? 0);
+        const { mean } = stats(series);
+        const peak = Math.max(0, ...series);
+        const burst = mean > 0 ? peak / mean : 1;
+        const monthsPresent = series.filter((v) => v > 0).length;
+        const score = count * (1 + Math.log(1 + burst)) * (term.includes(' ') ? 1.35 : 1);
+        return {
+          term,
+          count,
+          peak_month: months[series.indexOf(peak)] ?? null,
+          burst: Math.round(burst * 10) / 10,
+          months_present: monthsPresent,
+          series,
+          score: Math.round(score * 10) / 10,
+        };
+      })
+      .filter(Boolean) as Array<any>;
+    scored.sort((a, b) => b.score - a.score);
+
+    const distinctiveTerms = scored.slice(0, 18).map(({ series, ...rest }) => rest);
+
+    // Month-by-month series for the terms worth plotting (persistent, not one-hit).
+    const termTrends = scored
+      .filter((t) => t.months_present >= 3)
+      .slice(0, 6)
+      .map((t) => ({
+        term: t.term,
+        total: t.count,
+        series: t.series,
+        peak_month: t.peak_month,
+        trend: (() => {
+          const half = Math.floor(t.series.length / 2) || 1;
+          const first = t.series.slice(0, half).reduce((a: number, b: number) => a + b, 0);
+          const second = t.series.slice(half).reduce((a: number, b: number) => a + b, 0);
+          if (second > first * 1.5) return 'rising';
+          if (first > second * 1.5) return 'fading';
+          if (t.burst >= 3) return 'spiky';
+          return 'steady';
+        })(),
+      }));
+    const trendMonths = months;
+
+    // ---- Sub-category insight across the whole taxonomy -------------------
+    // Not just crime and council: every parent beat that actually splits.
+    const parentSubs: Record<
+      string,
+      { name: string; slug: string; total: number; subs: Record<string, number>; months: Record<string, Record<string, number>> }
+    > = {};
+    const prevParentSubs: Record<string, Record<string, number>> = {};
+    for (const r of current) {
+      const a = assignments.get(r.id);
+      if (!a?.subcategory_id) continue;
+      const parent = catById.get(a.category_id) as any;
+      const sub = catById.get(a.subcategory_id) as any;
+      if (!parent || !sub) continue;
+      const rec = (parentSubs[parent.slug] ??= {
+        name: parent.name,
+        slug: parent.slug,
+        total: 0,
+        subs: {},
+        months: {},
+      });
+      rec.total += 1;
+      rec.subs[sub.name] = (rec.subs[sub.name] ?? 0) + 1;
+      const m = monthKey(r.created_at);
+      ((rec.months[sub.name] ??= {})[m] = (rec.months[sub.name][m] ?? 0) + 1);
+    }
+    for (const r of previous) {
+      const a = assignments.get(r.id);
+      if (!a?.subcategory_id) continue;
+      const parent = catById.get(a.category_id) as any;
+      const sub = catById.get(a.subcategory_id) as any;
+      if (!parent || !sub) continue;
+      const rec = (prevParentSubs[parent.slug] ??= {});
+      rec[sub.name] = (rec[sub.name] ?? 0) + 1;
+    }
+
+    const subcategoryInsights = Object.values(parentSubs)
+      .filter((p) => Object.keys(p.subs).length >= 2 && p.total >= 6)
+      .map((p) => {
+        const prev = prevParentSubs[p.slug] ?? {};
+        const items = Object.entries(p.subs)
+          .map(([name, count]) => {
+            const byMonth = p.months[name] ?? {};
+            const peak = Object.entries(byMonth).sort((a, b) => b[1] - a[1])[0] ?? null;
+            const before = prev[name] ?? 0;
+            return {
+              name,
+              count,
+              share: Math.round((count / p.total) * 100),
+              previous: before,
+              change_percent: before > 0 ? Math.round(((count - before) / before) * 100) : null,
+              peak_month: peak ? peak[0] : null,
+            };
+          })
+          .sort((a, b) => b.count - a.count);
+        const lead = items[0];
+        return {
+          slug: p.slug,
+          name: p.name,
+          total: p.total,
+          items: items.slice(0, 8),
+          concentration: lead ? lead.share : 0,
+        };
+      })
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 6);
+
+    // The sub-beats that moved hardest, across every parent category.
+    const subcategoryMovers = subcategoryInsights
+      .flatMap((p) =>
+        p.items
+          .filter((i) => i.change_percent != null && Math.abs(i.change_percent) >= 25 && i.count + i.previous >= 6)
+          .map((i) => ({ parent: p.name, ...i }))
+      )
+      .sort((a, b) => Math.abs(b.change_percent ?? 0) - Math.abs(a.change_percent ?? 0))
+      .slice(0, 6);
 
 
     // Reader signal.
@@ -463,11 +612,12 @@ Deno.serve(async (req) => {
         summary,
         scale,
         categoryBreakdown: categoryBreakdown.slice(0, 12),
-        crimeBreakdown,
-        councilBreakdown,
+        subcategoryInsights,
+        subcategoryMovers,
         anomalies,
+        distinctiveTerms: distinctiveTerms.slice(0, 12),
+        termTrends,
         risingTerms,
-        hotTopics: hotTopics.slice(0, 12),
         timeline,
       });
       const resp = await llmFetch(
@@ -481,12 +631,18 @@ Deno.serve(async (req) => {
 
 Use ONLY the figures below — invent nothing, name no story that is not listed. Plain British English, confident and specific, no bullet points, no headings.
 
-Also write one short headline (max 10 words) that captures the single most striking fact.
+Aim for insight a reader could not have guessed:
+- Lead with sub-beat detail (which kind of crime, which kind of council business), never the parent beat alone.
+- Say what changed and when, using peak months and the trend labels.
+- Do not state the obvious (that a local feed covers local crime, police or the council). Skip any figure that is merely expected.
+- No filler adjectives, no "in conclusion", no restating the data as a list.
+
+Also write one short headline (max 10 words) that captures the single most striking, least obvious fact.
 
 DATA:
 ${factSheet}
 
-Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separated by \\n\\n, 180-240 words total"}`,
+Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separated by \\n\\n, 150-200 words total"}`,
               },
             ],
             temperature: 0.4,
@@ -514,6 +670,11 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       headline,
       categoryBreakdown,
       subcategoryBreakdown,
+      subcategoryInsights,
+      subcategoryMovers,
+      distinctiveTerms,
+      termTrends,
+      trendMonths,
       crimeBreakdown,
       councilBreakdown,
       anomalies,
