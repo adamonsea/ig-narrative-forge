@@ -95,43 +95,69 @@ Deno.serve(async (req) => {
     const categories = await loadTaxonomy(service, topicId);
     const bySlug = new Map(categories.map((c) => [c.slug, c]));
 
-    // Stories in this topic that have no assignment yet.
-    const { data: topicArticles, error: taError } = await service
-      .from('topic_articles')
-      .select('id')
-      .eq('topic_id', topicId)
-      .limit(20000);
-    if (taError) throw new Error(taError.message);
-
-    const taIds = (topicArticles ?? []).map((r: any) => r.id);
-    if (taIds.length === 0) {
-      return new Response(JSON.stringify({ processed: 0, remaining: 0 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: assigned } = await service
-      .from('story_category_assignments')
-      .select('story_id')
-      .eq('topic_id', topicId)
-      .limit(20000);
-    const assignedIds = new Set((assigned ?? []).map((r: any) => r.story_id));
+    const explicitIds: string[] = Array.isArray(body.storyIds)
+      ? body.storyIds.filter((v: unknown) => typeof v === 'string').slice(0, 100)
+      : [];
 
     const pending: StoryForClassification[] = [];
-    const chunkSize = 200;
-    for (let i = 0; i < taIds.length && pending.length < limit; i += chunkSize) {
+
+    if (explicitIds.length > 0) {
+      // Classify-on-ingest: only the stories we were handed, skipping any that
+      // already carry an assignment.
+      const { data: assigned } = await service
+        .from('story_category_assignments')
+        .select('story_id')
+        .in('story_id', explicitIds);
+      const assignedIds = new Set((assigned ?? []).map((r: any) => r.story_id));
+
       const { data: stories } = await service
         .from('stories')
-        .select('id, title, topic_article_id')
-        .in('topic_article_id', taIds.slice(i, i + chunkSize))
-        .order('created_at', { ascending: false });
+        .select('id, title')
+        .in('id', explicitIds);
 
       for (const s of stories ?? []) {
         if (assignedIds.has(s.id)) continue;
         pending.push({ id: s.id, title: s.title ?? '', snippet: '' });
-        if (pending.length >= limit) break;
+      }
+    } else {
+      // Stories in this topic that have no assignment yet.
+      const { data: topicArticles, error: taError } = await service
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', topicId)
+        .limit(20000);
+      if (taError) throw new Error(taError.message);
+
+      const taIds = (topicArticles ?? []).map((r: any) => r.id);
+      if (taIds.length === 0) {
+        return new Response(JSON.stringify({ processed: 0, remaining: 0 }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: assigned } = await service
+        .from('story_category_assignments')
+        .select('story_id')
+        .eq('topic_id', topicId)
+        .limit(20000);
+      const assignedIds = new Set((assigned ?? []).map((r: any) => r.story_id));
+
+      const chunkSize = 200;
+      for (let i = 0; i < taIds.length && pending.length < limit; i += chunkSize) {
+        const { data: stories } = await service
+          .from('stories')
+          .select('id, title, topic_article_id')
+          .in('topic_article_id', taIds.slice(i, i + chunkSize))
+          .order('created_at', { ascending: false });
+
+        for (const s of stories ?? []) {
+          if (assignedIds.has(s.id)) continue;
+          pending.push({ id: s.id, title: s.title ?? '', snippet: '' });
+          if (pending.length >= limit) break;
+        }
       }
     }
+
 
     // Enrich with the opening slide for context.
     const ids = pending.map((p) => p.id);
