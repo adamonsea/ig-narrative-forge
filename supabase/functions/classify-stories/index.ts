@@ -129,26 +129,34 @@ Deno.serve(async (req) => {
       }
     } else {
       // Stories in this topic that have no assignment yet.
-      const { data: topicArticles, error: taError } = await service
-        .from('topic_articles')
-        .select('id')
-        .eq('topic_id', topicId)
-        .limit(20000);
-      if (taError) throw new Error(taError.message);
-
-      const taIds = (topicArticles ?? []).map((r: any) => r.id);
+      // PostgREST caps each response at 1000 rows — page through explicitly.
+      const taIds: string[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error: taError } = await service
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', topicId)
+          .range(from, from + 999);
+        if (taError) throw new Error(taError.message);
+        taIds.push(...(data ?? []).map((r: any) => r.id));
+        if (!data || data.length < 1000) break;
+      }
       if (taIds.length === 0) {
         return new Response(JSON.stringify({ processed: 0, remaining: 0 }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const { data: assigned } = await service
-        .from('story_category_assignments')
-        .select('story_id')
-        .eq('topic_id', topicId)
-        .limit(20000);
-      const assignedIds = new Set((assigned ?? []).map((r: any) => r.story_id));
+      const assignedIds = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data } = await service
+          .from('story_category_assignments')
+          .select('story_id')
+          .eq('topic_id', topicId)
+          .range(from, from + 999);
+        for (const r of data ?? []) assignedIds.add((r as any).story_id);
+        if (!data || data.length < 1000) break;
+      }
 
       const chunkSize = 200;
       for (let i = 0; i < taIds.length && pending.length < limit; i += chunkSize) {
