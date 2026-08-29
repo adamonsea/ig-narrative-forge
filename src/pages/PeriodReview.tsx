@@ -68,8 +68,10 @@ const PeriodReview = () => {
   const [loading, setLoading] = useState(true);
   const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ container: scrollRef });
+  const [scrollReady, setScrollReady] = useState(false);
+  const { scrollYProgress } = useScroll(scrollReady ? { container: scrollRef } : {});
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 });
+
 
   useEffect(() => {
     let cancelled = false;
@@ -104,6 +106,15 @@ const PeriodReview = () => {
       document.title = `${review.data.topic?.name ?? 'Feed'} review — ${review.label}`;
     }
   }, [review]);
+
+  useEffect(() => {
+    if (!loading && review && scrollRef.current) {
+      setScrollReady(true);
+    } else {
+      setScrollReady(false);
+    }
+  }, [loading, review]);
+
 
   if (loading) {
     return (
