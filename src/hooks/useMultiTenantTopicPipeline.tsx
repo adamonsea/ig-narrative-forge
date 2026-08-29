@@ -1383,7 +1383,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       const existingIds = new Set(articles.map(a => a.id));
       const uniqueNewArticles = newArticles.filter(a => !existingIds.has(a.id));
       
-      setArticles(prev => [...prev, ...uniqueNewArticles]);
+      setArticles(prev => [...prev, ...filterTombstoned(uniqueNewArticles, removedArticlesRef.current)]);
       setArticlesPage(nextPage);
       setHasMoreArticles(uniqueNewArticles.length === ARTICLES_PAGE_SIZE);
       
