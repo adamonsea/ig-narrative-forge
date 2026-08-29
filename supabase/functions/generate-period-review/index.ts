@@ -21,6 +21,33 @@ function monthKey(iso: string) {
   return iso.slice(0, 7);
 }
 
+const PLACE_SUFFIX =
+  /\b(Road|Street|Avenue|Lane|Park|Pier|Drive|Way|Square|Close|Hill|Beach|Seafront|Centre|Center|Hospital|School|Station|Bridge|Green|Gardens|Estate|Terrace|Crescent|Court|Market|Common|Wood|Downs|Bay|Harbour|Theatre)\b/;
+
+/** Capitalised unigrams and bigrams from a headline, minus stopwords. */
+function extractTerms(title: string): string[] {
+  const words = (title ?? '')
+    .replace(/[^A-Za-z' -]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 3);
+  const out = new Set<string>();
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (!/^[A-Z]/.test(w)) continue;
+    if (STOPWORDS.has(w.toLowerCase())) continue;
+    out.add(w);
+    if (i + 1 < words.length && /^[A-Z]/.test(words[i + 1])) out.add(`${w} ${words[i + 1]}`);
+  }
+  return [...out];
+}
+
+function stats(values: number[]) {
+  const mean = values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
+  const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, values.length);
+  return { mean, sd: Math.sqrt(variance) };
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -61,7 +88,14 @@ Deno.serve(async (req) => {
     const taIds = (topicArticles ?? []).map((r: any) => r.id);
 
     // Fetch published stories in both the current and previous window.
-    type Row = { id: string; title: string; created_at: string; cover_illustration_url: string | null; slug: string | null };
+    type Row = {
+      id: string;
+      title: string;
+      created_at: string;
+      cover_illustration_url: string | null;
+      slug: string | null;
+      publication_name: string | null;
+    };
     const current: Row[] = [];
     const previous: Row[] = [];
 
@@ -69,7 +103,7 @@ Deno.serve(async (req) => {
       const chunk = taIds.slice(i, i + 200);
       const { data: rows } = await service
         .from('stories')
-        .select('id, title, created_at, cover_illustration_url, slug')
+        .select('id, title, created_at, cover_illustration_url, slug, publication_name')
         .in('topic_article_id', chunk)
         .eq('is_published', true)
         .gte('created_at', prevStartISO)
@@ -181,6 +215,147 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 20);
 
+    // ---- Scale of the archive -------------------------------------------
+    const currentIdList = current.map((s) => s.id);
+    let totalWords = 0;
+    for (let i = 0; i < currentIdList.length; i += 300) {
+      const { data: slideRows } = await service
+        .from('slides')
+        .select('word_count, content')
+        .in('story_id', currentIdList.slice(i, i + 300));
+      for (const s of slideRows ?? []) {
+        totalWords += s.word_count ?? String(s.content ?? '').split(/\s+/).filter(Boolean).length;
+      }
+    }
+
+    const dayCounts: Record<string, number> = {};
+    for (const r of current) {
+      const d = r.created_at.slice(0, 10);
+      dayCounts[d] = (dayCounts[d] ?? 0) + 1;
+    }
+    const busiest = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0] ?? null;
+
+    const sourceCounts: Record<string, number> = {};
+    for (const r of current) {
+      const name = (r.publication_name ?? '').trim();
+      if (!name) continue;
+      sourceCounts[name] = (sourceCounts[name] ?? 0) + 1;
+    }
+    const sourceScorecard = Object.entries(sourceCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const scale = {
+      total_stories: current.length,
+      total_words: totalWords,
+      avg_words: current.length ? Math.round(totalWords / current.length) : 0,
+      source_count: Object.keys(sourceCounts).length,
+      busiest_day: busiest ? { date: busiest[0], count: busiest[1] } : null,
+      days_covered: Object.keys(dayCounts).length,
+    };
+
+    // ---- Crime / council sub-breakdowns ----------------------------------
+    const subCountsFor = (rows: Row[], parentMatch: RegExp) => {
+      const counts: Record<string, number> = {};
+      for (const r of rows) {
+        const a = assignments.get(r.id);
+        if (!a) continue;
+        const parent = catById.get(a.category_id) as any;
+        if (!parent || !parentMatch.test(parent.slug)) continue;
+        const sub = a.subcategory_id ? (catById.get(a.subcategory_id) as any) : null;
+        const key = sub?.name ?? 'Other';
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+      return counts;
+    };
+    const buildBreakdown = (match: RegExp) => {
+      const now = subCountsFor(current, match);
+      const before = subCountsFor(previous, match);
+      const total = Object.values(now).reduce((a, b) => a + b, 0);
+      return {
+        total,
+        items: Object.entries(now)
+          .map(([name, count]) => {
+            const prev = before[name] ?? 0;
+            return {
+              name,
+              count,
+              previous: prev,
+              change_percent: prev > 0 ? Math.round(((count - prev) / prev) * 100) : null,
+            };
+          })
+          .sort((a, b) => b.count - a.count),
+      };
+    };
+    const crimeBreakdown = buildBreakdown(/crime|police|court/);
+    const councilBreakdown = buildBreakdown(/council|politic|planning|development/);
+
+    // ---- Anomalies: months where a term spiked above its own baseline ----
+    const months = timeline.map((t) => t.month);
+    const termMonth: Record<string, Record<string, number>> = {};
+    for (const r of current) {
+      const m = monthKey(r.created_at);
+      for (const t of extractTerms(r.title)) {
+        (termMonth[t] ??= {})[m] = (termMonth[t][m] ?? 0) + 1;
+      }
+    }
+    const anomalies = Object.entries(termMonth)
+      .map(([term, byMonth]) => {
+        const series = months.map((m) => byMonth[m] ?? 0);
+        const total = series.reduce((a, b) => a + b, 0);
+        if (total < 5 || months.length < 3) return null;
+        const { mean, sd } = stats(series);
+        const peak = Math.max(...series);
+        const peakMonth = months[series.indexOf(peak)];
+        if (peak < 3 || sd === 0 || peak < mean + 2 * sd) return null;
+        return {
+          term,
+          month: peakMonth,
+          count: peak,
+          baseline: Math.round(mean * 10) / 10,
+          multiple: Math.round((peak / Math.max(0.5, mean)) * 10) / 10,
+        };
+      })
+      .filter(Boolean)
+      .sort((a: any, b: any) => b.multiple - a.multiple)
+      .slice(0, 8) as Array<{ term: string; month: string; count: number; baseline: number; multiple: number }>;
+
+    // ---- Rising and fading vocabulary ------------------------------------
+    const prevTermCounts: Record<string, number> = {};
+    for (const r of previous) {
+      for (const t of extractTerms(r.title)) prevTermCounts[t] = (prevTermCounts[t] ?? 0) + 1;
+    }
+    const peakMonthOf = (term: string) => {
+      const byMonth = termMonth[term] ?? {};
+      const entries = Object.entries(byMonth).sort((a, b) => b[1] - a[1]);
+      return entries[0]?.[0] ?? null;
+    };
+    const risingTerms = Object.entries(termCounts)
+      .filter(([term, count]) => count >= 3 && (prevTermCounts[term] ?? 0) === 0)
+      .map(([term, count]) => ({ term, count, month: peakMonthOf(term) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+    const fadingTerms = Object.entries(prevTermCounts)
+      .filter(([term, count]) => count >= 3 && (termCounts[term] ?? 0) === 0)
+      .map(([term, count]) => ({ term, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    // ---- Places and people ------------------------------------------------
+    const places = Object.entries(termCounts)
+      .filter(([term, count]) => count >= 2 && PLACE_SUFFIX.test(term))
+      .map(([term, count]) => ({ term, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+    const entities = Object.entries(termCounts)
+      .filter(([term, count]) => count >= 3 && term.includes(' ') && !PLACE_SUFFIX.test(term))
+      .map(([term, count]) => ({ term, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+
+
+
     // Reader signal.
     const currentIds = current.map((s) => s.id);
     const interactionCounts = new Map<string, { views: number; shares: number }>();
@@ -209,18 +384,54 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.views + b.shares * 3 - (a.views + a.shares * 3))
       .slice(0, 8);
 
+
+    // Reads per story by category — which beat actually earned attention.
+    const perfByCat: Record<string, { name: string; stories: number; views: number }> = {};
+    for (const r of current) {
+      const a = assignments.get(r.id);
+      const cat = a ? (catById.get(a.category_id) as any) : null;
+      const key = cat?.slug ?? 'uncategorised';
+      const rec = (perfByCat[key] ??= { name: cat?.name ?? 'Uncategorised', stories: 0, views: 0 });
+      rec.stories += 1;
+      rec.views += interactionCounts.get(r.id)?.views ?? 0;
+    }
+    const categoryPerformance = Object.entries(perfByCat)
+      .filter(([, v]) => v.stories >= 3)
+      .map(([slugKey, v]) => ({
+        slug: slugKey,
+        name: v.name,
+        stories: v.stories,
+        views: v.views,
+        reads_per_story: Math.round((v.views / v.stories) * 10) / 10,
+      }))
+      .sort((a, b) => b.reads_per_story - a.reads_per_story)
+      .slice(0, 8);
+
     const summary = {
       total_stories: current.length,
       previous_total: previous.length,
       change_percent: previous.length > 0 ? Math.round(((current.length - previous.length) / previous.length) * 100) : null,
       categories_covered: categoryBreakdown.length,
       total_views: topStories.reduce((n, s) => n + s.views, 0),
+      total_words: totalWords,
     };
+
 
     // Narrative from the computed numbers only.
     let narrative: string | null = null;
+    let headline: string | null = null;
     try {
-      const factSheet = JSON.stringify({ summary, categoryBreakdown: categoryBreakdown.slice(0, 12), hotTopics: hotTopics.slice(0, 12), timeline });
+      const factSheet = JSON.stringify({
+        summary,
+        scale,
+        categoryBreakdown: categoryBreakdown.slice(0, 12),
+        crimeBreakdown,
+        councilBreakdown,
+        anomalies,
+        risingTerms,
+        hotTopics: hotTopics.slice(0, 12),
+        timeline,
+      });
       const resp = await llmFetch(
         {
           body: {
@@ -230,16 +441,18 @@ Deno.serve(async (req) => {
                 role: 'user',
                 content: `Write an editor's note reviewing the period ${periodStart} to ${periodEnd} for the ${topic?.name ?? 'local'} news feed.
 
-Use ONLY the figures below — invent nothing, name no story that is not listed. 150-200 words, plain British English, calm and factual, no bullet points, no headings.
+Use ONLY the figures below — invent nothing, name no story that is not listed. Plain British English, confident and specific, no bullet points, no headings.
+
+Also write one short headline (max 10 words) that captures the single most striking fact.
 
 DATA:
 ${factSheet}
 
-Return ONLY JSON: {"narrative":"..."}`,
+Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separated by \\n\\n, 180-240 words total"}`,
               },
             ],
             temperature: 0.4,
-            max_tokens: 800,
+            max_tokens: 1200,
             response_format: { type: 'json_object' },
           },
         },
@@ -247,7 +460,9 @@ Return ONLY JSON: {"narrative":"..."}`,
       );
       if (resp.ok) {
         const json = await resp.json();
-        narrative = parseJson<any>(json?.choices?.[0]?.message?.content ?? '')?.narrative ?? null;
+        const parsed = parseJson<any>(json?.choices?.[0]?.message?.content ?? '');
+        narrative = parsed?.narrative ?? null;
+        headline = parsed?.headline ?? null;
       } else {
         console.error('Narrative generation failed:', resp.status, (await resp.text()).slice(0, 300));
       }
@@ -257,8 +472,19 @@ Return ONLY JSON: {"narrative":"..."}`,
 
     const data = {
       summary,
+      scale,
+      headline,
       categoryBreakdown,
       subcategoryBreakdown,
+      crimeBreakdown,
+      councilBreakdown,
+      anomalies,
+      risingTerms,
+      fadingTerms,
+      places,
+      entities,
+      categoryPerformance,
+      sourceScorecard,
       timeline,
       hotTopics,
       topStories,
