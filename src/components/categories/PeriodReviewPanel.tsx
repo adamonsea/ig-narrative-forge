@@ -103,22 +103,53 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
       {reviews.length > 0 && (
         <div className="space-y-2">
           {reviews.map((r) => (
-            <Link
+            <div
               key={r.id}
-              to={`/feed/${topicSlug}/review/${r.slug}`}
-              className="flex items-center justify-between rounded-xl border border-border p-3 hover:bg-muted/50 transition-colors"
+              className="flex items-center justify-between gap-2 rounded-xl border border-border p-3 transition-colors hover:bg-muted/50"
             >
-              <div>
-                <p className="text-sm font-medium">{r.label}</p>
-                <p className="text-xs text-muted-foreground">
-                  {r.period_start} → {r.period_end}
-                </p>
-              </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            </Link>
+              <Link to={`/feed/${topicSlug}/review/${r.slug}`} className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{r.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {r.period_start} → {r.period_end}
+                  </p>
+                </div>
+                <ExternalLink className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    aria-label={`Delete review ${r.label}`}
+                    disabled={deletingId === r.id}
+                  >
+                    {deletingId === r.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this review?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      “{r.label}” will be removed for good. You can always generate it again.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => remove(r)}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           ))}
         </div>
       )}
+
     </div>
   );
 };
