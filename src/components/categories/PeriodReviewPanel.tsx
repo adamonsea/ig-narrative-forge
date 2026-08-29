@@ -4,7 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BarChart3, ExternalLink } from 'lucide-react';
+import { Loader2, BarChart3, ExternalLink, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Link } from 'react-router-dom';
 
 interface PeriodReviewPanelProps {
@@ -27,6 +38,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   const { toast } = useToast();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const today = new Date();
   const sixMonthsAgo = new Date(today.getTime() - 182 * 24 * 60 * 60 * 1000);
   const [start, setStart] = useState(isoDate(sixMonthsAgo));
@@ -45,6 +57,24 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId]);
+
+  const remove = async (r: ReviewRow) => {
+    setDeletingId(r.id);
+    try {
+      const { error } = await supabase.from('topic_period_reviews').delete().eq('id', r.id);
+      if (error) throw error;
+      setReviews((prev) => prev.filter((x) => x.id !== r.id));
+      toast({ title: 'Review deleted', description: r.label });
+    } catch (err) {
+      toast({
+        title: 'Could not delete review',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const generate = async () => {
     setGenerating(true);
