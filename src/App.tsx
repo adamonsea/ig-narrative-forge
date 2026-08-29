@@ -41,6 +41,8 @@ import Health from "./pages/Health";
 import ExplainerExport from "./pages/ExplainerExport";
 import Unsubscribe from "./pages/Unsubscribe";
 import WaitlistWelcome from "./pages/WaitlistWelcome";
+import PeriodReview from "./pages/PeriodReview";
+
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
