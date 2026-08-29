@@ -54,8 +54,16 @@ Return: [{"id":"<story id>","category":"<slug>","subcategory":"<slug or null>","
 
   if (!resp.ok) {
     const body = await resp.text();
-    throw new Error(`LLM request failed [${resp.status}]: ${body.slice(0, 500)}`);
+    const err = new Error(`LLM request failed [${resp.status}]: ${body.slice(0, 500)}`) as Error & {
+      status?: number;
+      blocked?: boolean;
+    };
+    err.status = resp.status;
+    // 402/403 are terminal (no credits / workspace limit reached) — never retry
+    err.blocked = resp.status === 402 || resp.status === 403;
+    throw err;
   }
+
 
   const json = await resp.json();
   const content = json?.choices?.[0]?.message?.content ?? '';
