@@ -62,6 +62,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
   const [animationModalStory, setAnimationModalStory] = useState<MultiTenantStory | null>(null);
   const { toast } = useToast();
+  const prefersReducedMotion = useReducedMotion();
   const { credits } = useCredits();
   const { isAdmin, isSuperAdmin, isProductOwner } = useAuth();
 
