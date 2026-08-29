@@ -230,12 +230,12 @@ Deno.serve(async (req) => {
         const seen = new Set<string>();
         const deduped = rows.filter((r) => (seen.has(r.story_id) ? false : (seen.add(r.story_id), true)));
 
-        if (rows.length) {
+        if (deduped.length) {
           const { error } = await service
             .from('story_category_assignments')
-            .upsert(rows, { onConflict: 'story_id' });
+            .upsert(deduped, { onConflict: 'story_id' });
           if (error) throw new Error(error.message);
-          processed += rows.length;
+          processed += deduped.length;
         }
       } catch (err) {
         failed += batch.length;
