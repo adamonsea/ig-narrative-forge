@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
         (termMonth[t] ??= {})[m] = (termMonth[t][m] ?? 0) + 1;
       }
     }
-    const anomalies = Object.entries(termMonth)
+    let anomalies = Object.entries(termMonth)
       .map(([term, byMonth]) => {
         const series = months.map((m) => byMonth[m] ?? 0);
         const total = series.reduce((a, b) => a + b, 0);
@@ -368,12 +368,12 @@ Deno.serve(async (req) => {
       const entries = Object.entries(byMonth).sort((a, b) => b[1] - a[1]);
       return entries[0]?.[0] ?? null;
     };
-    const risingTerms = Object.entries(termCounts)
+    let risingTerms = Object.entries(termCounts)
       .filter(([term, count]) => count >= 3 && (prevTermCounts[term] ?? 0) === 0)
       .map(([term, count]) => ({ term, count, month: peakMonthOf(term) }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 12);
-    const fadingTerms = Object.entries(prevTermCounts)
+    let fadingTerms = Object.entries(prevTermCounts)
       .filter(([term, count]) => count >= 3 && (termCounts[term] ?? 0) === 0)
       .map(([term, count]) => ({ term, count }))
       .sort((a, b) => b.count - a.count)
@@ -499,6 +499,12 @@ Deno.serve(async (req) => {
         })(),
       }));
     const trendMonths = months;
+
+    // Apply the same 'expected' filter to the anomaly and vocabulary lists so
+    // institutions and calendar words can't occupy those slides either.
+    anomalies = anomalies.filter((a) => !isExpected(a.term));
+    risingTerms = risingTerms.filter((t) => !isExpected(t.term));
+    fadingTerms = fadingTerms.filter((t) => !isExpected(t.term));
 
 
     // ---- Sub-category insight across the whole taxonomy -------------------
