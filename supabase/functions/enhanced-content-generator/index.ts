@@ -1450,6 +1450,29 @@ Return in JSON format:
       console.log('📱 Stored post copy successfully');
     }
 
+    // Classify-on-ingest: give the new story a category immediately (non-blocking).
+    try {
+      const classifyTopicId = (article as any)?.topic_id || (typeof topicArticle !== 'undefined' ? (topicArticle as any)?.topic_id : null);
+      if (classifyTopicId && storyId) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        fetch(`${supabaseUrl}/functions/v1/classify-stories`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceRoleKey}`,
+            'x-service-token': serviceRoleKey,
+          },
+          body: JSON.stringify({ topicId: classifyTopicId, storyIds: [storyId], batchSize: 1 }),
+        }).catch((e) => console.warn('⚠️ classify-stories trigger failed:', e?.message ?? e));
+        console.log('🗂️ Triggered classification for story', storyId);
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not trigger classification:', e instanceof Error ? e.message : e);
+    }
+
+
+
     // Trigger carousel image generation (non-blocking) using direct fetch with service role
     // Only generate if the user opted in (generateIllustration flag, defaults to true)
     if (generateIllustration === false) {
