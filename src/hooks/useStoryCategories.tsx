@@ -75,8 +75,15 @@ export const useStoryCategories = (topicId?: string) => {
         topic_id: topicId,
         category_id: categoryId,
         enabled: patch.enabled ?? existing?.enabled ?? true,
-        geographic_radius_miles: patch.geographic_radius_miles ?? existing?.geographic_radius_miles ?? null,
-        relevance_threshold: patch.relevance_threshold ?? existing?.relevance_threshold ?? null,
+        geographic_radius_miles:
+          'geographic_radius_miles' in patch
+            ? patch.geographic_radius_miles ?? null
+            : existing?.geographic_radius_miles ?? null,
+        relevance_threshold:
+          'relevance_threshold' in patch
+            ? patch.relevance_threshold ?? null
+            : existing?.relevance_threshold ?? null,
+
         automation_mode: patch.automation_mode ?? existing?.automation_mode ?? 'inherit',
       };
       setSettings((prev) => ({ ...prev, [categoryId]: { ...row, id: existing?.id } }));
