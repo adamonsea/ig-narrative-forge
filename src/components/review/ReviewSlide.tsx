@@ -47,7 +47,7 @@ export const BigStat = ({
       {value}
       {suffix && <span className="text-[0.35em] align-top ml-1 opacity-60">{suffix}</span>}
     </div>
-    <p className="mt-4 text-sm opacity-60">{caption}</p>
+    <p className="mt-5 text-lg leading-snug opacity-80">{caption}</p>
   </div>
 );
 
