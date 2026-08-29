@@ -670,10 +670,26 @@ const TopicDashboard = () => {
               <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Feed
               </TabsTrigger>
+              <TabsTrigger value="insights" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
+                Insights
+              </TabsTrigger>
               <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Settings
               </TabsTrigger>
             </TabsList>
+
+            {/* ===== INSIGHTS TAB ===== */}
+            <TabsContent value="insights" className="space-y-8">
+              <section className="space-y-3">
+                <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Categories</h2>
+                <CategoriesPanel topicId={topic.id} />
+              </section>
+              <section className="space-y-3">
+                <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Period reviews</h2>
+                <PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} />
+              </section>
+            </TabsContent>
+
 
             {/* ===== FEED TAB ===== */}
             <TabsContent value="feed" className="space-y-6">
