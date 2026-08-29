@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
 
         // Defensive fallback: if the JOIN somehow returned no content but we need
         // it for gating, fetch once. On failure we DO NOT hold (fail-open) below.
-        if (!sharedContent && (negativeKeywords.length > 0 || localityGateActive) && article.shared_content_id) {
+        if (!sharedContent && (negativeKeywords.length > 0 || localityGateActive || categoryGate.active) && article.shared_content_id) {
           const { data } = await supabase
             .from('shared_article_content')
             .select('title, body, url')
