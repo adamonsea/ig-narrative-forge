@@ -136,6 +136,35 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Tombstones: ids removed optimistically that must not be resurrected by a
+  // refresh that raced ahead of the server write. Expire after TOMBSTONE_TTL.
+  const TOMBSTONE_TTL = 60_000;
+  const removedArticlesRef = useRef<Map<string, number>>(new Map());
+  const removedStoriesRef = useRef<Map<string, number>>(new Map());
+
+  const pruneTombstones = (map: Map<string, number>) => {
+    const now = Date.now();
+    map.forEach((expiry, id) => {
+      if (expiry <= now) map.delete(id);
+    });
+  };
+
+  const tombstone = (map: Map<string, number>, ids: string | string[]) => {
+    const now = Date.now();
+    (Array.isArray(ids) ? ids : [ids]).forEach(id => map.set(id, now + TOMBSTONE_TTL));
+  };
+
+  const untombstone = (map: Map<string, number>, ids: string | string[]) => {
+    (Array.isArray(ids) ? ids : [ids]).forEach(id => map.delete(id));
+  };
+
+  const filterTombstoned = <T extends { id: string }>(items: T[], map: Map<string, number>): T[] => {
+    pruneTombstones(map);
+    if (map.size === 0) return items;
+    return items.filter(item => !map.has(item.id));
+  };
+
+
   // Previous counts to detect new content
   const previousCountsRef = useRef<{
     articles: number;
@@ -314,7 +343,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         });
       }
 
-      setArticles(allArticles);
+      // Drop tombstones the server already agrees are gone, then filter the rest
+      const serverArticleIds = new Set(allArticles.map(a => a.id));
+      pruneTombstones(removedArticlesRef.current);
+      removedArticlesRef.current.forEach((_, id) => {
+        if (!serverArticleIds.has(id)) removedArticlesRef.current.delete(id);
+      });
+      setArticles(filterTombstoned(allArticles, removedArticlesRef.current));
+
       
       // Update hasMoreArticles based on total count
       const filteredTotal = totalCount || 0;
@@ -721,7 +757,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         slideDistribution: storiesData.map(s => ({ id: s.id, title: s.title, slideCount: s.slides.length }))
       });
 
-      setStories(storiesData);
+      const serverStoryIds = new Set(storiesData.map((s: any) => s.id));
+      pruneTombstones(removedStoriesRef.current);
+      removedStoriesRef.current.forEach((_, id) => {
+        if (!serverStoryIds.has(id)) removedStoriesRef.current.delete(id);
+      });
+      setStories(filterTombstoned(storiesData as any, removedStoriesRef.current) as any);
+
       
       // Detect new published stories for visual indicator
       const publishedStories = storiesData.filter((s: any) => s.is_published && ['ready', 'published'].includes(s.status));
@@ -825,10 +867,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   ) => {
     // Auto-detect snippets and default to 'short' (3 slides) for better experience
     const finalSlideType = article.is_snippet && slideType === 'tabloid' ? 'short' : slideType;
-    
+
     // Optimistically hide the article from Arrivals immediately (exit animation handled by the list)
+    tombstone(removedArticlesRef.current, article.id);
     setArticles(prev => prev.filter(a => a.id !== article.id));
-    
+
     try {
       if (article.article_type === 'legacy') {
         // Handle legacy article approval
@@ -842,14 +885,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
     } catch (error) {
       // Restore the card if the approval failed
+      untombstone(removedArticlesRef.current, article.id);
       setArticles(prev => (prev.some(a => a.id === article.id) ? prev : [article, ...prev]));
       scheduleRefresh(0);
       throw error;
     }
-    
+
     // Reload in the background to surface the new queue item
     scheduleRefresh();
-  }, [approveMultiTenantArticle, scheduleRefresh, supabase]);
+  }, [approveMultiTenantArticle, scheduleRefresh]);
 
   const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
     // Find the article to determine its type
@@ -857,6 +901,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     if (!article) return;
 
     // Optimistic removal — the list plays the exit animation
+    tombstone(removedArticlesRef.current, articleId);
     setArticles(prev => prev.filter(a => a.id !== articleId));
 
     if (article.article_type === 'legacy') {
@@ -865,9 +910,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         .from('articles')
         .update({ processing_status: 'discarded' })
         .eq('id', articleId);
-      
+
       if (error) {
         console.error('Error deleting legacy article:', error);
+        untombstone(removedArticlesRef.current, articleId);
         setArticles(prev => (prev.some(a => a.id === articleId) ? prev : [article, ...prev]));
         toast({
           title: "Error",
@@ -881,13 +927,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       try {
         await deleteMultiTenantArticle(articleId, articleTitle);
       } catch (error) {
+        untombstone(removedArticlesRef.current, articleId);
         setArticles(prev => (prev.some(a => a.id === articleId) ? prev : [article, ...prev]));
         throw error;
       }
     }
-    
+
     scheduleRefresh();
-  }, [articles, deleteMultiTenantArticle, scheduleRefresh, toast, supabase]);
+  }, [articles, deleteMultiTenantArticle, scheduleRefresh, toast]);
 
   const handleMultiTenantBulkDelete = useCallback(async (articleIds: string[]) => {
     // Split into legacy vs multi-tenant
@@ -895,6 +942,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     const multiTenantIds = articleIds.filter(id => !legacyIds.includes(id));
 
     const idSet = new Set(articleIds);
+    tombstone(removedArticlesRef.current, articleIds);
     setArticles(prev => prev.filter(a => !idSet.has(a.id)));
 
     if (legacyIds.length > 0) {
@@ -904,15 +952,21 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         .in('id', legacyIds);
       if (legacyError) {
         console.error('Error discarding legacy articles:', legacyError);
+        untombstone(removedArticlesRef.current, legacyIds);
       }
     }
 
     if (multiTenantIds.length > 0) {
-      await deleteMultipleMultiTenantArticles(multiTenantIds);
+      try {
+        await deleteMultipleMultiTenantArticles(multiTenantIds);
+      } catch (error) {
+        untombstone(removedArticlesRef.current, multiTenantIds);
+        throw error;
+      }
     }
 
     scheduleRefresh();
-  }, [articles, deleteMultipleMultiTenantArticles, scheduleRefresh, supabase]);
+  }, [articles, deleteMultipleMultiTenantArticles, scheduleRefresh]);
 
   const handleMultiTenantCancelQueue = useCallback(async (queueId: string) => {
     setQueueItems(prev => prev.filter(q => q.id !== queueId));
@@ -921,28 +975,48 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   }, [cancelMultiTenantQueueItem, scheduleRefresh]);
 
   const handleMultiTenantApproveStory = useCallback(async (storyId: string) => {
-    const previous = stories;
-    setStories(prev => prev.filter(s => s.id !== storyId));
+    // The story survives approval (its status changes), so patch it locally
+    // instead of tombstoning — list filters handle moving it between sections.
+    let snapshot: MultiTenantStory | undefined;
+    setStories(prev => {
+      snapshot = prev.find(s => s.id === storyId);
+      return prev.map(s =>
+        s.id === storyId ? { ...s, status: 'ready', is_published: false } as MultiTenantStory : s
+      );
+    });
     try {
       await approveMultiTenantStory(storyId, selectedTopicId);
     } catch (error) {
-      setStories(previous);
+      if (snapshot) {
+        setStories(prev => prev.map(s => (s.id === storyId ? snapshot! : s)));
+      }
+      scheduleRefresh(0);
       throw error;
     }
     scheduleRefresh();
-  }, [approveMultiTenantStory, selectedTopicId, scheduleRefresh, stories]);
+  }, [approveMultiTenantStory, selectedTopicId, scheduleRefresh]);
 
   const handleMultiTenantRejectStory = useCallback(async (storyId: string) => {
-    const previous = stories;
-    setStories(prev => prev.filter(s => s.id !== storyId));
+    // Rejection deletes the story, so tombstone it against racing refreshes
+    let snapshot: MultiTenantStory | undefined;
+    tombstone(removedStoriesRef.current, storyId);
+    setStories(prev => {
+      snapshot = prev.find(s => s.id === storyId);
+      return prev.filter(s => s.id !== storyId);
+    });
     try {
       await rejectMultiTenantStory(storyId);
     } catch (error) {
-      setStories(previous);
+      untombstone(removedStoriesRef.current, storyId);
+      if (snapshot) {
+        setStories(prev => (prev.some(s => s.id === storyId) ? prev : [snapshot!, ...prev]));
+      }
+      scheduleRefresh(0);
       throw error;
     }
     scheduleRefresh();
-  }, [rejectMultiTenantStory, scheduleRefresh, stories]);
+  }, [rejectMultiTenantStory, scheduleRefresh]);
+
 
   const markArticleAsDiscarded = useCallback(async (articleId: string) => {
     if (!selectedTopicId) return;
@@ -1103,6 +1177,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       topicArticleIds: new Set(),
       sharedContentIds: new Set(),
     };
+    removedArticlesRef.current.clear();
+    removedStoriesRef.current.clear();
+    
+
     
     if (selectedTopicId) {
       loadTopicContent();
@@ -1341,7 +1419,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       const existingIds = new Set(articles.map(a => a.id));
       const uniqueNewArticles = newArticles.filter(a => !existingIds.has(a.id));
       
-      setArticles(prev => [...prev, ...uniqueNewArticles]);
+      setArticles(prev => [...prev, ...filterTombstoned(uniqueNewArticles, removedArticlesRef.current)]);
       setArticlesPage(nextPage);
       setHasMoreArticles(uniqueNewArticles.length === ARTICLES_PAGE_SIZE);
       
