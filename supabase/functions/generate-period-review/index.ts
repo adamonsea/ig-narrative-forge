@@ -612,11 +612,12 @@ Deno.serve(async (req) => {
         summary,
         scale,
         categoryBreakdown: categoryBreakdown.slice(0, 12),
-        crimeBreakdown,
-        councilBreakdown,
+        subcategoryInsights,
+        subcategoryMovers,
         anomalies,
+        distinctiveTerms: distinctiveTerms.slice(0, 12),
+        termTrends,
         risingTerms,
-        hotTopics: hotTopics.slice(0, 12),
         timeline,
       });
       const resp = await llmFetch(
