@@ -80,12 +80,54 @@ Deno.serve(async (req) => {
 
     const { data: topic } = await service.from('topics').select('name, region, slug').eq('id', topicId).maybeSingle();
 
-    const { data: topicArticles } = await service
-      .from('topic_articles')
-      .select('id')
-      .eq('topic_id', topicId)
-      .limit(20000);
-    const taIds = (topicArticles ?? []).map((r: any) => r.id);
+    // PostgREST caps a single response at 1000 rows regardless of .limit(),
+    // so page through the topic's articles explicitly — otherwise only a
+    // fraction of the archive is ever considered.
+    const taIds: string[] = [];
+    const PAGE = 1000;
+    for (let page = 0; page < 60; page++) {
+      const from = page * PAGE;
+      const { data: rows, error } = await service
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', topicId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) break;
+      const batch = rows ?? [];
+      taIds.push(...batch.map((r: any) => r.id));
+      if (batch.length < PAGE) break;
+    }
+
+    // Fetch every row matching an `in (...)` filter, paging past the
+    // PostgREST 1000-row response cap (slides/interactions are many-per-story).
+    const fetchAllIn = async (
+      table: string,
+      columns: string,
+      column: string,
+      ids: string[],
+      chunkSize = 200
+    ): Promise<any[]> => {
+      const out: any[] = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        for (let page = 0; page < 40; page++) {
+          const from = page * 1000;
+          const { data, error } = await service
+            .from(table)
+            .select(columns)
+            .in(column, chunk)
+            .order(column, { ascending: true })
+            .range(from, from + 999);
+          if (error) break;
+          const rows = data ?? [];
+          out.push(...rows);
+          if (rows.length < 1000) break;
+        }
+      }
+      return out;
+    };
+
 
     // Fetch published stories in both the current and previous window.
     type Row = {
@@ -117,12 +159,13 @@ Deno.serve(async (req) => {
     // Category assignments for both windows.
     const allIds = [...current, ...previous].map((s) => s.id);
     const assignments = new Map<string, { category_id: string; subcategory_id: string | null }>();
-    for (let i = 0; i < allIds.length; i += 300) {
-      const { data } = await service
-        .from('story_category_assignments')
-        .select('story_id, category_id, subcategory_id')
-        .in('story_id', allIds.slice(i, i + 300));
-      for (const a of data ?? []) assignments.set(a.story_id, a);
+    for (const a of await fetchAllIn(
+      'story_category_assignments',
+      'story_id, category_id, subcategory_id',
+      'story_id',
+      allIds
+    )) {
+      assignments.set(a.story_id, a);
     }
 
     const { data: categories } = await service
@@ -218,14 +261,8 @@ Deno.serve(async (req) => {
     // ---- Scale of the archive -------------------------------------------
     const currentIdList = current.map((s) => s.id);
     let totalWords = 0;
-    for (let i = 0; i < currentIdList.length; i += 300) {
-      const { data: slideRows } = await service
-        .from('slides')
-        .select('word_count, content')
-        .in('story_id', currentIdList.slice(i, i + 300));
-      for (const s of slideRows ?? []) {
-        totalWords += s.word_count ?? String(s.content ?? '').split(/\s+/).filter(Boolean).length;
-      }
+    for (const sl of await fetchAllIn('slides', 'word_count, content, story_id', 'story_id', currentIdList)) {
+      totalWords += sl.word_count ?? String(sl.content ?? '').split(/\s+/).filter(Boolean).length;
     }
 
     const dayCounts: Record<string, number> = {};
@@ -359,12 +396,13 @@ Deno.serve(async (req) => {
     // Reader signal.
     const currentIds = current.map((s) => s.id);
     const interactionCounts = new Map<string, { views: number; shares: number }>();
-    for (let i = 0; i < currentIds.length; i += 300) {
-      const { data } = await service
-        .from('story_interactions')
-        .select('story_id, interaction_type')
-        .in('story_id', currentIds.slice(i, i + 300));
-      for (const it of data ?? []) {
+    {
+      for (const it of await fetchAllIn(
+        'story_interactions',
+        'story_id, interaction_type',
+        'story_id',
+        currentIds
+      )) {
         const rec = interactionCounts.get(it.story_id) ?? { views: 0, shares: 0 };
         if (it.interaction_type === 'share_click') rec.shares += 1;
         else rec.views += 1;
