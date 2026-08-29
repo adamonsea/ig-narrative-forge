@@ -236,12 +236,12 @@ const PeriodReview = () => {
       <ReviewSlide>
         <Link
           to={`/feed/${slug}`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-10"
+          className="inline-flex items-center gap-1.5 text-base text-muted-foreground hover:text-foreground mb-10"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           {topic?.name ?? 'Feed'}
         </Link>
-        <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground mb-4">{review.label}</p>
+        <p className="text-sm uppercase tracking-[0.22em] text-muted-foreground mb-4">{review.label}</p>
         <MaskRevealHeading
           as="h1"
           onScroll={false}
@@ -254,18 +254,18 @@ const PeriodReview = () => {
               <div className="text-5xl font-semibold tracking-tight">
                 <CountUp value={summary.total_stories} />
               </div>
-              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">Stories</p>
+              <p className="mt-2 text-sm uppercase tracking-wide text-muted-foreground">Stories</p>
             </div>
             <div>
               <div className="text-5xl font-semibold tracking-tight">
                 <CountUp value={summary.categories_covered} />
               </div>
-              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">Beats</p>
+              <p className="mt-2 text-sm uppercase tracking-wide text-muted-foreground">Beats</p>
             </div>
           </div>
         </Reveal>
         <motion.div
-          className="mt-14 flex items-center gap-2 text-xs text-muted-foreground"
+          className="mt-14 flex items-center gap-2 text-sm text-muted-foreground"
           animate={reduce ? undefined : { y: [0, 6, 0] }}
           transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
         >
@@ -279,7 +279,7 @@ const PeriodReview = () => {
         <ReviewSlide tone="inverted" label="The scale">
           <BigStat value={<CountUp value={totalWords} />} caption={`words published about ${place}`} />
           {scale && (
-            <Reveal delay={0.2} className="mt-10 flex gap-10 text-sm opacity-70">
+            <Reveal delay={0.2} className="mt-10 flex flex-wrap gap-x-10 gap-y-3 text-lg opacity-80">
               <span>{scale.days_covered} days with news</span>
               <span>{scale.source_count} sources</span>
             </Reveal>
@@ -291,7 +291,7 @@ const PeriodReview = () => {
       {pullQuote && (
         <ReviewSlide label="In short">
           <Reveal>
-            <p className="text-2xl sm:text-3xl font-medium leading-snug tracking-tight">{pullQuote}</p>
+            <p className="text-3xl sm:text-4xl font-medium leading-snug tracking-tight">{pullQuote}</p>
           </Reveal>
         </ReviewSlide>
       )}
@@ -300,7 +300,7 @@ const PeriodReview = () => {
       {categoryBreakdown.length > 0 && (
         <ReviewSlide tone="accent" label="What we covered">
           <MaskRevealHeading
-            className="mb-8 text-3xl font-semibold tracking-tight"
+            className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'The five ' }, { text: 'biggest beats', italic: true }]}
           />
           <RankRows
@@ -345,13 +345,13 @@ const PeriodReview = () => {
                   viewport={{ once: true, margin: '-40px' }}
                   transition={{ duration: reduce ? 0 : 0.9, delay: reduce ? 0 : i * 0.05, ease: [0.19, 1, 0.22, 1] }}
                 />
-                <span className="text-center text-[10px] opacity-60">{monthLabel(t.month)}</span>
+                <span className="text-center text-xs opacity-70">{monthLabel(t.month)}</span>
               </div>
             ))}
           </div>
           {peakMonth && (
             <Reveal delay={0.3} className="mt-8">
-              <p className="text-sm opacity-70">
+              <p className="text-lg leading-snug opacity-80">
                 Busiest month: {monthLabel(peakMonth.month)} — {peakMonth.count} stories.
               </p>
             </Reveal>
@@ -363,14 +363,14 @@ const PeriodReview = () => {
       {spike && (
         <ReviewSlide tone="accent" label="Out of nowhere">
           <Reveal>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-muted-foreground">
               <Zap className="h-3.5 w-3.5 text-primary" />
               {monthLabel(spike.month)}
             </div>
             <p className="mt-4 text-[clamp(2.5rem,12vw,4.5rem)] font-semibold leading-none tracking-tight">
               {spike.term}
             </p>
-            <p className="mt-4 text-sm text-muted-foreground">
+            <p className="mt-5 text-lg text-muted-foreground">
               {spike.multiple}× its usual level — {spike.count} stories that month
             </p>
           </Reveal>
@@ -381,7 +381,7 @@ const PeriodReview = () => {
       {(risingTerms.length > 0 || names.length > 0) && (
         <ReviewSlide label="The words">
           <MaskRevealHeading
-            className="mb-8 text-3xl font-semibold tracking-tight"
+            className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'Names that ' }, { text: 'kept coming up', italic: true }]}
           />
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
@@ -400,7 +400,7 @@ const PeriodReview = () => {
             <div className="mt-10 flex flex-wrap gap-2">
               {risingTerms.slice(0, 6).map((t, i) => (
                 <Reveal key={t.term} delay={Math.min(0.4, i * 0.05)}>
-                  <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm">
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-lg">
                     ↑ {t.term}
                   </span>
                 </Reveal>
@@ -414,13 +414,13 @@ const PeriodReview = () => {
       {places.length > 0 && (
         <ReviewSlide tone="accent" label="On the map">
           <MaskRevealHeading
-            className="mb-8 text-3xl font-semibold tracking-tight"
+            className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'Streets in ' }, { text: 'the news', italic: true }]}
           />
           <div className="flex flex-wrap gap-2">
             {places.slice(0, 8).map((p, i) => (
               <Reveal key={p.term} delay={Math.min(0.4, i * 0.05)}>
-                <span className="rounded-full border border-border px-3 py-1.5 text-sm">{p.term}</span>
+                <span className="rounded-full border border-border px-4 py-2 text-lg">{p.term}</span>
               </Reveal>
             ))}
           </div>
@@ -451,8 +451,8 @@ const PeriodReview = () => {
                       </span>
                     )}
                     <div className="min-w-0">
-                      <p className="line-clamp-2 text-sm font-medium">{s.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{compact(s.views)} reads</p>
+                      <p className="line-clamp-2 text-base font-medium">{s.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{compact(s.views)} reads</p>
                     </div>
                   </Link>
                 </li>
@@ -478,7 +478,7 @@ const PeriodReview = () => {
           <p className="text-xl font-medium tracking-tight">Every story, gathered and written for {place}.</p>
           <Link
             to={`/feed/${slug}`}
-            className="mt-8 inline-block rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
+            className="mt-8 inline-block rounded-full bg-primary px-6 py-3 text-base font-medium text-primary-foreground"
           >
             Read the feed
           </Link>
