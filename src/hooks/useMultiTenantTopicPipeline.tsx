@@ -136,6 +136,35 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Tombstones: ids removed optimistically that must not be resurrected by a
+  // refresh that raced ahead of the server write. Expire after TOMBSTONE_TTL.
+  const TOMBSTONE_TTL = 60_000;
+  const removedArticlesRef = useRef<Map<string, number>>(new Map());
+  const removedStoriesRef = useRef<Map<string, number>>(new Map());
+
+  const pruneTombstones = (map: Map<string, number>) => {
+    const now = Date.now();
+    map.forEach((expiry, id) => {
+      if (expiry <= now) map.delete(id);
+    });
+  };
+
+  const tombstone = (map: Map<string, number>, ids: string | string[]) => {
+    const now = Date.now();
+    (Array.isArray(ids) ? ids : [ids]).forEach(id => map.set(id, now + TOMBSTONE_TTL));
+  };
+
+  const untombstone = (map: Map<string, number>, ids: string | string[]) => {
+    (Array.isArray(ids) ? ids : [ids]).forEach(id => map.delete(id));
+  };
+
+  const filterTombstoned = <T extends { id: string }>(items: T[], map: Map<string, number>): T[] => {
+    pruneTombstones(map);
+    if (map.size === 0) return items;
+    return items.filter(item => !map.has(item.id));
+  };
+
+
   // Previous counts to detect new content
   const previousCountsRef = useRef<{
     articles: number;
