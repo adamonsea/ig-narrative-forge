@@ -134,6 +134,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
   // Debounce timer for real-time refreshes
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Previous counts to detect new content
   const previousCountsRef = useRef<{
