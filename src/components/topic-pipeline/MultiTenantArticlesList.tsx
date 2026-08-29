@@ -505,7 +505,9 @@ export default function MultiTenantArticlesList({
         </div>
       )}
       
-      {articles.map((article) => renderArticleCard(article))}
+      <AnimatePresence initial={false} mode="popLayout">
+        {articles.map((article) => renderArticleCard(article))}
+      </AnimatePresence>
       
       {/* Load more button */}
       {hasMoreArticles && onLoadMore && (
