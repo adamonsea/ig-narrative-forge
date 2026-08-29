@@ -394,14 +394,28 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         </div>
       )}
       
+      <AnimatePresence initial={false} mode="popLayout">
       {currentStories.map((story) => {
         const isExpanded = expandedStories.has(story.id);
         const isAnimating = animatingStories.has(story.id);
 
         return (
-          <Card key={story.id} className={`transition-all duration-300 hover:shadow-md ${
-            isAnimating ? 'animate-slide-out-left opacity-0' : ''
-          }`}>
+          <motion.div
+            key={story.id}
+            layout={prefersReducedMotion ? false : "position"}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: isAnimating ? 0.55 : 1, y: 0 }}
+            exit={prefersReducedMotion
+              ? { opacity: 0 }
+              : { opacity: 0, x: -24, scale: 0.98 }}
+            transition={{
+              layout: { type: "spring", stiffness: 420, damping: 38, mass: 0.7 },
+              duration: 0.22,
+              ease: [0.4, 0, 0.2, 1]
+            }}
+            style={{ willChange: "transform, opacity" }}
+          >
+          <Card className="transition-shadow duration-200 hover:shadow-md">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
