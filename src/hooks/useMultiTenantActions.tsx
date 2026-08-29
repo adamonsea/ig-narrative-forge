@@ -20,9 +20,10 @@ export const useMultiTenantActions = () => {
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic',
     generateIllustration: boolean = true
   ) => {
-    if (processingArticle) return;
+    // Only block re-clicks on the same article — allow rapid approvals across cards
+    if (processingArticle === article.id) return;
 
-    // Immediate animation feedback - trigger slide-out-right (matching legacy)
+    // Immediate animation feedback (the list owns the exit transition)
     setAnimatingArticles(prev => new Set([...prev, article.id]));
     setProcessingArticle(article.id);
 

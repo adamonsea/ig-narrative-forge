@@ -134,6 +134,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
   // Debounce timer for real-time refreshes
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Previous counts to detect new content
   const previousCountsRef = useRef<{
@@ -805,6 +806,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
   }, [selectedTopicId, loadTopicContent, toast]);
 
+  // Non-blocking, coalesced refresh so optimistic UI updates never wait on a full refetch
+  const scheduleRefresh = useCallback((delay = 350) => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      refreshTimerRef.current = null;
+      loadTopicContent();
+    }, delay);
+  }, [loadTopicContent]);
+
   // Action handlers with proper callbacks
   const handleMultiTenantApprove = useCallback(async (
     article: MultiTenantArticle,
@@ -816,28 +826,38 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     // Auto-detect snippets and default to 'short' (3 slides) for better experience
     const finalSlideType = article.is_snippet && slideType === 'tabloid' ? 'short' : slideType;
     
-    // Optimistically hide the article from Arrivals immediately
+    // Optimistically hide the article from Arrivals immediately (exit animation handled by the list)
     setArticles(prev => prev.filter(a => a.id !== article.id));
     
-    if (article.article_type === 'legacy') {
-      // Handle legacy article approval
-      const { error } = await supabase.rpc('approve_article_for_generation', {
-        article_uuid: article.id
-      });
-      if (error) throw error;
-    } else {
-      // Handle multi-tenant article approval
-      await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle, generateIllustration);
+    try {
+      if (article.article_type === 'legacy') {
+        // Handle legacy article approval
+        const { error } = await supabase.rpc('approve_article_for_generation', {
+          article_uuid: article.id
+        });
+        if (error) throw error;
+      } else {
+        // Handle multi-tenant article approval
+        await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle, generateIllustration);
+      }
+    } catch (error) {
+      // Restore the card if the approval failed
+      setArticles(prev => (prev.some(a => a.id === article.id) ? prev : [article, ...prev]));
+      scheduleRefresh(0);
+      throw error;
     }
     
-    // Reload to update all sections and show the queue item
-    await loadTopicContent();
-  }, [approveMultiTenantArticle, loadTopicContent, supabase]);
+    // Reload in the background to surface the new queue item
+    scheduleRefresh();
+  }, [approveMultiTenantArticle, scheduleRefresh, supabase]);
 
   const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
     // Find the article to determine its type
     const article = articles.find(a => a.id === articleId);
     if (!article) return;
+
+    // Optimistic removal — the list plays the exit animation
+    setArticles(prev => prev.filter(a => a.id !== articleId));
 
     if (article.article_type === 'legacy') {
       // Handle legacy article deletion
@@ -848,6 +868,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       if (error) {
         console.error('Error deleting legacy article:', error);
+        setArticles(prev => (prev.some(a => a.id === articleId) ? prev : [article, ...prev]));
         toast({
           title: "Error",
           description: "Failed to delete article",
@@ -857,17 +878,24 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
     } else {
       // Handle multi-tenant article deletion
-      await deleteMultiTenantArticle(articleId, articleTitle);
+      try {
+        await deleteMultiTenantArticle(articleId, articleTitle);
+      } catch (error) {
+        setArticles(prev => (prev.some(a => a.id === articleId) ? prev : [article, ...prev]));
+        throw error;
+      }
     }
     
-    // Force immediate reload to show deletion
-    await loadTopicContent();
-  }, [articles, deleteMultiTenantArticle, loadTopicContent, toast, supabase]);
+    scheduleRefresh();
+  }, [articles, deleteMultiTenantArticle, scheduleRefresh, toast, supabase]);
 
   const handleMultiTenantBulkDelete = useCallback(async (articleIds: string[]) => {
     // Split into legacy vs multi-tenant
     const legacyIds = articles.filter(a => articleIds.includes(a.id) && a.article_type === 'legacy').map(a => a.id);
     const multiTenantIds = articleIds.filter(id => !legacyIds.includes(id));
+
+    const idSet = new Set(articleIds);
+    setArticles(prev => prev.filter(a => !idSet.has(a.id)));
 
     if (legacyIds.length > 0) {
       const { error: legacyError } = await supabase
@@ -883,24 +911,38 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       await deleteMultipleMultiTenantArticles(multiTenantIds);
     }
 
-    // Force immediate reload to show bulk deletion
-    await loadTopicContent();
-  }, [articles, deleteMultipleMultiTenantArticles, loadTopicContent]);
+    scheduleRefresh();
+  }, [articles, deleteMultipleMultiTenantArticles, scheduleRefresh, supabase]);
 
   const handleMultiTenantCancelQueue = useCallback(async (queueId: string) => {
+    setQueueItems(prev => prev.filter(q => q.id !== queueId));
     await cancelMultiTenantQueueItem(queueId);
-    await loadTopicContent();
-  }, [cancelMultiTenantQueueItem, loadTopicContent]);
+    scheduleRefresh();
+  }, [cancelMultiTenantQueueItem, scheduleRefresh]);
 
   const handleMultiTenantApproveStory = useCallback(async (storyId: string) => {
-    await approveMultiTenantStory(storyId, selectedTopicId);
-    await loadTopicContent();
-  }, [approveMultiTenantStory, selectedTopicId, loadTopicContent]);
+    const previous = stories;
+    setStories(prev => prev.filter(s => s.id !== storyId));
+    try {
+      await approveMultiTenantStory(storyId, selectedTopicId);
+    } catch (error) {
+      setStories(previous);
+      throw error;
+    }
+    scheduleRefresh();
+  }, [approveMultiTenantStory, selectedTopicId, scheduleRefresh, stories]);
 
   const handleMultiTenantRejectStory = useCallback(async (storyId: string) => {
-    await rejectMultiTenantStory(storyId);
-    await loadTopicContent();
-  }, [rejectMultiTenantStory, loadTopicContent]);
+    const previous = stories;
+    setStories(prev => prev.filter(s => s.id !== storyId));
+    try {
+      await rejectMultiTenantStory(storyId);
+    } catch (error) {
+      setStories(previous);
+      throw error;
+    }
+    scheduleRefresh();
+  }, [rejectMultiTenantStory, scheduleRefresh, stories]);
 
   const markArticleAsDiscarded = useCallback(async (articleId: string) => {
     if (!selectedTopicId) return;
