@@ -248,6 +248,11 @@ Deno.serve(async (req) => {
       const localityAnchors = topicDefaultsMap[topic_id]?.localityAnchors || [];
       const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
       let topicHeldForLocality = 0;
+      let topicHeldForCategory = 0;
+
+      // Per-category feed settings (enabled / threshold / radius). Fails open.
+      const categoryGate = await loadCategoryGate(supabase, topic_id);
+
 
       // Batched pre-checks for this page of articles (2 queries instead of 2/article)
       const batchArticleIds = (articles as any[]).map((a) => a.id as string);
