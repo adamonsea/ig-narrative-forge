@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { loadCategoryGate, applyCategoryGate } from '../_shared/category-gate.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -248,6 +250,11 @@ Deno.serve(async (req) => {
       const localityAnchors = topicDefaultsMap[topic_id]?.localityAnchors || [];
       const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
       let topicHeldForLocality = 0;
+      let topicHeldForCategory = 0;
+
+      // Per-category feed settings (enabled / threshold / radius). Fails open.
+      const categoryGate = await loadCategoryGate(supabase, topic_id);
+
 
       // Batched pre-checks for this page of articles (2 queries instead of 2/article)
       const batchArticleIds = (articles as any[]).map((a) => a.id as string);
@@ -265,7 +272,7 @@ Deno.serve(async (req) => {
 
         // Defensive fallback: if the JOIN somehow returned no content but we need
         // it for gating, fetch once. On failure we DO NOT hold (fail-open) below.
-        if (!sharedContent && (negativeKeywords.length > 0 || localityGateActive) && article.shared_content_id) {
+        if (!sharedContent && (negativeKeywords.length > 0 || localityGateActive || categoryGate.active) && article.shared_content_id) {
           const { data } = await supabase
             .from('shared_article_content')
             .select('title, body, url')
@@ -298,9 +305,23 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Per-category settings (guessed category + owner overrides).
+        const categoryDecision = applyCategoryGate(
+          categoryGate,
+          sharedContent?.title || '',
+          sharedContent?.body || '',
+          typeof article.content_quality_score === 'number' ? article.content_quality_score : null
+        );
+
+        if (categoryDecision.hold) {
+          console.log(`  🗂️ Category gate HELD article ${article.id} — ${categoryDecision.reason}`);
+          topicHeldForCategory++;
+          continue; // leave processing_status = 'new' for manual review
+        }
+
         // Locality gate (regional topics only): hold for manual review if no local
         // anchor appears in the title or opening. Story stays 'new' in Arrivals.
-        if (localityGateActive) {
+        if (localityGateActive && !categoryDecision.relaxLocality) {
           const title = sharedContent?.title || '';
           const body = sharedContent?.body || '';
           const region = (topicDefaultsMap[topic_id]?.region || '').toLowerCase().trim();
@@ -328,7 +349,12 @@ Deno.serve(async (req) => {
             `  ✅ Locality gate PASSED article ${article.id} via ` +
             `${matchedAnchor ? `anchor "${matchedAnchor}"` : `region "${region}"`}`
           );
+        } else if (localityGateActive && categoryDecision.relaxLocality) {
+          console.log(
+            `  🌍 Locality gate relaxed for article ${article.id} — wide radius on category "${categoryDecision.category?.slug}"`
+          );
         }
+
 
         // Check for an ACTIVE queue item only (pending/processing).
         // A finished (completed/failed) row must NOT block re-evaluation —
@@ -399,6 +425,11 @@ Deno.serve(async (req) => {
       if (topicHeldForLocality > 0) {
         console.log(`  🧭 Locality gate held ${topicHeldForLocality} article(s) for manual review in topic ${topic_id}`);
       }
+
+      if (topicHeldForCategory > 0) {
+        console.log(`  🗂️ Category settings held ${topicHeldForCategory} article(s) for manual review in topic ${topic_id}`);
+      }
+
     }
 
     // 3. If we queued anything, invoke queue-processor to generate stories immediately
