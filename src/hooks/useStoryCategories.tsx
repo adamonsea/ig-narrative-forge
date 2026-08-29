@@ -37,7 +37,25 @@ export const useStoryCategories = (topicId?: string) => {
     if (!topicId) return;
     setLoading(true);
     try {
-      const [{ data: cats }, { data: setts }, { data: assignments }] = await Promise.all([
+      // PostgREST caps a single response at 1000 rows, so page through
+      // assignments rather than relying on .limit().
+      const fetchAllAssignments = async () => {
+        const rows: { category_id: string }[] = [];
+        const page = 1000;
+        for (let from = 0; ; from += page) {
+          const { data, error } = await supabase
+            .from('story_category_assignments')
+            .select('category_id')
+            .eq('topic_id', topicId)
+            .range(from, from + page - 1);
+          if (error) break;
+          rows.push(...((data ?? []) as { category_id: string }[]));
+          if (!data || data.length < page) break;
+        }
+        return rows;
+      };
+
+      const [{ data: cats }, { data: setts }, assignments] = await Promise.all([
         supabase
           .from('story_categories')
           .select('id, topic_id, parent_id, slug, name, description, sort_order')
@@ -45,7 +63,7 @@ export const useStoryCategories = (topicId?: string) => {
           .eq('is_active', true)
           .order('sort_order', { ascending: true }),
         supabase.from('topic_category_settings').select('*').eq('topic_id', topicId),
-        supabase.from('story_category_assignments').select('category_id').eq('topic_id', topicId).limit(20000),
+        fetchAllAssignments(),
       ]);
 
       setCategories((cats ?? []) as StoryCategory[]);
