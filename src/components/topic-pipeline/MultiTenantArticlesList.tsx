@@ -81,6 +81,7 @@ export default function MultiTenantArticlesList({
   const [bulkDeleteCount, setBulkDeleteCount] = useState<number | null>(null);
   const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
   const [illustrationOverrides, setIllustrationOverrides] = useState<Record<string, boolean>>({});
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (articles.length === 0) {
