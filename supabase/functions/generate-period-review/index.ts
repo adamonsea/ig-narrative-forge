@@ -215,6 +215,147 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 20);
 
+    // ---- Scale of the archive -------------------------------------------
+    const currentIdList = current.map((s) => s.id);
+    let totalWords = 0;
+    for (let i = 0; i < currentIdList.length; i += 300) {
+      const { data: slideRows } = await service
+        .from('slides')
+        .select('word_count, content')
+        .in('story_id', currentIdList.slice(i, i + 300));
+      for (const s of slideRows ?? []) {
+        totalWords += s.word_count ?? String(s.content ?? '').split(/\s+/).filter(Boolean).length;
+      }
+    }
+
+    const dayCounts: Record<string, number> = {};
+    for (const r of current) {
+      const d = r.created_at.slice(0, 10);
+      dayCounts[d] = (dayCounts[d] ?? 0) + 1;
+    }
+    const busiest = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0] ?? null;
+
+    const sourceCounts: Record<string, number> = {};
+    for (const r of current) {
+      const name = (r.publication_name ?? '').trim();
+      if (!name) continue;
+      sourceCounts[name] = (sourceCounts[name] ?? 0) + 1;
+    }
+    const sourceScorecard = Object.entries(sourceCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const scale = {
+      total_stories: current.length,
+      total_words: totalWords,
+      avg_words: current.length ? Math.round(totalWords / current.length) : 0,
+      source_count: Object.keys(sourceCounts).length,
+      busiest_day: busiest ? { date: busiest[0], count: busiest[1] } : null,
+      days_covered: Object.keys(dayCounts).length,
+    };
+
+    // ---- Crime / council sub-breakdowns ----------------------------------
+    const subCountsFor = (rows: Row[], parentMatch: RegExp) => {
+      const counts: Record<string, number> = {};
+      for (const r of rows) {
+        const a = assignments.get(r.id);
+        if (!a) continue;
+        const parent = catById.get(a.category_id) as any;
+        if (!parent || !parentMatch.test(parent.slug)) continue;
+        const sub = a.subcategory_id ? (catById.get(a.subcategory_id) as any) : null;
+        const key = sub?.name ?? 'Other';
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+      return counts;
+    };
+    const buildBreakdown = (match: RegExp) => {
+      const now = subCountsFor(current, match);
+      const before = subCountsFor(previous, match);
+      const total = Object.values(now).reduce((a, b) => a + b, 0);
+      return {
+        total,
+        items: Object.entries(now)
+          .map(([name, count]) => {
+            const prev = before[name] ?? 0;
+            return {
+              name,
+              count,
+              previous: prev,
+              change_percent: prev > 0 ? Math.round(((count - prev) / prev) * 100) : null,
+            };
+          })
+          .sort((a, b) => b.count - a.count),
+      };
+    };
+    const crimeBreakdown = buildBreakdown(/crime|police|court/);
+    const councilBreakdown = buildBreakdown(/council|politic|planning|development/);
+
+    // ---- Anomalies: months where a term spiked above its own baseline ----
+    const months = timeline.map((t) => t.month);
+    const termMonth: Record<string, Record<string, number>> = {};
+    for (const r of current) {
+      const m = monthKey(r.created_at);
+      for (const t of extractTerms(r.title)) {
+        (termMonth[t] ??= {})[m] = (termMonth[t][m] ?? 0) + 1;
+      }
+    }
+    const anomalies = Object.entries(termMonth)
+      .map(([term, byMonth]) => {
+        const series = months.map((m) => byMonth[m] ?? 0);
+        const total = series.reduce((a, b) => a + b, 0);
+        if (total < 5 || months.length < 3) return null;
+        const { mean, sd } = stats(series);
+        const peak = Math.max(...series);
+        const peakMonth = months[series.indexOf(peak)];
+        if (peak < 3 || sd === 0 || peak < mean + 2 * sd) return null;
+        return {
+          term,
+          month: peakMonth,
+          count: peak,
+          baseline: Math.round(mean * 10) / 10,
+          multiple: Math.round((peak / Math.max(0.5, mean)) * 10) / 10,
+        };
+      })
+      .filter(Boolean)
+      .sort((a: any, b: any) => b.multiple - a.multiple)
+      .slice(0, 8) as Array<{ term: string; month: string; count: number; baseline: number; multiple: number }>;
+
+    // ---- Rising and fading vocabulary ------------------------------------
+    const prevTermCounts: Record<string, number> = {};
+    for (const r of previous) {
+      for (const t of extractTerms(r.title)) prevTermCounts[t] = (prevTermCounts[t] ?? 0) + 1;
+    }
+    const peakMonthOf = (term: string) => {
+      const byMonth = termMonth[term] ?? {};
+      const entries = Object.entries(byMonth).sort((a, b) => b[1] - a[1]);
+      return entries[0]?.[0] ?? null;
+    };
+    const risingTerms = Object.entries(termCounts)
+      .filter(([term, count]) => count >= 3 && (prevTermCounts[term] ?? 0) === 0)
+      .map(([term, count]) => ({ term, count, month: peakMonthOf(term) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+    const fadingTerms = Object.entries(prevTermCounts)
+      .filter(([term, count]) => count >= 3 && (termCounts[term] ?? 0) === 0)
+      .map(([term, count]) => ({ term, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    // ---- Places and people ------------------------------------------------
+    const places = Object.entries(termCounts)
+      .filter(([term, count]) => count >= 2 && PLACE_SUFFIX.test(term))
+      .map(([term, count]) => ({ term, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+    const entities = Object.entries(termCounts)
+      .filter(([term, count]) => count >= 3 && term.includes(' ') && !PLACE_SUFFIX.test(term))
+      .map(([term, count]) => ({ term, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+
+
+
     // Reader signal.
     const currentIds = current.map((s) => s.id);
     const interactionCounts = new Map<string, { views: number; shares: number }>();
