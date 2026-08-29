@@ -1177,6 +1177,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       topicArticleIds: new Set(),
       sharedContentIds: new Set(),
     };
+    removedArticlesRef.current.clear();
+    removedStoriesRef.current.clear();
+    
+
     
     if (selectedTopicId) {
       loadTopicContent();
