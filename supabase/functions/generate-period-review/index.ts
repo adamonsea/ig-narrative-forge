@@ -21,6 +21,33 @@ function monthKey(iso: string) {
   return iso.slice(0, 7);
 }
 
+const PLACE_SUFFIX =
+  /\b(Road|Street|Avenue|Lane|Park|Pier|Drive|Way|Square|Close|Hill|Beach|Seafront|Centre|Center|Hospital|School|Station|Bridge|Green|Gardens|Estate|Terrace|Crescent|Court|Market|Common|Wood|Downs|Bay|Harbour|Theatre)\b/;
+
+/** Capitalised unigrams and bigrams from a headline, minus stopwords. */
+function extractTerms(title: string): string[] {
+  const words = (title ?? '')
+    .replace(/[^A-Za-z' -]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 3);
+  const out = new Set<string>();
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (!/^[A-Z]/.test(w)) continue;
+    if (STOPWORDS.has(w.toLowerCase())) continue;
+    out.add(w);
+    if (i + 1 < words.length && /^[A-Z]/.test(words[i + 1])) out.add(`${w} ${words[i + 1]}`);
+  }
+  return [...out];
+}
+
+function stats(values: number[]) {
+  const mean = values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
+  const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, values.length);
+  return { mean, sd: Math.sqrt(variance) };
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
