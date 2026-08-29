@@ -48,7 +48,8 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
     try {
       let done = 0;
       // Resumable: keep asking for batches until nothing new comes back.
-      for (let pass = 0; pass < 10; pass++) {
+      // 40 passes x 200 covers a multi-thousand-story backlog in one click.
+      for (let pass = 0; pass < 40; pass++) {
         const { data, error } = await supabase.functions.invoke('classify-stories', {
           body: { topicId, limit: 200, batchSize: 25 },
         });
