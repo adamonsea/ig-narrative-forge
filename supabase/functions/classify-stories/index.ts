@@ -181,6 +181,8 @@ Deno.serve(async (req) => {
 
     let processed = 0;
     let failed = 0;
+    let blockedMessage: string | null = null;
+
 
     for (let i = 0; i < pending.length; i += batchSize) {
       const batch = pending.slice(i, i + batchSize);
