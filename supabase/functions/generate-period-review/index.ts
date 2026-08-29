@@ -99,6 +99,34 @@ Deno.serve(async (req) => {
       if (batch.length < PAGE) break;
     }
 
+    // Fetch every row matching an `in (...)` filter, paging past the
+    // PostgREST 1000-row response cap (slides/interactions are many-per-story).
+    const fetchAllIn = async (
+      table: string,
+      columns: string,
+      column: string,
+      ids: string[],
+      chunkSize = 200
+    ): Promise<any[]> => {
+      const out: any[] = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        for (let page = 0; page < 40; page++) {
+          const from = page * 1000;
+          const { data, error } = await service
+            .from(table)
+            .select(columns)
+            .in(column, chunk)
+            .range(from, from + 999);
+          if (error) break;
+          const rows = data ?? [];
+          out.push(...rows);
+          if (rows.length < 1000) break;
+        }
+      }
+      return out;
+    };
+
 
     // Fetch published stories in both the current and previous window.
     type Row = {
