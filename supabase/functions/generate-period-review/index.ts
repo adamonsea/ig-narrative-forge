@@ -61,7 +61,14 @@ Deno.serve(async (req) => {
     const taIds = (topicArticles ?? []).map((r: any) => r.id);
 
     // Fetch published stories in both the current and previous window.
-    type Row = { id: string; title: string; created_at: string; cover_illustration_url: string | null; slug: string | null };
+    type Row = {
+      id: string;
+      title: string;
+      created_at: string;
+      cover_illustration_url: string | null;
+      slug: string | null;
+      publication_name: string | null;
+    };
     const current: Row[] = [];
     const previous: Row[] = [];
 
@@ -69,7 +76,7 @@ Deno.serve(async (req) => {
       const chunk = taIds.slice(i, i + 200);
       const { data: rows } = await service
         .from('stories')
-        .select('id, title, created_at, cover_illustration_url, slug')
+        .select('id, title, created_at, cover_illustration_url, slug, publication_name')
         .in('topic_article_id', chunk)
         .eq('is_published', true)
         .gte('created_at', prevStartISO)
