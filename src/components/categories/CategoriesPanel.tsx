@@ -47,11 +47,14 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
     setClassifying(true);
     try {
       let done = 0;
+      let consecutiveErrors = 0;
+      let lastError: string | null = null;
       // Resumable: keep asking for batches until nothing new comes back.
-      // 40 passes x 200 covers a multi-thousand-story backlog in one click.
-      for (let pass = 0; pass < 40; pass++) {
+      // Smaller passes (75) stay well inside the edge invocation timeout;
+      // 80 passes still covers a multi-thousand-story backlog in one click.
+      for (let pass = 0; pass < 80; pass++) {
         const { data, error } = await supabase.functions.invoke('classify-stories', {
-          body: { topicId, limit: 200, batchSize: 25 },
+          body: { topicId, limit: 75, batchSize: 25 },
         });
         const payload = data as any;
         if (payload?.blocked) {
@@ -60,13 +63,31 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
               'AI classification is blocked — the workspace AI credit limit has been reached.'
           );
         }
-        if (error) throw error;
+        if (error) {
+          // Transient timeout / cold start — retry rather than throwing away
+          // the progress already committed in earlier passes.
+          consecutiveErrors += 1;
+          lastError = error.message ?? String(error);
+          if (consecutiveErrors >= 3) break;
+          await new Promise((r) => setTimeout(r, 1500 * consecutiveErrors));
+          continue;
+        }
+        consecutiveErrors = 0;
         const processed = payload?.processed ?? 0;
         done += processed;
         if (processed === 0) break;
       }
 
-      toast({ title: 'Classification run complete', description: `${done} stories categorised.` });
+      if (done > 0) {
+        toast({
+          title: 'Classification run complete',
+          description: lastError
+            ? `${done} stories categorised. Some passes timed out — run again to continue.`
+            : `${done} stories categorised.`,
+        });
+      } else {
+        throw new Error(lastError ?? 'No stories were classified.');
+      }
       reload();
     } catch (err) {
       toast({
@@ -78,6 +99,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
       setClassifying(false);
     }
   };
+
 
   const runDiscovery = async () => {
     setDiscovering(true);

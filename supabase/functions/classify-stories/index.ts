@@ -190,11 +190,16 @@ Deno.serve(async (req) => {
     let processed = 0;
     let failed = 0;
     let blockedMessage: string | null = null;
+    // Return cleanly before the platform kills the invocation, so the client
+    // sees the work already committed instead of a transport error.
+    const deadline = Date.now() + 100_000;
 
 
     for (let i = 0; i < pending.length; i += batchSize) {
+      if (Date.now() > deadline) break;
       const batch = pending.slice(i, i + batchSize);
       try {
+
         const results = await classifyBatch(batch, categories);
 
         // Repair hallucinated/truncated IDs: the LLM sometimes returns an id
