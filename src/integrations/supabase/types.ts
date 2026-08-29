@@ -3121,6 +3121,142 @@ export type Database = {
           },
         ]
       }
+      story_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          parent_id: string | null
+          slug: string
+          sort_order: number
+          topic_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "story_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_categories_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_categories_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_category_assignments: {
+        Row: {
+          category_id: string
+          confidence: number
+          created_at: string
+          id: string
+          model: string | null
+          rationale: string | null
+          story_id: string
+          subcategory_id: string | null
+          topic_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          model?: string | null
+          rationale?: string | null
+          story_id: string
+          subcategory_id?: string | null
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          model?: string | null
+          rationale?: string | null
+          story_id?: string
+          subcategory_id?: string | null
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_category_assignments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "story_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_category_assignments_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: true
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_category_assignments_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "story_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_category_assignments_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_category_assignments_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       story_cover_options: {
         Row: {
           cover_url: string
@@ -3475,6 +3611,54 @@ export type Database = {
         }
         Relationships: []
       }
+      taxonomy_discovery_runs: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          proposal: Json | null
+          sample_size: number
+          status: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          proposal?: Json | null
+          sample_size?: number
+          status?: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          proposal?: Json | null
+          sample_size?: number
+          status?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taxonomy_discovery_runs_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "taxonomy_discovery_runs_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_articles: {
         Row: {
           content_quality_score: number | null
@@ -3623,6 +3807,64 @@ export type Database = {
             foreignKeyName: "topic_automation_settings_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: true
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_category_settings: {
+        Row: {
+          automation_mode: string
+          category_id: string
+          created_at: string
+          enabled: boolean
+          geographic_radius_miles: number | null
+          id: string
+          relevance_threshold: number | null
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          automation_mode?: string
+          category_id: string
+          created_at?: string
+          enabled?: boolean
+          geographic_radius_miles?: number | null
+          id?: string
+          relevance_threshold?: number | null
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          automation_mode?: string
+          category_id?: string
+          created_at?: string
+          enabled?: boolean
+          geographic_radius_miles?: number | null
+          id?: string
+          relevance_threshold?: number | null
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_category_settings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "story_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_category_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_category_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -3879,6 +4121,66 @@ export type Database = {
           },
           {
             foreignKeyName: "topic_newsletter_signups_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_period_reviews: {
+        Row: {
+          created_at: string
+          data: Json
+          generated_at: string
+          id: string
+          is_public: boolean
+          label: string
+          narrative: string | null
+          period_end: string
+          period_start: string
+          slug: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          generated_at?: string
+          id?: string
+          is_public?: boolean
+          label: string
+          narrative?: string | null
+          period_end: string
+          period_start: string
+          slug: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          generated_at?: string
+          id?: string
+          is_public?: boolean
+          label?: string
+          narrative?: string | null
+          period_end?: string
+          period_start?: string
+          slug?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_period_reviews_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_period_reviews_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "topics"
