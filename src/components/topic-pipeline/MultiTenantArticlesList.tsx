@@ -158,11 +158,25 @@ export default function MultiTenantArticlesList({
     const showConfig = expandedConfig.has(article.id);
     
     return (
+      <motion.div
+        key={article.id}
+        layout={prefersReducedMotion ? false : "position"}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: isAnimating ? 0.55 : 1, y: 0 }}
+        exit={prefersReducedMotion
+          ? { opacity: 0 }
+          : { opacity: 0, x: 24, height: 0, marginTop: 0, marginBottom: 0, scale: 0.98 }}
+        transition={{
+          layout: { type: "spring", stiffness: 420, damping: 38, mass: 0.7 },
+          duration: 0.22,
+          ease: [0.4, 0, 0.2, 1]
+        }}
+        style={{ overflow: "hidden", willChange: "transform, opacity" }}
+      >
       <Card 
-        key={article.id} 
-        className={`transition-all duration-300 hover:shadow-md ${
-          isAnimating ? 'animate-fade-out opacity-0 transform translate-x-4' : ''
-        } ${dupInfo && !dupInfo.isDuplicateLeader ? 'ml-4 border-l-4 border-l-amber-400' : ''}`}
+        className={`transition-shadow duration-200 hover:shadow-md ${
+          dupInfo && !dupInfo.isDuplicateLeader ? 'ml-4 border-l-4 border-l-amber-400' : ''
+        }`}
       >
         <div className="p-4 space-y-2.5">
           {/* Metadata line: source domain, relevance pill, currentness */}
