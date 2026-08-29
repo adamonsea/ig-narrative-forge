@@ -419,8 +419,19 @@ Deno.serve(async (req) => {
 
     // Narrative from the computed numbers only.
     let narrative: string | null = null;
+    let headline: string | null = null;
     try {
-      const factSheet = JSON.stringify({ summary, categoryBreakdown: categoryBreakdown.slice(0, 12), hotTopics: hotTopics.slice(0, 12), timeline });
+      const factSheet = JSON.stringify({
+        summary,
+        scale,
+        categoryBreakdown: categoryBreakdown.slice(0, 12),
+        crimeBreakdown,
+        councilBreakdown,
+        anomalies,
+        risingTerms,
+        hotTopics: hotTopics.slice(0, 12),
+        timeline,
+      });
       const resp = await llmFetch(
         {
           body: {
@@ -430,16 +441,18 @@ Deno.serve(async (req) => {
                 role: 'user',
                 content: `Write an editor's note reviewing the period ${periodStart} to ${periodEnd} for the ${topic?.name ?? 'local'} news feed.
 
-Use ONLY the figures below — invent nothing, name no story that is not listed. 150-200 words, plain British English, calm and factual, no bullet points, no headings.
+Use ONLY the figures below — invent nothing, name no story that is not listed. Plain British English, confident and specific, no bullet points, no headings.
+
+Also write one short headline (max 10 words) that captures the single most striking fact.
 
 DATA:
 ${factSheet}
 
-Return ONLY JSON: {"narrative":"..."}`,
+Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separated by \\n\\n, 180-240 words total"}`,
               },
             ],
             temperature: 0.4,
-            max_tokens: 800,
+            max_tokens: 1200,
             response_format: { type: 'json_object' },
           },
         },
@@ -447,7 +460,9 @@ Return ONLY JSON: {"narrative":"..."}`,
       );
       if (resp.ok) {
         const json = await resp.json();
-        narrative = parseJson<any>(json?.choices?.[0]?.message?.content ?? '')?.narrative ?? null;
+        const parsed = parseJson<any>(json?.choices?.[0]?.message?.content ?? '');
+        narrative = parsed?.narrative ?? null;
+        headline = parsed?.headline ?? null;
       } else {
         console.error('Narrative generation failed:', resp.status, (await resp.text()).slice(0, 300));
       }
@@ -457,8 +472,19 @@ Return ONLY JSON: {"narrative":"..."}`,
 
     const data = {
       summary,
+      scale,
+      headline,
       categoryBreakdown,
       subcategoryBreakdown,
+      crimeBreakdown,
+      councilBreakdown,
+      anomalies,
+      risingTerms,
+      fadingTerms,
+      places,
+      entities,
+      categoryPerformance,
+      sourceScorecard,
       timeline,
       hotTopics,
       topStories,
