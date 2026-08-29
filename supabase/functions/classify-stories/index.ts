@@ -1,0 +1,195 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { llmFetch } from '../_shared/llm-router.ts';
+import { getUser, isAdmin, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
+import { loadTaxonomy, taxonomyPrompt, parseJson, CategoryRow } from '../_shared/taxonomy.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const MODEL = 'deepseek-v4-flash';
+
+interface StoryForClassification {
+  id: string;
+  title: string;
+  snippet: string;
+}
+
+async function classifyBatch(
+  stories: StoryForClassification[],
+  categories: CategoryRow[]
+): Promise<Array<{ id: string; category: string; subcategory?: string; confidence?: number }>> {
+  const prompt = `You are classifying local news stories into a fixed taxonomy.
+
+TAXONOMY (use the slug exactly):
+${taxonomyPrompt(categories)}
+
+Rules:
+- Choose exactly one primary category slug per story from the parent list.
+- Optionally add one sub-category slug, only from that parent's [sub: ...] list.
+- confidence is 0-1.
+- Missing person appeals and witness appeals belong to missing-persons, not crime.
+- Return ONLY a JSON array, no prose.
+
+STORIES:
+${stories.map((s) => `${s.id} :: ${s.title} :: ${s.snippet.slice(0, 320)}`).join('\n')}
+
+Return: [{"id":"<story id>","category":"<slug>","subcategory":"<slug or null>","confidence":0.0}]`;
+
+  const resp = await llmFetch(
+    {
+      body: {
+        model: MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0,
+        max_tokens: 3000,
+        response_format: { type: 'json_object' },
+      },
+    },
+    { context: 'classify-stories' }
+  );
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`LLM request failed [${resp.status}]: ${body.slice(0, 500)}`);
+  }
+
+  const json = await resp.json();
+  const content = json?.choices?.[0]?.message?.content ?? '';
+  const parsed = parseJson<any>(content);
+  if (Array.isArray(parsed)) return parsed;
+  if (Array.isArray(parsed?.stories)) return parsed.stories;
+  if (Array.isArray(parsed?.results)) return parsed.results;
+  return [];
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  const service = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const topicId: string | undefined = body.topicId;
+    const limit = Math.min(Number(body.limit) || 200, 500);
+    const batchSize = Math.min(Number(body.batchSize) || 25, 40);
+    const internal = req.headers.get('x-service-token') === SERVICE_KEY;
+
+    if (!topicId) {
+      return new Response(JSON.stringify({ error: 'topicId is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!internal) {
+      const user = await getUser(req);
+      if (!user) return unauthorized(corsHeaders);
+      const allowed = (await userOwnsTopic(service, user.id, topicId)) || (await isAdmin(service, user.id));
+      if (!allowed) return forbidden(corsHeaders);
+    }
+
+    const categories = await loadTaxonomy(service, topicId);
+    const bySlug = new Map(categories.map((c) => [c.slug, c]));
+
+    // Stories in this topic that have no assignment yet.
+    const { data: topicArticles, error: taError } = await service
+      .from('topic_articles')
+      .select('id')
+      .eq('topic_id', topicId)
+      .limit(20000);
+    if (taError) throw new Error(taError.message);
+
+    const taIds = (topicArticles ?? []).map((r: any) => r.id);
+    if (taIds.length === 0) {
+      return new Response(JSON.stringify({ processed: 0, remaining: 0 }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: assigned } = await service
+      .from('story_category_assignments')
+      .select('story_id')
+      .eq('topic_id', topicId)
+      .limit(20000);
+    const assignedIds = new Set((assigned ?? []).map((r: any) => r.story_id));
+
+    const pending: StoryForClassification[] = [];
+    const chunkSize = 200;
+    for (let i = 0; i < taIds.length && pending.length < limit; i += chunkSize) {
+      const { data: stories } = await service
+        .from('stories')
+        .select('id, title, topic_article_id')
+        .in('topic_article_id', taIds.slice(i, i + chunkSize))
+        .order('created_at', { ascending: false });
+
+      for (const s of stories ?? []) {
+        if (assignedIds.has(s.id)) continue;
+        pending.push({ id: s.id, title: s.title ?? '', snippet: '' });
+        if (pending.length >= limit) break;
+      }
+    }
+
+    // Enrich with the opening slide for context.
+    const ids = pending.map((p) => p.id);
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: slides } = await service
+        .from('slides')
+        .select('story_id, content, slide_number')
+        .in('story_id', ids.slice(i, i + 200))
+        .eq('slide_number', 1);
+      const map = new Map((slides ?? []).map((s: any) => [s.story_id, s.content]));
+      for (const p of pending) if (map.has(p.id)) p.snippet = String(map.get(p.id) ?? '');
+    }
+
+    let processed = 0;
+    let failed = 0;
+
+    for (let i = 0; i < pending.length; i += batchSize) {
+      const batch = pending.slice(i, i + batchSize);
+      try {
+        const results = await classifyBatch(batch, categories);
+        const rows = results
+          .map((r) => {
+            const cat = bySlug.get(String(r.category ?? '').trim());
+            if (!cat || cat.parent_id) return null;
+            const sub = r.subcategory ? bySlug.get(String(r.subcategory).trim()) : null;
+            return {
+              story_id: r.id,
+              topic_id: topicId,
+              category_id: cat.id,
+              subcategory_id: sub && sub.parent_id === cat.id ? sub.id : null,
+              confidence: Math.max(0, Math.min(1, Number(r.confidence ?? 0.5))),
+              model: MODEL,
+            };
+          })
+          .filter(Boolean) as any[];
+
+        if (rows.length) {
+          const { error } = await service
+            .from('story_category_assignments')
+            .upsert(rows, { onConflict: 'story_id' });
+          if (error) throw new Error(error.message);
+          processed += rows.length;
+        }
+      } catch (err) {
+        failed += batch.length;
+        console.error('Batch classification failed:', err instanceof Error ? err.message : err);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ processed, failed, requested: pending.length, remaining: Math.max(0, pending.length - processed - failed) }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('classify-stories error:', error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
