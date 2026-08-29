@@ -188,13 +188,35 @@ Deno.serve(async (req) => {
       const batch = pending.slice(i, i + batchSize);
       try {
         const results = await classifyBatch(batch, categories);
+
+        // Repair hallucinated/truncated IDs: the LLM sometimes returns an id
+        // with a typo or a missing character, which would poison the upsert.
+        // Match each returned id against this batch's real ids; drop anything
+        // that can't be matched instead of failing the whole batch.
+        const batchIds = batch.map((b) => b.id);
+        const resolveId = (raw: unknown): string | null => {
+          if (typeof raw !== 'string') return null;
+          const cleaned = raw.trim().toLowerCase();
+          if (batchIds.includes(cleaned)) return cleaned;
+          const hexOnly = cleaned.replace(/[^0-9a-f]/g, '');
+          if (hexOnly.length < 8) return null;
+          const match = batchIds.find((id) => {
+            const idHex = id.replace(/-/g, '');
+            return idHex.startsWith(hexOnly) || hexOnly.startsWith(idHex) ||
+              idHex.includes(hexOnly) || hexOnly.includes(idHex);
+          });
+          return match ?? null;
+        };
+
         const rows = results
           .map((r) => {
+            const storyId = resolveId(r.id);
+            if (!storyId) return null;
             const cat = bySlug.get(String(r.category ?? '').trim());
             if (!cat || cat.parent_id) return null;
             const sub = r.subcategory ? bySlug.get(String(r.subcategory).trim()) : null;
             return {
-              story_id: r.id,
+              story_id: storyId,
               topic_id: topicId,
               category_id: cat.id,
               subcategory_id: sub && sub.parent_id === cat.id ? sub.id : null,
@@ -204,12 +226,16 @@ Deno.serve(async (req) => {
           })
           .filter(Boolean) as any[];
 
-        if (rows.length) {
+        // De-dupe in case the LLM returned the same story twice.
+        const seen = new Set<string>();
+        const deduped = rows.filter((r) => (seen.has(r.story_id) ? false : (seen.add(r.story_id), true)));
+
+        if (deduped.length) {
           const { error } = await service
             .from('story_category_assignments')
-            .upsert(rows, { onConflict: 'story_id' });
+            .upsert(deduped, { onConflict: 'story_id' });
           if (error) throw new Error(error.message);
-          processed += rows.length;
+          processed += deduped.length;
         }
       } catch (err) {
         failed += batch.length;
