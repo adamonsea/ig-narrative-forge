@@ -64,14 +64,15 @@ export const RankRows = ({
   return (
     <ul className="space-y-4">
       {items.map((item, i) => (
-        <li key={item.key} className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-4 text-sm">
+        <li key={item.key} className="space-y-2">
+          <div className="flex items-baseline justify-between gap-4 text-lg">
             <span className="font-medium truncate">{item.label}</span>
-            <span className="tabular-nums opacity-60">
+            <span className="tabular-nums opacity-70">
               {item.value}
               {item.note && <span className="ml-2">{item.note}</span>}
             </span>
           </div>
+
           <div
             className={cn(
               'h-1.5 overflow-hidden rounded-full',
