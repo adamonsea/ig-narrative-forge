@@ -390,6 +390,7 @@ export default function MultiTenantArticlesList({
           </div>
         </div>
       </Card>
+      </motion.div>
     );
   };
 
