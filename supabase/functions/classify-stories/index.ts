@@ -213,14 +213,31 @@ Deno.serve(async (req) => {
         }
       } catch (err) {
         failed += batch.length;
-        console.error('Batch classification failed:', err instanceof Error ? err.message : err);
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('Batch classification failed:', message);
+        if ((err as any)?.blocked) {
+          // AI credits exhausted or workspace limit reached — stop immediately
+          blockedMessage = message;
+          console.error('⛔ [classify-stories] AI access blocked, aborting remaining batches');
+          break;
+        }
       }
     }
 
     return new Response(
-      JSON.stringify({ processed, failed, requested: pending.length, remaining: Math.max(0, pending.length - processed - failed) }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        processed,
+        failed,
+        requested: pending.length,
+        remaining: Math.max(0, pending.length - processed - failed),
+        blocked: Boolean(blockedMessage),
+        error: blockedMessage
+          ? 'AI classification is blocked: the workspace AI credit limit has been reached (and the DeepSeek balance is empty). Raise the limit or top up, then re-run.'
+          : undefined,
+      }),
+      { status: blockedMessage ? 402 : 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('classify-stories error:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
