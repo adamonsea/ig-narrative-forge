@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
         (termMonth[t] ??= {})[m] = (termMonth[t][m] ?? 0) + 1;
       }
     }
-    const anomalies = Object.entries(termMonth)
+    let anomalies = Object.entries(termMonth)
       .map(([term, byMonth]) => {
         const series = months.map((m) => byMonth[m] ?? 0);
         const total = series.reduce((a, b) => a + b, 0);
@@ -368,12 +368,12 @@ Deno.serve(async (req) => {
       const entries = Object.entries(byMonth).sort((a, b) => b[1] - a[1]);
       return entries[0]?.[0] ?? null;
     };
-    const risingTerms = Object.entries(termCounts)
+    let risingTerms = Object.entries(termCounts)
       .filter(([term, count]) => count >= 3 && (prevTermCounts[term] ?? 0) === 0)
       .map(([term, count]) => ({ term, count, month: peakMonthOf(term) }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 12);
-    const fadingTerms = Object.entries(prevTermCounts)
+    let fadingTerms = Object.entries(prevTermCounts)
       .filter(([term, count]) => count >= 3 && (termCounts[term] ?? 0) === 0)
       .map(([term, count]) => ({ term, count }))
       .sort((a, b) => b.count - a.count)
@@ -392,48 +392,74 @@ Deno.serve(async (req) => {
       .slice(0, 12);
 
     // ---- Distinctive terms: what was surprising, not what was expected ----
-    // Raw frequency surfaces the obvious (the town's own name, "police",
-    // "council"). Instead: drop terms that are generic or appear in a large
-    // share of headlines, then rank by volume × burstiness.
+    // Volume surfaces institutions (the council, the police, the town's own
+    // name). Insight lives in terms that are *concentrated* — a burst in one or
+    // two months against their own quiet baseline. So: strip anything expected,
+    // strip anything that hums along every month, then rank by burstiness.
     const totalStories = Math.max(1, current.length);
     const topicWords = new Set(
-      `${topic?.name ?? ''} ${topic?.region ?? ''}`
+      `${topic?.name ?? ''} ${topic?.region ?? ''} ${topic?.description ?? ''}`
         .split(/\W+/)
-        .filter(Boolean)
+        .filter((w) => w.length > 3)
         .map((w) => w.toLowerCase())
     );
     const GENERIC_TERMS = new Set([
-      'police', 'council', 'court', 'news', 'update', 'live', 'video', 'watch', 'plans', 'plan',
-      'warning', 'appeal', 'death', 'died', 'crash', 'fire', 'road', 'roads', 'town', 'area',
-      'week', 'weekend', 'east', 'west', 'north', 'south', 'uk', 'britain', 'england', 'british',
-      'man', 'woman', 'men', 'women', 'people', 'family', 'local', 'residents', 'community',
+      // institutions and beats every local feed carries
+      'police', 'council', 'councillor', 'councillors', 'borough', 'district', 'county', 'parish',
+      'court', 'magistrates', 'crown', 'jailed', 'sentenced', 'charged', 'arrested', 'investigation',
+      'hospital', 'ambulance', 'paramedics', 'nhs', 'firefighters', 'coastguard', 'lifeboat',
+      'mayor', 'authority', 'government', 'parliament', 'election', 'labour', 'conservative',
+      'liberal', 'democrats', 'reform', 'green', 'party', 'mp', 'mps',
+      // news furniture
+      'news', 'update', 'updates', 'live', 'video', 'watch', 'photos', 'gallery', 'plans', 'plan',
+      'warning', 'appeal', 'death', 'died', 'dead', 'crash', 'fire', 'road', 'roads', 'town',
+      'area', 'street', 'centre', 'center', 'service', 'services', 'scheme', 'project', 'report',
+      'meeting', 'decision', 'review', 'consultation', 'residents', 'community', 'local', 'public',
+      // people and time
+      'man', 'woman', 'men', 'women', 'people', 'family', 'boy', 'girl', 'teenager', 'driver',
+      'week', 'weekend', 'month', 'year', 'today', 'tonight', 'east', 'west', 'north', 'south',
       'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september',
       'october', 'november', 'december', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday',
-      'saturday', 'sunday', 'christmas', 'summer', 'winter', 'spring', 'autumn', 'best', 'top',
-      'here', 'what', 'when', 'where', 'why', 'how', 'now', 'still', 'back', 'again',
+      'saturday', 'sunday', 'christmas', 'summer', 'winter', 'spring', 'autumn', 'easter',
+      'uk', 'britain', 'england', 'english', 'british',
+      'best', 'top', 'new', 'here', 'what', 'when', 'where', 'more', 'after', 'over',
     ]);
-    const isExpected = (term: string) =>
-      term
-        .toLowerCase()
-        .split(' ')
-        .every((w) => topicWords.has(w) || GENERIC_TERMS.has(w));
+    const words = (term: string) => term.toLowerCase().split(' ');
+    // Expected if it mentions the topic itself, or if every word is furniture.
+    const isExpected = (term: string) => {
+      const ws = words(term);
+      if (ws.some((w) => topicWords.has(w))) return true;
+      return ws.every((w) => GENERIC_TERMS.has(w));
+    };
 
     const scored = Object.entries(termCounts)
       .map(([term, count]) => {
-        if (count < 4 || isExpected(term)) return null;
-        // A term in more than 12% of all headlines is the wallpaper, not the news.
-        if (count / totalStories > 0.12) return null;
+        if (count < 3 || isExpected(term)) return null;
+        // A term in more than 6% of all headlines is the wallpaper, not the news.
+        if (count / totalStories > 0.06) return null;
         const series = months.map((m) => termMonth[term]?.[m] ?? 0);
         const { mean } = stats(series);
         const peak = Math.max(0, ...series);
         const burst = mean > 0 ? peak / mean : 1;
         const monthsPresent = series.filter((v) => v > 0).length;
-        const score = count * (1 + Math.log(1 + burst)) * (term.includes(' ') ? 1.35 : 1);
+        // Concentration: share of the term's mentions falling in its peak month.
+        const concentration = peak / Math.max(1, count);
+        // Anything present in nearly every month at a flat rate is background.
+        const spread = monthsPresent / Math.max(1, months.length);
+        if (months.length >= 4 && spread > 0.75 && burst < 2) return null;
+        if (burst < 1.5 && concentration < 0.4) return null;
+        // Rank on anomaly first, volume only as a tiebreaker.
+        const score =
+          Math.pow(burst, 1.6) *
+          (0.6 + concentration) *
+          Math.sqrt(count) *
+          (term.includes(' ') ? 1.4 : 1);
         return {
           term,
           count,
           peak_month: months[series.indexOf(peak)] ?? null,
           burst: Math.round(burst * 10) / 10,
+          concentration: Math.round(concentration * 100) / 100,
           months_present: monthsPresent,
           series,
           score: Math.round(score * 10) / 10,
@@ -442,11 +468,20 @@ Deno.serve(async (req) => {
       .filter(Boolean) as Array<any>;
     scored.sort((a, b) => b.score - a.score);
 
-    const distinctiveTerms = scored.slice(0, 18).map(({ series, ...rest }) => rest);
+    // Don't let one story cluster dominate: keep only one term per head word.
+    const seenHeads = new Set<string>();
+    const deduped = scored.filter((t) => {
+      const head = words(t.term).filter((w) => !GENERIC_TERMS.has(w)).pop() ?? t.term;
+      if (seenHeads.has(head)) return false;
+      seenHeads.add(head);
+      return true;
+    });
 
-    // Month-by-month series for the terms worth plotting (persistent, not one-hit).
-    const termTrends = scored
-      .filter((t) => t.months_present >= 3)
+    const distinctiveTerms = deduped.slice(0, 18).map(({ series, ...rest }) => rest);
+
+    // Month-by-month series worth plotting: the sharpest movers, not the steadiest.
+    const termTrends = deduped
+      .filter((t) => t.months_present >= 2)
       .slice(0, 6)
       .map((t) => ({
         term: t.term,
@@ -457,13 +492,20 @@ Deno.serve(async (req) => {
           const half = Math.floor(t.series.length / 2) || 1;
           const first = t.series.slice(0, half).reduce((a: number, b: number) => a + b, 0);
           const second = t.series.slice(half).reduce((a: number, b: number) => a + b, 0);
+          if (t.burst >= 3) return 'spiky';
           if (second > first * 1.5) return 'rising';
           if (first > second * 1.5) return 'fading';
-          if (t.burst >= 3) return 'spiky';
           return 'steady';
         })(),
       }));
     const trendMonths = months;
+
+    // Apply the same 'expected' filter to the anomaly and vocabulary lists so
+    // institutions and calendar words can't occupy those slides either.
+    anomalies = anomalies.filter((a) => !isExpected(a.term));
+    risingTerms = risingTerms.filter((t) => !isExpected(t.term));
+    fadingTerms = fadingTerms.filter((t) => !isExpected(t.term));
+
 
     // ---- Sub-category insight across the whole taxonomy -------------------
     // Not just crime and council: every parent beat that actually splits.
