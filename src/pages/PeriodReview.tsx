@@ -314,6 +314,116 @@ const PeriodReview = () => {
         </ReviewSlide>
       )}
 
+      {/* Sub-beat deep dives — the detail inside each beat */}
+      {subDeepDives.map((p) => (
+        <ReviewSlide key={p.slug} label={`Inside ${p.name.toLowerCase()}`}>
+          <MaskRevealHeading
+            className="mb-3 text-4xl font-semibold tracking-tight"
+            segments={[{ text: `${p.total} ` }, { text: p.name.toLowerCase(), italic: true }, { text: ' stories' }]}
+          />
+          <Reveal delay={0.15}>
+            <p className="mb-8 text-lg text-muted-foreground">
+              {p.items[0].share}% of them were {p.items[0].name.toLowerCase()}
+              {p.items[0].peak_month ? `, peaking in ${monthLabel(p.items[0].peak_month)}` : ''}.
+            </p>
+          </Reveal>
+          <RankRows
+            items={p.items.slice(0, 5).map((i) => ({
+              key: i.name,
+              label: i.name,
+              value: i.count,
+              note:
+                i.change_percent != null
+                  ? `${i.change_percent > 0 ? '+' : ''}${i.change_percent}%`
+                  : `${i.share}%`,
+            }))}
+          />
+        </ReviewSlide>
+      ))}
+
+      {/* Sub-beat movers */}
+      {subcategoryMovers.length > 0 && (
+        <ReviewSlide tone="inverted" label="What actually changed">
+          <MaskRevealHeading
+            className="mb-8 text-4xl font-semibold tracking-tight"
+            segments={[{ text: 'The sub-beats that ' }, { text: 'moved', italic: true }]}
+          />
+          <ul className="space-y-6">
+            {subcategoryMovers.slice(0, 4).map((m, i) => (
+              <Reveal key={`${m.parent}-${m.name}`} delay={i * 0.08}>
+                <li className="flex items-baseline justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-xl font-medium">{m.name}</p>
+                    <p className="text-base opacity-70">
+                      {m.parent} · {m.previous} → {m.count}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 text-3xl font-semibold tabular-nums ${
+                      (m.change_percent ?? 0) >= 0 ? '' : 'opacity-60'
+                    }`}
+                  >
+                    {(m.change_percent ?? 0) > 0 ? '+' : ''}
+                    {m.change_percent}%
+                  </span>
+                </li>
+              </Reveal>
+            ))}
+          </ul>
+        </ReviewSlide>
+      )}
+
+      {/* Term trends over time */}
+      {termTrends.length > 0 && chartMonths.length > 2 && (
+        <ReviewSlide tone="accent" label="Rise and fall">
+          <MaskRevealHeading
+            className="mb-8 text-4xl font-semibold tracking-tight"
+            segments={[{ text: 'Words that ' }, { text: 'came and went', italic: true }]}
+          />
+          <div className="space-y-6">
+            {termTrends.slice(0, 5).map((t, idx) => {
+              const max = Math.max(1, ...t.series);
+              const w = 100 / Math.max(1, t.series.length - 1);
+              const path = t.series
+                .map((v, i) => `${i === 0 ? 'M' : 'L'} ${i * w} ${30 - (v / max) * 28}`)
+                .join(' ');
+              const badge =
+                t.trend === 'rising' ? '▲ rising' : t.trend === 'fading' ? '▼ fading' : t.trend === 'spiky' ? '⚡ spiked' : '— steady';
+              return (
+                <Reveal key={t.term} delay={idx * 0.08}>
+                  <div>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <span className="truncate text-xl font-medium">{t.term}</span>
+                      <span className="shrink-0 text-base text-muted-foreground">
+                        {t.total} · {badge}
+                      </span>
+                    </div>
+                    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="mt-2 h-12 w-full" aria-hidden>
+                      <motion.path
+                        d={path}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.4}
+                        vectorEffect="non-scaling-stroke"
+                        className="text-primary"
+                        initial={{ pathLength: reduce ? 1 : 0 }}
+                        whileInView={{ pathLength: 1 }}
+                        viewport={{ once: true, margin: '-40px' }}
+                        transition={{ duration: reduce ? 0 : 1.1, ease: [0.19, 1, 0.22, 1] }}
+                      />
+                    </svg>
+                    <span className="sr-only">
+                      {chartMonths.map((m, i) => `${monthLabel(m)}: ${t.series[i] ?? 0}`).join(', ')}
+                    </span>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </ReviewSlide>
+      )}
+
+
       {/* Biggest shift */}
       {topMover && (
         <ReviewSlide label="The shift">
