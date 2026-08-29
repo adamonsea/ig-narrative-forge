@@ -57,3 +57,49 @@ export function parseJson<T>(raw: string): T {
   if (last > -1) text = text.slice(0, last + 1);
   return JSON.parse(text) as T;
 }
+
+/**
+ * Tolerant JSON parse for LLM output that may be truncated by max_tokens.
+ * Falls back to closing any open strings/brackets and dropping the trailing
+ * incomplete element so we still recover the categories produced so far.
+ */
+export function parseJsonSalvage<T>(raw: string): T {
+  try {
+    return parseJson<T>(raw);
+  } catch {
+    let text = (raw ?? '').trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    const first = text.search(/[[{]/);
+    if (first > 0) text = text.slice(first);
+
+    // Walk the text tracking structure; remember the last position where the
+    // document could be safely closed (end of a complete array/object element).
+    const stack: string[] = [];
+    let inString = false;
+    let escaped = false;
+    let safeEnd = -1;
+    let safeStack: string[] = [];
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === '\\') escaped = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') inString = true;
+      else if (ch === '{' || ch === '[') stack.push(ch === '{' ? '}' : ']');
+      else if (ch === '}' || ch === ']') {
+        stack.pop();
+        if (stack.length > 0) {
+          safeEnd = i;
+          safeStack = [...stack];
+        }
+      }
+    }
+
+    if (safeEnd === -1) throw new Error('Unable to salvage JSON from model output');
+    const closed = text.slice(0, safeEnd + 1) + safeStack.reverse().join('');
+    return JSON.parse(closed) as T;
+  }
+}
