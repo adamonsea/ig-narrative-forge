@@ -384,13 +384,38 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.views + b.shares * 3 - (a.views + a.shares * 3))
       .slice(0, 8);
 
+
+    // Reads per story by category — which beat actually earned attention.
+    const perfByCat: Record<string, { name: string; stories: number; views: number }> = {};
+    for (const r of current) {
+      const a = assignments.get(r.id);
+      const cat = a ? (catById.get(a.category_id) as any) : null;
+      const key = cat?.slug ?? 'uncategorised';
+      const rec = (perfByCat[key] ??= { name: cat?.name ?? 'Uncategorised', stories: 0, views: 0 });
+      rec.stories += 1;
+      rec.views += interactionCounts.get(r.id)?.views ?? 0;
+    }
+    const categoryPerformance = Object.entries(perfByCat)
+      .filter(([, v]) => v.stories >= 3)
+      .map(([slugKey, v]) => ({
+        slug: slugKey,
+        name: v.name,
+        stories: v.stories,
+        views: v.views,
+        reads_per_story: Math.round((v.views / v.stories) * 10) / 10,
+      }))
+      .sort((a, b) => b.reads_per_story - a.reads_per_story)
+      .slice(0, 8);
+
     const summary = {
       total_stories: current.length,
       previous_total: previous.length,
       change_percent: previous.length > 0 ? Math.round(((current.length - previous.length) / previous.length) * 100) : null,
       categories_covered: categoryBreakdown.length,
       total_views: topStories.reduce((n, s) => n + s.views, 0),
+      total_words: totalWords,
     };
+
 
     // Narrative from the computed numbers only.
     let narrative: string | null = null;
