@@ -29,18 +29,14 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
     if (totalStories != null) return;
     let cancelled = false;
     (async () => {
-      const { data: tas } = await supabase.from('topic_articles').select('id').eq('topic_id', topicId).limit(20000);
-      const ids = (tas ?? []).map((t) => t.id);
-      let total = 0;
-      for (let i = 0; i < ids.length; i += 200) {
-        const { count } = await supabase
-          .from('stories')
-          .select('id', { count: 'exact', head: true })
-          .in('topic_article_id', ids.slice(i, i + 200))
-          .eq('is_published', true);
-        total += count ?? 0;
-      }
-      if (!cancelled) setStoryTotal(total);
+      // Single exact count via the topic_articles join — avoids the 1000-row
+      // page cap that was under-reporting the backlog.
+      const { count } = await supabase
+        .from('stories')
+        .select('id, topic_articles!inner(topic_id)', { count: 'exact', head: true })
+        .eq('topic_articles.topic_id', topicId)
+        .eq('is_published', true);
+      if (!cancelled) setStoryTotal(count ?? 0);
     })();
     return () => {
       cancelled = true;
