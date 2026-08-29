@@ -34,6 +34,44 @@ interface ReviewData {
   headline?: string | null;
   categoryBreakdown: Array<{ slug: string; name: string; count: number; previous: number; change_percent: number | null }>;
   subcategoryBreakdown: Array<{ name: string; count: number }>;
+  subcategoryInsights?: Array<{
+    slug: string;
+    name: string;
+    total: number;
+    concentration: number;
+    items: Array<{
+      name: string;
+      count: number;
+      share: number;
+      previous: number;
+      change_percent: number | null;
+      peak_month: string | null;
+    }>;
+  }>;
+  subcategoryMovers?: Array<{
+    parent: string;
+    name: string;
+    count: number;
+    previous: number;
+    change_percent: number | null;
+    peak_month: string | null;
+  }>;
+  distinctiveTerms?: Array<{
+    term: string;
+    count: number;
+    peak_month: string | null;
+    burst: number;
+    months_present: number;
+  }>;
+  termTrends?: Array<{
+    term: string;
+    total: number;
+    series: number[];
+    peak_month: string | null;
+    trend: 'rising' | 'fading' | 'spiky' | 'steady';
+  }>;
+  trendMonths?: string[];
+
   crimeBreakdown?: { total: number; items: Movement[] };
   councilBreakdown?: { total: number; items: Movement[] };
   anomalies?: Array<{ term: string; month: string; count: number; baseline: number; multiple: number }>;
