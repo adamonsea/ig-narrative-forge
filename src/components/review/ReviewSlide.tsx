@@ -25,7 +25,7 @@ export const ReviewSlide = ({
   >
     <div className="mx-auto w-full max-w-lg">
       {label && (
-        <p className="mb-6 text-[11px] uppercase tracking-[0.24em] opacity-60">{label}</p>
+        <p className="mb-6 text-sm uppercase tracking-[0.22em] opacity-70">{label}</p>
       )}
       {children}
     </div>
