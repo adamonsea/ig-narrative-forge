@@ -115,7 +115,9 @@ const App = () => {
               <Route path="/feed/:slug/widget" element={<PublicWidgetBuilder />} />
               <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
               <Route path="/feed/:slug/daily/:date" element={<DailyRoundupList />} />
-              <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundupList />} />
+             <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundupList />} />
+             <Route path="/feed/:slug/review/:reviewSlug" element={<PeriodReview />} />
+
               
               {/* Swipe Mode (isolated) */}
               <Route path="/play/:slug" element={<SwipeMode />} />
