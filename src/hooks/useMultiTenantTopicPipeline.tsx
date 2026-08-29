@@ -757,7 +757,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         slideDistribution: storiesData.map(s => ({ id: s.id, title: s.title, slideCount: s.slides.length }))
       });
 
-      setStories(storiesData);
+      const serverStoryIds = new Set(storiesData.map((s: any) => s.id));
+      pruneTombstones(removedStoriesRef.current);
+      removedStoriesRef.current.forEach((_, id) => {
+        if (!serverStoryIds.has(id)) removedStoriesRef.current.delete(id);
+      });
+      setStories(filterTombstoned(storiesData as any, removedStoriesRef.current) as any);
+
       
       // Detect new published stories for visual indicator
       const publishedStories = storiesData.filter((s: any) => s.is_published && ['ready', 'published'].includes(s.status));
