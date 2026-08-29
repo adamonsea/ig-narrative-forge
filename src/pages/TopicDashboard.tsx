@@ -39,6 +39,9 @@ import { ExternalLink, MapPin, Hash, Clock, ChevronDown, Loader2, Globe, Users, 
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
+import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
+import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
+
 
 interface TopicDashboardStats {
   articles: number;
