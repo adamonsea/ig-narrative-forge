@@ -185,6 +185,11 @@ const PeriodReview = () => {
     summary,
     scale,
     categoryBreakdown,
+    subcategoryInsights = [],
+    subcategoryMovers = [],
+    distinctiveTerms = [],
+    termTrends = [],
+    trendMonths = [],
     anomalies = [],
     risingTerms = [],
     places = [],
@@ -207,8 +212,14 @@ const PeriodReview = () => {
     .sort((a, b) => Math.abs(b.change_percent ?? 0) - Math.abs(a.change_percent ?? 0))[0];
   const totalWords = scale?.total_words ?? summary.total_words ?? 0;
   const spike = anomalies[0];
-  const names = (entities.length > 0 ? entities : hotTopics).slice(0, 6);
+  const names =
+    distinctiveTerms.length > 0
+      ? distinctiveTerms.slice(0, 6).map((t) => ({ term: t.term, count: t.count }))
+      : (entities.length > 0 ? entities : hotTopics).slice(0, 6);
+  const subDeepDives = subcategoryInsights.slice(0, 3);
+  const chartMonths = trendMonths.length > 0 ? trendMonths : timeline.map((t) => t.month);
   const pullQuote = (review.narrative ?? '').split(/\n{2,}/)[0]?.trim() ?? '';
+
 
   return (
     <main
