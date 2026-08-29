@@ -631,12 +631,18 @@ Deno.serve(async (req) => {
 
 Use ONLY the figures below — invent nothing, name no story that is not listed. Plain British English, confident and specific, no bullet points, no headings.
 
-Also write one short headline (max 10 words) that captures the single most striking fact.
+Aim for insight a reader could not have guessed:
+- Lead with sub-beat detail (which kind of crime, which kind of council business), never the parent beat alone.
+- Say what changed and when, using peak months and the trend labels.
+- Do not state the obvious (that a local feed covers local crime, police or the council). Skip any figure that is merely expected.
+- No filler adjectives, no "in conclusion", no restating the data as a list.
+
+Also write one short headline (max 10 words) that captures the single most striking, least obvious fact.
 
 DATA:
 ${factSheet}
 
-Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separated by \\n\\n, 180-240 words total"}`,
+Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separated by \\n\\n, 150-200 words total"}`,
               },
             ],
             temperature: 0.4,
