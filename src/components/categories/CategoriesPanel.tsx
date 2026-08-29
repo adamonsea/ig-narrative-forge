@@ -56,11 +56,19 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
         const { data, error } = await supabase.functions.invoke('classify-stories', {
           body: { topicId, limit: 200, batchSize: 25 },
         });
+        const payload = data as any;
+        if (payload?.blocked) {
+          throw new Error(
+            payload.error ||
+              'AI classification is blocked — the workspace AI credit limit has been reached.'
+          );
+        }
         if (error) throw error;
-        const processed = (data as any)?.processed ?? 0;
+        const processed = payload?.processed ?? 0;
         done += processed;
         if (processed === 0) break;
       }
+
       toast({ title: 'Classification run complete', description: `${done} stories categorised.` });
       reload();
     } catch (err) {
