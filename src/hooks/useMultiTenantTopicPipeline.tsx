@@ -343,7 +343,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         });
       }
 
-      setArticles(allArticles);
+      // Drop tombstones the server already agrees are gone, then filter the rest
+      const serverArticleIds = new Set(allArticles.map(a => a.id));
+      pruneTombstones(removedArticlesRef.current);
+      removedArticlesRef.current.forEach((_, id) => {
+        if (!serverArticleIds.has(id)) removedArticlesRef.current.delete(id);
+      });
+      setArticles(filterTombstoned(allArticles, removedArticlesRef.current));
+
       
       // Update hasMoreArticles based on total count
       const filteredTotal = totalCount || 0;
