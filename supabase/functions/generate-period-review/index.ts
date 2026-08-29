@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
             .from(table)
             .select(columns)
             .in(column, chunk)
+            .order(column, { ascending: true })
             .range(from, from + 999);
           if (error) break;
           const rows = data ?? [];
@@ -158,12 +159,13 @@ Deno.serve(async (req) => {
     // Category assignments for both windows.
     const allIds = [...current, ...previous].map((s) => s.id);
     const assignments = new Map<string, { category_id: string; subcategory_id: string | null }>();
-    for (let i = 0; i < allIds.length; i += 300) {
-      const { data } = await service
-        .from('story_category_assignments')
-        .select('story_id, category_id, subcategory_id')
-        .in('story_id', allIds.slice(i, i + 300));
-      for (const a of data ?? []) assignments.set(a.story_id, a);
+    for (const a of await fetchAllIn(
+      'story_category_assignments',
+      'story_id, category_id, subcategory_id',
+      'story_id',
+      allIds
+    )) {
+      assignments.set(a.story_id, a);
     }
 
     const { data: categories } = await service
@@ -259,14 +261,8 @@ Deno.serve(async (req) => {
     // ---- Scale of the archive -------------------------------------------
     const currentIdList = current.map((s) => s.id);
     let totalWords = 0;
-    for (let i = 0; i < currentIdList.length; i += 300) {
-      const { data: slideRows } = await service
-        .from('slides')
-        .select('word_count, content')
-        .in('story_id', currentIdList.slice(i, i + 300));
-      for (const s of slideRows ?? []) {
-        totalWords += s.word_count ?? String(s.content ?? '').split(/\s+/).filter(Boolean).length;
-      }
+    for (const sl of await fetchAllIn('slides', 'word_count, content, story_id', 'story_id', currentIdList)) {
+      totalWords += sl.word_count ?? String(sl.content ?? '').split(/\s+/).filter(Boolean).length;
     }
 
     const dayCounts: Record<string, number> = {};
@@ -400,12 +396,13 @@ Deno.serve(async (req) => {
     // Reader signal.
     const currentIds = current.map((s) => s.id);
     const interactionCounts = new Map<string, { views: number; shares: number }>();
-    for (let i = 0; i < currentIds.length; i += 300) {
-      const { data } = await service
-        .from('story_interactions')
-        .select('story_id, interaction_type')
-        .in('story_id', currentIds.slice(i, i + 300));
-      for (const it of data ?? []) {
+    {
+      for (const it of await fetchAllIn(
+        'story_interactions',
+        'story_id, interaction_type',
+        'story_id',
+        currentIds
+      )) {
         const rec = interactionCounts.get(it.story_id) ?? { views: 0, shares: 0 };
         if (it.interaction_type === 'share_click') rec.shares += 1;
         else rec.views += 1;
