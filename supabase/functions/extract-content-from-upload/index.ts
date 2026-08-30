@@ -55,31 +55,37 @@ function titleCaseFromDomain(domain?: string): string | undefined {
   return base.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Multimodal calls must go to the Lovable AI Gateway (DeepSeek chat is text-only).
+async function gatewayVision(body: Record<string, unknown>): Promise<Response> {
+  const key = Deno.env.get('LOVABLE_API_KEY');
+  if (!key) throw new Error('Vision extraction is not configured (missing LOVABLE_API_KEY).');
+  return await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 // ---------------------------------------------------------------- extraction
 
 async function extractFromImage(fileBuffer: ArrayBuffer, mimeType: string): Promise<string> {
-  const response = await llmFetch(
-    {
-      body: {
-        model: 'deepseek-v4-flash',
-        messages: [
+  const response = await gatewayVision({
+    model: 'google/gemini-2.5-flash',
+    messages: [
+      {
+        role: 'user',
+        content: [
           {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Transcribe all readable text from this image of a news article or screenshot. Return only the raw text, keeping headline and paragraph structure. Ignore navigation, adverts and sidebars. If there is no meaningful text, return exactly NO_TEXT_FOUND.',
-              },
-              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${toBase64(fileBuffer)}` } },
-            ],
+            type: 'text',
+            text: 'Transcribe all readable text from this image of a news article or screenshot. Return only the raw text, keeping headline and paragraph structure. Ignore navigation, adverts and sidebars. If there is no meaningful text, return exactly NO_TEXT_FOUND.',
           },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${toBase64(fileBuffer)}` } },
         ],
-        max_tokens: 4000,
-        temperature: 0,
       },
-    },
-    { context: 'manual-upload-image-ocr', forceGateway: true } as any,
-  );
+    ],
+    max_tokens: 4000,
+    temperature: 0,
+  });
 
   if (!response.ok) {
     throw new Error(`Could not read this image (vision service returned ${response.status}).`);
@@ -106,31 +112,26 @@ async function extractFromPdf(fileBuffer: ArrayBuffer): Promise<string> {
   }
 
   // 2. Vision fallback for scanned PDFs (Gemini accepts PDFs as file blocks)
-  const response = await llmFetch(
-    {
-      body: {
-        model: 'google/gemini-2.5-flash',
-        messages: [
+  const response = await gatewayVision({
+    model: 'google/gemini-2.5-flash',
+    messages: [
+      {
+        role: 'user',
+        content: [
           {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Transcribe all readable article text from this PDF. Return only the raw text, keeping headline and paragraph structure. If there is no meaningful text, return exactly NO_TEXT_FOUND.',
-              },
-              {
-                type: 'file',
-                file: { filename: 'upload.pdf', file_data: `data:application/pdf;base64,${toBase64(fileBuffer)}` },
-              },
-            ],
+            type: 'text',
+            text: 'Transcribe all readable article text from this PDF. Return only the raw text, keeping headline and paragraph structure. If there is no meaningful text, return exactly NO_TEXT_FOUND.',
+          },
+          {
+            type: 'file',
+            file: { filename: 'upload.pdf', file_data: `data:application/pdf;base64,${toBase64(fileBuffer)}` },
           },
         ],
-        max_tokens: 8000,
-        temperature: 0,
       },
-    },
-    { context: 'manual-upload-pdf-ocr', forceGateway: true } as any,
-  );
+    ],
+    max_tokens: 8000,
+    temperature: 0,
+  });
 
   if (!response.ok) {
     throw new Error("Couldn't read this PDF — it may be an image-only scan we can't decode. Try uploading a screenshot instead.");
