@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AppLayout } from "@/components/AppLayout";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
-import { ManualContentStaging } from "@/components/ManualContentStaging";
+import { AddStoryDialog } from "@/components/manual/AddStoryDialog";
 import { GatheringProgressIndicator } from "@/components/GatheringProgressIndicator";
 import { KeywordManager } from "@/components/KeywordManager";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
@@ -711,10 +711,12 @@ const TopicDashboard = () => {
                 />
               )}
               
-              <ManualContentStaging 
-                topicId={topic.id} 
-                onContentProcessed={loadTopicAndStats}
-              />
+              <div className="mb-6">
+                <AddStoryDialog
+                  topicId={topic.id}
+                  onContentProcessed={loadTopicAndStats}
+                />
+              </div>
 
               <UnifiedContentPipeline selectedTopicId={topic.id} />
 
