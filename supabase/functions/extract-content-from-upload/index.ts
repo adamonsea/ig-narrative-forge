@@ -1,418 +1,421 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { llmFetch } from '../_shared/llm-router.ts';
+import { getUser, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
+import { fetchWithRetry, extractContentFromHTML } from '../_shared/content-processor.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Initialize Supabase client with service role key for database operations
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-interface ExtractionResult {
-  success: boolean;
-  extractedContent?: string;
-  contentType?: string;
-  articleId?: string;
-  sharedContentId?: string;
-  error?: string;
+interface StoryDraft {
+  headline: string;
+  author: string;
+  publication: string;
+  publishedAt: string;
+  body: string;
+  sourceUrl?: string;
 }
 
-// Extract text from images using OpenAI Vision API (OCR only)
-async function extractFromImage(fileBuffer: ArrayBuffer, fileName: string): Promise<string> {
-  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!openAIApiKey) {
-    throw new Error('OpenAI API key not configured');
+const json = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+const fail = (error: string, status = 200) => json({ success: false, error }, status);
+
+function toBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function domainFromUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return undefined;
+  }
+}
+
+function titleCaseFromDomain(domain?: string): string | undefined {
+  if (!domain) return undefined;
+  const base = domain.split('.')[0].replace(/[-_]+/g, ' ');
+  return base.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ---------------------------------------------------------------- extraction
+
+async function extractFromImage(fileBuffer: ArrayBuffer, mimeType: string): Promise<string> {
+  const response = await llmFetch(
+    {
+      body: {
+        model: 'deepseek-v4-flash',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Transcribe all readable text from this image of a news article or screenshot. Return only the raw text, keeping headline and paragraph structure. Ignore navigation, adverts and sidebars. If there is no meaningful text, return exactly NO_TEXT_FOUND.',
+              },
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${toBase64(fileBuffer)}` } },
+            ],
+          },
+        ],
+        max_tokens: 4000,
+        temperature: 0,
+      },
+    },
+    { context: 'manual-upload-image-ocr', forceGateway: true } as any,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Could not read this image (vision service returned ${response.status}).`);
+  }
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text || text.includes('NO_TEXT_FOUND')) {
+    throw new Error('No readable text found in this image.');
+  }
+  return text;
+}
+
+async function extractFromPdf(fileBuffer: ArrayBuffer): Promise<string> {
+  // 1. Text layer
+  try {
+    const { extractText, getDocumentProxy } = await import('https://esm.sh/unpdf@0.12.1');
+    const pdf = await getDocumentProxy(new Uint8Array(fileBuffer));
+    const { text } = await extractText(pdf, { mergePages: true });
+    const clean = (Array.isArray(text) ? text.join('\n') : text || '').trim();
+    if (clean.split(/\s+/).filter(Boolean).length >= 60) return clean;
+    console.log('📄 PDF text layer too thin, falling back to vision OCR');
+  } catch (err) {
+    console.warn('📄 PDF text-layer extraction failed, falling back to vision OCR', err);
   }
 
-  // Convert ArrayBuffer to base64
-  const bytes = new Uint8Array(fileBuffer);
-  const base64 = btoa(String.fromCharCode(...bytes));
-  const mimeType = fileName.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
-
-  console.log('🔍 Extracting text from image using OpenAI Vision API');
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openAIApiKey}`,
-      'Content-Type': 'application/json',
+  // 2. Vision fallback for scanned PDFs (Gemini accepts PDFs as file blocks)
+  const response = await llmFetch(
+    {
+      body: {
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Transcribe all readable article text from this PDF. Return only the raw text, keeping headline and paragraph structure. If there is no meaningful text, return exactly NO_TEXT_FOUND.',
+              },
+              {
+                type: 'file',
+                file: { filename: 'upload.pdf', file_data: `data:application/pdf;base64,${toBase64(fileBuffer)}` },
+              },
+            ],
+          },
+        ],
+        max_tokens: 8000,
+        temperature: 0,
+      },
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Extract all readable text from this image. Return only the raw text content, maintaining structure when possible. If this appears to be a screenshot of an article or webpage, focus on the main content and ignore navigation elements, ads, or sidebar content.
+    { context: 'manual-upload-pdf-ocr', forceGateway: true } as any,
+  );
 
-If no meaningful text is found, return "NO_TEXT_FOUND".`
+  if (!response.ok) {
+    throw new Error("Couldn't read this PDF — it may be an image-only scan we can't decode. Try uploading a screenshot instead.");
+  }
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text || text.includes('NO_TEXT_FOUND')) {
+    throw new Error("Couldn't find any text in this PDF.");
+  }
+  return text;
+}
+
+async function extractFromDocx(fileBuffer: ArrayBuffer): Promise<string> {
+  const { default: JSZip } = await import('https://esm.sh/jszip@3.10.1');
+  const zip = await JSZip.loadAsync(fileBuffer);
+  const doc = zip.file('word/document.xml');
+  if (!doc) throw new Error("Couldn't read this Word document.");
+  const xml = await doc.async('string');
+  const text = xml
+    .replace(/<\/w:p>/g, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  if (!text) throw new Error('This Word document appears to be empty.');
+  return text;
+}
+
+function extractFromText(fileBuffer: ArrayBuffer): string {
+  const text = new TextDecoder('utf-8').decode(fileBuffer).trim();
+  if (!text) throw new Error('This text file is empty.');
+  return text;
+}
+
+// ------------------------------------------------------------- structuring
+
+async function structureContent(rawContent: string, hints: Partial<StoryDraft>): Promise<StoryDraft> {
+  const today = new Date().toISOString().slice(0, 10);
+  const fallback: StoryDraft = {
+    headline: hints.headline || rawContent.split('\n').find((l) => l.trim())?.slice(0, 140) || 'Untitled story',
+    author: hints.author || '',
+    publication: hints.publication || '',
+    publishedAt: hints.publishedAt || today,
+    body: rawContent,
+    sourceUrl: hints.sourceUrl,
+  };
+
+  try {
+    const response = await llmFetch(
+      {
+        body: {
+          model: 'deepseek-v4-flash',
+          messages: [
+            {
+              role: 'system',
+              content: `You clean up raw article text for an editorial pipeline. Return STRICT JSON only, no markdown fences, with keys:
+{"headline": string, "author": string, "publication": string, "publishedAt": "YYYY-MM-DD", "body": string}
+
+Rules:
+- headline: the article's own headline. If none is present, write a plain factual one under 90 characters.
+- author: the byline if present, else "".
+- publication: the publication/masthead name if present, else "".
+- publishedAt: the article's date if present, else "${today}".
+- body: the full article text, OCR errors fixed, navigation/advert/UI junk removed, clean paragraphs separated by blank lines. Never summarise or shorten the reporting.`,
             },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64}`,
-                detail: 'high'
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 4000,
-      temperature: 0
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('OpenAI Vision API error:', errorData);
-    throw new Error(`Vision API failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const extractedText = data.choices[0]?.message?.content?.trim();
-
-  if (!extractedText || extractedText === 'NO_TEXT_FOUND') {
-    throw new Error('No readable text found in image');
-  }
-
-  return extractedText;
-}
-
-// Process and rewrite content using DeepSeek API for consistency
-async function processContentWithDeepSeek(rawContent: string, contentType: string): Promise<string> {
-  const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-  if (!deepseekApiKey && !Deno.env.get('LOVABLE_API_KEY')) {
-    throw new Error('DeepSeek API key not configured');
-  }
-
-  console.log('🤖 Processing content with DeepSeek API');
-
-  const response = await llmFetch({
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${deepseekApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-v4-flash',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a professional content editor. Clean up and structure the provided ${contentType} content for publication. Maintain the original meaning and key information while improving readability and flow.
-
-Guidelines:
-- Fix any OCR errors or formatting issues
-- Structure content with clear paragraphs
-- Maintain factual accuracy and original meaning
-- Remove irrelevant navigation text or UI elements
-- Ensure proper grammar and punctuation
-- Keep the content concise but complete
-
-Return only the cleaned, structured content without any additional commentary.`
+            { role: 'user', content: rawContent.slice(0, 40000) },
+          ],
+          max_tokens: 8000,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
         },
-        {
-          role: 'user',
-          content: rawContent
-        }
-      ],
-      max_tokens: 4000,
-      temperature: 0.3,
-      stream: false
-    }),
-  });
+      },
+      { context: 'manual-upload-structure' },
+    );
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('DeepSeek API error:', errorData);
-    throw new Error(`DeepSeek API failed: ${response.status}`);
+    if (!response.ok) return fallback;
+    const data = await response.json();
+    const content = (data.choices?.[0]?.message?.content ?? '').replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(content);
+    return {
+      headline: (parsed.headline || fallback.headline).toString().trim(),
+      author: (parsed.author || hints.author || '').toString().trim(),
+      publication: (hints.publication || parsed.publication || '').toString().trim(),
+      publishedAt: /^\d{4}-\d{2}-\d{2}/.test(parsed.publishedAt || '') ? parsed.publishedAt.slice(0, 10) : fallback.publishedAt,
+      body: (parsed.body || rawContent).toString().trim(),
+      sourceUrl: hints.sourceUrl,
+    };
+  } catch (err) {
+    console.warn('⚠️ Structuring failed, returning raw draft', err);
+    return fallback;
   }
-
-  const data = await response.json();
-  const processedContent = data.choices[0]?.message?.content?.trim();
-
-  if (!processedContent) {
-    throw new Error('No content returned from DeepSeek');
-  }
-
-  return processedContent;
 }
 
-// Extract text from PDF using simple text extraction
-async function extractFromPDF(fileBuffer: ArrayBuffer): Promise<string> {
-  // For now, we'll use a simple approach and rely on the user to provide text
-  // In a production system, you'd want to use a proper PDF parsing library
-  console.log('📄 PDF parsing not fully implemented - using placeholder');
-  
-  // This is a placeholder - in production you'd want to use:
-  // - pdf-parse library
-  // - Or call a dedicated PDF extraction service
-  // - Or use OCR on PDF pages
-  
-  throw new Error('PDF extraction not yet supported - please convert to text or image format');
+// ------------------------------------------------------------------ commit
+
+async function commitDraft(draft: StoryDraft, topicId: string, meta: Record<string, unknown>) {
+  const body = (draft.body || '').trim();
+  if (body.length < 50) throw new Error('Story body is too short to add (minimum 50 characters).');
+
+  const headline = (draft.headline || 'Untitled story').trim();
+  const sourceDomain = domainFromUrl(draft.sourceUrl)
+    || (draft.publication ? draft.publication.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'manual');
+  const stableKey = draft.sourceUrl || `manual://${topicId}/${crypto.randomUUID()}`;
+  const publishedAt = /^\d{4}-\d{2}-\d{2}/.test(draft.publishedAt || '')
+    ? new Date(draft.publishedAt).toISOString()
+    : new Date().toISOString();
+
+  const { data: existing } = await supabase
+    .from('shared_article_content')
+    .select('id')
+    .eq('url', stableKey)
+    .maybeSingle();
+
+  let sharedContentId: string;
+  if (existing) {
+    sharedContentId = existing.id;
+    await supabase
+      .from('shared_article_content')
+      .update({
+        title: headline,
+        body,
+        author: draft.author || null,
+        word_count: body.split(/\s+/).length,
+        published_at: publishedAt,
+        last_seen_at: new Date().toISOString(),
+      })
+      .eq('id', sharedContentId);
+  } else {
+    const { data: inserted, error } = await supabase
+      .from('shared_article_content')
+      .insert({
+        url: stableKey,
+        normalized_url: stableKey,
+        title: headline,
+        body,
+        author: draft.author || null,
+        word_count: body.split(/\s+/).length,
+        language: 'en',
+        source_domain: sourceDomain,
+        published_at: publishedAt,
+        last_seen_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(`Failed to save story content: ${error.message}`);
+    sharedContentId = inserted.id;
+  }
+
+  const { data: existingTopicArticle } = await supabase
+    .from('topic_articles')
+    .select('id')
+    .eq('shared_content_id', sharedContentId)
+    .eq('topic_id', topicId)
+    .maybeSingle();
+
+  if (existingTopicArticle) {
+    return { articleId: existingTopicArticle.id, sharedContentId, duplicate: true };
+  }
+
+  const { data: topicArticle, error: topicError } = await supabase
+    .from('topic_articles')
+    .insert({
+      shared_content_id: sharedContentId,
+      topic_id: topicId,
+      regional_relevance_score: 90,
+      content_quality_score: 85,
+      processing_status: 'new',
+      import_metadata: {
+        manual_upload: true,
+        skip_locality_gate: true,
+        publication: draft.publication || null,
+        source_url: draft.sourceUrl || null,
+        added_at: new Date().toISOString(),
+        ...meta,
+      },
+    })
+    .select('id')
+    .single();
+
+  if (topicError) throw new Error(`Failed to add story to arrivals: ${topicError.message}`);
+  return { articleId: topicArticle.id, sharedContentId, duplicate: false };
 }
 
-// Extract text from text files
-async function extractFromText(fileBuffer: ArrayBuffer): Promise<string> {
-  const decoder = new TextDecoder('utf-8');
-  const text = decoder.decode(fileBuffer);
-  
-  if (!text.trim()) {
-    throw new Error('Text file is empty');
-  }
-  
-  return text.trim();
-}
+// ------------------------------------------------------------------ handler
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const contentType = req.headers.get('content-type');
-    let file: File;
-    let topicId: string;
-    let fileBuffer: ArrayBuffer;
-    let storageBucket: string | undefined;
-    let storagePath: string | undefined;
-    let idempotencyKey: string | undefined;
+    const user = await getUser(req);
+    if (!user) return unauthorized(corsHeaders);
 
-    // Handle both multipart form data and JSON with storage URLs
-    if (contentType && contentType.includes('multipart/form-data')) {
-      // Original direct file upload
-      const formData = await req.formData();
-      file = formData.get('file') as File;
-      topicId = formData.get('topicId') as string;
-      
-      if (!file) {
-        throw new Error('No file provided');
-      }
-      
-      fileBuffer = await file.arrayBuffer();
-      console.log('📁 Processing direct file upload:', file.name, file.type, `${Math.round(file.size / 1024)}KB`);
-    } else {
-      // JSON with storage file URL
-      const body = await req.json();
-      const { fileUrl, fileName, fileType, topicId: bodyTopicId, storageBucket: bodyBucket, storagePath: bodyPath, idempotencyKey: bodyIdem } = body;
-      
-      if (!fileUrl || !fileName || !fileType) {
-        throw new Error('File URL, name, and type are required');
-      }
-      
-      topicId = bodyTopicId;
-      storageBucket = bodyBucket;
-      storagePath = bodyPath;
-      idempotencyKey = bodyIdem;
-      
-      // Download file from storage
-      console.log('📁 Downloading file from storage:', fileName);
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`);
-      }
-      
-      fileBuffer = await response.arrayBuffer();
-      
-      // Create file-like object for compatibility
-      file = new File([fileBuffer], fileName, { type: fileType });
-      console.log('📁 Processing storage file:', fileName, fileType, `${Math.round(fileBuffer.byteLength / 1024)}KB`);
-    }
+    const payload = await req.json();
+    const { mode, topicId, commit, story, text, url, storageBucket, storagePath, fileName, fileType } = payload ?? {};
 
-    if (!topicId) {
-      throw new Error('Topic ID is required');
-    }
+    if (!topicId || typeof topicId !== 'string') return fail('Topic ID is required', 400);
+    if (!(await userOwnsTopic(supabase, user.id, topicId))) return forbidden(corsHeaders);
 
-    // Validate file size (20MB limit)
-    if (fileBuffer.byteLength > 20 * 1024 * 1024) {
-      throw new Error('File size exceeds 20MB limit');
-    }
-    
-    let extractedContent: string;
-    let extractionContentType: string;
-
-    // Extract content based on file type
-    let rawContent: string;
-    if (file.type.startsWith('image/')) {
-      extractionContentType = 'image';
-      rawContent = await extractFromImage(fileBuffer, file.name);
-    } else if (file.type === 'application/pdf') {
-      // Return a proper error response for unsupported PDFs instead of throwing
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'PDF extraction not yet supported - please convert to text or image format'
-      }), {
-        status: 200, // Return 200 with error in body
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // ---- commit path
+    if (commit) {
+      if (!story?.body) return fail('Story body is required', 400);
+      const result = await commitDraft(story as StoryDraft, topicId, {
+        mode: mode ?? 'paste',
+        original_filename: fileName ?? null,
       });
-    } else if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
-      extractionContentType = 'text';
-      rawContent = await extractFromText(fileBuffer);
-    } else {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Unsupported file type: ${file.type}. Please use images (PNG, JPG), text files, or convert to supported format.`
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Process content. For text uploads, fall back to raw content if DeepSeek key is missing
-    const deepseekKey = Deno.env.get('DEEPSEEK_API_KEY');
-    if (extractionContentType === 'text' && !deepseekKey) {
-      console.log('📝 DeepSeek key missing; using raw text content without rewriting');
-      extractedContent = rawContent;
-    } else {
-      extractedContent = await processContentWithDeepSeek(rawContent, extractionContentType);
-    }
-
-    // Validate extracted content
-    if (!extractedContent || extractedContent.length < 50) {
-      throw new Error('Insufficient content extracted from file');
-    }
-
-
-    console.log('✅ Content extraction successful:', extractedContent.substring(0, 100) + '...');
-
-    // Now handle database operations with service role permissions
-    console.log('💾 Saving content to database with service role');
-    
-    const wordCount = extractedContent.split(/\s+/).length;
-    const stableKey = idempotencyKey
-      || (typeof storageBucket === 'string' && typeof storagePath === 'string'
-          ? `manual-upload://${storageBucket}/${storagePath}`
-          : `manual-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
-    const title = `Manual Upload: ${file.name.replace(/\.[^/.]+$/, "")}`;
-
-    // Check for existing shared content to prevent duplicates (idempotent by stableKey)
-    const uploadDate = new Date().toISOString();
-
-    const { data: existingContent } = await supabase
-      .from('shared_article_content')
-      .select('id, published_at')
-      .eq('url', stableKey)
-      .maybeSingle();
-
-    let sharedContentId: string;
-
-    if (existingContent) {
-      sharedContentId = existingContent.id;
-      console.log('📋 Using existing shared content (idempotent hit)');
-
-      // Ensure manually staged uploads always have a publish date and fresh last_seen marker
-      const updateData: Record<string, string> = { last_seen_at: uploadDate };
-      if (!existingContent.published_at) {
-        updateData.published_at = uploadDate;
+      if (storageBucket && storagePath) {
+        await supabase.storage.from(storageBucket).remove([storagePath]).catch(() => {});
       }
-
-      const { error: publishUpdateError } = await supabase
-        .from('shared_article_content')
-        .update(updateData)
-        .eq('id', existingContent.id);
-
-      if (publishUpdateError) {
-        console.warn('⚠️ Failed to backfill publish metadata on existing shared content', publishUpdateError);
-      }
-    } else {
-      // Create new shared content
-      const { data: sharedContent, error: sharedError } = await supabase
-        .from('shared_article_content')
-        .insert({
-          url: stableKey,
-          normalized_url: stableKey,
-          title: title,
-          body: extractedContent,
-          author: 'Manual Upload',
-          word_count: wordCount,
-          language: 'en',
-          source_domain: 'manual-upload.local',
-          published_at: uploadDate,
-          last_seen_at: uploadDate,
-        })
-        .select()
-        .single();
-
-      if (sharedError) {
-        console.error('❌ Failed to create shared content:', sharedError);
-        throw new Error(`Failed to create shared content: ${sharedError.message}`);
-      }
-      sharedContentId = sharedContent.id;
-      console.log('✅ Created shared content:', sharedContentId);
+      return json({ success: true, ...result });
     }
 
-    // Check for existing topic article
-    const { data: existingTopicArticle } = await supabase
-      .from('topic_articles')
-      .select('id')
-      .eq('shared_content_id', sharedContentId)
-      .eq('topic_id', topicId)
-      .maybeSingle();
+    // ---- extract path
+    let rawContent = '';
+    const hints: Partial<StoryDraft> = {};
 
-    let topicArticleId: string;
-
-    if (existingTopicArticle) {
-      topicArticleId = existingTopicArticle.id;
-      console.log('📋 Using existing topic article');
-    } else {
-      // Create new topic article
-      const { data: topicArticle, error: topicError } = await supabase
-        .from('topic_articles')
-        .insert({
-          shared_content_id: sharedContentId,
-          topic_id: topicId,
-          regional_relevance_score: 75,
-          content_quality_score: 80,
-          processing_status: 'new',
-          import_metadata: {
-            manual_upload: true,
-            original_filename: file.name,
-            upload_date: uploadDate,
-            extracted_via: extractionContentType
-          }
-        })
-        .select()
-        .single();
-
-      if (topicError) {
-        console.error('❌ Failed to create topic article:', topicError);
-        throw new Error(`Failed to create topic article: ${topicError.message}`);
+    if (mode === 'paste') {
+      if (!text || text.trim().length < 50) return fail('Paste at least 50 characters of article text.', 400);
+      rawContent = text.trim();
+    } else if (mode === 'link') {
+      if (!url) return fail('A URL is required.', 400);
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        return fail('That does not look like a valid URL.', 400);
       }
-      topicArticleId = topicArticle.id;
-      console.log('✅ Created topic article:', topicArticleId);
+      if (!['http:', 'https:'].includes(parsed.protocol)) return fail('Only http(s) links are supported.', 400);
+      let html: string;
+      try {
+        html = await fetchWithRetry(parsed.toString(), 2);
+      } catch (err: any) {
+        return fail(`Couldn't fetch that page (${err?.message ?? 'network error'}). Try pasting the text instead.`);
+      }
+      const extracted = extractContentFromHTML(html, parsed.toString());
+      if (!extracted?.body || extracted.body.trim().length < 100) {
+        return fail("Couldn't read the article from that page. Try pasting the text instead.");
+      }
+      rawContent = extracted.body;
+      hints.headline = extracted.title;
+      hints.author = extracted.author;
+      hints.publishedAt = extracted.published_at?.slice(0, 10);
+      hints.sourceUrl = parsed.toString();
+      hints.publication = titleCaseFromDomain(domainFromUrl(parsed.toString()));
+    } else if (mode === 'file') {
+      if (!storageBucket || !storagePath) return fail('File location is required.', 400);
+      const { data: blob, error: downloadError } = await supabase.storage.from(storageBucket).download(storagePath);
+      if (downloadError || !blob) return fail(`Couldn't read the uploaded file: ${downloadError?.message ?? 'not found'}`);
+      const buffer = await blob.arrayBuffer();
+      if (buffer.byteLength > 20 * 1024 * 1024) return fail('File exceeds the 20MB limit.');
+
+      const type = (fileType || blob.type || '').toLowerCase();
+      const name = (fileName || storagePath).toLowerCase();
+
+      try {
+        if (type.startsWith('image/')) {
+          rawContent = await extractFromImage(buffer, type);
+        } else if (type === 'application/pdf' || name.endsWith('.pdf')) {
+          rawContent = await extractFromPdf(buffer);
+        } else if (name.endsWith('.docx') || type.includes('officedocument.wordprocessingml')) {
+          rawContent = await extractFromDocx(buffer);
+        } else if (type.startsWith('text/') || name.endsWith('.txt') || name.endsWith('.md')) {
+          rawContent = extractFromText(buffer);
+        } else {
+          return fail(`Unsupported file type: ${type || 'unknown'}. Use an image, PDF, Word document or text file.`);
+        }
+      } catch (err: any) {
+        return fail(err?.message ?? 'Extraction failed.');
+      }
+      hints.headline = (fileName || '').replace(/\.[^/.]+$/, '');
+    } else {
+      return fail('Unknown mode.', 400);
     }
 
-    console.log('🎉 Successfully processed and saved content to database');
+    if (!rawContent || rawContent.trim().length < 50) {
+      return fail('Not enough readable content was found.');
+    }
 
-    return new Response(JSON.stringify({
-      success: true,
-      extractedContent,
-      contentType: extractionContentType,
-      originalFileName: file.name,
-      wordCount,
-      articleId: topicArticleId,
-      sharedContentId: sharedContentId,
-      title
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    const draft = await structureContent(rawContent, hints);
+    return json({ success: true, draft });
   } catch (error: any) {
-    console.error('❌ Content extraction error:', error);
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message || 'Content extraction failed'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('❌ Manual content error:', error);
+    return json({ success: false, error: error?.message || 'Something went wrong' }, 500);
   }
 });
