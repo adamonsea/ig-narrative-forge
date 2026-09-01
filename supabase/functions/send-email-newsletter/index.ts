@@ -29,6 +29,16 @@ interface EmailStory {
   story_url: string;
 }
 
+interface EmailEvent {
+  id: string;
+  title: string;
+  date_label: string;
+  time_label: string;
+  location: string | null;
+  url: string | null;
+}
+
+
 /**
  * Returns an email-safe thumbnail URL.
  *
