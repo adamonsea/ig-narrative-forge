@@ -86,16 +86,84 @@ export default function Widgets() {
       .finally(() => setPreviewLoading(false));
   }, [config.feed, config.max]);
 
+  const isValidAvatarUrl = (url: string) => {
+    if (!url) return true;
+    return url.startsWith("http://") || url.startsWith("https://");
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a PNG, JPEG, or WebP image.");
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      toast.error("Maximum file size is 500KB.");
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("feedSlug", config.feed || "custom");
+
+      const response = await fetch(`${SUPABASE_URL}/widget-avatar-upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Upload failed");
+
+      setConfig(prev => ({ ...prev, customAvatar: result.url }));
+      setAvatarFileName(file.name);
+      toast.success("Avatar uploaded");
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload avatar.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleAvatarUpload(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleAvatarUpload(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const removeAvatar = () => {
+    setConfig(prev => ({ ...prev, customAvatar: "" }));
+    setAvatarFileName(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const generateEmbedCode = () => {
     const attrs = [`data-feed="${config.feed}"`];
     if (config.max !== 5) attrs.push(`data-max="${config.max}"`);
     if (config.theme !== "auto") attrs.push(`data-theme="${config.theme}"`);
     if (config.accent) attrs.push(`data-accent="${config.accent}"`);
+    if (config.width !== "responsive") attrs.push(`data-width="${config.width}"`);
+    if (config.customTitle) attrs.push(`data-title="${config.customTitle.replace(/"/g, "&quot;")}"`);
+    if (config.customAvatar && isValidAvatarUrl(config.customAvatar)) {
+      attrs.push(`data-avatar="${config.customAvatar.replace(/"/g, "&quot;")}"`);
+    }
+    if (config.showSubscribe) attrs.push(`data-subscribe="true"`);
 
     return `<!-- Curatr Widget -->
 <div id="curatr-widget" ${attrs.join(" ")}></div>
 <script src="${WIDGET_SCRIPT_URL}" async></script>`;
   };
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generateEmbedCode());
