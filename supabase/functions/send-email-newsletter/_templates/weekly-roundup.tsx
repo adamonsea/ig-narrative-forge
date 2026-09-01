@@ -94,6 +94,15 @@ export const WeeklyRoundupEmail = ({
 
         <Hr style={hr} />
 
+        {(introHeading || introText) && (
+          <Section style={introSection}>
+            {introHeading && <Text style={introHeadingStyle}>{introHeading}</Text>}
+            {introText && <Text style={introTextStyle}>{introText}</Text>}
+          </Section>
+        )}
+
+
+
         {stories.length > 0 ? (
           <Section style={storiesSection}>
             {stories.map((story) => (
