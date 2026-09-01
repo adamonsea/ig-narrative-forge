@@ -394,7 +394,7 @@ serve(async (req) => {
     // Upcoming events for weekly emails ("What's on this week")
     // Only included when the topic has events enabled and there are events in the next 7 days.
     let upcomingEvents: EmailEvent[] = [];
-    if (notificationType === 'weekly' && topic.events_enabled) {
+    if (notificationType === 'weekly' && topic.events_enabled && (!segment || segment.include_events)) {
       const eventsFrom = new Date();
       eventsFrom.setUTCHours(0, 0, 0, 0);
       const eventsTo = new Date(eventsFrom);
