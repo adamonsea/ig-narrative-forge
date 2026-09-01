@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Copy, Check, ExternalLink, Code2, Eye } from "lucide-react";
+import { Copy, Check, ExternalLink, Code2, Eye, Upload, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTopics } from "@/hooks/useTopics";
 import { AppLayout } from "@/components/AppLayout";
@@ -24,7 +24,10 @@ interface WidgetConfig {
   max: number;
   theme: "auto" | "light" | "dark";
   accent: string;
-  showAttribution: boolean;
+  width: string;
+  customTitle: string;
+  customAvatar: string;
+  showSubscribe: boolean;
 }
 
 export default function Widgets() {
@@ -37,12 +40,19 @@ export default function Widgets() {
     max: 5,
     theme: "auto",
     accent: "",
-    showAttribution: true,
+    width: "responsive",
+    customTitle: "",
+    customAvatar: "",
+    showSubscribe: false,
   });
 
   const [copied, setCopied] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -76,16 +86,84 @@ export default function Widgets() {
       .finally(() => setPreviewLoading(false));
   }, [config.feed, config.max]);
 
+  const isValidAvatarUrl = (url: string) => {
+    if (!url) return true;
+    return url.startsWith("http://") || url.startsWith("https://");
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a PNG, JPEG, or WebP image.");
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      toast.error("Maximum file size is 500KB.");
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("feedSlug", config.feed || "custom");
+
+      const response = await fetch(`${SUPABASE_URL}/widget-avatar-upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Upload failed");
+
+      setConfig(prev => ({ ...prev, customAvatar: result.url }));
+      setAvatarFileName(file.name);
+      toast.success("Avatar uploaded");
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload avatar.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleAvatarUpload(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleAvatarUpload(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const removeAvatar = () => {
+    setConfig(prev => ({ ...prev, customAvatar: "" }));
+    setAvatarFileName(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const generateEmbedCode = () => {
     const attrs = [`data-feed="${config.feed}"`];
     if (config.max !== 5) attrs.push(`data-max="${config.max}"`);
     if (config.theme !== "auto") attrs.push(`data-theme="${config.theme}"`);
     if (config.accent) attrs.push(`data-accent="${config.accent}"`);
+    if (config.width !== "responsive") attrs.push(`data-width="${config.width}"`);
+    if (config.customTitle) attrs.push(`data-title="${config.customTitle.replace(/"/g, "&quot;")}"`);
+    if (config.customAvatar && isValidAvatarUrl(config.customAvatar)) {
+      attrs.push(`data-avatar="${config.customAvatar.replace(/"/g, "&quot;")}"`);
+    }
+    if (config.showSubscribe) attrs.push(`data-subscribe="true"`);
 
     return `<!-- Curatr Widget -->
 <div id="curatr-widget" ${attrs.join(" ")}></div>
 <script src="${WIDGET_SCRIPT_URL}" async></script>`;
   };
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generateEmbedCode());
@@ -216,18 +294,120 @@ export default function Widgets() {
                 </p>
               </div>
 
-              {/* Attribution Toggle */}
+              {/* Widget Title */}
+              <div className="space-y-2">
+                <Label htmlFor="widget-title">Widget title (optional)</Label>
+                <Input
+                  id="widget-title"
+                  type="text"
+                  maxLength={100}
+                  placeholder={selectedTopic?.name || "Feed name"}
+                  value={config.customTitle}
+                  onChange={(e) => setConfig(prev => ({ ...prev, customTitle: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to use the feed's name
+                </p>
+              </div>
+
+              {/* Width */}
+              <div className="space-y-2">
+                <Label>Width</Label>
+                <Select
+                  value={config.width}
+                  onValueChange={(value) => setConfig(prev => ({ ...prev, width: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="wide">Wide (max 1000px) — with images</SelectItem>
+                    <SelectItem value="responsive">Responsive (max 480px)</SelectItem>
+                    <SelectItem value="100%">Full width</SelectItem>
+                    <SelectItem value="400px">400px</SelectItem>
+                    <SelectItem value="350px">350px</SelectItem>
+                    <SelectItem value="300px">300px</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom logo / avatar */}
+              <div className="space-y-2">
+                <Label>Custom logo / icon (optional)</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {config.customAvatar && isValidAvatarUrl(config.customAvatar) ? (
+                  <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/50">
+                    <img
+                      src={config.customAvatar}
+                      alt="Custom widget logo preview"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-background shadow-sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {avatarFileName || "Custom logo"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Click × to remove</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={removeAvatar}
+                      aria-label="Remove custom logo"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                  >
+                    {avatarUploading ? (
+                      <>
+                        <Loader2 className="w-8 h-8 text-muted-foreground animate-spin mb-2" />
+                        <p className="text-sm text-muted-foreground">Uploading...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Upload image</p>
+                        <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Ideal size: <strong>128×128px</strong> (square). Max 500KB. PNG, JPG, or WebP.
+                </p>
+              </div>
+
+              {/* Subscribe box */}
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="attribution">Show Attribution</Label>
-                  <p className="text-xs text-muted-foreground">Display "Powered by Curatr"</p>
+                  <Label htmlFor="subscribe">Show subscribe box</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Readers can sign up for email highlights without leaving the page
+                  </p>
                 </div>
                 <Switch
-                  id="attribution"
-                  checked={config.showAttribution}
-                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showAttribution: checked }))}
+                  id="subscribe"
+                  checked={config.showSubscribe}
+                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showSubscribe: checked }))}
                 />
               </div>
+
             </CardContent>
           </Card>
 
@@ -265,7 +445,11 @@ export default function Widgets() {
                       data={previewData} 
                       theme={config.theme === "auto" ? "light" : config.theme}
                       accent={accentColor}
+                      customTitle={config.customTitle}
+                      customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ""}
+                      showSubscribe={config.showSubscribe}
                     />
+
                   )}
                 </div>
               </CardContent>
@@ -309,15 +493,22 @@ export default function Widgets() {
 function WidgetPreview({ 
   data, 
   theme, 
-  accent 
+  accent,
+  customTitle = "",
+  customAvatar = "",
+  showSubscribe = false,
 }: { 
   data: any; 
   theme: "light" | "dark"; 
   accent: string;
+  customTitle?: string;
+  customAvatar?: string;
+  showSubscribe?: boolean;
 }) {
   if (!data?.feed || !data?.stories) {
     return <div className="text-center py-4 text-muted-foreground">No data</div>;
   }
+
 
   const isDark = theme === "dark";
   const bg = isDark ? "#1a1a1a" : "#ffffff";
@@ -341,10 +532,10 @@ function WidgetPreview({
         className="flex items-center gap-2.5 pb-3 mb-3"
         style={{ borderBottom: `1px solid ${border}` }}
       >
-        {(data.feed.icon_url || data.feed.logo_url) ? (
+        {(customAvatar || data.feed.icon_url || data.feed.logo_url) ? (
           <img 
-            src={data.feed.icon_url || data.feed.logo_url} 
-            alt={data.feed.name}
+            src={customAvatar || data.feed.icon_url || data.feed.logo_url} 
+            alt={customTitle || data.feed.name}
             className="w-7 h-7 rounded-full object-cover"
           />
         ) : (
@@ -352,11 +543,12 @@ function WidgetPreview({
             className="w-7 h-7 rounded-full flex items-center justify-center text-white font-semibold text-sm"
             style={{ background: accent }}
           >
-            {data.feed.name.charAt(0)}
+            {(customTitle || data.feed.name).charAt(0)}
           </div>
         )}
-        <span className="font-semibold">{data.feed.name}</span>
+        <span className="font-semibold">{customTitle || data.feed.name}</span>
       </div>
+
 
       {/* Stories */}
       <div className="space-y-1">
@@ -396,7 +588,36 @@ function WidgetPreview({
         ))}
       </div>
 
+      {/* Subscribe box */}
+      {showSubscribe && (
+        <div
+          className="pt-3 mt-3"
+          style={{ borderTop: `1px solid ${border}` }}
+        >
+          <div className="text-xs mb-2" style={{ color: textMuted }}>
+            Get these highlights by email
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="you@example.com"
+              readOnly
+              className="flex-1 rounded-md px-2 py-1.5 text-sm"
+              style={{ background: isDark ? '#2a2a2a' : '#f9fafb', border: `1px solid ${border}`, color: text }}
+            />
+            <button
+              type="button"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+              style={{ background: accent }}
+            >
+              Subscribe
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
+
       <div 
         className="flex justify-between items-center pt-3 mt-3 flex-wrap gap-2"
         style={{ borderTop: `1px solid ${border}` }}

@@ -15,7 +15,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.3.0';
+  const WIDGET_VERSION = '1.4.0';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -85,6 +85,7 @@
     const customTitle = container.dataset.title || '';
     // Custom avatar URL with XSS validation
     const customAvatar = isValidUrl(container.dataset.avatar) ? container.dataset.avatar : '';
+    const showSubscribe = container.dataset.subscribe === 'true' || container.dataset.subscribe === '';
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -110,8 +111,9 @@
     // Try to show cached data immediately while fetching fresh data
     const cached = getCachedData(feedSlug);
     if (cached) {
-      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar);
+      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe);
       attachClickHandlers(shadow, feedSlug);
+      attachSubscribeHandler(shadow, feedSlug, cached);
     } else {
       wrapper.innerHTML = getLoadingHTML();
     }
@@ -123,7 +125,7 @@
         // Cache the successful response
         setCachedData(feedSlug, data);
         
-        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar);
+        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe);
         
         // Track impression after successful render (only if not cached initially)
         if (!cached) {
@@ -132,6 +134,7 @@
         
         // Attach click handlers for story tracking
         attachClickHandlers(shadow, feedSlug);
+        attachSubscribeHandler(shadow, feedSlug, data);
       })
       .catch(error => {
         console.error('Curatr Widget Error:', error);
@@ -149,7 +152,7 @@
 
   // Cache management for graceful degradation
   function getCacheKey(feedSlug) {
-    return `curatr_widget_cache_${feedSlug}`;
+    return `curatr_widget_cache_${WIDGET_VERSION}_${feedSlug}`;
   }
 
   function getCachedData(feedSlug) {
@@ -206,7 +209,120 @@
     return response.json();
   }
 
-  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '') {
+
+  // ---- Subscribe box -------------------------------------------------
+  function subscribeStorageKey(feedSlug) {
+    return `curatr_widget_subscribed_${feedSlug}`;
+  }
+
+  function isAlreadySubscribed(feedSlug) {
+    try {
+      return localStorage.getItem(subscribeStorageKey(feedSlug)) === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function markSubscribed(feedSlug) {
+    try {
+      localStorage.setItem(subscribeStorageKey(feedSlug), 'true');
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function getSubscribeHTML(feed, accent) {
+    if (isAlreadySubscribed(feed.slug)) {
+      return `
+        <div class="widget-subscribe">
+          <p class="subscribe-done">You're subscribed to email highlights.</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="widget-subscribe">
+        <label class="subscribe-label" for="curatr-subscribe-email">Subscribe to email</label>
+        <form class="subscribe-form" novalidate>
+          <input
+            id="curatr-subscribe-email"
+            class="subscribe-input"
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+          />
+          <button type="submit" class="subscribe-button" style="background: ${accent}">Subscribe</button>
+        </form>
+        <p class="subscribe-message" role="status" aria-live="polite"></p>
+      </div>
+    `;
+  }
+
+  function attachSubscribeHandler(shadow, feedSlug, data) {
+    const root = shadow.querySelector('.widget-subscribe');
+    if (!root) return;
+
+    const form = root.querySelector('.subscribe-form');
+    if (!form) return;
+
+    const input = form.querySelector('.subscribe-input');
+    const button = form.querySelector('.subscribe-button');
+    const message = root.querySelector('.subscribe-message');
+    const topicId = data && data.feed ? data.feed.id : null;
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = (input.value || '').trim();
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+      if (!emailRegex.test(email)) {
+        message.textContent = 'Please enter a valid email address.';
+        message.className = 'subscribe-message error';
+        return;
+      }
+
+      if (!topicId) {
+        message.textContent = 'Subscriptions are unavailable right now.';
+        message.className = 'subscribe-message error';
+        return;
+      }
+
+      button.disabled = true;
+      input.disabled = true;
+      const originalLabel = button.textContent;
+      button.textContent = 'Sending…';
+      message.textContent = '';
+      message.className = 'subscribe-message';
+
+      try {
+        const response = await fetch(`${API_BASE}/secure-newsletter-signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, topicId, notificationType: 'daily' })
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Subscription failed. Please try again.');
+        }
+
+        markSubscribed(feedSlug);
+        trackEvent(feedSlug, 'subscribe');
+        root.innerHTML = '<p class="subscribe-done">Check your inbox to confirm your subscription.</p>';
+      } catch (error) {
+        button.disabled = false;
+        input.disabled = false;
+        button.textContent = originalLabel;
+        message.textContent = error && error.message ? error.message : 'Subscription failed. Please try again.';
+        message.className = 'subscribe-message error';
+      }
+    });
+  }
+
+  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false) {
     const { feed, stories } = data;
     const accent = accentOverride || feed.brand_color || '#3b82f6';
     const displayName = customTitle || feed.name;
@@ -279,6 +395,7 @@
             ${remainingHTML}
           </div>
         </div>
+        ${showSubscribe ? getSubscribeHTML(feed, accent) : ''}
         <div class="widget-footer">
           <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
             ${wideCtaText}
@@ -329,6 +446,7 @@
       <div class="widget-stories">
         ${storiesHTML}
       </div>
+      ${showSubscribe ? getSubscribeHTML(feed, accent) : ''}
       <div class="widget-footer">
         <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
           ${ctaText}
@@ -476,6 +594,75 @@
 
       .story-source:hover {
         opacity: 0.8;
+      }
+
+      .widget-subscribe {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid ${border};
+      }
+
+      .subscribe-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: ${textMuted};
+        margin-bottom: 6px;
+      }
+
+      .subscribe-form {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .subscribe-input {
+        flex: 1 1 160px;
+        min-width: 0;
+        padding: 8px 10px;
+        font: inherit;
+        font-size: 13px;
+        color: ${text};
+        background: ${bg};
+        border: 1px solid ${border};
+        border-radius: 8px;
+      }
+
+      .subscribe-input:focus {
+        outline: 2px solid ${accent || '#3b82f6'};
+        outline-offset: 1px;
+      }
+
+      .subscribe-button {
+        padding: 8px 14px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .subscribe-button:disabled {
+        opacity: 0.65;
+        cursor: default;
+      }
+
+      .subscribe-message {
+        margin: 6px 0 0;
+        font-size: 12px;
+        color: ${textMuted};
+      }
+
+      .subscribe-message.error {
+        color: #dc2626;
+      }
+
+      .subscribe-done {
+        margin: 0;
+        font-size: 12px;
+        color: ${textMuted};
       }
 
       .widget-footer {

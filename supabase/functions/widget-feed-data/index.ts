@@ -74,6 +74,7 @@ serve(async (req) => {
       const logoVariants = branding.logo_variants || {};
       
       let feedData: any = {
+        id: topic.id,
         name: topic.name,
         slug: topic.slug,
         // Use optimized widget-sized images when available

@@ -4,6 +4,8 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +31,8 @@ interface WidgetConfig {
   width: string;
   customTitle: string;
   customAvatar: string;
+  showSubscribe: boolean;
+
 }
 
 interface PreviewStory {
@@ -67,6 +71,8 @@ export default function PublicWidgetBuilder() {
     width: 'responsive',
     customTitle: '',
     customAvatar: '',
+    showSubscribe: false,
+
   });
 
   // Load topic data
@@ -253,6 +259,10 @@ export default function PublicWidgetBuilder() {
     if (config.customAvatar && isValidAvatarUrl(config.customAvatar)) {
       code += ` data-avatar="${config.customAvatar.replace(/"/g, '&quot;')}"`;
     }
+    if (config.showSubscribe) {
+      code += ` data-subscribe="true"`;
+    }
+
     
     code += `></div>\n<script src="${window.location.origin}/widget.js?v=${WIDGET_JS_VERSION}" async></script>`;
     
@@ -532,6 +542,22 @@ export default function PublicWidgetBuilder() {
                     Ideal size: <strong>128×128px</strong> (square). Max 500KB. PNG, JPG, or WebP.
                   </p>
                 </div>
+
+                {/* Subscribe box */}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label htmlFor="subscribe">Show subscribe box</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Let readers sign up for email highlights without leaving the page
+                    </p>
+                  </div>
+                  <Switch
+                    id="subscribe"
+                    checked={config.showSubscribe}
+                    onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showSubscribe: checked }))}
+                  />
+                </div>
+
               </CardContent>
             </Card>
 

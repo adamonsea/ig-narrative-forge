@@ -34,10 +34,10 @@ serve(async (req) => {
     }
 
     // Validate event type
-    if (!['impression', 'click'].includes(eventType)) {
+    if (!['impression', 'click', 'subscribe'].includes(eventType)) {
       console.error('❌ Widget analytics: Invalid event type', eventType);
       return new Response(
-        JSON.stringify({ error: 'Invalid eventType. Must be "impression" or "click"' }),
+        JSON.stringify({ error: 'Invalid eventType. Must be "impression", "click" or "subscribe"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
