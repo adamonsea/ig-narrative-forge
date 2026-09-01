@@ -165,7 +165,7 @@ serve(async (req) => {
           const { error: upsertError } = await supabase
             .from('events')
             .upsert(rows, { onConflict: 'topic_id,source_api,external_id' });
-          if (upsertError) throw upsertError;
+          if (upsertError) throw new Error(upsertError.message);
         }
 
         // Remove imported events that have dropped off the feed within the window
@@ -184,7 +184,7 @@ serve(async (req) => {
         console.log(`✅ ${topic.name}: imported ${rows.length} events`);
         results.push({ topicId: topic.id, topicName: topic.name, imported: rows.length, success: true });
       } catch (topicError) {
-        const message = topicError instanceof Error ? topicError.message : String(topicError);
+        const message = topicError instanceof Error ? topicError.message : JSON.stringify(topicError);
         console.error(`❌ ${topic.name}: ${message}`);
         results.push({ topicId: topic.id, topicName: topic.name, success: false, error: message });
       }
