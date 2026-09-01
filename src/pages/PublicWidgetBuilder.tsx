@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
+import { edgeErrorMessage } from "@/lib/edgeError";
+
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -176,7 +178,6 @@ export default function PublicWidgetBuilder() {
       formData.append('file', file);
       formData.append('feedSlug', slug || 'custom');
 
-      const response = await fetch(
       const { data: result, error: fnError } = await supabase.functions.invoke(
         'widget-avatar-upload',
         { body: formData }
