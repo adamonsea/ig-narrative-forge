@@ -23,6 +23,15 @@ interface EmailStory {
   story_url: string;
 }
 
+interface EmailEvent {
+  id: string;
+  title: string;
+  date_label: string;
+  time_label: string;
+  location: string | null;
+  url: string | null;
+}
+
 interface WeeklyRoundupEmailProps {
   topicName: string;
   topicSlug: string;
@@ -35,6 +44,7 @@ interface WeeklyRoundupEmailProps {
   unsubscribeUrl?: string;
   audioUrl?: string; // Audio briefing URL if available
   totalStoryCount?: number; // Total stories in the week (not just email preview)
+  events?: EmailEvent[]; // Upcoming local events (omitted when empty)
 }
 
 export const WeeklyRoundupEmail = ({
@@ -49,6 +59,7 @@ export const WeeklyRoundupEmail = ({
   unsubscribeUrl,
   audioUrl,
   totalStoryCount,
+  events = [],
 }: WeeklyRoundupEmailProps) => {
   const displayStoryCount = totalStoryCount || stories.length;
   
