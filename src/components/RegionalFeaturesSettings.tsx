@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Calendar, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Calendar, Building2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
@@ -13,6 +14,7 @@ interface RegionalFeaturesSettingsProps {
   region?: string;
   parliamentaryEnabled?: boolean;
   eventsEnabled?: boolean;
+  eventSourceUrl?: string | null;
   onUpdate?: () => void;
 }
 
@@ -21,18 +23,46 @@ export const RegionalFeaturesSettings = ({
   region: initialRegion,
   parliamentaryEnabled: initialParliamentary,
   eventsEnabled: initialEvents,
+  eventSourceUrl: initialEventSourceUrl,
   onUpdate
 }: RegionalFeaturesSettingsProps) => {
   const [region, setRegion] = useState(initialRegion || '');
   const [parliamentaryEnabled, setParliamentaryEnabled] = useState(initialParliamentary || false);
   const [eventsEnabled, setEventsEnabled] = useState(initialEvents || false);
+  const [eventSourceUrl, setEventSourceUrl] = useState(initialEventSourceUrl || '');
+  const [refreshingEvents, setRefreshingEvents] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (initialRegion !== undefined) setRegion(initialRegion || '');
     if (initialParliamentary !== undefined) setParliamentaryEnabled(initialParliamentary);
     if (initialEvents !== undefined) setEventsEnabled(initialEvents);
-  }, [initialRegion, initialParliamentary, initialEvents]);
+    if (initialEventSourceUrl !== undefined) setEventSourceUrl(initialEventSourceUrl || '');
+  }, [initialRegion, initialParliamentary, initialEvents, initialEventSourceUrl]);
+
+  const refreshEvents = async () => {
+    setRefreshingEvents(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ingest-chamber-events', {
+        body: { topicId }
+      });
+      if (error) throw error;
+      const imported = data?.results?.[0]?.imported ?? 0;
+      const failure = data?.results?.[0]?.error;
+      if (failure) throw new Error(failure);
+      toast({ title: "Events refreshed", description: `${imported} upcoming events imported` });
+      onUpdate?.();
+    } catch (error) {
+      toast({
+        title: "Couldn't refresh events",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshingEvents(false);
+    }
+  };
+
 
   const updateField = async (field: string, value: any) => {
     try {
