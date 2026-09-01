@@ -3,6 +3,41 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MultiTenantArticle } from "./useMultiTenantTopicPipeline";
 
+/**
+ * Postgres statement timeouts (57014) and transient network blips can make a
+ * single-row write fail even though the request is perfectly valid. Retry those
+ * with a short backoff before surfacing a failure toast.
+ */
+const isTransientDbError = (err: any) => {
+  const code = err?.code ?? '';
+  const message = String(err?.message ?? '').toLowerCase();
+  return (
+    code === '57014' ||
+    code === '08006' ||
+    code === '08003' ||
+    message.includes('statement timeout') ||
+    message.includes('canceling statement') ||
+    message.includes('failed to fetch') ||
+    message.includes('timeout')
+  );
+};
+
+const withRetry = async <T,>(
+  operation: () => Promise<{ data: T; error: any }>,
+  attempts = 3
+): Promise<{ data: T; error: any }> => {
+  let last: { data: T; error: any } = { data: null as T, error: null };
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    last = await operation();
+    if (!last.error || !isTransientDbError(last.error)) return last;
+    console.warn(`⏳ Transient DB error, retrying (${attempt + 1}/${attempts})`, last.error?.message);
+    await new Promise((resolve) => setTimeout(resolve, 400 * Math.pow(2, attempt)));
+  }
+  return last;
+};
+
+
+
 export const useMultiTenantActions = () => {
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
   const [deletingArticles, setDeletingArticles] = useState<Set<string>>(new Set());
