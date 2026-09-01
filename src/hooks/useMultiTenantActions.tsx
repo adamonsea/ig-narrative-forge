@@ -127,31 +127,33 @@ export const useMultiTenantActions = () => {
           .eq('id', bridgeArticleId);
       } else {
         // Create bridge article with conflict handling
-        const { data: bridgeData, error: bridgeError } = await supabase
-          .from('articles')
-          .upsert({
-            title: article.title,
-            body: article.body || 'Multi-tenant bridge article',
-            source_url: article.url,
-            canonical_url: article.url,
-            author: article.author,
-            published_at: article.published_at,
-            processing_status: 'processed',
-            content_quality_score: article.content_quality_score,
-            regional_relevance_score: article.regional_relevance_score,
-            word_count: article.word_count,
-            import_metadata: {
-              multi_tenant_bridge: true,
-              topic_article_id: article.id,
-              shared_content_id: article.shared_content_id,
-              created_for_queue: true
-            }
-          }, {
-            onConflict: 'source_url',
-            ignoreDuplicates: false
-          })
-          .select('id')
-          .single();
+        const { data: bridgeData, error: bridgeError } = await withRetry(() =>
+          supabase
+            .from('articles')
+            .upsert({
+              title: article.title,
+              body: article.body || 'Multi-tenant bridge article',
+              source_url: article.url,
+              canonical_url: article.url,
+              author: article.author,
+              published_at: article.published_at,
+              processing_status: 'processed',
+              content_quality_score: article.content_quality_score,
+              regional_relevance_score: article.regional_relevance_score,
+              word_count: article.word_count,
+              import_metadata: {
+                multi_tenant_bridge: true,
+                topic_article_id: article.id,
+                shared_content_id: article.shared_content_id,
+                created_for_queue: true
+              }
+            }, {
+              onConflict: 'source_url',
+              ignoreDuplicates: false
+            })
+            .select('id')
+            .single() as any
+        );
 
         if (bridgeError) {
           // If still a constraint error, try to find the existing article
