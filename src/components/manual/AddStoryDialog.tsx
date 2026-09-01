@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Upload, Plus, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { extractEdgeFunctionError } from '@/lib/edgeFunctionError';
+import { edgeErrorMessage } from '@/lib/edgeError';
 
 export interface StoryDraft {
   headline: string;
@@ -54,7 +54,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
   const callExtract = async (body: Record<string, unknown>) => {
     const { data, error: fnError } = await supabase.functions.invoke('extract-content-from-upload', { body });
     if (fnError) {
-      throw new Error(await extractEdgeFunctionError(fnError, 'The story service hit an unexpected problem. Please try again in a moment.'));
+      throw new Error(await edgeErrorMessage(fnError, 'The story service hit an unexpected problem. Please try again in a moment.'));
     }
     if (!data?.success) throw new Error(data?.error || 'Extraction failed');
     return data;
@@ -162,7 +162,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
         },
       });
       if (fnError) {
-        throw new Error(await extractEdgeFunctionError(fnError, 'The story service hit an unexpected problem. Please try again in a moment.'));
+        throw new Error(await edgeErrorMessage(fnError, 'The story service hit an unexpected problem. Please try again in a moment.'));
       }
       if (!data?.success) throw new Error(data?.error || 'Could not add the story');
 

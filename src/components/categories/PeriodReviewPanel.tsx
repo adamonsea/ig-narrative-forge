@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { extractEdgeFunctionError } from '@/lib/edgeFunctionError';
+import { edgeErrorMessage } from '@/lib/edgeError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -87,7 +87,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
         body: { topicId, periodStart: start, periodEnd: end, label, slug: `${start}_${end}` },
       });
       if (error) {
-        throw new Error(await extractEdgeFunctionError(error, 'The review service hit an unexpected problem. Please try again in a moment.'));
+        throw new Error(await edgeErrorMessage(error, 'The review service hit an unexpected problem. Please try again in a moment.'));
       }
       toast({ title: 'Review generated', description: label });
       load();
