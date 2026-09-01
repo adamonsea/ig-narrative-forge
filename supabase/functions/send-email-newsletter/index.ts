@@ -565,7 +565,7 @@ serve(async (req) => {
           }
         }
 
-        const { error: sendError } = await resend.emails.send({
+        const { error: sendError } = await resend!.emails.send({
           from: `${topic.name} <noreply@curatr.pro>`,
           to: [recipient.email!],
           subject,
