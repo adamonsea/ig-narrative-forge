@@ -445,7 +445,11 @@ export default function Widgets() {
                       data={previewData} 
                       theme={config.theme === "auto" ? "light" : config.theme}
                       accent={accentColor}
+                      customTitle={config.customTitle}
+                      customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ""}
+                      showSubscribe={config.showSubscribe}
                     />
+
                   )}
                 </div>
               </CardContent>
@@ -489,15 +493,22 @@ export default function Widgets() {
 function WidgetPreview({ 
   data, 
   theme, 
-  accent 
+  accent,
+  customTitle = "",
+  customAvatar = "",
+  showSubscribe = false,
 }: { 
   data: any; 
   theme: "light" | "dark"; 
   accent: string;
+  customTitle?: string;
+  customAvatar?: string;
+  showSubscribe?: boolean;
 }) {
   if (!data?.feed || !data?.stories) {
     return <div className="text-center py-4 text-muted-foreground">No data</div>;
   }
+
 
   const isDark = theme === "dark";
   const bg = isDark ? "#1a1a1a" : "#ffffff";
