@@ -53,6 +53,9 @@ export const TopicManager = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [safetyTarget, setSafetyTarget] = useState<{ id: string; name: string } | null>(null);
+  const [backupsTarget, setBackupsTarget] = useState<{ id: string; name: string } | null>(null);
+
   const { toast } = useToast();
   const { user } = useAuth();
 
