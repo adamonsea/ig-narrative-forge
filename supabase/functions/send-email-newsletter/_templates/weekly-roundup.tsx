@@ -45,6 +45,8 @@ interface WeeklyRoundupEmailProps {
   audioUrl?: string; // Audio briefing URL if available
   totalStoryCount?: number; // Total stories in the week (not just email preview)
   events?: EmailEvent[]; // Upcoming local events (omitted when empty)
+  introHeading?: string; // Segment personalisation (partner site)
+  introText?: string;
 }
 
 export const WeeklyRoundupEmail = ({
@@ -60,7 +62,10 @@ export const WeeklyRoundupEmail = ({
   audioUrl,
   totalStoryCount,
   events = [],
+  introHeading,
+  introText,
 }: WeeklyRoundupEmailProps) => {
+
   const displayStoryCount = totalStoryCount || stories.length;
   
   return (
@@ -88,6 +93,15 @@ export const WeeklyRoundupEmail = ({
         </Section>
 
         <Hr style={hr} />
+
+        {(introHeading || introText) && (
+          <Section style={introSection}>
+            {introHeading && <Text style={introHeadingStyle}>{introHeading}</Text>}
+            {introText && <Text style={introTextStyle}>{introText}</Text>}
+          </Section>
+        )}
+
+
 
         {stories.length > 0 ? (
           <Section style={storiesSection}>
@@ -415,4 +429,22 @@ const poweredByLink = {
   color: '#6b7280',
   textDecoration: 'none',
   fontWeight: '700',
+}
+
+const introSection = {
+  padding: '0 16px 8px',
+}
+
+const introHeadingStyle = {
+  color: '#111827',
+  fontSize: '17px',
+  fontWeight: '700',
+  margin: '0 0 6px',
+}
+
+const introTextStyle = {
+  color: '#374151',
+  fontSize: '15px',
+  lineHeight: '22px',
+  margin: '0',
 }

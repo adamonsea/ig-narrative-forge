@@ -19,7 +19,10 @@ interface SendEmailRequest {
   notificationType: 'daily' | 'weekly';
   testEmail?: string; // For testing
   testDate?: string; // ISO date string for testing specific dates (e.g., "2025-12-20")
+  segmentId?: string; // Optional audience segment (partner site personalisation)
+  previewOnly?: boolean; // Render the email HTML and return it without sending
 }
+
 
 interface EmailStory {
   id: string;
@@ -75,9 +78,9 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { topicId, notificationType, testEmail, testDate }: SendEmailRequest = await req.json();
+    const { topicId, notificationType, testEmail, testDate, segmentId, previewOnly }: SendEmailRequest = await req.json();
 
-    console.log(`📧 Sending ${notificationType} email newsletter for topic ${topicId}`);
+    console.log(`📧 ${previewOnly ? 'Previewing' : 'Sending'} ${notificationType} email newsletter for topic ${topicId}${segmentId ? ` (segment ${segmentId})` : ''}`);
 
     // Authorization: allow internal/cron (service role) callers, otherwise require topic owner
     if (!isServiceRole(req)) {
@@ -88,7 +91,7 @@ serve(async (req) => {
       }
     }
 
-    if (!resendApiKey) {
+    if (!resendApiKey && !previewOnly) {
       console.warn('⚠️ RESEND_API_KEY not configured, skipping email send');
       return new Response(JSON.stringify({
         success: false,
@@ -98,7 +101,33 @@ serve(async (req) => {
       });
     }
 
-    const resend = new Resend(resendApiKey);
+    // Load the audience segment, if one was requested
+    let segment: {
+      id: string;
+      name: string;
+      source_domain: string | null;
+      signup_source: string | null;
+      intro_heading: string | null;
+      intro_text: string | null;
+      include_events: boolean;
+    } | null = null;
+
+    if (segmentId) {
+      const { data: segmentRow, error: segmentError } = await supabase
+        .from('email_segments')
+        .select('id, name, topic_id, source_domain, signup_source, intro_heading, intro_text, include_events')
+        .eq('id', segmentId)
+        .eq('topic_id', topicId)
+        .maybeSingle();
+
+      if (segmentError) console.error('Error loading segment (non-fatal):', segmentError);
+      if (segmentRow) segment = segmentRow as typeof segment;
+      if (!segment) console.warn(`⚠️ Segment ${segmentId} not found for topic ${topicId} — sending unsegmented`);
+    }
+
+    const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
+
 
     // Get topic details
     const { data: topic, error: topicError } = await supabase
@@ -294,28 +323,61 @@ serve(async (req) => {
 
     // Get subscribers (or use test email)
     let recipients: { email: string; name?: string | null; unsubscribe_token?: string | null }[] = [];
-    
-    if (testEmail) {
+
+    if (previewOnly) {
+      recipients = [];
+      console.log('👀 Preview mode: no recipients loaded');
+    } else if (testEmail) {
       recipients = [{ email: testEmail, name: null, unsubscribe_token: null }];
       console.log(`🧪 Test mode: sending to ${testEmail}`);
     } else {
-      const { data: subscribers, error: subError } = await supabase
+      let subQuery = supabase
         .from('topic_newsletter_signups')
-        .select('email, name, unsubscribe_token')
+        .select('email, name, unsubscribe_token, source_domain, signup_source')
         .eq('topic_id', topicId)
         .eq('is_active', true)
         .eq('email_verified', true)
         .eq('notification_type', notificationType)
         .not('email', 'is', null);
 
+      if (segment) {
+        // Segment send: only subscribers who came from this partner site / source
+        if (segment.source_domain) subQuery = subQuery.eq('source_domain', segment.source_domain);
+        if (segment.signup_source) subQuery = subQuery.eq('signup_source', segment.signup_source);
+      }
+
+      const { data: subscribers, error: subError } = await subQuery;
+
       if (subError) {
         throw new Error(`Failed to fetch subscribers: ${subError.message}`);
       }
 
-      recipients = (subscribers || []).filter(s => s.email);
+      let list = (subscribers || []).filter((s) => s.email);
+
+      if (!segment) {
+        // Default send: exclude anyone already covered by an active segment,
+        // so nobody receives two versions of the same briefing.
+        const { data: otherSegments } = await supabase
+          .from('email_segments')
+          .select('source_domain, signup_source')
+          .eq('topic_id', topicId)
+          .eq('is_active', true);
+
+        const claimed = (otherSegments || []).filter((s) => s.source_domain || s.signup_source);
+        if (claimed.length > 0) {
+          list = list.filter((sub) =>
+            !claimed.some((seg) =>
+              (!seg.source_domain || seg.source_domain === sub.source_domain) &&
+              (!seg.signup_source || seg.signup_source === sub.signup_source)
+            )
+          );
+        }
+      }
+
+      recipients = list;
     }
 
-    if (recipients.length === 0) {
+    if (recipients.length === 0 && !previewOnly) {
       console.log('📭 No email recipients');
       return new Response(JSON.stringify({
         success: true,
@@ -328,10 +390,11 @@ serve(async (req) => {
 
     console.log(`📬 Sending to ${recipients.length} recipients`);
 
+
     // Upcoming events for weekly emails ("What's on this week")
     // Only included when the topic has events enabled and there are events in the next 7 days.
     let upcomingEvents: EmailEvent[] = [];
-    if (notificationType === 'weekly' && topic.events_enabled) {
+    if (notificationType === 'weekly' && topic.events_enabled && (!segment || segment.include_events)) {
       const eventsFrom = new Date();
       eventsFrom.setUTCHours(0, 0, 0, 0);
       const eventsTo = new Date(eventsFrom);
@@ -423,7 +486,9 @@ serve(async (req) => {
             baseUrl: BASE_URL,
             isSlowNewsDay,
             audioUrl,
-            unsubscribeUrl
+            unsubscribeUrl,
+            introHeading: segment?.intro_heading || undefined,
+            introText: segment?.intro_text || undefined
           })
         );
       } else {
@@ -443,16 +508,35 @@ serve(async (req) => {
             audioUrl,
             totalStoryCount,
             events: upcomingEvents,
-            unsubscribeUrl
+            unsubscribeUrl,
+            introHeading: segment?.intro_heading || undefined,
+            introText: segment?.intro_text || undefined
           })
         );
       }
     };
 
+    // Preview mode: render and return the HTML without sending anything
+    if (previewOnly) {
+      const previewHtml = await renderEmailForRecipient(undefined);
+      return new Response(JSON.stringify({
+        success: true,
+        preview: true,
+        html: previewHtml,
+        segment: segment ? { id: segment.id, name: segment.name } : null,
+        story_count: stories.length,
+        event_count: upcomingEvents.length,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Send emails
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
+
+
 
     for (const recipient of recipients) {
       try {
@@ -481,7 +565,7 @@ serve(async (req) => {
           }
         }
 
-        const { error: sendError } = await resend.emails.send({
+        const { error: sendError } = await resend!.emails.send({
           from: `${topic.name} <noreply@curatr.pro>`,
           to: [recipient.email!],
           subject,

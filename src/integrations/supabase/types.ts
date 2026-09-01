@@ -969,6 +969,63 @@ export type Database = {
           },
         ]
       }
+      email_segments: {
+        Row: {
+          created_at: string
+          id: string
+          include_events: boolean
+          intro_heading: string | null
+          intro_text: string | null
+          is_active: boolean
+          name: string
+          signup_source: string | null
+          source_domain: string | null
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          include_events?: boolean
+          intro_heading?: string | null
+          intro_text?: string | null
+          is_active?: boolean
+          name: string
+          signup_source?: string | null
+          source_domain?: string | null
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          include_events?: boolean
+          intro_heading?: string | null
+          intro_text?: string | null
+          is_active?: boolean
+          name?: string
+          signup_source?: string | null
+          source_domain?: string | null
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_segments_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_segments_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       error_notifications: {
         Row: {
           created_at: string
@@ -4475,6 +4532,8 @@ export type Database = {
           email_subscriptions_enabled: boolean | null
           event_source_url: string | null
           events_enabled: boolean | null
+          events_last_checked_at: string | null
+          events_last_new_count: number
           id: string
           illustration_accent_color: string | null
           illustration_primary_color: string | null
@@ -4531,6 +4590,8 @@ export type Database = {
           email_subscriptions_enabled?: boolean | null
           event_source_url?: string | null
           events_enabled?: boolean | null
+          events_last_checked_at?: string | null
+          events_last_new_count?: number
           id?: string
           illustration_accent_color?: string | null
           illustration_primary_color?: string | null
@@ -4587,6 +4648,8 @@ export type Database = {
           email_subscriptions_enabled?: boolean | null
           event_source_url?: string | null
           events_enabled?: boolean | null
+          events_last_checked_at?: string | null
+          events_last_new_count?: number
           id?: string
           illustration_accent_color?: string | null
           illustration_primary_color?: string | null

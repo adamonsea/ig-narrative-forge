@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TrackedMPsManager } from "@/components/TrackedMPsManager";
+import { EmailSegmentsManager } from "@/components/EmailSegmentsManager";
+
 
 interface RegionalFeaturesSettingsProps {
   topicId: string;
@@ -40,6 +42,41 @@ export const RegionalFeaturesSettings = ({
     if (initialEventSourceUrl !== undefined) setEventSourceUrl(initialEventSourceUrl || '');
   }, [initialRegion, initialParliamentary, initialEvents, initialEventSourceUrl]);
 
+  const [eventStatus, setEventStatus] = useState<{
+    lastChecked: string | null;
+    lastNew: number | null;
+    upcoming: number;
+  } | null>(null);
+
+  const loadEventStatus = async () => {
+    try {
+      const { data: topicRow } = await (supabase as any)
+        .from('topics')
+        .select('events_last_checked_at, events_last_new_count')
+        .eq('id', topicId)
+        .maybeSingle();
+
+      const { count } = await (supabase as any)
+        .from('events')
+        .select('id', { count: 'exact', head: true })
+        .eq('topic_id', topicId)
+        .gte('start_date', new Date().toISOString().split('T')[0]);
+
+      setEventStatus({
+        lastChecked: topicRow?.events_last_checked_at ?? null,
+        lastNew: topicRow?.events_last_new_count ?? null,
+        upcoming: count ?? 0,
+      });
+    } catch (error) {
+      console.error('Failed to load event status', error);
+    }
+  };
+
+  useEffect(() => {
+    if (eventsEnabled) loadEventStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventsEnabled, topicId]);
+
   const refreshEvents = async () => {
     setRefreshingEvents(true);
     try {
@@ -48,9 +85,11 @@ export const RegionalFeaturesSettings = ({
       });
       if (error) throw error;
       const imported = data?.results?.[0]?.imported ?? 0;
+      const newEvents = data?.results?.[0]?.newEvents ?? 0;
       const failure = data?.results?.[0]?.error;
       if (failure) throw new Error(failure);
-      toast({ title: "Events refreshed", description: `${imported} upcoming events imported` });
+      toast({ title: "Events refreshed", description: `${imported} upcoming events (${newEvents} new)` });
+      await loadEventStatus();
       onUpdate?.();
     } catch (error) {
       toast({
@@ -62,6 +101,7 @@ export const RegionalFeaturesSettings = ({
       setRefreshingEvents(false);
     }
   };
+
 
 
   const updateField = async (field: string, value: any) => {
@@ -141,11 +181,28 @@ export const RegionalFeaturesSettings = ({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Events are imported daily. Upcoming events appear in the weekly email only when there are any.
+              Events are checked every few hours. Upcoming events appear in the weekly email only when there are any.
             </p>
+            {eventStatus && (
+              <p className="text-xs text-muted-foreground">
+                {eventStatus.upcoming} upcoming ·{' '}
+                {eventStatus.lastChecked
+                  ? `last checked ${new Date(eventStatus.lastChecked).toLocaleString('en-GB')}`
+                  : 'not checked yet'}
+                {eventStatus.lastNew !== null ? ` · ${eventStatus.lastNew} new that run` : ''}
+              </p>
+            )}
           </div>
         )}
       </div>
+
+      {/* Email segments */}
+      <div className="py-3 border-t">
+        <EmailSegmentsManager topicId={topicId} />
+      </div>
+
+
+
 
 
       {/* Parliamentary Tracking */}
