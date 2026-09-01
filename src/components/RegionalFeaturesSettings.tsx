@@ -190,12 +190,16 @@ export const RegionalFeaturesSettings = ({
                 {eventStatus.lastNew !== null ? ` · ${eventStatus.lastNew} new that run` : ''}
               </p>
             )}
-            <div className="pt-4 border-t">
-              <EmailSegmentsManager topicId={topicId} />
-            </div>
           </div>
         )}
       </div>
+
+      {/* Email segments */}
+      <div className="py-3 border-t">
+        <EmailSegmentsManager topicId={topicId} />
+      </div>
+
+
 
 
 
