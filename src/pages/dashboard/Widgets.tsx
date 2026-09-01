@@ -108,12 +108,13 @@ export default function Widgets() {
       formData.append("file", file);
       formData.append("feedSlug", config.feed || "custom");
 
-      const response = await fetch(`${SUPABASE_URL}/widget-avatar-upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Upload failed");
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        "widget-avatar-upload",
+        { body: formData }
+      );
+      if (fnError) throw new Error(await getEdgeErrorMessage(fnError, "Upload failed"));
+      if (!result?.url) throw new Error(result?.error || "Upload failed");
+
 
       setConfig(prev => ({ ...prev, customAvatar: result.url }));
       setAvatarFileName(file.name);
