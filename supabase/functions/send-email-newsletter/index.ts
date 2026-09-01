@@ -78,9 +78,9 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { topicId, notificationType, testEmail, testDate }: SendEmailRequest = await req.json();
+    const { topicId, notificationType, testEmail, testDate, segmentId, previewOnly }: SendEmailRequest = await req.json();
 
-    console.log(`📧 Sending ${notificationType} email newsletter for topic ${topicId}`);
+    console.log(`📧 ${previewOnly ? 'Previewing' : 'Sending'} ${notificationType} email newsletter for topic ${topicId}${segmentId ? ` (segment ${segmentId})` : ''}`);
 
     // Authorization: allow internal/cron (service role) callers, otherwise require topic owner
     if (!isServiceRole(req)) {
@@ -91,7 +91,7 @@ serve(async (req) => {
       }
     }
 
-    if (!resendApiKey) {
+    if (!resendApiKey && !previewOnly) {
       console.warn('⚠️ RESEND_API_KEY not configured, skipping email send');
       return new Response(JSON.stringify({
         success: false,
@@ -101,7 +101,33 @@ serve(async (req) => {
       });
     }
 
-    const resend = new Resend(resendApiKey);
+    // Load the audience segment, if one was requested
+    let segment: {
+      id: string;
+      name: string;
+      source_domain: string | null;
+      signup_source: string | null;
+      intro_heading: string | null;
+      intro_text: string | null;
+      include_events: boolean;
+    } | null = null;
+
+    if (segmentId) {
+      const { data: segmentRow, error: segmentError } = await supabase
+        .from('email_segments')
+        .select('id, name, topic_id, source_domain, signup_source, intro_heading, intro_text, include_events')
+        .eq('id', segmentId)
+        .eq('topic_id', topicId)
+        .maybeSingle();
+
+      if (segmentError) console.error('Error loading segment (non-fatal):', segmentError);
+      if (segmentRow) segment = segmentRow as typeof segment;
+      if (!segment) console.warn(`⚠️ Segment ${segmentId} not found for topic ${topicId} — sending unsegmented`);
+    }
+
+    const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
+
 
     // Get topic details
     const { data: topic, error: topicError } = await supabase
