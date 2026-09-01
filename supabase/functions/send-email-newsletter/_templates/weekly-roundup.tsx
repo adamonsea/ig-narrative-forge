@@ -296,6 +296,56 @@ const emptyText = {
   fontSize: '14px',
 }
 
+const eventsSection = {
+  padding: '8px 32px 16px',
+}
+
+const eventsHeading = {
+  color: '#111827',
+  fontSize: '13px',
+  fontWeight: '700',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase' as const,
+  margin: '0 0 12px',
+}
+
+const eventCard = {
+  borderLeft: '2px solid #e5e7eb',
+  padding: '0 0 0 12px',
+  margin: '0 0 14px',
+}
+
+const eventMeta = {
+  color: '#6b7280',
+  fontSize: '12px',
+  fontWeight: '600',
+  margin: '0 0 2px',
+}
+
+const eventTitle = {
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: '600',
+  lineHeight: '20px',
+  margin: '0',
+}
+
+const eventTitleLink = {
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: '600',
+  lineHeight: '20px',
+  textDecoration: 'none',
+  display: 'block',
+}
+
+const eventLocation = {
+  color: '#6b7280',
+  fontSize: '13px',
+  margin: '2px 0 0',
+}
+
+
 const ctaSection = {
   padding: '16px 32px 24px',
   textAlign: 'center' as const,
