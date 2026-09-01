@@ -532,10 +532,10 @@ function WidgetPreview({
         className="flex items-center gap-2.5 pb-3 mb-3"
         style={{ borderBottom: `1px solid ${border}` }}
       >
-        {(data.feed.icon_url || data.feed.logo_url) ? (
+        {(customAvatar || data.feed.icon_url || data.feed.logo_url) ? (
           <img 
-            src={data.feed.icon_url || data.feed.logo_url} 
-            alt={data.feed.name}
+            src={customAvatar || data.feed.icon_url || data.feed.logo_url} 
+            alt={customTitle || data.feed.name}
             className="w-7 h-7 rounded-full object-cover"
           />
         ) : (
@@ -543,11 +543,12 @@ function WidgetPreview({
             className="w-7 h-7 rounded-full flex items-center justify-center text-white font-semibold text-sm"
             style={{ background: accent }}
           >
-            {data.feed.name.charAt(0)}
+            {(customTitle || data.feed.name).charAt(0)}
           </div>
         )}
-        <span className="font-semibold">{data.feed.name}</span>
+        <span className="font-semibold">{customTitle || data.feed.name}</span>
       </div>
+
 
       {/* Stories */}
       <div className="space-y-1">
