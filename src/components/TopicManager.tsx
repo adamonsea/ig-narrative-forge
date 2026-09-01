@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Hash, Archive, ExternalLink, TrendingUp, TrendingDown, AlertTriangle, MoreHorizontal } from "lucide-react";
+import { Plus, Hash, Archive, ExternalLink, TrendingUp, TrendingDown, AlertTriangle, MoreHorizontal, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +15,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FeedSafetyDialog } from "@/components/topics/FeedSafetyDialog";
+import { FeedBackupsDialog } from "@/components/topics/FeedBackupsDialog";
+
 
 interface Topic {
   id: string;
@@ -50,6 +53,9 @@ export const TopicManager = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [safetyTarget, setSafetyTarget] = useState<{ id: string; name: string } | null>(null);
+  const [backupsTarget, setBackupsTarget] = useState<{ id: string; name: string } | null>(null);
+
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -166,36 +172,11 @@ export const TopicManager = () => {
     }
   };
 
-  const handleArchiveTopic = async (topicId: string, topicName: string) => {
-    if (!confirm(`Archive "${topicName}"? You can restore it later from the archive.`)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('topics')
-        .update({ 
-          is_archived: true,
-          archived_at: new Date().toISOString(),
-          archived_by: user?.id
-        })
-        .eq('id', topicId);
-
-      if (error) throw error;
-      setTopics(topics.filter(topic => topic.id !== topicId));
-      toast({
-        title: "Success",
-        description: `"${topicName}" has been archived`
-      });
-    } catch (error) {
-      console.error('Error archiving topic:', error);
-      toast({
-        title: "Error",
-        description: "Failed to archive topic",
-        variant: "destructive"
-      });
-    }
+  const handleArchiveTopic = (topicId: string, topicName: string) => {
+    setSafetyTarget({ id: topicId, name: topicName });
   };
+
+
 
   if (loading) {
     return (
@@ -349,6 +330,16 @@ export const TopicManager = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenuItem
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setBackupsTarget({ id: topic.id, name: topic.name });
+                              }}
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+                              Backups &amp; restore
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={(e) => {
                                 e.preventDefault();
@@ -360,6 +351,7 @@ export const TopicManager = () => {
                               Archive
                             </DropdownMenuItem>
                           </DropdownMenuContent>
+
                         </DropdownMenu>
                       </div>
                     </div>
@@ -412,6 +404,30 @@ export const TopicManager = () => {
           })}
         </div>
       )}
+
+      {safetyTarget && (
+        <FeedSafetyDialog
+          open={!!safetyTarget}
+          onOpenChange={(open) => !open && setSafetyTarget(null)}
+          topicId={safetyTarget.id}
+          topicName={safetyTarget.name}
+          onArchived={() => {
+            setTopics((prev) => prev.filter((t) => t.id !== safetyTarget.id));
+            setSafetyTarget(null);
+          }}
+        />
+      )}
+
+      {backupsTarget && (
+        <FeedBackupsDialog
+          open={!!backupsTarget}
+          onOpenChange={(open) => !open && setBackupsTarget(null)}
+          topicId={backupsTarget.id}
+          topicName={backupsTarget.name}
+          onRestored={loadTopics}
+        />
+      )}
     </div>
   );
 };
+

@@ -3872,6 +3872,42 @@ export type Database = {
           },
         ]
       }
+      topic_backups: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string | null
+          reason: string
+          snapshot: Json
+          topic_id: string
+          topic_name: string
+          topic_slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          reason?: string
+          snapshot: Json
+          topic_id: string
+          topic_name: string
+          topic_slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          reason?: string
+          snapshot?: Json
+          topic_id?: string
+          topic_name?: string
+          topic_slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       topic_category_settings: {
         Row: {
           automation_mode: string
@@ -4521,6 +4557,7 @@ export type Database = {
           custom_css: Json | null
           default_tone: Database["public"]["Enums"]["tone_type"] | null
           default_writing_style: string | null
+          deletion_protected: boolean
           description: string | null
           donation_config: Json | null
           donation_enabled: boolean | null
@@ -4579,6 +4616,7 @@ export type Database = {
           custom_css?: Json | null
           default_tone?: Database["public"]["Enums"]["tone_type"] | null
           default_writing_style?: string | null
+          deletion_protected?: boolean
           description?: string | null
           donation_config?: Json | null
           donation_enabled?: boolean | null
@@ -4637,6 +4675,7 @@ export type Database = {
           custom_css?: Json | null
           default_tone?: Database["public"]["Enums"]["tone_type"] | null
           default_writing_style?: string | null
+          deletion_protected?: boolean
           description?: string | null
           donation_config?: Json | null
           donation_enabled?: boolean | null
@@ -5139,6 +5178,7 @@ export type Database = {
       }
       article_is_public: { Args: { p_article_id: string }; Returns: boolean }
       auto_generate_missing_schedules: { Args: never; Returns: Json }
+      build_topic_snapshot: { Args: { p_topic_id: string }; Returns: Json }
       bulk_cleanup_topic_content: {
         Args: { p_topic_id: string }
         Returns: Json
@@ -5185,6 +5225,10 @@ export type Database = {
           p_title: string
           p_topic_article_id: string
         }
+        Returns: string
+      }
+      create_topic_backup: {
+        Args: { p_reason?: string; p_topic_id: string }
         Returns: string
       }
       deduct_user_credits: {
@@ -5972,6 +6016,11 @@ export type Database = {
       }
       reset_stalled_processing: { Args: never; Returns: undefined }
       reset_stalled_stories: { Args: never; Returns: number }
+      restore_topic_from_backup: {
+        Args: { p_backup_id: string }
+        Returns: Json
+      }
+      run_nightly_topic_backups: { Args: never; Returns: Json }
       safe_cleanup_inactive_sources: {
         Args: never
         Returns: {
