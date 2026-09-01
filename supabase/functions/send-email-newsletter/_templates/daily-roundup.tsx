@@ -34,6 +34,8 @@ interface DailyRoundupEmailProps {
   unsubscribeUrl?: string;
   isSlowNewsDay?: boolean;
   audioUrl?: string; // Audio briefing URL if available
+  introHeading?: string; // Segment personalisation (partner site)
+  introText?: string;
 }
 
 export const DailyRoundupEmail = ({
@@ -47,6 +49,8 @@ export const DailyRoundupEmail = ({
   unsubscribeUrl,
   isSlowNewsDay = false,
   audioUrl,
+  introHeading,
+  introText,
 }: DailyRoundupEmailProps) => (
   <Html style={html}>
     <Head>
@@ -72,6 +76,15 @@ export const DailyRoundupEmail = ({
         </Section>
 
         <Hr style={hr} />
+
+        {(introHeading || introText) && (
+          <Section style={introSection}>
+            {introHeading && <Text style={introHeadingStyle}>{introHeading}</Text>}
+            {introText && <Text style={introTextStyle}>{introText}</Text>}
+          </Section>
+        )}
+
+
 
         {isSlowNewsDay && stories.length > 0 && (
           <Section style={slowNewsDaySection}>
