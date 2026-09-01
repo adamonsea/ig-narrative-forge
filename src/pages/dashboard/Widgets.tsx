@@ -631,7 +631,10 @@ function WidgetPreview({
           className="font-medium text-sm no-underline hover:underline"
           style={{ color: accent }}
         >
-          View all stories →
+          {data.feed?.stories_this_week > 0
+            ? `${data.feed.stories_this_week} stories this week →`
+            : 'View all stories →'}
+
         </a>
         <span className="text-xs" style={{ color: textMuted }}>
           Powered by{' '}
