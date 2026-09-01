@@ -1070,6 +1070,7 @@ export type Database = {
           end_date: string | null
           end_time: string | null
           event_type: string
+          external_id: string | null
           id: string
           location: string | null
           price: string | null
@@ -1092,6 +1093,7 @@ export type Database = {
           end_date?: string | null
           end_time?: string | null
           event_type: string
+          external_id?: string | null
           id?: string
           location?: string | null
           price?: string | null
@@ -1114,6 +1116,7 @@ export type Database = {
           end_date?: string | null
           end_time?: string | null
           event_type?: string
+          external_id?: string | null
           id?: string
           location?: string | null
           price?: string | null
@@ -4470,6 +4473,7 @@ export type Database = {
           drip_start_hour: number | null
           drip_stories_per_release: number | null
           email_subscriptions_enabled: boolean | null
+          event_source_url: string | null
           events_enabled: boolean | null
           id: string
           illustration_accent_color: string | null
@@ -4525,6 +4529,7 @@ export type Database = {
           drip_start_hour?: number | null
           drip_stories_per_release?: number | null
           email_subscriptions_enabled?: boolean | null
+          event_source_url?: string | null
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null
@@ -4580,6 +4585,7 @@ export type Database = {
           drip_start_hour?: number | null
           drip_stories_per_release?: number | null
           email_subscriptions_enabled?: boolean | null
+          event_source_url?: string | null
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null
