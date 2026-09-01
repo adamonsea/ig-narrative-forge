@@ -93,7 +93,7 @@ serve(async (req) => {
     // Get topic details
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, slug, branding_config')
+      .select('id, name, slug, branding_config, events_enabled')
       .eq('id', topicId)
       .single();
 
