@@ -540,6 +540,22 @@ export default function PublicWidgetBuilder() {
                     Ideal size: <strong>128×128px</strong> (square). Max 500KB. PNG, JPG, or WebP.
                   </p>
                 </div>
+
+                {/* Subscribe box */}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label htmlFor="subscribe">Show subscribe box</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Let readers sign up for email highlights without leaving the page
+                    </p>
+                  </div>
+                  <Switch
+                    id="subscribe"
+                    checked={config.showSubscribe}
+                    onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showSubscribe: checked }))}
+                  />
+                </div>
+
               </CardContent>
             </Card>
 
