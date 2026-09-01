@@ -161,7 +161,9 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
           fileName: pendingFile?.fileName,
         },
       });
-      if (fnError) throw new Error(await extractFnErrorMessage(fnError));
+      if (fnError) {
+        throw new Error(await extractEdgeFunctionError(fnError, 'The story service hit an unexpected problem. Please try again in a moment.'));
+      }
       if (!data?.success) throw new Error(data?.error || 'Could not add the story');
 
       toast({

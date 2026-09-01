@@ -85,7 +85,9 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
       const { error } = await supabase.functions.invoke('generate-period-review', {
         body: { topicId, periodStart: start, periodEnd: end, label, slug: `${start}_${end}` },
       });
-      if (error) throw error;
+      if (error) {
+        throw new Error(await extractEdgeFunctionError(error, 'The review service hit an unexpected problem. Please try again in a moment.'));
+      }
       toast({ title: 'Review generated', description: label });
       load();
     } catch (err) {
