@@ -363,16 +363,12 @@ const TopicFeed = () => {
         return;
       }
 
-      // Check if they have any active subscriptions
-      const { data: subscriptions } = await supabase
-        .from('topic_newsletter_signups')
-        .select('id')
-        .eq('topic_id', topic.id)
-        .eq('is_active', true)
-        .limit(1);
+      // Check if this feed has any active subscriptions (privacy-safe existence check)
+      const { data: hasSubscriptions } = await (supabase as any)
+        .rpc('topic_has_active_signups', { p_topic_id: topic.id });
 
       // If no subscriptions, mark them as eligible for prompt
-      if (!subscriptions || subscriptions.length === 0) {
+      if (!hasSubscriptions) {
         setShouldShowNotificationPrompt(true);
       }
       

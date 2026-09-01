@@ -39,13 +39,11 @@ export const useSubscriberStatus = (topicId: string | null) => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('topic_newsletter_signups')
-        .select('notification_type, email_verified')
-        .eq('topic_id', topicId)
-        .eq('email', storedEmail)
-        .eq('email_verified', true)
-        .eq('is_active', true);
+      const { data, error } = await (supabase as any)
+        .rpc('get_subscriber_status', {
+          p_topic_id: topicId,
+          p_email: storedEmail,
+        });
 
       if (error) {
         console.error('Error checking subscription:', error);
@@ -53,9 +51,9 @@ export const useSubscriberStatus = (topicId: string | null) => {
         return;
       }
 
-      const verifiedTypes = (data || [])
-        .filter(s => s.email_verified)
-        .map(s => s.notification_type)
+      const verifiedTypes = ((data as any[]) || [])
+        .filter((s: any) => s.email_verified)
+        .map((s: any) => s.notification_type)
         .filter(Boolean);
 
       setStatus({
