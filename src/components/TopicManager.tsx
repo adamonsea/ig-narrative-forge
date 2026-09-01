@@ -170,15 +170,7 @@ export const TopicManager = () => {
     setSafetyTarget({ id: topicId, name: topicName });
   };
 
-    } catch (error) {
-      console.error('Error archiving topic:', error);
-      toast({
-        title: "Error",
-        description: "Failed to archive topic",
-        variant: "destructive"
-      });
-    }
-  };
+
 
   if (loading) {
     return (
