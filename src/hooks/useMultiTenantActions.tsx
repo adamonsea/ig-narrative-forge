@@ -273,13 +273,15 @@ export const useMultiTenantActions = () => {
 
       // Update the multi-tenant article status to discarded 
       // Auto-suppression handled by database trigger
-      const { error: updateError } = await supabase
-        .from('topic_articles')
-        .update({
-          processing_status: 'discarded',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', articleId);
+      const { error: updateError } = await withRetry(() =>
+        supabase
+          .from('topic_articles')
+          .update({
+            processing_status: 'discarded',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', articleId) as any
+      );
 
       if (updateError) {
         console.error('Error discarding multi-tenant article:', updateError);
