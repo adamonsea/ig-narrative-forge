@@ -588,7 +588,36 @@ function WidgetPreview({
         ))}
       </div>
 
+      {/* Subscribe box */}
+      {showSubscribe && (
+        <div
+          className="pt-3 mt-3"
+          style={{ borderTop: `1px solid ${border}` }}
+        >
+          <div className="text-xs mb-2" style={{ color: textMuted }}>
+            Get these highlights by email
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="you@example.com"
+              readOnly
+              className="flex-1 rounded-md px-2 py-1.5 text-sm"
+              style={{ background: isDark ? '#2a2a2a' : '#f9fafb', border: `1px solid ${border}`, color: text }}
+            />
+            <button
+              type="button"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+              style={{ background: accent }}
+            >
+              Subscribe
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
+
       <div 
         className="flex justify-between items-center pt-3 mt-3 flex-wrap gap-2"
         style={{ borderTop: `1px solid ${border}` }}
