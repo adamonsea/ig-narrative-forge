@@ -427,9 +427,7 @@ export default function Widgets() {
                 <div 
                   className="rounded-lg p-4"
                   style={{ 
-                    background: config.theme === "dark" ? "#0a0a0a" : 
-                               config.theme === "light" ? "#f5f5f5" : 
-                               "linear-gradient(135deg, #f5f5f5 50%, #0a0a0a 50%)"
+                    background: config.theme === "dark" ? "#0a0a0a" : "#f5f5f5"
                   }}
                 >
                   {previewLoading ? (
