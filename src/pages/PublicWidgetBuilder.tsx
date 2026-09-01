@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
+import { edgeErrorMessage } from "@/lib/edgeError";
+
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -176,19 +178,19 @@ export default function PublicWidgetBuilder() {
       formData.append('file', file);
       formData.append('feedSlug', slug || 'custom');
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1/widget-avatar-upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        'widget-avatar-upload',
+        { body: formData }
       );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed');
+      if (fnError) {
+        throw new Error(await edgeErrorMessage(fnError, 'Upload failed'));
       }
+
+      if (!result?.url) {
+        throw new Error(result?.error || 'Upload failed');
+      }
+
 
       setConfig(prev => ({ ...prev, customAvatar: result.url }));
       setAvatarFileName(file.name);

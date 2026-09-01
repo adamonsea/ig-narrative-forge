@@ -15,6 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { edgeErrorMessage } from "@/lib/edgeError";
+
 
 const SUPABASE_URL = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1";
 const WIDGET_SCRIPT_URL = "https://curatr.pro/widget.js";
@@ -108,12 +111,13 @@ export default function Widgets() {
       formData.append("file", file);
       formData.append("feedSlug", config.feed || "custom");
 
-      const response = await fetch(`${SUPABASE_URL}/widget-avatar-upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Upload failed");
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        "widget-avatar-upload",
+        { body: formData }
+      );
+      if (fnError) throw new Error(await edgeErrorMessage(fnError, "Upload failed"));
+      if (!result?.url) throw new Error(result?.error || "Upload failed");
+
 
       setConfig(prev => ({ ...prev, customAvatar: result.url }));
       setAvatarFileName(file.name);
