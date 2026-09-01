@@ -4064,6 +4064,8 @@ export type Database = {
           name: string | null
           notification_type: string | null
           push_subscription: Json | null
+          signup_source: string
+          source_domain: string | null
           topic_id: string | null
           unsubscribe_token: string | null
           updated_at: string
@@ -4084,6 +4086,8 @@ export type Database = {
           name?: string | null
           notification_type?: string | null
           push_subscription?: Json | null
+          signup_source?: string
+          source_domain?: string | null
           topic_id?: string | null
           unsubscribe_token?: string | null
           updated_at?: string
@@ -4104,6 +4108,8 @@ export type Database = {
           name?: string | null
           notification_type?: string | null
           push_subscription?: Json | null
+          signup_source?: string
+          source_domain?: string | null
           topic_id?: string | null
           unsubscribe_token?: string | null
           updated_at?: string
