@@ -486,7 +486,9 @@ serve(async (req) => {
             baseUrl: BASE_URL,
             isSlowNewsDay,
             audioUrl,
-            unsubscribeUrl
+            unsubscribeUrl,
+            introHeading: segment?.intro_heading || undefined,
+            introText: segment?.intro_text || undefined
           })
         );
       } else {
@@ -506,16 +508,35 @@ serve(async (req) => {
             audioUrl,
             totalStoryCount,
             events: upcomingEvents,
-            unsubscribeUrl
+            unsubscribeUrl,
+            introHeading: segment?.intro_heading || undefined,
+            introText: segment?.intro_text || undefined
           })
         );
       }
     };
 
+    // Preview mode: render and return the HTML without sending anything
+    if (previewOnly) {
+      const previewHtml = await renderEmailForRecipient(undefined);
+      return new Response(JSON.stringify({
+        success: true,
+        preview: true,
+        html: previewHtml,
+        segment: segment ? { id: segment.id, name: segment.name } : null,
+        story_count: stories.length,
+        event_count: upcomingEvents.length,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Send emails
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
+
+
 
     for (const recipient of recipients) {
       try {
