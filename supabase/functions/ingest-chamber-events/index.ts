@@ -80,13 +80,18 @@ serve(async (req) => {
     const daysAhead: number = Math.min(Math.max(Number(body.daysAhead) || 120, 7), 400);
 
     // Authorization: cron/service-role callers pass through, users must own the topic
-    if (!isServiceRole(req)) {
+    const bearer = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
+    const cronToken = Deno.env.get('EVENTS_CRON_TOKEN') || '';
+    const isCron = cronToken.length > 0 && bearer === cronToken;
+
+    if (!isCron && !isServiceRole(req)) {
       const user = await getUser(req);
       if (!user) return unauthorized(corsHeaders);
       if (!topicId || !(await userOwnsTopic(supabase, user.id, topicId))) {
         return forbidden(corsHeaders);
       }
     }
+
 
     // Resolve which topics to process
     let query = supabase
