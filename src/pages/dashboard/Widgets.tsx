@@ -294,18 +294,120 @@ export default function Widgets() {
                 </p>
               </div>
 
-              {/* Attribution Toggle */}
+              {/* Widget Title */}
+              <div className="space-y-2">
+                <Label htmlFor="widget-title">Widget title (optional)</Label>
+                <Input
+                  id="widget-title"
+                  type="text"
+                  maxLength={100}
+                  placeholder={selectedTopic?.name || "Feed name"}
+                  value={config.customTitle}
+                  onChange={(e) => setConfig(prev => ({ ...prev, customTitle: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to use the feed's name
+                </p>
+              </div>
+
+              {/* Width */}
+              <div className="space-y-2">
+                <Label>Width</Label>
+                <Select
+                  value={config.width}
+                  onValueChange={(value) => setConfig(prev => ({ ...prev, width: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="wide">Wide (max 1000px) — with images</SelectItem>
+                    <SelectItem value="responsive">Responsive (max 480px)</SelectItem>
+                    <SelectItem value="100%">Full width</SelectItem>
+                    <SelectItem value="400px">400px</SelectItem>
+                    <SelectItem value="350px">350px</SelectItem>
+                    <SelectItem value="300px">300px</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom logo / avatar */}
+              <div className="space-y-2">
+                <Label>Custom logo / icon (optional)</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {config.customAvatar && isValidAvatarUrl(config.customAvatar) ? (
+                  <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/50">
+                    <img
+                      src={config.customAvatar}
+                      alt="Custom widget logo preview"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-background shadow-sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {avatarFileName || "Custom logo"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Click × to remove</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={removeAvatar}
+                      aria-label="Remove custom logo"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                  >
+                    {avatarUploading ? (
+                      <>
+                        <Loader2 className="w-8 h-8 text-muted-foreground animate-spin mb-2" />
+                        <p className="text-sm text-muted-foreground">Uploading...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Upload image</p>
+                        <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Ideal size: <strong>128×128px</strong> (square). Max 500KB. PNG, JPG, or WebP.
+                </p>
+              </div>
+
+              {/* Subscribe box */}
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="attribution">Show Attribution</Label>
-                  <p className="text-xs text-muted-foreground">Display "Powered by Curatr"</p>
+                  <Label htmlFor="subscribe">Show subscribe box</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Readers can sign up for email highlights without leaving the page
+                  </p>
                 </div>
                 <Switch
-                  id="attribution"
-                  checked={config.showAttribution}
-                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showAttribution: checked }))}
+                  id="subscribe"
+                  checked={config.showSubscribe}
+                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showSubscribe: checked }))}
                 />
               </div>
+
             </CardContent>
           </Card>
 
