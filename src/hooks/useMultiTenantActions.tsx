@@ -347,13 +347,15 @@ export const useMultiTenantActions = () => {
       });
 
       // Update all articles to discarded status
-      const { error: updateError } = await supabase
-        .from('topic_articles')
-        .update({
-          processing_status: 'discarded',
-          updated_at: new Date().toISOString()
-        })
-        .in('id', articleIds);
+      const { error: updateError } = await withRetry(() =>
+        supabase
+          .from('topic_articles')
+          .update({
+            processing_status: 'discarded',
+            updated_at: new Date().toISOString()
+          })
+          .in('id', articleIds) as any
+      );
 
       if (updateError) {
         console.error('Error bulk discarding multi-tenant articles:', updateError);
