@@ -323,28 +323,61 @@ serve(async (req) => {
 
     // Get subscribers (or use test email)
     let recipients: { email: string; name?: string | null; unsubscribe_token?: string | null }[] = [];
-    
-    if (testEmail) {
+
+    if (previewOnly) {
+      recipients = [];
+      console.log('👀 Preview mode: no recipients loaded');
+    } else if (testEmail) {
       recipients = [{ email: testEmail, name: null, unsubscribe_token: null }];
       console.log(`🧪 Test mode: sending to ${testEmail}`);
     } else {
-      const { data: subscribers, error: subError } = await supabase
+      let subQuery = supabase
         .from('topic_newsletter_signups')
-        .select('email, name, unsubscribe_token')
+        .select('email, name, unsubscribe_token, source_domain, signup_source')
         .eq('topic_id', topicId)
         .eq('is_active', true)
         .eq('email_verified', true)
         .eq('notification_type', notificationType)
         .not('email', 'is', null);
 
+      if (segment) {
+        // Segment send: only subscribers who came from this partner site / source
+        if (segment.source_domain) subQuery = subQuery.eq('source_domain', segment.source_domain);
+        if (segment.signup_source) subQuery = subQuery.eq('signup_source', segment.signup_source);
+      }
+
+      const { data: subscribers, error: subError } = await subQuery;
+
       if (subError) {
         throw new Error(`Failed to fetch subscribers: ${subError.message}`);
       }
 
-      recipients = (subscribers || []).filter(s => s.email);
+      let list = (subscribers || []).filter((s) => s.email);
+
+      if (!segment) {
+        // Default send: exclude anyone already covered by an active segment,
+        // so nobody receives two versions of the same briefing.
+        const { data: otherSegments } = await supabase
+          .from('email_segments')
+          .select('source_domain, signup_source')
+          .eq('topic_id', topicId)
+          .eq('is_active', true);
+
+        const claimed = (otherSegments || []).filter((s) => s.source_domain || s.signup_source);
+        if (claimed.length > 0) {
+          list = list.filter((sub) =>
+            !claimed.some((seg) =>
+              (!seg.source_domain || seg.source_domain === sub.source_domain) &&
+              (!seg.signup_source || seg.signup_source === sub.signup_source)
+            )
+          );
+        }
+      }
+
+      recipients = list;
     }
 
-    if (recipients.length === 0) {
+    if (recipients.length === 0 && !previewOnly) {
       console.log('📭 No email recipients');
       return new Response(JSON.stringify({
         success: true,
@@ -356,6 +389,7 @@ serve(async (req) => {
     }
 
     console.log(`📬 Sending to ${recipients.length} recipients`);
+
 
     // Upcoming events for weekly emails ("What's on this week")
     // Only included when the topic has events enabled and there are events in the next 7 days.
