@@ -114,7 +114,7 @@ serve(async (req) => {
           method: 'POST',
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'Referer': `${feedUrl.origin}/`,
+            'Referer': `${feedUrl.origin.replace('members.', 'www.')}/events`,
             'Content-Type': 'application/x-www-form-urlencoded',
             'User-Agent': 'Mozilla/5.0 (compatible; CuratrEvents/1.0)',
           },
