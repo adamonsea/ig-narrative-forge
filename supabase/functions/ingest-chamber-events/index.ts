@@ -193,8 +193,23 @@ serve(async (req) => {
         }
         await cleanup;
 
-        console.log(`✅ ${topic.name}: imported ${rows.length} events`);
-        results.push({ topicId: topic.id, topicName: topic.name, imported: rows.length, success: true });
+        await supabase
+          .from('topics')
+          .update({
+            events_last_checked_at: new Date().toISOString(),
+            events_last_new_count: newCount,
+          })
+          .eq('id', topic.id);
+
+        console.log(`✅ ${topic.name}: imported ${rows.length} events (${newCount} new)`);
+        results.push({
+          topicId: topic.id,
+          topicName: topic.name,
+          imported: rows.length,
+          newEvents: newCount,
+          success: true,
+        });
+
       } catch (topicError) {
         const message = topicError instanceof Error ? topicError.message : JSON.stringify(topicError);
         console.error(`❌ ${topic.name}: ${message}`);
