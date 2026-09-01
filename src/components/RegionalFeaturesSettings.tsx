@@ -179,11 +179,24 @@ export const RegionalFeaturesSettings = ({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Events are imported daily. Upcoming events appear in the weekly email only when there are any.
+              Events are checked every few hours. Upcoming events appear in the weekly email only when there are any.
             </p>
+            {eventStatus && (
+              <p className="text-xs text-muted-foreground">
+                {eventStatus.upcoming} upcoming ·{' '}
+                {eventStatus.lastChecked
+                  ? `last checked ${new Date(eventStatus.lastChecked).toLocaleString('en-GB')}`
+                  : 'not checked yet'}
+                {eventStatus.lastNew !== null ? ` · ${eventStatus.lastNew} new that run` : ''}
+              </p>
+            )}
+            <div className="pt-4 border-t">
+              <EmailSegmentsManager topicId={topicId} />
+            </div>
           </div>
         )}
       </div>
+
 
 
       {/* Parliamentary Tracking */}
