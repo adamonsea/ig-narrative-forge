@@ -69,6 +69,8 @@ export default function PublicWidgetBuilder() {
     width: 'responsive',
     customTitle: '',
     customAvatar: '',
+    showSubscribe: false,
+
   });
 
   // Load topic data
