@@ -442,6 +442,7 @@ serve(async (req) => {
             baseUrl: BASE_URL,
             audioUrl,
             totalStoryCount,
+            events: upcomingEvents,
             unsubscribeUrl
           })
         );
