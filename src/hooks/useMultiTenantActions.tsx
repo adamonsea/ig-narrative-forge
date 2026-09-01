@@ -93,13 +93,15 @@ export const useMultiTenantActions = () => {
       }
 
       // Update multi-tenant article status to processed (equivalent to legacy)
-      const { error: updateError } = await supabase
-        .from('topic_articles')
-        .update({ 
-          processing_status: 'processed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', article.id);
+      const { error: updateError } = await withRetry(() =>
+        supabase
+          .from('topic_articles')
+          .update({ 
+            processing_status: 'processed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', article.id) as any
+      );
 
       if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
 
