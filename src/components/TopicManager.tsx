@@ -15,6 +15,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FeedSafetyDialog } from "@/components/topics/FeedSafetyDialog";
+import { FeedBackupsDialog } from "@/components/topics/FeedBackupsDialog";
+
 
 interface Topic {
   id: string;
