@@ -99,23 +99,54 @@ export const RegionalFeaturesSettings = ({
         </p>
       </div>
 
-      {/* Events Toggle */}
-      <div className="flex items-center justify-between py-3 border-t">
-        <div className="space-y-0.5">
-          <Label className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Local Events
-          </Label>
-          <p className="text-xs text-muted-foreground">Show events between stories in feed</p>
+      {/* Events */}
+      <div className="space-y-4 py-3 border-t">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Local Events
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Show events between stories in the feed, and in the weekly email
+            </p>
+          </div>
+          <Switch
+            checked={eventsEnabled}
+            onCheckedChange={(checked) => {
+              setEventsEnabled(checked);
+              updateField('events_enabled', checked);
+            }}
+          />
         </div>
-        <Switch
-          checked={eventsEnabled}
-          onCheckedChange={(checked) => {
-            setEventsEnabled(checked);
-            updateField('events_enabled', checked);
-          }}
-        />
+
+        {eventsEnabled && (
+          <div className="space-y-2 pl-6 border-l-2 border-muted">
+            <Label htmlFor="event-source-url" className="text-sm">Events calendar feed</Label>
+            <div className="flex gap-2 max-w-xl">
+              <Input
+                id="event-source-url"
+                value={eventSourceUrl}
+                onChange={(e) => setEventSourceUrl(e.target.value)}
+                onBlur={() => updateField('event_source_url', eventSourceUrl.trim() || null)}
+                placeholder="https://members.example.co.uk/ajax_website/ajax_retrieveevents.php"
+              />
+              <Button
+                variant="outline"
+                onClick={refreshEvents}
+                disabled={refreshingEvents || !eventSourceUrl.trim()}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshingEvents ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Events are imported daily. Upcoming events appear in the weekly email only when there are any.
+            </p>
+          </div>
+        )}
       </div>
+
 
       {/* Parliamentary Tracking */}
       <div className="space-y-4 py-3 border-t">
