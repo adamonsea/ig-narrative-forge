@@ -24,7 +24,9 @@ Two existing gaps fixed in the same pass:
 - `public/widget.js`: render a subscribe form (Shadow DOM, existing style system, accent colour), read `data-subscribe`, POST to the existing `secure-newsletter-signup` edge function (already `verify_jwt = false`, CORS `*`, rate limited, email-validated). Reuse the existing analytics helper to record a `subscribe` event via `widget-analytics`. Bump `WIDGET_VERSION`.
 - `supabase/functions/widget-feed-data/index.ts`: include `id: topic.id` in the returned `feed` object so the widget can pass `topicId` to the signup endpoint. Topic ids are already public via the feed pages, and the signup function independently re-checks that the topic exists and `is_public`.
 - `supabase/functions/widget-analytics/index.ts`: allow the `subscribe` event type if the current handler validates against a fixed list, so widget analytics can report subscribe counts.
-- `src/pages/dashboard/Widgets.tsx` and `src/pages/PublicWidgetBuilder.tsx`: add the toggle to config state, embed-code generation, and the live preview.
+- `src/pages/dashboard/Widgets.tsx`: add the subscribe toggle plus the ported avatar/title/width controls to config state, embed-code generation, and the live preview; drop the `showAttribution` config field and its Switch.
+- `src/pages/PublicWidgetBuilder.tsx`: add the subscribe toggle to config state, embed-code generation, and preview.
+
 - No database migration required — signups land in `topic_newsletter_signups` exactly as feed signups do, including the existing confirmation email flow.
 
 ## Out of scope for this pass
