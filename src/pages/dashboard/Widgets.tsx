@@ -151,6 +151,17 @@ export default function Widgets() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const getPreviewWidth = () => {
+    if (config.width === "responsive" || config.width === "wide") return "100%";
+    return config.width;
+  };
+
+  const getPreviewMaxWidth = () => {
+    if (config.width === "responsive") return "480px";
+    if (config.width === "wide") return "1000px";
+    return config.width === "100%" ? "none" : config.width;
+  };
+
   const generateEmbedCode = () => {
     const attrs = [`data-feed="${config.feed}"`];
     if (config.max !== 5) attrs.push(`data-max="${config.max}"`);
