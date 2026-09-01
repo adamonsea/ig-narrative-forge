@@ -15,7 +15,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.4.0';
+  const WIDGET_VERSION = '1.4.1';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -300,7 +300,7 @@
         const response = await fetch(`${API_BASE}/secure-newsletter-signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, topicId, notificationType: 'daily' })
+          body: JSON.stringify({ email, topicId, notificationType: 'daily', source: 'widget' })
         });
 
         const result = await response.json().catch(() => ({}));
