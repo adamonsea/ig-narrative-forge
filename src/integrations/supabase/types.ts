@@ -5504,6 +5504,13 @@ export type Database = {
           total_swipes: number
         }[]
       }
+      get_subscriber_status: {
+        Args: { p_email: string; p_topic_id: string }
+        Returns: {
+          email_verified: boolean
+          notification_type: string
+        }[]
+      }
       get_swipe_insights: {
         Args: { p_topic_id: string }
         Returns: {
@@ -5914,6 +5921,10 @@ export type Database = {
           relevance_score: number
           title: string
         }[]
+      }
+      topic_has_active_signups: {
+        Args: { p_topic_id: string }
+        Returns: boolean
       }
       update_cron_schedules: { Args: never; Returns: undefined }
       update_scheduler_setting: {
