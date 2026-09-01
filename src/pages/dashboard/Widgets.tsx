@@ -454,15 +454,19 @@ export default function Widgets() {
                       Unable to load preview
                     </div>
                   ) : (
-                    <WidgetPreview 
-                      data={previewData} 
-                      theme={config.theme === "auto" ? "light" : config.theme}
-                      accent={accentColor}
-                      customTitle={config.customTitle}
-                      customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ""}
-                      showSubscribe={config.showSubscribe}
-                    />
-
+                    <div
+                      className="mx-auto transition-[max-width] duration-300"
+                      style={{ width: getPreviewWidth(), maxWidth: getPreviewMaxWidth() }}
+                    >
+                      <WidgetPreview 
+                        data={previewData} 
+                        theme={config.theme === "auto" ? "light" : config.theme}
+                        accent={accentColor}
+                        customTitle={config.customTitle}
+                        customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ""}
+                        showSubscribe={config.showSubscribe}
+                      />
+                    </div>
                   )}
                 </div>
               </CardContent>
