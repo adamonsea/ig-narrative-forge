@@ -19,7 +19,10 @@ interface SendEmailRequest {
   notificationType: 'daily' | 'weekly';
   testEmail?: string; // For testing
   testDate?: string; // ISO date string for testing specific dates (e.g., "2025-12-20")
+  segmentId?: string; // Optional audience segment (partner site personalisation)
+  previewOnly?: boolean; // Render the email HTML and return it without sending
 }
+
 
 interface EmailStory {
   id: string;
