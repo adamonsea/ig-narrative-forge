@@ -1,0 +1,2 @@
+ALTER TABLE public.widget_analytics DROP CONSTRAINT IF EXISTS widget_analytics_event_type_check;
+ALTER TABLE public.widget_analytics ADD CONSTRAINT widget_analytics_event_type_check CHECK (event_type = ANY (ARRAY['impression'::text, 'click'::text, 'subscribe'::text]));
