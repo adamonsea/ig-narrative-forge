@@ -15,6 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { edgeErrorMessage } from "@/lib/edgeError";
+
 
 const SUPABASE_URL = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1";
 const WIDGET_SCRIPT_URL = "https://curatr.pro/widget.js";
@@ -112,7 +115,7 @@ export default function Widgets() {
         "widget-avatar-upload",
         { body: formData }
       );
-      if (fnError) throw new Error(await getEdgeErrorMessage(fnError, "Upload failed"));
+      if (fnError) throw new Error(await edgeErrorMessage(fnError, "Upload failed"));
       if (!result?.url) throw new Error(result?.error || "Upload failed");
 
 
