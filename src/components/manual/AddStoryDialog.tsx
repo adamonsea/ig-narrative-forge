@@ -176,7 +176,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
           fileName: pendingFile?.fileName,
         },
       });
-      if (fnError) throw new Error(fnError.message);
+      if (fnError) throw new Error(await extractFnErrorMessage(fnError));
       if (!data?.success) throw new Error(data?.error || 'Could not add the story');
 
       toast({
