@@ -11,6 +11,7 @@ interface NewsletterSignupRequest {
   name?: string;
   topicId: string;
   notificationType?: 'daily' | 'weekly';
+  source?: string;
 }
 
 // SHA-256 hash function using Web Crypto API
@@ -50,7 +51,22 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email, name, topicId, notificationType = 'daily' }: NewsletterSignupRequest = await req.json();
+    const { email, name, topicId, notificationType = 'daily', source }: NewsletterSignupRequest = await req.json();
+
+    // Normalise signup source (only a known allowlist is stored)
+    const allowedSources = ['feed', 'widget', 'api'];
+    const signupSource = allowedSources.includes((source || '').toLowerCase())
+      ? (source as string).toLowerCase()
+      : 'feed';
+
+    // Derive the embedding domain server-side from the request origin/referer
+    let sourceDomain: string | null = null;
+    try {
+      const originHeader = req.headers.get('origin') || req.headers.get('referer');
+      if (originHeader) sourceDomain = new URL(originHeader).hostname;
+    } catch (_) {
+      sourceDomain = null;
+    }
 
     // Extract client IP server-side from trusted headers (never trust the body)
     const clientIP =
@@ -198,7 +214,9 @@ serve(async (req) => {
         verification_token: verificationToken,
         verification_sent_at: new Date().toISOString(),
         consent_given_at: new Date().toISOString(),
-        consent_ip_hash: ipHash
+        consent_ip_hash: ipHash,
+        signup_source: signupSource,
+        source_domain: sourceDomain
       })
       .select()
       .single();
