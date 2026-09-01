@@ -50,9 +50,27 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
     setLinkUrl('');
   };
 
+  // supabase-js turns any non-2xx edge function response into a generic
+  // "Edge Function returned a non-2xx status code" error. Read the response
+  // body to surface the function's specific, user-friendly message instead.
+  const extractFnErrorMessage = async (fnError: any): Promise<string> => {
+    const response: Response | undefined = fnError?.context instanceof Response ? fnError.context : undefined;
+    if (response) {
+      try {
+        const payload = await response.clone().json();
+        if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+          return payload.error;
+        }
+      } catch {
+        // Body wasn't JSON — fall through to the generic message.
+      }
+    }
+    return 'The story service hit an unexpected problem. Please try again in a moment.';
+  };
+
   const callExtract = async (body: Record<string, unknown>) => {
     const { data, error: fnError } = await supabase.functions.invoke('extract-content-from-upload', { body });
-    if (fnError) throw new Error(fnError.message);
+    if (fnError) throw new Error(await extractFnErrorMessage(fnError));
     if (!data?.success) throw new Error(data?.error || 'Extraction failed');
     return data;
   };
@@ -158,7 +176,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
           fileName: pendingFile?.fileName,
         },
       });
-      if (fnError) throw new Error(fnError.message);
+      if (fnError) throw new Error(await extractFnErrorMessage(fnError));
       if (!data?.success) throw new Error(data?.error || 'Could not add the story');
 
       toast({
