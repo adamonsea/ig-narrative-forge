@@ -175,7 +175,7 @@ export const useMultiTenantActions = () => {
             throw new Error(`Failed to create bridge article: ${bridgeError.message}`);
           }
         } else {
-          bridgeArticleId = bridgeData.id;
+          bridgeArticleId = (bridgeData as { id: string }).id;
           console.log('🔗 Created/updated bridge article:', bridgeArticleId);
         }
       }
