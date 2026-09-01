@@ -161,12 +161,24 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           }));
 
+        // Work out which of these are brand new (so we can report "new since last check")
+        let newCount = 0;
         if (rows.length > 0) {
+          const { data: existing } = await supabase
+            .from('events')
+            .select('external_id')
+            .eq('topic_id', topic.id)
+            .eq('source_api', SOURCE_API)
+            .in('external_id', rows.map((r) => r.external_id));
+          const known = new Set((existing || []).map((e) => e.external_id));
+          newCount = rows.filter((r) => !known.has(r.external_id)).length;
+
           const { error: upsertError } = await supabase
             .from('events')
             .upsert(rows, { onConflict: 'topic_id,source_api,external_id' });
           if (upsertError) throw new Error(upsertError.message);
         }
+
 
         // Remove imported events that have dropped off the feed within the window
         const keptIds = rows.map((r) => r.external_id);
