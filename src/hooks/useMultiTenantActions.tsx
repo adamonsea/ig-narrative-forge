@@ -3,6 +3,41 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MultiTenantArticle } from "./useMultiTenantTopicPipeline";
 
+/**
+ * Postgres statement timeouts (57014) and transient network blips can make a
+ * single-row write fail even though the request is perfectly valid. Retry those
+ * with a short backoff before surfacing a failure toast.
+ */
+const isTransientDbError = (err: any) => {
+  const code = err?.code ?? '';
+  const message = String(err?.message ?? '').toLowerCase();
+  return (
+    code === '57014' ||
+    code === '08006' ||
+    code === '08003' ||
+    message.includes('statement timeout') ||
+    message.includes('canceling statement') ||
+    message.includes('failed to fetch') ||
+    message.includes('timeout')
+  );
+};
+
+const withRetry = async <T,>(
+  operation: () => Promise<{ data: T; error: any }>,
+  attempts = 3
+): Promise<{ data: T; error: any }> => {
+  let last: { data: T; error: any } = { data: null as T, error: null };
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    last = await operation();
+    if (!last.error || !isTransientDbError(last.error)) return last;
+    console.warn(`⏳ Transient DB error, retrying (${attempt + 1}/${attempts})`, last.error?.message);
+    await new Promise((resolve) => setTimeout(resolve, 400 * Math.pow(2, attempt)));
+  }
+  return last;
+};
+
+
+
 export const useMultiTenantActions = () => {
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
   const [deletingArticles, setDeletingArticles] = useState<Set<string>>(new Set());
@@ -58,13 +93,15 @@ export const useMultiTenantActions = () => {
       }
 
       // Update multi-tenant article status to processed (equivalent to legacy)
-      const { error: updateError } = await supabase
-        .from('topic_articles')
-        .update({ 
-          processing_status: 'processed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', article.id);
+      const { error: updateError } = await withRetry(() =>
+        supabase
+          .from('topic_articles')
+          .update({ 
+            processing_status: 'processed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', article.id) as any
+      );
 
       if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
 
@@ -90,31 +127,33 @@ export const useMultiTenantActions = () => {
           .eq('id', bridgeArticleId);
       } else {
         // Create bridge article with conflict handling
-        const { data: bridgeData, error: bridgeError } = await supabase
-          .from('articles')
-          .upsert({
-            title: article.title,
-            body: article.body || 'Multi-tenant bridge article',
-            source_url: article.url,
-            canonical_url: article.url,
-            author: article.author,
-            published_at: article.published_at,
-            processing_status: 'processed',
-            content_quality_score: article.content_quality_score,
-            regional_relevance_score: article.regional_relevance_score,
-            word_count: article.word_count,
-            import_metadata: {
-              multi_tenant_bridge: true,
-              topic_article_id: article.id,
-              shared_content_id: article.shared_content_id,
-              created_for_queue: true
-            }
-          }, {
-            onConflict: 'source_url',
-            ignoreDuplicates: false
-          })
-          .select('id')
-          .single();
+        const { data: bridgeData, error: bridgeError } = await withRetry(() =>
+          supabase
+            .from('articles')
+            .upsert({
+              title: article.title,
+              body: article.body || 'Multi-tenant bridge article',
+              source_url: article.url,
+              canonical_url: article.url,
+              author: article.author,
+              published_at: article.published_at,
+              processing_status: 'processed',
+              content_quality_score: article.content_quality_score,
+              regional_relevance_score: article.regional_relevance_score,
+              word_count: article.word_count,
+              import_metadata: {
+                multi_tenant_bridge: true,
+                topic_article_id: article.id,
+                shared_content_id: article.shared_content_id,
+                created_for_queue: true
+              }
+            }, {
+              onConflict: 'source_url',
+              ignoreDuplicates: false
+            })
+            .select('id')
+            .single() as any
+        );
 
         if (bridgeError) {
           // If still a constraint error, try to find the existing article
@@ -136,7 +175,7 @@ export const useMultiTenantActions = () => {
             throw new Error(`Failed to create bridge article: ${bridgeError.message}`);
           }
         } else {
-          bridgeArticleId = bridgeData.id;
+          bridgeArticleId = (bridgeData as { id: string }).id;
           console.log('🔗 Created/updated bridge article:', bridgeArticleId);
         }
       }
@@ -236,13 +275,15 @@ export const useMultiTenantActions = () => {
 
       // Update the multi-tenant article status to discarded 
       // Auto-suppression handled by database trigger
-      const { error: updateError } = await supabase
-        .from('topic_articles')
-        .update({
-          processing_status: 'discarded',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', articleId);
+      const { error: updateError } = await withRetry(() =>
+        supabase
+          .from('topic_articles')
+          .update({
+            processing_status: 'discarded',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', articleId) as any
+      );
 
       if (updateError) {
         console.error('Error discarding multi-tenant article:', updateError);
@@ -308,13 +349,15 @@ export const useMultiTenantActions = () => {
       });
 
       // Update all articles to discarded status
-      const { error: updateError } = await supabase
-        .from('topic_articles')
-        .update({
-          processing_status: 'discarded',
-          updated_at: new Date().toISOString()
-        })
-        .in('id', articleIds);
+      const { error: updateError } = await withRetry(() =>
+        supabase
+          .from('topic_articles')
+          .update({
+            processing_status: 'discarded',
+            updated_at: new Date().toISOString()
+          })
+          .in('id', articleIds) as any
+      );
 
       if (updateError) {
         console.error('Error bulk discarding multi-tenant articles:', updateError);
