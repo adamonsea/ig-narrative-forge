@@ -330,6 +330,16 @@ export const TopicManager = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenuItem
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setBackupsTarget({ id: topic.id, name: topic.name });
+                              }}
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+                              Backups &amp; restore
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={(e) => {
                                 e.preventDefault();
@@ -341,6 +351,7 @@ export const TopicManager = () => {
                               Archive
                             </DropdownMenuItem>
                           </DropdownMenuContent>
+
                         </DropdownMenu>
                       </div>
                     </div>
