@@ -45,6 +45,8 @@ interface WeeklyRoundupEmailProps {
   audioUrl?: string; // Audio briefing URL if available
   totalStoryCount?: number; // Total stories in the week (not just email preview)
   events?: EmailEvent[]; // Upcoming local events (omitted when empty)
+  introHeading?: string; // Segment personalisation (partner site)
+  introText?: string;
 }
 
 export const WeeklyRoundupEmail = ({
@@ -60,7 +62,10 @@ export const WeeklyRoundupEmail = ({
   audioUrl,
   totalStoryCount,
   events = [],
+  introHeading,
+  introText,
 }: WeeklyRoundupEmailProps) => {
+
   const displayStoryCount = totalStoryCount || stories.length;
   
   return (
