@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Calendar, Mail, TrendingUp, Users } from 'lucide-react';
+import { Download, Calendar, Mail, TrendingUp, Users, LayoutGrid } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface EmailSubscriber {
@@ -16,6 +16,8 @@ interface EmailSubscriber {
   created_at: string;
   is_active: boolean;
   is_verified: boolean;
+  signup_source: string;
+  source_domain: string | null;
   topic: {
     id: string;
     name: string;
@@ -28,6 +30,7 @@ interface SubscriberStats {
   total: number;
   signupsToday: number;
   signupsWeek: number;
+  fromWidget: number;
 }
 
 interface NewsletterSignupsManagerProps {
@@ -49,7 +52,7 @@ const getNotificationBadge = (type: string) => {
 
 export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerProps) => {
   const [emailSubscribers, setEmailSubscribers] = useState<EmailSubscriber[]>([]);
-  const [stats, setStats] = useState<SubscriberStats>({ daily: 0, weekly: 0, total: 0, signupsToday: 0, signupsWeek: 0 });
+  const [stats, setStats] = useState<SubscriberStats>({ daily: 0, weekly: 0, total: 0, signupsToday: 0, signupsWeek: 0, fromWidget: 0 });
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const { toast } = useToast();
@@ -72,6 +75,8 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
           notification_type,
           created_at,
           is_active,
+          signup_source,
+          source_domain,
           topics!inner (
             id,
             name
@@ -97,6 +102,8 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         created_at: signup.created_at,
         is_active: signup.is_active,
         is_verified: true, // Assume verified if active
+        signup_source: ((signup as any).signup_source as string) || 'feed',
+        source_domain: ((signup as any).source_domain as string) || null,
         topic: {
           id: (signup.topics as any).id,
           name: (signup.topics as any).name
@@ -116,7 +123,10 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
       const signupsToday = transformedEmailData.filter(s => new Date(s.created_at) >= today).length;
       const signupsWeek = transformedEmailData.filter(s => new Date(s.created_at) >= weekAgo).length;
 
+      const fromWidget = transformedEmailData.filter(s => s.signup_source === 'widget').length;
+
       setStats({
+        fromWidget,
         daily: dailyCount,
         weekly: weeklyCount,
         total: transformedEmailData.length,
@@ -149,7 +159,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         return;
       }
 
-      const headers = ['First Name', 'Email', 'Frequency', 'Topic', 'Verified', 'Subscribed Date'];
+      const headers = ['First Name', 'Email', 'Frequency', 'Topic', 'Source', 'Source Domain', 'Verified', 'Subscribed Date'];
       const csvContent = [
         headers.join(','),
         ...emailSubscribers.map(sub => {
@@ -158,6 +168,8 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
             `"${sub.email}"`,
             `"${sub.notification_type}"`,
             `"${sub.topic.name}"`,
+            `"${sub.signup_source}"`,
+            `"${sub.source_domain || ''}"`,
             `"${sub.is_verified ? 'Yes' : 'No'}"`,
             `"${format(new Date(sub.created_at), 'yyyy-MM-dd HH:mm:ss')}"`
           ].join(',');
@@ -213,7 +225,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card className="bg-blue-500/5 border-blue-200/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -239,6 +251,15 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
               <span className="text-sm text-muted-foreground">This Week</span>
             </div>
             <p className="text-2xl font-bold text-emerald-600 mt-1">+{stats.signupsWeek}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-500/5 border-amber-200/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <LayoutGrid className="w-4 h-4 text-amber-600" />
+              <span className="text-sm text-muted-foreground">From widget</span>
+            </div>
+            <p className="text-2xl font-bold text-amber-600 mt-1">{stats.fromWidget}</p>
           </CardContent>
         </Card>
         <Card className="bg-muted/30">
@@ -293,6 +314,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                 <TableHead>Subscriber</TableHead>
                 <TableHead>Frequency</TableHead>
                 {!topicId && <TableHead>Topic</TableHead>}
+                <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Subscribed</TableHead>
               </TableRow>
@@ -327,6 +349,18 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                       </Badge>
                     </TableCell>
                   )}
+                  <TableCell>
+                    <div className="flex flex-col gap-0.5">
+                      <Badge variant="outline" className="text-xs w-fit capitalize">
+                        {sub.signup_source === 'widget' ? 'Widget' : 'Feed'}
+                      </Badge>
+                      {sub.source_domain && (
+                        <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">
+                          {sub.source_domain}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {sub.is_verified ? (
                       <Badge variant="default" className="text-xs bg-emerald-500">Verified</Badge>
