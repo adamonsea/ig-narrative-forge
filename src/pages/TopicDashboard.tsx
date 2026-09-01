@@ -935,6 +935,7 @@ const TopicDashboard = () => {
                           region={topic.region}
                           parliamentaryEnabled={topic.parliamentary_tracking_enabled}
                           eventsEnabled={(topic as any).events_enabled}
+                          eventSourceUrl={(topic as any).event_source_url}
                           onUpdate={() => loadTopicAndStats()}
                         />
                       </CollapsibleContent>

@@ -29,6 +29,16 @@ interface EmailStory {
   story_url: string;
 }
 
+interface EmailEvent {
+  id: string;
+  title: string;
+  date_label: string;
+  time_label: string;
+  location: string | null;
+  url: string | null;
+}
+
+
 /**
  * Returns an email-safe thumbnail URL.
  *
@@ -93,7 +103,7 @@ serve(async (req) => {
     // Get topic details
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, slug, branding_config')
+      .select('id, name, slug, branding_config, events_enabled')
       .eq('id', topicId)
       .single();
 
@@ -318,6 +328,52 @@ serve(async (req) => {
 
     console.log(`📬 Sending to ${recipients.length} recipients`);
 
+    // Upcoming events for weekly emails ("What's on this week")
+    // Only included when the topic has events enabled and there are events in the next 7 days.
+    let upcomingEvents: EmailEvent[] = [];
+    if (notificationType === 'weekly' && topic.events_enabled) {
+      const eventsFrom = new Date();
+      eventsFrom.setUTCHours(0, 0, 0, 0);
+      const eventsTo = new Date(eventsFrom);
+      eventsTo.setUTCDate(eventsTo.getUTCDate() + 7);
+
+      const { data: eventRows, error: eventsError } = await supabase
+        .from('events')
+        .select('id, title, start_date, start_time, end_time, location, source_url, source_name')
+        .eq('topic_id', topicId)
+        .eq('status', 'published')
+        .gte('start_date', eventsFrom.toISOString().slice(0, 10))
+        .lte('start_date', eventsTo.toISOString().slice(0, 10))
+        .order('start_date', { ascending: true })
+        .order('start_time', { ascending: true, nullsFirst: true })
+        .limit(6);
+
+      if (eventsError) {
+        console.error('Error fetching events (non-fatal):', eventsError);
+      } else {
+        upcomingEvents = (eventRows || []).map((e) => {
+          const day = new Date(`${e.start_date}T12:00:00Z`).toLocaleDateString('en-GB', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            timeZone: 'UTC',
+          });
+          const start = e.start_time ? e.start_time.slice(0, 5) : null;
+          const end = e.end_time ? e.end_time.slice(0, 5) : null;
+          const time = start ? (end ? `${start}–${end}` : start) : 'All day';
+          return {
+            id: e.id,
+            title: e.title,
+            date_label: day,
+            time_label: time,
+            location: e.location || e.source_name || null,
+            url: e.source_url || null,
+          };
+        });
+      }
+      console.log(`🎪 Found ${upcomingEvents.length} upcoming events for the weekly email`);
+    }
+
     // Prepare shared email template data
     const displayDate = dateEnd.toLocaleDateString('en-GB', { 
       weekday: 'long', 
@@ -386,6 +442,7 @@ serve(async (req) => {
             baseUrl: BASE_URL,
             audioUrl,
             totalStoryCount,
+            events: upcomingEvents,
             unsubscribeUrl
           })
         );

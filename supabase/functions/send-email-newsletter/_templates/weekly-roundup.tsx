@@ -23,6 +23,15 @@ interface EmailStory {
   story_url: string;
 }
 
+interface EmailEvent {
+  id: string;
+  title: string;
+  date_label: string;
+  time_label: string;
+  location: string | null;
+  url: string | null;
+}
+
 interface WeeklyRoundupEmailProps {
   topicName: string;
   topicSlug: string;
@@ -35,6 +44,7 @@ interface WeeklyRoundupEmailProps {
   unsubscribeUrl?: string;
   audioUrl?: string; // Audio briefing URL if available
   totalStoryCount?: number; // Total stories in the week (not just email preview)
+  events?: EmailEvent[]; // Upcoming local events (omitted when empty)
 }
 
 export const WeeklyRoundupEmail = ({
@@ -49,6 +59,7 @@ export const WeeklyRoundupEmail = ({
   unsubscribeUrl,
   audioUrl,
   totalStoryCount,
+  events = [],
 }: WeeklyRoundupEmailProps) => {
   const displayStoryCount = totalStoryCount || stories.length;
   
@@ -112,7 +123,32 @@ export const WeeklyRoundupEmail = ({
           </Section>
         )}
 
+        {events.length > 0 && (
+          <>
+            <Hr style={hr} />
+            <Section style={eventsSection}>
+              <Text style={eventsHeading}>What's on this week</Text>
+              {events.map((event) => (
+                <Section key={event.id} style={eventCard}>
+                  <Text style={eventMeta}>
+                    {event.date_label} • {event.time_label}
+                  </Text>
+                  {event.url ? (
+                    <Link href={event.url} target="_blank" style={eventTitleLink}>
+                      {event.title}
+                    </Link>
+                  ) : (
+                    <Text style={eventTitle}>{event.title}</Text>
+                  )}
+                  {event.location && <Text style={eventLocation}>{event.location}</Text>}
+                </Section>
+              ))}
+            </Section>
+          </>
+        )}
+
         <Hr style={hr} />
+
 
         <Section style={ctaSection}>
           {audioUrl && (
@@ -259,6 +295,56 @@ const emptyText = {
   color: '#6b7280',
   fontSize: '14px',
 }
+
+const eventsSection = {
+  padding: '8px 32px 16px',
+}
+
+const eventsHeading = {
+  color: '#111827',
+  fontSize: '13px',
+  fontWeight: '700',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase' as const,
+  margin: '0 0 12px',
+}
+
+const eventCard = {
+  borderLeft: '2px solid #e5e7eb',
+  padding: '0 0 0 12px',
+  margin: '0 0 14px',
+}
+
+const eventMeta = {
+  color: '#6b7280',
+  fontSize: '12px',
+  fontWeight: '600',
+  margin: '0 0 2px',
+}
+
+const eventTitle = {
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: '600',
+  lineHeight: '20px',
+  margin: '0',
+}
+
+const eventTitleLink = {
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: '600',
+  lineHeight: '20px',
+  textDecoration: 'none',
+  display: 'block',
+}
+
+const eventLocation = {
+  color: '#6b7280',
+  fontSize: '13px',
+  margin: '2px 0 0',
+}
+
 
 const ctaSection = {
   padding: '16px 32px 24px',
