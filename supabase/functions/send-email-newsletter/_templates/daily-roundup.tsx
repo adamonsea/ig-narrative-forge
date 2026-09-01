@@ -360,3 +360,21 @@ const slowNewsDayText = {
   padding: '12px 16px',
   margin: '0',
 }
+
+const introSection = {
+  padding: '0 16px 8px',
+}
+
+const introHeadingStyle = {
+  color: '#111827',
+  fontSize: '17px',
+  fontWeight: '700',
+  margin: '0 0 6px',
+}
+
+const introTextStyle = {
+  color: '#374151',
+  fontSize: '15px',
+  lineHeight: '22px',
+  margin: '0',
+}
