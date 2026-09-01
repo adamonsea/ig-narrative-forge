@@ -404,6 +404,30 @@ export const TopicManager = () => {
           })}
         </div>
       )}
+
+      {safetyTarget && (
+        <FeedSafetyDialog
+          open={!!safetyTarget}
+          onOpenChange={(open) => !open && setSafetyTarget(null)}
+          topicId={safetyTarget.id}
+          topicName={safetyTarget.name}
+          onArchived={() => {
+            setTopics((prev) => prev.filter((t) => t.id !== safetyTarget.id));
+            setSafetyTarget(null);
+          }}
+        />
+      )}
+
+      {backupsTarget && (
+        <FeedBackupsDialog
+          open={!!backupsTarget}
+          onOpenChange={(open) => !open && setBackupsTarget(null)}
+          topicId={backupsTarget.id}
+          topicName={backupsTarget.name}
+          onRestored={loadTopics}
+        />
+      )}
     </div>
   );
 };
+
