@@ -123,7 +123,32 @@ export const WeeklyRoundupEmail = ({
           </Section>
         )}
 
+        {events.length > 0 && (
+          <>
+            <Hr style={hr} />
+            <Section style={eventsSection}>
+              <Text style={eventsHeading}>What's on this week</Text>
+              {events.map((event) => (
+                <Section key={event.id} style={eventCard}>
+                  <Text style={eventMeta}>
+                    {event.date_label} • {event.time_label}
+                  </Text>
+                  {event.url ? (
+                    <Link href={event.url} target="_blank" style={eventTitleLink}>
+                      {event.title}
+                    </Link>
+                  ) : (
+                    <Text style={eventTitle}>{event.title}</Text>
+                  )}
+                  {event.location && <Text style={eventLocation}>{event.location}</Text>}
+                </Section>
+              ))}
+            </Section>
+          </>
+        )}
+
         <Hr style={hr} />
+
 
         <Section style={ctaSection}>
           {audioUrl && (
