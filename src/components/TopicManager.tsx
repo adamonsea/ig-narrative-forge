@@ -166,27 +166,10 @@ export const TopicManager = () => {
     }
   };
 
-  const handleArchiveTopic = async (topicId: string, topicName: string) => {
-    if (!confirm(`Archive "${topicName}"? You can restore it later from the archive.`)) {
-      return;
-    }
+  const handleArchiveTopic = (topicId: string, topicName: string) => {
+    setSafetyTarget({ id: topicId, name: topicName });
+  };
 
-    try {
-      const { error } = await supabase
-        .from('topics')
-        .update({ 
-          is_archived: true,
-          archived_at: new Date().toISOString(),
-          archived_by: user?.id
-        })
-        .eq('id', topicId);
-
-      if (error) throw error;
-      setTopics(topics.filter(topic => topic.id !== topicId));
-      toast({
-        title: "Success",
-        description: `"${topicName}" has been archived`
-      });
     } catch (error) {
       console.error('Error archiving topic:', error);
       toast({
