@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TrackedMPsManager } from "@/components/TrackedMPsManager";
+import { EmailSegmentsManager } from "@/components/EmailSegmentsManager";
+
 
 interface RegionalFeaturesSettingsProps {
   topicId: string;
