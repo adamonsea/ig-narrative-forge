@@ -29,6 +29,8 @@ interface WidgetConfig {
   width: string;
   customTitle: string;
   customAvatar: string;
+  showSubscribe: boolean;
+
 }
 
 interface PreviewStory {
@@ -253,6 +255,10 @@ export default function PublicWidgetBuilder() {
     if (config.customAvatar && isValidAvatarUrl(config.customAvatar)) {
       code += ` data-avatar="${config.customAvatar.replace(/"/g, '&quot;')}"`;
     }
+    if (config.showSubscribe) {
+      code += ` data-subscribe="true"`;
+    }
+
     
     code += `></div>\n<script src="${window.location.origin}/widget.js?v=${WIDGET_JS_VERSION}" async></script>`;
     
