@@ -152,7 +152,7 @@
 
   // Cache management for graceful degradation
   function getCacheKey(feedSlug) {
-    return `curatr_widget_cache_${feedSlug}`;
+    return `curatr_widget_cache_${WIDGET_VERSION}_${feedSlug}`;
   }
 
   function getCachedData(feedSlug) {
