@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Copy, Check, ExternalLink, Code2, Eye } from "lucide-react";
+import { Copy, Check, ExternalLink, Code2, Eye, Upload, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTopics } from "@/hooks/useTopics";
 import { AppLayout } from "@/components/AppLayout";
@@ -24,7 +24,10 @@ interface WidgetConfig {
   max: number;
   theme: "auto" | "light" | "dark";
   accent: string;
-  showAttribution: boolean;
+  width: string;
+  customTitle: string;
+  customAvatar: string;
+  showSubscribe: boolean;
 }
 
 export default function Widgets() {
@@ -37,12 +40,19 @@ export default function Widgets() {
     max: 5,
     theme: "auto",
     accent: "",
-    showAttribution: true,
+    width: "responsive",
+    customTitle: "",
+    customAvatar: "",
+    showSubscribe: false,
   });
 
   const [copied, setCopied] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   // Redirect if not authenticated
   useEffect(() => {
