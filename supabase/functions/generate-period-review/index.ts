@@ -763,6 +763,8 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       timeline,
       hotTopics,
       topStories,
+      categoryStories,
+
       topic: { name: topic?.name, region: topic?.region, slug: topic?.slug },
     };
 
