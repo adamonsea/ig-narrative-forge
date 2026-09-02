@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, ChevronDown, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
-import { Reveal, CountUp } from '@/components/review/ReviewChapter';
+import { Reveal } from '@/components/review/ReviewChapter';
 import { ReviewSlide, BigStat, RankRows } from '@/components/review/ReviewSlide';
 import { Odometer } from '@/components/review/Odometer';
 import { StoryImageGrid } from '@/components/review/StoryImageGrid';
