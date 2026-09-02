@@ -328,6 +328,19 @@ const PeriodReview = () => {
         </ReviewSlide>
       )}
 
+      {/* Beats, in pictures */}
+      {categoryStories.slice(0, 3).map((c, idx) => (
+        <ReviewSlide key={`imgs-${c.slug}`} label={c.name} hue={h(12 + idx)}>
+          <MaskRevealHeading
+            className="mb-6 text-4xl font-semibold tracking-tight"
+            segments={[{ text: `${c.count} stories on ` }, { text: c.name.toLowerCase(), italic: true }]}
+          />
+          <StoryImageGrid stories={c.stories} feedSlug={slug} />
+        </ReviewSlide>
+      ))}
+
+
+
       {/* Sub-beat deep dives — the detail inside each beat */}
       {subDeepDives.map((p, idx) => (
         <ReviewSlide key={p.slug} label={`Inside ${p.name.toLowerCase()}`} hue={h(5 + idx)}>
