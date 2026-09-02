@@ -7,6 +7,9 @@ import { ArrowLeft, ChevronDown, TrendingUp, TrendingDown, Zap } from 'lucide-re
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { Reveal, CountUp } from '@/components/review/ReviewChapter';
 import { ReviewSlide, BigStat, RankRows } from '@/components/review/ReviewSlide';
+import { Odometer } from '@/components/review/Odometer';
+import { StoryImageGrid } from '@/components/review/StoryImageGrid';
+import { baseHueFor, hueForIndex } from '@/lib/reviewPalette';
 
 interface Movement {
   name: string;
@@ -90,6 +93,12 @@ interface ReviewData {
     cover_illustration_url: string | null;
     views: number;
     shares: number;
+  }>;
+  categoryStories?: Array<{
+    slug: string;
+    name: string;
+    count: number;
+    stories: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
   }>;
   topic: { name?: string; region?: string; slug?: string };
 }
@@ -198,6 +207,7 @@ const PeriodReview = () => {
     timeline,
     hotTopics,
     topStories,
+    categoryStories = [],
     topic,
   } = d;
 
@@ -220,6 +230,10 @@ const PeriodReview = () => {
   const chartMonths = trendMonths.length > 0 ? trendMonths : timeline.map((t) => t.month);
   const pullQuote = (review.narrative ?? '').split(/\n{2,}/)[0]?.trim() ?? '';
 
+  // Feed-derived colour: one base hue per feed, stepped along an editorial ramp.
+  const baseHue = baseHueFor(slug);
+  const h = (i: number) => hueForIndex(baseHue, i);
+
 
   return (
     <main
@@ -233,7 +247,7 @@ const PeriodReview = () => {
       />
 
       {/* Cover */}
-      <ReviewSlide>
+      <ReviewSlide hue={h(0)}>
         <Link
           to={`/feed/${slug}`}
           className="inline-flex items-center gap-1.5 text-base text-muted-foreground hover:text-foreground mb-10"
@@ -251,14 +265,14 @@ const PeriodReview = () => {
         <Reveal delay={0.4} className="mt-10">
           <div className="flex items-end gap-8">
             <div>
-              <div className="text-5xl font-semibold tracking-tight">
-                <CountUp value={summary.total_stories} />
+              <div className="text-5xl font-semibold tracking-tight" style={{ color: 'var(--review-accent)' }}>
+                <Odometer value={summary.total_stories} />
               </div>
               <p className="mt-2 text-sm uppercase tracking-wide text-muted-foreground">Stories</p>
             </div>
             <div>
-              <div className="text-5xl font-semibold tracking-tight">
-                <CountUp value={summary.categories_covered} />
+              <div className="text-5xl font-semibold tracking-tight" style={{ color: 'var(--review-accent)' }}>
+                <Odometer value={summary.categories_covered} />
               </div>
               <p className="mt-2 text-sm uppercase tracking-wide text-muted-foreground">Beats</p>
             </div>
@@ -276,8 +290,8 @@ const PeriodReview = () => {
 
       {/* Words written */}
       {totalWords > 0 && (
-        <ReviewSlide tone="inverted" label="The scale">
-          <BigStat value={<CountUp value={totalWords} />} caption={`words published about ${place}`} />
+        <ReviewSlide tone="inverted" label="The scale" hue={h(1)}>
+          <BigStat count={totalWords} caption={`words published about ${place}`} />
           {scale && (
             <Reveal delay={0.2} className="mt-10 flex flex-wrap gap-x-10 gap-y-3 text-lg opacity-80">
               <span>{scale.days_covered} days with news</span>
@@ -289,7 +303,7 @@ const PeriodReview = () => {
 
       {/* Pull quote */}
       {pullQuote && (
-        <ReviewSlide label="In short">
+        <ReviewSlide label="In short" hue={h(2)}>
           <Reveal>
             <p className="text-3xl sm:text-4xl font-medium leading-snug tracking-tight">{pullQuote}</p>
           </Reveal>
@@ -298,7 +312,7 @@ const PeriodReview = () => {
 
       {/* Top beats */}
       {categoryBreakdown.length > 0 && (
-        <ReviewSlide tone="accent" label="What we covered">
+        <ReviewSlide tone="accent" label="What we covered" hue={h(3)}>
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'The five ' }, { text: 'biggest beats', italic: true }]}
@@ -315,8 +329,8 @@ const PeriodReview = () => {
       )}
 
       {/* Sub-beat deep dives — the detail inside each beat */}
-      {subDeepDives.map((p) => (
-        <ReviewSlide key={p.slug} label={`Inside ${p.name.toLowerCase()}`}>
+      {subDeepDives.map((p, idx) => (
+        <ReviewSlide key={p.slug} label={`Inside ${p.name.toLowerCase()}`} hue={h(5 + idx)}>
           <MaskRevealHeading
             className="mb-3 text-4xl font-semibold tracking-tight"
             segments={[{ text: `${p.total} ` }, { text: p.name.toLowerCase(), italic: true }, { text: ' stories' }]}
@@ -343,7 +357,7 @@ const PeriodReview = () => {
 
       {/* Sub-beat movers */}
       {subcategoryMovers.length > 0 && (
-        <ReviewSlide tone="inverted" label="What actually changed">
+        <ReviewSlide tone="inverted" label="What actually changed" hue={h(8)}>
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'The sub-beats that ' }, { text: 'moved', italic: true }]}
@@ -375,7 +389,7 @@ const PeriodReview = () => {
 
       {/* Term trends over time */}
       {termTrends.length > 0 && chartMonths.length > 2 && (
-        <ReviewSlide tone="accent" label="Rise and fall">
+        <ReviewSlide tone="accent" label="Rise and fall" hue={h(9)}>
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'Words that ' }, { text: 'came and went', italic: true }]}
@@ -402,10 +416,9 @@ const PeriodReview = () => {
                       <motion.path
                         d={path}
                         fill="none"
-                        stroke="currentColor"
+                        stroke="var(--review-accent)"
                         strokeWidth={1.4}
                         vectorEffect="non-scaling-stroke"
-                        className="text-primary"
                         initial={{ pathLength: reduce ? 1 : 0 }}
                         whileInView={{ pathLength: 1 }}
                         viewport={{ once: true, margin: '-40px' }}
@@ -426,7 +439,7 @@ const PeriodReview = () => {
 
       {/* Biggest shift */}
       {topMover && (
-        <ReviewSlide label="The shift">
+        <ReviewSlide label="The shift" hue={h(10)}>
           <div className="flex items-center gap-3">
             {(topMover.change_percent ?? 0) >= 0 ? (
               <TrendingUp className="h-10 w-10 text-primary" />
@@ -434,7 +447,8 @@ const PeriodReview = () => {
               <TrendingDown className="h-10 w-10 text-muted-foreground" />
             )}
             <BigStat
-              value={`${(topMover.change_percent ?? 0) > 0 ? '+' : ''}${topMover.change_percent}`}
+              prefix={(topMover.change_percent ?? 0) > 0 ? '+' : (topMover.change_percent ?? 0) < 0 ? '-' : ''}
+              count={Math.abs(topMover.change_percent ?? 0)}
               suffix="%"
               caption={`${topMover.name} — ${topMover.previous} to ${topMover.count} stories`}
             />
@@ -444,12 +458,13 @@ const PeriodReview = () => {
 
       {/* Rhythm */}
       {timeline.length > 1 && (
-        <ReviewSlide tone="inverted" label="Month by month">
+        <ReviewSlide tone="inverted" label="Month by month" hue={h(11)}>
           <div className="flex h-56 items-end gap-1.5">
             {timeline.map((t, i) => (
               <div key={t.month} className="flex h-full flex-1 flex-col justify-end gap-2">
                 <motion.div
-                  className="w-full rounded-t bg-background/90"
+                  className="w-full rounded-t"
+                  style={{ backgroundColor: 'var(--review-accent)' }}
                   initial={{ height: reduce ? `${(t.count / maxMonth) * 100}%` : 0 }}
                   whileInView={{ height: `${Math.max(3, (t.count / maxMonth) * 100)}%` }}
                   viewport={{ once: true, margin: '-40px' }}
@@ -471,13 +486,16 @@ const PeriodReview = () => {
 
       {/* Spike */}
       {spike && (
-        <ReviewSlide tone="accent" label="Out of nowhere">
+        <ReviewSlide tone="accent" label="Out of nowhere" hue={h(2)}>
           <Reveal>
             <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-muted-foreground">
               <Zap className="h-3.5 w-3.5 text-primary" />
               {monthLabel(spike.month)}
             </div>
-            <p className="mt-4 text-[clamp(2.5rem,12vw,4.5rem)] font-semibold leading-none tracking-tight">
+            <p
+              className="mt-4 text-[clamp(2.5rem,12vw,4.5rem)] font-semibold leading-none tracking-tight"
+              style={{ color: 'var(--review-accent)' }}
+            >
               {spike.term}
             </p>
             <p className="mt-5 text-lg text-muted-foreground">
@@ -489,7 +507,7 @@ const PeriodReview = () => {
 
       {/* Words of the period */}
       {(risingTerms.length > 0 || names.length > 0) && (
-        <ReviewSlide label="The words">
+        <ReviewSlide label="The words" hue={h(4)}>
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'Names that ' }, { text: 'kept coming up', italic: true }]}
@@ -510,7 +528,10 @@ const PeriodReview = () => {
             <div className="mt-10 flex flex-wrap gap-2">
               {risingTerms.slice(0, 6).map((t, i) => (
                 <Reveal key={t.term} delay={Math.min(0.4, i * 0.05)}>
-                  <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-lg">
+                  <span
+                    className="rounded-full border px-4 py-2 text-lg"
+                    style={{ borderColor: 'var(--review-accent)', background: 'var(--review-accent-soft)' }}
+                  >
                     ↑ {t.term}
                   </span>
                 </Reveal>
@@ -522,7 +543,7 @@ const PeriodReview = () => {
 
       {/* Places */}
       {places.length > 0 && (
-        <ReviewSlide tone="accent" label="On the map">
+        <ReviewSlide tone="accent" label="On the map" hue={h(6)}>
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'Places in ' }, { text: 'the news', italic: true }]}
@@ -539,7 +560,7 @@ const PeriodReview = () => {
 
       {/* Most read */}
       {topStories.length > 0 && (
-        <ReviewSlide label="Most read">
+        <ReviewSlide label="Most read" hue={h(7)}>
           <ul className="space-y-4">
             {topStories.slice(0, 3).map((s, i) => (
               <Reveal key={s.id} delay={i * 0.08}>
@@ -574,7 +595,7 @@ const PeriodReview = () => {
 
       {/* Sources */}
       {sourceScorecard.length > 0 && (
-        <ReviewSlide tone="inverted" label="Where it came from">
+        <ReviewSlide tone="inverted" label="Where it came from" hue={h(9)}>
           <RankRows
             tone="inverted"
             items={sourceScorecard.slice(0, 5).map((s) => ({ key: s.name, label: s.name, value: s.count }))}
@@ -583,7 +604,7 @@ const PeriodReview = () => {
       )}
 
       {/* Outro */}
-      <ReviewSlide className="text-center">
+      <ReviewSlide className="text-center" hue={h(0)}>
         <Reveal>
           <p className="text-xl font-medium tracking-tight">Every story, gathered and written for {place}.</p>
           <Link
