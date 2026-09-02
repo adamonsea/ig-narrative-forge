@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { getOptimizedImageUrl } from '@/lib/imageOptimization';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { editorialEase } from './ReviewChapter';
 
 export interface GridStory {
@@ -23,7 +23,7 @@ const Tile = ({
 }) => {
   const reduce = useReducedMotion();
   const src = story.cover_illustration_url
-    ? getOptimizedImageUrl(story.cover_illustration_url, { width: lead ? 720 : 360, quality: 78 })
+    ? optimizeImageUrl(story.cover_illustration_url, { width: lead ? 720 : 360, height: lead ? 760 : 224, quality: 78 })
     : null;
 
   return (
