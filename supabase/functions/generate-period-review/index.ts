@@ -706,7 +706,41 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       console.error('Narrative generation error:', err instanceof Error ? err.message : err);
     }
 
+    // Story imagery per beat — powers the image grids in the review deck.
+    const storiesByCat: Record<string, { name: string; rows: Row[] }> = {};
+    for (const r of current) {
+      const a = assignments.get(r.id);
+      const cat = a ? (catById.get(a.category_id) as any) : null;
+      if (!cat) continue;
+      const rec = (storiesByCat[cat.slug] ??= { name: cat.name, rows: [] });
+      rec.rows.push(r);
+    }
+    const categoryStories = categoryBreakdown.slice(0, 5).flatMap((c) => {
+      const rec = storiesByCat[c.slug];
+      if (!rec) return [];
+      const stories = rec.rows
+        .map((s) => ({
+          id: s.id,
+          slug: s.slug,
+          title: s.title,
+          cover_illustration_url: s.cover_illustration_url,
+          created_at: s.created_at,
+          views: interactionCounts.get(s.id)?.views ?? 0,
+        }))
+        // covers first, then engagement, then recency
+        .sort(
+          (a, b) =>
+            Number(!!b.cover_illustration_url) - Number(!!a.cover_illustration_url) ||
+            b.views - a.views ||
+            b.created_at.localeCompare(a.created_at)
+        )
+        .slice(0, 6);
+      if (stories.length < 3) return [];
+      return [{ slug: c.slug, name: c.name, count: c.count, stories }];
+    });
+
     const data = {
+
       summary,
       scale,
       headline,
@@ -729,6 +763,8 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       timeline,
       hotTopics,
       topStories,
+      categoryStories,
+
       topic: { name: topic?.name, region: topic?.region, slug: topic?.slug },
     };
 
