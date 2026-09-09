@@ -56,24 +56,25 @@ const expertiseGuidance: Record<string, string> = {
 
 const getGuidance = (map: Record<string, string>, key: string, fallback: string) => map[key] || fallback;
 
-// Chat call with automatic escalation. Requests are routed by the shared LLM router:
-// Lovable AI Gateway (Gemini) first, DeepSeek only as a fallback — DeepSeek pricing is
-// rising sharply, so it is no longer the default provider.
-// Tier escalation on HTTP 400: flash-class → pro-class model.
+// Chat call with automatic escalation. Requests are routed by the shared LLM router.
+// On HTTP 400 we escalate to a genuinely different provider (Lovable AI Gateway),
+// not to DeepSeek's "pro" tier — that tier now serves the same V4.1 Flash model,
+// so the retry re-ran the identical model and simply billed us twice.
+const ESCALATION_MODEL = 'google/gemini-2.5-flash';
+
 async function deepseekChatWithFallback(
   apiKey: string,
   body: Record<string, any>,
   context: string = 'deepseek'
 ): Promise<Response> {
   const primaryModel = body.model ?? 'deepseek-v4-flash';
-  const fallbackModel = 'deepseek-v4-pro';
 
   const firstResp = await llmFetch(
     { body: { ...body, model: primaryModel } },
     { deepseekApiKey: apiKey, context }
   );
 
-  if (firstResp.status !== 400 || primaryModel === fallbackModel) {
+  if (firstResp.status !== 400) {
     return firstResp;
   }
 
@@ -83,12 +84,12 @@ async function deepseekChatWithFallback(
     errSnippet = (await firstResp.clone().text()).slice(0, 500);
   } catch { /* ignore */ }
   console.warn(
-    `⚠️ [${context}] ${primaryModel} tier returned 400 — retrying with ${fallbackModel} tier. Detail: ${errSnippet}`
+    `⚠️ [${context}] ${primaryModel} returned 400 — escalating to ${ESCALATION_MODEL}. Detail: ${errSnippet}`
   );
 
   return await llmFetch(
-    { body: { ...body, model: fallbackModel } },
-    { deepseekApiKey: apiKey, context: `${context}-escalated` }
+    { body: { ...body, model: ESCALATION_MODEL } },
+    { context: `${context}-escalated`, gatewayOnly: true }
   );
 }
 
