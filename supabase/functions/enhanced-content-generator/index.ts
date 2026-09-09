@@ -642,12 +642,13 @@ OUTPUT FORMAT (JSON):
         return salvaged;
       };
 
-      // Try flash → pro → OpenAI. Only escalate when the previous attempt gave us nothing usable.
+      // Try flash → OpenAI. The old "pro" hop is gone: DeepSeek now serves Pro
+      // requests with the same V4.1 Flash model, so retrying it re-ran the same
+      // model (and billed again) instead of escalating.
       let content = '';
       let parsedSlides: any[] = [];
       const attempts: Array<[string, () => Promise<string>]> = [
         ['deepseek-v4-flash', () => callDeepSeek('deepseek-v4-flash', 'slide-generation')],
-        ['deepseek-v4-pro', () => callDeepSeek('deepseek-v4-pro', 'slide-generation-pro')],
         ['openai-gpt-4o-mini', callOpenAI],
       ];
       let lastError: unknown = null;
