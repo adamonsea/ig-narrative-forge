@@ -44,6 +44,8 @@ export interface LlmFetchOptions {
   deepseekApiKey?: string;
   /** Label used in logs. */
   context?: string;
+  /** Skip DeepSeek entirely and call the Lovable AI Gateway (used for escalation). */
+  gatewayOnly?: boolean;
 }
 
 /**
@@ -86,11 +88,14 @@ export async function llmFetch(
       body: JSON.stringify(gatewayBody(body)),
     });
 
-  const providers: Array<{ name: string; key: string; call: () => Promise<Response> }> = [
-    { name: 'DeepSeek', key: deepseekKey, call: callDeepseek },
-    { name: 'AI gateway', key: lovableKey ?? '', call: callGateway },
-  ];
-  if (gatewayFirst) providers.reverse();
+  const providers: Array<{ name: string; key: string; call: () => Promise<Response> }> =
+    options.gatewayOnly
+      ? [{ name: 'AI gateway', key: lovableKey ?? '', call: callGateway }]
+      : [
+          { name: 'DeepSeek', key: deepseekKey, call: callDeepseek },
+          { name: 'AI gateway', key: lovableKey ?? '', call: callGateway },
+        ];
+  if (gatewayFirst && providers.length > 1) providers.reverse();
 
   const available = providers.filter((p) => p.key);
 
