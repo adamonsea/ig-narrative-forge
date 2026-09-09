@@ -44,6 +44,8 @@ export interface LlmFetchOptions {
   deepseekApiKey?: string;
   /** Label used in logs. */
   context?: string;
+  /** Skip DeepSeek entirely and call the Lovable AI Gateway (used for escalation). */
+  gatewayOnly?: boolean;
 }
 
 /**
