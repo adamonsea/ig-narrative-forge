@@ -269,7 +269,10 @@ serve(async (req) => {
       let formattedStories: any[];
       if (featuredSources.length > 0) {
         const featured = working
-          .filter(s => featuredSources.includes(norm(s.source_name)))
+          .filter(s =>
+            featuredSources.includes(norm(s.source_name)) &&
+            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutes)
+          )
           .slice(0, MAX_FEATURED)
           .map(s => ({ ...s, featured: true }));
         const featuredIds = new Set(featured.map(s => s.id));
