@@ -152,3 +152,28 @@ export const publicationFromUrl = (input?: string | null): string => {
   return splitGluedWords(name);
 };
 
+/** Stored names that are really fragments of a web address, not a publication. */
+const UNUSABLE_NAMES = new Set([
+  'co', 'gov', 'org', 'net', 'com', 'uk', 'www', 'news', 'site', 'web', 'home', 'index',
+  'unknown', 'unknown source', 'n/a', 'null', 'undefined',
+]);
+
+/**
+ * Best label for a story's source: prefer the stored publication name, but fall back to the
+ * domain when the stored value is a fragment ("Co", "Gov") or looks like a bare domain.
+ */
+export const resolvePublicationName = (
+  storedName?: string | null,
+  sourceUrl?: string | null
+): string => {
+  const derived = publicationFromUrl(sourceUrl);
+  const stored = (storedName || '').trim();
+
+  if (!stored) return derived;
+  if (UNUSABLE_NAMES.has(stored.toLowerCase())) return derived || stored;
+  // "sussexexpress.co.uk" stored as a name — run it through the domain formatter.
+  if (/^[a-z0-9-]+(\.[a-z]{2,})+$/i.test(stored)) return publicationFromUrl(stored) || derived || stored;
+  return stored;
+};
+
+
