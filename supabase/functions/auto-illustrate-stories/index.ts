@@ -190,11 +190,19 @@ Deno.serve(async (req) => {
     const results = [];
     let successCount = 0;
     let failureCount = 0;
+    let queuedCount = 0;
+
+    // Fresh news must never wait: stories under 24 hours old generate
+    // immediately, older backlog stories go via the discounted batch route.
+    const freshCutoff = Date.now() - 24 * 60 * 60 * 1000;
 
     // Generate illustrations for each eligible story
     for (const story of filteredStories) {
       try {
-        console.log(`Generating illustration for story ${story.id} (score: ${story.quality_score})`);
+        const isBacklog = new Date(story.created_at).getTime() < freshCutoff;
+        console.log(
+          `Generating illustration for story ${story.id} (score: ${story.quality_score}, route: ${isBacklog ? 'batch' : 'immediate'})`
+        );
 
         const { data: illustrationData, error: illustrationError } = await supabase.functions.invoke(
           'story-illustrator',
@@ -203,9 +211,17 @@ Deno.serve(async (req) => {
               storyId: story.id,
               model: 'gpt-image-1.5-low', // 2 credits - OpenAI lowest tier
               isAutomated: true, // Flag for lifecycle tracking
+              useBatch: isBacklog, // 50% cheaper, up to 24h — backlog only
             },
           }
         );
+
+        if (!illustrationError && illustrationData?.queued) {
+          queuedCount++;
+          results.push({ storyId: story.id, success: true, queued: true });
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          continue;
+        }
 
         if (illustrationError) {
           console.error(`Failed to generate illustration for story ${story.id}:`, illustrationError);
