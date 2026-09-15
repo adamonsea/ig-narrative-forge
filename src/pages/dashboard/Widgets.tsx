@@ -35,7 +35,8 @@ interface WidgetConfig {
   frequency: "daily" | "weekly";
   sources: string[];
   featuredSources: string[];
-  featuredDays: number;
+  /** Days each featured source keeps its top slot, keyed by publication name */
+  featuredDaysBySource: Record<string, number>;
 }
 
 interface FeedSource {
@@ -60,7 +61,7 @@ export default function Widgets() {
     frequency: "daily",
     sources: [],
     featuredSources: [],
-    featuredDays: 2,
+    featuredDaysBySource: {},
   });
 
   const [copied, setCopied] = useState(false);
