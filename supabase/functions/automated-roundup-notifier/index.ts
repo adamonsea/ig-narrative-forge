@@ -118,6 +118,49 @@ serve(async (req) => {
         };
       }
 
+      // === SEGMENTED SENDS ===
+      // The default send above deliberately excludes subscribers matched by an
+      // active segment, so each active segment must be sent its own version —
+      // otherwise those readers receive nothing at all.
+      try {
+        const { data: segments, error: segmentsError } = await supabase
+          .from('email_segments')
+          .select('id, name')
+          .eq('topic_id', topic.id)
+          .eq('is_active', true);
+
+        if (segmentsError) {
+          console.error(`Error loading segments for ${topic.name}:`, segmentsError);
+        } else if (segments && segments.length > 0) {
+          topicResults.segments = [];
+          for (const seg of segments) {
+            const segBody: any = {
+              topicId: topic.id,
+              notificationType: notification_type,
+              segmentId: seg.id
+            };
+            if (notification_type === 'daily') segBody.roundupDate = today;
+            else if (notification_type === 'weekly') segBody.weekStart = weekStart;
+
+            console.log(`📧 Sending segment "${seg.name}" email for ${topic.name}`);
+            const segResponse = await supabase.functions.invoke('send-email-newsletter', { body: segBody });
+
+            if (segResponse.error) {
+              console.error(`❌ Segment email error (${seg.name}):`, segResponse.error);
+              topicResults.segments.push({
+                segment: seg.name,
+                success: false,
+                error: segResponse.error.message || String(segResponse.error)
+              });
+            } else {
+              topicResults.segments.push({ segment: seg.name, success: true, ...segResponse.data });
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Segment newsletters failed for ${topic.name}:`, error);
+      }
+
       results.push(topicResults);
     }
 
