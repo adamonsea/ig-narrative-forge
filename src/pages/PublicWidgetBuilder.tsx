@@ -265,6 +265,9 @@ export default function PublicWidgetBuilder() {
     }
     if (config.showSubscribe) {
       code += ` data-subscribe="true"`;
+      if (config.frequency === 'weekly') {
+        code += ` data-frequency="weekly"`;
+      }
     }
 
     
