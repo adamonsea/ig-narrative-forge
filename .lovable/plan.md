@@ -1,67 +1,35 @@
-# Scraping overhaul: more sources working, one clear path, honest diagnostics
+# Steady up the Published queue
 
-## Where things stand (checked today)
+The Published tab is fed by several overlapping queries that can each fail or truncate on their own. When one of them is slow, the tab keeps rendering — just with fewer stories, missing slides, or a red error toast. That is why it feels different every time you look at it. This is a reliability clean-up, not new functionality.
 
-- In the last 7 days, 17 sources produced zero articles, including Eastbourne Herald, East Sussex County Council, EB Chamber UnLtd, South Downs National Park, sussex.press and eastsussex.news. Two more are outright broken feeds (Civil Society News, Third Sector).
-- Across every feed, only 62 articles were taken in the last 14 days; weekly totals have sat between 9 and 46 for three months.
-- Almost every failure is recorded as the catch-all "no new URLs", which tells you nothing about whether the site blocked us, changed layout, or genuinely published nothing.
-- There are over 40 overlapping scraping tools in the backend, only one of which is really used. The rest are old experiments and one-off fixes that still cost time to reason about and can be triggered by stray buttons.
-- Pages are re-fetched in full every run, even when nothing changed.
+## What's actually happening
 
-## What will change
+**1. Two different lists of stories are stitched together.**
+Stories are fetched twice: once through the admin function (capped at 50 per status) and once directly (capped at 200, newest-updated first). The two results are merged and de-duplicated. As stories are edited, the 200-row window shifts, so the number shown in Published moves up and down even though nothing was published or removed.
 
-### 1. Find stories in more ways (biggest win on volume)
+**2. Slides are fetched separately and silently dropped on failure.**
+The story rows say how many slides exist, but the slide text is loaded by a second round of queries. If those time out (which has been happening on Eastbourne), the code logs the error and carries on, so stories render as if they have no slides. The direct story query already returns the slide text inline, but the merge throws that copy away in favour of the row without slides.
 
-Today a source is mostly tried as a feed, then as a listing page. The new order tries each method in turn and remembers which one worked for that site:
+**3. Parliamentary filtering can delete stories from the view.**
+A follow-up query decides which parliamentary stories to keep. It has no error handling: if it fails, every parliamentary story is dropped from the tab. A different failure in the related query makes the same stories all reappear as ordinary stories.
 
-```text
-1. RSS / Atom feed
-2. News sitemap, then regular sitemap (sitemap.xml, sitemap_index.xml, robots.txt pointer)
-3. Structured data already embedded in the page (JSON-LD article listings)
-4. Listing-page HTML parsing (current behaviour)
-5. Rendered fetch for JavaScript-heavy sites
-6. AI read of the page as a last resort
-```
+**4. Refresh churn and toast noise.**
+The tab reloads everything every 30 seconds, plus on every live database change (300ms debounce), plus after every action. Each full reload can raise its own error toast, and there are 61 separate toast messages across the pipeline screens — so one slow moment produces a stack of red boxes.
 
-This adds sitemaps, structured data and the AI last resort to the main path. Council, chamber, arts-venue and gov sites — the ones failing now — almost all publish sitemaps or JSON-LD even when they have no feed.
+## The fix
 
-### 2. AI last-resort extraction
+**One source of truth for the list.** Use a single consistent query path for Published, with one clear page size, so the count only changes when stories actually change. Keep the second query purely as a fallback if the first one fails, never as an additive merge.
 
-When every free method returns nothing usable, the page is handed to an AI reader that pulls headline, date, author, body and image. Capped: only on sources that produced nothing by other means, at most a few pages per source per run, with a per-day ceiling so it can never run away with cost. The result is recorded so a source that only ever works this way is visible to you.
+**Never show a story with its slides missing.** Prefer the slide text that already comes back with the story. Where slides do have to be fetched separately, a failure is treated as "not loaded yet" — the story keeps its previous slide content and shows a small retry, instead of silently rendering as empty.
 
-### 3. Honest diagnostics per run
+**Fail-safe parliamentary filtering.** If the filter query fails, keep the stories visible (current behaviour is to hide them). Errors here should never remove content from the tab.
 
-A new run record per source per scrape, storing: method used, URLs discovered, URLs already seen, new URLs, articles kept, and a counted reason for every rejection (too old, off-topic, low quality, duplicate, extraction failed, blocked, feed missing). The source health email and the admin panel then say "found 14 URLs, 14 already seen" or "blocked with 403" instead of "no new URLs".
+**Calmer refreshing and toasts.** Stop the fixed 30-second full reload while the live subscription is connected, and skip a refresh entirely when the tab isn't visible. Collapse repeated load failures into a single quiet inline warning with a retry, instead of one toast per attempt. Keep success toasts only for actions you took deliberately (publish, delete, approve); drop the incidental ones.
 
-### 4. Don't re-fetch what hasn't changed
-
-Store the ETag / last-modified value per source and send it on the next run. Unchanged feeds return an empty, near-free response. Cuts both time and bandwidth on every scrape.
-
-### 5. Retire the sprawl
-
-Keep the live path (universal-topic-scraper and its shared helpers, the Firecrawl and Beautiful Soup fallbacks, source health monitoring, chamber events, manual upload extraction). Delete the one-off and superseded functions — the emergency fixes, the reactivate-X scripts, the duplicate scrapers, the test harnesses — after confirming nothing in the app or the schedules calls them. Any UI buttons pointing at deleted tools are removed with them.
-
-## What will not change
-
-- No change to how stories are written, approved or published.
-- No change to the feeds, widgets or emails.
-- Existing articles and sources are untouched; nothing is deleted from your content.
+**A consistency check.** After the changes, load the Eastbourne Published tab repeatedly and confirm the story count is stable, every story shows the slide count it claims, and no toast appears unless an action genuinely failed.
 
 ## Technical notes
 
-- New `_shared/discovery.ts`: ordered strategies (rss, news-sitemap, sitemap, jsonld, html-listing, rendered, ai-extract) behind one interface, each returning candidate URLs plus provenance. `content_sources.scraping_config` gains `preferred_discovery`, written back on success and tried first next run; failure demotes it.
-- Sitemap strategy: try `/sitemap_index.xml`, `/sitemap.xml`, `/news-sitemap.xml`, and any `Sitemap:` line in `robots.txt`; parse `<url><loc>` plus `news:publication_date`/`lastmod`; filter to the freshness window before fetching anything.
-- JSON-LD strategy: parse `application/ld+json` blocks for `ItemList`, `Blog`, `NewsArticle` entries on the listing page.
-- AI extraction: Lovable AI Gateway, `google/gemini-3-pro-image` is not needed — use the default chat model on cleaned page text, JSON-mode response of `{title, published_at, author, body, image_url}`. Guarded by `ai_extract_enabled` on the source, a per-run cap (default 3 pages) and a per-day global cap; every call is logged to the run record with token cost.
-- New table `public.scrape_runs` (`id, source_id, topic_id, started_at, finished_at, method, urls_discovered, urls_new, articles_stored, rejections jsonb, error_code, error_detail`) with owner/admin RLS plus explicit GRANTs (service_role full, authenticated select via topic ownership). `source-health-monitor` reads the newest run per source for its reason code instead of guessing.
-- Conditional GET: store `etag`/`last_modified` in `scraping_config`; send `If-None-Match`/`If-Modified-Since`; treat 304 as a clean, zero-cost run rather than a failure.
-- Cleanup list is confirmed by grepping `src/` and the pg_cron schedules for each function name before deletion; functions referenced by anything stay.
-
-## Order of work
-
-1. `scrape_runs` table, run recording, health monitor reading real reasons.
-2. Discovery strategies (sitemap, JSON-LD) plus preferred-method memory.
-3. Conditional GET.
-4. AI last-resort extraction with caps.
-5. Retire unused functions and their stray UI.
-6. Re-run the failing Eastbourne sources and report what each one now returns.
+- `src/hooks/useMultiTenantTopicPipeline.tsx`: consolidate the `get_admin_topic_stories` per-status fetch (lines ~467-497) and the direct `stories` query (lines ~502-535) into primary + fallback rather than concat/dedupe; carry the inline `slides(...)` selection through the merge; make the slides pass (lines ~614-657) preserve prior slides on error and expose a `slidesError` flag; add error handling to the parliamentary mentions query (line ~683) so a failure keeps stories visible; gate the 30s poll (lines ~1369-1379) on subscription status and `document.visibilityState`; replace per-load destructive toasts (lines ~217, ~795) with a single deduplicated inline error state.
+- `src/components/UnifiedContentPipeline.tsx` / `PublishedStoriesList.tsx`: surface the inline "couldn't load — retry" state and the per-story "slides not loaded" state instead of rendering empty; audit toast call sites and remove incidental ones.
+- No schema changes. The owner-scoped slides function added earlier stays as the fast path.
