@@ -113,9 +113,9 @@
     // Try to show cached data immediately while fetching fresh data
     const cached = getCachedData(feedSlug);
     if (cached) {
-      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe);
+      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
       attachClickHandlers(shadow, feedSlug);
-      attachSubscribeHandler(shadow, feedSlug, cached);
+      attachSubscribeHandler(shadow, feedSlug, cached, frequency);
     } else {
       wrapper.innerHTML = getLoadingHTML();
     }
