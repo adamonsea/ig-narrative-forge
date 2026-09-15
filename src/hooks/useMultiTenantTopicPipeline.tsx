@@ -107,6 +107,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const [queueItems, setQueueItems] = useState<MultiTenantQueueItem[]>([]);
   const [stories, setStories] = useState<MultiTenantStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [stats, setStats] = useState<MultiTenantStats>({
     articles: 0,
     queueItems: 0,
@@ -135,6 +136,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   // Debounce timer for real-time refreshes
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Tracks whether the realtime channel is live, so the 30s fallback poll can
+  // stand down while realtime is doing the refreshing.
+  const channelActiveRef = useRef(false);
+
+  // Last known-good slide rows per story id, used when a slide fetch fails so
+  // stories never render as if they had no content.
+  const prevSlidesRef = useRef<Map<string, any[]>>(new Map());
 
   // Tombstones: ids removed optimistically that must not be resurrected by a
   // refresh that raced ahead of the server write. Expire after TOMBSTONE_TTL.
@@ -192,6 +201,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     try {
       setLoading(true);
+      setLoadError(null);
 
       // Get ONLY multi-tenant articles for arrivals (no legacy articles)
       // Use pagination - first page loads with reset
@@ -214,11 +224,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       if (multiTenantArticlesResult.error) {
         console.error('Error loading multi-tenant articles:', multiTenantArticlesResult.error);
-        toast({
-          title: "Error loading articles",
-          description: "Failed to load articles. Please try refreshing.",
-          variant: "destructive",
-        });
+        // Quiet inline error instead of a toast — background refreshes must not
+        // stack red popups. Surfaced as a banner with a retry by the pipeline.
+        setLoadError('Some new arrivals could not be loaded. Showing what we have.');
+      } else {
+        setLoadError(null);
       }
 
       // Get story IDs to filter out articles that are already published or queued for this topic
@@ -463,7 +473,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       console.log('🗳️ Tracked MPs for filtering:', trackedMPs?.length || 0);
 
       // Fetch per status so a large backlog of published stories can never push
-      // drafts (or vice versa) out of a single shared row window.
+      // drafts (or vice versa) out of a single shared row window. This is the
+      // single source of truth for the pipeline lists; the direct query is only
+      // a fallback when the RPC fails — never merged additively with it, or the
+      // visible story count would drift as row windows shift.
       const STATUS_PAGE_SIZE = 50;
       const STATUSES = ['draft', 'ready', 'published', 'archived'];
       const perStatusResults = await Promise.all(
@@ -478,6 +491,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       );
 
       const failedStatus = perStatusResults.find((r) => r.error);
+      const rpcRows = perStatusResults.flatMap((r) => r.data || []);
+
       console.log('📊 Admin stories query results:', {
         byStatus: Object.fromEntries(
           STATUSES.map((s, i) => [s, perStatusResults[i].data?.length || 0])
@@ -485,118 +500,95 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         error: failedStatus?.error
       });
 
-      if (failedStatus?.error) {
-        // Keep whatever is already on screen — blanking the list makes published
-        // stories flicker out of view on any transient RPC failure.
-        console.error('Error loading topic stories; using direct owner-scoped fallback:', failedStatus.error);
-      }
+      const byNewestCreated = (a: any, b: any) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 
-      const topicStoriesResult = {
-        data: perStatusResults.flatMap((r) => r.data || []),
-        error: null as any
-      };
+      let sortedStories: any[];
 
-      // Always load the topic's current workspace rows directly as well. This is
-      // owner-scoped by stories/topic_articles RLS and prevents an unavailable or
-      // stale admin RPC from making real stories disappear from the dashboard.
-      const { data: directTopicStories, error: directTopicStoriesError } = await supabase
-        .from('stories')
-        .select(`
-          id,
-          article_id,
-          topic_article_id,
-          title,
-          status,
-          is_published,
-          is_parliamentary,
-          created_at,
-          updated_at,
-          scheduled_publish_at,
-          drip_queued_at,
-          cover_illustration_url,
-          cover_illustration_prompt,
-          illustration_generated_at,
-          animated_illustration_url,
-          animation_suggestions,
-          slide_type,
-          tone,
-          writing_style,
-          audience_expertise,
-          shared_content_id,
-          slides(id, slide_number, content, word_count, alt_text, visual_prompt, links),
-          topic_articles!inner(
-            topic_id,
-            shared_content:shared_article_content(title, url, author, word_count)
-          )
-        `)
-        .eq('topic_articles.topic_id', selectedTopicId)
-        .in('status', ['draft', 'ready', 'published'])
-        .order('updated_at', { ascending: false })
-        .limit(200);
-
-      if (directTopicStoriesError) {
-        console.warn('⚠️ Failed direct topic-story fallback:', directTopicStoriesError);
-      }
-
-      const directTopicAsAdminRows = (directTopicStories || []).map((s: any) => {
-        const shared = s.topic_articles?.shared_content;
-        // Include slides directly from the query
-        const slides = (s.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number);
-        return {
-          id: s.id,
-          article_id: s.article_id || null,
-          topic_article_id: s.topic_article_id || null,
-          title: s.title || shared?.title || 'Untitled',
-          status: s.status,
-          is_published: s.is_published,
-          created_at: s.created_at,
-          updated_at: s.updated_at,
-          article_title: shared?.title || s.title || 'Untitled',
-          article_url: shared?.url || null,
-          article_author: shared?.author || null,
-          word_count: shared?.word_count || null,
-          slide_count: slides.length,
-          slides: slides,
-          story_type: s.topic_article_id ? 'multi_tenant' : 'legacy',
-          is_teaser: false,
-          is_parliamentary: s.is_parliamentary || false,
-          cover_illustration_url: s.cover_illustration_url,
-          cover_illustration_prompt: s.cover_illustration_prompt,
-          illustration_generated_at: s.illustration_generated_at,
-          animated_illustration_url: s.animated_illustration_url,
-          animation_suggestions: s.animation_suggestions || null,
-          slide_type: s.slide_type,
-          tone: s.tone,
-          writing_style: s.writing_style,
-          audience_expertise: s.audience_expertise,
-          scheduled_publish_at: s.scheduled_publish_at || null,
-        };
-      });
-
-      console.log('🟦 Direct topic stories included:', {
-        count: directTopicAsAdminRows.length,
-      });
-
-      const allStories = [...(topicStoriesResult.data || []), ...directTopicAsAdminRows];
-
-      // Frontend deduplication safety net
-      const seenStoryIds = new Set();
-      const deduplicatedStories = allStories.filter((story: any) => {
-        if (seenStoryIds.has(story.id)) {
-          console.warn('🚨 Duplicate story detected and filtered:', story.id, story.title);
-          return false;
+      if (!failedStatus?.error && rpcRows.length > 0) {
+        // Primary path: the admin RPC.
+        sortedStories = [...rpcRows].sort(byNewestCreated);
+      } else {
+        if (failedStatus?.error) {
+          console.error('Admin stories RPC unavailable; using direct owner-scoped fallback:', failedStatus.error);
         }
-        seenStoryIds.add(story.id);
-        return true;
-      });
-      
-      // The RPC already returns clean, deduplicated data - this is just a safety net
-      const sortedStories = deduplicatedStories.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+        // Owner-scoped by stories/topic_articles RLS.
+        const { data: directTopicStories, error: directTopicStoriesError } = await supabase
+          .from('stories')
+          .select(`
+            id,
+            article_id,
+            topic_article_id,
+            title,
+            status,
+            is_published,
+            is_parliamentary,
+            created_at,
+            updated_at,
+            scheduled_publish_at,
+            drip_queued_at,
+            cover_illustration_url,
+            cover_illustration_prompt,
+            illustration_generated_at,
+            animated_illustration_url,
+            animation_suggestions,
+            slide_type,
+            tone,
+            writing_style,
+            audience_expertise,
+            shared_content_id,
+            slides(id, slide_number, content, word_count, alt_text, visual_prompt, links),
+            topic_articles!inner(
+              topic_id,
+              shared_content:shared_article_content(title, url, author, word_count)
+            )
+          `)
+          .eq('topic_articles.topic_id', selectedTopicId)
+          .in('status', ['draft', 'ready', 'published'])
+          .order('updated_at', { ascending: false })
+          .limit(200);
+
+        if (directTopicStoriesError) {
+          console.warn('⚠️ Direct topic-story fallback also failed:', directTopicStoriesError);
+        }
+
+        sortedStories = (directTopicStories || []).map((s: any) => {
+          const shared = s.topic_articles?.shared_content;
+          const slides = (s.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number);
+          return {
+            id: s.id,
+            article_id: s.article_id || null,
+            topic_article_id: s.topic_article_id || null,
+            title: s.title || shared?.title || 'Untitled',
+            status: s.status,
+            is_published: s.is_published,
+            created_at: s.created_at,
+            updated_at: s.updated_at,
+            article_title: shared?.title || s.title || 'Untitled',
+            article_url: shared?.url || null,
+            article_author: shared?.author || null,
+            word_count: shared?.word_count || null,
+            slide_count: slides.length,
+            slides,
+            story_type: s.topic_article_id ? 'multi_tenant' : 'legacy',
+            is_teaser: false,
+            is_parliamentary: s.is_parliamentary || false,
+            cover_illustration_url: s.cover_illustration_url,
+            cover_illustration_prompt: s.cover_illustration_prompt,
+            illustration_generated_at: s.illustration_generated_at,
+            animated_illustration_url: s.animated_illustration_url,
+            animation_suggestions: s.animation_suggestions || null,
+            slide_type: s.slide_type,
+            tone: s.tone,
+            writing_style: s.writing_style,
+            audience_expertise: s.audience_expertise,
+            scheduled_publish_at: s.scheduled_publish_at || null,
+          };
+        }).sort(byNewestCreated);
+      }
 
       console.log('✅ Stories loaded successfully:', sortedStories.length, 'total stories');
-      
+
       // Validation logging for QA
       const publishedCount = sortedStories.filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length;
       console.log('📊 Published Stories Validation:', {
@@ -606,12 +598,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length
       });
 
-      // Load slides for stories to enable edit functionality
+      // Load slides for stories to enable edit functionality — only needed when
+      // the story rows didn't already come back with their slide text.
       const storyIds = sortedStories.map((story: any) => story.id);
       let slidesData: any[] = [];
       let parliamentaryData: any[] = [];
+      let slidesHadError = false;
       
-      if (storyIds.length > 0) {
+      if (storyIds.length > 0 && sortedStories.some((s: any) => !s.slides?.length)) {
         // PostgREST caps responses at 1000 rows. With ~6 slides per story this
         // silently truncated the result (stories rendering with missing/no slides).
         // Fetch in story-id chunks and page through each chunk until exhausted.
@@ -646,6 +640,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
             if (slidesError) {
               console.error('Error loading slides:', slidesError);
+              slidesHadError = true;
               break;
             }
 
@@ -680,10 +675,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       );
 
       // Get parliamentary mentions for filtering (only mp_name and constituency exist in this table)
-      const { data: allParliamentaryMentions } = await supabase
+      const { data: allParliamentaryMentions, error: mentionsError } = await supabase
         .from('parliamentary_mentions')
         .select('story_id, mp_name, constituency')
         .in('story_id', sortedStories.map(s => s.id).filter(id => parliamentaryStoryIds.has(id)));
+
+      if (mentionsError) {
+        // Fail open: a failed filter query must never remove stories from the tab.
+        console.error('Error loading parliamentary mentions for filtering; keeping all parliamentary stories:', mentionsError);
+      }
 
       // Create map of story_id -> mention for filtering
       const storyMentionMap = new Map(
@@ -695,6 +695,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         const isParliamentary = parliamentaryStoryIds.has(story.id);
         
         if (!isParliamentary) return true; // Keep all non-parliamentary stories
+
+        // If the filter query failed, keep parliamentary stories visible.
+        if (mentionsError) return true;
 
         // For parliamentary stories, check if MP is tracked
         const mention = storyMentionMap.get(story.id);
@@ -722,7 +725,23 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       // Map to MultiTenantStory shape - the RPC already provides clean data structure
       const storiesData = parliamentaryFilteredStories.map((story: any) => {
-        const storySlides = slidesData.filter(slide => slide.story_id === story.id);
+        // Prefer slide text that came back inline with the story row; only fall
+        // back to the separately fetched rows.
+        let storySlides: any[] = story.slides?.length
+          ? story.slides
+          : slidesData.filter((slide: any) => slide.story_id === story.id);
+        let slidesLoadFailed = false;
+
+        if (storySlides.length === 0 && (story.slide_count || 0) > 0 && slidesHadError) {
+          // The slide fetch failed — keep whatever slides were loaded last time
+          // instead of rendering the story as if it had none.
+          const previous = prevSlidesRef.current.get(story.id) || [];
+          if (previous.length > 0) {
+            storySlides = previous;
+            slidesLoadFailed = true;
+          }
+        }
+
         const isParliamentary = parliamentaryStoryIds.has(story.id);
         
         console.log('🔍 Story mapping debug:', {
@@ -743,7 +762,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           is_published: story.is_published,
           created_at: story.created_at,
           updated_at: story.updated_at,
-          slides: storySlides, // Now properly loaded with slide data
+          slides: storySlides,
+          slides_load_failed: slidesLoadFailed,
+          slide_count: story.slide_count || storySlides.length,
           article_title: story.article_title,
           story_type: story.story_type,
           title: story.title,
@@ -766,6 +787,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           scheduled_publish_at: story.scheduled_publish_at || null
         };
       });
+
+      // Remember the latest good slides per story for fail-safe re-renders
+      prevSlidesRef.current.clear();
+      for (const s of storiesData) {
+        if (s.slides.length > 0) prevSlidesRef.current.set(s.id, s.slides);
+      }
 
       console.log('📊 Final stories data with slides:', {
         totalStories: storiesData.length,
@@ -808,11 +835,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     } catch (error) {
       console.error('Error loading topic content:', error);
-      toast({
-        title: "Error loading content",
-        description: "Failed to load multi-tenant topic content",
-        variant: "destructive",
-      });
+      // Quiet inline error instead of a toast — see loadError above.
+      setLoadError('Couldn\'t fully refresh the pipeline. Showing the last good data.');
     } finally {
       setLoading(false);
     }
@@ -1349,6 +1373,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       )
       .subscribe((status) => {
         console.log('🔄 Real-time subscription status:', status);
+        // The 30s fallback poll stands down while the live channel is healthy.
+        channelActiveRef.current = status === 'SUBSCRIBED';
       });
 
     return () => {
@@ -1366,11 +1392,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     stories
   ]);
 
-  // Fallback polling as safety net (every 30 seconds)
+  // Fallback polling as safety net (every 30 seconds) — skipped while the live
+  // subscription is connected or the dashboard tab is in the background, so the
+  // pipeline doesn't churn (and surface errors) when nobody is watching.
   useEffect(() => {
     if (!selectedTopicId) return;
 
     const pollInterval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      if (channelActiveRef.current) return;
       console.log('🔄 Fallback poll refresh');
       loadTopicContent();
     }, 30000);
@@ -1462,6 +1492,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     
     // Loading states
     loading,
+    loadError,
     loadingMore,
     
     // Pagination

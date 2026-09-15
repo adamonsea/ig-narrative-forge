@@ -80,6 +80,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     queueItems,
     stories,
     loading,
+    loadError,
     loadingMore,
     stats,
     duplicateMap,
@@ -308,6 +309,23 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   return (
     <div className="space-y-4">
+      {/* Quiet inline load-error banner with retry — replaces the old per-refresh error toasts */}
+      {loadError && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm"
+        >
+          <span className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {loadError}
+          </span>
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => refreshContent()}>
+            <RefreshCw className="h-3 w-3 mr-1" aria-hidden="true" />
+            Retry
+          </Button>
+        </div>
+      )}
       {/* Two-tab pipeline */}
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-2">

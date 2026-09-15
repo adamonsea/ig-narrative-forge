@@ -38,29 +38,20 @@ export function optimizeImageUrl(
     return url;
   }
 
-  // Note: Supabase Image Transformations require Pro Plan or above.
-  // The /render/image/ endpoint is only available on paid plans.
-  // For now, return original URL until Pro plan is confirmed.
-  // To enable optimization: uncomment the transformation code below
-  // and ensure the Supabase project is on Pro plan or above.
-  
-  // TODO: Enable when Pro plan is active
-  // Convert to render/image endpoint for transformations
+  // Supabase Image Transformation: serve a resized copy instead of the original
+  // (dashboard thumbnails were previously pulling full multi-megabyte uploads).
   // /storage/v1/object/public/{bucket}/{path} → /storage/v1/render/image/public/{bucket}/{path}
-  // const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-  // const transformParams = new URLSearchParams({
-  //   width: width.toString(),
-  //   height: height.toString(),
-  //   quality: quality.toString(),
-  //   resize: 'cover',
-  // });
-  // if (format !== 'origin') {
-  //   transformParams.append('format', format);
-  // }
-  // return `${renderUrl}?${transformParams.toString()}`;
-  
-  // Return original URL (no transformation on Free plan)
-  return url;
+  const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  const transformParams = new URLSearchParams({
+    width: width.toString(),
+    height: height.toString(),
+    quality: quality.toString(),
+    resize: 'cover',
+  });
+  if (format !== 'origin') {
+    transformParams.append('format', format);
+  }
+  return `${renderUrl}?${transformParams.toString()}`;
 }
 
 /**
