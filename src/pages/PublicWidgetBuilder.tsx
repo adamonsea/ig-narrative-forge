@@ -35,8 +35,15 @@ interface WidgetConfig {
   customAvatar: string;
   showSubscribe: boolean;
   frequency: 'daily' | 'weekly';
-
+  sources: string[];
+  featuredSources: string[];
 }
+
+interface FeedSource {
+  name: string;
+  count: number;
+}
+
 
 interface PreviewStory {
   title: string;
