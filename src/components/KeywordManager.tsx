@@ -21,6 +21,7 @@ interface Topic {
   region?: string;
   landmarks?: string[];
   landmark_descriptions?: Record<string, string>;
+  landmark_reference_images?: Record<string, LandmarkPhoto[]>;
   postcodes?: string[];
   organizations?: string[];
 }
