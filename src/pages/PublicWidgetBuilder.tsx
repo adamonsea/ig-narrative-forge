@@ -131,13 +131,61 @@ export default function PublicWidgetBuilder() {
 
   // Fetch preview data
   useEffect(() => {
+  const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1`;
+
+  // Load the publications that appear in this feed
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+
+    fetch(`${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&mode=sources`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        const list: FeedSource[] = data?.sources || [];
+        setAvailableSources(list);
+        setConfig(prev => ({ ...prev, sources: list.map(s => s.name), featuredSources: [] }));
+      })
+      .catch(err => console.error('Failed to fetch sources:', err));
+
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  const sourcesParam = availableSources.length > 0 && config.sources.length < availableSources.length
+    ? config.sources.join(',')
+    : '';
+  const featuredParam = config.featuredSources.join(',');
+
+  const toggleSource = (name: string) => {
+    setConfig(prev => {
+      const included = prev.sources.includes(name);
+      return {
+        ...prev,
+        sources: included ? prev.sources.filter(s => s !== name) : [...prev.sources, name],
+        featuredSources: included ? prev.featuredSources.filter(s => s !== name) : prev.featuredSources,
+      };
+    });
+  };
+
+  const toggleFeaturedSource = (name: string) => {
+    setConfig(prev => ({
+      ...prev,
+      featuredSources: prev.featuredSources.includes(name)
+        ? prev.featuredSources.filter(s => s !== name)
+        : [...prev.featuredSources, name],
+    }));
+  };
+
+  // Fetch preview data
+  useEffect(() => {
     const fetchPreview = async () => {
       if (!slug) return;
       
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1/widget-feed-data?feed=${slug}&max=${config.maxHeadlines}`
-        );
+        let url = `${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&max=${config.maxHeadlines}`;
+        if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
+        if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}`;
+        const response = await fetch(url);
         
         if (response.ok) {
           const data = await response.json();
@@ -149,9 +197,9 @@ export default function PublicWidgetBuilder() {
     };
     
     fetchPreview();
-  }, [slug, config.maxHeadlines]);
+  }, [slug, config.maxHeadlines, sourcesParam, featuredParam]);
 
-  const WIDGET_JS_VERSION = '1.4.2';
+  const WIDGET_JS_VERSION = '1.5.0';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
