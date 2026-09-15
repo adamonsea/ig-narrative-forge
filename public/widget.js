@@ -156,21 +156,33 @@
       });
   }
 
-  // Cache management for graceful degradation
-  function getCacheKey(feedSlug) {
-    return `curatr_widget_cache_${WIDGET_VERSION}_${feedSlug}`;
+  // Keep only safe publication-name characters from a comma separated list
+  function sanitiseNameList(raw) {
+    if (!raw) return '';
+    return String(raw)
+      .slice(0, 600)
+      .split(',')
+      .map(n => n.replace(/[^\w &'’.\-]/g, '').trim())
+      .filter(n => n.length > 0 && n.length <= 80)
+      .slice(0, 25)
+      .join(',');
   }
 
-  function getCachedData(feedSlug) {
+  // Cache management for graceful degradation
+  function getCacheKey(feedSlug, variantKey) {
+    return `curatr_widget_cache_${WIDGET_VERSION}_${feedSlug}_${variantKey || ''}`;
+  }
+
+  function getCachedData(feedSlug, variantKey) {
     try {
-      const cached = localStorage.getItem(getCacheKey(feedSlug));
+      const cached = localStorage.getItem(getCacheKey(feedSlug, variantKey));
       if (!cached) return null;
       
       const { data, timestamp } = JSON.parse(cached);
       
       // Check if cache is still valid
       if (Date.now() - timestamp > CACHE_TTL_MS) {
-        localStorage.removeItem(getCacheKey(feedSlug));
+        localStorage.removeItem(getCacheKey(feedSlug, variantKey));
         return null;
       }
       
@@ -180,9 +192,9 @@
     }
   }
 
-  function setCachedData(feedSlug, data) {
+  function setCachedData(feedSlug, data, variantKey) {
     try {
-      localStorage.setItem(getCacheKey(feedSlug), JSON.stringify({
+      localStorage.setItem(getCacheKey(feedSlug, variantKey), JSON.stringify({
         data,
         timestamp: Date.now()
       }));
@@ -202,11 +214,12 @@
     });
   }
 
-  async function fetchFeedData(feedSlug, maxStories) {
-    const response = await fetch(
-      `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`,
-      { headers: { 'Accept': 'application/json' } }
-    );
+  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList) {
+    let url = `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`;
+    if (sourceList) url += `&sources=${encodeURIComponent(sourceList)}`;
+    if (featuredList) url += `&featured=${encodeURIComponent(featuredList)}`;
+
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch feed: ${response.status}`);
