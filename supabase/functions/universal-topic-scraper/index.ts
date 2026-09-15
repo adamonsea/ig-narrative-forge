@@ -1031,6 +1031,43 @@ serve(async (req) => {
                 }
               }
 
+              // ADDITIVE LAST RESORT: every existing method failed. Try sitemaps /
+              // JSON-LD and AI extraction before declaring the source failed.
+              const lastResort = await attemptDeepRecovery(supabase, dbOps, {
+                sourceUrl: source.normalizedUrl,
+                sourceId: source.source_id,
+                sourceName: source.source_name,
+                topicId,
+                maxAgeDays: effectiveMaxAgeDays,
+                scrapingConfig: source.scraping_config || {}
+              });
+
+              await recordScrapeRun(supabase, {
+                source_id: source.source_id,
+                topic_id: topicId,
+                method: lastResort.method || scrapeResult.method || 'unknown',
+                methods_tried: [scrapeResult.method || 'unknown', 'beautiful-soup', 'firecrawl', ...lastResort.methodsTried],
+                urls_discovered: lastResort.urlsDiscovered,
+                urls_new: lastResort.urlsNew,
+                articles_stored: lastResort.stored,
+                ai_pages_used: lastResort.aiPagesUsed,
+                error_code: lastResort.stored > 0 ? null : 'all_methods_failed',
+                error_detail: lastResort.error || scrapeResult.errors.join(', ').slice(0, 900) || null
+              });
+
+              if (lastResort.stored > 0) {
+                console.log(`   ✅ RECOVERED: ${source.source_name} via ${lastResort.method}`);
+                return {
+                  sourceId: source.source_id,
+                  sourceName: source.source_name,
+                  success: true,
+                  articlesFound: lastResort.urlsDiscovered,
+                  articlesScraped: lastResort.stored,
+                  articlesStored: lastResort.stored,
+                  executionTimeMs: Date.now() - startTime
+                } as ScraperSourceResult;
+              }
+
               // Only mark as failed if there were actual technical errors
               recordFailure(source.normalizedUrl);
               const result: ScraperSourceResult = {
