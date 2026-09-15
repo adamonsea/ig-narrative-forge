@@ -142,7 +142,7 @@ export default function PublicWidgetBuilder() {
     fetchPreview();
   }, [slug, config.maxHeadlines]);
 
-  const WIDGET_JS_VERSION = '1.4.0';
+  const WIDGET_JS_VERSION = '1.4.2';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
