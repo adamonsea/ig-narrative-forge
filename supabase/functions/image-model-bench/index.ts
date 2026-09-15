@@ -319,9 +319,10 @@ Deno.serve(async (req) => {
               error: message,
               duration_ms: Date.now() - started,
               reference_image_urls: useReferences ? referenceImageUrls : null,
+              prompt_variant: promptVariant,
             });
 
-            results.push({ storyId, model, quality, error: message, prompt });
+            results.push({ storyId, model, quality, error: message, prompt, promptVariant });
           }
 
         }
