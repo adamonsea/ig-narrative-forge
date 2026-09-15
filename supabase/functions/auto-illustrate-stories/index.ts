@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
           {
             body: {
               storyId: story.id,
-              model: 'gpt-image-1.5-low', // 2 credits - OpenAI lowest tier
+              model: 'gpt-image-2-low', // Quick tier - OpenAI lowest tier
               isAutomated: true, // Flag for lifecycle tracking
               useBatch: isBacklog, // 50% cheaper, up to 24h — backlog only
             },
