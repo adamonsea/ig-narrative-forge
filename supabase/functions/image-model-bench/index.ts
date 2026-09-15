@@ -173,11 +173,12 @@ Deno.serve(async (req) => {
       let topicRegion: string | undefined;
       let topicLandmarks: string[] | undefined;
       let topicLandmarkDescriptions: Record<string, string> | null = null;
+      let topicLandmarkPhotos: Record<string, Array<{ url: string }>> | null = null;
 
       if (topicId) {
         const { data: topicData } = await supabase
           .from('topics')
-          .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions')
+          .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions, landmark_reference_images')
           .eq('id', topicId)
           .single();
         if (topicData?.illustration_style) illustrationStyle = topicData.illustration_style;
