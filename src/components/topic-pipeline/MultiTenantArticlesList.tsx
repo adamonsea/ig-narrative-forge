@@ -343,7 +343,16 @@ export default function MultiTenantArticlesList({
           {/* Action bar */}
           <div className="flex items-center gap-1.5 pt-1 border-t border-border/40">
             <Button
-              onClick={() => onApprove(article, slideType, toneOverride, writingStyleOverride, illustrationOverrides[article.id] ?? true)}
+              onClick={() => {
+                // Warn before publishing a second version of a story already covered.
+                if (dupInfo && !dupInfo.isDuplicateLeader) {
+                  const ok = window.confirm(
+                    `Another source already reported this story:\n\n• ${dupInfo.similarTitles[0] ?? ''}\n\nContinue and publish this version too?`
+                  );
+                  if (!ok) return;
+                }
+                onApprove(article, slideType, toneOverride, writingStyleOverride, illustrationOverrides[article.id] ?? true);
+              }}
               disabled={isProcessing || isDeleting}
               size="sm"
               className="h-7 text-xs"
