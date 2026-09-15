@@ -643,14 +643,19 @@ serve(async (req) => {
     // Which saved place photographs (if any) match the place this story is about
     const subjectPhotoUrls: string[] = []
     if (locationDetails && topicLandmarkPhotos) {
-      const haystack = locationDetails.toLowerCase()
-      for (const [place, photos] of Object.entries(topicLandmarkPhotos)) {
-        if (!place || !Array.isArray(photos) || photos.length === 0) continue
-        if (!haystack.includes(place.toLowerCase())) continue
-        for (const photo of photos) {
+      // Only the place this story is actually about: whole-word match on the
+      // named place (the text before the bracketed description), longest wins.
+      const placeName = locationDetails.split('(')[0].trim() || locationDetails
+      const candidates = Object.keys(topicLandmarkPhotos).filter(
+        (p) => Array.isArray(topicLandmarkPhotos![p]) && topicLandmarkPhotos![p].length > 0
+      )
+      const bestPlace = matchPlaceName(placeName, candidates)
+      if (bestPlace) {
+        for (const photo of topicLandmarkPhotos[bestPlace]) {
           const url = (photo as any)?.url
           if (typeof url === 'string' && url) subjectPhotoUrls.push(url)
         }
+        console.log(`🏛️ Place photos matched: ${bestPlace}`)
       }
     }
     if (subjectPhotoUrls.length > 0) {
