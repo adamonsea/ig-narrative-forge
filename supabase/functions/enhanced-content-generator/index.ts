@@ -1332,7 +1332,8 @@ Return in JSON format:
         targetSlideCount,
         publicationName,
         templateGuidance,
-        supabase
+        supabase,
+        houseStyleGuidance
       );
 
       console.log(`✅ Generated ${slides.length}/${targetSlideCount} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
