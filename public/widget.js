@@ -438,7 +438,11 @@
     }
 
     // Default compact list layout
-    const storiesHTML = stories.map(story => {
+    let leadingFeatured = 0;
+    while (leadingFeatured < stories.length && stories[leadingFeatured].featured) leadingFeatured++;
+    const showSectionLabels = leadingFeatured > 0 && leadingFeatured < stories.length;
+
+    const storiesHTML = stories.map((story, index) => {
       const sourceHTML = story.source_name && story.source_url 
         ? `<a href="${story.source_url}" target="_blank" rel="noopener" class="story-source" onclick="event.stopPropagation();">${escapeHTML(story.source_name)}</a>`
         : story.source_name 
@@ -451,8 +455,13 @@
       const bulletStyle = isFresh 
         ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
         : `background: ${accent}`;
+
+      let labelHTML = '';
+      if (showSectionLabels && index === 0) labelHTML = '<div class="section-label">Featured</div>';
+      if (showSectionLabels && index === leadingFeatured) labelHTML = '<div class="section-label">Latest</div>';
       
       return `
+        ${labelHTML}
         <a href="${story.url}" target="_blank" rel="noopener" class="story-item" data-story-id="${story.id || ''}">
           <span class="${bulletClass}" style="${bulletStyle}"></span>
           <div class="story-content">
