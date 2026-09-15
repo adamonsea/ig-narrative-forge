@@ -209,6 +209,74 @@ serve(async (req) => {
         cost: 0.013,
         stylePrefix: 'cinematic and editorial style, '
       },
+
+      // OpenAI GPT Image 2 — successor to Image 1.5, which OpenAI removes from
+      // the API on 1 December 2026. Cheaper at every tier, same 1536x1024.
+      'gpt-image-2-high': {
+        provider: 'openai',
+        quality: 'high',
+        credits: 7,
+        cost: 0.165,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-2-medium': {
+        provider: 'openai',
+        quality: 'medium',
+        credits: 3,
+        cost: 0.041,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-2-low': {
+        provider: 'openai',
+        quality: 'low',
+        credits: 1,
+        cost: 0.006,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+
+      // GPT Image 2.5 variants (latency-first Flare, quality-first Sunburst)
+      'gpt-image-2.5-flare-high': {
+        provider: 'openai',
+        quality: 'high',
+        credits: 7,
+        cost: 0.165,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-2.5-flare-medium': {
+        provider: 'openai',
+        quality: 'medium',
+        credits: 3,
+        cost: 0.041,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-2.5-flare-low': {
+        provider: 'openai',
+        quality: 'low',
+        credits: 1,
+        cost: 0.006,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-2.5-sunburst-high': {
+        provider: 'openai',
+        quality: 'high',
+        credits: 7,
+        cost: 0.165,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-2.5-sunburst-medium': {
+        provider: 'openai',
+        quality: 'medium',
+        credits: 3,
+        cost: 0.041,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-2.5-sunburst-low': {
+        provider: 'openai',
+        quality: 'low',
+        credits: 1,
+        cost: 0.006,
+        stylePrefix: 'cinematic and editorial style, '
+      },
       'flux-1.1-pro': {
         provider: 'replicate-flux-pro',
         credits: 10,
