@@ -4,6 +4,7 @@ import { z } from 'https://esm.sh/zod@3.23.8';
 import {
   analyzeStoryTone,
   extractLocationDetails,
+  matchPlaceName,
   extractSubjectMatter,
   buildIllustrativePrompt,
   buildPhotographicPrompt,
@@ -229,11 +230,13 @@ Deno.serve(async (req) => {
           : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant);
 
         if (locationDetails && topicLandmarkPhotos) {
-          const haystack = locationDetails.toLowerCase();
-          for (const [place, photos] of Object.entries(topicLandmarkPhotos)) {
-            if (!place || !Array.isArray(photos) || photos.length === 0) continue;
-            if (!haystack.includes(place.toLowerCase())) continue;
-            for (const photo of photos) {
+          const placeName = locationDetails.split('(')[0].trim() || locationDetails;
+          const candidates = Object.keys(topicLandmarkPhotos).filter(
+            (p) => Array.isArray(topicLandmarkPhotos![p]) && topicLandmarkPhotos![p].length > 0
+          );
+          const bestPlace = matchPlaceName(placeName, candidates);
+          if (bestPlace) {
+            for (const photo of topicLandmarkPhotos[bestPlace]) {
               const url = (photo as any)?.url;
               if (typeof url === 'string' && url) subjectPhotoUrls.push(url);
             }
