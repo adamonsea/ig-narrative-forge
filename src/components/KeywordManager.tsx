@@ -50,6 +50,12 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     topic.landmark_descriptions || {}
   );
   const [describingLandmark, setDescribingLandmark] = useState<string | null>(null);
+  const [landmarkPhotos, setLandmarkPhotos] = useState<Record<string, LandmarkPhoto[]>>(
+    topic.landmark_reference_images || {}
+  );
+  const [photoCandidates, setPhotoCandidates] = useState<Record<string, PhotoCandidate[]>>({});
+  const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+  const [photoLink, setPhotoLink] = useState<Record<string, string>>({});
   const [postcodes, setPostcodes] = useState(topic.postcodes || []);
   const [organizations, setOrganizations] = useState(topic.organizations || []);
   const [newKeyword, setNewKeyword] = useState('');
