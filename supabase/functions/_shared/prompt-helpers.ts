@@ -454,9 +454,9 @@ PLACE-SPECIFIC ACCURACY (${region}):
   // Location accuracy section for identified landmarks
   const locationAccuracy = locationHint ? `
 
-LOCATION ACCURACY (leverage AI knowledge):
-Render "${locationHint}" based on your training knowledge of this location.
-Include authentic architectural details, proportions, materials, and distinctive visual features.
+LOCATION ACCURACY (authoritative description):
+Render "${locationHint}".
+Any description in brackets is a VERIFIED description of the real place and must be followed exactly — massing, proportions, materials, roofline, window pattern and distinctive features. Do not substitute a generic or remembered version, and do not invent features it does not mention.
 Capture the real-world appearance as it would be photographed on location.
 ` : '';
 
