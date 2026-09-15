@@ -37,6 +37,12 @@ serve(async (req) => {
     const allowedSources = parseNameList(url.searchParams.get('sources'));
     const featuredSources = parseNameList(url.searchParams.get('featured'));
     const MAX_FEATURED = 3;
+    // How long a story from a featured source keeps its featured slot (1-5 days, default 2)
+    const parsedFeaturedDays = parseInt(url.searchParams.get('featuredDays') || '', 10);
+    const featuredDays = Number.isFinite(parsedFeaturedDays)
+      ? Math.min(5, Math.max(1, parsedFeaturedDays))
+      : 2;
+    const featuredMaxAgeMinutes = featuredDays * 24 * 60;
 
     if (!feedSlug) {
       return new Response(
