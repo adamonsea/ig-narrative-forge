@@ -714,12 +714,38 @@ serve(async (req) => {
                 } catch (auditError) {
                   console.warn(`   (non-fatal) could not record zero-extraction audit: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
                 }
+
+                // ADDITIVE FALLBACK: the page loaded but no links were extracted.
+                // Try sitemaps / JSON-LD, then AI extraction. Fails soft.
+                const recovery = await attemptDeepRecovery(supabase, dbOps, {
+                  sourceUrl: source.normalizedUrl,
+                  sourceId: source.source_id,
+                  sourceName: source.source_name,
+                  topicId,
+                  maxAgeDays: effectiveMaxAgeDays,
+                  scrapingConfig: source.scraping_config || {}
+                });
+
+                await recordScrapeRun(supabase, {
+                  source_id: source.source_id,
+                  topic_id: topicId,
+                  method: recovery.method || scrapeResult.method || 'unknown',
+                  methods_tried: [scrapeResult.method || 'unknown', ...recovery.methodsTried],
+                  urls_discovered: recovery.urlsDiscovered,
+                  urls_new: recovery.urlsNew,
+                  articles_stored: recovery.stored,
+                  ai_pages_used: recovery.aiPagesUsed,
+                  error_code: recovery.stored > 0 ? null : 'zero_extraction',
+                  error_detail: recovery.error || null
+                });
+
                 return {
                   sourceId: source.source_id,
                   sourceName: source.source_name,
                   success: true,
-                  articlesFound: 0,
-                  articlesScraped: 0,
+                  articlesFound: recovery.urlsDiscovered,
+                  articlesScraped: recovery.stored,
+                  articlesStored: recovery.stored,
                   executionTimeMs: Date.now() - startTime
                 } as ScraperSourceResult;
               }
