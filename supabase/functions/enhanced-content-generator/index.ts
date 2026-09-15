@@ -1180,11 +1180,12 @@ Return in JSON format:
     let effectiveWritingStyle = writingStyle || 'journalistic';
     let dripFeedEnabled = false;
     let autoSimplifyEnabled = false; // Controls whether stories skip editorial review
+    let houseStyleGuidance = '';
     
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled')
+        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples')
         .eq('id', article.topic_id)
         .maybeSingle();
       
@@ -1194,7 +1195,21 @@ Return in JSON format:
         effectiveWritingStyle = writingStyle ?? topicData.default_writing_style ?? 'journalistic';
         dripFeedEnabled = topicData.drip_feed_enabled || false;
         autoSimplifyEnabled = topicData.auto_simplify_enabled || false;
-        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}, autoSimplify=${autoSimplifyEnabled}`);
+
+        const notes = (topicData.house_style_notes || '').trim();
+        const examples = (topicData.house_style_examples || '').trim();
+        if (notes || examples) {
+          houseStyleGuidance = [
+            'HOUSE STYLE FOR THIS FEED (the editor\'s own instructions — follow them over any generic guidance, but never over factual accuracy):',
+            notes ? notes.slice(0, 2000) : '',
+            examples
+              ? `EXAMPLE SENTENCES THE EDITOR LIKES (match their rhythm and register, not their subject):\n${examples.slice(0, 2000)}`
+              : '',
+          ].filter(Boolean).join('\n\n');
+          console.log('🏷️ House style applied for this feed');
+        }
+
+        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}, autoSimplify=${autoSimplifyEnabled}, houseStyle=${houseStyleGuidance ? 'yes' : 'no'}`);
       }
     }
 
