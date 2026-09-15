@@ -33,6 +33,14 @@ export const GatheringProgressIndicator = ({
   const [gatheringStatuses, setGatheringStatuses] = useState<GatheringStatus[]>([]);
   const [totalProgress, setTotalProgress] = useState(0);
   const [jobStatus, setJobStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
+  // Completion must be announced once per run, never on every poll.
+  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    completedRef.current = false;
+  }, [jobRunId, isVisible]);
 
   useEffect(() => {
     if (!isVisible || !topicId) return;
@@ -49,13 +57,15 @@ export const GatheringProgressIndicator = ({
           
           if (jobRun) {
             setJobStatus(jobRun.status as any);
-            
-            if (jobRun.status === 'completed' && onComplete) {
-              onComplete();
+
+            if ((jobRun.status === 'completed' || jobRun.status === 'failed') && !completedRef.current) {
+              completedRef.current = true;
+              onCompleteRef.current?.();
               return;
             }
           }
         }
+
 
         // Get all sources for this topic via junction table
         const { data: topicSources, error: sourcesError } = await supabase
