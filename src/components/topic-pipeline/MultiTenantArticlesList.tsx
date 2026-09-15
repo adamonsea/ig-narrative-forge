@@ -81,7 +81,25 @@ export default function MultiTenantArticlesList({
   const [bulkDeleteCount, setBulkDeleteCount] = useState<number | null>(null);
   const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
   const [illustrationOverrides, setIllustrationOverrides] = useState<Record<string, boolean>>({});
+  // Duplicates from other sources are hidden behind their leader by default.
+  const [showAllDuplicates, setShowAllDuplicates] = useState(false);
+  const [expandedDuplicateGroups, setExpandedDuplicateGroups] = useState<Set<string>>(new Set());
   const prefersReducedMotion = useReducedMotion();
+
+  const toggleDuplicateGroup = (groupId: string) => {
+    setExpandedDuplicateGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
+  const visibleArticles = articles.filter(article => {
+    const info = duplicateMap?.get(article.id);
+    if (!info || info.isDuplicateLeader) return true;
+    return showAllDuplicates || expandedDuplicateGroups.has(info.duplicateGroupId);
+  });
 
   useEffect(() => {
     if (articles.length === 0) {
