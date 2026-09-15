@@ -133,10 +133,9 @@ export const GatheringProgressIndicator = ({
           setTotalProgress(overallProgress);
         }
 
-        // Auto-complete if job is done or all sources completed
-        if ((jobStatus === 'completed' || totalProgress >= 100) && onComplete) {
-          setTimeout(() => onComplete(), 2000);
-        }
+        // Completion is announced only from the job run status above, so an
+        // already-scraped source list can't re-fire it every poll.
+
 
       } catch (error) {
         console.error('Error fetching content gathering status:', error);
