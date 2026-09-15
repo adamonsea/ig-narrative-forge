@@ -253,6 +253,22 @@ export default function MultiTenantArticlesList({
             {article.title}
           </h3>
 
+          {/* Same story from other sources, collapsed behind the first report */}
+          {dupInfo && dupInfo.isDuplicateLeader && dupInfo.similarCount > 0 && !showAllDuplicates && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleDuplicateGroup(dupInfo.duplicateGroupId)}
+              className="h-6 px-2 -ml-2 text-xs text-amber-700 hover:text-amber-800"
+              aria-expanded={expandedDuplicateGroups.has(dupInfo.duplicateGroupId)}
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              {expandedDuplicateGroups.has(dupInfo.duplicateGroupId)
+                ? 'Hide similar reports'
+                : `${dupInfo.similarCount} similar from other source${dupInfo.similarCount > 1 ? 's' : ''}`}
+            </Button>
+          )}
+
           {/* Author */}
           {article.author && (
             <p className="text-sm text-muted-foreground">by {article.author}</p>
