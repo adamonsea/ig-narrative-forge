@@ -174,7 +174,10 @@ export default function Widgets() {
     if (config.customAvatar && isValidAvatarUrl(config.customAvatar)) {
       attrs.push(`data-avatar="${config.customAvatar.replace(/"/g, "&quot;")}"`);
     }
-    if (config.showSubscribe) attrs.push(`data-subscribe="true"`);
+    if (config.showSubscribe) {
+      attrs.push(`data-subscribe="true"`);
+      if (config.frequency === "weekly") attrs.push(`data-frequency="weekly"`);
+    }
 
     return `<!-- Curatr Widget -->
 <div id="curatr-widget" ${attrs.join(" ")}></div>
