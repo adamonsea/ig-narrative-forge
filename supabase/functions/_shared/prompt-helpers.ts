@@ -98,6 +98,18 @@ ${storyText.slice(0, 2000)}`
       return null;
     }
     
+    // Author-supplied description wins over anything the model invented.
+    const resultLower = result.toLowerCase();
+    const matched = Object.entries(descriptions).find(
+      ([name, text]) => name && text && resultLower.includes(name.toLowerCase())
+    );
+    if (matched) {
+      const [name, text] = matched;
+      const authored = `${name} (${String(text).slice(0, 400)})`;
+      console.log('Using author-supplied landmark description:', authored);
+      return authored;
+    }
+
     console.log('Extracted location details:', result);
     return result;
   } catch (error) {
