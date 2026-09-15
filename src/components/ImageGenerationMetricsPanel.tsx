@@ -127,6 +127,30 @@ export const ImageGenerationMetricsPanel: React.FC = () => {
                 </tr>
               </tbody>
             </table>
+
+            {topicSpend.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium mb-2">Spend by feed</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2 pr-4 font-medium">Feed</th>
+                      <th className="py-2 pr-4 font-medium">Images</th>
+                      <th className="py-2 font-medium">Est. spend</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topicSpend.map((t) => (
+                      <tr key={t.key} className="border-b last:border-0">
+                        <td className="py-2 pr-4">{t.name}</td>
+                        <td className="py-2 pr-4">{t.count}</td>
+                        <td className="py-2">${t.costUsd.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
