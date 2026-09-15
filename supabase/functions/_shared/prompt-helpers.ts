@@ -54,16 +54,16 @@ export async function extractLocationDetails(
           role: 'user',
           content: `Identify any SPECIFIC LOCATION, BUILDING, or LANDMARK mentioned in this story.
 
-KNOWN LOCAL LANDMARKS (use exact name if matched):
-${landmarksList}
+KNOWN LOCAL LANDMARKS (use exact name if matched; any text after an em dash is the verified description of how it actually looks):
+- ${landmarksList}
 
 REGION: ${regionContext}
 
 INSTRUCTIONS:
 1. Look for named buildings, venues, parks, streets, or landmarks
 2. If a known landmark is mentioned, use its EXACT name from the list
-3. Include architectural style/era (e.g., "Victorian pavilion", "Art Deco theatre", "modernist gallery")
-4. Note distinctive visual features from public knowledge
+3. If that landmark has a verified description above, use THAT description verbatim — do not invent or substitute features
+4. Otherwise include architectural style/era (e.g., "Victorian pavilion", "Art Deco theatre", "modernist gallery") and distinctive visual features from public knowledge
 
 RETURN FORMAT (single line):
 "[Exact Name] ([architectural style], [distinctive visual features])"
