@@ -112,7 +112,8 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
           topicName: topic.name,
           region: topic.region,
           mode: 'describe',
-          landmark
+          landmark,
+          imageUrls: (landmarkPhotos[landmark] || []).map(p => p.url)
         }
       });
       if (error) throw error;
