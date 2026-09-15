@@ -24,9 +24,9 @@ const PRICES: Record<string, Record<string, number>> = {
   'gpt-image-2.5-sunburst': { low: 0.006, medium: 0.041, high: 0.165, xhigh: 0.25, max: 0.32 },
 };
 
-// Kept small so one invocation finishes well inside the function time limit.
-// The admin page loops story by story and shows progress.
-const MAX_GENERATIONS_PER_RUN = 12;
+// Edge functions are killed after 150s idle, and a single high-quality image can
+// take over a minute. One image per invocation; the admin page loops the grid.
+const MAX_GENERATIONS_PER_RUN = 1;
 
 const requestSchema = z.object({
   storyIds: z.array(z.string().uuid()).min(1).max(4),
@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
               success: true,
             });
 
-            results.push({ storyId, model, quality, imageUrl, costUsd, durationMs });
+            results.push({ storyId, model, quality, imageUrl, costUsd, durationMs, prompt });
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             console.warn(`Bench failure ${model}/${quality} on ${storyId}: ${message}`);
@@ -258,11 +258,9 @@ Deno.serve(async (req) => {
               duration_ms: Date.now() - started,
             });
 
-            results.push({ storyId, model, quality, error: message });
+            results.push({ storyId, model, quality, error: message, prompt });
           }
 
-          // Small gap between generations to stay inside image rate limits.
-          await new Promise((resolve) => setTimeout(resolve, 800));
         }
       }
     }
