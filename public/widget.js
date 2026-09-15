@@ -91,7 +91,10 @@
     // Per-embed source controls: which publications to show, and which to feature on top
     const sourceList = sanitiseNameList(container.dataset.sources);
     const featuredList = sanitiseNameList(container.dataset.featured);
-    const variantKey = `${sourceList}|${featuredList}`;
+    // How many days a story from a featured source stays in the featured strip (1-5, default 2)
+    const parsedFeaturedDays = parseInt(container.dataset.featuredDays, 10);
+    const featuredDays = isNaN(parsedFeaturedDays) ? 2 : Math.min(5, Math.max(1, parsedFeaturedDays));
+    const variantKey = `${sourceList}|${featuredList}|${featuredDays}`;
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
