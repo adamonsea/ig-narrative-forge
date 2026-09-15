@@ -334,6 +334,47 @@ ANTI-REPETITION RULES:
     }
   }
 
+  // Pull a few recently published stories from this feed to anchor the house voice.
+  // These are style references only — never a source of facts.
+  async function fetchStyleAnchors(supabase: any, topicId: string): Promise<string> {
+    try {
+      const { data } = await supabase
+        .from('stories')
+        .select(`
+          title,
+          created_at,
+          slides!inner(content, slide_number),
+          topic_article:topic_articles!inner(topic_id)
+        `)
+        .eq('topic_articles.topic_id', topicId)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (!data?.length) return '';
+
+      const samples = data
+        .map((story: any) => {
+          const slides = (story.slides || [])
+            .sort((a: any, b: any) => (a.slide_number || 0) - (b.slide_number || 0))
+            .slice(0, 3)
+            .map((s: any) => (s.content || '').trim())
+            .filter(Boolean);
+          return slides.length ? slides.join('\n') : '';
+        })
+        .filter(Boolean)
+        .slice(0, 3);
+
+      if (!samples.length) return '';
+
+      return `HOUSE VOICE SAMPLES (published on this feed — match their RHYTHM and REGISTER only, never their subject matter or facts):
+${samples.map((s: string, i: number) => `--- sample ${i + 1} ---\n${s}`).join('\n')}`;
+    } catch (error) {
+      console.error('Error fetching style anchors (non-fatal):', error);
+      return '';
+    }
+  }
+
   // Generate slides using DeepSeek
   async function generateSlidesWithDeepSeek(
     article: Article, 
