@@ -647,7 +647,9 @@ OUTPUT FORMAT (JSON):
           body: JSON.stringify({
             model: 'gpt-4o-mini',
             messages: chatMessages,
-            temperature: 0.7,
+            temperature: 0.85,
+            frequency_penalty: 0.4,
+            presence_penalty: 0.3,
             max_tokens: maxTokens,
             response_format: { type: 'json_object' },
           }),
