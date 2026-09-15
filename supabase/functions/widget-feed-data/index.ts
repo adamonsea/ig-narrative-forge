@@ -281,7 +281,7 @@ serve(async (req) => {
         const featured = working
           .filter(s =>
             featuredSources.includes(norm(s.source_name)) &&
-            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutes)
+            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutesFor(norm(s.source_name)))
           )
           .slice(0, MAX_FEATURED)
           .map(s => ({ ...s, featured: true }));
