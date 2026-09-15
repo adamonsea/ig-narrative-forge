@@ -634,6 +634,24 @@ serve(async (req) => {
     if (locationDetails) {
       console.log(`Location identified: ${locationDetails}`)
     }
+
+    // Which saved place photographs (if any) match the place this story is about
+    const subjectPhotoUrls: string[] = []
+    if (locationDetails && topicLandmarkPhotos) {
+      const haystack = locationDetails.toLowerCase()
+      for (const [place, photos] of Object.entries(topicLandmarkPhotos)) {
+        if (!place || !Array.isArray(photos) || photos.length === 0) continue
+        if (!haystack.includes(place.toLowerCase())) continue
+        for (const photo of photos) {
+          const url = (photo as any)?.url
+          if (typeof url === 'string' && url) subjectPhotoUrls.push(url)
+        }
+      }
+    }
+    if (subjectPhotoUrls.length > 0) {
+      console.log(`🏛️ ${subjectPhotoUrls.length} reference photo(s) matched for this story's place`)
+    }
+    
     
     // Extract subject matter with location context
     const subjectMatter = await extractSubjectMatter(
