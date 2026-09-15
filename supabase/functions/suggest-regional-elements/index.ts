@@ -78,7 +78,8 @@ serve(async (req) => {
       existingOrganizations = [],
       elementType, // 'landmarks', 'postcodes', 'organizations', or 'all'
       mode, // optional: 'describe' returns a visual description of one landmark
-      landmark // the landmark name to describe when mode === 'describe'
+      landmark, // the landmark name to describe when mode === 'describe'
+      imageUrls // optional reference photographs to describe from
     } = await req.json();
 
     // Verify authentication and topic ownership
