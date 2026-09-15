@@ -75,6 +75,7 @@ export default function PublicWidgetBuilder() {
     customTitle: '',
     customAvatar: '',
     showSubscribe: false,
+    frequency: 'daily',
 
   });
 
