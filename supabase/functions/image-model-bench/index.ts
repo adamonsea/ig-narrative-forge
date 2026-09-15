@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
       if (!prompt) {
         const [storyTone, locationDetails] = await Promise.all([
           analyzeStoryTone(slides || [], OPENAI_API_KEY),
-          extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion),
+          extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion, topicLandmarkDescriptions),
         ]);
         const subjectMatter = await extractSubjectMatter(
           slides || [],
