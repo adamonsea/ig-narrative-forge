@@ -56,6 +56,27 @@ const expertiseGuidance: Record<string, string> = {
 
 const getGuidance = (map: Record<string, string>, key: string, fallback: string) => map[key] || fallback;
 
+// Phrases and habits that instantly read as machine-written copy.
+const AI_TELL_PHRASES = [
+  'in a move that', 'nestled', 'at the end of the day', 'sparked outrage',
+  'leaves residents wondering', 'underscores', 'a stark reminder', 'as the dust settles',
+  'in today\'s world', 'it is important to note', 'delve', 'tapestry', 'testament to',
+  'plays a crucial role', 'navigating the', 'sends a clear message', 'remains to be seen',
+];
+
+const HUMAN_VOICE_RULES = `SOUND HUMAN (non-negotiable):
+- BANNED phrases — never use these or close variants: ${AI_TELL_PHRASES.map((p) => `"${p}"`).join(', ')}.
+- BANNED construction: "This isn't just X, it's Y" (and any "not only ... but also" rhetorical flourish).
+- Do not use three-part lists for rhythm ("faster, cheaper and greener"). Two items, or one specific item, is almost always better.
+- No stacked em-dashes. At most one dash across the whole carousel.
+- Vary sentence length deliberately. A short fragment is allowed. Two long sentences in a row is not.
+- No two slides may open with the same word or the same grammatical shape.
+- Never open a slide with a participle ("Following the decision, ...", "Highlighting concerns, ...").
+- Prefer the specific noun, name, street, number or date from the article to any general one ("Terminus Road", not "the town centre"; "£1.4m", not "significant funding").
+- If the article quotes someone, use their words rather than paraphrasing their view into flat summary.
+- Do not use editorialising verbs ("slammed", "blasted", "hit out", "erupted") where the article reports plainly.
+- Write like a local reporter filing copy, not like a press release or an explainer.`;
+
 // Chat call with automatic escalation. Requests are routed by the shared LLM router.
 // On HTTP 400 we escalate to a genuinely different provider (Lovable AI Gateway),
 // not to DeepSeek's "pro" tier — that tier now serves the same V4.1 Flash model,
