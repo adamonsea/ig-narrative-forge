@@ -755,6 +755,8 @@ const TopicDashboard = () => {
                   currentTone={topic.default_tone}
                   currentWritingStyle={topic.default_writing_style}
                   currentIllustrationStyle={topic.illustration_style}
+                  currentHouseStyleNotes={(topic as any).house_style_notes}
+                  currentHouseStyleExamples={(topic as any).house_style_examples}
                   onUpdate={() => loadTopicAndStats()}
                 />
               </section>
