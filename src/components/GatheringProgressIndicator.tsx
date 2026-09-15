@@ -149,7 +149,7 @@ export const GatheringProgressIndicator = ({
     const interval = setInterval(fetchGatheringStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [topicId, isVisible, jobRunId, jobStatus, totalProgress, onComplete]);
+  }, [topicId, isVisible, jobRunId]);
 
   if (!isVisible || gatheringStatuses.length === 0) {
     return null;
