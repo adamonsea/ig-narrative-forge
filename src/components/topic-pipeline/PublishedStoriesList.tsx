@@ -96,6 +96,10 @@ interface PublishedStoriesListProps {
   loading?: boolean;
   topicSlug?: string;
   topicId?: string;
+  totalPublishedCount?: number | null;
+  hasMorePublished?: boolean;
+  loadingMorePublished?: boolean;
+  onLoadMorePublished?: () => void;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -109,7 +113,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onRefresh,
   loading = false,
   topicSlug,
-  topicId
+  topicId,
+  totalPublishedCount = null,
+  hasMorePublished = false,
+  loadingMorePublished = false,
+  onLoadMorePublished
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
