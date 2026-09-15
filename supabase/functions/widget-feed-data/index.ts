@@ -22,6 +22,21 @@ serve(async (req) => {
     const url = new URL(req.url);
     const feedSlug = url.searchParams.get('feed');
     const maxStories = Math.min(Math.max(parseInt(url.searchParams.get('max') || '5'), 1), 10);
+    const mode = url.searchParams.get('mode');
+
+    // Optional per-embed source controls (comma separated publication names)
+    const parseNameList = (raw: string | null): string[] => {
+      if (!raw) return [];
+      return raw
+        .slice(0, 600)
+        .split(',')
+        .map(n => n.trim().toLowerCase())
+        .filter(n => n.length > 0 && n.length <= 80)
+        .slice(0, 25);
+    };
+    const allowedSources = parseNameList(url.searchParams.get('sources'));
+    const featuredSources = parseNameList(url.searchParams.get('featured'));
+    const MAX_FEATURED = 3;
 
     if (!feedSlug) {
       return new Response(
