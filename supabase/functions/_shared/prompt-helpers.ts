@@ -10,22 +10,72 @@ interface SlideContent {
 
 /**
  * Finds which saved place name a piece of text is actually about.
- * Whole-word matching, longest (most specific) name wins, so "prom" never
- * matches "prominent"/"promenade" inside another landmark's description.
+ *
+ * Word-aware, not substring: "prom" never matches "promenade".
+ * Partial names work in both directions, so the saved entry "Towner Art
+ * Gallery" still matches a story that only says "Towner", and the saved
+ * entry "Towner" still matches "Towner Art Gallery" — but only when a
+ * distinctive (non-generic) word lines up, so "Eastbourne Pier" can't be
+ * claimed by a bare mention of "the pier".
  */
+const PLACE_STOPWORDS = new Set([
+  'the', 'a', 'an', 'of', 'at', 'in', 'on', 'and', 'for', 'de', 'la', 'st', 'saint',
+]);
+
+// Words that describe a *kind* of place rather than identify one.
+const GENERIC_PLACE_WORDS = new Set([
+  'gallery', 'galleries', 'theatre', 'theater', 'centre', 'center', 'park', 'gardens',
+  'garden', 'road', 'street', 'avenue', 'lane', 'drive', 'square', 'pier', 'beach',
+  'house', 'hall', 'museum', 'station', 'school', 'college', 'hospital', 'church',
+  'library', 'market', 'bridge', 'car', 'park', 'seafront', 'promenade', 'town',
+  'village', 'city', 'green', 'common', 'field', 'ground', 'grounds', 'club',
+  'hotel', 'pub', 'inn', 'shop', 'store', 'arena', 'stadium', 'pavilion', 'bandstand',
+]);
+
+function placeTokens(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/['’]s\b/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map(t => (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t))
+    .filter(t => !PLACE_STOPWORDS.has(t));
+}
+
 export function matchPlaceName(text: string, names: string[]): string | null {
   if (!text || !names?.length) return null;
-  const haystack = text.toLowerCase();
+  const haystack = new Set(placeTokens(text));
+  if (haystack.size === 0) return null;
+
   let best: string | null = null;
+  let bestScore = 0;
+
   for (const name of names) {
     if (!name || typeof name !== 'string') continue;
-    const escaped = name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i');
-    if (!pattern.test(haystack)) continue;
-    if (!best || name.length > best.length) best = name;
+    const tokens = placeTokens(name);
+    if (tokens.length === 0) continue;
+
+    const matched = tokens.filter(t => haystack.has(t));
+    if (matched.length === 0) continue;
+
+    const distinctive = matched.filter(t => !GENERIC_PLACE_WORDS.has(t));
+    const ratio = matched.length / tokens.length;
+
+    // Accept a full match, or a partial one anchored by a distinctive word.
+    if (ratio < 1 && distinctive.length === 0) continue;
+    if (ratio < 0.5 && distinctive.length === 0) continue;
+
+    // Prefer more matched words, then the more distinctive/specific entry.
+    const score = matched.length * 10 + distinctive.length * 5 + ratio;
+    if (score > bestScore) {
+      bestScore = score;
+      best = name;
+    }
   }
+
   return best;
 }
+
 
 /**
  * Extracts specific location/landmark details from story content
