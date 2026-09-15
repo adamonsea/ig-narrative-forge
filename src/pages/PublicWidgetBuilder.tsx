@@ -38,7 +38,8 @@ interface WidgetConfig {
   frequency: 'daily' | 'weekly';
   sources: string[];
   featuredSources: string[];
-  featuredDays: number;
+  /** Days each featured source keeps its top slot, keyed by publication name */
+  featuredDaysBySource: Record<string, number>;
 }
 
 interface FeedSource {
@@ -88,7 +89,7 @@ export default function PublicWidgetBuilder() {
     frequency: 'daily',
     sources: [],
     featuredSources: [],
-    featuredDays: 2,
+    featuredDaysBySource: {},
   });
 
   // Load topic data
@@ -332,7 +333,7 @@ export default function PublicWidgetBuilder() {
     }
     if (featuredParam) {
       code += ` data-featured="${featuredParam.replace(/"/g, '&quot;')}"`;
-      code += ` data-featured-days="${config.featuredDays}"`;
+      code += ` data-featured-days="${featuredDaysParam}"`;
     }
 
 
