@@ -13,6 +13,18 @@ import { KeywordSuggestionTool } from "./KeywordSuggestionTool";
 import { RegionalElementsSuggestionTool } from "./RegionalElementsSuggestionTool";
 import { RegionalKeywordAutoPopulate } from "./RegionalKeywordAutoPopulate";
 
+interface LandmarkPhoto {
+  url: string;
+  credit?: string;
+}
+
+interface PhotoCandidate {
+  url: string;
+  thumbUrl: string;
+  credit: string;
+  title: string;
+}
+
 interface Topic {
   id: string;
   name: string;
