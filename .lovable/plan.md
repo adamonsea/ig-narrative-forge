@@ -28,8 +28,19 @@ The tab reloads everything every 30 seconds, plus on every live database change 
 
 **A consistency check.** After the changes, load the Eastbourne Published tab repeatedly and confirm the story count is stable, every story shows the slide count it claims, and no toast appears unless an action genuinely failed.
 
+## Making the page feel fast
+
+**Small images instead of full-size ones.** Every story card currently loads the full-resolution cover illustration — often over a megabyte each — even though it's displayed as a thumbnail. There is already a helper for requesting resized images; the Published list doesn't use it. Cards will request a thumbnail-sized version, and the full image only when a story is expanded.
+
+**Load images only when scrolled into view.** None of the story images defer loading today, so a page of ten stories downloads ten large images at once. Adding lazy loading and fixed image dimensions stops the layout jumping and cuts the initial load.
+
+**Fetch less per refresh.** The list only needs the slide text of the stories currently on screen, not all of them. Slides for collapsed stories load on demand, which removes the heaviest query from every refresh.
+
+
 ## Technical notes
 
 - `src/hooks/useMultiTenantTopicPipeline.tsx`: consolidate the `get_admin_topic_stories` per-status fetch (lines ~467-497) and the direct `stories` query (lines ~502-535) into primary + fallback rather than concat/dedupe; carry the inline `slides(...)` selection through the merge; make the slides pass (lines ~614-657) preserve prior slides on error and expose a `slidesError` flag; add error handling to the parliamentary mentions query (line ~683) so a failure keeps stories visible; gate the 30s poll (lines ~1369-1379) on subscription status and `document.visibilityState`; replace per-load destructive toasts (lines ~217, ~795) with a single deduplicated inline error state.
 - `src/components/UnifiedContentPipeline.tsx` / `PublishedStoriesList.tsx`: surface the inline "couldn't load — retry" state and the per-story "slides not loaded" state instead of rendering empty; audit toast call sites and remove incidental ones.
+- `PublishedStoriesList.tsx` images (lines ~626-628, ~738-743): route `cover_illustration_url` through `optimizeImageUrl` from `src/lib/imageOptimization.ts` (thumbnail width for the card, full size only in the expanded/preview view), add `loading="lazy"`, `decoding="async"` and explicit width/height.
+- Slides on demand: fetch slide rows for expanded stories only (via the owner-scoped `get_admin_slides_for_stories` function), keeping `slide_count` from the story row for the collapsed badge.
 - No schema changes. The owner-scoped slides function added earlier stays as the fast path.
