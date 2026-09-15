@@ -256,13 +256,14 @@ Deno.serve(async (req) => {
     // Log the batch operation
     await supabase.from('system_logs').insert({
       level: successCount > 0 ? 'info' : (failureCount > 0 ? 'warn' : 'info'),
-      message: `Auto-illustration batch completed: ${successCount} success, ${failureCount} failed`,
+      message: `Auto-illustration batch completed: ${successCount} success, ${queuedCount} queued, ${failureCount} failed`,
       context: {
         topicId: topicId || 'all_holiday_topics',
         topicsScanned: topicsToProcess.length,
         eligibleStories: eligibleStories?.length || 0,
         anonymitySkipped,
         successCount,
+        queuedCount,
         failureCount,
         ageFilterDays: 7,
       },
@@ -276,6 +277,7 @@ Deno.serve(async (req) => {
         eligibleStories: eligibleStories?.length || 0,
         anonymitySkipped,
         successCount,
+        queuedCount,
         failureCount,
         results,
       }),
