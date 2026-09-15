@@ -715,7 +715,23 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       // Map to MultiTenantStory shape - the RPC already provides clean data structure
       const storiesData = parliamentaryFilteredStories.map((story: any) => {
-        const storySlides = slidesData.filter(slide => slide.story_id === story.id);
+        // Prefer slide text that came back inline with the story row; only fall
+        // back to the separately fetched rows.
+        let storySlides: any[] = story.slides?.length
+          ? story.slides
+          : slidesData.filter((slide: any) => slide.story_id === story.id);
+        let slidesLoadFailed = false;
+
+        if (storySlides.length === 0 && (story.slide_count || 0) > 0 && slidesHadError) {
+          // The slide fetch failed — keep whatever slides were loaded last time
+          // instead of rendering the story as if it had none.
+          const previous = prevSlidesRef.current.get(story.id) || [];
+          if (previous.length > 0) {
+            storySlides = previous;
+            slidesLoadFailed = true;
+          }
+        }
+
         const isParliamentary = parliamentaryStoryIds.has(story.id);
         
         console.log('🔍 Story mapping debug:', {
@@ -736,7 +752,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           is_published: story.is_published,
           created_at: story.created_at,
           updated_at: story.updated_at,
-          slides: storySlides, // Now properly loaded with slide data
+          slides: storySlides,
+          slides_load_failed: slidesLoadFailed,
+          slide_count: story.slide_count || storySlides.length,
           article_title: story.article_title,
           story_type: story.story_type,
           title: story.title,
@@ -759,6 +777,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           scheduled_publish_at: story.scheduled_publish_at || null
         };
       });
+
+      // Remember the latest good slides per story for fail-safe re-renders
+      prevSlidesRef.current.clear();
+      for (const s of storiesData) {
+        if (s.slides.length > 0) prevSlidesRef.current.set(s.id, s.slides);
+      }
 
       console.log('📊 Final stories data with slides:', {
         totalStories: storiesData.length,
