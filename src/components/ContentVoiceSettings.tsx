@@ -23,9 +23,21 @@ export const ContentVoiceSettings = ({
   currentTone,
   currentWritingStyle,
   currentIllustrationStyle,
+  currentHouseStyleNotes,
+  currentHouseStyleExamples,
   onUpdate
 }: ContentVoiceSettingsProps) => {
   const { toast } = useToast();
+  const [houseStyleNotes, setHouseStyleNotes] = useState(currentHouseStyleNotes ?? '');
+  const [houseStyleExamples, setHouseStyleExamples] = useState(currentHouseStyleExamples ?? '');
+
+  useEffect(() => {
+    setHouseStyleNotes(currentHouseStyleNotes ?? '');
+  }, [currentHouseStyleNotes]);
+
+  useEffect(() => {
+    setHouseStyleExamples(currentHouseStyleExamples ?? '');
+  }, [currentHouseStyleExamples]);
 
   const autoSave = useCallback(async (field: string, value: string) => {
     try {
