@@ -189,6 +189,10 @@ Deno.serve(async (req) => {
         if (rawDescriptions && typeof rawDescriptions === 'object' && !Array.isArray(rawDescriptions)) {
           topicLandmarkDescriptions = rawDescriptions as Record<string, string>;
         }
+        const rawPhotos = (topicData as any)?.landmark_reference_images;
+        if (rawPhotos && typeof rawPhotos === 'object' && !Array.isArray(rawPhotos)) {
+          topicLandmarkPhotos = rawPhotos as Record<string, Array<{ url: string }>>;
+        }
       }
 
       const { data: slides } = await supabase
