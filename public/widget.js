@@ -329,7 +329,7 @@
     });
   }
 
-  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false) {
+  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false, frequency = 'daily') {
     const { feed, stories } = data;
     const accent = accentOverride || feed.brand_color || '#3b82f6';
     const displayName = customTitle || feed.name;
