@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
             output_bytes: imageData.length,
             credits: 0,
             // Batch route is billed at 50% of the standard per-image price.
-            cost_usd: job.model === 'gpt-image-1.5-low' ? 0.0065 : null,
+            cost_usd: job.model === 'gpt-image-2-low' ? 0.003 : job.model === 'gpt-image-1.5-low' ? 0.0065 : null,
           });
         } catch (_metricsError) {
           // non-critical

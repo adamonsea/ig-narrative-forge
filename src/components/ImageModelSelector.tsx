@@ -21,53 +21,53 @@ export interface ImageModel {
   experimental?: boolean;
 }
 
-// Illustrative models (editorial cartoon style) - GPT Image 1.5
+// Illustrative models (editorial cartoon style) - GPT Image 2
 export const illustrativeModels: ImageModel[] = [
   {
-    id: 'gpt-image-1.5-high',
+    id: 'gpt-image-2-high',
     name: 'Premium',
-    credits: 8,
+    credits: 7,
     provider: 'openai',
-    description: 'Highest quality editorial cartoons (GPT-Image-1.5)'
+    description: 'Highest quality editorial illustrations (GPT-Image-2)'
   },
   {
-    id: 'gpt-image-1.5-medium',
+    id: 'gpt-image-2-medium',
     name: 'Creative',
-    credits: 4,
+    credits: 3,
     provider: 'openai',
-    description: 'Balanced quality and cost (GPT-Image-1.5)'
+    description: 'Balanced quality and cost (GPT-Image-2)'
   },
   {
-    id: 'gpt-image-1.5-low',
+    id: 'gpt-image-2-low',
     name: 'Quick',
-    credits: 2,
+    credits: 1,
     provider: 'openai',
-    description: 'Fast generation, good quality (GPT-Image-1.5)'
+    description: 'Fast generation, good quality (GPT-Image-2)'
   }
 ];
 
-// Photographic models (documentary/photojournalism style) - GPT Image 1.5
+// Photographic models (documentary/photojournalism style) - GPT Image 2
 export const photographicModels: ImageModel[] = [
   {
-    id: 'gpt-image-1.5-high',
+    id: 'gpt-image-2-high',
     name: 'Premium',
-    credits: 8,
+    credits: 7,
     provider: 'openai',
-    description: 'Highest quality photorealistic images (GPT-Image-1.5)'
+    description: 'Highest quality photorealistic images (GPT-Image-2)'
   },
   {
-    id: 'gpt-image-1.5-medium',
+    id: 'gpt-image-2-medium',
     name: 'Creative',
-    credits: 4,
+    credits: 3,
     provider: 'openai',
-    description: 'Balanced quality and cost (GPT-Image-1.5)'
+    description: 'Balanced quality and cost (GPT-Image-2)'
   },
   {
-    id: 'gpt-image-1.5-low',
+    id: 'gpt-image-2-low',
     name: 'Quick',
-    credits: 2,
+    credits: 1,
     provider: 'openai',
-    description: 'Fast generation, good quality (GPT-Image-1.5)'
+    description: 'Fast generation, good quality (GPT-Image-2)'
   }
 ];
 
@@ -162,7 +162,7 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
           sideOffset={5}
         >
           <div className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 border-b">
-            OpenAI GPT Image 1.5 • {styleLabel} Mode
+            OpenAI GPT Image 2 • {styleLabel} Mode
           </div>
           {availableModels.map((model) => (
             <DropdownMenuItem

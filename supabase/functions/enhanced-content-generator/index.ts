@@ -1682,7 +1682,7 @@ Return in JSON format:
           },
           body: JSON.stringify({
             storyId,
-            model: 'gpt-image-1.5-low', // Quick tier - 2 credits
+            model: 'gpt-image-2-low', // Quick tier
             forceRegenerate: true,
             skipExistingImages: false,
             isAutomated: autoSimplifyEnabled // anonymity guard: block auto images for sexual-offence stories
