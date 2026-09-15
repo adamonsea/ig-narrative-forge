@@ -555,6 +555,29 @@ export default function Widgets() {
                       Nothing selected — the embed will show every publication.
                     </p>
                   )}
+                  {config.featuredSources.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="featured-days">Keep featured stories for</Label>
+                      <Select
+                        value={String(config.featuredDays)}
+                        onValueChange={(v) => setConfig(prev => ({ ...prev, featuredDays: Number(v) }))}
+                      >
+                        <SelectTrigger id="featured-days">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5].map(d => (
+                            <SelectItem key={d} value={String(d)}>
+                              {d} {d === 1 ? "day" : "days"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        After this, featured stories move down into the main list.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
