@@ -481,6 +481,13 @@ serve(async (req) => {
         topicLandmarks = topicData.landmarks
         console.log(`Using topic landmarks for location accuracy: ${topicLandmarks.length} landmarks available`)
       }
+
+      // Owner-written descriptions of how each place actually looks (fail-open)
+      const rawDescriptions = (topicData as any)?.landmark_descriptions
+      if (rawDescriptions && typeof rawDescriptions === 'object' && !Array.isArray(rawDescriptions)) {
+        topicLandmarkDescriptions = rawDescriptions as Record<string, string>
+        console.log(`Landmark descriptions available: ${Object.keys(topicLandmarkDescriptions).length}`)
+      }
     }
 
     // Guard: Photographic style requires feature flag and Replicate API key
