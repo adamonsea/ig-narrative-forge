@@ -143,7 +143,7 @@ export default function Widgets() {
     setPreviewLoading(true);
     let url = `${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=${config.max}`;
     if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
-    if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${config.featuredDays}`;
+    if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${encodeURIComponent(featuredDaysParam)}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
@@ -155,7 +155,7 @@ export default function Widgets() {
       })
       .catch(err => console.error("Preview fetch error:", err))
       .finally(() => setPreviewLoading(false));
-  }, [config.feed, config.max, sourcesParam, featuredParam, config.featuredDays]);
+  }, [config.feed, config.max, sourcesParam, featuredParam, featuredDaysParam]);
 
   const isValidAvatarUrl = (url: string) => {
     if (!url) return true;
