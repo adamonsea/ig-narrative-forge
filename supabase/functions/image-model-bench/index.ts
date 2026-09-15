@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
               form.append('quality', quality);
               form.append('output_format', 'webp');
               form.append('output_compression', '80');
-              for (const ref of referenceBlobs) {
+              for (const ref of [...referenceBlobs.slice(0, 2), ...(usePlacePhotos ? subjectBlobs : [])]) {
                 form.append('image[]', ref.blob, ref.name);
               }
               res = await fetch('https://api.openai.com/v1/images/edits', {
