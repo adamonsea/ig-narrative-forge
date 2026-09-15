@@ -505,8 +505,21 @@ export default function MultiTenantArticlesList({
         </div>
       )}
       
+      {duplicateMap && duplicateMap.size > 0 && (
+        <div className="flex items-center justify-end gap-2 pb-1">
+          <Label htmlFor="show-duplicates" className="text-xs text-muted-foreground">
+            Show duplicates
+          </Label>
+          <Switch
+            id="show-duplicates"
+            checked={showAllDuplicates}
+            onCheckedChange={setShowAllDuplicates}
+          />
+        </div>
+      )}
+
       <AnimatePresence initial={false} mode="popLayout">
-        {articles.map((article) => renderArticleCard(article))}
+        {visibleArticles.map((article) => renderArticleCard(article))}
       </AnimatePresence>
       
       {/* Load more button */}
