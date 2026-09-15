@@ -470,6 +470,9 @@ const ImageModelBench: React.FC = () => {
                         {r.reference_image_urls && r.reference_image_urls.length > 0 && (
                           <Badge variant="secondary">Style referenced</Badge>
                         )}
+                        {r.prompt_variant === 'handmade' && (
+                          <Badge variant="secondary">Hand-made wording</Badge>
+                        )}
                       </div>
                       {r.image_url && (
                         <div className="flex gap-1">
