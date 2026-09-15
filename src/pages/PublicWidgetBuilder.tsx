@@ -987,16 +987,19 @@ function WidgetPreview({
         </span>
       </div>
 
-      {/* Stories */}
-      <div className="divide-y" style={{ borderColor }}>
-        {data.stories.map((story, i) => (
+      {/* Stories — split into Featured / Latest, matching widget.js v1.5.0 */}
+      {(() => {
+        const featured = data.stories.filter((s: any) => (s as any).featured);
+        const latest = data.stories.filter((s: any) => !(s as any).featured);
+
+        const renderStory = (story: any, i: number) => (
           <div key={i} className="p-3 flex items-start gap-2">
-            <div 
-              className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" 
+            <div
+              className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
               style={{ background: accent }}
             />
             <div className="flex-1 min-w-0">
-              <a 
+              <a
                 href={story.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -1006,11 +1009,11 @@ function WidgetPreview({
                 {story.title}
               </a>
               {story.source_name && (
-                <span 
+                <span
                   className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded"
-                  style={{ 
-                    background: sourceBg, 
-                    color: mutedColor 
+                  style={{
+                    background: sourceBg,
+                    color: mutedColor
                   }}
                 >
                   {story.source_name}
@@ -1018,8 +1021,42 @@ function WidgetPreview({
               )}
             </div>
           </div>
-        ))}
-      </div>
+        );
+
+        const sectionLabel = (label: string) => (
+          <div
+            className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase"
+            style={{ color: mutedColor, letterSpacing: '0.06em' }}
+          >
+            {label}
+          </div>
+        );
+
+        if (featured.length === 0) {
+          return (
+            <div className="divide-y" style={{ borderColor }}>
+              {data.stories.map(renderStory)}
+            </div>
+          );
+        }
+
+        return (
+          <div>
+            {sectionLabel('Featured')}
+            <div className="divide-y" style={{ borderColor }}>
+              {featured.map(renderStory)}
+            </div>
+            {latest.length > 0 && (
+              <>
+                {sectionLabel('Latest')}
+                <div className="divide-y" style={{ borderColor }}>
+                  {latest.map(renderStory)}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Footer */}
       <div 

@@ -703,23 +703,26 @@ function WidgetPreview({
       </div>
 
 
-      {/* Stories */}
-      <div className="space-y-1">
-        {data.stories.map((story: any, idx: number) => (
-          <div 
+      {/* Stories — split into Featured / Latest, matching widget.js v1.5.0 */}
+      {(() => {
+        const featured = data.stories.filter((s: any) => s.featured);
+        const latest = data.stories.filter((s: any) => !s.featured);
+
+        const renderStory = (story: any, idx: number) => (
+          <div
             key={idx}
             className="flex items-start gap-2.5 p-2 rounded-lg transition-colors"
-            style={{ 
-              marginLeft: "-8px", 
+            style={{
+              marginLeft: "-8px",
               marginRight: "-8px",
             }}
           >
-            <div 
+            <div
               className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
               style={{ background: accent }}
             />
             <div className="flex-1 min-w-0">
-              <a 
+              <a
                 href={story.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -729,7 +732,7 @@ function WidgetPreview({
                 {story.title}
               </a>
               {story.source_name && (
-                <span 
+                <span
                   className="inline-block text-xs px-1.5 py-0.5 rounded mt-1"
                   style={{ background: isDark ? '#2a2a2a' : '#f3f4f6', color: textMuted }}
                 >
@@ -738,8 +741,34 @@ function WidgetPreview({
               )}
             </div>
           </div>
-        ))}
-      </div>
+        );
+
+        const sectionLabel = (label: string) => (
+          <div
+            className="text-[11px] font-semibold uppercase tracking-wide mb-1 mt-1"
+            style={{ color: textMuted, letterSpacing: "0.06em" }}
+          >
+            {label}
+          </div>
+        );
+
+        if (featured.length === 0) {
+          return <div className="space-y-1">{data.stories.map(renderStory)}</div>;
+        }
+
+        return (
+          <div className="space-y-1">
+            {sectionLabel("Featured")}
+            {featured.map(renderStory)}
+            {latest.length > 0 && (
+              <>
+                {sectionLabel("Latest")}
+                {latest.map(renderStory)}
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Subscribe box */}
       {showSubscribe && (
