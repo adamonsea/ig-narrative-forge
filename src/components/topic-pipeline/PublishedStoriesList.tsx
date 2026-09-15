@@ -158,10 +158,18 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       if (!data) throw new Error('No story was updated. Check topic ownership and access.');
       toast({ title: 'Published Immediately', description: `"${title}" is now live.` });
       onRefresh();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error publishing story:', e);
-      toast({ title: 'Publish failed', description: 'Could not publish story', variant: 'destructive' });
+      const detail = e?.message || 'Could not publish story';
+      toast({
+        title: 'Publish failed',
+        description: e?.code === '57014'
+          ? 'The database timed out. The story may still have published — refresh to check.'
+          : detail,
+        variant: 'destructive',
+      });
     } finally {
+
       setPublishingNow(prev => { const n = new Set(prev); n.delete(storyId); return n; });
     }
   };
