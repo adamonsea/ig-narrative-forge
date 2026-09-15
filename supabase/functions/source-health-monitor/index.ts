@@ -26,10 +26,51 @@ interface Classification {
 }
 
 // Classify why a source produced 0 articles based on the strongest available signal.
-function classifyReason(source: any, latestDaily: any): Classification {
+// The newest scrape run (when one exists) is the most reliable signal, because it
+// records exactly what the scraper found and why items were dropped.
+function classifyReason(source: any, latestDaily: any, latestRun?: any): Classification {
   const failure = (source.last_failure_reason || "").toString();
   const dailyErr = (latestDaily?.error_message || "").toString();
-  const blob = `${failure} ${dailyErr}`.toLowerCase();
+  const runErr = (latestRun?.error_detail || "").toString();
+  const blob = `${failure} ${dailyErr} ${runErr}`.toLowerCase();
+
+  if (latestRun) {
+    const discovered = latestRun.urls_discovered || 0;
+    const fresh = latestRun.urls_new || 0;
+    const rejections = latestRun.rejections || {};
+    const rejectedTotal = Object.values(rejections).reduce(
+      (sum: number, v: any) => sum + (Number(v) || 0),
+      0,
+    );
+
+    if (discovered === 0 && latestRun.error_code === "all_methods_failed") {
+      return {
+        reason_code: "blocked",
+        reason_detail: `Every method failed (tried: ${(latestRun.methods_tried || []).join(", ") || "unknown"})${runErr ? ` — ${runErr}` : ""}`,
+      };
+    }
+    if (discovered > 0 && fresh === 0) {
+      return {
+        reason_code: "no_new_urls",
+        reason_detail: `Found ${discovered} link(s), all already collected`,
+      };
+    }
+    if (rejectedTotal > 0) {
+      const parts = Object.entries(rejections)
+        .filter(([, v]) => Number(v) > 0)
+        .map(([k, v]) => `${v} ${k.replace(/_/g, " ")}`);
+      return {
+        reason_code: "age_cutoff",
+        reason_detail: `Found ${discovered} link(s) but kept none — rejected: ${parts.join(", ")}`,
+      };
+    }
+    if (discovered === 0 && latestRun.error_code === "zero_extraction") {
+      return {
+        reason_code: "unknown",
+        reason_detail: "Page loaded but no article links could be read — layout may have changed",
+      };
+    }
+  }
 
   if (/(404|not found|feed url|no feed|invalid feed|xml parse|not xml)/.test(blob)) {
     return { reason_code: "feed_404", reason_detail: failure || dailyErr || "Feed URL returns 404 / no valid feed found" };
