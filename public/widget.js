@@ -402,7 +402,7 @@
             ${remainingHTML}
           </div>
         </div>
-        ${showSubscribe ? getSubscribeHTML(feed, accent) : ''}
+        ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
         <div class="widget-footer">
           <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
             ${wideCtaText}
@@ -453,7 +453,7 @@
       <div class="widget-stories">
         ${storiesHTML}
       </div>
-      ${showSubscribe ? getSubscribeHTML(feed, accent) : ''}
+      ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
       <div class="widget-footer">
         <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
           ${ctaText}
