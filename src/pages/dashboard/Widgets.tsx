@@ -31,6 +31,7 @@ interface WidgetConfig {
   customTitle: string;
   customAvatar: string;
   showSubscribe: boolean;
+  frequency: "daily" | "weekly";
 }
 
 export default function Widgets() {
@@ -47,6 +48,7 @@ export default function Widgets() {
     customTitle: "",
     customAvatar: "",
     showSubscribe: false,
+    frequency: "daily",
   });
 
   const [copied, setCopied] = useState(false);
@@ -172,7 +174,10 @@ export default function Widgets() {
     if (config.customAvatar && isValidAvatarUrl(config.customAvatar)) {
       attrs.push(`data-avatar="${config.customAvatar.replace(/"/g, "&quot;")}"`);
     }
-    if (config.showSubscribe) attrs.push(`data-subscribe="true"`);
+    if (config.showSubscribe) {
+      attrs.push(`data-subscribe="true"`);
+      if (config.frequency === "weekly") attrs.push(`data-frequency="weekly"`);
+    }
 
     return `<!-- Curatr Widget -->
 <div id="curatr-widget" ${attrs.join(" ")}></div>
@@ -422,6 +427,30 @@ export default function Widgets() {
                   onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showSubscribe: checked }))}
                 />
               </div>
+
+              {/* Email frequency */}
+              {config.showSubscribe && (
+                <div className="space-y-2">
+                  <Label htmlFor="frequency">Email frequency</Label>
+                  <Select
+                    value={config.frequency}
+                    onValueChange={(value: "daily" | "weekly") => setConfig(prev => ({ ...prev, frequency: value }))}
+                  >
+                    <SelectTrigger id="frequency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily highlights</SelectItem>
+                      <SelectItem value="weekly">Weekly briefing (includes what's on)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    What new sign-ups from this embed will receive.
+                  </p>
+                </div>
+              )}
+
+
 
             </CardContent>
           </Card>

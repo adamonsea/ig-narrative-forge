@@ -15,7 +15,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.4.1';
+  const WIDGET_VERSION = '1.4.2';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -86,6 +86,8 @@
     // Custom avatar URL with XSS validation
     const customAvatar = isValidUrl(container.dataset.avatar) ? container.dataset.avatar : '';
     const showSubscribe = container.dataset.subscribe === 'true' || container.dataset.subscribe === '';
+    // Email cadence readers sign up for. Embeds without data-frequency stay daily.
+    const frequency = container.dataset.frequency === 'weekly' ? 'weekly' : 'daily';
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -111,9 +113,9 @@
     // Try to show cached data immediately while fetching fresh data
     const cached = getCachedData(feedSlug);
     if (cached) {
-      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe);
+      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
       attachClickHandlers(shadow, feedSlug);
-      attachSubscribeHandler(shadow, feedSlug, cached);
+      attachSubscribeHandler(shadow, feedSlug, cached, frequency);
     } else {
       wrapper.innerHTML = getLoadingHTML();
     }
@@ -125,7 +127,7 @@
         // Cache the successful response
         setCachedData(feedSlug, data);
         
-        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe);
+        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
         
         // Track impression after successful render (only if not cached initially)
         if (!cached) {
@@ -134,7 +136,7 @@
         
         // Attach click handlers for story tracking
         attachClickHandlers(shadow, feedSlug);
-        attachSubscribeHandler(shadow, feedSlug, data);
+        attachSubscribeHandler(shadow, feedSlug, data, frequency);
       })
       .catch(error => {
         console.error('Curatr Widget Error:', error);
@@ -231,7 +233,7 @@
     }
   }
 
-  function getSubscribeHTML(feed, accent) {
+  function getSubscribeHTML(feed, accent, frequency) {
     if (isAlreadySubscribed(feed.slug)) {
       return `
         <div class="widget-subscribe">
@@ -240,9 +242,13 @@
       `;
     }
 
+    const label = frequency === 'weekly'
+      ? 'Subscribe to the weekly briefing'
+      : 'Subscribe to daily email highlights';
+
     return `
       <div class="widget-subscribe">
-        <label class="subscribe-label" for="curatr-subscribe-email">Subscribe to email</label>
+        <label class="subscribe-label" for="curatr-subscribe-email">${label}</label>
         <form class="subscribe-form" novalidate>
           <input
             id="curatr-subscribe-email"
@@ -260,7 +266,8 @@
     `;
   }
 
-  function attachSubscribeHandler(shadow, feedSlug, data) {
+  function attachSubscribeHandler(shadow, feedSlug, data, frequency) {
+    const notificationType = frequency === 'weekly' ? 'weekly' : 'daily';
     const root = shadow.querySelector('.widget-subscribe');
     if (!root) return;
 
@@ -300,7 +307,7 @@
         const response = await fetch(`${API_BASE}/secure-newsletter-signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, topicId, notificationType: 'daily', source: 'widget' })
+          body: JSON.stringify({ email, topicId, notificationType, source: 'widget' })
         });
 
         const result = await response.json().catch(() => ({}));
@@ -322,7 +329,7 @@
     });
   }
 
-  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false) {
+  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false, frequency = 'daily') {
     const { feed, stories } = data;
     const accent = accentOverride || feed.brand_color || '#3b82f6';
     const displayName = customTitle || feed.name;
@@ -395,7 +402,7 @@
             ${remainingHTML}
           </div>
         </div>
-        ${showSubscribe ? getSubscribeHTML(feed, accent) : ''}
+        ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
         <div class="widget-footer">
           <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
             ${wideCtaText}
@@ -446,7 +453,7 @@
       <div class="widget-stories">
         ${storiesHTML}
       </div>
-      ${showSubscribe ? getSubscribeHTML(feed, accent) : ''}
+      ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
       <div class="widget-footer">
         <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
           ${ctaText}

@@ -34,6 +34,7 @@ interface WidgetConfig {
   customTitle: string;
   customAvatar: string;
   showSubscribe: boolean;
+  frequency: 'daily' | 'weekly';
 
 }
 
@@ -74,6 +75,7 @@ export default function PublicWidgetBuilder() {
     customTitle: '',
     customAvatar: '',
     showSubscribe: false,
+    frequency: 'daily',
 
   });
 
@@ -140,7 +142,7 @@ export default function PublicWidgetBuilder() {
     fetchPreview();
   }, [slug, config.maxHeadlines]);
 
-  const WIDGET_JS_VERSION = '1.4.0';
+  const WIDGET_JS_VERSION = '1.4.2';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
@@ -263,6 +265,9 @@ export default function PublicWidgetBuilder() {
     }
     if (config.showSubscribe) {
       code += ` data-subscribe="true"`;
+      if (config.frequency === 'weekly') {
+        code += ` data-frequency="weekly"`;
+      }
     }
 
     
@@ -559,6 +564,30 @@ export default function PublicWidgetBuilder() {
                     onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showSubscribe: checked }))}
                   />
                 </div>
+
+                {/* Email frequency */}
+                {config.showSubscribe && (
+                  <div className="space-y-2">
+                    <Label htmlFor="frequency">Email frequency</Label>
+                    <Select
+                      value={config.frequency}
+                      onValueChange={(value: 'daily' | 'weekly') => setConfig(prev => ({ ...prev, frequency: value }))}
+                    >
+                      <SelectTrigger id="frequency">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Daily highlights</SelectItem>
+                        <SelectItem value="weekly">Weekly briefing (includes what's on)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      What new sign-ups from this embed will receive.
+                    </p>
+                  </div>
+                )}
+
+
 
               </CardContent>
             </Card>
