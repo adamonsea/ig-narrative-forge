@@ -294,12 +294,13 @@ PLACE-SPECIFIC ELEMENTS (${region}):
     ? (variant === 'handmade' ? `
 LOCATION (silhouette only):
 Suggest "${locationHint}" through its overall silhouette and one or two unmistakable shapes.
+The bracketed description above is the verified appearance of this place — it overrides any other idea of how it looks.
 No architectural detail, no window counts, no ornament — a recognisable outline cut from flat ink.
 ` : `
-LOCATION ACCURACY (leverage AI knowledge):
-Render "${locationHint}" based on your training knowledge of this location.
-Include authentic architectural details, proportions, and distinctive visual features.
-Stylize to match the print aesthetic while maintaining recognizable characteristics.
+LOCATION ACCURACY (authoritative description):
+Render "${locationHint}".
+Any description in brackets is a VERIFIED description of the real building and must be followed exactly — its massing, proportions, roofline, window pattern and unmistakable features. Do not substitute a generic or remembered version, and do not add features it does not mention.
+Express it through the big shapes that make it recognisable, stylized to match the print aesthetic — accuracy of form, not fussy detail.
 `)
     : '';
 
