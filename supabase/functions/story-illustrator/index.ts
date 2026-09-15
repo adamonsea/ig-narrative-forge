@@ -880,7 +880,16 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
 
     } else if (modelConfig.provider === 'openai') {
-      const openaiModelName = model.startsWith('gpt-image-1.5') ? 'gpt-image-1.5' : 'gpt-image-1';
+      // Strip the trailing quality suffix to get the real OpenAI model name.
+      const openaiModelName = model.startsWith('gpt-image-2.5-sunburst')
+        ? 'gpt-image-2.5-sunburst'
+        : model.startsWith('gpt-image-2.5-flare')
+          ? 'gpt-image-2.5-flare'
+          : model.startsWith('gpt-image-2')
+            ? 'gpt-image-2'
+            : model.startsWith('gpt-image-1.5')
+              ? 'gpt-image-1.5'
+              : 'gpt-image-1';
 
       console.log(`Generating with OpenAI ${openaiModelName}...`);
 
