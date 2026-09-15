@@ -1037,7 +1037,10 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         if (styleReferences.length > 0) {
           const form = new FormData();
           form.append('model', openaiModelName);
-          form.append('prompt', `${illustrationPrompt}${STYLE_REFERENCE_NOTE}`);
+          form.append(
+            'prompt',
+            `${illustrationPrompt}${STYLE_REFERENCE_NOTE}${subjectReferences.length > 0 ? SUBJECT_REFERENCE_NOTE : ''}`,
+          );
           form.append('n', '1');
           form.append('size', '1536x1024');
           form.append('quality', modelConfig.quality || 'medium');
