@@ -32,13 +32,16 @@ export const ImageGenerationMetricsPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [total, setTotal] = useState({ count: 0, credits: 0, costUsd: 0 });
+  const [topicSpend, setTopicSpend] = useState<
+    { key: string; name: string; count: number; costUsd: number }[]
+  >([]);
 
   useEffect(() => {
     const load = async () => {
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('image_generation_metrics' as never)
-        .select('model, quality, is_automated, prep_ms, generation_ms, total_ms, output_bytes, credits, cost_usd')
+        .select('model, quality, is_automated, prep_ms, generation_ms, total_ms, output_bytes, credits, cost_usd, topic_id')
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(1000);
