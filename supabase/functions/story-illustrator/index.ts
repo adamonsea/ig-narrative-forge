@@ -1319,6 +1319,11 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       animated_illustration_url: null,  // Clear animation when new static image is generated
       animation_suggestions: animationSuggestions.length > 0 ? animationSuggestions : null,
     };
+
+    // Count replacements of an existing image so the soft cap can be enforced.
+    if (isRegeneration) {
+      updateData.illustration_regen_count = currentRegenCount + 1;
+    }
     
     // Only set automation flag if explicitly marked as automated
     if (isAutomated) {
