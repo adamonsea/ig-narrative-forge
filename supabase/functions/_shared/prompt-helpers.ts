@@ -9,6 +9,25 @@ interface SlideContent {
 }
 
 /**
+ * Finds which saved place name a piece of text is actually about.
+ * Whole-word matching, longest (most specific) name wins, so "prom" never
+ * matches "prominent"/"promenade" inside another landmark's description.
+ */
+export function matchPlaceName(text: string, names: string[]): string | null {
+  if (!text || !names?.length) return null;
+  const haystack = text.toLowerCase();
+  let best: string | null = null;
+  for (const name of names) {
+    if (!name || typeof name !== 'string') continue;
+    const escaped = name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i');
+    if (!pattern.test(haystack)) continue;
+    if (!best || name.length > best.length) best = name;
+  }
+  return best;
+}
+
+/**
  * Extracts specific location/landmark details from story content
  * Cross-references against known topic landmarks for accurate naming
  * Returns: "Landmark Name (architectural description)" or null
