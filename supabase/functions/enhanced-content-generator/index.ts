@@ -621,7 +621,11 @@ OUTPUT FORMAT (JSON):
         const resp = await deepseekChatWithFallback(apiKey, {
           model,
           messages: chatMessages,
-          temperature: 0.7,
+          // Looser sampling plus repetition penalties: the default settings made the
+          // model reach for the same constructions story after story.
+          temperature: 0.85,
+          frequency_penalty: 0.4,
+          presence_penalty: 0.3,
           max_tokens: maxTokens,
           response_format: { type: 'json_object' },
         }, label);
