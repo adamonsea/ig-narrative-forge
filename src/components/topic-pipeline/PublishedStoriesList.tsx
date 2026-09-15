@@ -26,6 +26,18 @@ import { ReelExportButton } from "@/components/reels/ReelExportButton";
 import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 import { publicationFromUrl } from "@/lib/urlUtils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowDownAZ } from "lucide-react";
+
+/** Best-effort source label for a story. */
+const storySourceLabel = (s: { publication_name?: string | null; source_url?: string | null }): string =>
+  s.publication_name?.trim() || publicationFromUrl(s.source_url) || 'Unknown source';
 
 interface Link {
   start: number;
