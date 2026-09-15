@@ -405,9 +405,22 @@ ${samples.map((s: string, i: number) => `--- sample ${i + 1} ---\n${s}`).join('\
         }
       }
 
+      // Voice anchors from this feed's own published stories
+      let styleAnchors = '';
+      if (supabase && article.topic_id) {
+        styleAnchors = await fetchStyleAnchors(supabase, article.topic_id);
+        if (styleAnchors) console.log('🎙️ Injecting house voice samples from recent published stories');
+      }
+
       const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
 
 ${storyHistoryContext}
+
+${HUMAN_VOICE_RULES}
+
+${houseStyleGuidance || ''}
+
+${styleAnchors}
 
 ARTICLE DETAILS:
 Title: ${article.title}
