@@ -57,6 +57,16 @@ const STYLE_REFERENCE_NOTE =
   'backgrounds. If unsure, draw LESS than the reference — under-detailing is preferred to ' +
   'over-detailing.';
 
+// Appended when photographs of the real place are attached after the style
+// references, so architecture comes from the photos and finish from the style.
+const SUBJECT_REFERENCE_NOTE =
+  '\n\nSUBJECT REFERENCE: The final attached image(s) are PHOTOGRAPHS of the real place named above. ' +
+  'They define the ARCHITECTURE ONLY: overall massing, proportions, number of storeys, roofline, ' +
+  'window pattern, materials and setting. Reproduce those shapes faithfully so the place is ' +
+  'recognisable. Do NOT copy the photographs literally, and do NOT take their photographic look, ' +
+  'colour, lighting or level of detail — the finish must come entirely from the house style ' +
+  'reference(s), reduced to the same small number of flat shapes.';
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
