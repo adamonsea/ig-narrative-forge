@@ -876,6 +876,19 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         </div>
       )}
 
+      {hasMorePublished && onLoadMorePublished && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" size="sm" onClick={onLoadMorePublished} disabled={loadingMorePublished}>
+            {loadingMorePublished ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading older stories…</>
+            ) : (
+              'Load older stories'
+            )}
+          </Button>
+        </div>
+      )}
+
+
       <AnimationInstructionsModal
         isOpen={!!animationModalStory}
         onClose={() => setAnimationModalStory(null)}
