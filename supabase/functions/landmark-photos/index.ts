@@ -29,7 +29,7 @@ async function verifyTopicOwnership(authHeader: string, topicId: string) {
   const serviceClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
   const { data: topic, error: topicError } = await serviceClient
     .from('topics')
-    .select('id, owner_id')
+    .select('id, created_by')
     .eq('id', topicId)
     .maybeSingle();
   if (topicError) {
@@ -37,7 +37,7 @@ async function verifyTopicOwnership(authHeader: string, topicId: string) {
     return { userId: null, error: 'Could not verify this feed' };
   }
   if (!topic) return { userId: null, error: 'Topic not found' };
-  if (topic.owner_id !== userId) {
+  if (topic.created_by !== userId) {
     const { data: isAdmin } = await serviceClient.rpc('has_role', { _user_id: userId, _role: 'admin' });
     if (!isAdmin) return { userId: null, error: 'Not authorized to manage this topic' };
   }
