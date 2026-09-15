@@ -107,6 +107,25 @@ Deno.serve(async (req) => {
 
     const { storyIds, models, qualities, promptOverride } = parsed.data;
     const runId = parsed.data.runId ?? crypto.randomUUID();
+    const referenceImageUrls = parsed.data.referenceImageUrls ?? [];
+
+    // Download the reference pictures once per run.
+    const referenceBlobs: { blob: Blob; name: string }[] = [];
+    for (const url of referenceImageUrls) {
+      try {
+        const refRes = await fetch(url);
+        if (!refRes.ok) throw new Error(`${refRes.status}`);
+        const buf = new Uint8Array(await refRes.arrayBuffer());
+        const type = refRes.headers.get('content-type') || 'image/png';
+        const ext = type.includes('webp') ? 'webp' : type.includes('jpeg') ? 'jpg' : 'png';
+        referenceBlobs.push({
+          blob: new Blob([buf], { type }),
+          name: `reference-${referenceBlobs.length + 1}.${ext}`,
+        });
+      } catch (error) {
+        console.warn(`Could not load reference image ${url}: ${error}`);
+      }
+    }
 
     const planned = storyIds.length * models.length * qualities.length;
     if (planned > MAX_GENERATIONS_PER_RUN) {
