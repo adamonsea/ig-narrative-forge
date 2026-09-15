@@ -31,6 +31,7 @@ interface WidgetConfig {
   customTitle: string;
   customAvatar: string;
   showSubscribe: boolean;
+  frequency: "daily" | "weekly";
 }
 
 export default function Widgets() {
