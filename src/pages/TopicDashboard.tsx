@@ -73,6 +73,7 @@ interface Topic {
   keywords: string[];
   landmarks?: string[];
   landmark_descriptions?: Record<string, string>;
+  landmark_reference_images?: Record<string, { url: string; credit?: string }[]>;
   postcodes?: string[];
   organizations?: string[];
   negative_keywords?: string[];
@@ -203,6 +204,8 @@ const TopicDashboard = () => {
         keywords: topicData.keywords || [],
         landmarks: topicData.landmarks || [],
         landmark_descriptions: (topicData.landmark_descriptions as Record<string, string>) || {},
+        landmark_reference_images:
+          ((topicData as any).landmark_reference_images as Record<string, { url: string; credit?: string }[]>) || {},
         postcodes: topicData.postcodes || [],
         organizations: topicData.organizations || [],
         negative_keywords: topicData.negative_keywords || [],
