@@ -123,28 +123,46 @@ const ImageModelBench: React.FC = () => {
       return;
     }
 
-    setRunning(true);
-    setProgress({ done: 0, total: selectedStories.length });
-    const runId = crypto.randomUUID();
+    // One picture per call: a single high-quality generation can take over a
+    // minute and the function is cut off at 150 seconds.
+    const jobs: { storyId: string; model: string; quality: string }[] = [];
+    selectedStories.forEach((storyId) => {
+      selectedModels.forEach((model) => {
+        selectedQualities.forEach((quality) => {
+          const isTwoFive = model.startsWith('gpt-image-2.5');
+          if (!isTwoFive && (quality === 'xhigh' || quality === 'max')) return;
+          jobs.push({ storyId, model, quality });
+        });
+      });
+    });
 
-    // One story per call keeps every run comfortably inside the time limit.
-    for (let i = 0; i < selectedStories.length; i++) {
-      const storyId = selectedStories[i];
+    setRunning(true);
+    setProgress({ done: 0, total: jobs.length });
+    const runId = crypto.randomUUID();
+    const promptByStory = new Map<string, string>();
+
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
       try {
-        const { error } = await supabase.functions.invoke('image-model-bench', {
+        const { data, error } = await supabase.functions.invoke('image-model-bench', {
           body: {
-            storyIds: [storyId],
-            models: selectedModels,
-            qualities: selectedQualities,
+            storyIds: [job.storyId],
+            models: [job.model],
+            qualities: [job.quality],
             runId,
+            // Reuse the prompt already built for this story so we only pay for
+            // the wording work once.
+            promptOverride: promptByStory.get(job.storyId),
           },
         });
         if (error) throw error;
+        const returnedPrompt = (data as { results?: { prompt?: string }[] })?.results?.[0]?.prompt;
+        if (returnedPrompt) promptByStory.set(job.storyId, returnedPrompt);
       } catch (error) {
         console.error(error);
-        toast.error(`Story ${i + 1} failed — carrying on with the rest`);
+        toast.error(`${modelLabel(job.model)} · ${qualityLabel(job.quality)} failed — carrying on`);
       }
-      setProgress({ done: i + 1, total: selectedStories.length });
+      setProgress({ done: i + 1, total: jobs.length });
       await loadResults();
     }
 
