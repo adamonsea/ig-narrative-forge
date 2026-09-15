@@ -62,7 +62,13 @@ interface BenchResult {
   error: string | null;
   verdict: string | null;
   reference_image_urls: string[] | null;
+  prompt_variant: string | null;
 }
+
+const PROMPT_VARIANTS = [
+  { id: 'current', label: 'Current', hint: 'The wording the live pipeline uses today' },
+  { id: 'handmade', label: 'Hand-made print', hint: 'Fewer, bigger shapes · three inks · gallery screen print' },
+] as const;
 
 const qualityLabel = (q: string) => QUALITIES.find((x) => x.id === q)?.label ?? q;
 const modelLabel = (m: string) => MODELS.find((x) => x.id === m)?.label ?? m;
