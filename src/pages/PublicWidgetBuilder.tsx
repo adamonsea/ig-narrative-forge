@@ -157,6 +157,10 @@ export default function PublicWidgetBuilder() {
     ? config.sources.join(',')
     : '';
   const featuredParam = config.featuredSources.join(',');
+  // Days list aligned with the featured list order (per source)
+  const featuredDaysParam = config.featuredSources
+    .map(name => config.featuredDaysBySource[name] ?? 2)
+    .join(',');
 
   const toggleSource = (name: string) => {
     setConfig(prev => {
