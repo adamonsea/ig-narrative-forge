@@ -35,6 +35,7 @@ interface WidgetConfig {
   frequency: "daily" | "weekly";
   sources: string[];
   featuredSources: string[];
+  featuredDays: number;
 }
 
 interface FeedSource {
@@ -59,6 +60,7 @@ export default function Widgets() {
     frequency: "daily",
     sources: [],
     featuredSources: [],
+    featuredDays: 2,
   });
 
   const [copied, setCopied] = useState(false);
@@ -136,7 +138,7 @@ export default function Widgets() {
     setPreviewLoading(true);
     let url = `${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=${config.max}`;
     if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
-    if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}`;
+    if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${config.featuredDays}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
@@ -148,7 +150,7 @@ export default function Widgets() {
       })
       .catch(err => console.error("Preview fetch error:", err))
       .finally(() => setPreviewLoading(false));
-  }, [config.feed, config.max, sourcesParam, featuredParam]);
+  }, [config.feed, config.max, sourcesParam, featuredParam, config.featuredDays]);
 
   const isValidAvatarUrl = (url: string) => {
     if (!url) return true;
@@ -238,7 +240,10 @@ export default function Widgets() {
       if (config.frequency === "weekly") attrs.push(`data-frequency="weekly"`);
     }
     if (sourcesParam) attrs.push(`data-sources="${sourcesParam.replace(/"/g, "&quot;")}"`);
-    if (featuredParam) attrs.push(`data-featured="${featuredParam.replace(/"/g, "&quot;")}"`);
+    if (featuredParam) {
+      attrs.push(`data-featured="${featuredParam.replace(/"/g, "&quot;")}"`);
+      attrs.push(`data-featured-days="${config.featuredDays}"`);
+    }
 
 
 
@@ -554,6 +559,29 @@ export default function Widgets() {
                     <p className="text-xs text-muted-foreground">
                       Nothing selected — the embed will show every publication.
                     </p>
+                  )}
+                  {config.featuredSources.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="featured-days">Keep featured stories for</Label>
+                      <Select
+                        value={String(config.featuredDays)}
+                        onValueChange={(v) => setConfig(prev => ({ ...prev, featuredDays: Number(v) }))}
+                      >
+                        <SelectTrigger id="featured-days">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5].map(d => (
+                            <SelectItem key={d} value={String(d)}>
+                              {d} {d === 1 ? "day" : "days"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        After this, featured stories move down into the main list.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}

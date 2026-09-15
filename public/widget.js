@@ -15,7 +15,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.5.0';
+  const WIDGET_VERSION = '1.5.1';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -91,7 +91,10 @@
     // Per-embed source controls: which publications to show, and which to feature on top
     const sourceList = sanitiseNameList(container.dataset.sources);
     const featuredList = sanitiseNameList(container.dataset.featured);
-    const variantKey = `${sourceList}|${featuredList}`;
+    // How many days a story from a featured source stays in the featured strip (1-5, default 2)
+    const parsedFeaturedDays = parseInt(container.dataset.featuredDays, 10);
+    const featuredDays = isNaN(parsedFeaturedDays) ? 2 : Math.min(5, Math.max(1, parsedFeaturedDays));
+    const variantKey = `${sourceList}|${featuredList}|${featuredDays}`;
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -126,7 +129,7 @@
     shadow.appendChild(wrapper);
 
     // Fetch fresh data
-    fetchFeedData(feedSlug, maxStories, sourceList, featuredList)
+    fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays)
       .then(data => {
         // Cache the successful response
         setCachedData(feedSlug, data, variantKey);
@@ -214,10 +217,11 @@
     });
   }
 
-  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList) {
+  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays) {
     let url = `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`;
     if (sourceList) url += `&sources=${encodeURIComponent(sourceList)}`;
     if (featuredList) url += `&featured=${encodeURIComponent(featuredList)}`;
+    if (featuredList && featuredDays) url += `&featuredDays=${encodeURIComponent(featuredDays)}`;
 
     const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
 

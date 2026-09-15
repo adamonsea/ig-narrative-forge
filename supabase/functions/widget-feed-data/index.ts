@@ -37,6 +37,12 @@ serve(async (req) => {
     const allowedSources = parseNameList(url.searchParams.get('sources'));
     const featuredSources = parseNameList(url.searchParams.get('featured'));
     const MAX_FEATURED = 3;
+    // How long a story from a featured source keeps its featured slot (1-5 days, default 2)
+    const parsedFeaturedDays = parseInt(url.searchParams.get('featuredDays') || '', 10);
+    const featuredDays = Number.isFinite(parsedFeaturedDays)
+      ? Math.min(5, Math.max(1, parsedFeaturedDays))
+      : 2;
+    const featuredMaxAgeMinutes = featuredDays * 24 * 60;
 
     if (!feedSlug) {
       return new Response(
@@ -263,7 +269,10 @@ serve(async (req) => {
       let formattedStories: any[];
       if (featuredSources.length > 0) {
         const featured = working
-          .filter(s => featuredSources.includes(norm(s.source_name)))
+          .filter(s =>
+            featuredSources.includes(norm(s.source_name)) &&
+            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutes)
+          )
           .slice(0, MAX_FEATURED)
           .map(s => ({ ...s, featured: true }));
         const featuredIds = new Set(featured.map(s => s.id));
