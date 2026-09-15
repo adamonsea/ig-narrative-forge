@@ -140,6 +140,100 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     }
   };
 
+  // ---- Reference photographs for a place ----
+  const savePhotos = async (landmark: string, photos: LandmarkPhoto[]) => {
+    const next = { ...(topic.landmark_reference_images || {}) };
+    if (photos.length > 0) next[landmark] = photos.slice(0, 3);
+    else delete next[landmark];
+
+    setLandmarkPhotos(next);
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ landmark_reference_images: next as any, updated_at: new Date().toISOString() })
+        .eq('id', topic.id);
+      if (error) throw error;
+      onTopicUpdate({ ...topic, landmark_reference_images: next });
+    } catch (error) {
+      console.error('Error saving place photos:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't save that photo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const searchPhotos = async (landmark: string) => {
+    setPhotoBusy(landmark);
+    try {
+      const { data, error } = await supabase.functions.invoke('landmark-photos', {
+        body: { topicId: topic.id, mode: 'search', landmark, region: topic.region }
+      });
+      if (error) throw error;
+      const results = ((data as any)?.results || []) as PhotoCandidate[];
+      setPhotoCandidates(prev => ({ ...prev, [landmark]: results }));
+      if (results.length === 0) {
+        toast({ title: "Nothing found", description: "Try uploading a photo or pasting a link" });
+      }
+    } catch (error) {
+      console.error('Error searching for photos:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't look that place up — try again",
+        variant: "destructive"
+      });
+    } finally {
+      setPhotoBusy(null);
+    }
+  };
+
+  const importPhoto = async (
+    landmark: string,
+    payload: { sourceUrl?: string; credit?: string; fileBase64?: string; contentType?: string }
+  ) => {
+    const current = landmarkPhotos[landmark] || [];
+    if (current.length >= 3) {
+      toast({ title: "Three photos is the limit", description: "Remove one first" });
+      return;
+    }
+    setPhotoBusy(landmark);
+    try {
+      const { data, error } = await supabase.functions.invoke('landmark-photos', {
+        body: { topicId: topic.id, mode: 'import', landmark, ...payload }
+      });
+      if (error) throw error;
+      const url = (data as any)?.url;
+      if (!url) throw new Error((data as any)?.error || 'No image returned');
+      await savePhotos(landmark, [...current, { url, credit: (data as any)?.credit || payload.credit }]);
+    } catch (error) {
+      console.error('Error adding photo:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't add that photo",
+        variant: "destructive"
+      });
+    } finally {
+      setPhotoBusy(null);
+    }
+  };
+
+  const uploadPhoto = async (landmark: string, file: File) => {
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    await importPhoto(landmark, { fileBase64: base64, contentType: file.type });
+  };
+
+  const removePhoto = async (landmark: string, index: number) => {
+    const current = landmarkPhotos[landmark] || [];
+    await savePhotos(landmark, current.filter((_, i) => i !== index));
+  };
+
+
   // Listen for external keyword additions
   useEffect(() => {
     const handleKeywordAdded = () => {
