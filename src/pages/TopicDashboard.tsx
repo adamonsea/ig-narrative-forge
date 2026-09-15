@@ -512,10 +512,6 @@ const TopicDashboard = () => {
       const jobId = data?.jobRunId;
       if (jobId) setJobRunId(jobId);
 
-      toast({
-        title: "Scraping Job Started",
-        description: "Content gathering is running in the background.",
-      });
 
       const refreshInterval = setInterval(() => { loadTopicAndStats(); }, 5000);
       setTimeout(() => { clearInterval(refreshInterval); setGatheringAll(false); }, 60000);
