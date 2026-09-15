@@ -167,10 +167,30 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   };
 
   const filteredStories = useMemo(() => {
-    if (storyFilter === 'all') return stories;
-    if (storyFilter === 'parliamentary') return stories.filter(s => s.is_parliamentary);
-    return stories.filter(s => !s.is_parliamentary);
-  }, [stories, storyFilter]);
+    let list = stories;
+    if (storyFilter === 'parliamentary') list = list.filter(s => s.is_parliamentary);
+    else if (storyFilter === 'regular') list = list.filter(s => !s.is_parliamentary);
+    if (sourceFilter !== 'all') list = list.filter(s => storySourceLabel(s) === sourceFilter);
+
+    const byNewest = (a: PublishedStory, b: PublishedStory) => b.created_at.localeCompare(a.created_at);
+    const sorted = [...list];
+    if (sortMode === 'oldest') sorted.sort((a, b) => -byNewest(a, b));
+    else if (sortMode === 'source') {
+      sorted.sort((a, b) =>
+        storySourceLabel(a).localeCompare(storySourceLabel(b)) || byNewest(a, b)
+      );
+    } else sorted.sort(byNewest);
+    return sorted;
+  }, [stories, storyFilter, sourceFilter, sortMode]);
+
+  const availableSources = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of stories) {
+      const label = storySourceLabel(s);
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [stories]);
 
   const paginatedStories = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
