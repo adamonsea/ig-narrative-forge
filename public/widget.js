@@ -88,6 +88,10 @@
     const showSubscribe = container.dataset.subscribe === 'true' || container.dataset.subscribe === '';
     // Email cadence readers sign up for. Embeds without data-frequency stay daily.
     const frequency = container.dataset.frequency === 'weekly' ? 'weekly' : 'daily';
+    // Per-embed source controls: which publications to show, and which to feature on top
+    const sourceList = sanitiseNameList(container.dataset.sources);
+    const featuredList = sanitiseNameList(container.dataset.featured);
+    const variantKey = `${sourceList}|${featuredList}`;
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -111,7 +115,7 @@
     wrapper.className = 'eezee-widget';
     
     // Try to show cached data immediately while fetching fresh data
-    const cached = getCachedData(feedSlug);
+    const cached = getCachedData(feedSlug, variantKey);
     if (cached) {
       wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
       attachClickHandlers(shadow, feedSlug);
@@ -122,10 +126,10 @@
     shadow.appendChild(wrapper);
 
     // Fetch fresh data
-    fetchFeedData(feedSlug, maxStories)
+    fetchFeedData(feedSlug, maxStories, sourceList, featuredList)
       .then(data => {
         // Cache the successful response
-        setCachedData(feedSlug, data);
+        setCachedData(feedSlug, data, variantKey);
         
         wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
         
