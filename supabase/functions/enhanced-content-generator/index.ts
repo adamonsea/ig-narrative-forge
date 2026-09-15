@@ -919,6 +919,94 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
         }
       }
 
+      // ── Humanising pass ───────────────────────────────────────────────────
+      // A short second call that rewrites HOW things are said, never WHAT is said.
+      // If the rewrite drops facts, invents new ones, or breaks the limits, we
+      // silently keep the original draft.
+      try {
+        const sourceText = `${article.title} ${article.body || ''}`.toLowerCase();
+        const wordCount = (t: string) => (t.trim().match(/\S+/g) || []).length;
+        const factTokens = (t: string) =>
+          (t.match(/(£\s?[\d,.]+|\d[\d,.]*%?|\b[A-Z][a-zA-Z'’-]+\b)/g) || [])
+            .map((x) => x.trim())
+            .filter((x) => x.length > 1);
+
+        const originalTokens = new Set(
+          normalized.flatMap((s) => factTokens(s.content || '')).map((t) => t.toLowerCase())
+        );
+
+        const humanisePrompt = `Rewrite the slides below so they read like a human reporter wrote them.
+
+${HUMAN_VOICE_RULES}
+
+${houseStyleGuidance || ''}
+
+${styleAnchors}
+
+HARD RULES:
+- Facts, names, numbers, dates, places and quotes are FROZEN. Do not add, remove or alter a single one.
+- Do not introduce any name, figure or place that is not already in the slides or the article below.
+- Keep exactly ${normalized.length} slides, in the same order, covering the same points.
+- Slide 1: 8 words ideal, 15 words maximum. Other slides: 40 words maximum.
+- Keep attribution rules: opinions and claims stay attributed to whoever said them.
+- NEVER name the publication, website, domain or author.
+- Keep the visualPrompt and altText fields; update altText only if the content changed meaningfully.
+- If a slide already reads naturally, leave it exactly as it is.
+
+ARTICLE (for fact checking only):
+${(article.body || '').slice(0, 4000)}
+
+CURRENT SLIDES:
+${JSON.stringify({ slides: normalized }, null, 2)}
+
+Return valid JSON only: { "slides": [ { "slideNumber": 1, "content": "...", "visualPrompt": "...", "altText": "..." } ] }`;
+
+        const humaniseResp = await deepseekChatWithFallback(apiKey, {
+          model: 'deepseek-v4-flash',
+          messages: [
+            { role: 'system', content: 'You are a ruthless copy editor. You improve phrasing only, never facts. Output valid JSON only.' },
+            { role: 'user', content: humanisePrompt },
+          ],
+          temperature: 0.8,
+          frequency_penalty: 0.3,
+          max_tokens: slideCount >= 12 ? 4000 : slideCount >= 8 ? 3000 : 2400,
+          response_format: { type: 'json_object' },
+        }, 'slide-humanise');
+
+        if (humaniseResp.ok) {
+          const humaniseData = await humaniseResp.json();
+          const rewritten = normalizeSlides(
+            tryExtractSlides(readContent(humaniseData, 'slide-humanise'))
+          ).slice(0, slideCount);
+
+          const sameShape = rewritten.length === normalized.length;
+          const withinLimits = sameShape && rewritten.every((s, i) =>
+            wordCount(s.content || '') <= (i === 0 ? 18 : 45) && (s.content || '').trim().length > 0
+          );
+          const noNewFacts = sameShape && rewritten.every((s) =>
+            factTokens(s.content || '').every((tok) => {
+              const lower = tok.toLowerCase();
+              return originalTokens.has(lower) || sourceText.includes(lower);
+            })
+          );
+          const notClipped = sameShape && rewritten.every((s, i) => !isClipped(s, i));
+
+          if (sameShape && withinLimits && noNewFacts && notClipped) {
+            normalized = rewritten;
+            console.log('✍️ Humanising pass applied.');
+          } else {
+            console.warn(
+              `✍️ Humanising pass rejected (shape=${sameShape} limits=${withinLimits} facts=${noNewFacts} clipped=${!notClipped}) — keeping original draft.`
+            );
+          }
+        } else {
+          console.warn(`⚠️ Humanising pass request failed: ${humaniseResp.status}`);
+        }
+      } catch (e) {
+        console.warn('⚠️ Humanising pass failed, keeping original draft.', e);
+      }
+
+
       return normalized.slice(0, slideCount).map((s: any) => ({
         ...s,
         content: stripGeneratedAttribution(s.content || ''),
