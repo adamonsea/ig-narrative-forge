@@ -266,7 +266,8 @@
     `;
   }
 
-  function attachSubscribeHandler(shadow, feedSlug, data) {
+  function attachSubscribeHandler(shadow, feedSlug, data, frequency) {
+    const notificationType = frequency === 'weekly' ? 'weekly' : 'daily';
     const root = shadow.querySelector('.widget-subscribe');
     if (!root) return;
 
