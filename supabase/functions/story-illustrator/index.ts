@@ -489,6 +489,12 @@ serve(async (req) => {
         topicLandmarkDescriptions = rawDescriptions as Record<string, string>
         console.log(`Landmark descriptions available: ${Object.keys(topicLandmarkDescriptions).length}`)
       }
+
+      // Owner-saved reference photographs of each place (fail-open)
+      const rawPhotos = (topicData as any)?.landmark_reference_images
+      if (rawPhotos && typeof rawPhotos === 'object' && !Array.isArray(rawPhotos)) {
+        topicLandmarkPhotos = rawPhotos as Record<string, Array<{ url: string }>>
+      }
     }
 
     // Guard: Photographic style requires feature flag and Replicate API key
