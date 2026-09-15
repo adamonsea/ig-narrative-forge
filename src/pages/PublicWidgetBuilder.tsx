@@ -72,6 +72,7 @@ export default function PublicWidgetBuilder() {
   const [previewData, setPreviewData] = useState<{ feed: PreviewFeed | null; stories: PreviewStory[] } | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
+  const [availableSources, setAvailableSources] = useState<FeedSource[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [config, setConfig] = useState<WidgetConfig>({
@@ -83,7 +84,8 @@ export default function PublicWidgetBuilder() {
     customAvatar: '',
     showSubscribe: false,
     frequency: 'daily',
-
+    sources: [],
+    featuredSources: [],
   });
 
   // Load topic data
