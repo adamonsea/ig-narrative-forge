@@ -39,7 +39,18 @@ const requestSchema = z.object({
   qualities: z.array(z.enum(['low', 'medium', 'high', 'xhigh', 'max'])).min(1).max(5),
   promptOverride: z.string().max(6000).optional(),
   runId: z.string().uuid().optional(),
+  // Existing pictures (usually Image 1.5 premium covers) handed to the newer
+  // models as a house-style reference.
+  referenceImageUrls: z.array(z.string().url()).max(3).optional(),
 });
+
+// Appended to the prompt when reference pictures are supplied, so the model
+// treats them as style guidance rather than content to reproduce.
+const STYLE_REFERENCE_NOTE =
+  '\n\nSTYLE REFERENCE: The attached image(s) are examples of the required house style only. ' +
+  'Match their artistic treatment, palette handling, level of abstraction, lighting, composition ' +
+  'balance and finish as closely as possible. Do NOT copy their subject matter, characters, ' +
+  'text or scene — illustrate the new subject described above in that same style.';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -96,6 +107,25 @@ Deno.serve(async (req) => {
 
     const { storyIds, models, qualities, promptOverride } = parsed.data;
     const runId = parsed.data.runId ?? crypto.randomUUID();
+    const referenceImageUrls = parsed.data.referenceImageUrls ?? [];
+
+    // Download the reference pictures once per run.
+    const referenceBlobs: { blob: Blob; name: string }[] = [];
+    for (const url of referenceImageUrls) {
+      try {
+        const refRes = await fetch(url);
+        if (!refRes.ok) throw new Error(`${refRes.status}`);
+        const buf = new Uint8Array(await refRes.arrayBuffer());
+        const type = refRes.headers.get('content-type') || 'image/png';
+        const ext = type.includes('webp') ? 'webp' : type.includes('jpeg') ? 'jpg' : 'png';
+        referenceBlobs.push({
+          blob: new Blob([buf], { type }),
+          name: `reference-${referenceBlobs.length + 1}.${ext}`,
+        });
+      } catch (error) {
+        console.warn(`Could not load reference image ${url}: ${error}`);
+      }
+    }
 
     const planned = storyIds.length * models.length * qualities.length;
     if (planned > MAX_GENERATIONS_PER_RUN) {
@@ -179,23 +209,47 @@ Deno.serve(async (req) => {
           if (!isTwoFive && (quality === 'xhigh' || quality === 'max')) continue;
 
           const started = Date.now();
+          // Reference pictures only work through the image-edits route, and
+          // only on the newer models. Image 1.5 stays on plain generation so it
+          // remains the honest baseline being matched.
+          const useReferences = referenceBlobs.length > 0 && model !== 'gpt-image-1.5';
           try {
-            const res = await fetch('https://api.openai.com/v1/images/generations', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model,
-                prompt,
-                n: 1,
-                size: '1536x1024',
-                quality,
-                output_format: 'webp',
-                output_compression: 80,
-              }),
-            });
+            let res: Response;
+            if (useReferences) {
+              const form = new FormData();
+              form.append('model', model);
+              form.append('prompt', `${prompt}${STYLE_REFERENCE_NOTE}`);
+              form.append('n', '1');
+              form.append('size', '1536x1024');
+              form.append('quality', quality);
+              form.append('output_format', 'webp');
+              form.append('output_compression', '80');
+              for (const ref of referenceBlobs) {
+                form.append('image[]', ref.blob, ref.name);
+              }
+              res = await fetch('https://api.openai.com/v1/images/edits', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+                body: form,
+              });
+            } else {
+              res = await fetch('https://api.openai.com/v1/images/generations', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${OPENAI_API_KEY}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model,
+                  prompt,
+                  n: 1,
+                  size: '1536x1024',
+                  quality,
+                  output_format: 'webp',
+                  output_compression: 80,
+                }),
+              });
+            }
 
             if (!res.ok) {
               const text = await res.text();
@@ -238,6 +292,7 @@ Deno.serve(async (req) => {
               cost_usd: costUsd,
               duration_ms: durationMs,
               success: true,
+              reference_image_urls: useReferences ? referenceImageUrls : null,
             });
 
             results.push({ storyId, model, quality, imageUrl, costUsd, durationMs, prompt });
@@ -256,6 +311,7 @@ Deno.serve(async (req) => {
               success: false,
               error: message,
               duration_ms: Date.now() - started,
+              reference_image_urls: useReferences ? referenceImageUrls : null,
             });
 
             results.push({ storyId, model, quality, error: message, prompt });

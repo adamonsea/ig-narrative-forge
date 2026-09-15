@@ -42,6 +42,12 @@ interface StoryOption {
   title: string;
 }
 
+interface ReferenceOption {
+  id: string;
+  title: string;
+  cover_illustration_url: string;
+}
+
 interface BenchResult {
   id: string;
   run_id: string;
@@ -55,6 +61,7 @@ interface BenchResult {
   success: boolean;
   error: string | null;
   verdict: string | null;
+  reference_image_urls: string[] | null;
 }
 
 const qualityLabel = (q: string) => QUALITIES.find((x) => x.id === q)?.label ?? q;
@@ -71,6 +78,8 @@ const ImageModelBench: React.FC = () => {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [results, setResults] = useState<BenchResult[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
+  const [referenceOptions, setReferenceOptions] = useState<ReferenceOption[]>([]);
+  const [selectedReferences, setSelectedReferences] = useState<string[]>([]);
 
   const loadResults = useCallback(async () => {
     const { data } = await supabase
@@ -92,6 +101,15 @@ const ImageModelBench: React.FC = () => {
         .limit(40);
       setStories(((data as unknown as StoryOption[]) || []));
       setLoadingStories(false);
+
+      const { data: refs } = await supabase
+        .from('stories')
+        .select('id, title, cover_illustration_url, created_at')
+        .eq('is_published', true)
+        .not('cover_illustration_url', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(60);
+      setReferenceOptions((refs as unknown as ReferenceOption[]) || []);
     };
     load();
     loadResults();
@@ -150,6 +168,7 @@ const ImageModelBench: React.FC = () => {
             models: [job.model],
             qualities: [job.quality],
             runId,
+            referenceImageUrls: selectedReferences,
             // Reuse the prompt already built for this story so we only pay for
             // the wording work once.
             promptOverride: promptByStory.get(job.storyId),
@@ -177,6 +196,17 @@ const ImageModelBench: React.FC = () => {
       .update({ verdict } as never)
       .eq('id', id);
     if (error) toast.error('Could not save that rating');
+  };
+
+  const toggleReference = (url: string) => {
+    setSelectedReferences((prev) => {
+      if (prev.includes(url)) return prev.filter((u) => u !== url);
+      if (prev.length >= 3) {
+        toast.error('Up to three reference pictures');
+        return prev;
+      }
+      return [...prev, url];
+    });
   };
 
   const grouped = useMemo(() => {
@@ -290,9 +320,47 @@ const ImageModelBench: React.FC = () => {
               )}
             </div>
 
+            <div>
+              <h2 className="text-sm font-medium mb-1">Style references (optional, up to 3)</h2>
+              <p className="text-xs text-muted-foreground mb-2">
+                Pick existing pictures you love. The newer models are shown them as the house style to
+                match. The current model always runs without them, so it stays the honest benchmark.
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 max-h-64 overflow-y-auto border rounded-md p-3">
+                {referenceOptions.map((r) => {
+                  const active = selectedReferences.includes(r.cover_illustration_url);
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => toggleReference(r.cover_illustration_url)}
+                      aria-pressed={active}
+                      title={r.title}
+                      className={`relative rounded-md overflow-hidden border-2 transition ${
+                        active ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-muted-foreground/30'
+                      }`}
+                    >
+                      <img
+                        src={r.cover_illustration_url}
+                        alt={r.title}
+                        loading="lazy"
+                        className="w-full aspect-[3/2] object-cover"
+                      />
+                      {active && (
+                        <span className="absolute top-1 right-1 rounded-full bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5">
+                          {selectedReferences.indexOf(r.cover_illustration_url) + 1}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between border-t pt-4">
               <p className="text-sm text-muted-foreground">
                 {estimate.images} pictures · about ${estimate.cost.toFixed(2)}
+                {selectedReferences.length > 0 && ` · ${selectedReferences.length} style reference${selectedReferences.length > 1 ? 's' : ''}`}
               </p>
               <Button onClick={runBench} disabled={running || estimate.images === 0}>
                 {running ? (
@@ -367,6 +435,9 @@ const ImageModelBench: React.FC = () => {
                         <Badge variant="outline">{qualityLabel(r.quality)}</Badge>
                         {r.cost_usd !== null && <span>${Number(r.cost_usd).toFixed(3)}</span>}
                         {r.duration_ms !== null && <span>{(r.duration_ms / 1000).toFixed(1)}s</span>}
+                        {r.reference_image_urls && r.reference_image_urls.length > 0 && (
+                          <Badge variant="secondary">Style referenced</Badge>
+                        )}
                       </div>
                       {r.image_url && (
                         <div className="flex gap-1">

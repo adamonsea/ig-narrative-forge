@@ -1,0 +1,1 @@
+ALTER TABLE public.image_bench_results ADD COLUMN IF NOT EXISTS reference_image_urls text[];
