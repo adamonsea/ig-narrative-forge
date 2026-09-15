@@ -515,6 +515,9 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                   <MapPin className="h-4 w-4" />
                   Landmarks & Places
                 </Label>
+                <p className="text-xs text-muted-foreground">
+                  Add a short note on what a place actually looks like and illustrated covers will follow your description instead of guessing.
+                </p>
                 <div className="flex gap-2">
                   <Input
                     value={newLandmark}
@@ -526,21 +529,45 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {landmarks.map((landmark, index) => (
-                    <Badge key={index} variant="outline" className="flex items-center gap-1">
-                      {landmark}
+                    <div key={index} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{landmark}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeLandmark(index)}
+                          className="h-auto p-1"
+                          aria-label={`Remove ${landmark}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={landmarkDescriptions[landmark] ?? ''}
+                        onChange={(e) =>
+                          setLandmarkDescriptions(prev => ({ ...prev, [landmark]: e.target.value }))
+                        }
+                        onBlur={() => saveLandmarkDescription(landmark)}
+                        placeholder="What it looks like — massing, roofline, materials, windows, setting..."
+                        rows={2}
+                        maxLength={400}
+                        className="text-sm"
+                      />
                       <Button
                         size="sm"
-                        variant="ghost"
-                        onClick={() => removeLandmark(index)}
-                        className="h-auto p-0 ml-1"
+                        variant="outline"
+                        disabled={describingLandmark === landmark}
+                        onClick={() => suggestLandmarkDescription(landmark)}
                       >
-                        <X className="h-3 w-3" />
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        {describingLandmark === landmark ? 'Describing…' : 'Suggest description'}
                       </Button>
-                    </Badge>
+                    </div>
                   ))}
                 </div>
+                
                 
                 {/* Landmark Suggestions */}
                 {topic.region && (
