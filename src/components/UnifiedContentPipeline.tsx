@@ -102,7 +102,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     clearNewPublished,
     hasMoreArticles,
     totalArticlesCount,
-    loadMoreArticles
+    loadMoreArticles,
+    hasMorePublished,
+    totalPublishedCount,
+    loadingMorePublished,
+    loadMorePublished
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
   const multiTenantActions = useMultiTenantActions();
@@ -446,6 +450,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               loading={loading}
               topicSlug={topicSlug}
               topicId={selectedTopicId}
+              totalPublishedCount={totalPublishedCount}
+              hasMorePublished={hasMorePublished}
+              loadingMorePublished={loadingMorePublished}
+              onLoadMorePublished={loadMorePublished}
             />
           )}
         </TabsContent>

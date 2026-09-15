@@ -96,6 +96,10 @@ interface PublishedStoriesListProps {
   loading?: boolean;
   topicSlug?: string;
   topicId?: string;
+  totalPublishedCount?: number | null;
+  hasMorePublished?: boolean;
+  loadingMorePublished?: boolean;
+  onLoadMorePublished?: () => void;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -109,7 +113,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onRefresh,
   loading = false,
   topicSlug,
-  topicId
+  topicId,
+  totalPublishedCount = null,
+  hasMorePublished = false,
+  loadingMorePublished = false,
+  onLoadMorePublished
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -391,7 +399,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           <Button variant={storyFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => { setStoryFilter('all'); setCurrentPage(1); }} className="h-7 text-xs shrink-0">
-            All ({stories.length})
+            All ({stories.length}{typeof totalPublishedCount === 'number' && totalPublishedCount > stories.length ? ` of ${totalPublishedCount}` : ''})
           </Button>
           <Button variant={storyFilter === 'regular' ? 'default' : 'outline'} size="sm" onClick={() => { setStoryFilter('regular'); setCurrentPage(1); }} className="h-7 text-xs shrink-0">
             Regular ({regularCount})
@@ -867,6 +875,19 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           </Button>
         </div>
       )}
+
+      {hasMorePublished && onLoadMorePublished && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" size="sm" onClick={onLoadMorePublished} disabled={loadingMorePublished}>
+            {loadingMorePublished ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading older stories…</>
+            ) : (
+              'Load older stories'
+            )}
+          </Button>
+        </div>
+      )}
+
 
       <AnimationInstructionsModal
         isOpen={!!animationModalStory}
