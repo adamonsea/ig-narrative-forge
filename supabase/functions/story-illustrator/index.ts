@@ -447,11 +447,12 @@ serve(async (req) => {
     let topicRegion: string | undefined = undefined // for place-accurate prompts
     let topicLandmarks: string[] | undefined = undefined // for landmark-accurate rendering
     let topicLandmarkDescriptions: Record<string, string> | null = null // owner-written appearance notes
+    let topicLandmarkPhotos: Record<string, Array<{ url: string }>> | null = null // owner-saved reference photos
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions')
+        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions, landmark_reference_images')
         .eq('id', topicId)
         .single()
       
