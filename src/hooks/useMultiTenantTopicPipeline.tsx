@@ -107,6 +107,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const [queueItems, setQueueItems] = useState<MultiTenantQueueItem[]>([]);
   const [stories, setStories] = useState<MultiTenantStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [stats, setStats] = useState<MultiTenantStats>({
     articles: 0,
     queueItems: 0,
@@ -135,6 +136,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   // Debounce timer for real-time refreshes
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Tracks whether the realtime channel is live, so the 30s fallback poll can
+  // stand down while realtime is doing the refreshing.
+  const channelActiveRef = useRef(false);
+
+  // Last known-good slide rows per story id, used when a slide fetch fails so
+  // stories never render as if they had no content.
+  const prevSlidesRef = useRef<Map<string, any[]>>(new Map());
 
   // Tombstones: ids removed optimistically that must not be resurrected by a
   // refresh that raced ahead of the server write. Expire after TOMBSTONE_TTL.
@@ -214,11 +223,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       if (multiTenantArticlesResult.error) {
         console.error('Error loading multi-tenant articles:', multiTenantArticlesResult.error);
-        toast({
-          title: "Error loading articles",
-          description: "Failed to load articles. Please try refreshing.",
-          variant: "destructive",
-        });
+        // Quiet inline error instead of a toast — background refreshes must not
+        // stack red popups. Surfaced as a banner with a retry by the pipeline.
+        setLoadError('Some new arrivals could not be loaded. Showing what we have.');
+      } else {
+        setLoadError(null);
       }
 
       // Get story IDs to filter out articles that are already published or queued for this topic
@@ -825,11 +834,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     } catch (error) {
       console.error('Error loading topic content:', error);
-      toast({
-        title: "Error loading content",
-        description: "Failed to load multi-tenant topic content",
-        variant: "destructive",
-      });
+      // Quiet inline error instead of a toast — see loadError above.
+      setLoadError('Couldn\'t fully refresh the pipeline. Showing the last good data.');
     } finally {
       setLoading(false);
     }
