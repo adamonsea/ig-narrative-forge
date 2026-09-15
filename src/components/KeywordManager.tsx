@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, Hash, MapPin, Building, Navigation } from "lucide-react";
+import { Plus, X, Hash, MapPin, Building, Navigation, Sparkles } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { KeywordSuggestionTool } from "./KeywordSuggestionTool";
@@ -19,6 +20,7 @@ interface Topic {
   keywords: string[];
   region?: string;
   landmarks?: string[];
+  landmark_descriptions?: Record<string, string>;
   postcodes?: string[];
   organizations?: string[];
 }
@@ -31,6 +33,10 @@ interface KeywordManagerProps {
 export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUpdate }) => {
   const [keywords, setKeywords] = useState(topic.keywords || []);
   const [landmarks, setLandmarks] = useState(topic.landmarks || []);
+  const [landmarkDescriptions, setLandmarkDescriptions] = useState<Record<string, string>>(
+    topic.landmark_descriptions || {}
+  );
+  const [describingLandmark, setDescribingLandmark] = useState<string | null>(null);
   const [postcodes, setPostcodes] = useState(topic.postcodes || []);
   const [organizations, setOrganizations] = useState(topic.organizations || []);
   const [newKeyword, setNewKeyword] = useState('');
@@ -45,9 +51,73 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     const sortedKeywords = [...(topic.keywords || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     setKeywords(sortedKeywords);
     setLandmarks(topic.landmarks || []);
+    setLandmarkDescriptions(topic.landmark_descriptions || {});
     setPostcodes(topic.postcodes || []);
     setOrganizations(topic.organizations || []);
   }, [topic]);
+
+  // Save one place's appearance note (auto-save on blur)
+  const saveLandmarkDescription = async (landmark: string) => {
+    const value = (landmarkDescriptions[landmark] ?? '').trim().slice(0, 400);
+    const existing = (topic.landmark_descriptions || {})[landmark] ?? '';
+    if (value === existing) return;
+
+    const next = { ...(topic.landmark_descriptions || {}) };
+    if (value) next[landmark] = value;
+    else delete next[landmark];
+
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ landmark_descriptions: next, updated_at: new Date().toISOString() })
+        .eq('id', topic.id);
+      if (error) throw error;
+      onTopicUpdate({ ...topic, landmark_descriptions: next });
+    } catch (error) {
+      console.error('Error saving landmark description:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't save that description",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const suggestLandmarkDescription = async (landmark: string) => {
+    setDescribingLandmark(landmark);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-regional-elements', {
+        body: {
+          topicId: topic.id,
+          topicName: topic.name,
+          region: topic.region,
+          mode: 'describe',
+          landmark
+        }
+      });
+      if (error) throw error;
+      const description = (data as any)?.description;
+      if (!description) throw new Error('No description returned');
+      setLandmarkDescriptions(prev => ({ ...prev, [landmark]: description }));
+
+      const next = { ...(topic.landmark_descriptions || {}), [landmark]: description };
+      const { error: saveError } = await supabase
+        .from('topics')
+        .update({ landmark_descriptions: next, updated_at: new Date().toISOString() })
+        .eq('id', topic.id);
+      if (saveError) throw saveError;
+      onTopicUpdate({ ...topic, landmark_descriptions: next });
+    } catch (error) {
+      console.error('Error describing landmark:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't suggest a description — try again",
+        variant: "destructive"
+      });
+    } finally {
+      setDescribingLandmark(null);
+    }
+  };
 
   // Listen for external keyword additions
   useEffect(() => {
@@ -515,6 +585,9 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                   <MapPin className="h-4 w-4" />
                   Landmarks & Places
                 </Label>
+                <p className="text-xs text-muted-foreground">
+                  Add a short note on what a place actually looks like and illustrated covers will follow your description instead of guessing.
+                </p>
                 <div className="flex gap-2">
                   <Input
                     value={newLandmark}
@@ -526,21 +599,45 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {landmarks.map((landmark, index) => (
-                    <Badge key={index} variant="outline" className="flex items-center gap-1">
-                      {landmark}
+                    <div key={index} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{landmark}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeLandmark(index)}
+                          className="h-auto p-1"
+                          aria-label={`Remove ${landmark}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={landmarkDescriptions[landmark] ?? ''}
+                        onChange={(e) =>
+                          setLandmarkDescriptions(prev => ({ ...prev, [landmark]: e.target.value }))
+                        }
+                        onBlur={() => saveLandmarkDescription(landmark)}
+                        placeholder="What it looks like — massing, roofline, materials, windows, setting..."
+                        rows={2}
+                        maxLength={400}
+                        className="text-sm"
+                      />
                       <Button
                         size="sm"
-                        variant="ghost"
-                        onClick={() => removeLandmark(index)}
-                        className="h-auto p-0 ml-1"
+                        variant="outline"
+                        disabled={describingLandmark === landmark}
+                        onClick={() => suggestLandmarkDescription(landmark)}
                       >
-                        <X className="h-3 w-3" />
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        {describingLandmark === landmark ? 'Describing…' : 'Suggest description'}
                       </Button>
-                    </Badge>
+                    </div>
                   ))}
                 </div>
+                
                 
                 {/* Landmark Suggestions */}
                 {topic.region && (

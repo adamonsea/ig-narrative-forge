@@ -72,6 +72,7 @@ interface Topic {
   topic_type: 'regional' | 'keyword';
   keywords: string[];
   landmarks?: string[];
+  landmark_descriptions?: Record<string, string>;
   postcodes?: string[];
   organizations?: string[];
   negative_keywords?: string[];
@@ -201,6 +202,7 @@ const TopicDashboard = () => {
         topic_type: topicData.topic_type as 'regional' | 'keyword',
         keywords: topicData.keywords || [],
         landmarks: topicData.landmarks || [],
+        landmark_descriptions: (topicData.landmark_descriptions as Record<string, string>) || {},
         postcodes: topicData.postcodes || [],
         organizations: topicData.organizations || [],
         negative_keywords: topicData.negative_keywords || [],

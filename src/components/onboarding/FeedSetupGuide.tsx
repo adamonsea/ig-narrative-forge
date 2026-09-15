@@ -257,6 +257,7 @@ export const FeedSetupGuide = ({
               keywords: topic.keywords || [],
               region: topic.region,
               landmarks: topic.landmarks,
+              landmark_descriptions: (topic as any).landmark_descriptions,
               postcodes: topic.postcodes,
               organizations: topic.organizations,
             }}

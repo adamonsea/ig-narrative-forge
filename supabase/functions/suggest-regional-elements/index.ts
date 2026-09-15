@@ -76,7 +76,9 @@ serve(async (req) => {
       existingLandmarks = [], 
       existingPostcodes = [], 
       existingOrganizations = [],
-      elementType // 'landmarks', 'postcodes', 'organizations', or 'all'
+      elementType, // 'landmarks', 'postcodes', 'organizations', or 'all'
+      mode, // optional: 'describe' returns a visual description of one landmark
+      landmark // the landmark name to describe when mode === 'describe'
     } = await req.json();
 
     // Verify authentication and topic ownership
@@ -102,6 +104,53 @@ serve(async (req) => {
 
     if (!region) {
       throw new Error('Region is required for regional element suggestions');
+    }
+
+    // ---- Describe mode: one landmark's visual appearance, for illustration accuracy ----
+    if (mode === 'describe') {
+      if (!landmark || typeof landmark !== 'string') {
+        throw new Error('A landmark name is required to describe it');
+      }
+
+      const describePrompt = `Describe how "${landmark}" in ${region} actually looks, for an illustrator who has never seen it.
+
+RULES:
+- One sentence, 25-45 words, plain British English.
+- Only big, visible, verifiable features: overall massing and shape, roofline, number of storeys, materials and colours, window pattern, setting (seafront, high street, park).
+- No history, no opinions, no atmosphere, no people, no small ornament.
+- If you are not confident about this specific building, describe only what you are sure of.
+
+Return the sentence only, with no quotes and no preamble.`;
+
+      const describeRes = await llmFetch({
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-v4-flash',
+          messages: [
+            { role: 'system', content: 'You are a precise architectural describer. Reply with one plain sentence.' },
+            { role: 'user', content: describePrompt }
+          ],
+          temperature: 0.2,
+          max_tokens: 200
+        }),
+      });
+
+      const describeData = await describeRes.json();
+      if (!describeRes.ok) {
+        throw new Error(`Description failed: ${describeData.error?.message || 'Unknown error'}`);
+      }
+
+      const description = (describeData.choices?.[0]?.message?.content || '')
+        .replace(/^["'\s]+|["'\s]+$/g, '')
+        .slice(0, 400);
+
+      return new Response(JSON.stringify({ success: true, description }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Construct the prompt based on element type

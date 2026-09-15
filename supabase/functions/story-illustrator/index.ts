@@ -446,11 +446,12 @@ serve(async (req) => {
     let primaryColor: string = '#10B981' // default mint green
     let topicRegion: string | undefined = undefined // for place-accurate prompts
     let topicLandmarks: string[] | undefined = undefined // for landmark-accurate rendering
+    let topicLandmarkDescriptions: Record<string, string> | null = null // owner-written appearance notes
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style, illustration_primary_color, region, landmarks')
+        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions')
         .eq('id', topicId)
         .single()
       
@@ -479,6 +480,13 @@ serve(async (req) => {
       if (topicData?.landmarks && Array.isArray(topicData.landmarks)) {
         topicLandmarks = topicData.landmarks
         console.log(`Using topic landmarks for location accuracy: ${topicLandmarks.length} landmarks available`)
+      }
+
+      // Owner-written descriptions of how each place actually looks (fail-open)
+      const rawDescriptions = (topicData as any)?.landmark_descriptions
+      if (rawDescriptions && typeof rawDescriptions === 'object' && !Array.isArray(rawDescriptions)) {
+        topicLandmarkDescriptions = rawDescriptions as Record<string, string>
+        console.log(`Landmark descriptions available: ${Object.keys(topicLandmarkDescriptions).length}`)
       }
     }
 
@@ -612,7 +620,7 @@ serve(async (req) => {
     // Run tone analysis and location extraction in parallel
     const [storyTone, locationDetails] = await Promise.all([
       analyzeStoryTone(slides || [], OPENAI_API_KEY),
-      extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion)
+      extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion, topicLandmarkDescriptions)
     ]);
     
     console.log(`Story tone: ${storyTone}`)

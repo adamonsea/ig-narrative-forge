@@ -17,7 +17,11 @@ export async function extractLocationDetails(
   slides: SlideContent[],
   openaiKey: string,
   knownLandmarks?: string[],
-  region?: string
+  region?: string,
+  // Author-supplied "what it looks like" text, keyed by landmark name.
+  // When the story matches one of these, the owner's words replace the
+  // model's guesswork about the architecture.
+  landmarkDescriptions?: Record<string, string> | null
 ): Promise<string | null> {
   if (!openaiKey || slides.length === 0) {
     return null;
@@ -25,8 +29,16 @@ export async function extractLocationDetails(
 
   try {
     const storyText = slides.map(s => s.content).join('\n');
+    const descriptions = landmarkDescriptions && typeof landmarkDescriptions === 'object'
+      ? landmarkDescriptions
+      : {};
     const landmarksList = knownLandmarks?.length 
-      ? knownLandmarks.join(', ') 
+      ? knownLandmarks
+          .map(name => {
+            const described = descriptions[name];
+            return described ? `${name} — ${described}` : name;
+          })
+          .join('\n- ')
       : 'None specified';
     const regionContext = region || 'UK';
     
@@ -42,16 +54,16 @@ export async function extractLocationDetails(
           role: 'user',
           content: `Identify any SPECIFIC LOCATION, BUILDING, or LANDMARK mentioned in this story.
 
-KNOWN LOCAL LANDMARKS (use exact name if matched):
-${landmarksList}
+KNOWN LOCAL LANDMARKS (use exact name if matched; any text after an em dash is the verified description of how it actually looks):
+- ${landmarksList}
 
 REGION: ${regionContext}
 
 INSTRUCTIONS:
 1. Look for named buildings, venues, parks, streets, or landmarks
 2. If a known landmark is mentioned, use its EXACT name from the list
-3. Include architectural style/era (e.g., "Victorian pavilion", "Art Deco theatre", "modernist gallery")
-4. Note distinctive visual features from public knowledge
+3. If that landmark has a verified description above, use THAT description verbatim — do not invent or substitute features
+4. Otherwise include architectural style/era (e.g., "Victorian pavilion", "Art Deco theatre", "modernist gallery") and distinctive visual features from public knowledge
 
 RETURN FORMAT (single line):
 "[Exact Name] ([architectural style], [distinctive visual features])"
@@ -86,6 +98,18 @@ ${storyText.slice(0, 2000)}`
       return null;
     }
     
+    // Author-supplied description wins over anything the model invented.
+    const resultLower = result.toLowerCase();
+    const matched = Object.entries(descriptions).find(
+      ([name, text]) => name && text && resultLower.includes(name.toLowerCase())
+    );
+    if (matched) {
+      const [name, text] = matched;
+      const authored = `${name} (${String(text).slice(0, 400)})`;
+      console.log('Using author-supplied landmark description:', authored);
+      return authored;
+    }
+
     console.log('Extracted location details:', result);
     return result;
   } catch (error) {
@@ -270,12 +294,13 @@ PLACE-SPECIFIC ELEMENTS (${region}):
     ? (variant === 'handmade' ? `
 LOCATION (silhouette only):
 Suggest "${locationHint}" through its overall silhouette and one or two unmistakable shapes.
+The bracketed description above is the verified appearance of this place — it overrides any other idea of how it looks.
 No architectural detail, no window counts, no ornament — a recognisable outline cut from flat ink.
 ` : `
-LOCATION ACCURACY (leverage AI knowledge):
-Render "${locationHint}" based on your training knowledge of this location.
-Include authentic architectural details, proportions, and distinctive visual features.
-Stylize to match the print aesthetic while maintaining recognizable characteristics.
+LOCATION ACCURACY (authoritative description):
+Render "${locationHint}".
+Any description in brackets is a VERIFIED description of the real building and must be followed exactly — its massing, proportions, roofline, window pattern and unmistakable features. Do not substitute a generic or remembered version, and do not add features it does not mention.
+Express it through the big shapes that make it recognisable, stylized to match the print aesthetic — accuracy of form, not fussy detail.
 `)
     : '';
 
@@ -429,9 +454,9 @@ PLACE-SPECIFIC ACCURACY (${region}):
   // Location accuracy section for identified landmarks
   const locationAccuracy = locationHint ? `
 
-LOCATION ACCURACY (leverage AI knowledge):
-Render "${locationHint}" based on your training knowledge of this location.
-Include authentic architectural details, proportions, materials, and distinctive visual features.
+LOCATION ACCURACY (authoritative description):
+Render "${locationHint}".
+Any description in brackets is a VERIFIED description of the real place and must be followed exactly — massing, proportions, materials, roofline, window pattern and distinctive features. Do not substitute a generic or remembered version, and do not invent features it does not mention.
 Capture the real-world appearance as it would be photographed on location.
 ` : '';
 

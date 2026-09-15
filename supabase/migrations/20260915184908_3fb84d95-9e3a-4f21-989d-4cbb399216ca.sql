@@ -1,0 +1,1 @@
+ALTER TABLE public.topics ADD COLUMN IF NOT EXISTS landmark_descriptions jsonb NOT NULL DEFAULT '{}'::jsonb;
