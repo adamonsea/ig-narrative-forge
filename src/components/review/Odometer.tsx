@@ -53,7 +53,9 @@ export const Odometer = ({
     <span ref={ref} className={cn('tabular-nums', className)}>
       {groups.map((g, i) => (
         <motion.span
-          key={`${i}-${g}`}
+          // Key by position only: the text changes every animation frame while
+          // counting, and keying on it would remount (and restart) each span.
+          key={i}
           className="inline-block"
           initial={reduce ? false : { opacity: 0, y: '0.35em' }}
           animate={inView ? { opacity: 1, y: 0 } : undefined}
