@@ -72,6 +72,7 @@ interface Topic {
   topic_type: 'regional' | 'keyword';
   keywords: string[];
   landmarks?: string[];
+  landmark_descriptions?: Record<string, string>;
   postcodes?: string[];
   organizations?: string[];
   negative_keywords?: string[];
