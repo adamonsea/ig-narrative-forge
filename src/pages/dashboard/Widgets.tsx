@@ -513,6 +513,50 @@ export default function Widgets() {
                 </div>
               )}
 
+              {/* Publications shown in this embed */}
+              {availableSources.length > 1 && (
+                <div className="space-y-3">
+                  <div>
+                    <Label>Publications</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Choose which publications appear, and feature up to 3 at the top.
+                    </p>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto rounded-md border p-3">
+                    {availableSources.map(source => {
+                      const included = config.sources.includes(source.name);
+                      const featured = config.featuredSources.includes(source.name);
+                      return (
+                        <div key={source.name} className="flex items-center justify-between gap-3">
+                          <label className="flex items-center gap-2 text-sm cursor-pointer">
+                            <Checkbox
+                              checked={included}
+                              onCheckedChange={() => toggleSource(source.name)}
+                              aria-label={`Show stories from ${source.name}`}
+                            />
+                            <span>{source.name}</span>
+                            <span className="text-xs text-muted-foreground">({source.count})</span>
+                          </label>
+                          <label className={`flex items-center gap-2 text-xs cursor-pointer ${included ? "" : "opacity-40 pointer-events-none"}`}>
+                            <Checkbox
+                              checked={featured}
+                              disabled={!included}
+                              onCheckedChange={() => toggleFeaturedSource(source.name)}
+                              aria-label={`Feature ${source.name}`}
+                            />
+                            <span>Feature</span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {config.sources.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Nothing selected — the embed will show every publication.
+                    </p>
+                  )}
+                </div>
+              )}
 
 
             </CardContent>
