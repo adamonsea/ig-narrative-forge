@@ -588,12 +588,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length
       });
 
-      // Load slides for stories to enable edit functionality
+      // Load slides for stories to enable edit functionality — only needed when
+      // the story rows didn't already come back with their slide text.
       const storyIds = sortedStories.map((story: any) => story.id);
       let slidesData: any[] = [];
       let parliamentaryData: any[] = [];
+      let slidesHadError = false;
       
-      if (storyIds.length > 0) {
+      if (storyIds.length > 0 && sortedStories.some((s: any) => !s.slides?.length)) {
         // PostgREST caps responses at 1000 rows. With ~6 slides per story this
         // silently truncated the result (stories rendering with missing/no slides).
         // Fetch in story-id chunks and page through each chunk until exhausted.
@@ -628,6 +630,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
             if (slidesError) {
               console.error('Error loading slides:', slidesError);
+              slidesHadError = true;
               break;
             }
 
@@ -662,10 +665,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       );
 
       // Get parliamentary mentions for filtering (only mp_name and constituency exist in this table)
-      const { data: allParliamentaryMentions } = await supabase
+      const { data: allParliamentaryMentions, error: mentionsError } = await supabase
         .from('parliamentary_mentions')
         .select('story_id, mp_name, constituency')
         .in('story_id', sortedStories.map(s => s.id).filter(id => parliamentaryStoryIds.has(id)));
+
+      if (mentionsError) {
+        // Fail open: a failed filter query must never remove stories from the tab.
+        console.error('Error loading parliamentary mentions for filtering; keeping all parliamentary stories:', mentionsError);
+      }
 
       // Create map of story_id -> mention for filtering
       const storyMentionMap = new Map(
@@ -677,6 +685,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         const isParliamentary = parliamentaryStoryIds.has(story.id);
         
         if (!isParliamentary) return true; // Keep all non-parliamentary stories
+
+        // If the filter query failed, keep parliamentary stories visible.
+        if (mentionsError) return true;
 
         // For parliamentary stories, check if MP is tracked
         const mention = storyMentionMap.get(story.id);
