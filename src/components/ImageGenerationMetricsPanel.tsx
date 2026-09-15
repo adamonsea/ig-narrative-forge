@@ -73,6 +73,39 @@ export const ImageGenerationMetricsPanel: React.FC = () => {
         credits: rows.reduce((sum, r) => sum + (r.credits || 0), 0),
         costUsd: rows.reduce((sum, r) => sum + Number(r.cost_usd || 0), 0),
       });
+
+      // Spend per feed, so a single topic running away with the budget is obvious.
+      const byTopic = new Map<string, { count: number; costUsd: number }>();
+      rows.forEach((row) => {
+        const key = row.topic_id || 'unassigned';
+        const current = byTopic.get(key) || { count: 0, costUsd: 0 };
+        byTopic.set(key, {
+          count: current.count + 1,
+          costUsd: current.costUsd + Number(row.cost_usd || 0),
+        });
+      });
+
+      const topicIds = Array.from(byTopic.keys()).filter((k) => k !== 'unassigned');
+      const names = new Map<string, string>();
+      if (topicIds.length > 0) {
+        const { data: topics } = await supabase
+          .from('topics')
+          .select('id, name')
+          .in('id', topicIds);
+        (topics || []).forEach((t: { id: string; name: string }) => names.set(t.id, t.name));
+      }
+
+      setTopicSpend(
+        Array.from(byTopic.entries())
+          .map(([key, value]) => ({
+            key,
+            name: key === 'unassigned' ? 'Unassigned' : names.get(key) || 'Unknown feed',
+            count: value.count,
+            costUsd: value.costUsd,
+          }))
+          .sort((a, b) => b.costUsd - a.costUsd)
+      );
+
       setLoading(false);
     };
 
