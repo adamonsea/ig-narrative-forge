@@ -22,14 +22,23 @@ async function verifyTopicOwnership(authHeader: string, topicId: string) {
   if (claimsError || !claimsData?.claims) return { userId: null, error: 'Invalid or expired token' };
   const userId = claimsData.claims.sub as string;
 
-  const { data: topic, error: topicError } = await supabase
+  if (!topicId || typeof topicId !== 'string') return { userId: null, error: 'A topic id is required' };
+
+  // Service role for the ownership lookup so a restrictive row policy can't
+  // make the owner's own feed look missing.
+  const serviceClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+  const { data: topic, error: topicError } = await serviceClient
     .from('topics')
     .select('id, owner_id')
     .eq('id', topicId)
-    .single();
-  if (topicError || !topic) return { userId: null, error: 'Topic not found' };
+    .maybeSingle();
+  if (topicError) {
+    console.error('Topic lookup failed:', topicError.message);
+    return { userId: null, error: 'Could not verify this feed' };
+  }
+  if (!topic) return { userId: null, error: 'Topic not found' };
   if (topic.owner_id !== userId) {
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    const { data: isAdmin } = await serviceClient.rpc('has_role', { _user_id: userId, _role: 'admin' });
     if (!isAdmin) return { userId: null, error: 'Not authorized to manage this topic' };
   }
   return { userId, error: null };
