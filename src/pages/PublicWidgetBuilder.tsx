@@ -565,6 +565,30 @@ export default function PublicWidgetBuilder() {
                   />
                 </div>
 
+                {/* Email frequency */}
+                {config.showSubscribe && (
+                  <div className="space-y-2">
+                    <Label htmlFor="frequency">Email frequency</Label>
+                    <Select
+                      value={config.frequency}
+                      onValueChange={(value: 'daily' | 'weekly') => setConfig(prev => ({ ...prev, frequency: value }))}
+                    >
+                      <SelectTrigger id="frequency">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Daily highlights</SelectItem>
+                        <SelectItem value="weekly">Weekly briefing (includes what's on)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      What new sign-ups from this embed will receive.
+                    </p>
+                  </div>
+                )}
+
+
+
               </CardContent>
             </Card>
 
