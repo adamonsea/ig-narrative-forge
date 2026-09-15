@@ -450,6 +450,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               loading={loading}
               topicSlug={topicSlug}
               topicId={selectedTopicId}
+              totalPublishedCount={totalPublishedCount}
+              hasMorePublished={hasMorePublished}
+              loadingMorePublished={loadingMorePublished}
+              onLoadMorePublished={loadMorePublished}
             />
           )}
         </TabsContent>
