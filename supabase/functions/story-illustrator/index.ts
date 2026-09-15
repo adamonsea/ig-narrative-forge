@@ -489,6 +489,21 @@ serve(async (req) => {
       })
       isSuperAdmin = hasAdminRole === true
     }
+    // Regeneration cap: stop runaway repeat generations on a single story.
+    const currentRegenCount = Number((story as any).illustration_regen_count ?? 0)
+    const isRegeneration = Boolean((story as any).cover_illustration_url)
+    if (isRegeneration && !isSuperAdmin && currentRegenCount >= MAX_ILLUSTRATION_REGENERATIONS) {
+      return new Response(
+        JSON.stringify({
+          error: `This story has already been regenerated ${currentRegenCount} times. Edit the story or ask the product owner to lift the limit.`,
+          code: 'regeneration_limit_reached',
+          regenerations: currentRegenCount,
+          limit: MAX_ILLUSTRATION_REGENERATIONS,
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     let creditResult = null
     
     // Track fallback usage to inform the user
