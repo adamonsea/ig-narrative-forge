@@ -978,24 +978,55 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         promptLength: illustrationPrompt.length
       });
 
+      // House style references: attached only for GPT Image 2 and later, via the
+      // image-edits route. Fail-open — if nothing loads we use plain generation,
+      // exactly as before.
+      const styleReferences = openaiModelName.startsWith('gpt-image-2')
+        ? await loadStyleReferences()
+        : [];
+      if (styleReferences.length > 0) {
+        console.log(`🎨 Attaching ${styleReferences.length} house style reference(s)`);
+      }
+
       // Transient upstream/Cloudflare failures (5xx, 520) are common on image
       // generation. Retry with backoff instead of failing the whole job.
-      const requestOpenAIImage = () => fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: openaiModelName,
-          prompt: illustrationPrompt,
-          n: 1,
-          size: '1536x1024', // Landscape aspect ratio for feed UI
-          quality: modelConfig.quality || 'medium',
-          output_format: 'webp', // WebP is ~70% smaller than PNG
-          output_compression: 70 // Increased compression for <500KB target (WhatsApp limit is 600KB)
-        }),
-      });
+      const requestOpenAIImage = () => {
+        if (styleReferences.length > 0) {
+          const form = new FormData();
+          form.append('model', openaiModelName);
+          form.append('prompt', `${illustrationPrompt}${STYLE_REFERENCE_NOTE}`);
+          form.append('n', '1');
+          form.append('size', '1536x1024');
+          form.append('quality', modelConfig.quality || 'medium');
+          form.append('output_format', 'webp');
+          form.append('output_compression', '70');
+          for (const ref of styleReferences) {
+            form.append('image[]', ref.blob, ref.name);
+          }
+          return fetch('https://api.openai.com/v1/images/edits', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            body: form,
+          });
+        }
+
+        return fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: openaiModelName,
+            prompt: illustrationPrompt,
+            n: 1,
+            size: '1536x1024', // Landscape aspect ratio for feed UI
+            quality: modelConfig.quality || 'medium',
+            output_format: 'webp', // WebP is ~70% smaller than PNG
+            output_compression: 70 // Increased compression for <500KB target (WhatsApp limit is 600KB)
+          }),
+        });
+      };
 
       let openaiResponse = await requestOpenAIImage();
       for (let attempt = 1; attempt <= 3 && openaiResponse.status >= 500; attempt++) {
