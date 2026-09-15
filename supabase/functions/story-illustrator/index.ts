@@ -1022,6 +1022,15 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         console.log(`🎨 Attaching ${styleReferences.length} house style reference(s)`);
       }
 
+      // Photographs of the real place, when the owner has saved some and the
+      // story is about that place. Style still comes from the covers above.
+      const subjectReferences = styleReferences.length > 0 && subjectPhotoUrls.length > 0
+        ? await loadReferenceImagesFromUrls(subjectPhotoUrls.slice(0, 2), 'subject')
+        : [];
+      if (subjectReferences.length > 0) {
+        console.log(`🏛️ Attaching ${subjectReferences.length} place photo reference(s)`);
+      }
+
       // Transient upstream/Cloudflare failures (5xx, 520) are common on image
       // generation. Retry with backoff instead of failing the whole job.
       const requestOpenAIImage = () => {
