@@ -112,14 +112,6 @@ export function RegionalElementsSuggestionTool({
           rationale: s.rationale
         }));
         suggestionMemory.addSuggestions(memoryItems);
-        
-        if (newSuggestions.length > 0) {
-          toast.success(`Found ${newSuggestions.length} new ${getElementTypeLabel(elementType).toLowerCase()}${allSuggestions.length > newSuggestions.length ? ` (${allSuggestions.length - newSuggestions.length} already seen)` : ''}`);
-        } else if (allSuggestions.length > 0) {
-          toast.info(`All ${allSuggestions.length} suggested ${getElementTypeLabel(elementType).toLowerCase()} were previously shown. Check history to see them again.`);
-        } else {
-          toast.info(`No new ${getElementTypeLabel(elementType).toLowerCase()} found for this region`);
-        }
       } else {
         throw new Error(data.error || `Failed to find ${getElementTypeLabel(elementType).toLowerCase()}`);
       }
@@ -145,7 +137,6 @@ export function RegionalElementsSuggestionTool({
     try {
       // Trigger element addition
       onElementAdd(element);
-      toast.success(`✅ Added ${elementType.slice(0, -1)}: "${element}"`);
       
       // Mark as added in memory
       const memoryItem = suggestionMemory.memory.find(item => item.element === element);
