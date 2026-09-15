@@ -681,6 +681,23 @@ serve(async (req) => {
               console.log(`      Rejected (low quality): ${storeResult.rejectedLowQuality}`);
               console.log(`      Rejected (competing): ${storeResult.rejectedCompeting}\n`);
 
+              // Additive diagnostics only — never affects the result above
+              await recordScrapeRun(supabase, {
+                source_id: source.source_id,
+                topic_id: topicId,
+                method: scrapeResult.method || 'unknown',
+                methods_tried: [scrapeResult.method || 'unknown'],
+                urls_discovered: scrapeResult.articlesFound || 0,
+                urls_new: scrapeResult.articlesScraped || 0,
+                articles_stored: storeResult.articlesStored || 0,
+                rejections: {
+                  low_relevance: storeResult.rejectedLowRelevance || 0,
+                  low_quality: storeResult.rejectedLowQuality || 0,
+                  competing_region: storeResult.rejectedCompeting || 0,
+                  duplicates: storeResult.duplicatesSkipped || 0
+                }
+              });
+
               return result;
             } else {
               // Check if this is a successful scrape with no new articles vs a failed scrape
