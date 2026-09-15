@@ -81,7 +81,25 @@ export default function MultiTenantArticlesList({
   const [bulkDeleteCount, setBulkDeleteCount] = useState<number | null>(null);
   const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
   const [illustrationOverrides, setIllustrationOverrides] = useState<Record<string, boolean>>({});
+  // Duplicates from other sources are hidden behind their leader by default.
+  const [showAllDuplicates, setShowAllDuplicates] = useState(false);
+  const [expandedDuplicateGroups, setExpandedDuplicateGroups] = useState<Set<string>>(new Set());
   const prefersReducedMotion = useReducedMotion();
+
+  const toggleDuplicateGroup = (groupId: string) => {
+    setExpandedDuplicateGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
+  const visibleArticles = articles.filter(article => {
+    const info = duplicateMap?.get(article.id);
+    if (!info || info.isDuplicateLeader) return true;
+    return showAllDuplicates || expandedDuplicateGroups.has(info.duplicateGroupId);
+  });
 
   useEffect(() => {
     if (articles.length === 0) {
@@ -235,6 +253,22 @@ export default function MultiTenantArticlesList({
             {article.title}
           </h3>
 
+          {/* Same story from other sources, collapsed behind the first report */}
+          {dupInfo && dupInfo.isDuplicateLeader && dupInfo.similarCount > 0 && !showAllDuplicates && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleDuplicateGroup(dupInfo.duplicateGroupId)}
+              className="h-6 px-2 -ml-2 text-xs text-amber-700 hover:text-amber-800"
+              aria-expanded={expandedDuplicateGroups.has(dupInfo.duplicateGroupId)}
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              {expandedDuplicateGroups.has(dupInfo.duplicateGroupId)
+                ? 'Hide similar reports'
+                : `${dupInfo.similarCount} similar from other source${dupInfo.similarCount > 1 ? 's' : ''}`}
+            </Button>
+          )}
+
           {/* Author */}
           {article.author && (
             <p className="text-sm text-muted-foreground">by {article.author}</p>
@@ -309,7 +343,16 @@ export default function MultiTenantArticlesList({
           {/* Action bar */}
           <div className="flex items-center gap-1.5 pt-1 border-t border-border/40">
             <Button
-              onClick={() => onApprove(article, slideType, toneOverride, writingStyleOverride, illustrationOverrides[article.id] ?? true)}
+              onClick={() => {
+                // Warn before publishing a second version of a story already covered.
+                if (dupInfo && !dupInfo.isDuplicateLeader) {
+                  const ok = window.confirm(
+                    `Another source already reported this story:\n\n• ${dupInfo.similarTitles[0] ?? ''}\n\nContinue and publish this version too?`
+                  );
+                  if (!ok) return;
+                }
+                onApprove(article, slideType, toneOverride, writingStyleOverride, illustrationOverrides[article.id] ?? true);
+              }}
               disabled={isProcessing || isDeleting}
               size="sm"
               className="h-7 text-xs"
@@ -505,8 +548,21 @@ export default function MultiTenantArticlesList({
         </div>
       )}
       
+      {duplicateMap && duplicateMap.size > 0 && (
+        <div className="flex items-center justify-end gap-2 pb-1">
+          <Label htmlFor="show-duplicates" className="text-xs text-muted-foreground">
+            Show duplicates
+          </Label>
+          <Switch
+            id="show-duplicates"
+            checked={showAllDuplicates}
+            onCheckedChange={setShowAllDuplicates}
+          />
+        </div>
+      )}
+
       <AnimatePresence initial={false} mode="popLayout">
-        {articles.map((article) => renderArticleCard(article))}
+        {visibleArticles.map((article) => renderArticleCard(article))}
       </AnimatePresence>
       
       {/* Load more button */}

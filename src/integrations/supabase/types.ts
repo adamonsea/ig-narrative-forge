@@ -1355,6 +1355,54 @@ export type Database = {
         }
         Relationships: []
       }
+      illustration_batch_jobs: {
+        Row: {
+          attempts: number
+          batch_id: string | null
+          created_at: string
+          custom_id: string
+          error: string | null
+          id: string
+          image_url: string | null
+          model: string
+          prompt: string
+          status: string
+          story_id: string
+          topic_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          batch_id?: string | null
+          created_at?: string
+          custom_id: string
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          model: string
+          prompt: string
+          status?: string
+          story_id: string
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          batch_id?: string | null
+          created_at?: string
+          custom_id?: string
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          model?: string
+          prompt?: string
+          status?: string
+          story_id?: string
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       image_generation_metrics: {
         Row: {
           cost_usd: number | null
@@ -3107,6 +3155,7 @@ export type Database = {
           drip_queued_at: string | null
           id: string
           illustration_generated_at: string | null
+          illustration_regen_count: number
           is_auto_animated: boolean | null
           is_auto_gathered: boolean | null
           is_auto_illustrated: boolean | null
@@ -3146,6 +3195,7 @@ export type Database = {
           drip_queued_at?: string | null
           id?: string
           illustration_generated_at?: string | null
+          illustration_regen_count?: number
           is_auto_animated?: boolean | null
           is_auto_gathered?: boolean | null
           is_auto_illustrated?: boolean | null
@@ -3185,6 +3235,7 @@ export type Database = {
           drip_queued_at?: string | null
           id?: string
           illustration_generated_at?: string | null
+          illustration_regen_count?: number
           is_auto_animated?: boolean | null
           is_auto_gathered?: boolean | null
           is_auto_illustrated?: boolean | null

@@ -13,6 +13,7 @@ interface MetricRow {
   output_bytes: number | null;
   credits: number | null;
   cost_usd: number | null;
+  topic_id: string | null;
 }
 
 interface Bucket {
@@ -32,13 +33,16 @@ export const ImageGenerationMetricsPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [total, setTotal] = useState({ count: 0, credits: 0, costUsd: 0 });
+  const [topicSpend, setTopicSpend] = useState<
+    { key: string; name: string; count: number; costUsd: number }[]
+  >([]);
 
   useEffect(() => {
     const load = async () => {
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('image_generation_metrics' as never)
-        .select('model, quality, is_automated, prep_ms, generation_ms, total_ms, output_bytes, credits, cost_usd')
+        .select('model, quality, is_automated, prep_ms, generation_ms, total_ms, output_bytes, credits, cost_usd, topic_id')
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(1000);
@@ -69,6 +73,39 @@ export const ImageGenerationMetricsPanel: React.FC = () => {
         credits: rows.reduce((sum, r) => sum + (r.credits || 0), 0),
         costUsd: rows.reduce((sum, r) => sum + Number(r.cost_usd || 0), 0),
       });
+
+      // Spend per feed, so a single topic running away with the budget is obvious.
+      const byTopic = new Map<string, { count: number; costUsd: number }>();
+      rows.forEach((row) => {
+        const key = row.topic_id || 'unassigned';
+        const current = byTopic.get(key) || { count: 0, costUsd: 0 };
+        byTopic.set(key, {
+          count: current.count + 1,
+          costUsd: current.costUsd + Number(row.cost_usd || 0),
+        });
+      });
+
+      const topicIds = Array.from(byTopic.keys()).filter((k) => k !== 'unassigned');
+      const names = new Map<string, string>();
+      if (topicIds.length > 0) {
+        const { data: topics } = await supabase
+          .from('topics')
+          .select('id, name')
+          .in('id', topicIds);
+        (topics || []).forEach((t: { id: string; name: string }) => names.set(t.id, t.name));
+      }
+
+      setTopicSpend(
+        Array.from(byTopic.entries())
+          .map(([key, value]) => ({
+            key,
+            name: key === 'unassigned' ? 'Unassigned' : names.get(key) || 'Unknown feed',
+            count: value.count,
+            costUsd: value.costUsd,
+          }))
+          .sort((a, b) => b.costUsd - a.costUsd)
+      );
+
       setLoading(false);
     };
 
@@ -127,6 +164,30 @@ export const ImageGenerationMetricsPanel: React.FC = () => {
                 </tr>
               </tbody>
             </table>
+
+            {topicSpend.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium mb-2">Spend by feed</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2 pr-4 font-medium">Feed</th>
+                      <th className="py-2 pr-4 font-medium">Images</th>
+                      <th className="py-2 font-medium">Est. spend</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topicSpend.map((t) => (
+                      <tr key={t.key} className="border-b last:border-0">
+                        <td className="py-2 pr-4">{t.name}</td>
+                        <td className="py-2 pr-4">{t.count}</td>
+                        <td className="py-2">${t.costUsd.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
