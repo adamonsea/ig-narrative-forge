@@ -121,6 +121,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const [hasMoreArticles, setHasMoreArticles] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  // Pagination state for published stories (feeds can hold thousands)
+  const [publishedLoadedCount, setPublishedLoadedCount] = useState(0);
+  const [totalPublishedCount, setTotalPublishedCount] = useState<number | null>(null);
+  const [hasMorePublished, setHasMorePublished] = useState(false);
+  const [loadingMorePublished, setLoadingMorePublished] = useState(false);
+
   // New content indicators for real-time updates
   const [newArrivals, setNewArrivals] = useState(false);
   const [newPublished, setNewPublished] = useState(false);
