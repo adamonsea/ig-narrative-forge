@@ -1046,7 +1046,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           form.append('quality', modelConfig.quality || 'medium');
           form.append('output_format', 'webp');
           form.append('output_compression', '70');
-          for (const ref of styleReferences) {
+          for (const ref of [...styleReferences.slice(0, 2), ...subjectReferences]) {
             form.append('image[]', ref.blob, ref.name);
           }
           return fetch('https://api.openai.com/v1/images/edits', {
