@@ -202,6 +202,7 @@ const TopicDashboard = () => {
         topic_type: topicData.topic_type as 'regional' | 'keyword',
         keywords: topicData.keywords || [],
         landmarks: topicData.landmarks || [],
+        landmark_descriptions: (topicData.landmark_descriptions as Record<string, string>) || {},
         postcodes: topicData.postcodes || [],
         organizations: topicData.organizations || [],
         negative_keywords: topicData.negative_keywords || [],
