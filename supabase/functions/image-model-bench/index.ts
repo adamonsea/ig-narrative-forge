@@ -202,6 +202,7 @@ Deno.serve(async (req) => {
         .order('slide_number', { ascending: true });
 
       let prompt = promptOverride;
+      const subjectPhotoUrls: string[] = [];
       if (!prompt) {
         const [storyTone, locationDetails] = await Promise.all([
           analyzeStoryTone(slides || [], OPENAI_API_KEY),
@@ -216,6 +217,36 @@ Deno.serve(async (req) => {
         prompt = illustrationStyle === 'editorial_photographic'
           ? buildPhotographicPrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails)
           : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant);
+
+        if (locationDetails && topicLandmarkPhotos) {
+          const haystack = locationDetails.toLowerCase();
+          for (const [place, photos] of Object.entries(topicLandmarkPhotos)) {
+            if (!place || !Array.isArray(photos) || photos.length === 0) continue;
+            if (!haystack.includes(place.toLowerCase())) continue;
+            for (const photo of photos) {
+              const url = (photo as any)?.url;
+              if (typeof url === 'string' && url) subjectPhotoUrls.push(url);
+            }
+          }
+        }
+      }
+
+      // Photographs of the real place, loaded fail-open.
+      const subjectBlobs: { blob: Blob; name: string }[] = [];
+      for (const url of subjectPhotoUrls.slice(0, 2)) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`${res.status}`);
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          const type = res.headers.get('content-type') || 'image/png';
+          const ext = type.includes('webp') ? 'webp' : type.includes('jpeg') ? 'jpg' : 'png';
+          subjectBlobs.push({
+            blob: new Blob([bytes], { type }),
+            name: `subject-${subjectBlobs.length + 1}.${ext}`,
+          });
+        } catch (error) {
+          console.warn(`Could not load place photo ${url}: ${error}`);
+        }
       }
 
       // ---- Generate across the grid ----
