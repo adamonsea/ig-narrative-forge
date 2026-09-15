@@ -129,7 +129,7 @@
     shadow.appendChild(wrapper);
 
     // Fetch fresh data
-    fetchFeedData(feedSlug, maxStories, sourceList, featuredList)
+    fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays)
       .then(data => {
         // Cache the successful response
         setCachedData(feedSlug, data, variantKey);
