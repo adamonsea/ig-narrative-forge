@@ -127,7 +127,7 @@
         // Cache the successful response
         setCachedData(feedSlug, data);
         
-        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe);
+        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
         
         // Track impression after successful render (only if not cached initially)
         if (!cached) {
@@ -136,7 +136,7 @@
         
         // Attach click handlers for story tracking
         attachClickHandlers(shadow, feedSlug);
-        attachSubscribeHandler(shadow, feedSlug, data);
+        attachSubscribeHandler(shadow, feedSlug, data, frequency);
       })
       .catch(error => {
         console.error('Curatr Widget Error:', error);
