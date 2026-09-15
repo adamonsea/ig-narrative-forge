@@ -100,6 +100,7 @@ export interface MultiTenantStats {
 }
 
 const ARTICLES_PAGE_SIZE = 50;
+const PUBLISHED_PAGE_SIZE = 250;
 
 export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const { toast } = useToast();
