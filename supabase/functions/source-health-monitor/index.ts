@@ -187,7 +187,7 @@ serve(async (req) => {
       let reason_detail = `${count} article(s) in last ${WINDOW_DAYS} days`;
 
       if (count === 0) {
-        const classified = classifyReason(s, latestDailyBySource[s.id]);
+        const classified = classifyReason(s, latestDailyBySource[s.id], latestRunBySource[s.id]);
         reason_code = classified.reason_code;
         reason_detail = classified.reason_detail;
         status = reason_code === "blocked" || reason_code === "feed_404" || reason_code === "needs_bypass_head"
