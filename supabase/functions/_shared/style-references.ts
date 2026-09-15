@@ -53,3 +53,43 @@ export async function loadStyleReferences(
   }
   return refs;
 }
+
+/**
+ * Note appended when photographs of a real place are attached alongside the
+ * house style references. The style comes from the style covers; the building's
+ * shape comes from the photographs.
+ */
+export const SUBJECT_REFERENCE_NOTE =
+  '\n\nSUBJECT REFERENCE: The final attached image(s) are PHOTOGRAPHS of the real place named above. ' +
+  'They define the ARCHITECTURE ONLY: overall massing, proportions, number of storeys, roofline, ' +
+  'window pattern, materials and setting. Reproduce those shapes faithfully so the place is ' +
+  'recognisable. Do NOT copy the photographs literally, and do NOT take their photographic look, ' +
+  'colour, lighting or level of detail — the finish must come entirely from the house style ' +
+  'reference(s), reduced to the same small number of flat shapes.';
+
+/**
+ * Downloads arbitrary reference photographs (e.g. a place's saved photos).
+ * Fail-open: anything that cannot be fetched is skipped.
+ */
+export async function loadReferenceImagesFromUrls(
+  urls: string[],
+  prefix = 'subject',
+): Promise<StyleReferenceBlob[]> {
+  const refs: StyleReferenceBlob[] = [];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${res.status}`);
+      const buf = new Uint8Array(await res.arrayBuffer());
+      const type = res.headers.get('content-type') || 'image/png';
+      const ext = type.includes('webp') ? 'webp' : type.includes('jpeg') ? 'jpg' : 'png';
+      refs.push({
+        blob: new Blob([buf], { type }),
+        name: `${prefix}-${refs.length + 1}.${ext}`,
+      });
+    } catch (error) {
+      console.warn(`Could not load reference image ${url}: ${error}`);
+    }
+  }
+  return refs;
+}

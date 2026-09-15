@@ -9,7 +9,12 @@ import {
   buildPhotographicPrompt 
 } from '../_shared/prompt-helpers.ts'
 import { checkAnonymity } from '../_shared/anonymity-guard.ts'
-import { loadStyleReferences, STYLE_REFERENCE_NOTE } from '../_shared/style-references.ts'
+import {
+  loadStyleReferences,
+  loadReferenceImagesFromUrls,
+  STYLE_REFERENCE_NOTE,
+  SUBJECT_REFERENCE_NOTE,
+} from '../_shared/style-references.ts'
 
 /**
  * Generate context-aware animation suggestions using GPT-4o-mini
@@ -447,11 +452,12 @@ serve(async (req) => {
     let topicRegion: string | undefined = undefined // for place-accurate prompts
     let topicLandmarks: string[] | undefined = undefined // for landmark-accurate rendering
     let topicLandmarkDescriptions: Record<string, string> | null = null // owner-written appearance notes
+    let topicLandmarkPhotos: Record<string, Array<{ url: string }>> | null = null // owner-saved reference photos
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions')
+        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions, landmark_reference_images')
         .eq('id', topicId)
         .single()
       
@@ -487,6 +493,12 @@ serve(async (req) => {
       if (rawDescriptions && typeof rawDescriptions === 'object' && !Array.isArray(rawDescriptions)) {
         topicLandmarkDescriptions = rawDescriptions as Record<string, string>
         console.log(`Landmark descriptions available: ${Object.keys(topicLandmarkDescriptions).length}`)
+      }
+
+      // Owner-saved reference photographs of each place (fail-open)
+      const rawPhotos = (topicData as any)?.landmark_reference_images
+      if (rawPhotos && typeof rawPhotos === 'object' && !Array.isArray(rawPhotos)) {
+        topicLandmarkPhotos = rawPhotos as Record<string, Array<{ url: string }>>
       }
     }
 
@@ -627,6 +639,24 @@ serve(async (req) => {
     if (locationDetails) {
       console.log(`Location identified: ${locationDetails}`)
     }
+
+    // Which saved place photographs (if any) match the place this story is about
+    const subjectPhotoUrls: string[] = []
+    if (locationDetails && topicLandmarkPhotos) {
+      const haystack = locationDetails.toLowerCase()
+      for (const [place, photos] of Object.entries(topicLandmarkPhotos)) {
+        if (!place || !Array.isArray(photos) || photos.length === 0) continue
+        if (!haystack.includes(place.toLowerCase())) continue
+        for (const photo of photos) {
+          const url = (photo as any)?.url
+          if (typeof url === 'string' && url) subjectPhotoUrls.push(url)
+        }
+      }
+    }
+    if (subjectPhotoUrls.length > 0) {
+      console.log(`🏛️ ${subjectPhotoUrls.length} reference photo(s) matched for this story's place`)
+    }
+    
     
     // Extract subject matter with location context
     const subjectMatter = await extractSubjectMatter(
@@ -997,19 +1027,31 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         console.log(`🎨 Attaching ${styleReferences.length} house style reference(s)`);
       }
 
+      // Photographs of the real place, when the owner has saved some and the
+      // story is about that place. Style still comes from the covers above.
+      const subjectReferences = styleReferences.length > 0 && subjectPhotoUrls.length > 0
+        ? await loadReferenceImagesFromUrls(subjectPhotoUrls.slice(0, 2), 'subject')
+        : [];
+      if (subjectReferences.length > 0) {
+        console.log(`🏛️ Attaching ${subjectReferences.length} place photo reference(s)`);
+      }
+
       // Transient upstream/Cloudflare failures (5xx, 520) are common on image
       // generation. Retry with backoff instead of failing the whole job.
       const requestOpenAIImage = () => {
         if (styleReferences.length > 0) {
           const form = new FormData();
           form.append('model', openaiModelName);
-          form.append('prompt', `${illustrationPrompt}${STYLE_REFERENCE_NOTE}`);
+          form.append(
+            'prompt',
+            `${illustrationPrompt}${STYLE_REFERENCE_NOTE}${subjectReferences.length > 0 ? SUBJECT_REFERENCE_NOTE : ''}`,
+          );
           form.append('n', '1');
           form.append('size', '1536x1024');
           form.append('quality', modelConfig.quality || 'medium');
           form.append('output_format', 'webp');
           form.append('output_compression', '70');
-          for (const ref of styleReferences) {
+          for (const ref of [...styleReferences.slice(0, 2), ...subjectReferences]) {
             form.append('image[]', ref.blob, ref.name);
           }
           return fetch('https://api.openai.com/v1/images/edits', {

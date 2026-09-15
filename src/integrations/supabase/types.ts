@@ -4759,6 +4759,7 @@ export type Database = {
           is_public: boolean | null
           keywords: string[] | null
           landmark_descriptions: Json
+          landmark_reference_images: Json
           landmarks: string[] | null
           max_article_age_days: number | null
           name: string
@@ -4821,6 +4822,7 @@ export type Database = {
           is_public?: boolean | null
           keywords?: string[] | null
           landmark_descriptions?: Json
+          landmark_reference_images?: Json
           landmarks?: string[] | null
           max_article_age_days?: number | null
           name: string
@@ -4883,6 +4885,7 @@ export type Database = {
           is_public?: boolean | null
           keywords?: string[] | null
           landmark_descriptions?: Json
+          landmark_reference_images?: Json
           landmarks?: string[] | null
           max_article_age_days?: number | null
           name?: string

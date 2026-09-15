@@ -78,7 +78,8 @@ serve(async (req) => {
       existingOrganizations = [],
       elementType, // 'landmarks', 'postcodes', 'organizations', or 'all'
       mode, // optional: 'describe' returns a visual description of one landmark
-      landmark // the landmark name to describe when mode === 'describe'
+      landmark, // the landmark name to describe when mode === 'describe'
+      imageUrls // optional reference photographs to describe from
     } = await req.json();
 
     // Verify authentication and topic ownership
@@ -121,6 +122,58 @@ RULES:
 - If you are not confident about this specific building, describe only what you are sure of.
 
 Return the sentence only, with no quotes and no preamble.`;
+
+      // If the owner has saved reference photographs, describe what is actually
+      // in them rather than working from memory. Fail-open: any problem with the
+      // vision call falls back to the text-only description below.
+      const photoUrls: string[] = Array.isArray(imageUrls)
+        ? imageUrls.filter((u: unknown) => typeof u === 'string' && /^https?:\/\//i.test(u)).slice(0, 3)
+        : [];
+      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+
+      if (photoUrls.length > 0 && OPENAI_API_KEY) {
+        try {
+          const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: 'You are a precise architectural describer. Reply with one plain sentence.' },
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'text',
+                      text: `${describePrompt}\n\nDescribe ONLY what is visible in the attached photograph(s) of "${landmark}".`,
+                    },
+                    ...photoUrls.map((url) => ({ type: 'image_url', image_url: { url } })),
+                  ],
+                },
+              ],
+              temperature: 0.2,
+            }),
+          });
+          const visionData = await visionRes.json();
+          if (visionRes.ok) {
+            const visionDescription = (visionData.choices?.[0]?.message?.content || '')
+              .replace(/^["'\s]+|["'\s]+$/g, '')
+              .slice(0, 400);
+            if (visionDescription) {
+              return new Response(JSON.stringify({ success: true, description: visionDescription }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+          } else {
+            console.warn('Vision description failed:', visionData?.error?.message);
+          }
+        } catch (visionError) {
+          console.warn('Vision description error, falling back to text:', visionError);
+        }
+      }
 
       const describeRes = await llmFetch({
         method: 'POST',

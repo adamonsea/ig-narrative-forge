@@ -57,6 +57,16 @@ const STYLE_REFERENCE_NOTE =
   'backgrounds. If unsure, draw LESS than the reference — under-detailing is preferred to ' +
   'over-detailing.';
 
+// Appended when photographs of the real place are attached after the style
+// references, so architecture comes from the photos and finish from the style.
+const SUBJECT_REFERENCE_NOTE =
+  '\n\nSUBJECT REFERENCE: The final attached image(s) are PHOTOGRAPHS of the real place named above. ' +
+  'They define the ARCHITECTURE ONLY: overall massing, proportions, number of storeys, roofline, ' +
+  'window pattern, materials and setting. Reproduce those shapes faithfully so the place is ' +
+  'recognisable. Do NOT copy the photographs literally, and do NOT take their photographic look, ' +
+  'colour, lighting or level of detail — the finish must come entirely from the house style ' +
+  'reference(s), reduced to the same small number of flat shapes.';
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -173,11 +183,12 @@ Deno.serve(async (req) => {
       let topicRegion: string | undefined;
       let topicLandmarks: string[] | undefined;
       let topicLandmarkDescriptions: Record<string, string> | null = null;
+      let topicLandmarkPhotos: Record<string, Array<{ url: string }>> | null = null;
 
       if (topicId) {
         const { data: topicData } = await supabase
           .from('topics')
-          .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions')
+          .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions, landmark_reference_images')
           .eq('id', topicId)
           .single();
         if (topicData?.illustration_style) illustrationStyle = topicData.illustration_style;
@@ -188,6 +199,10 @@ Deno.serve(async (req) => {
         if (rawDescriptions && typeof rawDescriptions === 'object' && !Array.isArray(rawDescriptions)) {
           topicLandmarkDescriptions = rawDescriptions as Record<string, string>;
         }
+        const rawPhotos = (topicData as any)?.landmark_reference_images;
+        if (rawPhotos && typeof rawPhotos === 'object' && !Array.isArray(rawPhotos)) {
+          topicLandmarkPhotos = rawPhotos as Record<string, Array<{ url: string }>>;
+        }
       }
 
       const { data: slides } = await supabase
@@ -197,6 +212,7 @@ Deno.serve(async (req) => {
         .order('slide_number', { ascending: true });
 
       let prompt = promptOverride;
+      const subjectPhotoUrls: string[] = [];
       if (!prompt) {
         const [storyTone, locationDetails] = await Promise.all([
           analyzeStoryTone(slides || [], OPENAI_API_KEY),
@@ -211,6 +227,36 @@ Deno.serve(async (req) => {
         prompt = illustrationStyle === 'editorial_photographic'
           ? buildPhotographicPrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails)
           : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant);
+
+        if (locationDetails && topicLandmarkPhotos) {
+          const haystack = locationDetails.toLowerCase();
+          for (const [place, photos] of Object.entries(topicLandmarkPhotos)) {
+            if (!place || !Array.isArray(photos) || photos.length === 0) continue;
+            if (!haystack.includes(place.toLowerCase())) continue;
+            for (const photo of photos) {
+              const url = (photo as any)?.url;
+              if (typeof url === 'string' && url) subjectPhotoUrls.push(url);
+            }
+          }
+        }
+      }
+
+      // Photographs of the real place, loaded fail-open.
+      const subjectBlobs: { blob: Blob; name: string }[] = [];
+      for (const url of subjectPhotoUrls.slice(0, 2)) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`${res.status}`);
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          const type = res.headers.get('content-type') || 'image/png';
+          const ext = type.includes('webp') ? 'webp' : type.includes('jpeg') ? 'jpg' : 'png';
+          subjectBlobs.push({
+            blob: new Blob([bytes], { type }),
+            name: `subject-${subjectBlobs.length + 1}.${ext}`,
+          });
+        } catch (error) {
+          console.warn(`Could not load place photo ${url}: ${error}`);
+        }
       }
 
       // ---- Generate across the grid ----
@@ -224,18 +270,22 @@ Deno.serve(async (req) => {
           // only on the newer models. Image 1.5 stays on plain generation so it
           // remains the honest baseline being matched.
           const useReferences = referenceBlobs.length > 0 && model !== 'gpt-image-1.5';
+          const usePlacePhotos = useReferences && subjectBlobs.length > 0;
           try {
             let res: Response;
             if (useReferences) {
               const form = new FormData();
               form.append('model', model);
-              form.append('prompt', `${prompt}${STYLE_REFERENCE_NOTE}`);
+              form.append(
+                'prompt',
+                `${prompt}${STYLE_REFERENCE_NOTE}${usePlacePhotos ? SUBJECT_REFERENCE_NOTE : ''}`,
+              );
               form.append('n', '1');
               form.append('size', '1536x1024');
               form.append('quality', quality);
               form.append('output_format', 'webp');
               form.append('output_compression', '80');
-              for (const ref of referenceBlobs) {
+              for (const ref of [...referenceBlobs.slice(0, 2), ...(usePlacePhotos ? subjectBlobs : [])]) {
                 form.append('image[]', ref.blob, ref.name);
               }
               res = await fetch('https://api.openai.com/v1/images/edits', {

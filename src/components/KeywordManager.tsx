@@ -5,13 +5,25 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, Hash, MapPin, Building, Navigation, Sparkles } from "lucide-react";
+import { Plus, X, Hash, MapPin, Building, Navigation, Sparkles, Image as ImageIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { KeywordSuggestionTool } from "./KeywordSuggestionTool";
 import { RegionalElementsSuggestionTool } from "./RegionalElementsSuggestionTool";
 import { RegionalKeywordAutoPopulate } from "./RegionalKeywordAutoPopulate";
+
+interface LandmarkPhoto {
+  url: string;
+  credit?: string;
+}
+
+interface PhotoCandidate {
+  url: string;
+  thumbUrl: string;
+  credit: string;
+  title: string;
+}
 
 interface Topic {
   id: string;
@@ -21,6 +33,7 @@ interface Topic {
   region?: string;
   landmarks?: string[];
   landmark_descriptions?: Record<string, string>;
+  landmark_reference_images?: Record<string, LandmarkPhoto[]>;
   postcodes?: string[];
   organizations?: string[];
 }
@@ -37,6 +50,12 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     topic.landmark_descriptions || {}
   );
   const [describingLandmark, setDescribingLandmark] = useState<string | null>(null);
+  const [landmarkPhotos, setLandmarkPhotos] = useState<Record<string, LandmarkPhoto[]>>(
+    topic.landmark_reference_images || {}
+  );
+  const [photoCandidates, setPhotoCandidates] = useState<Record<string, PhotoCandidate[]>>({});
+  const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+  const [photoLink, setPhotoLink] = useState<Record<string, string>>({});
   const [postcodes, setPostcodes] = useState(topic.postcodes || []);
   const [organizations, setOrganizations] = useState(topic.organizations || []);
   const [newKeyword, setNewKeyword] = useState('');
@@ -52,6 +71,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     setKeywords(sortedKeywords);
     setLandmarks(topic.landmarks || []);
     setLandmarkDescriptions(topic.landmark_descriptions || {});
+    setLandmarkPhotos(topic.landmark_reference_images || {});
     setPostcodes(topic.postcodes || []);
     setOrganizations(topic.organizations || []);
   }, [topic]);
@@ -92,7 +112,8 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
           topicName: topic.name,
           region: topic.region,
           mode: 'describe',
-          landmark
+          landmark,
+          imageUrls: (landmarkPhotos[landmark] || []).map(p => p.url)
         }
       });
       if (error) throw error;
@@ -118,6 +139,100 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
       setDescribingLandmark(null);
     }
   };
+
+  // ---- Reference photographs for a place ----
+  const savePhotos = async (landmark: string, photos: LandmarkPhoto[]) => {
+    const next = { ...(topic.landmark_reference_images || {}) };
+    if (photos.length > 0) next[landmark] = photos.slice(0, 3);
+    else delete next[landmark];
+
+    setLandmarkPhotos(next);
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ landmark_reference_images: next as any, updated_at: new Date().toISOString() })
+        .eq('id', topic.id);
+      if (error) throw error;
+      onTopicUpdate({ ...topic, landmark_reference_images: next });
+    } catch (error) {
+      console.error('Error saving place photos:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't save that photo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const searchPhotos = async (landmark: string) => {
+    setPhotoBusy(landmark);
+    try {
+      const { data, error } = await supabase.functions.invoke('landmark-photos', {
+        body: { topicId: topic.id, mode: 'search', landmark, region: topic.region }
+      });
+      if (error) throw error;
+      const results = ((data as any)?.results || []) as PhotoCandidate[];
+      setPhotoCandidates(prev => ({ ...prev, [landmark]: results }));
+      if (results.length === 0) {
+        toast({ title: "Nothing found", description: "Try uploading a photo or pasting a link" });
+      }
+    } catch (error) {
+      console.error('Error searching for photos:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't look that place up — try again",
+        variant: "destructive"
+      });
+    } finally {
+      setPhotoBusy(null);
+    }
+  };
+
+  const importPhoto = async (
+    landmark: string,
+    payload: { sourceUrl?: string; credit?: string; fileBase64?: string; contentType?: string }
+  ) => {
+    const current = landmarkPhotos[landmark] || [];
+    if (current.length >= 3) {
+      toast({ title: "Three photos is the limit", description: "Remove one first" });
+      return;
+    }
+    setPhotoBusy(landmark);
+    try {
+      const { data, error } = await supabase.functions.invoke('landmark-photos', {
+        body: { topicId: topic.id, mode: 'import', landmark, ...payload }
+      });
+      if (error) throw error;
+      const url = (data as any)?.url;
+      if (!url) throw new Error((data as any)?.error || 'No image returned');
+      await savePhotos(landmark, [...current, { url, credit: (data as any)?.credit || payload.credit }]);
+    } catch (error) {
+      console.error('Error adding photo:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't add that photo",
+        variant: "destructive"
+      });
+    } finally {
+      setPhotoBusy(null);
+    }
+  };
+
+  const uploadPhoto = async (landmark: string, file: File) => {
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    await importPhoto(landmark, { fileBase64: base64, contentType: file.type });
+  };
+
+  const removePhoto = async (landmark: string, index: number) => {
+    const current = landmarkPhotos[landmark] || [];
+    await savePhotos(landmark, current.filter((_, i) => i !== index));
+  };
+
 
   // Listen for external keyword additions
   useEffect(() => {
@@ -634,6 +749,113 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                         <Sparkles className="h-3 w-3 mr-1" />
                         {describingLandmark === landmark ? 'Describing…' : 'Suggest description'}
                       </Button>
+
+                      {/* Reference photographs */}
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs text-muted-foreground">
+                          Reference photos (up to 3) — used for accurate architecture when a story is about this place.
+                        </p>
+                        {(landmarkPhotos[landmark] || []).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {(landmarkPhotos[landmark] || []).map((photo, photoIndex) => (
+                              <div key={photo.url} className="relative">
+                                <img
+                                  src={photo.url}
+                                  alt={`${landmark} reference ${photoIndex + 1}`}
+                                  loading="lazy"
+                                  className="h-16 w-24 rounded object-cover border"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removePhoto(landmark, photoIndex)}
+                                  aria-label={`Remove reference photo ${photoIndex + 1}`}
+                                  className="absolute -top-1 -right-1 rounded-full bg-background border p-0.5"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={photoBusy === landmark}
+                            onClick={() => searchPhotos(landmark)}
+                          >
+                            <ImageIcon className="h-3 w-3 mr-1" />
+                            {photoBusy === landmark ? 'Working…' : 'Find photos'}
+                          </Button>
+                          <label className="text-xs underline cursor-pointer">
+                            Upload
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = '';
+                                if (file) uploadPhoto(landmark, file);
+                              }}
+                            />
+                          </label>
+                          <Input
+                            value={photoLink[landmark] ?? ''}
+                            onChange={(e) => setPhotoLink(prev => ({ ...prev, [landmark]: e.target.value }))}
+                            placeholder="Paste an image link…"
+                            className="h-8 text-xs flex-1 min-w-[160px]"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={photoBusy === landmark || !(photoLink[landmark] || '').trim()}
+                            onClick={async () => {
+                              const link = (photoLink[landmark] || '').trim();
+                              if (!link) return;
+                              await importPhoto(landmark, { sourceUrl: link });
+                              setPhotoLink(prev => ({ ...prev, [landmark]: '' }));
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                        {(photoCandidates[landmark] || []).length > 0 && (
+                          <div className="space-y-2 rounded-md border p-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-muted-foreground">Tap a photo to save it</p>
+                              <button
+                                type="button"
+                                className="text-xs underline"
+                                onClick={() => setPhotoCandidates(prev => ({ ...prev, [landmark]: [] }))}
+                              >
+                                Close
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(photoCandidates[landmark] || []).map((candidate) => (
+                                <button
+                                  key={candidate.url}
+                                  type="button"
+                                  disabled={photoBusy === landmark}
+                                  title={candidate.credit}
+                                  onClick={() =>
+                                    importPhoto(landmark, { sourceUrl: candidate.url, credit: candidate.credit })
+                                  }
+                                  className="rounded overflow-hidden border hover:ring-2 hover:ring-primary"
+                                >
+                                  <img
+                                    src={candidate.thumbUrl}
+                                    alt={candidate.title}
+                                    loading="lazy"
+                                    className="h-16 w-24 object-cover"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
