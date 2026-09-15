@@ -483,7 +483,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       const STATUS_PAGE_SIZE: Record<string, number> = {
         draft: 100,
         ready: 100,
-        published: 500,
+        published: 250,
         archived: 100
       };
       const STATUSES = ['draft', 'ready', 'published', 'archived'];
