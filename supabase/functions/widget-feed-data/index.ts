@@ -37,12 +37,22 @@ serve(async (req) => {
     const allowedSources = parseNameList(url.searchParams.get('sources'));
     const featuredSources = parseNameList(url.searchParams.get('featured'));
     const MAX_FEATURED = 3;
-    // How long a story from a featured source keeps its featured slot (1-5 days, default 2)
-    const parsedFeaturedDays = parseInt(url.searchParams.get('featuredDays') || '', 10);
-    const featuredDays = Number.isFinite(parsedFeaturedDays)
-      ? Math.min(5, Math.max(1, parsedFeaturedDays))
-      : 2;
-    const featuredMaxAgeMinutes = featuredDays * 24 * 60;
+    // How long each featured source keeps its featured slot (1-5 days, default 2).
+    // Accepts a single value applied to all, or a comma list aligned with `featured`.
+    const rawFeaturedDays = (url.searchParams.get('featuredDays') || '').slice(0, 120);
+    const clampDays = (n: number) => (Number.isFinite(n) ? Math.min(5, Math.max(1, Math.round(n))) : 2);
+    const featuredDaysParts = rawFeaturedDays
+      .split(',')
+      .map(v => clampDays(parseInt(v.trim(), 10)));
+    const featuredDaysBySource = new Map<string, number>();
+    featuredSources.forEach((name, i) => {
+      const days = featuredDaysParts.length === 1
+        ? featuredDaysParts[0]
+        : (featuredDaysParts[i] ?? 2);
+      featuredDaysBySource.set(name, days);
+    });
+    const featuredMaxAgeMinutesFor = (name: string) =>
+      (featuredDaysBySource.get(name) ?? 2) * 24 * 60;
 
     if (!feedSlug) {
       return new Response(
@@ -271,7 +281,7 @@ serve(async (req) => {
         const featured = working
           .filter(s =>
             featuredSources.includes(norm(s.source_name)) &&
-            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutes)
+            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutesFor(norm(s.source_name)))
           )
           .slice(0, MAX_FEATURED)
           .map(s => ({ ...s, featured: true }));

@@ -38,7 +38,8 @@ interface WidgetConfig {
   frequency: 'daily' | 'weekly';
   sources: string[];
   featuredSources: string[];
-  featuredDays: number;
+  /** Days each featured source keeps its top slot, keyed by publication name */
+  featuredDaysBySource: Record<string, number>;
 }
 
 interface FeedSource {
@@ -88,7 +89,7 @@ export default function PublicWidgetBuilder() {
     frequency: 'daily',
     sources: [],
     featuredSources: [],
-    featuredDays: 2,
+    featuredDaysBySource: {},
   });
 
   // Load topic data
@@ -156,6 +157,10 @@ export default function PublicWidgetBuilder() {
     ? config.sources.join(',')
     : '';
   const featuredParam = config.featuredSources.join(',');
+  // Days list aligned with the featured list order (per source)
+  const featuredDaysParam = config.featuredSources
+    .map(name => config.featuredDaysBySource[name] ?? 2)
+    .join(',');
 
   const toggleSource = (name: string) => {
     setConfig(prev => {
@@ -185,7 +190,7 @@ export default function PublicWidgetBuilder() {
       try {
         let url = `${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&max=${config.maxHeadlines}`;
         if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
-        if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${config.featuredDays}`;
+        if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${encodeURIComponent(featuredDaysParam)}`;
         const response = await fetch(url);
         
         if (response.ok) {
@@ -198,9 +203,9 @@ export default function PublicWidgetBuilder() {
     };
     
     fetchPreview();
-  }, [slug, config.maxHeadlines, sourcesParam, featuredParam, config.featuredDays]);
+  }, [slug, config.maxHeadlines, sourcesParam, featuredParam, featuredDaysParam]);
 
-  const WIDGET_JS_VERSION = '1.5.1';
+  const WIDGET_JS_VERSION = '1.5.2';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
@@ -332,7 +337,7 @@ export default function PublicWidgetBuilder() {
     }
     if (featuredParam) {
       code += ` data-featured="${featuredParam.replace(/"/g, '&quot;')}"`;
-      code += ` data-featured-days="${config.featuredDays}"`;
+      code += ` data-featured-days="${featuredDaysParam}"`;
     }
 
 
@@ -678,15 +683,39 @@ export default function PublicWidgetBuilder() {
                               <span>{source.name}</span>
                               <span className="text-xs text-muted-foreground">({source.count})</span>
                             </label>
-                            <label className={`flex items-center gap-2 text-xs cursor-pointer ${included ? '' : 'opacity-40 pointer-events-none'}`}>
-                              <Checkbox
-                                checked={featured}
-                                disabled={!included}
-                                onCheckedChange={() => toggleFeaturedSource(source.name)}
-                                aria-label={`Feature ${source.name}`}
-                              />
-                              <span>Feature</span>
-                            </label>
+                            <div className="flex items-center gap-2">
+                              <label className={`flex items-center gap-2 text-xs cursor-pointer ${included ? '' : 'opacity-40 pointer-events-none'}`}>
+                                <Checkbox
+                                  checked={featured}
+                                  disabled={!included}
+                                  onCheckedChange={() => toggleFeaturedSource(source.name)}
+                                  aria-label={`Feature ${source.name}`}
+                                />
+                                <span>Feature</span>
+                              </label>
+                              {featured && (
+                                <Select
+                                  value={String(config.featuredDaysBySource[source.name] ?? 2)}
+                                  onValueChange={(v) =>
+                                    setConfig(prev => ({
+                                      ...prev,
+                                      featuredDaysBySource: { ...prev.featuredDaysBySource, [source.name]: Number(v) },
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger className="h-7 w-[92px] text-xs" aria-label={`Keep ${source.name} featured for`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {[1, 2, 3, 4, 5].map(d => (
+                                      <SelectItem key={d} value={String(d)}>
+                                        {d} {d === 1 ? 'day' : 'days'}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -697,27 +726,9 @@ export default function PublicWidgetBuilder() {
                       </p>
                     )}
                     {config.featuredSources.length > 0 && (
-                      <div className="space-y-2">
-                        <Label htmlFor="public-featured-days">Keep featured stories for</Label>
-                        <Select
-                          value={String(config.featuredDays)}
-                          onValueChange={(v) => setConfig(prev => ({ ...prev, featuredDays: Number(v) }))}
-                        >
-                          <SelectTrigger id="public-featured-days">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4, 5].map(d => (
-                              <SelectItem key={d} value={String(d)}>
-                                {d} {d === 1 ? 'day' : 'days'}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          After this, featured stories move down into the main list.
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Each featured publication keeps its top slot for the days you choose, then its stories move down into the main list.
+                      </p>
                     )}
                   </div>
                 )}
