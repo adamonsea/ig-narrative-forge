@@ -20,3 +20,12 @@ change to writing, approval, publishing, feeds, widgets or emails.
         or removing (decision with owner)
       - South Downs National Park: recovered, 4 stories stored
       - East Sussex County Council: 10 links read, none passed relevance
+
+Published queue steadiness (plan: .lovable/plan/steady-up-the-published-queue-2026-09-15.md)
+- [x] Single source of truth: admin RPC primary, direct query fallback-only
+- [x] Slides never silently missing: inline slides preferred, last-good slides
+      kept on fetch failure, "Slides loading — refresh" state in the list
+- [x] Parliamentary filter fail-open (failed filter keeps stories visible)
+- [x] 30s fallback poll stands down when realtime is live or tab hidden
+- [x] Load-error toasts replaced by one quiet inline banner with retry
+- [x] Thumbnails via Supabase image transformation + lazy loading
