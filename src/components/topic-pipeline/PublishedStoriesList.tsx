@@ -26,6 +26,18 @@ import { ReelExportButton } from "@/components/reels/ReelExportButton";
 import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 import { publicationFromUrl } from "@/lib/urlUtils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowDownAZ } from "lucide-react";
+
+/** Best-effort source label for a story. */
+const storySourceLabel = (s: { publication_name?: string | null; source_url?: string | null }): string =>
+  s.publication_name?.trim() || publicationFromUrl(s.source_url) || 'Unknown source';
 
 interface Link {
   start: number;
@@ -109,6 +121,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [linkEditorSlide, setLinkEditorSlide] = useState<Slide | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [storyFilter, setStoryFilter] = useState<'all' | 'regular' | 'parliamentary'>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [sortMode, setSortMode] = useState<'newest' | 'oldest' | 'source'>('newest');
   const pageSize = 10;
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
   const [animationModalStory, setAnimationModalStory] = useState<PublishedStory | null>(null);
@@ -153,10 +167,30 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   };
 
   const filteredStories = useMemo(() => {
-    if (storyFilter === 'all') return stories;
-    if (storyFilter === 'parliamentary') return stories.filter(s => s.is_parliamentary);
-    return stories.filter(s => !s.is_parliamentary);
-  }, [stories, storyFilter]);
+    let list = stories;
+    if (storyFilter === 'parliamentary') list = list.filter(s => s.is_parliamentary);
+    else if (storyFilter === 'regular') list = list.filter(s => !s.is_parliamentary);
+    if (sourceFilter !== 'all') list = list.filter(s => storySourceLabel(s) === sourceFilter);
+
+    const byNewest = (a: PublishedStory, b: PublishedStory) => b.created_at.localeCompare(a.created_at);
+    const sorted = [...list];
+    if (sortMode === 'oldest') sorted.sort((a, b) => -byNewest(a, b));
+    else if (sortMode === 'source') {
+      sorted.sort((a, b) =>
+        storySourceLabel(a).localeCompare(storySourceLabel(b)) || byNewest(a, b)
+      );
+    } else sorted.sort(byNewest);
+    return sorted;
+  }, [stories, storyFilter, sourceFilter, sortMode]);
+
+  const availableSources = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of stories) {
+      const label = storySourceLabel(s);
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [stories]);
 
   const paginatedStories = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -358,6 +392,30 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           )}
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-2">
+          {availableSources.length > 1 && (
+            <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="h-7 w-[150px] text-xs">
+                <SelectValue placeholder="All sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                {availableSources.map(([label, count]) => (
+                  <SelectItem key={label} value={label}>{label} ({count})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={sortMode} onValueChange={(v) => { setSortMode(v as typeof sortMode); setCurrentPage(1); }}>
+            <SelectTrigger className="h-7 w-[130px] text-xs" aria-label="Sort stories">
+              <ArrowDownAZ className="h-3.5 w-3.5 mr-1 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="source">Source A–Z</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-xs text-muted-foreground">{totalPages > 1 && `Page ${currentPage}/${totalPages}`}</span>
           <Button variant="ghost" size="sm" onClick={onRefresh} className="h-7 w-7 p-0">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
@@ -424,6 +482,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {isLive && <Badge variant="default" className="h-5 text-[10px] bg-green-600">Live</Badge>}
                   {isDraft && <Badge variant="secondary" className="h-5 text-[10px]">Draft</Badge>}
+                  <span className="truncate max-w-[140px] text-[10px] text-muted-foreground/80">
+                    {storySourceLabel(story)}
+                  </span>
                   {isScheduled && (
                     <>
                       <Badge variant="outline" className="h-5 text-[10px] border-amber-300 text-amber-700 bg-amber-50">
