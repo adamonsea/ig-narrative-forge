@@ -39,7 +39,18 @@ const requestSchema = z.object({
   qualities: z.array(z.enum(['low', 'medium', 'high', 'xhigh', 'max'])).min(1).max(5),
   promptOverride: z.string().max(6000).optional(),
   runId: z.string().uuid().optional(),
+  // Existing pictures (usually Image 1.5 premium covers) handed to the newer
+  // models as a house-style reference.
+  referenceImageUrls: z.array(z.string().url()).max(3).optional(),
 });
+
+// Appended to the prompt when reference pictures are supplied, so the model
+// treats them as style guidance rather than content to reproduce.
+const STYLE_REFERENCE_NOTE =
+  '\n\nSTYLE REFERENCE: The attached image(s) are examples of the required house style only. ' +
+  'Match their artistic treatment, palette handling, level of abstraction, lighting, composition ' +
+  'balance and finish as closely as possible. Do NOT copy their subject matter, characters, ' +
+  'text or scene — illustrate the new subject described above in that same style.';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
