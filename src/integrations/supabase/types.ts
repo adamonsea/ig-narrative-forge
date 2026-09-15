@@ -1403,6 +1403,66 @@ export type Database = {
         }
         Relationships: []
       }
+      image_bench_results: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          id: string
+          image_url: string | null
+          model: string
+          prompt: string | null
+          quality: string
+          run_id: string
+          size: string
+          story_id: string | null
+          story_title: string | null
+          success: boolean
+          topic_id: string | null
+          updated_at: string
+          verdict: string | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          model: string
+          prompt?: string | null
+          quality: string
+          run_id: string
+          size?: string
+          story_id?: string | null
+          story_title?: string | null
+          success?: boolean
+          topic_id?: string | null
+          updated_at?: string
+          verdict?: string | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          model?: string
+          prompt?: string | null
+          quality?: string
+          run_id?: string
+          size?: string
+          story_id?: string | null
+          story_title?: string | null
+          success?: boolean
+          topic_id?: string | null
+          updated_at?: string
+          verdict?: string | null
+        }
+        Relationships: []
+      }
       image_generation_metrics: {
         Row: {
           cost_usd: number | null
