@@ -345,7 +345,8 @@ ANTI-REPETITION RULES:
     slideCount: number,
     publicationName: string,
     templateGuidance?: string,
-    supabase?: any
+    supabase?: any,
+    houseStyleGuidance?: string
   ): Promise<SlideContent[]> {
     try {
       // Fetch recent similar stories for context
