@@ -15,7 +15,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.4.2';
+  const WIDGET_VERSION = '1.5.0';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -88,6 +88,10 @@
     const showSubscribe = container.dataset.subscribe === 'true' || container.dataset.subscribe === '';
     // Email cadence readers sign up for. Embeds without data-frequency stay daily.
     const frequency = container.dataset.frequency === 'weekly' ? 'weekly' : 'daily';
+    // Per-embed source controls: which publications to show, and which to feature on top
+    const sourceList = sanitiseNameList(container.dataset.sources);
+    const featuredList = sanitiseNameList(container.dataset.featured);
+    const variantKey = `${sourceList}|${featuredList}`;
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -111,7 +115,7 @@
     wrapper.className = 'eezee-widget';
     
     // Try to show cached data immediately while fetching fresh data
-    const cached = getCachedData(feedSlug);
+    const cached = getCachedData(feedSlug, variantKey);
     if (cached) {
       wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
       attachClickHandlers(shadow, feedSlug);
@@ -122,10 +126,10 @@
     shadow.appendChild(wrapper);
 
     // Fetch fresh data
-    fetchFeedData(feedSlug, maxStories)
+    fetchFeedData(feedSlug, maxStories, sourceList, featuredList)
       .then(data => {
         // Cache the successful response
-        setCachedData(feedSlug, data);
+        setCachedData(feedSlug, data, variantKey);
         
         wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
         
@@ -152,21 +156,33 @@
       });
   }
 
-  // Cache management for graceful degradation
-  function getCacheKey(feedSlug) {
-    return `curatr_widget_cache_${WIDGET_VERSION}_${feedSlug}`;
+  // Keep only safe publication-name characters from a comma separated list
+  function sanitiseNameList(raw) {
+    if (!raw) return '';
+    return String(raw)
+      .slice(0, 600)
+      .split(',')
+      .map(n => n.replace(/[^\w &'’.\-]/g, '').trim())
+      .filter(n => n.length > 0 && n.length <= 80)
+      .slice(0, 25)
+      .join(',');
   }
 
-  function getCachedData(feedSlug) {
+  // Cache management for graceful degradation
+  function getCacheKey(feedSlug, variantKey) {
+    return `curatr_widget_cache_${WIDGET_VERSION}_${feedSlug}_${variantKey || ''}`;
+  }
+
+  function getCachedData(feedSlug, variantKey) {
     try {
-      const cached = localStorage.getItem(getCacheKey(feedSlug));
+      const cached = localStorage.getItem(getCacheKey(feedSlug, variantKey));
       if (!cached) return null;
       
       const { data, timestamp } = JSON.parse(cached);
       
       // Check if cache is still valid
       if (Date.now() - timestamp > CACHE_TTL_MS) {
-        localStorage.removeItem(getCacheKey(feedSlug));
+        localStorage.removeItem(getCacheKey(feedSlug, variantKey));
         return null;
       }
       
@@ -176,9 +192,9 @@
     }
   }
 
-  function setCachedData(feedSlug, data) {
+  function setCachedData(feedSlug, data, variantKey) {
     try {
-      localStorage.setItem(getCacheKey(feedSlug), JSON.stringify({
+      localStorage.setItem(getCacheKey(feedSlug, variantKey), JSON.stringify({
         data,
         timestamp: Date.now()
       }));
@@ -198,11 +214,12 @@
     });
   }
 
-  async function fetchFeedData(feedSlug, maxStories) {
-    const response = await fetch(
-      `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`,
-      { headers: { 'Accept': 'application/json' } }
-    );
+  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList) {
+    let url = `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`;
+    if (sourceList) url += `&sources=${encodeURIComponent(sourceList)}`;
+    if (featuredList) url += `&featured=${encodeURIComponent(featuredList)}`;
+
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch feed: ${response.status}`);
@@ -357,7 +374,8 @@
         ? `<div class="featured-image"><img src="${featured.image_url}" alt="" /></div>`
         : '';
 
-      const remainingHTML = remaining.map(story => {
+      const remainingFeatured = remaining.filter(s => s.featured).length;
+      const remainingHTML = remaining.map((story, index) => {
         const sourceHTML = story.source_name 
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
@@ -367,7 +385,12 @@
         const bulletStyle = isFresh 
           ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
           : `background: ${accent}`;
+        // Mark where the featured run ends
+        const labelHTML = (remainingFeatured > 0 && index === remainingFeatured)
+          ? '<div class="section-label">Latest</div>'
+          : '';
         return `
+          ${labelHTML}
           <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
             <span class="${bulletClass}" style="${bulletStyle}"></span>
             <div class="story-content">
@@ -415,7 +438,11 @@
     }
 
     // Default compact list layout
-    const storiesHTML = stories.map(story => {
+    let leadingFeatured = 0;
+    while (leadingFeatured < stories.length && stories[leadingFeatured].featured) leadingFeatured++;
+    const showSectionLabels = leadingFeatured > 0 && leadingFeatured < stories.length;
+
+    const storiesHTML = stories.map((story, index) => {
       const sourceHTML = story.source_name && story.source_url 
         ? `<a href="${story.source_url}" target="_blank" rel="noopener" class="story-source" onclick="event.stopPropagation();">${escapeHTML(story.source_name)}</a>`
         : story.source_name 
@@ -428,8 +455,13 @@
       const bulletStyle = isFresh 
         ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
         : `background: ${accent}`;
+
+      let labelHTML = '';
+      if (showSectionLabels && index === 0) labelHTML = '<div class="section-label">Featured</div>';
+      if (showSectionLabels && index === leadingFeatured) labelHTML = '<div class="section-label">Latest</div>';
       
       return `
+        ${labelHTML}
         <a href="${story.url}" target="_blank" rel="noopener" class="story-item" data-story-id="${story.id || ''}">
           <span class="${bulletClass}" style="${bulletStyle}"></span>
           <div class="story-content">
@@ -546,6 +578,19 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+      }
+
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: ${isDark ? '#9ca3af' : '#6b7280'};
+        margin: 10px 0 4px;
+      }
+
+      .section-label:first-child {
+        margin-top: 0;
       }
 
       .story-item {

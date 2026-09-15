@@ -22,6 +22,21 @@ serve(async (req) => {
     const url = new URL(req.url);
     const feedSlug = url.searchParams.get('feed');
     const maxStories = Math.min(Math.max(parseInt(url.searchParams.get('max') || '5'), 1), 10);
+    const mode = url.searchParams.get('mode');
+
+    // Optional per-embed source controls (comma separated publication names)
+    const parseNameList = (raw: string | null): string[] => {
+      if (!raw) return [];
+      return raw
+        .slice(0, 600)
+        .split(',')
+        .map(n => n.trim().toLowerCase())
+        .filter(n => n.length > 0 && n.length <= 80)
+        .slice(0, 25);
+    };
+    const allowedSources = parseNameList(url.searchParams.get('sources'));
+    const featuredSources = parseNameList(url.searchParams.get('featured'));
+    const MAX_FEATURED = 3;
 
     if (!feedSlug) {
       return new Response(
@@ -68,6 +83,48 @@ serve(async (req) => {
         );
       }
 
+      // Source discovery mode: list publications recently seen in this feed
+      if (mode === 'sources') {
+        const { data: recent, error: recentError } = await supabase
+          .from('stories')
+          .select('publication_name, articles(source_url), topic_articles!inner(topic_id)')
+          .eq('topic_articles.topic_id', topic.id)
+          .eq('is_published', true)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false })
+          .limit(60);
+
+        if (recentError) {
+          console.error('Error fetching feed sources:', recentError);
+          return new Response(
+            JSON.stringify({ error: 'Failed to fetch sources' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const counts = new Map<string, number>();
+        for (const row of recent || []) {
+          let name: string | null = (row as any).publication_name?.trim() || null;
+          if (!name) {
+            const su = (row as any).articles?.source_url;
+            if (su) {
+              try { name = new URL(su).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+            }
+          }
+          if (!name) continue;
+          counts.set(name, (counts.get(name) || 0) + 1);
+        }
+
+        const sources = Array.from(counts.entries())
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count);
+
+        return new Response(
+          JSON.stringify({ feed: { id: topic.id, name: topic.name, slug: topic.slug }, sources }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Extract branding from config with optimized variants
       const branding = topic.branding_config || {};
       const iconVariants = branding.icon_variants || {};
@@ -91,7 +148,9 @@ serve(async (req) => {
       }, QUERY_TIMEOUT_MS);
 
       // Fetch more stories than needed to filter for those with images
-      const fetchLimit = maxStories * 3; // Fetch 3x to ensure we get enough with images
+      // Fetch more stories than needed to filter for those with images (and, when a
+      // per-embed source filter is present, to still have enough after filtering)
+      const fetchLimit = Math.min(allowedSources.length > 0 ? maxStories * 8 : maxStories * 3, 80);
       
       // Calculate rolling 7-day window (now minus 7 days)
       const now = new Date();
@@ -153,7 +212,7 @@ serve(async (req) => {
 
       // Build story URLs with source attribution and images - filter to only stories with images
       const baseUrl = `https://curatr.pro`;
-      const formattedStories = (stories || [])
+      const allFormatted = (stories || [])
         .map(story => {
           const imageUrl = story.cover_illustration_url || story.articles?.image_url || null;
           
@@ -190,8 +249,29 @@ serve(async (req) => {
             image_url: imageUrl,
           };
         })
-        .filter(Boolean) // Remove nulls (stories without images)
-        .slice(0, maxStories); // Limit to requested count
+        .filter(Boolean) as any[]; // Remove nulls (stories without images)
+
+      // Apply per-embed source filtering (falls back to the full list if it empties the widget)
+      const norm = (s: string | null) => (s || '').trim().toLowerCase();
+      let working = allFormatted;
+      if (allowedSources.length > 0) {
+        const filtered = allFormatted.filter(s => allowedSources.includes(norm(s.source_name)));
+        if (filtered.length > 0) working = filtered;
+      }
+
+      // Featured strip: up to 3 newest stories from nominated sources, then the rest newest-first
+      let formattedStories: any[];
+      if (featuredSources.length > 0) {
+        const featured = working
+          .filter(s => featuredSources.includes(norm(s.source_name)))
+          .slice(0, MAX_FEATURED)
+          .map(s => ({ ...s, featured: true }));
+        const featuredIds = new Set(featured.map(s => s.id));
+        const rest = working.filter(s => !featuredIds.has(s.id));
+        formattedStories = [...featured, ...rest].slice(0, maxStories);
+      } else {
+        formattedStories = working.slice(0, maxStories);
+      }
       
       // Add weekly stats to feed data
       feedData.stories_this_week = storiesThisWeek;

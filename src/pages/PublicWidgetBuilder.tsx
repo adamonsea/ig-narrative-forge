@@ -7,6 +7,7 @@ import { edgeErrorMessage } from "@/lib/edgeError";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,8 +36,15 @@ interface WidgetConfig {
   customAvatar: string;
   showSubscribe: boolean;
   frequency: 'daily' | 'weekly';
-
+  sources: string[];
+  featuredSources: string[];
 }
+
+interface FeedSource {
+  name: string;
+  count: number;
+}
+
 
 interface PreviewStory {
   title: string;
@@ -65,6 +73,7 @@ export default function PublicWidgetBuilder() {
   const [previewData, setPreviewData] = useState<{ feed: PreviewFeed | null; stories: PreviewStory[] } | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
+  const [availableSources, setAvailableSources] = useState<FeedSource[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [config, setConfig] = useState<WidgetConfig>({
@@ -76,7 +85,8 @@ export default function PublicWidgetBuilder() {
     customAvatar: '',
     showSubscribe: false,
     frequency: 'daily',
-
+    sources: [],
+    featuredSources: [],
   });
 
   // Load topic data
@@ -120,15 +130,61 @@ export default function PublicWidgetBuilder() {
     loadTopic();
   }, [slug]);
 
+  const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1`;
+
+  // Load the publications that appear in this feed
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+
+    fetch(`${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&mode=sources`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        const list: FeedSource[] = data?.sources || [];
+        setAvailableSources(list);
+        setConfig(prev => ({ ...prev, sources: list.map(s => s.name), featuredSources: [] }));
+      })
+      .catch(err => console.error('Failed to fetch sources:', err));
+
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  const sourcesParam = availableSources.length > 0 && config.sources.length < availableSources.length
+    ? config.sources.join(',')
+    : '';
+  const featuredParam = config.featuredSources.join(',');
+
+  const toggleSource = (name: string) => {
+    setConfig(prev => {
+      const included = prev.sources.includes(name);
+      return {
+        ...prev,
+        sources: included ? prev.sources.filter(s => s !== name) : [...prev.sources, name],
+        featuredSources: included ? prev.featuredSources.filter(s => s !== name) : prev.featuredSources,
+      };
+    });
+  };
+
+  const toggleFeaturedSource = (name: string) => {
+    setConfig(prev => ({
+      ...prev,
+      featuredSources: prev.featuredSources.includes(name)
+        ? prev.featuredSources.filter(s => s !== name)
+        : [...prev.featuredSources, name],
+    }));
+  };
+
   // Fetch preview data
   useEffect(() => {
     const fetchPreview = async () => {
       if (!slug) return;
       
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1/widget-feed-data?feed=${slug}&max=${config.maxHeadlines}`
-        );
+        let url = `${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&max=${config.maxHeadlines}`;
+        if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
+        if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}`;
+        const response = await fetch(url);
         
         if (response.ok) {
           const data = await response.json();
@@ -140,9 +196,9 @@ export default function PublicWidgetBuilder() {
     };
     
     fetchPreview();
-  }, [slug, config.maxHeadlines]);
+  }, [slug, config.maxHeadlines, sourcesParam, featuredParam]);
 
-  const WIDGET_JS_VERSION = '1.4.2';
+  const WIDGET_JS_VERSION = '1.5.0';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
@@ -269,6 +325,14 @@ export default function PublicWidgetBuilder() {
         code += ` data-frequency="weekly"`;
       }
     }
+    if (sourcesParam) {
+      code += ` data-sources="${sourcesParam.replace(/"/g, '&quot;')}"`;
+    }
+    if (featuredParam) {
+      code += ` data-featured="${featuredParam.replace(/"/g, '&quot;')}"`;
+    }
+
+
 
     
     code += `></div>\n<script src="${window.location.origin}/widget.js?v=${WIDGET_JS_VERSION}" async></script>`;
@@ -587,6 +651,50 @@ export default function PublicWidgetBuilder() {
                   </div>
                 )}
 
+                {/* Publications shown in this embed */}
+                {availableSources.length > 1 && (
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Publications</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Choose which publications appear, and feature up to 3 at the top.
+                      </p>
+                    </div>
+                    <div className="space-y-2 max-h-64 overflow-y-auto rounded-md border p-3">
+                      {availableSources.map(source => {
+                        const included = config.sources.includes(source.name);
+                        const featured = config.featuredSources.includes(source.name);
+                        return (
+                          <div key={source.name} className="flex items-center justify-between gap-3">
+                            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                              <Checkbox
+                                checked={included}
+                                onCheckedChange={() => toggleSource(source.name)}
+                                aria-label={`Show stories from ${source.name}`}
+                              />
+                              <span>{source.name}</span>
+                              <span className="text-xs text-muted-foreground">({source.count})</span>
+                            </label>
+                            <label className={`flex items-center gap-2 text-xs cursor-pointer ${included ? '' : 'opacity-40 pointer-events-none'}`}>
+                              <Checkbox
+                                checked={featured}
+                                disabled={!included}
+                                onCheckedChange={() => toggleFeaturedSource(source.name)}
+                                aria-label={`Feature ${source.name}`}
+                              />
+                              <span>Feature</span>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {config.sources.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Nothing selected — the embed will show every publication.
+                      </p>
+                    )}
+                  </div>
+                )}
 
 
               </CardContent>

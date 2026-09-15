@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,13 @@ interface WidgetConfig {
   customAvatar: string;
   showSubscribe: boolean;
   frequency: "daily" | "weekly";
+  sources: string[];
+  featuredSources: string[];
+}
+
+interface FeedSource {
+  name: string;
+  count: number;
 }
 
 export default function Widgets() {
@@ -49,6 +57,8 @@ export default function Widgets() {
     customAvatar: "",
     showSubscribe: false,
     frequency: "daily",
+    sources: [],
+    featuredSources: [],
   });
 
   const [copied, setCopied] = useState(false);
@@ -56,6 +66,7 @@ export default function Widgets() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
+  const [availableSources, setAvailableSources] = useState<FeedSource[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -73,12 +84,60 @@ export default function Widgets() {
     }
   }, [topics, config.feed]);
 
+  // Load the publications that appear in the selected feed
+  useEffect(() => {
+    if (!config.feed) return;
+
+    let cancelled = false;
+    fetch(`${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&mode=sources`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        const list: FeedSource[] = data?.sources || [];
+        setAvailableSources(list);
+        // Default: every source included, none featured
+        setConfig(prev => ({ ...prev, sources: list.map(s => s.name), featuredSources: [] }));
+      })
+      .catch(err => console.error("Source list fetch error:", err));
+
+    return () => { cancelled = true; };
+  }, [config.feed]);
+
+  const sourcesParam = availableSources.length > 0 && config.sources.length < availableSources.length
+    ? config.sources.join(",")
+    : "";
+  const featuredParam = config.featuredSources.join(",");
+
+  const toggleSource = (name: string) => {
+    setConfig(prev => {
+      const included = prev.sources.includes(name);
+      return {
+        ...prev,
+        sources: included ? prev.sources.filter(s => s !== name) : [...prev.sources, name],
+        // Removing a source also drops it from the featured list
+        featuredSources: included ? prev.featuredSources.filter(s => s !== name) : prev.featuredSources,
+      };
+    });
+  };
+
+  const toggleFeaturedSource = (name: string) => {
+    setConfig(prev => ({
+      ...prev,
+      featuredSources: prev.featuredSources.includes(name)
+        ? prev.featuredSources.filter(s => s !== name)
+        : [...prev.featuredSources, name],
+    }));
+  };
+
   // Fetch preview data when feed changes
   useEffect(() => {
     if (!config.feed) return;
 
     setPreviewLoading(true);
-    fetch(`${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=${config.max}`)
+    let url = `${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=${config.max}`;
+    if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
+    if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}`;
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         setPreviewData(data);
@@ -89,7 +148,7 @@ export default function Widgets() {
       })
       .catch(err => console.error("Preview fetch error:", err))
       .finally(() => setPreviewLoading(false));
-  }, [config.feed, config.max]);
+  }, [config.feed, config.max, sourcesParam, featuredParam]);
 
   const isValidAvatarUrl = (url: string) => {
     if (!url) return true;
@@ -178,6 +237,10 @@ export default function Widgets() {
       attrs.push(`data-subscribe="true"`);
       if (config.frequency === "weekly") attrs.push(`data-frequency="weekly"`);
     }
+    if (sourcesParam) attrs.push(`data-sources="${sourcesParam.replace(/"/g, "&quot;")}"`);
+    if (featuredParam) attrs.push(`data-featured="${featuredParam.replace(/"/g, "&quot;")}"`);
+
+
 
     return `<!-- Curatr Widget -->
 <div id="curatr-widget" ${attrs.join(" ")}></div>
@@ -450,6 +513,50 @@ export default function Widgets() {
                 </div>
               )}
 
+              {/* Publications shown in this embed */}
+              {availableSources.length > 1 && (
+                <div className="space-y-3">
+                  <div>
+                    <Label>Publications</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Choose which publications appear, and feature up to 3 at the top.
+                    </p>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto rounded-md border p-3">
+                    {availableSources.map(source => {
+                      const included = config.sources.includes(source.name);
+                      const featured = config.featuredSources.includes(source.name);
+                      return (
+                        <div key={source.name} className="flex items-center justify-between gap-3">
+                          <label className="flex items-center gap-2 text-sm cursor-pointer">
+                            <Checkbox
+                              checked={included}
+                              onCheckedChange={() => toggleSource(source.name)}
+                              aria-label={`Show stories from ${source.name}`}
+                            />
+                            <span>{source.name}</span>
+                            <span className="text-xs text-muted-foreground">({source.count})</span>
+                          </label>
+                          <label className={`flex items-center gap-2 text-xs cursor-pointer ${included ? "" : "opacity-40 pointer-events-none"}`}>
+                            <Checkbox
+                              checked={featured}
+                              disabled={!included}
+                              onCheckedChange={() => toggleFeaturedSource(source.name)}
+                              aria-label={`Feature ${source.name}`}
+                            />
+                            <span>Feature</span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {config.sources.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Nothing selected — the embed will show every publication.
+                    </p>
+                  )}
+                </div>
+              )}
 
 
             </CardContent>
