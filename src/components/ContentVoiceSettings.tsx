@@ -130,6 +130,41 @@ export const ContentVoiceSettings = ({
           </SelectContent>
         </Select>
       </div>
+
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor="house-style-notes">House style</Label>
+        <Textarea
+          id="house-style-notes"
+          rows={4}
+          placeholder="How should this feed sound? e.g. Plain, dry, local. Short sentences. Name the street. No cheerleading."
+          value={houseStyleNotes}
+          onChange={(e) => setHouseStyleNotes(e.target.value)}
+          onBlur={() => {
+            if ((currentHouseStyleNotes ?? '') !== houseStyleNotes) {
+              autoSave('house_style_notes', houseStyleNotes);
+            }
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          Applied to every story in this feed, including automated ones.
+        </p>
+      </div>
+
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor="house-style-examples">Example sentences</Label>
+        <Textarea
+          id="house-style-examples"
+          rows={3}
+          placeholder="Paste one or two sentences you'd be happy to publish. Their rhythm will be copied, not their content."
+          value={houseStyleExamples}
+          onChange={(e) => setHouseStyleExamples(e.target.value)}
+          onBlur={() => {
+            if ((currentHouseStyleExamples ?? '') !== houseStyleExamples) {
+              autoSave('house_style_examples', houseStyleExamples);
+            }
+          }}
+        />
+      </div>
     </div>
   );
 };
