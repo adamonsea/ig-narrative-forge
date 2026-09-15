@@ -101,7 +101,12 @@ const requestSchema = z.object({
   storyId: z.string().uuid(),
   model: z.string().max(100).optional().default('gpt-image-1.5-medium'),
   isAutomated: z.boolean().optional().default(false), // Lifecycle tracking flag
+  useBatch: z.boolean().optional().default(false), // Discounted overnight route (backlog only)
 });
+
+// Soft cap on how many times one story's image may be regenerated.
+// Repeat regenerations were ~40% of image spend; superadmins bypass this.
+const MAX_ILLUSTRATION_REGENERATIONS = 3;
 
 serve(async (req) => {
   // Handle CORS preflight requests
