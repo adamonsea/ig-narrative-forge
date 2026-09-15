@@ -86,6 +86,8 @@
     // Custom avatar URL with XSS validation
     const customAvatar = isValidUrl(container.dataset.avatar) ? container.dataset.avatar : '';
     const showSubscribe = container.dataset.subscribe === 'true' || container.dataset.subscribe === '';
+    // Email cadence readers sign up for. Embeds without data-frequency stay daily.
+    const frequency = container.dataset.frequency === 'weekly' ? 'weekly' : 'daily';
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
