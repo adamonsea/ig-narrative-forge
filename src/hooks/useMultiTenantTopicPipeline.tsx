@@ -619,6 +619,21 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         const PAGE = 1000;
         for (let i = 0; i < storyIds.length; i += CHUNK) {
           const chunkIds = storyIds.slice(i, i + CHUNK);
+
+          // Fast path: owner/admin RPC avoids evaluating the many permissive
+          // RLS policies on slides per row (that direct query can hit the
+          // statement timeout on large feeds). Falls back to the direct query.
+          const { data: rpcSlides, error: rpcError } = await supabase
+            .rpc('get_admin_slides_for_stories', { p_story_ids: chunkIds });
+
+          if (!rpcError && rpcSlides) {
+            slidesData = slidesData.concat(rpcSlides);
+            continue;
+          }
+          if (rpcError) {
+            console.warn('Slides RPC unavailable, falling back to direct query:', rpcError.message);
+          }
+
           let offset = 0;
           // eslint-disable-next-line no-constant-condition
           while (true) {
@@ -640,6 +655,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             offset += PAGE;
           }
         }
+
 
         // Load parliamentary mentions to identify parliamentary stories
         const { data: parliamentaryResult, error: parliamentaryError } = await supabase

@@ -5356,6 +5356,27 @@ export type Database = {
           variant: string
         }[]
       }
+      get_admin_slides_for_stories: {
+        Args: { p_story_ids: string[] }
+        Returns: {
+          alt_text: string | null
+          content: string
+          created_at: string
+          id: string
+          links: Json | null
+          slide_number: number
+          story_id: string
+          updated_at: string
+          visual_prompt: string | null
+          word_count: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "slides"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_admin_topic_stories: {
         Args: {
           p_limit?: number
