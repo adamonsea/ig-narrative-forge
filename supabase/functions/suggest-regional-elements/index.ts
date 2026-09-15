@@ -38,20 +38,36 @@ async function verifyTopicOwnership(authHeader: string, topicId: string): Promis
 
   const userId = claimsData.claims.sub as string;
 
-  // Verify topic ownership
-  const { data: topic, error: topicError } = await supabase
+  if (!topicId || typeof topicId !== 'string') {
+    return { userId: null, error: 'A topic id is required' };
+  }
+
+  // Ownership is looked up with the service role so a restrictive row policy
+  // can't make an owner's own topic look missing. The claims check above is
+  // what authenticates the caller.
+  const serviceClient = createClient(
+    supabaseUrl,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? supabaseAnonKey,
+    { auth: { persistSession: false } }
+  );
+
+  const { data: topic, error: topicError } = await serviceClient
     .from('topics')
     .select('id, owner_id')
     .eq('id', topicId)
-    .single();
+    .maybeSingle();
 
-  if (topicError || !topic) {
+  if (topicError) {
+    console.error('Topic lookup failed:', topicError.message);
+    return { userId: null, error: 'Could not verify this feed' };
+  }
+  if (!topic) {
     return { userId: null, error: 'Topic not found' };
   }
 
   if (topic.owner_id !== userId) {
     // Check if user is admin
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    const { data: isAdmin } = await serviceClient.rpc('has_role', { _user_id: userId, _role: 'admin' });
     if (!isAdmin) {
       return { userId: null, error: 'Not authorized to manage this topic' };
     }
