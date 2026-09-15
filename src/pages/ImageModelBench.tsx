@@ -86,6 +86,7 @@ const ImageModelBench: React.FC = () => {
   const [loadingStories, setLoadingStories] = useState(true);
   const [referenceOptions, setReferenceOptions] = useState<ReferenceOption[]>([]);
   const [selectedReferences, setSelectedReferences] = useState<string[]>([]);
+  const [promptVariant, setPromptVariant] = useState<'current' | 'handmade'>('handmade');
 
   const loadResults = useCallback(async () => {
     const { data } = await supabase
