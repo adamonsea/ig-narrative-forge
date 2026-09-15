@@ -4,6 +4,10 @@ import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-
 import { FastTrackScraper } from '../_shared/fast-track-scraper.ts';
 import { StandardizedScraperResponse, ScraperSourceResult } from '../_shared/scraper-response-types.ts';
 import { resolveDomainProfile } from '../_shared/domain-profiles.ts';
+// Additive-only helpers: these run after the existing path has found nothing,
+// and every one of them fails soft so existing behaviour is never disrupted.
+import { attemptDeepRecovery } from '../_shared/deep-recovery.ts';
+import { recordScrapeRun } from '../_shared/scrape-run-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -677,6 +681,23 @@ serve(async (req) => {
               console.log(`      Rejected (low quality): ${storeResult.rejectedLowQuality}`);
               console.log(`      Rejected (competing): ${storeResult.rejectedCompeting}\n`);
 
+              // Additive diagnostics only — never affects the result above
+              await recordScrapeRun(supabase, {
+                source_id: source.source_id,
+                topic_id: topicId,
+                method: scrapeResult.method || 'unknown',
+                methods_tried: [scrapeResult.method || 'unknown'],
+                urls_discovered: scrapeResult.articlesFound || 0,
+                urls_new: scrapeResult.articlesScraped || 0,
+                articles_stored: storeResult.articlesStored || 0,
+                rejections: {
+                  low_relevance: storeResult.rejectedLowRelevance || 0,
+                  low_quality: storeResult.rejectedLowQuality || 0,
+                  competing_region: storeResult.rejectedCompeting || 0,
+                  duplicates: storeResult.duplicatesSkipped || 0
+                }
+              });
+
               return result;
             } else {
               // Check if this is a successful scrape with no new articles vs a failed scrape
@@ -710,12 +731,38 @@ serve(async (req) => {
                 } catch (auditError) {
                   console.warn(`   (non-fatal) could not record zero-extraction audit: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
                 }
+
+                // ADDITIVE FALLBACK: the page loaded but no links were extracted.
+                // Try sitemaps / JSON-LD, then AI extraction. Fails soft.
+                const recovery = await attemptDeepRecovery(supabase, dbOps, {
+                  sourceUrl: source.normalizedUrl,
+                  sourceId: source.source_id,
+                  sourceName: source.source_name,
+                  topicId,
+                  maxAgeDays: effectiveMaxAgeDays,
+                  scrapingConfig: source.scraping_config || {}
+                });
+
+                await recordScrapeRun(supabase, {
+                  source_id: source.source_id,
+                  topic_id: topicId,
+                  method: recovery.method || scrapeResult.method || 'unknown',
+                  methods_tried: [scrapeResult.method || 'unknown', ...recovery.methodsTried],
+                  urls_discovered: recovery.urlsDiscovered,
+                  urls_new: recovery.urlsNew,
+                  articles_stored: recovery.stored,
+                  ai_pages_used: recovery.aiPagesUsed,
+                  error_code: recovery.stored > 0 ? null : 'zero_extraction',
+                  error_detail: recovery.error || null
+                });
+
                 return {
                   sourceId: source.source_id,
                   sourceName: source.source_name,
                   success: true,
-                  articlesFound: 0,
-                  articlesScraped: 0,
+                  articlesFound: recovery.urlsDiscovered,
+                  articlesScraped: recovery.stored,
+                  articlesStored: recovery.stored,
                   executionTimeMs: Date.now() - startTime
                 } as ScraperSourceResult;
               }
@@ -999,6 +1046,43 @@ serve(async (req) => {
                 } catch (fallbackError) {
                   console.log(`❌ Beautiful Soup fallback error for ${source.source_name}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
                 }
+              }
+
+              // ADDITIVE LAST RESORT: every existing method failed. Try sitemaps /
+              // JSON-LD and AI extraction before declaring the source failed.
+              const lastResort = await attemptDeepRecovery(supabase, dbOps, {
+                sourceUrl: source.normalizedUrl,
+                sourceId: source.source_id,
+                sourceName: source.source_name,
+                topicId,
+                maxAgeDays: effectiveMaxAgeDays,
+                scrapingConfig: source.scraping_config || {}
+              });
+
+              await recordScrapeRun(supabase, {
+                source_id: source.source_id,
+                topic_id: topicId,
+                method: lastResort.method || scrapeResult.method || 'unknown',
+                methods_tried: [scrapeResult.method || 'unknown', 'beautiful-soup', 'firecrawl', ...lastResort.methodsTried],
+                urls_discovered: lastResort.urlsDiscovered,
+                urls_new: lastResort.urlsNew,
+                articles_stored: lastResort.stored,
+                ai_pages_used: lastResort.aiPagesUsed,
+                error_code: lastResort.stored > 0 ? null : 'all_methods_failed',
+                error_detail: lastResort.error || scrapeResult.errors.join(', ').slice(0, 900) || null
+              });
+
+              if (lastResort.stored > 0) {
+                console.log(`   ✅ RECOVERED: ${source.source_name} via ${lastResort.method}`);
+                return {
+                  sourceId: source.source_id,
+                  sourceName: source.source_name,
+                  success: true,
+                  articlesFound: lastResort.urlsDiscovered,
+                  articlesScraped: lastResort.stored,
+                  articlesStored: lastResort.stored,
+                  executionTimeMs: Date.now() - startTime
+                } as ScraperSourceResult;
               }
 
               // Only mark as failed if there were actual technical errors
