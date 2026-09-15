@@ -482,6 +482,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {isLive && <Badge variant="default" className="h-5 text-[10px] bg-green-600">Live</Badge>}
                   {isDraft && <Badge variant="secondary" className="h-5 text-[10px]">Draft</Badge>}
+                  <span className="truncate max-w-[140px] text-[10px] text-muted-foreground/80">
+                    {storySourceLabel(story)}
+                  </span>
                   {isScheduled && (
                     <>
                       <Badge variant="outline" className="h-5 text-[10px] border-amber-300 text-amber-700 bg-amber-50">
