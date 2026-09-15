@@ -173,6 +173,10 @@ export const resolvePublicationName = (
   if (UNUSABLE_NAMES.has(stored.toLowerCase())) return derived || stored;
   // "sussexexpress.co.uk" stored as a name — run it through the domain formatter.
   if (/^[a-z0-9-]+(\.[a-z]{2,})+$/i.test(stored)) return publicationFromUrl(stored) || derived || stored;
+  // A single bare word ("Parliament", "Hailsham") when we know a fuller name for the domain.
+  if (derived && !stored.includes(' ') && derived.toLowerCase().includes(stored.toLowerCase())) {
+    return derived;
+  }
   return stored;
 };
 
