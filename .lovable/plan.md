@@ -1,49 +1,50 @@
-# Replacing the image model before 1 December — and what it does to costs
+# Testing GPT Image 2 before we switch
 
-## The situation
+## Why now
 
-We generate every illustration with GPT Image 1.5 at 1536x1024. That model is deprecated and OpenAI removes it from the API on 1 December 2026 [3](https://www.modellix.ai/blog/gpt-image-1-5-pricing/). After that date, illustration stops working entirely unless we have moved. We have about ten weeks.
+Our current model, GPT Image 1.5, is deprecated and OpenAI removes it from the API on 1 December 2026 [3](https://www.modellix.ai/blog/gpt-image-1-5-pricing/) — illustration simply stops working after that date. GPT Image 2 is the same family, one generation newer, keeps the same landscape 1536x1024 size, and costs less at every tier:
 
-The good news: the replacement is cheaper, keeps the same landscape size, and is a newer generation of the same family — so the house style should carry over rather than restart.
+| Tier | Now (Image 1.5) | GPT Image 2 | Saving |
+| --- | --- | --- | --- |
+| Quick | $0.013 | ~$0.006 | ~55% |
+| Creative | $0.05 | $0.041 | ~18% |
+| Premium | $0.20 | $0.165 | ~18% |
 
-## The options
+On August's volume that is about **$11 instead of $24.52**, before the batch route. We are not on it already simply because nothing has changed the model since it was set up — no technical obstacle.
 
-All four keep landscape 1536x1024, so nothing about card shapes or crops changes.
+Two sibling models are worth seeing at the same time: GPT Image 2.5 Flare (faster) and 2.5 Sunburst (quality-first), same token price, five quality levels instead of three.
 
-| Model | Quick | Creative | Premium | Notes |
-| --- | --- | --- | --- | --- |
-| GPT Image 1.5 (today) | $0.013 | $0.05 | $0.20 | Gone 1 December |
-| **GPT Image 2** | ~$0.006 | $0.041 | $0.165 | Current flagship, same family, cheaper at every tier [3](https://costgoat.com/pricing/openai-images) |
-| GPT Image 2.5 Flare | same token rate | | | Latency-first variant, five quality levels |
-| GPT Image 2.5 Sunburst | same token rate | | | Quality-first variant, five quality levels |
-| Gemini 3 Pro Image | roughly $0.13 per image | | | Different house style — a visual reset, not a swap |
+## The test
 
-GPT Image 2 is the obvious primary candidate: same lineage as what you already like, 20-55% cheaper per image depending on tier, and it still does the three quality steps we map Quick, Creative and Premium onto. The 2.5 variants are worth seeing side by side, because Sunburst is the quality-first option and may be the better home for Premium.
+A comparison bench in the admin area, built for judging pictures rather than reading numbers.
 
-## What this does to the bill
+**What it does**
+1. You pick real stories from any feed — suggested default is 10 recent Eastbourne stories spanning a council piece, a crime piece, a community piece, a sport piece and a business piece, since those are where the style either works or falls apart.
+2. For each story it builds the exact prompt the live pipeline would build — same tone analysis, same location extraction, same style guardrails — so we are comparing models, not prompts.
+3. It generates that story across a grid you choose: models (Image 1.5, Image 2, 2.5 Flare, 2.5 Sunburst) by quality tier (Quick, Creative, Premium; the five-step scale for the 2.5 models).
+4. Results appear as a side-by-side row per story, each image labelled with model, tier, actual cost and generation time, at the size they appear in the feed and full size on click.
+5. You mark each image good, acceptable or reject. Those marks are saved, so the decision is based on a tally rather than a memory.
 
-August was $24.52 (1,383 Quick by hand, 478 Quick automated, 3 Creative).
+**What it costs to run**
+A 10-story grid across 4 models at 3 tiers is 120 images — roughly $9 at today's prices, less on the new models. One run, and it settles the question.
 
-The same month's work on GPT Image 2: **about $11**. Adding the batch route for automated images on stories not yet published takes it to **about $9**. No change in size, shape or how fast a published story gets its picture.
+**Prompt tuning pass**
+Newer models follow instructions more literally, which usually helps but can push the illustration style toward realism. The bench lets you edit the style guardrails and re-run a single story cheaply, so the prompt is tuned before anything goes live, not after.
 
-Batch (half price, up to 24 hours) works on GPT Image 2 as well, so the work already built keeps its value.
+## Decision and switch
 
-## Plan
+- Choose per tier, not globally: if Sunburst is clearly better for Premium and Image 2 is fine for Quick, we map them that way.
+- Switch the live pipeline to the chosen models, leaving Image 1.5 selectable until 1 December as a safety net.
+- Update recorded cost per tier so spend reporting stays accurate, and watch the first week of automated output.
+- Keep the cheap wins already built: batch route for automated images on unpublished stories, and the regeneration cap.
 
-1. **Side-by-side trial.** Take 10 recent Eastbourne stories and generate each one four ways: current model, GPT Image 2, 2.5 Flare, 2.5 Sunburst — at all three of our tiers. Put them in a single comparison page in the admin so you can judge Quick, Creative and Premium on your own stories rather than on samples.
-2. **Pick per tier.** Nothing says all three tiers must use the same model. If Sunburst is visibly better for Premium and GPT Image 2 is fine for Quick, we map them that way.
-3. **Switch, keeping a fallback.** Point the illustrator at the chosen models, keep GPT Image 1.5 selectable until 1 December as a safety net, and update the recorded cost per tier so your spend reporting stays accurate.
-4. **Re-tune the prompt only if needed.** Newer models follow instructions more literally; if the illustration guardrails (flat shapes, no shading, no realism) drift, adjust the prompt during the trial rather than after go-live.
-5. **Keep the cheap wins.** Route automated illustrations through batch for stories not yet published, tighten the regeneration cap from 3 to 2, and show the regeneration count on the card.
-
-Do step 1 now, decide within a week, switch in early October. That leaves two clear months of margin before the shutdown.
+Timeline: bench this week, run and judge within a few days, switch in early October — two clear months before the shutdown.
 
 ## Technical notes
 
-- Size is hardcoded `1536x1024` in four places in `story-illustrator`; the new models take the same value, so no size change.
-- `modelConfigs` gains entries for `gpt-image-2`, `gpt-image-2.5-flare` and `gpt-image-2.5-sunburst` with corrected `cost` values; the tier names (Quick/Creative/Premium) and credit prices stay as they are unless you want to reprice.
-- GPT Image 2 bills by token rather than a flat per-image fee, so record the reported usage into `image_generation_metrics.cost_usd` rather than a hardcoded constant, and keep the per-tier estimate only as a fallback.
-- The 2.5 models expose five quality levels rather than three; the trial page should expose them so the mapping is chosen on evidence.
-- Trial page is admin-only, writes to a scratch table or reuses `image_generation_tests`, and does not touch published stories.
-- The existing OpenAI key keeps working for all of these; no billing change needed.
-- `illustration-batch-poller` and the batch route already built work unchanged with the new models.
+- New admin page (product-owner only) plus an edge function `image-model-bench`, reusing `story-illustrator`'s prompt builders (`analyzeStoryTone`, `extractLocationDetails`, `extractSubjectMatter`, `buildIllustrativePrompt`, `buildPhotographicPrompt`) so the prompt is identical to production. Extract those into `_shared/` rather than copying them.
+- Bench generations write to `image_generation_tests` (already exists) with model, tier, size, cost, duration, prompt and image URL, plus a verdict column for good/acceptable/reject. Images go to the existing `visuals` bucket under a `bench/` prefix so they can be cleared in one go.
+- Bench never touches `stories` rows — no `cover_illustration_url` writes, nothing published.
+- Runs sequentially with a small delay and a hard cap per run to avoid rate limits and runaway spend; the run is bounded by the grid you select and shows the estimated cost before it starts.
+- `story-illustrator` gains `modelConfigs` entries for `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` with correct costs; GPT Image 2 bills by token, so read the reported usage into `cost_usd` and keep the per-tier figure only as a fallback.
+- Existing OpenAI key covers all of these; no billing or infrastructure change.
