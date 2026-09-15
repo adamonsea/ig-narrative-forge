@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
     }
 
     const { storyIds, models, qualities, promptOverride } = parsed.data;
+    const promptVariant = parsed.data.promptVariant ?? 'current';
     const runId = parsed.data.runId ?? crypto.randomUUID();
     const referenceImageUrls = parsed.data.referenceImageUrls ?? [];
 
