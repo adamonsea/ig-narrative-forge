@@ -20,6 +20,7 @@ interface Topic {
   keywords: string[];
   region?: string;
   landmarks?: string[];
+  landmark_descriptions?: Record<string, string>;
   postcodes?: string[];
   organizations?: string[];
 }
@@ -32,6 +33,10 @@ interface KeywordManagerProps {
 export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUpdate }) => {
   const [keywords, setKeywords] = useState(topic.keywords || []);
   const [landmarks, setLandmarks] = useState(topic.landmarks || []);
+  const [landmarkDescriptions, setLandmarkDescriptions] = useState<Record<string, string>>(
+    topic.landmark_descriptions || {}
+  );
+  const [describingLandmark, setDescribingLandmark] = useState<string | null>(null);
   const [postcodes, setPostcodes] = useState(topic.postcodes || []);
   const [organizations, setOrganizations] = useState(topic.organizations || []);
   const [newKeyword, setNewKeyword] = useState('');
@@ -46,9 +51,73 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     const sortedKeywords = [...(topic.keywords || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     setKeywords(sortedKeywords);
     setLandmarks(topic.landmarks || []);
+    setLandmarkDescriptions(topic.landmark_descriptions || {});
     setPostcodes(topic.postcodes || []);
     setOrganizations(topic.organizations || []);
   }, [topic]);
+
+  // Save one place's appearance note (auto-save on blur)
+  const saveLandmarkDescription = async (landmark: string) => {
+    const value = (landmarkDescriptions[landmark] ?? '').trim().slice(0, 400);
+    const existing = (topic.landmark_descriptions || {})[landmark] ?? '';
+    if (value === existing) return;
+
+    const next = { ...(topic.landmark_descriptions || {}) };
+    if (value) next[landmark] = value;
+    else delete next[landmark];
+
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ landmark_descriptions: next, updated_at: new Date().toISOString() })
+        .eq('id', topic.id);
+      if (error) throw error;
+      onTopicUpdate({ ...topic, landmark_descriptions: next });
+    } catch (error) {
+      console.error('Error saving landmark description:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't save that description",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const suggestLandmarkDescription = async (landmark: string) => {
+    setDescribingLandmark(landmark);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-regional-elements', {
+        body: {
+          topicId: topic.id,
+          topicName: topic.name,
+          region: topic.region,
+          mode: 'describe',
+          landmark
+        }
+      });
+      if (error) throw error;
+      const description = (data as any)?.description;
+      if (!description) throw new Error('No description returned');
+      setLandmarkDescriptions(prev => ({ ...prev, [landmark]: description }));
+
+      const next = { ...(topic.landmark_descriptions || {}), [landmark]: description };
+      const { error: saveError } = await supabase
+        .from('topics')
+        .update({ landmark_descriptions: next, updated_at: new Date().toISOString() })
+        .eq('id', topic.id);
+      if (saveError) throw saveError;
+      onTopicUpdate({ ...topic, landmark_descriptions: next });
+    } catch (error) {
+      console.error('Error describing landmark:', error);
+      toast({
+        title: "Error",
+        description: "Couldn't suggest a description — try again",
+        variant: "destructive"
+      });
+    } finally {
+      setDescribingLandmark(null);
+    }
+  };
 
   // Listen for external keyword additions
   useEffect(() => {
