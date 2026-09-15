@@ -217,10 +217,11 @@
     });
   }
 
-  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList) {
+  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays) {
     let url = `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`;
     if (sourceList) url += `&sources=${encodeURIComponent(sourceList)}`;
     if (featuredList) url += `&featured=${encodeURIComponent(featuredList)}`;
+    if (featuredList && featuredDays) url += `&featuredDays=${encodeURIComponent(featuredDays)}`;
 
     const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
 
