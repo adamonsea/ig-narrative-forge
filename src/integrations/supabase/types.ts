@@ -2226,6 +2226,66 @@ export type Database = {
           },
         ]
       }
+      scrape_runs: {
+        Row: {
+          ai_pages_used: number
+          articles_stored: number
+          created_at: string
+          error_code: string | null
+          error_detail: string | null
+          finished_at: string | null
+          id: string
+          method: string | null
+          methods_tried: string[]
+          not_modified: boolean
+          rejections: Json
+          source_id: string | null
+          started_at: string
+          topic_id: string | null
+          updated_at: string
+          urls_discovered: number
+          urls_new: number
+        }
+        Insert: {
+          ai_pages_used?: number
+          articles_stored?: number
+          created_at?: string
+          error_code?: string | null
+          error_detail?: string | null
+          finished_at?: string | null
+          id?: string
+          method?: string | null
+          methods_tried?: string[]
+          not_modified?: boolean
+          rejections?: Json
+          source_id?: string | null
+          started_at?: string
+          topic_id?: string | null
+          updated_at?: string
+          urls_discovered?: number
+          urls_new?: number
+        }
+        Update: {
+          ai_pages_used?: number
+          articles_stored?: number
+          created_at?: string
+          error_code?: string | null
+          error_detail?: string | null
+          finished_at?: string | null
+          id?: string
+          method?: string | null
+          methods_tried?: string[]
+          not_modified?: boolean
+          rejections?: Json
+          source_id?: string | null
+          started_at?: string
+          topic_id?: string | null
+          updated_at?: string
+          urls_discovered?: number
+          urls_new?: number
+        }
+        Relationships: []
+      }
       scrape_schedules: {
         Row: {
           created_at: string
