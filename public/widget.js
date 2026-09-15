@@ -233,7 +233,7 @@
     }
   }
 
-  function getSubscribeHTML(feed, accent) {
+  function getSubscribeHTML(feed, accent, frequency) {
     if (isAlreadySubscribed(feed.slug)) {
       return `
         <div class="widget-subscribe">
@@ -242,9 +242,13 @@
       `;
     }
 
+    const label = frequency === 'weekly'
+      ? 'Subscribe to the weekly briefing'
+      : 'Subscribe to daily email highlights';
+
     return `
       <div class="widget-subscribe">
-        <label class="subscribe-label" for="curatr-subscribe-email">Subscribe to email</label>
+        <label class="subscribe-label" for="curatr-subscribe-email">${label}</label>
         <form class="subscribe-form" novalidate>
           <input
             id="curatr-subscribe-email"
