@@ -307,7 +307,7 @@
         const response = await fetch(`${API_BASE}/secure-newsletter-signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, topicId, notificationType: 'daily', source: 'widget' })
+          body: JSON.stringify({ email, topicId, notificationType, source: 'widget' })
         });
 
         const result = await response.json().catch(() => ({}));
