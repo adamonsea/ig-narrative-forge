@@ -260,12 +260,16 @@ Deno.serve(async (req) => {
           // only on the newer models. Image 1.5 stays on plain generation so it
           // remains the honest baseline being matched.
           const useReferences = referenceBlobs.length > 0 && model !== 'gpt-image-1.5';
+          const usePlacePhotos = useReferences && subjectBlobs.length > 0;
           try {
             let res: Response;
             if (useReferences) {
               const form = new FormData();
               form.append('model', model);
-              form.append('prompt', `${prompt}${STYLE_REFERENCE_NOTE}`);
+              form.append(
+                'prompt',
+                `${prompt}${STYLE_REFERENCE_NOTE}${usePlacePhotos ? SUBJECT_REFERENCE_NOTE : ''}`,
+              );
               form.append('n', '1');
               form.append('size', '1536x1024');
               form.append('quality', quality);
