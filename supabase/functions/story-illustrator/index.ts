@@ -9,7 +9,12 @@ import {
   buildPhotographicPrompt 
 } from '../_shared/prompt-helpers.ts'
 import { checkAnonymity } from '../_shared/anonymity-guard.ts'
-import { loadStyleReferences, STYLE_REFERENCE_NOTE } from '../_shared/style-references.ts'
+import {
+  loadStyleReferences,
+  loadReferenceImagesFromUrls,
+  STYLE_REFERENCE_NOTE,
+  SUBJECT_REFERENCE_NOTE,
+} from '../_shared/style-references.ts'
 
 /**
  * Generate context-aware animation suggestions using GPT-4o-mini
