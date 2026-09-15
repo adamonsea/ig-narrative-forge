@@ -32,6 +32,13 @@ interface WidgetConfig {
   customAvatar: string;
   showSubscribe: boolean;
   frequency: "daily" | "weekly";
+  sources: string[];
+  featuredSources: string[];
+}
+
+interface FeedSource {
+  name: string;
+  count: number;
 }
 
 export default function Widgets() {
@@ -49,6 +56,8 @@ export default function Widgets() {
     customAvatar: "",
     showSubscribe: false,
     frequency: "daily",
+    sources: [],
+    featuredSources: [],
   });
 
   const [copied, setCopied] = useState(false);
@@ -56,6 +65,7 @@ export default function Widgets() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
+  const [availableSources, setAvailableSources] = useState<FeedSource[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -73,12 +83,60 @@ export default function Widgets() {
     }
   }, [topics, config.feed]);
 
+  // Load the publications that appear in the selected feed
+  useEffect(() => {
+    if (!config.feed) return;
+
+    let cancelled = false;
+    fetch(`${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&mode=sources`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        const list: FeedSource[] = data?.sources || [];
+        setAvailableSources(list);
+        // Default: every source included, none featured
+        setConfig(prev => ({ ...prev, sources: list.map(s => s.name), featuredSources: [] }));
+      })
+      .catch(err => console.error("Source list fetch error:", err));
+
+    return () => { cancelled = true; };
+  }, [config.feed]);
+
+  const sourcesParam = availableSources.length > 0 && config.sources.length < availableSources.length
+    ? config.sources.join(",")
+    : "";
+  const featuredParam = config.featuredSources.join(",");
+
+  const toggleSource = (name: string) => {
+    setConfig(prev => {
+      const included = prev.sources.includes(name);
+      return {
+        ...prev,
+        sources: included ? prev.sources.filter(s => s !== name) : [...prev.sources, name],
+        // Removing a source also drops it from the featured list
+        featuredSources: included ? prev.featuredSources.filter(s => s !== name) : prev.featuredSources,
+      };
+    });
+  };
+
+  const toggleFeaturedSource = (name: string) => {
+    setConfig(prev => ({
+      ...prev,
+      featuredSources: prev.featuredSources.includes(name)
+        ? prev.featuredSources.filter(s => s !== name)
+        : [...prev.featuredSources, name],
+    }));
+  };
+
   // Fetch preview data when feed changes
   useEffect(() => {
     if (!config.feed) return;
 
     setPreviewLoading(true);
-    fetch(`${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=${config.max}`)
+    let url = `${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=${config.max}`;
+    if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
+    if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}`;
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         setPreviewData(data);
@@ -89,7 +147,7 @@ export default function Widgets() {
       })
       .catch(err => console.error("Preview fetch error:", err))
       .finally(() => setPreviewLoading(false));
-  }, [config.feed, config.max]);
+  }, [config.feed, config.max, sourcesParam, featuredParam]);
 
   const isValidAvatarUrl = (url: string) => {
     if (!url) return true;
