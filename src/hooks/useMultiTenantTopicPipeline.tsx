@@ -490,7 +490,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       const STATUS_PAGE_SIZE: Record<string, number> = {
         draft: 100,
         ready: 100,
-        published: 250,
+        published: PUBLISHED_PAGE_SIZE,
         archived: 100
       };
       const STATUSES = ['draft', 'ready', 'published', 'archived'];
@@ -507,6 +507,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       const failedStatus = perStatusResults.find((r) => r.error);
       const rpcRows = perStatusResults.flatMap((r) => r.data || []);
+
+      // Published pagination bookkeeping — the tab shows the newest page and
+      // can pull older pages on demand.
+      const publishedRowCount = perStatusResults[STATUSES.indexOf('published')].data?.length || 0;
+      setPublishedLoadedCount(publishedRowCount);
+      setHasMorePublished(publishedRowCount >= PUBLISHED_PAGE_SIZE);
 
       console.log('📊 Admin stories query results:', {
         byStatus: Object.fromEntries(
