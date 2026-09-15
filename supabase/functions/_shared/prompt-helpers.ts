@@ -17,7 +17,11 @@ export async function extractLocationDetails(
   slides: SlideContent[],
   openaiKey: string,
   knownLandmarks?: string[],
-  region?: string
+  region?: string,
+  // Author-supplied "what it looks like" text, keyed by landmark name.
+  // When the story matches one of these, the owner's words replace the
+  // model's guesswork about the architecture.
+  landmarkDescriptions?: Record<string, string> | null
 ): Promise<string | null> {
   if (!openaiKey || slides.length === 0) {
     return null;
@@ -25,8 +29,16 @@ export async function extractLocationDetails(
 
   try {
     const storyText = slides.map(s => s.content).join('\n');
+    const descriptions = landmarkDescriptions && typeof landmarkDescriptions === 'object'
+      ? landmarkDescriptions
+      : {};
     const landmarksList = knownLandmarks?.length 
-      ? knownLandmarks.join(', ') 
+      ? knownLandmarks
+          .map(name => {
+            const described = descriptions[name];
+            return described ? `${name} — ${described}` : name;
+          })
+          .join('\n- ')
       : 'None specified';
     const regionContext = region || 'UK';
     
