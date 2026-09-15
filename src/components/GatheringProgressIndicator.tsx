@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,14 @@ export const GatheringProgressIndicator = ({
   const [gatheringStatuses, setGatheringStatuses] = useState<GatheringStatus[]>([]);
   const [totalProgress, setTotalProgress] = useState(0);
   const [jobStatus, setJobStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
+  // Completion must be announced once per run, never on every poll.
+  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    completedRef.current = false;
+  }, [jobRunId, isVisible]);
 
   useEffect(() => {
     if (!isVisible || !topicId) return;
@@ -49,13 +57,15 @@ export const GatheringProgressIndicator = ({
           
           if (jobRun) {
             setJobStatus(jobRun.status as any);
-            
-            if (jobRun.status === 'completed' && onComplete) {
-              onComplete();
+
+            if ((jobRun.status === 'completed' || jobRun.status === 'failed') && !completedRef.current) {
+              completedRef.current = true;
+              onCompleteRef.current?.();
               return;
             }
           }
         }
+
 
         // Get all sources for this topic via junction table
         const { data: topicSources, error: sourcesError } = await supabase
@@ -123,10 +133,9 @@ export const GatheringProgressIndicator = ({
           setTotalProgress(overallProgress);
         }
 
-        // Auto-complete if job is done or all sources completed
-        if ((jobStatus === 'completed' || totalProgress >= 100) && onComplete) {
-          setTimeout(() => onComplete(), 2000);
-        }
+        // Completion is announced only from the job run status above, so an
+        // already-scraped source list can't re-fire it every poll.
+
 
       } catch (error) {
         console.error('Error fetching content gathering status:', error);
@@ -140,7 +149,7 @@ export const GatheringProgressIndicator = ({
     const interval = setInterval(fetchGatheringStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [topicId, isVisible, jobRunId, jobStatus, totalProgress, onComplete]);
+  }, [topicId, isVisible, jobRunId]);
 
   if (!isVisible || gatheringStatuses.length === 0) {
     return null;
