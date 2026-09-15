@@ -42,6 +42,7 @@ const requestSchema = z.object({
   // Existing pictures (usually Image 1.5 premium covers) handed to the newer
   // models as a house-style reference.
   referenceImageUrls: z.array(z.string().url()).max(3).optional(),
+  promptVariant: z.enum(['current', 'handmade']).optional(),
 });
 
 // Appended to the prompt when reference pictures are supplied, so the model
@@ -50,7 +51,11 @@ const STYLE_REFERENCE_NOTE =
   '\n\nSTYLE REFERENCE: The attached image(s) are examples of the required house style only. ' +
   'Match their artistic treatment, palette handling, level of abstraction, lighting, composition ' +
   'balance and finish as closely as possible. Do NOT copy their subject matter, characters, ' +
-  'text or scene — illustrate the new subject described above in that same style.';
+  'text or scene — illustrate the new subject described above in that same style. ' +
+  'Match the AMOUNT of detail as strictly as the look: the same small number of distinct flat ' +
+  'shapes, the same flatness, the same ink count, the same level of abstraction in faces and ' +
+  'backgrounds. If unsure, draw LESS than the reference — under-detailing is preferred to ' +
+  'over-detailing.';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
