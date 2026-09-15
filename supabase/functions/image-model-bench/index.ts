@@ -24,10 +24,12 @@ const PRICES: Record<string, Record<string, number>> = {
   'gpt-image-2.5-sunburst': { low: 0.006, medium: 0.041, high: 0.165, xhigh: 0.25, max: 0.32 },
 };
 
-const MAX_GENERATIONS_PER_RUN = 60;
+// Kept small so one invocation finishes well inside the function time limit.
+// The admin page loops story by story and shows progress.
+const MAX_GENERATIONS_PER_RUN = 12;
 
 const requestSchema = z.object({
-  storyIds: z.array(z.string().uuid()).min(1).max(12),
+  storyIds: z.array(z.string().uuid()).min(1).max(4),
   models: z.array(z.enum([
     'gpt-image-1.5',
     'gpt-image-2',
