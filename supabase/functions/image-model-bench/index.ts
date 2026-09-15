@@ -172,17 +172,22 @@ Deno.serve(async (req) => {
       let primaryColor = '#10B981';
       let topicRegion: string | undefined;
       let topicLandmarks: string[] | undefined;
+      let topicLandmarkDescriptions: Record<string, string> | null = null;
 
       if (topicId) {
         const { data: topicData } = await supabase
           .from('topics')
-          .select('illustration_style, illustration_primary_color, region, landmarks')
+          .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions')
           .eq('id', topicId)
           .single();
         if (topicData?.illustration_style) illustrationStyle = topicData.illustration_style;
         if (topicData?.illustration_primary_color) primaryColor = topicData.illustration_primary_color;
         if (topicData?.region) topicRegion = topicData.region;
         if (Array.isArray(topicData?.landmarks)) topicLandmarks = topicData.landmarks as string[];
+        const rawDescriptions = (topicData as any)?.landmark_descriptions;
+        if (rawDescriptions && typeof rawDescriptions === 'object' && !Array.isArray(rawDescriptions)) {
+          topicLandmarkDescriptions = rawDescriptions as Record<string, string>;
+        }
       }
 
       const { data: slides } = await supabase
