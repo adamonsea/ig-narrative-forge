@@ -13,6 +13,7 @@ interface MetricRow {
   output_bytes: number | null;
   credits: number | null;
   cost_usd: number | null;
+  topic_id: string | null;
 }
 
 interface Bucket {
