@@ -1625,6 +1625,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     hasMoreArticles,
     totalArticlesCount,
     loadMoreArticles,
+    hasMorePublished,
+    totalPublishedCount,
+    loadingMorePublished,
+    loadMorePublished,
     
     // New content indicators
     newArrivals,
