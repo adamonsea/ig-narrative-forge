@@ -446,11 +446,12 @@ serve(async (req) => {
     let primaryColor: string = '#10B981' // default mint green
     let topicRegion: string | undefined = undefined // for place-accurate prompts
     let topicLandmarks: string[] | undefined = undefined // for landmark-accurate rendering
+    let topicLandmarkDescriptions: Record<string, string> | null = null // owner-written appearance notes
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style, illustration_primary_color, region, landmarks')
+        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions')
         .eq('id', topicId)
         .single()
       
