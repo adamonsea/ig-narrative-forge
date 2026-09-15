@@ -821,6 +821,79 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('OPENAI_API_KEY not configured');
       }
 
+      // Discounted overnight route for backlog stories only (50% cheaper).
+      // Fail-open: any problem here falls straight through to immediate generation.
+      if (useBatch) {
+        try {
+          const customId = `story-${storyId}-${Date.now()}`
+          const jsonl = JSON.stringify({
+            custom_id: customId,
+            method: 'POST',
+            url: '/v1/images/generations',
+            body: {
+              model: openaiModelName,
+              prompt: illustrationPrompt,
+              n: 1,
+              size: '1536x1024',
+              quality: modelConfig.quality || 'medium',
+              output_format: 'webp',
+              output_compression: 70,
+            },
+          }) + '\n'
+
+          const fileForm = new FormData()
+          fileForm.append('purpose', 'batch')
+          fileForm.append('file', new Blob([jsonl], { type: 'application/jsonl' }), `${customId}.jsonl`)
+
+          const fileRes = await fetch('https://api.openai.com/v1/files', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+            body: fileForm,
+          })
+          if (!fileRes.ok) throw new Error(`file upload failed: ${fileRes.status} ${await fileRes.text()}`)
+          const fileJson = await fileRes.json()
+
+          const batchRes = await fetch('https://api.openai.com/v1/batches', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              input_file_id: fileJson.id,
+              endpoint: '/v1/images/generations',
+              completion_window: '24h',
+            }),
+          })
+          if (!batchRes.ok) throw new Error(`batch create failed: ${batchRes.status} ${await batchRes.text()}`)
+          const batchJson = await batchRes.json()
+
+          await supabase.from('illustration_batch_jobs').insert({
+            story_id: storyId,
+            topic_id: topicId ?? null,
+            batch_id: batchJson.id,
+            custom_id: customId,
+            model,
+            prompt: illustrationPrompt,
+            status: 'submitted',
+          })
+
+          console.log(`🕒 Queued batch illustration for story ${storyId} (batch ${batchJson.id})`)
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              queued: true,
+              batch_id: batchJson.id,
+              message: 'Illustration queued on the discounted batch route.',
+            }),
+            { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        } catch (batchError) {
+          console.warn('Batch submission failed, falling back to immediate generation:', batchError)
+        }
+      }
+
       console.log('📸 OpenAI request parameters:', {
         model: openaiModelName,
         size: '1536x1024',
