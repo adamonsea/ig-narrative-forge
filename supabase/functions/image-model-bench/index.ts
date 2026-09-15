@@ -299,9 +299,10 @@ Deno.serve(async (req) => {
               duration_ms: durationMs,
               success: true,
               reference_image_urls: useReferences ? referenceImageUrls : null,
+              prompt_variant: promptVariant,
             });
 
-            results.push({ storyId, model, quality, imageUrl, costUsd, durationMs, prompt });
+            results.push({ storyId, model, quality, imageUrl, costUsd, durationMs, prompt, promptVariant });
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             console.warn(`Bench failure ${model}/${quality} on ${storyId}: ${message}`);
