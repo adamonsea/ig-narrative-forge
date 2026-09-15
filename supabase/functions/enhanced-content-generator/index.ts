@@ -1035,6 +1035,8 @@ Create:
 2. Relevant hashtags for web sharing (10-15 hashtags)
 
 Make it engaging and shareable for ${publicationName} web readers.
+
+${HUMAN_VOICE_RULES}
 Use web-appropriate language like "share with friends", "discuss this story", "read more".
 Avoid social media platform-specific terms.
 
