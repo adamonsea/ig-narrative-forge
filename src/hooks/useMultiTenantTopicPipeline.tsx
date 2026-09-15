@@ -608,7 +608,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       // Load slides for stories to enable edit functionality — only needed when
       // the story rows didn't already come back with their slide text.
-      const storyIds = sortedStories.map((story: any) => story.id);
+      // Slide text is only prefetched for the most recent stories; older ones
+      // keep their slide_count and load slides on demand, so a large backlog
+      // never slows the dashboard down.
+      const SLIDE_PREFETCH_LIMIT = 300;
+      const storyIds = sortedStories.slice(0, SLIDE_PREFETCH_LIMIT).map((story: any) => story.id);
       let slidesData: any[] = [];
       let parliamentaryData: any[] = [];
       let slidesHadError = false;
