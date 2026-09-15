@@ -91,9 +91,16 @@
     // Per-embed source controls: which publications to show, and which to feature on top
     const sourceList = sanitiseNameList(container.dataset.sources);
     const featuredList = sanitiseNameList(container.dataset.featured);
-    // How many days a story from a featured source stays in the featured strip (1-5, default 2)
-    const parsedFeaturedDays = parseInt(container.dataset.featuredDays, 10);
-    const featuredDays = isNaN(parsedFeaturedDays) ? 2 : Math.min(5, Math.max(1, parsedFeaturedDays));
+    // How many days each featured source stays in the featured strip (1-5, default 2).
+    // Either one value for all, or a comma list matching data-featured order.
+    const featuredDays = String(container.dataset.featuredDays || '')
+      .split(',')
+      .map(function (v) {
+        const n = parseInt(v.trim(), 10);
+        return isNaN(n) ? 2 : Math.min(5, Math.max(1, n));
+      })
+      .slice(0, 25)
+      .join(',');
     const variantKey = `${sourceList}|${featuredList}|${featuredDays}`;
 
     if (!feedSlug) {
