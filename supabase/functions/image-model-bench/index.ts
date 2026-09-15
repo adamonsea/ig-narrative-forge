@@ -292,6 +292,7 @@ Deno.serve(async (req) => {
               cost_usd: costUsd,
               duration_ms: durationMs,
               success: true,
+              reference_image_urls: useReferences ? referenceImageUrls : null,
             });
 
             results.push({ storyId, model, quality, imageUrl, costUsd, durationMs, prompt });
@@ -310,6 +311,7 @@ Deno.serve(async (req) => {
               success: false,
               error: message,
               duration_ms: Date.now() - started,
+              reference_image_urls: useReferences ? referenceImageUrls : null,
             });
 
             results.push({ storyId, model, quality, error: message, prompt });
