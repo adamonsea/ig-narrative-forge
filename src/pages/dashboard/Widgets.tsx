@@ -48,6 +48,7 @@ export default function Widgets() {
     customTitle: "",
     customAvatar: "",
     showSubscribe: false,
+    frequency: "daily",
   });
 
   const [copied, setCopied] = useState(false);
