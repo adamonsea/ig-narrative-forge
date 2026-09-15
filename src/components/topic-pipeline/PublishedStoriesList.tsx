@@ -13,6 +13,7 @@ import {
 import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight, Loader2, Clock, Zap, XCircle, AlertCircle, MoreHorizontal, ImageIcon, Film } from "lucide-react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { optimizeImageUrl } from "@/lib/imageOptimization";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/hooks/useAuth";
@@ -68,6 +69,8 @@ interface PublishedStory {
   created_at: string;
   updated_at: string;
   slides: Slide[];
+  slide_count?: number;
+  slides_load_failed?: boolean;
   article_id?: string;
   topic_article_id?: string;
   story_type?: 'legacy' | 'multi_tenant';
@@ -625,8 +628,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               <div className="flex items-start gap-3">
                 {story.cover_illustration_url && (
                   <img 
-                    src={story.cover_illustration_url} 
+                    src={optimizeImageUrl(story.cover_illustration_url, { width: 160, height: 160, quality: 70 }) || story.cover_illustration_url} 
                     alt="" 
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    decoding="async"
                     className="w-20 h-20 object-cover rounded-md shrink-0"
                   />
                 )}
@@ -637,7 +644,15 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {story.author && <span>{story.author}</span>}
                     {story.author && <span>·</span>}
-                    <span>{story.slides.length} slides</span>
+                    <span>{story.slide_count ?? story.slides.length} slides</span>
+                    {story.slides_load_failed && (
+                      <>
+                        <span>·</span>
+                        <Badge className="h-4 text-[9px] bg-amber-100 text-amber-800 border-amber-300 px-1">
+                          Slides loading — refresh
+                        </Badge>
+                      </>
+                    )}
                     <span>·</span>
                     <span>{totalWordCount(story.slides)} words</span>
                     {story.animated_illustration_url && (
@@ -753,7 +768,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   )}
                   
                   <div className="space-y-3">
-                    <h4 className="text-sm font-medium">Slides ({story.slides.length})</h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">Slides ({story.slides.length})</h4>
+                      {story.slides_load_failed && (
+                        <Button size="sm" variant="ghost" className="h-6 text-xs text-amber-700" onClick={onRefresh}>
+                          Reload slides
+                        </Button>
+                      )}
+                    </div>
                     {story.slides.map((slide, index) => (
                       <div key={slide.id} className="border rounded-lg p-3 bg-muted/10">
                         <div className="flex justify-between items-center mb-2">
