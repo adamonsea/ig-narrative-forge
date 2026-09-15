@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
         );
         prompt = illustrationStyle === 'editorial_photographic'
           ? buildPhotographicPrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails)
-          : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails);
+          : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant);
       }
 
       // ---- Generate across the grid ----
