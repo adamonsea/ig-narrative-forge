@@ -620,7 +620,7 @@ serve(async (req) => {
     // Run tone analysis and location extraction in parallel
     const [storyTone, locationDetails] = await Promise.all([
       analyzeStoryTone(slides || [], OPENAI_API_KEY),
-      extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion)
+      extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion, topicLandmarkDescriptions)
     ]);
     
     console.log(`Story tone: ${storyTone}`)
