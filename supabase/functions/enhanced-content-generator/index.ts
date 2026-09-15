@@ -56,6 +56,27 @@ const expertiseGuidance: Record<string, string> = {
 
 const getGuidance = (map: Record<string, string>, key: string, fallback: string) => map[key] || fallback;
 
+// Phrases and habits that instantly read as machine-written copy.
+const AI_TELL_PHRASES = [
+  'in a move that', 'nestled', 'at the end of the day', 'sparked outrage',
+  'leaves residents wondering', 'underscores', 'a stark reminder', 'as the dust settles',
+  'in today\'s world', 'it is important to note', 'delve', 'tapestry', 'testament to',
+  'plays a crucial role', 'navigating the', 'sends a clear message', 'remains to be seen',
+];
+
+const HUMAN_VOICE_RULES = `SOUND HUMAN (non-negotiable):
+- BANNED phrases — never use these or close variants: ${AI_TELL_PHRASES.map((p) => `"${p}"`).join(', ')}.
+- BANNED construction: "This isn't just X, it's Y" (and any "not only ... but also" rhetorical flourish).
+- Do not use three-part lists for rhythm ("faster, cheaper and greener"). Two items, or one specific item, is almost always better.
+- No stacked em-dashes. At most one dash across the whole carousel.
+- Vary sentence length deliberately. A short fragment is allowed. Two long sentences in a row is not.
+- No two slides may open with the same word or the same grammatical shape.
+- Never open a slide with a participle ("Following the decision, ...", "Highlighting concerns, ...").
+- Prefer the specific noun, name, street, number or date from the article to any general one ("Terminus Road", not "the town centre"; "£1.4m", not "significant funding").
+- If the article quotes someone, use their words rather than paraphrasing their view into flat summary.
+- Do not use editorialising verbs ("slammed", "blasted", "hit out", "erupted") where the article reports plainly.
+- Write like a local reporter filing copy, not like a press release or an explainer.`;
+
 // Chat call with automatic escalation. Requests are routed by the shared LLM router.
 // On HTTP 400 we escalate to a genuinely different provider (Lovable AI Gateway),
 // not to DeepSeek's "pro" tier — that tier now serves the same V4.1 Flash model,
@@ -313,6 +334,47 @@ ANTI-REPETITION RULES:
     }
   }
 
+  // Pull a few recently published stories from this feed to anchor the house voice.
+  // These are style references only — never a source of facts.
+  async function fetchStyleAnchors(supabase: any, topicId: string): Promise<string> {
+    try {
+      const { data } = await supabase
+        .from('stories')
+        .select(`
+          title,
+          created_at,
+          slides!inner(content, slide_number),
+          topic_article:topic_articles!inner(topic_id)
+        `)
+        .eq('topic_articles.topic_id', topicId)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (!data?.length) return '';
+
+      const samples = data
+        .map((story: any) => {
+          const slides = (story.slides || [])
+            .sort((a: any, b: any) => (a.slide_number || 0) - (b.slide_number || 0))
+            .slice(0, 3)
+            .map((s: any) => (s.content || '').trim())
+            .filter(Boolean);
+          return slides.length ? slides.join('\n') : '';
+        })
+        .filter(Boolean)
+        .slice(0, 3);
+
+      if (!samples.length) return '';
+
+      return `HOUSE VOICE SAMPLES (published on this feed — match their RHYTHM and REGISTER only, never their subject matter or facts):
+${samples.map((s: string, i: number) => `--- sample ${i + 1} ---\n${s}`).join('\n')}`;
+    } catch (error) {
+      console.error('Error fetching style anchors (non-fatal):', error);
+      return '';
+    }
+  }
+
   // Generate slides using DeepSeek
   async function generateSlidesWithDeepSeek(
     article: Article, 
@@ -324,7 +386,8 @@ ANTI-REPETITION RULES:
     slideCount: number,
     publicationName: string,
     templateGuidance?: string,
-    supabase?: any
+    supabase?: any,
+    houseStyleGuidance?: string
   ): Promise<SlideContent[]> {
     try {
       // Fetch recent similar stories for context
@@ -342,9 +405,22 @@ ANTI-REPETITION RULES:
         }
       }
 
+      // Voice anchors from this feed's own published stories
+      let styleAnchors = '';
+      if (supabase && article.topic_id) {
+        styleAnchors = await fetchStyleAnchors(supabase, article.topic_id);
+        if (styleAnchors) console.log('🎙️ Injecting house voice samples from recent published stories');
+      }
+
       const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
 
 ${storyHistoryContext}
+
+${HUMAN_VOICE_RULES}
+
+${houseStyleGuidance || ''}
+
+${styleAnchors}
 
 ARTICLE DETAILS:
 Title: ${article.title}
@@ -517,7 +593,7 @@ OUTPUT FORMAT (JSON):
       // forces a costly escalation to Pro.
       const maxTokens = slideCount >= 12 ? 8000 : slideCount >= 8 ? 7000 : 6000;
 
-      const systemPrompt = `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms. Always reply with a single valid JSON object and nothing else.`;
+      const systemPrompt = `You are a seasoned local reporter writing ${slideType} web feed carousels. Create ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Write the way a person writes: concrete, specific, varied in rhythm, free of stock phrasing and marketing cadence. Focus on web-appropriate sharing language and avoid social media platform-specific terms. Always reply with a single valid JSON object and nothing else.${houseStyleGuidance ? `\n\n${houseStyleGuidance}` : ''}`;
       const chatMessages = [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
@@ -545,7 +621,11 @@ OUTPUT FORMAT (JSON):
         const resp = await deepseekChatWithFallback(apiKey, {
           model,
           messages: chatMessages,
-          temperature: 0.7,
+          // Looser sampling plus repetition penalties: the default settings made the
+          // model reach for the same constructions story after story.
+          temperature: 0.85,
+          frequency_penalty: 0.4,
+          presence_penalty: 0.3,
           max_tokens: maxTokens,
           response_format: { type: 'json_object' },
         }, label);
@@ -567,7 +647,9 @@ OUTPUT FORMAT (JSON):
           body: JSON.stringify({
             model: 'gpt-4o-mini',
             messages: chatMessages,
-            temperature: 0.7,
+            temperature: 0.85,
+            frequency_penalty: 0.4,
+            presence_penalty: 0.3,
             max_tokens: maxTokens,
             response_format: { type: 'json_object' },
           }),
@@ -837,6 +919,94 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
         }
       }
 
+      // ── Humanising pass ───────────────────────────────────────────────────
+      // A short second call that rewrites HOW things are said, never WHAT is said.
+      // If the rewrite drops facts, invents new ones, or breaks the limits, we
+      // silently keep the original draft.
+      try {
+        const sourceText = `${article.title} ${article.body || ''}`.toLowerCase();
+        const wordCount = (t: string) => (t.trim().match(/\S+/g) || []).length;
+        const factTokens = (t: string) =>
+          (t.match(/(£\s?[\d,.]+|\d[\d,.]*%?|\b[A-Z][a-zA-Z'’-]+\b)/g) || [])
+            .map((x) => x.trim())
+            .filter((x) => x.length > 1);
+
+        const originalTokens = new Set(
+          normalized.flatMap((s) => factTokens(s.content || '')).map((t) => t.toLowerCase())
+        );
+
+        const humanisePrompt = `Rewrite the slides below so they read like a human reporter wrote them.
+
+${HUMAN_VOICE_RULES}
+
+${houseStyleGuidance || ''}
+
+${styleAnchors}
+
+HARD RULES:
+- Facts, names, numbers, dates, places and quotes are FROZEN. Do not add, remove or alter a single one.
+- Do not introduce any name, figure or place that is not already in the slides or the article below.
+- Keep exactly ${normalized.length} slides, in the same order, covering the same points.
+- Slide 1: 8 words ideal, 15 words maximum. Other slides: 40 words maximum.
+- Keep attribution rules: opinions and claims stay attributed to whoever said them.
+- NEVER name the publication, website, domain or author.
+- Keep the visualPrompt and altText fields; update altText only if the content changed meaningfully.
+- If a slide already reads naturally, leave it exactly as it is.
+
+ARTICLE (for fact checking only):
+${(article.body || '').slice(0, 4000)}
+
+CURRENT SLIDES:
+${JSON.stringify({ slides: normalized }, null, 2)}
+
+Return valid JSON only: { "slides": [ { "slideNumber": 1, "content": "...", "visualPrompt": "...", "altText": "..." } ] }`;
+
+        const humaniseResp = await deepseekChatWithFallback(apiKey, {
+          model: 'deepseek-v4-flash',
+          messages: [
+            { role: 'system', content: 'You are a ruthless copy editor. You improve phrasing only, never facts. Output valid JSON only.' },
+            { role: 'user', content: humanisePrompt },
+          ],
+          temperature: 0.8,
+          frequency_penalty: 0.3,
+          max_tokens: slideCount >= 12 ? 4000 : slideCount >= 8 ? 3000 : 2400,
+          response_format: { type: 'json_object' },
+        }, 'slide-humanise');
+
+        if (humaniseResp.ok) {
+          const humaniseData = await humaniseResp.json();
+          const rewritten = normalizeSlides(
+            tryExtractSlides(readContent(humaniseData, 'slide-humanise'))
+          ).slice(0, slideCount);
+
+          const sameShape = rewritten.length === normalized.length;
+          const withinLimits = sameShape && rewritten.every((s, i) =>
+            wordCount(s.content || '') <= (i === 0 ? 18 : 45) && (s.content || '').trim().length > 0
+          );
+          const noNewFacts = sameShape && rewritten.every((s) =>
+            factTokens(s.content || '').every((tok) => {
+              const lower = tok.toLowerCase();
+              return originalTokens.has(lower) || sourceText.includes(lower);
+            })
+          );
+          const notClipped = sameShape && rewritten.every((s, i) => !isClipped(s, i));
+
+          if (sameShape && withinLimits && noNewFacts && notClipped) {
+            normalized = rewritten;
+            console.log('✍️ Humanising pass applied.');
+          } else {
+            console.warn(
+              `✍️ Humanising pass rejected (shape=${sameShape} limits=${withinLimits} facts=${noNewFacts} clipped=${!notClipped}) — keeping original draft.`
+            );
+          }
+        } else {
+          console.warn(`⚠️ Humanising pass request failed: ${humaniseResp.status}`);
+        }
+      } catch (e) {
+        console.warn('⚠️ Humanising pass failed, keeping original draft.', e);
+      }
+
+
       return normalized.slice(0, slideCount).map((s: any) => ({
         ...s,
         content: stripGeneratedAttribution(s.content || ''),
@@ -865,6 +1035,8 @@ Create:
 2. Relevant hashtags for web sharing (10-15 hashtags)
 
 Make it engaging and shareable for ${publicationName} web readers.
+
+${HUMAN_VOICE_RULES}
 Use web-appropriate language like "share with friends", "discuss this story", "read more".
 Avoid social media platform-specific terms.
 
@@ -1008,11 +1180,12 @@ Return in JSON format:
     let effectiveWritingStyle = writingStyle || 'journalistic';
     let dripFeedEnabled = false;
     let autoSimplifyEnabled = false; // Controls whether stories skip editorial review
+    let houseStyleGuidance = '';
     
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled')
+        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples')
         .eq('id', article.topic_id)
         .maybeSingle();
       
@@ -1022,7 +1195,21 @@ Return in JSON format:
         effectiveWritingStyle = writingStyle ?? topicData.default_writing_style ?? 'journalistic';
         dripFeedEnabled = topicData.drip_feed_enabled || false;
         autoSimplifyEnabled = topicData.auto_simplify_enabled || false;
-        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}, autoSimplify=${autoSimplifyEnabled}`);
+
+        const notes = (topicData.house_style_notes || '').trim();
+        const examples = (topicData.house_style_examples || '').trim();
+        if (notes || examples) {
+          houseStyleGuidance = [
+            'HOUSE STYLE FOR THIS FEED (the editor\'s own instructions — follow them over any generic guidance, but never over factual accuracy):',
+            notes ? notes.slice(0, 2000) : '',
+            examples
+              ? `EXAMPLE SENTENCES THE EDITOR LIKES (match their rhythm and register, not their subject):\n${examples.slice(0, 2000)}`
+              : '',
+          ].filter(Boolean).join('\n\n');
+          console.log('🏷️ House style applied for this feed');
+        }
+
+        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}, autoSimplify=${autoSimplifyEnabled}, houseStyle=${houseStyleGuidance ? 'yes' : 'no'}`);
       }
     }
 
@@ -1145,7 +1332,8 @@ Return in JSON format:
         targetSlideCount,
         publicationName,
         templateGuidance,
-        supabase
+        supabase,
+        houseStyleGuidance
       );
 
       console.log(`✅ Generated ${slides.length}/${targetSlideCount} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);

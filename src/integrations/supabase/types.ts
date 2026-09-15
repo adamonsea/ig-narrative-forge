@@ -4571,6 +4571,8 @@ export type Database = {
           events_enabled: boolean | null
           events_last_checked_at: string | null
           events_last_new_count: number
+          house_style_examples: string | null
+          house_style_notes: string | null
           id: string
           illustration_accent_color: string | null
           illustration_primary_color: string | null
@@ -4630,6 +4632,8 @@ export type Database = {
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
           events_last_new_count?: number
+          house_style_examples?: string | null
+          house_style_notes?: string | null
           id?: string
           illustration_accent_color?: string | null
           illustration_primary_color?: string | null
@@ -4689,6 +4693,8 @@ export type Database = {
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
           events_last_new_count?: number
+          house_style_examples?: string | null
+          house_style_notes?: string | null
           id?: string
           illustration_accent_color?: string | null
           illustration_primary_color?: string | null
