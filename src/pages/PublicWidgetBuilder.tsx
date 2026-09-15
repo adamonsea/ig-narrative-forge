@@ -129,8 +129,6 @@ export default function PublicWidgetBuilder() {
     loadTopic();
   }, [slug]);
 
-  // Fetch preview data
-  useEffect(() => {
   const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1`;
 
   // Load the publications that appear in this feed
