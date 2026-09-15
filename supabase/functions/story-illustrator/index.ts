@@ -130,7 +130,7 @@ serve(async (req) => {
       );
     }
 
-    const { storyId, model, isAutomated } = validated.data;
+    const { storyId, model, isAutomated, useBatch } = validated.data;
     
     // Debug logging for lifecycle tracking
     console.log(`📊 Story Illustrator invoked - storyId: ${storyId}, model: ${model}, isAutomated: ${isAutomated}`);
