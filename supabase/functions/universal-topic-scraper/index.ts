@@ -4,6 +4,10 @@ import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-
 import { FastTrackScraper } from '../_shared/fast-track-scraper.ts';
 import { StandardizedScraperResponse, ScraperSourceResult } from '../_shared/scraper-response-types.ts';
 import { resolveDomainProfile } from '../_shared/domain-profiles.ts';
+// Additive-only helpers: these run after the existing path has found nothing,
+// and every one of them fails soft so existing behaviour is never disrupted.
+import { attemptDeepRecovery } from '../_shared/deep-recovery.ts';
+import { recordScrapeRun } from '../_shared/scrape-run-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
