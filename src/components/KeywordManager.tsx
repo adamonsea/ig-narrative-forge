@@ -749,6 +749,113 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                         <Sparkles className="h-3 w-3 mr-1" />
                         {describingLandmark === landmark ? 'Describing…' : 'Suggest description'}
                       </Button>
+
+                      {/* Reference photographs */}
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs text-muted-foreground">
+                          Reference photos (up to 3) — used for accurate architecture when a story is about this place.
+                        </p>
+                        {(landmarkPhotos[landmark] || []).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {(landmarkPhotos[landmark] || []).map((photo, photoIndex) => (
+                              <div key={photo.url} className="relative">
+                                <img
+                                  src={photo.url}
+                                  alt={`${landmark} reference ${photoIndex + 1}`}
+                                  loading="lazy"
+                                  className="h-16 w-24 rounded object-cover border"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removePhoto(landmark, photoIndex)}
+                                  aria-label={`Remove reference photo ${photoIndex + 1}`}
+                                  className="absolute -top-1 -right-1 rounded-full bg-background border p-0.5"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={photoBusy === landmark}
+                            onClick={() => searchPhotos(landmark)}
+                          >
+                            <ImageIcon className="h-3 w-3 mr-1" />
+                            {photoBusy === landmark ? 'Working…' : 'Find photos'}
+                          </Button>
+                          <label className="text-xs underline cursor-pointer">
+                            Upload
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = '';
+                                if (file) uploadPhoto(landmark, file);
+                              }}
+                            />
+                          </label>
+                          <Input
+                            value={photoLink[landmark] ?? ''}
+                            onChange={(e) => setPhotoLink(prev => ({ ...prev, [landmark]: e.target.value }))}
+                            placeholder="Paste an image link…"
+                            className="h-8 text-xs flex-1 min-w-[160px]"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={photoBusy === landmark || !(photoLink[landmark] || '').trim()}
+                            onClick={async () => {
+                              const link = (photoLink[landmark] || '').trim();
+                              if (!link) return;
+                              await importPhoto(landmark, { sourceUrl: link });
+                              setPhotoLink(prev => ({ ...prev, [landmark]: '' }));
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                        {(photoCandidates[landmark] || []).length > 0 && (
+                          <div className="space-y-2 rounded-md border p-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-muted-foreground">Tap a photo to save it</p>
+                              <button
+                                type="button"
+                                className="text-xs underline"
+                                onClick={() => setPhotoCandidates(prev => ({ ...prev, [landmark]: [] }))}
+                              >
+                                Close
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(photoCandidates[landmark] || []).map((candidate) => (
+                                <button
+                                  key={candidate.url}
+                                  type="button"
+                                  disabled={photoBusy === landmark}
+                                  title={candidate.credit}
+                                  onClick={() =>
+                                    importPhoto(landmark, { sourceUrl: candidate.url, credit: candidate.credit })
+                                  }
+                                  className="rounded overflow-hidden border hover:ring-2 hover:ring-primary"
+                                >
+                                  <img
+                                    src={candidate.thumbUrl}
+                                    alt={candidate.title}
+                                    loading="lazy"
+                                    className="h-16 w-24 object-cover"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
