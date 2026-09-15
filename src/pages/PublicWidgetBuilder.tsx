@@ -200,7 +200,7 @@ export default function PublicWidgetBuilder() {
     fetchPreview();
   }, [slug, config.maxHeadlines, sourcesParam, featuredParam, config.featuredDays]);
 
-  const WIDGET_JS_VERSION = '1.5.0';
+  const WIDGET_JS_VERSION = '1.5.1';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
