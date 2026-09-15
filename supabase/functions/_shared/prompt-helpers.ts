@@ -220,13 +220,16 @@ ${storyText.slice(0, 2000)}`
  * Place-specific accuracy only when story content warrants it
  * Now accepts optional locationHint for landmark-accurate rendering
  */
+export type IllustrativePromptVariant = 'current' | 'handmade';
+
 export function buildIllustrativePrompt(
   tone: string,
   subject: string,
   publicationName?: string,
   primaryColor: string = '#10B981',
   region?: string,
-  locationHint?: string | null
+  locationHint?: string | null,
+  variant: IllustrativePromptVariant = 'current'
 ): string {
   const expressionGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
     ? 'subtle expressions, thoughtful demeanor'
