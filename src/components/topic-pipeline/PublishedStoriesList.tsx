@@ -392,6 +392,30 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           )}
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-2">
+          {availableSources.length > 1 && (
+            <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="h-7 w-[150px] text-xs">
+                <SelectValue placeholder="All sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                {availableSources.map(([label, count]) => (
+                  <SelectItem key={label} value={label}>{label} ({count})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={sortMode} onValueChange={(v) => { setSortMode(v as typeof sortMode); setCurrentPage(1); }}>
+            <SelectTrigger className="h-7 w-[130px] text-xs" aria-label="Sort stories">
+              <ArrowDownAZ className="h-3.5 w-3.5 mr-1 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="source">Source A–Z</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-xs text-muted-foreground">{totalPages > 1 && `Page ${currentPage}/${totalPages}`}</span>
           <Button variant="ghost" size="sm" onClick={onRefresh} className="h-7 w-7 p-0">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
