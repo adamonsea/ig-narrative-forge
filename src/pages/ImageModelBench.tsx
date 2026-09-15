@@ -176,6 +176,7 @@ const ImageModelBench: React.FC = () => {
             qualities: [job.quality],
             runId,
             referenceImageUrls: selectedReferences,
+            promptVariant,
             // Reuse the prompt already built for this story so we only pay for
             // the wording work once.
             promptOverride: promptByStory.get(job.storyId),
