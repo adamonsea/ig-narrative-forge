@@ -99,12 +99,15 @@ ${storyText.slice(0, 2000)}`
     }
     
     // Author-supplied description wins over anything the model invented.
-    const resultLower = result.toLowerCase();
-    const matched = Object.entries(descriptions).find(
-      ([name, text]) => name && text && resultLower.includes(name.toLowerCase())
+    // Match on whole words and prefer the most specific (longest) name so a
+    // short entry like "prom" can't hijack "prominent" or "promenade".
+    const describedNames = Object.keys(descriptions).filter(
+      (name) => name && descriptions[name]
     );
-    if (matched) {
-      const [name, text] = matched;
+    const bestName = matchPlaceName(result, describedNames);
+    if (bestName) {
+      const name = bestName;
+      const text = descriptions[name];
       const authored = `${name} (${String(text).slice(0, 400)})`;
       console.log('Using author-supplied landmark description:', authored);
       return authored;
