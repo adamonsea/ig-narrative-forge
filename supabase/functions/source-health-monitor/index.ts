@@ -162,6 +162,21 @@ serve(async (req) => {
       if (d.source_id && !latestDailyBySource[d.source_id]) latestDailyBySource[d.source_id] = d;
     }
 
+    // 3b. Newest scrape run per source (richest signal; may be empty on old data)
+    const latestRunBySource: Record<string, any> = {};
+    try {
+      const { data: runs } = await supabase
+        .from("scrape_runs")
+        .select("source_id, method, methods_tried, urls_discovered, urls_new, articles_stored, rejections, error_code, error_detail, started_at")
+        .gte("started_at", sinceDate)
+        .order("started_at", { ascending: false });
+      for (const r of runs || []) {
+        if (r.source_id && !latestRunBySource[r.source_id]) latestRunBySource[r.source_id] = r;
+      }
+    } catch (runErr) {
+      console.warn("(non-fatal) could not read scrape runs:", runErr);
+    }
+
     const rows: any[] = [];
     const flagged: any[] = [];
 
