@@ -15,7 +15,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.4.2';
+  const WIDGET_VERSION = '1.5.0';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -578,6 +578,19 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+      }
+
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: ${isDark ? '#9ca3af' : '#6b7280'};
+        margin: 10px 0 4px;
+      }
+
+      .section-label:first-child {
+        margin-top: 0;
       }
 
       .story-item {
