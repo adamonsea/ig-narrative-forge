@@ -58,6 +58,27 @@ export async function attemptDeepRecovery(
       limit: 10,
     });
 
+    // Attribution guard: only keep URLs on the source's own domain. Some
+    // publishers share one sitemap across a group of titles, and stories must
+    // stay attributed to the publication they actually came from.
+    const registrable = (raw: string): string => {
+      try {
+        const host = new URL(raw).hostname.replace(/^www\./, '').toLowerCase();
+        const parts = host.split('.');
+        return parts.length > 2 ? parts.slice(-3).join('.') : host;
+      } catch {
+        return '';
+      }
+    };
+    const sourceDomain = registrable(params.sourceUrl);
+    const onDomain = discovery.urls.filter(u => registrable(u.url) === sourceDomain);
+    if (onDomain.length !== discovery.urls.length) {
+      console.log(
+        `🧭 Deep recovery dropped ${discovery.urls.length - onDomain.length} off-domain URL(s) for ${params.sourceName}`,
+      );
+    }
+    discovery.urls = onDomain;
+
     if (discovery.urls.length === 0) {
       return { ...EMPTY, methodsTried: discovery.methodsTried, error: discovery.error };
     }
