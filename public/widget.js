@@ -374,7 +374,8 @@
         ? `<div class="featured-image"><img src="${featured.image_url}" alt="" /></div>`
         : '';
 
-      const remainingHTML = remaining.map(story => {
+      const remainingFeatured = remaining.filter(s => s.featured).length;
+      const remainingHTML = remaining.map((story, index) => {
         const sourceHTML = story.source_name 
           ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
           : '';
@@ -384,7 +385,12 @@
         const bulletStyle = isFresh 
           ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
           : `background: ${accent}`;
+        // Mark where the featured run ends
+        const labelHTML = (remainingFeatured > 0 && index === remainingFeatured)
+          ? '<div class="section-label">Latest</div>'
+          : '';
         return `
+          ${labelHTML}
           <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
             <span class="${bulletClass}" style="${bulletStyle}"></span>
             <div class="story-content">
