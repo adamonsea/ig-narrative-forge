@@ -365,9 +365,33 @@ const ImageModelBench: React.FC = () => {
               </div>
             </div>
 
+            <div>
+              <h2 className="text-sm font-medium mb-2">Prompt style</h2>
+              <div className="flex flex-wrap gap-2">
+                {PROMPT_VARIANTS.map((v) => {
+                  const active = promptVariant === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setPromptVariant(v.id)}
+                      aria-pressed={active}
+                      className={`text-left rounded-md border px-3 py-2 transition ${
+                        active ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/40'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{v.label}</span>
+                      <span className="block text-xs text-muted-foreground">{v.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between border-t pt-4">
               <p className="text-sm text-muted-foreground">
                 {estimate.images} pictures · about ${estimate.cost.toFixed(2)}
+                {` · ${PROMPT_VARIANTS.find((v) => v.id === promptVariant)?.label} wording`}
                 {selectedReferences.length > 0 && ` · ${selectedReferences.length} style reference${selectedReferences.length > 1 ? 's' : ''}`}
               </p>
               <Button onClick={runBench} disabled={running || estimate.images === 0}>
