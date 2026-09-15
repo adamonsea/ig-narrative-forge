@@ -201,6 +201,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     try {
       setLoading(true);
+      setLoadError(null);
 
       // Get ONLY multi-tenant articles for arrivals (no legacy articles)
       // Use pagination - first page loads with reset
@@ -1372,6 +1373,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       )
       .subscribe((status) => {
         console.log('🔄 Real-time subscription status:', status);
+        // The 30s fallback poll stands down while the live channel is healthy.
+        channelActiveRef.current = status === 'SUBSCRIBED';
       });
 
     return () => {
@@ -1389,11 +1392,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     stories
   ]);
 
-  // Fallback polling as safety net (every 30 seconds)
+  // Fallback polling as safety net (every 30 seconds) — skipped while the live
+  // subscription is connected or the dashboard tab is in the background, so the
+  // pipeline doesn't churn (and surface errors) when nobody is watching.
   useEffect(() => {
     if (!selectedTopicId) return;
 
     const pollInterval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      if (channelActiveRef.current) return;
       console.log('🔄 Fallback poll refresh');
       loadTopicContent();
     }, 30000);
@@ -1485,6 +1492,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     
     // Loading states
     loading,
+    loadError,
     loadingMore,
     
     // Pagination
