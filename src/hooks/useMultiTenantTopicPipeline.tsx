@@ -477,14 +477,22 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // single source of truth for the pipeline lists; the direct query is only
       // a fallback when the RPC fails — never merged additively with it, or the
       // visible story count would drift as row windows shift.
-      const STATUS_PAGE_SIZE = 50;
+      // Published feeds routinely hold hundreds of stories, so the published
+      // window must be much larger than the working queues or the Published tab
+      // appears to "lose" stories it used to show.
+      const STATUS_PAGE_SIZE: Record<string, number> = {
+        draft: 100,
+        ready: 100,
+        published: 500,
+        archived: 100
+      };
       const STATUSES = ['draft', 'ready', 'published', 'archived'];
       const perStatusResults = await Promise.all(
         STATUSES.map((status) =>
           supabase.rpc('get_admin_topic_stories', {
             p_topic_id: selectedTopicId,
             p_status: status,
-            p_limit: STATUS_PAGE_SIZE,
+            p_limit: STATUS_PAGE_SIZE[status] ?? 100,
             p_offset: 0
           })
         )
