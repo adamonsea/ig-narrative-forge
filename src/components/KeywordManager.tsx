@@ -71,6 +71,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     setKeywords(sortedKeywords);
     setLandmarks(topic.landmarks || []);
     setLandmarkDescriptions(topic.landmark_descriptions || {});
+    setLandmarkPhotos(topic.landmark_reference_images || {});
     setPostcodes(topic.postcodes || []);
     setOrganizations(topic.organizations || []);
   }, [topic]);
