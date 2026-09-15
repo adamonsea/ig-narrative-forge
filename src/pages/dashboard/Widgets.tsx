@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -236,6 +237,10 @@ export default function Widgets() {
       attrs.push(`data-subscribe="true"`);
       if (config.frequency === "weekly") attrs.push(`data-frequency="weekly"`);
     }
+    if (sourcesParam) attrs.push(`data-sources="${sourcesParam.replace(/"/g, "&quot;")}"`);
+    if (featuredParam) attrs.push(`data-featured="${featuredParam.replace(/"/g, "&quot;")}"`);
+
+
 
     return `<!-- Curatr Widget -->
 <div id="curatr-widget" ${attrs.join(" ")}></div>
