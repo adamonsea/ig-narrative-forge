@@ -1413,6 +1413,7 @@ export type Database = {
           image_url: string | null
           model: string
           prompt: string | null
+          prompt_variant: string
           quality: string
           reference_image_urls: string[] | null
           run_id: string
@@ -1433,6 +1434,7 @@ export type Database = {
           image_url?: string | null
           model: string
           prompt?: string | null
+          prompt_variant?: string
           quality: string
           reference_image_urls?: string[] | null
           run_id: string
@@ -1453,6 +1455,7 @@ export type Database = {
           image_url?: string | null
           model?: string
           prompt?: string | null
+          prompt_variant?: string
           quality?: string
           reference_image_urls?: string[] | null
           run_id?: string

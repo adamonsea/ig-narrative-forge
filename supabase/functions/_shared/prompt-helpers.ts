@@ -220,13 +220,16 @@ ${storyText.slice(0, 2000)}`
  * Place-specific accuracy only when story content warrants it
  * Now accepts optional locationHint for landmark-accurate rendering
  */
+export type IllustrativePromptVariant = 'current' | 'handmade';
+
 export function buildIllustrativePrompt(
   tone: string,
   subject: string,
   publicationName?: string,
   primaryColor: string = '#10B981',
   region?: string,
-  locationHint?: string | null
+  locationHint?: string | null,
+  variant: IllustrativePromptVariant = 'current'
 ): string {
   const expressionGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
     ? 'subtle expressions, thoughtful demeanor'
@@ -263,12 +266,63 @@ PLACE-SPECIFIC ELEMENTS (${region}):
 ` : '';
 
   // Location accuracy section for identified landmarks
-  const locationAccuracy = locationHint ? `
+  const locationAccuracy = locationHint
+    ? (variant === 'handmade' ? `
+LOCATION (silhouette only):
+Suggest "${locationHint}" through its overall silhouette and one or two unmistakable shapes.
+No architectural detail, no window counts, no ornament — a recognisable outline cut from flat ink.
+` : `
 LOCATION ACCURACY (leverage AI knowledge):
 Render "${locationHint}" based on your training knowledge of this location.
 Include authentic architectural details, proportions, and distinctive visual features.
 Stylize to match the print aesthetic while maintaining recognizable characteristics.
-` : '';
+`)
+    : '';
+
+  if (variant === 'handmade') {
+    return `HAND-MADE SCREEN PRINT for ${publicationName || 'local news publication'}. Subject: ${subject}
+
+This must look like a limited-edition screen print sold in a gallery shop — cut by hand, printed in three inks on paper. Restraint is the whole point: when in doubt, remove detail.
+
+DETAIL BUDGET (the most important rule):
+- Build the ENTIRE picture from roughly 8 to 15 large flat shapes. Count them.
+- No element smaller than a human hand at the picture's scale. Delete anything smaller.
+- One foreground subject, one middle ground, one background. Nothing else.
+- Under-detailed is correct. Over-detailed is a failure.
+
+INK LIMIT:
+- Exactly three inks: black, paper white, and one accent colour (${primaryColor}).
+- Flat fills only. NO shading, NO gradients, NO blended or mixed tones, NO third mixed hue.
+- Overlap of accent and black may darken, as real ink does — nothing else.
+
+SHAPE LANGUAGE:
+- Hand-cut edges: slightly irregular, like lino or a cut paper stencil. Never vector-smooth.
+- Figures reduced to essential silhouettes: a hair shape, a jaw, a single nose line. No rendered eyes, no expressions, no fingers.
+- Backgrounds as silhouette masses — a whole stand of trees as one shape, a crowd as one shape, water as repeating white flecks, foliage as a repeated cut mark.
+${placeGuidance}${locationAccuracy}
+TEXTURE (only from the printing, never from drawing):
+- Paper grain across the whole sheet, visible speckle in flat areas.
+- Slight registration shift between inks, a little ink starvation at edges.
+- Texture must NEVER come from extra lines, hatching, stippling as drawing, or added small marks.
+
+COMPOSITION:
+- Bold, simple, poster-like. Big empty areas are good.
+- Strong silhouette read at thumbnail size.
+- Landscape 3:2 format for editorial cover use.
+
+VISUAL APPROACH: ${expressionGuidance}, conveyed by posture and composition, not facial detail.
+
+FORBIDDEN:
+❌ Cross-hatching, stippling, pen work or any fine linework
+❌ Gradients, airbrush, soft shadows, glow, depth-of-field
+❌ Photorealism, 3D rendering, digital polish
+❌ More than three inks
+❌ Small background details, clutter, crowds of tiny objects
+❌ Text, logos, speech bubbles, graphic design furniture
+❌ Childish cartoon style
+
+BENCHMARK: A mid-century screen-printed travel or public-information poster, reprinted today by a small studio — flat, graphic, textured, confidently simple.`;
+  }
 
   return `PRINT-MADE EDITORIAL ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
 

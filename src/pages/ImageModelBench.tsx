@@ -62,7 +62,13 @@ interface BenchResult {
   error: string | null;
   verdict: string | null;
   reference_image_urls: string[] | null;
+  prompt_variant: string | null;
 }
+
+const PROMPT_VARIANTS = [
+  { id: 'current', label: 'Current', hint: 'The wording the live pipeline uses today' },
+  { id: 'handmade', label: 'Hand-made print', hint: 'Fewer, bigger shapes · three inks · gallery screen print' },
+] as const;
 
 const qualityLabel = (q: string) => QUALITIES.find((x) => x.id === q)?.label ?? q;
 const modelLabel = (m: string) => MODELS.find((x) => x.id === m)?.label ?? m;
@@ -80,6 +86,7 @@ const ImageModelBench: React.FC = () => {
   const [loadingStories, setLoadingStories] = useState(true);
   const [referenceOptions, setReferenceOptions] = useState<ReferenceOption[]>([]);
   const [selectedReferences, setSelectedReferences] = useState<string[]>([]);
+  const [promptVariant, setPromptVariant] = useState<'current' | 'handmade'>('handmade');
 
   const loadResults = useCallback(async () => {
     const { data } = await supabase
@@ -169,6 +176,7 @@ const ImageModelBench: React.FC = () => {
             qualities: [job.quality],
             runId,
             referenceImageUrls: selectedReferences,
+            promptVariant,
             // Reuse the prompt already built for this story so we only pay for
             // the wording work once.
             promptOverride: promptByStory.get(job.storyId),
@@ -357,9 +365,33 @@ const ImageModelBench: React.FC = () => {
               </div>
             </div>
 
+            <div>
+              <h2 className="text-sm font-medium mb-2">Prompt style</h2>
+              <div className="flex flex-wrap gap-2">
+                {PROMPT_VARIANTS.map((v) => {
+                  const active = promptVariant === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setPromptVariant(v.id)}
+                      aria-pressed={active}
+                      className={`text-left rounded-md border px-3 py-2 transition ${
+                        active ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/40'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{v.label}</span>
+                      <span className="block text-xs text-muted-foreground">{v.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between border-t pt-4">
               <p className="text-sm text-muted-foreground">
                 {estimate.images} pictures · about ${estimate.cost.toFixed(2)}
+                {` · ${PROMPT_VARIANTS.find((v) => v.id === promptVariant)?.label} wording`}
                 {selectedReferences.length > 0 && ` · ${selectedReferences.length} style reference${selectedReferences.length > 1 ? 's' : ''}`}
               </p>
               <Button onClick={runBench} disabled={running || estimate.images === 0}>
@@ -437,6 +469,9 @@ const ImageModelBench: React.FC = () => {
                         {r.duration_ms !== null && <span>{(r.duration_ms / 1000).toFixed(1)}s</span>}
                         {r.reference_image_urls && r.reference_image_urls.length > 0 && (
                           <Badge variant="secondary">Style referenced</Badge>
+                        )}
+                        {r.prompt_variant === 'handmade' && (
+                          <Badge variant="secondary">Hand-made wording</Badge>
                         )}
                       </div>
                       {r.image_url && (
