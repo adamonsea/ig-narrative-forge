@@ -100,7 +100,7 @@ function isValidIllustrationStyle(value: unknown): value is IllustrationStyle {
 // Zod schema for request validation
 const requestSchema = z.object({
   storyId: z.string().uuid(),
-  model: z.string().max(100).optional().default('gpt-image-1.5-medium'),
+  model: z.string().max(100).optional().default('gpt-image-2-medium'),
   isAutomated: z.boolean().optional().default(false), // Lifecycle tracking flag
   useBatch: z.boolean().optional().default(false), // Discounted overnight route (backlog only)
 });
