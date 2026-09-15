@@ -5,6 +5,7 @@ import {
   analyzeStoryTone, 
   extractSubjectMatter,
   extractLocationDetails,
+  matchPlaceName,
   buildIllustrativePrompt, 
   buildPhotographicPrompt 
 } from '../_shared/prompt-helpers.ts'
