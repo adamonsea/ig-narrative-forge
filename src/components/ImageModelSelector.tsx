@@ -162,7 +162,7 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
           sideOffset={5}
         >
           <div className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 border-b">
-            OpenAI GPT Image 1.5 • {styleLabel} Mode
+            OpenAI GPT Image 2 • {styleLabel} Mode
           </div>
           {availableModels.map((model) => (
             <DropdownMenuItem
