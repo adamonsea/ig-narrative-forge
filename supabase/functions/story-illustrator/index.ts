@@ -340,7 +340,7 @@ serve(async (req) => {
       }
     }
     
-    const modelConfig = modelConfigs[model] || modelConfigs['gpt-image-1.5-medium']
+    const modelConfig = modelConfigs[model] || modelConfigs['gpt-image-2-medium']
 
     if (!storyId) {
       return new Response(
