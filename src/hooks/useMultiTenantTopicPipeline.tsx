@@ -1504,6 +1504,107 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
   }, [selectedTopicId, articlesPage, loadingMore, hasMoreArticles, articles]);
 
+  // Exact published total so the tab can state how many stories exist, not just
+  // how many are currently loaded.
+  useEffect(() => {
+    if (!selectedTopicId) {
+      setTotalPublishedCount(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { count, error } = await supabase
+        .from('stories')
+        .select('id, topic_articles!inner(topic_id)', { count: 'exact', head: true })
+        .eq('topic_articles.topic_id', selectedTopicId)
+        .eq('status', 'published');
+      if (!cancelled && !error && typeof count === 'number') setTotalPublishedCount(count);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedTopicId]);
+
+  // Load an older page of published stories on demand.
+  const loadMorePublished = useCallback(async () => {
+    if (!selectedTopicId || loadingMorePublished || !hasMorePublished) return;
+    setLoadingMorePublished(true);
+    try {
+      const { data, error } = await supabase.rpc('get_admin_topic_stories', {
+        p_topic_id: selectedTopicId,
+        p_status: 'published',
+        p_limit: PUBLISHED_PAGE_SIZE,
+        p_offset: publishedLoadedCount
+      });
+
+      if (error) {
+        console.error('Failed to load more published stories:', error);
+        return;
+      }
+
+      const rows = data || [];
+      const newIds = rows.map((r: any) => r.id);
+
+      // Fetch slide text for the new page so expanding a story still works.
+      let newSlides: any[] = [];
+      if (newIds.length > 0) {
+        const CHUNK = 60;
+        for (let i = 0; i < newIds.length; i += CHUNK) {
+          const { data: slideRows } = await supabase
+            .rpc('get_admin_slides_for_stories', { p_story_ids: newIds.slice(i, i + CHUNK) });
+          if (slideRows) newSlides = newSlides.concat(slideRows);
+        }
+      }
+
+      const mapped = rows.map((story: any) => {
+        const slides = newSlides
+          .filter((s: any) => s.story_id === story.id)
+          .sort((a: any, b: any) => a.slide_number - b.slide_number);
+        return {
+          id: story.id,
+          article_id: story.article_id || null,
+          topic_article_id: story.topic_article_id || null,
+          headline: story.title || story.article_title || 'Untitled',
+          summary: '',
+          status: story.status,
+          is_published: story.is_published,
+          created_at: story.created_at,
+          updated_at: story.updated_at,
+          slides,
+          slides_load_failed: false,
+          slide_count: story.slide_count || slides.length,
+          article_title: story.article_title,
+          story_type: story.story_type,
+          title: story.title,
+          url: story.article_url,
+          source_url: story.article_url,
+          author: story.article_author,
+          publication_name: null,
+          word_count: null,
+          cover_illustration_url: story.cover_illustration_url,
+          cover_illustration_prompt: story.cover_illustration_prompt,
+          illustration_generated_at: story.illustration_generated_at,
+          animated_illustration_url: story.animated_illustration_url,
+          animation_suggestions: story.animation_suggestions || null,
+          slidetype: story.slide_type,
+          tone: story.tone || '',
+          writing_style: story.writing_style || '',
+          audience_expertise: story.audience_expertise || '',
+          is_teaser: false,
+          is_parliamentary: false,
+          scheduled_publish_at: story.scheduled_publish_at || null
+        } as any;
+      });
+
+      setStories(prev => {
+        const seen = new Set(prev.map(s => s.id));
+        return [...prev, ...mapped.filter((s: any) => !seen.has(s.id))];
+      });
+      setPublishedLoadedCount(prev => prev + rows.length);
+      setHasMorePublished(rows.length >= PUBLISHED_PAGE_SIZE);
+    } finally {
+      setLoadingMorePublished(false);
+    }
+  }, [selectedTopicId, loadingMorePublished, hasMorePublished, publishedLoadedCount]);
+
   // Compute duplicate groups from articles
   const duplicateMap = useMemo(() => detectDuplicateGroups(articles), [articles]);
 
