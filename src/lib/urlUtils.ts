@@ -59,8 +59,9 @@ export const buildShareUrl = (path: string): string => {
 
 /**
  * Derive a human-friendly publication name from a URL or bare domain.
- * e.g. "https://www.theargus.co.uk/news/123" -> "Theargus"
+ * e.g. "https://www.theargus.co.uk/news/123" -> "The Argus"
  *      "bbc.co.uk" -> "BBC"
+ *      "eastbournereporter.co.uk" -> "Eastbourne Reporter"
  * Returns '' when nothing usable can be derived.
  */
 const KNOWN_PUBLICATIONS: Record<string, string> = {
@@ -70,6 +71,50 @@ const KNOWN_PUBLICATIONS: Record<string, string> = {
   'theargus.co.uk': 'The Argus',
   'sussexexpress.co.uk': 'Sussex Express',
   'eastbourneherald.co.uk': 'Eastbourne Herald',
+  'eastbournereporter.co.uk': 'Eastbourne Reporter',
+  'bournefreelive.co.uk': 'Bourne Free Live',
+  'eastbourne.gov.uk': 'Eastbourne Borough Council',
+  'lewes-eastbourne.gov.uk': 'Lewes & Eastbourne Councils',
+  'eastsussex.gov.uk': 'East Sussex County Council',
+  'wealden.gov.uk': 'Wealden District Council',
+  'hailsham-tc.gov.uk': 'Hailsham Town Council',
+  'parliament.uk': 'UK Parliament',
+  'gov.uk': 'GOV.UK',
+  'sussex.police.uk': 'Sussex Police',
+  'eastbourneunltd.co.uk': 'Eastbourne Chamber',
+  'itv.com': 'ITV News',
+  'sky.com': 'Sky News',
+  'independent.co.uk': 'The Independent',
+  'telegraph.co.uk': 'The Telegraph',
+  'thetimes.co.uk': 'The Times',
+  'standard.co.uk': 'Evening Standard',
+};
+
+/** Multi-label public suffixes we must skip to reach the real domain name. */
+const MULTI_PART_SUFFIXES = new Set([
+  'co.uk', 'org.uk', 'gov.uk', 'ac.uk', 'net.uk', 'ltd.uk', 'plc.uk', 'me.uk', 'sch.uk', 'police.uk', 'nhs.uk',
+  'com.au', 'net.au', 'org.au', 'co.nz', 'co.za', 'com.br', 'co.jp', 'co.in', 'com.tr',
+]);
+
+/** Words commonly glued onto a place name in UK publication domains. */
+const PUBLICATION_WORDS = [
+  'reporter', 'herald', 'express', 'gazette', 'chronicle', 'observer', 'journal', 'advertiser',
+  'telegraph', 'tribune', 'courier', 'mercury', 'echo', 'argus', 'standard', 'bulletin',
+  'news', 'times', 'post', 'today', 'online', 'live', 'daily', 'weekly', 'radio', 'press',
+];
+
+const titleCase = (word: string): string =>
+  word.charAt(0).toUpperCase() + word.slice(1);
+
+/** Split "eastbournereporter" into "Eastbourne Reporter" when a known word is glued on the end. */
+const splitGluedWords = (name: string): string => {
+  for (const word of PUBLICATION_WORDS) {
+    if (name.length > word.length + 2 && name.endsWith(word)) {
+      const head = name.slice(0, name.length - word.length);
+      return `${titleCase(head)} ${titleCase(word)}`;
+    }
+  }
+  return titleCase(name);
 };
 
 export const publicationFromUrl = (input?: string | null): string => {
@@ -85,9 +130,25 @@ export const publicationFromUrl = (input?: string | null): string => {
 
   if (KNOWN_PUBLICATIONS[host]) return KNOWN_PUBLICATIONS[host];
 
-  // Take the registrable name (segment before the public suffix).
   const parts = host.split('.');
-  const name = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+
+  // Match a known publication ignoring any subdomain (e.g. news.bbc.co.uk).
+  for (let i = 1; i < parts.length - 1; i++) {
+    const candidate = parts.slice(i).join('.');
+    if (KNOWN_PUBLICATIONS[candidate]) return KNOWN_PUBLICATIONS[candidate];
+  }
+
+  // Skip multi-label public suffixes such as .co.uk so we never return "Co" or "Gov".
+  const lastTwo = parts.slice(-2).join('.');
+  const suffixLength = MULTI_PART_SUFFIXES.has(lastTwo) ? 2 : 1;
+  const name = parts.length > suffixLength ? parts[parts.length - suffixLength - 1] : parts[0];
   if (!name) return '';
-  return name.charAt(0).toUpperCase() + name.slice(1);
+
+  // Hyphenated domains are already word-separated.
+  if (name.includes('-')) {
+    return name.split('-').filter(Boolean).map(titleCase).join(' ');
+  }
+
+  return splitGluedWords(name);
 };
+
