@@ -477,14 +477,22 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // single source of truth for the pipeline lists; the direct query is only
       // a fallback when the RPC fails — never merged additively with it, or the
       // visible story count would drift as row windows shift.
-      const STATUS_PAGE_SIZE = 50;
+      // Published feeds routinely hold hundreds of stories, so the published
+      // window must be much larger than the working queues or the Published tab
+      // appears to "lose" stories it used to show.
+      const STATUS_PAGE_SIZE: Record<string, number> = {
+        draft: 100,
+        ready: 100,
+        published: 250,
+        archived: 100
+      };
       const STATUSES = ['draft', 'ready', 'published', 'archived'];
       const perStatusResults = await Promise.all(
         STATUSES.map((status) =>
           supabase.rpc('get_admin_topic_stories', {
             p_topic_id: selectedTopicId,
             p_status: status,
-            p_limit: STATUS_PAGE_SIZE,
+            p_limit: STATUS_PAGE_SIZE[status] ?? 100,
             p_offset: 0
           })
         )
@@ -600,7 +608,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       // Load slides for stories to enable edit functionality — only needed when
       // the story rows didn't already come back with their slide text.
-      const storyIds = sortedStories.map((story: any) => story.id);
+      // Slide text is only prefetched for the most recent stories; older ones
+      // keep their slide_count and load slides on demand, so a large backlog
+      // never slows the dashboard down.
+      const SLIDE_PREFETCH_LIMIT = 300;
+      const storyIds = sortedStories.slice(0, SLIDE_PREFETCH_LIMIT).map((story: any) => story.id);
       let slidesData: any[] = [];
       let parliamentaryData: any[] = [];
       let slidesHadError = false;
