@@ -190,7 +190,7 @@ export default function PublicWidgetBuilder() {
       try {
         let url = `${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&max=${config.maxHeadlines}`;
         if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
-        if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${config.featuredDays}`;
+        if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${encodeURIComponent(featuredDaysParam)}`;
         const response = await fetch(url);
         
         if (response.ok) {
@@ -203,9 +203,9 @@ export default function PublicWidgetBuilder() {
     };
     
     fetchPreview();
-  }, [slug, config.maxHeadlines, sourcesParam, featuredParam, config.featuredDays]);
+  }, [slug, config.maxHeadlines, sourcesParam, featuredParam, featuredDaysParam]);
 
-  const WIDGET_JS_VERSION = '1.5.1';
+  const WIDGET_JS_VERSION = '1.5.2';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
