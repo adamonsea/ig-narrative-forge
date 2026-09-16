@@ -422,10 +422,10 @@ Deno.serve(async (req) => {
           console.log(`  ↩︎ Article ${article.id} already has an active queue job — skipping`);
         }
 
-        // Mark topic_article as processed
+        // Mark topic_article as processed (and clear any previous hold)
         await supabase
           .from('topic_articles')
-          .update({ processing_status: 'processed' })
+          .update({ processing_status: 'processed', held_at: null, held_reason: null })
           .eq('id', article.id);
 
         console.log(`  ✅ Queued article ${article.id} (score: ${article.content_quality_score}%)`);
