@@ -21,6 +21,7 @@ export default {
 			fontFamily: {
 				sans: ['Work Sans', 'Inter', 'system-ui', 'sans-serif'],
 				display: ['Instrument Serif', 'Playfair Display', 'serif'],
+				logo: ['Playfair Display', 'serif'],
 				lexend: ['Lexend', 'system-ui', 'sans-serif'],
 			},
 			colors: {

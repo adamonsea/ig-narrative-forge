@@ -82,7 +82,7 @@ const Index = () => {
       <div className="relative z-10">
         <header className="container mx-auto px-6 py-8">
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
-            <div className="text-3xl font-display font-semibold tracking-tight text-white">
+            <div className="text-3xl font-logo font-semibold tracking-tight text-white">
               Curatr<span className="text-[hsl(155,100%,67%)]">.</span><span className="text-xl opacity-70">pro</span>
             </div>
             <div className="hidden md:flex items-center gap-4">
