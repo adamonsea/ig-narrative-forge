@@ -363,6 +363,18 @@ const PeriodReview = () => {
         </motion.div>
       </ReviewSlide>
 
+      {/* The archive, in pictures */}
+      {mosaic.length >= 12 && (
+        <ReviewSlide label="The archive" hue={h(1)}>
+          <MosaicWall covers={mosaic} feedSlug={slug} />
+          <Reveal delay={0.3} className="mt-8">
+            <p className="text-lg leading-snug text-muted-foreground">
+              Every picture drawn for {place} this period — {summary.total_stories.toLocaleString()} stories in all.
+            </p>
+          </Reveal>
+        </ReviewSlide>
+      )}
+
       {/* Words written */}
       {totalWords > 0 && (
         <ReviewSlide tone="inverted" label="The scale" hue={h(1)}>
