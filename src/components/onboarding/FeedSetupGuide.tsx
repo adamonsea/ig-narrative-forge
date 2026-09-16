@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
+import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
+import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 import { SourceScanLoop, ClippingStackLoop } from "@/components/onboarding/WaitingAnimations";
 import {
   ILLUSTRATION_STYLES,
-  ILLUSTRATION_STYLE_DESCRIPTIONS,
   type IllustrationStyle,
 } from "@/lib/constants/illustrationStyles";
 import { cn } from "@/lib/utils";
@@ -31,6 +28,9 @@ export interface FeedSetupGuideTopic {
   default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet";
   default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven";
   illustration_style?: IllustrationStyle;
+  audience_expertise?: "beginner" | "intermediate" | "expert";
+  house_style_notes?: string | null;
+  house_style_examples?: string | null;
 }
 
 interface FeedSetupGuideProps {
@@ -64,15 +64,10 @@ export const FeedSetupGuide = ({
   gathering,
   onSkip,
 }: FeedSetupGuideProps) => {
-  const { toast } = useToast();
   const storageKey = storageKeyFor(topic.id);
   const [step, setStep] = useState(1);
-  const [automationMode, setAutomationMode] = useState<"manual" | "auto_simplify" | null>(null);
-  const [savingMode, setSavingMode] = useState(false);
+  const [automationMode, setAutomationMode] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
-  const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(
-    topic.illustration_style || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE
-  );
 
   useEffect(() => {
     try {
@@ -102,44 +97,6 @@ export const FeedSetupGuide = ({
     setStep(clamped);
     persist(clamped);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const saveVoice = async (field: "default_tone" | "default_writing_style" | "illustration_style", value: string) => {
-    const { error } = await supabase
-      .from("topics")
-      .update({ [field]: value, updated_at: new Date().toISOString() } as any)
-      .eq("id", topic.id);
-    if (error) {
-      toast({ title: "Error", description: "Failed to save", variant: "destructive" });
-      return;
-    }
-    onUpdate();
-  };
-
-  const savePublishMode = async (mode: "manual" | "auto_simplify") => {
-    setAutomationMode(mode);
-    setSavingMode(true);
-    try {
-      const { error } = await supabase
-        .from("topic_automation_settings")
-        .upsert(
-          {
-            topic_id: topic.id,
-            automation_mode: mode,
-            is_active: mode !== "manual",
-            auto_simplify_enabled: mode === "auto_simplify",
-            next_run_at: mode !== "manual" ? new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString() : null,
-            updated_at: new Date().toISOString(),
-          } as any,
-          { onConflict: "topic_id" }
-        );
-      if (error) throw error;
-    } catch (error) {
-      console.error("Failed to save publishing mode", error);
-      toast({ title: "Error", description: "Failed to save", variant: "destructive" });
-    } finally {
-      setSavingMode(false);
-    }
   };
 
   const finish = async () => {
@@ -288,106 +245,20 @@ export const FeedSetupGuide = ({
         )}
 
         {step === 4 && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Tone</Label>
-              <Select
-                defaultValue={topic.default_tone || "conversational"}
-                onValueChange={(v) => saveVoice("default_tone", v)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="formal">Formal</SelectItem>
-                  <SelectItem value="conversational">Conversational</SelectItem>
-                  <SelectItem value="engaging">Engaging</SelectItem>
-                  <SelectItem value="satirical">Satirical</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">How the writing sounds to a reader.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Writing style</Label>
-              <Select
-                defaultValue={topic.default_writing_style || "journalistic"}
-                onValueChange={(v) => saveVoice("default_writing_style", v)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="journalistic">Journalistic</SelectItem>
-                  <SelectItem value="educational">Educational</SelectItem>
-                  <SelectItem value="listicle">Listicle</SelectItem>
-                  <SelectItem value="story_driven">Story driven</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">How each story is structured.</p>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Image style</Label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  { value: ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE, title: "Illustrated" },
-                  { value: ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC, title: "Photographic" },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setIllustrationStyle(option.value);
-                      saveVoice("illustration_style", option.value);
-                    }}
-                    aria-pressed={illustrationStyle === option.value}
-                    className={cn(
-                      "text-left rounded-xl border p-4 transition-colors hover:border-primary/60",
-                      illustrationStyle === option.value ? "border-primary bg-primary/5" : "border-border"
-                    )}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      {illustrationStyle === option.value && <Check className="w-4 h-4 text-primary" />}
-                      {option.title}
-                    </span>
-                    <span className="block mt-1.5 text-xs text-muted-foreground">
-                      {ILLUSTRATION_STYLE_DESCRIPTIONS[option.value]}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">Used when Curatr generates artwork for a story.</p>
-            </div>
-          </div>
+          <ContentVoiceSettings
+            topicId={topic.id}
+            currentExpertise={topic.audience_expertise}
+            currentTone={topic.default_tone}
+            currentWritingStyle={topic.default_writing_style}
+            currentIllustrationStyle={topic.illustration_style}
+            currentHouseStyleNotes={topic.house_style_notes}
+            currentHouseStyleExamples={topic.house_style_examples}
+            onUpdate={onUpdate}
+          />
         )}
 
         {step === 5 && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              {
-                value: "manual" as const,
-                title: "I'll review each story",
-                body: "Stories wait in your pipeline until you approve them. Best while you learn what your sources produce.",
-              },
-              {
-                value: "auto_simplify" as const,
-                title: "Publish good ones automatically",
-                body: "High-scoring stories go live on their own. Faster, but you'll see the odd story you'd have cut.",
-              },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => savePublishMode(option.value)}
-                aria-pressed={automationMode === option.value}
-                className={cn(
-                  "text-left rounded-xl border p-4 transition-colors hover:border-primary/60",
-                  automationMode === option.value ? "border-primary bg-primary/5" : "border-border"
-                )}
-              >
-                <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  {automationMode === option.value && <Check className="w-4 h-4 text-primary" />}
-                  {option.title}
-                </span>
-                <span className="block mt-1.5 text-xs text-muted-foreground">{option.body}</span>
-              </button>
-            ))}
-          </div>
+          <TopicAutomationSettings topicId={topic.id} onModeChange={setAutomationMode} />
         )}
       </div>
 
@@ -410,7 +281,7 @@ export const FeedSetupGuide = ({
               <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           ) : (
-            <Button size="sm" onClick={finish} disabled={gathering || savingMode || !automationMode}>
+            <Button size="sm" onClick={finish} disabled={gathering || !automationMode}>
               {gathering ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
               Gather first stories
             </Button>

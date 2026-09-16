@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface TopicAutomationSettingsProps {
   topicId: string;
+  onModeChange?: (mode: AutomationMode) => void;
 }
 
 type AutomationMode = 'manual' | 'auto_gather' | 'auto_simplify' | 'auto_illustrate' | 'holiday';
@@ -35,7 +36,7 @@ const MODE_GROUPS: { label: string; modes: AutomationMode[]; summary: string }[]
   { label: 'Automatic', modes: ['holiday'], summary: 'Qualifying stories can publish unattended' },
 ];
 
-export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProps) {
+export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomationSettingsProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,6 +65,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
 
       if (data) {
         setAutomationMode((data.automation_mode || 'manual') as AutomationMode);
+        onModeChange?.((data.automation_mode || 'manual') as AutomationMode);
         setScrapeFrequency(data.scrape_frequency_hours || 12);
         setQualityThreshold(data.quality_threshold || 60);
         setIllustrationThreshold(data.illustration_quality_threshold || 70);
@@ -101,6 +103,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
   // Auto-save mode changes immediately
   const handleModeChange = (mode: AutomationMode) => {
     setAutomationMode(mode);
+    onModeChange?.(mode);
     const nextRun = mode !== 'manual'
       ? new Date(Date.now() + scrapeFrequency * 60 * 60 * 1000).toISOString()
       : null;
