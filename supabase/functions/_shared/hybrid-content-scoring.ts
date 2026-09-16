@@ -382,13 +382,14 @@ function generateKeywordVariations(keyword: string): string[] {
 export function getRelevanceThreshold(
   topicType: 'regional' | 'keyword',
   sourceType: string = 'national',
-  isUserSelectedSource: boolean = false
+  isUserSelectedSource: boolean = false,
+  localityStrength?: number | null
 ): number {
   if (topicType === 'regional') {
-    // Regional topics maintain higher thresholds
-    if (sourceType === 'hyperlocal') return 10;
-    if (sourceType === 'regional') return 12;
-    return 15;
+    // The owner's "how local?" dial sets the bar for letting an article in at all.
+    // (Whether it then publishes unattended is decided later by applyNewsValues.)
+    const dial = getDial(localityStrength);
+    return Math.max(8, Math.round(dial.nowhereCap * 0.8));
   } else {
     // Keyword topics: Lower thresholds for niche/specialized topics
     if (isUserSelectedSource) {
