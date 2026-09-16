@@ -267,14 +267,10 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Topic Branding</CardTitle>
-          <CardDescription>
-            Customize how your topic appears to readers with a logo and custom subheader
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <div className="space-y-6">
+        <p className="text-sm text-muted-foreground">
+          Customise how your feed appears to readers with a logo and custom subheader.
+        </p>
           {/* Logo Upload */}
           <div>
             <Label className="text-base font-medium">Logo (Header Branding)</Label>
@@ -489,8 +485,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
               "Save Branding"
             )}
           </Button>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
