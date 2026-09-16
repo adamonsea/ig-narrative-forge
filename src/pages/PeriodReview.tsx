@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, useScroll, useSpring, useReducedMotion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, ChevronDown, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { Reveal } from '@/components/review/ReviewChapter';
@@ -135,13 +136,15 @@ const monthLabel = (m: string) =>
 const compact = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}m` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
 
+type MosaicCover = { id: string; slug: string | null; title: string; cover_illustration_url: string | null };
+
 /** A dense, full-width wall of covers from the period — the archive at a glance. */
 const MosaicWall = ({
   covers,
-  feedSlug,
+  onOpen,
 }: {
-  covers: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
-  feedSlug?: string;
+  covers: MosaicCover[];
+  onOpen: (cover: MosaicCover) => void;
 }) => {
   const reduce = useReducedMotion();
   const boxRef = useRef<HTMLDivElement>(null);
@@ -194,10 +197,11 @@ const MosaicWall = ({
               ease: [0.2, 0.7, 0.3, 1],
             }}
           >
-            <Link
-              to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
+            <button
+              type="button"
+              onClick={() => onOpen(c)}
               title={c.title}
-              className="group block aspect-square overflow-hidden rounded-[2px]"
+              className="group block aspect-square w-full overflow-hidden rounded-[2px]"
             >
               <img
                 src={optimizeImageUrl(c.cover_illustration_url, { width: 200, height: 200, quality: 66 }) ?? c.cover_illustration_url ?? ''}
@@ -212,7 +216,7 @@ const MosaicWall = ({
                       }
                 }
               />
-            </Link>
+            </button>
           </motion.div>
         ))}
       </div>
@@ -224,6 +228,7 @@ const PeriodReview = () => {
   const { slug, reviewSlug } = useParams<{ slug: string; reviewSlug: string }>();
   const [review, setReview] = useState<{ label: string; narrative: string | null; data: ReviewData } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previewCover, setPreviewCover] = useState<MosaicCover | null>(null);
   const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollReady, setScrollReady] = useState(false);
@@ -503,7 +508,7 @@ const PeriodReview = () => {
         <section className="snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden bg-background px-4 py-14 sm:px-6">
           <div className="w-full">
             <p className="mb-5 text-sm uppercase tracking-[0.22em] text-muted-foreground">The archive</p>
-            <MosaicWall covers={mosaic} feedSlug={slug} />
+            <MosaicWall covers={mosaic} onOpen={setPreviewCover} />
             <Reveal delay={0.3} className="mt-6">
               <p className="text-lg leading-snug text-muted-foreground">
                 {mosaic.length < summary.total_stories
@@ -1055,6 +1060,37 @@ const PeriodReview = () => {
           </Link>
         </Reveal>
       </ReviewSlide>
+
+      <Dialog open={previewCover != null} onOpenChange={(open) => !open && setPreviewCover(null)}>
+        <DialogContent className="max-w-lg overflow-hidden p-0">
+          {previewCover && (
+            <>
+              {previewCover.cover_illustration_url && (
+                <img
+                  src={
+                    optimizeImageUrl(previewCover.cover_illustration_url, {
+                      width: 900,
+                      height: 700,
+                      quality: 80,
+                    }) ?? previewCover.cover_illustration_url
+                  }
+                  alt=""
+                  className="aspect-[9/7] w-full object-cover"
+                />
+              )}
+              <div className="p-5">
+                <DialogTitle className="text-xl font-semibold leading-snug">{previewCover.title}</DialogTitle>
+                <Link
+                  to={`/feed/${slug}`}
+                  className="mt-4 inline-block text-sm font-medium text-primary underline"
+                >
+                  Read in {place}
+                </Link>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
