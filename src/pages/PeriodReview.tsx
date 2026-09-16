@@ -506,7 +506,7 @@ const PeriodReview = () => {
         <section className="snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden bg-background px-4 py-14 sm:px-6">
           <div className="w-full">
             <p className="mb-5 text-sm uppercase tracking-[0.22em] text-muted-foreground">The archive</p>
-            <MosaicWall covers={mosaic} feedSlug={slug} />
+            <MosaicWall covers={mosaic} onOpen={setPreviewCover} />
             <Reveal delay={0.3} className="mt-6">
               <p className="text-lg leading-snug text-muted-foreground">
                 {mosaic.length < summary.total_stories
