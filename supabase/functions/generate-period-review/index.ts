@@ -146,8 +146,9 @@ Deno.serve(async (req) => {
       slug: string | null;
       publication_name: string | null;
     };
-    const current: Row[] = [];
-    const previous: Row[] = [];
+    let current: Row[] = [];
+    let previous: Row[] = [];
+
 
     for (let i = 0; i < taIds.length; i += 200) {
       const chunk = taIds.slice(i, i + 200);
