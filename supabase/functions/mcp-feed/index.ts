@@ -307,6 +307,7 @@ Deno.serve(async (req) => {
             isError: false,
           });
         } catch (toolError) {
+          console.error("[mcp-feed] tool error", toolName, JSON.stringify(toolError));
           const message = toolError instanceof Error ? toolError.message : "Tool failed";
           return rpcResult(id, { content: [{ type: "text", text: message }], isError: true });
         }
