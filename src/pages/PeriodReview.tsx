@@ -243,16 +243,17 @@ const PeriodReview = () => {
     const goTo = (direction: 1 | -1) => {
       const items = slides();
       if (items.length === 0) return;
-      const current = items.reduce(
-        (best, node, i) =>
-          Math.abs(node.offsetTop - el.scrollTop) < Math.abs(items[best].offsetTop - el.scrollTop) ? i : best,
+      const containerTop = el.getBoundingClientRect().top;
+      const tops = items.map((node) => el.scrollTop + node.getBoundingClientRect().top - containerTop);
+      const current = tops.reduce(
+        (best, top, i) => (Math.abs(top - el.scrollTop) < Math.abs(tops[best] - el.scrollTop) ? i : best),
         0
       );
-      const target = items[Math.min(items.length - 1, Math.max(0, current + direction))];
-      if (!target || target.offsetTop === items[current].offsetTop) return;
+      const nextIndex = Math.min(items.length - 1, Math.max(0, current + direction));
+      if (nextIndex === current) return;
       locked = true;
       travel = 0;
-      el.scrollTo({ top: target.offsetTop, behavior: reduce ? 'auto' : 'smooth' });
+      el.scrollTo({ top: tops[nextIndex], behavior: reduce ? 'auto' : 'smooth' });
       clearTimeout(unlockTimer);
       unlockTimer = setTimeout(() => {
         locked = false;
@@ -379,7 +380,8 @@ const PeriodReview = () => {
   return (
     <main
       ref={scrollRef}
-      className="h-dvh overflow-y-auto snap-y snap-mandatory bg-background scroll-smooth"
+      tabIndex={0}
+      className="h-dvh overflow-y-auto overscroll-contain snap-y snap-mandatory bg-background outline-none"
     >
       <motion.div
         className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-primary"
