@@ -577,7 +577,11 @@ const PeriodReview = () => {
             className="mb-6 text-4xl font-semibold tracking-tight"
             segments={[{ text: `${c.count} stories on ` }, { text: c.name.toLowerCase(), italic: true }]}
           />
-          <StoryImageGrid stories={c.stories} feedSlug={slug} />
+          {idx % 2 === 0 ? (
+            <StoryImageGrid stories={c.stories} feedSlug={slug} />
+          ) : (
+            <ImageCarousel stories={c.stories} feedSlug={slug} />
+          )}
         </ReviewSlide>
       ))}
 
