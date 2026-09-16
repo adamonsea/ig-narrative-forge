@@ -193,9 +193,10 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                 {copied === "endpoint" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              In ChatGPT or Claude, add a custom connector and paste this address{access === "key" ? ", then paste your key as the authentication token." : "."}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <SetupGuide tool="ChatGPT" endpoint={endpoint} topicName={topicName} needsKey={access === "key"} />
+              <SetupGuide tool="Claude" endpoint={endpoint} topicName={topicName} needsKey={access === "key"} />
+            </div>
           </div>
 
           {access === "key" && (
