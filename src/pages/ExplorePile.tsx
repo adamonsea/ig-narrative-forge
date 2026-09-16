@@ -162,7 +162,7 @@ export default function ExplorePile() {
         });
         
         console.log('[Explore] Filtered stories with images:', uniqueStories.size);
-        setStories(Array.from(uniqueStories.values()));
+        setStories(await applySimplifiedHeadlines(Array.from(uniqueStories.values())));
       }
 
       setLoading(false);
