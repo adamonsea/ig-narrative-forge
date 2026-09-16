@@ -40,7 +40,7 @@ export function CoverageTerms({ topicId, keywords, setupState, onChange }: Cover
     try {
       const { error } = await supabase
         .from('topics')
-        .update({ ...patch, updated_at: new Date().toISOString() })
+        .update({ ...patch, updated_at: new Date().toISOString() } as never)
         .eq('id', topicId);
       if (error) throw error;
       onChange(patch);

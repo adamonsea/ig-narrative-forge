@@ -56,6 +56,8 @@ interface Topic {
   landmarks?: string[];
   landmark_descriptions?: Record<string, string>;
   landmark_reference_images?: Record<string, { url: string; credit?: string }[]>;
+  landmark_setup_state?: Record<string, any>;
+  coverage_setup_state?: Record<string, any>;
   postcodes?: string[];
   organizations?: string[];
   negative_keywords?: string[];
