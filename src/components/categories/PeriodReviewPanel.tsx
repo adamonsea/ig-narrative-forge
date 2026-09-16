@@ -138,7 +138,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
             </Button>
           ))}
         </div>
-        <Disclosure summary="Pick exact dates">
+        <Disclosure label="Pick exact dates">
           <div className="flex flex-wrap items-end gap-3 pt-1">
             <div className="space-y-1">
               <Label htmlFor="review-start" className="text-xs">

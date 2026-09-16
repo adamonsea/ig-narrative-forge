@@ -34,6 +34,9 @@ function relativeTime(iso: string) {
 
 export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
   const [nextRunAt, setNextRunAt] = useState<string | null>(null);
+  const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+  const [frequencyHours, setFrequencyHours] = useState<number>(4);
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [automationMode, setAutomationMode] = useState<string>("manual");
   const [sweepAt, setSweepAt] = useState<string | null>(null);
   const [sources, setSources] = useState<SweepSource[]>([]);
@@ -47,7 +50,9 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
       const [{ data: settings }, { data: runs }] = await Promise.all([
         supabase
           .from("topic_automation_settings")
-          .select("next_run_at, automation_mode")
+          .select(
+            "next_run_at, last_run_at, automation_mode, scrape_frequency_hours, is_active"
+          )
           .eq("topic_id", topicId)
           .maybeSingle(),
         supabase
@@ -62,7 +67,10 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
       if (cancelled) return;
 
       setNextRunAt(settings?.next_run_at ?? null);
+      setLastRunAt(settings?.last_run_at ?? null);
       setAutomationMode(settings?.automation_mode ?? "manual");
+      setFrequencyHours(settings?.scrape_frequency_hours ?? 4);
+      setIsActive(settings?.is_active ?? true);
 
       if (runs && runs.length > 0) {
         const latest = new Date(runs[0].finished_at as string).getTime();
@@ -80,6 +88,9 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
             .map(([name, stored]) => ({ name, stored }))
             .sort((a, b) => b.stored - a.stored)
         );
+      } else {
+        setSweepAt(null);
+        setSources([]);
       }
     };
 
@@ -96,33 +107,81 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
     return () => clearInterval(tick);
   }, []);
 
-  const remaining = useMemo(() => {
-    if (!nextRunAt || automationMode === "manual") return null;
-    return new Date(nextRunAt).getTime() - now;
-  }, [nextRunAt, automationMode, now]);
+  const isAutomatic = automationMode !== "manual" && isActive;
+  const intervalMs = Math.max(1, frequencyHours) * 3600 * 1000;
+
+  // Anchor the countdown to the most recent real activity so a stale
+  // scheduled time rolls forward instead of sticking on "any moment".
+  const dueAt = useMemo(() => {
+    const anchors = [sweepAt, lastRunAt]
+      .filter(Boolean)
+      .map((iso) => new Date(iso as string).getTime())
+      .filter((t) => !Number.isNaN(t));
+    const lastActivity = anchors.length ? Math.max(...anchors) : null;
+
+    const scheduled = nextRunAt ? new Date(nextRunAt).getTime() : null;
+    if (scheduled && !Number.isNaN(scheduled) && scheduled > now) return scheduled;
+
+    if (lastActivity) {
+      let next = lastActivity + intervalMs;
+      while (next <= now) next += intervalMs;
+      return next;
+    }
+    return scheduled && !Number.isNaN(scheduled) ? scheduled : null;
+  }, [nextRunAt, lastRunAt, sweepAt, intervalMs, now]);
+
+  const remaining = dueAt !== null ? dueAt - now : null;
+  const overdue =
+    !isAutomatic && sweepAt
+      ? now - new Date(sweepAt).getTime() > intervalMs
+      : false;
 
   const totalStored = sources.reduce((sum, s) => sum + s.stored, 0);
   const contributing = sources.filter((s) => s.stored > 0);
-  const imminent = remaining !== null && remaining <= 0;
+  const imminent = isAutomatic && remaining !== null && remaining <= 0;
+
+  const everyLabel =
+    frequencyHours === 1 ? "every hour" : `every ${frequencyHours} hours`;
 
   return (
     <div className="rounded-xl border bg-card/50 px-4 py-6 text-center">
       <div className="flex items-center justify-center gap-2 text-muted-foreground">
         <Radar className={`h-4 w-4 ${imminent ? "live-pulse" : ""}`} aria-hidden />
-        <span className="section-label">Next sweep</span>
+        <span className="section-label">
+          {isAutomatic ? "Next sweep" : "Gathering by hand"}
+        </span>
       </div>
 
-      {remaining === null ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          Gathering is set to manual — run it yourself whenever you like.
-        </p>
+      {isAutomatic ? (
+        <>
+          <p className="mt-2 display-heading text-4xl tabular-nums">
+            {remaining === null
+              ? "Any moment"
+              : imminent
+              ? "Any moment"
+              : formatCountdown(remaining)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Stories are collected automatically {everyLabel}.
+          </p>
+        </>
       ) : (
-        <p
-          className="mt-2 display-heading text-4xl tabular-nums"
-          aria-live="off"
-        >
-          {imminent ? "Any moment" : formatCountdown(remaining)}
-        </p>
+        <>
+          <p className="mt-2 display-heading text-4xl">
+            {sweepAt
+              ? overdue
+                ? "Due now"
+                : formatCountdown(remaining ?? 0)
+              : "Not run yet"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {sweepAt
+              ? overdue
+                ? `Last gathered ${relativeTime(sweepAt)} — worth running again.`
+                : `Last gathered ${relativeTime(sweepAt)}. Worth checking again ${everyLabel}.`
+              : `Run a gather whenever you like — ${everyLabel} keeps a feed fresh.`}
+          </p>
+        </>
       )}
 
       <div className="mt-5 border-t pt-4 text-left">
