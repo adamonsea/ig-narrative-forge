@@ -51,8 +51,9 @@ interface StoryRow {
   publication_name: string | null;
   published_at: string | null;
   created_at: string | null;
+  cover_illustration_url?: string | null;
   slides?: SlideRow[] | null;
-  topic_articles?: { topic_id?: string; shared_article_content?: { url?: string | null; author?: string | null; source_domain?: string | null } | null } | null;
+  topic_articles?: { topic_id?: string; shared_article_content?: { url?: string | null; author?: string | null; source_domain?: string | null; image_url?: string | null } | null } | null;
 }
 
 const orderedSlides = (story: StoryRow): string[] =>
@@ -71,6 +72,9 @@ const shapeStory = (story: StoryRow, slug: string) => {
   if (!publication && sourceUrl) {
     try { publication = new URL(sourceUrl).hostname.replace(/^www\./, ""); } catch { publication = null; }
   }
+  const illustration = story.cover_illustration_url || null;
+  const sourceImage = shared?.image_url || null;
+  const imageUrl = illustration || sourceImage;
   return {
     id: story.id,
     headline: story.title || parts[0] || "Untitled story",
@@ -80,6 +84,8 @@ const shapeStory = (story: StoryRow, slug: string) => {
     author: story.author || shared?.author || null,
     original_article_url: sourceUrl,
     curatr_url: `${SITE_URL}/feed/${slug}/story/${story.slug || story.id}`,
+    image_url: imageUrl,
+    image_source: imageUrl ? (illustration ? "curatr_illustration" : "original_publication") : null,
   };
 };
 
@@ -91,10 +97,11 @@ const STORY_SELECT = `
   publication_name,
   created_at,
   published_at,
+  cover_illustration_url,
   slides ( slide_number, content ),
   topic_articles!inner (
     topic_id,
-    shared_article_content ( url, author, source_domain )
+    shared_article_content ( url, author, source_domain, image_url )
   )
 `;
 
@@ -116,7 +123,7 @@ async function fetchStories(topicId: string, limit: number, sinceIso?: string) {
 const TOOLS = [
   {
     name: "list_latest_stories",
-    description: "List the most recently published stories in this feed, with source attribution and links.",
+    description: "List the most recently published stories in this feed, with their picture, source attribution and links.",
     inputSchema: {
       type: "object",
       properties: { limit: { type: "number", description: "How many stories to return (1-25, default 10)" } },
@@ -138,7 +145,7 @@ const TOOLS = [
   },
   {
     name: "get_story",
-    description: "Read one published story in full, with its source attribution and link.",
+    description: "Read one published story in full, with its picture, source attribution and link.",
     inputSchema: {
       type: "object",
       properties: { story_id: { type: "string", description: "The story id returned by the other tools" } },
@@ -282,7 +289,7 @@ Deno.serve(async (req) => {
           protocolVersion: PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: { name: `curatr-${topic.slug}`, version: "1.0.0" },
-          instructions: `Read-only access to the Curatr feed "${topic.name}". Always credit the original publication and include its link when using a story.`,
+          instructions: `Read-only access to the Curatr feed "${topic.name}". Always credit the original publication and include its link when using a story. Each story may include an image_url you can show; illustrations are Curatr-generated, other pictures belong to the original publication.`,
         });
       case "notifications/initialized":
       case "ping":
