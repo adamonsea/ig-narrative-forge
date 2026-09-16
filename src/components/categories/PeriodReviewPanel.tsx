@@ -59,7 +59,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [generating, setGenerating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [months, setMonths] = useState<number>(6);
+  const [months, setMonths] = useState<number | null>(null);
   const [includeParliamentary, setIncludeParliamentary] = useState(false);
   const [customStart, setCustomStart] = useState(monthsAgo(6));
   const [customEnd, setCustomEnd] = useState(isoDate(new Date()));
@@ -164,6 +164,26 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     return bits.length ? ` · ${bits.join(', ')}` : '';
   };
 
+  const fmtDay = (d: string) =>
+    new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const periodSummary = () => {
+    if (useCustom) return `${fmtDay(customStart)} – ${fmtDay(customEnd)}`;
+    if (months !== null) return `the last ${months} months`;
+    return null;
+  };
+
+  const pickPreset = (m: number) => {
+    setMonths(m);
+    setUseCustom(false);
+  };
+
+  const pickCustom = (setter: (v: string) => void) => (v: string) => {
+    setter(v);
+    setUseCustom(true);
+    setMonths(null);
+  };
+
   const generate = async (start: string, end: string) => {
     setGenerating(true);
     try {
@@ -208,18 +228,12 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           {PRESETS.map((p) => (
             <Button
               key={p.months}
+              type="button"
               size="sm"
               variant={!useCustom && months === p.months ? 'default' : 'outline'}
-              disabled={generating}
-              onClick={() => {
-                setUseCustom(false);
-                setMonths(p.months);
-                generate(monthsAgo(p.months), isoDate(new Date()));
-              }}
+              aria-pressed={!useCustom && months === p.months}
+              onClick={() => pickPreset(p.months)}
             >
-              {generating && !useCustom && months === p.months && (
-                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-              )}
               {p.label}
             </Button>
           ))}
@@ -300,7 +314,6 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           </div>
         </Disclosure>
         <Disclosure label="Pick exact dates">
-
           <div className="flex flex-wrap items-end gap-3 pt-1">
             <div className="space-y-1">
               <Label htmlFor="review-start" className="text-xs">
@@ -310,7 +323,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                 id="review-start"
                 type="date"
                 value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
+                onChange={(e) => pickCustom(setCustomStart)(e.target.value)}
                 className="w-auto"
               />
             </div>
@@ -322,23 +335,39 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                 id="review-end"
                 type="date"
                 value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
+                onChange={(e) => pickCustom(setCustomEnd)(e.target.value)}
                 className="w-auto"
               />
             </div>
-            <Button
-              size="sm"
-              disabled={generating}
-              onClick={() => {
-                setUseCustom(true);
-                generate(customStart, customEnd);
-              }}
-            >
-              {generating && useCustom && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-              Generate
-            </Button>
           </div>
         </Disclosure>
+        <div className="sticky bottom-4 z-10">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg backdrop-blur">
+            <p className="text-sm text-muted-foreground">
+              {periodSummary() ? (
+                <>
+                  Reviewing <span className="font-medium text-foreground">{periodSummary()}</span>
+                </>
+              ) : (
+                'Choose a period to review'
+              )}
+            </p>
+            <Button
+              size="sm"
+              disabled={!periodSummary() || generating}
+              onClick={() => {
+                if (months === null) return;
+                generate(
+                  useCustom ? customStart : monthsAgo(months),
+                  useCustom ? customEnd : isoDate(new Date())
+                );
+              }}
+            >
+              {generating && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Generate review
+            </Button>
+          </div>
+        </div>
       </div>
 
       {reviews.length > 0 && (
