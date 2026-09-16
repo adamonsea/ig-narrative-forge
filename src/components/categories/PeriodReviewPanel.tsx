@@ -206,7 +206,70 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
             </Button>
           ))}
         </div>
+        {(selectedCategories.length > 0 || selectedSources.length > 0) && (
+          <p className="text-xs text-muted-foreground">
+            Covering{scopeLabel().replace(/^ · /, ' ')}.{' '}
+            <button
+              type="button"
+              className="underline underline-offset-2"
+              onClick={() => {
+                setSelectedCategories([]);
+                setSelectedSources([]);
+              }}
+            >
+              Include everything
+            </button>
+          </p>
+        )}
+        <Disclosure label="Choose topics and sources">
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Topics</p>
+              {categories.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No topics set up yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {categories.map((c) => (
+                    <Button
+                      key={c.id}
+                      type="button"
+                      size="sm"
+                      variant={selectedCategories.includes(c.id) ? 'default' : 'outline'}
+                      aria-pressed={selectedCategories.includes(c.id)}
+                      onClick={() => toggle(selectedCategories, setSelectedCategories, c.id)}
+                    >
+                      {c.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Sources</p>
+              {sources.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No sources yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {sources.map((s) => (
+                    <Button
+                      key={s.id}
+                      type="button"
+                      size="sm"
+                      variant={selectedSources.includes(s.id) ? 'default' : 'outline'}
+                      aria-pressed={selectedSources.includes(s.id)}
+                      onClick={() => toggle(selectedSources, setSelectedSources, s.id)}
+                    >
+                      {s.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Nothing selected means everything is included.</p>
+          </div>
+        </Disclosure>
         <Disclosure label="Pick exact dates">
+
           <div className="flex flex-wrap items-end gap-3 pt-1">
             <div className="space-y-1">
               <Label htmlFor="review-start" className="text-xs">
