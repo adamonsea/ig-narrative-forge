@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PictureReferences } from "@/components/topics/PictureReferences";
 import { CoverageTerms } from "@/components/topics/CoverageTerms";
+import { AiAssistantAccess } from "@/components/topics/AiAssistantAccess";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
@@ -80,6 +81,8 @@ export interface EditorialTopic {
   drip_feed_enabled?: boolean;
   public_widget_builder_enabled?: boolean;
   rss_enabled?: boolean;
+  mcp_enabled?: boolean;
+  mcp_access?: "open" | "key";
   email_subscriptions_enabled?: boolean;
   audio_briefings_daily_enabled?: boolean;
   audio_briefings_weekly_enabled?: boolean;
