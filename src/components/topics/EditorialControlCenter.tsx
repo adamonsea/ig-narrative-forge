@@ -39,7 +39,7 @@ import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
 import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { WidgetAnalytics } from "@/components/WidgetAnalytics";
-import { StatusPill } from "@/components/ui/editorial";
+import { StatusPill, InfoHint } from "@/components/ui/editorial";
 import { ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { getDial, parseNearbyPlaces } from "@/lib/newsValues";
 import { cn } from "@/lib/utils";
