@@ -1,35 +1,42 @@
-# Why strong local stories aren't passing automatically
+# Clear the backlog and keep the feed to a news window
 
-## What's happening
+## What's wrong now
 
-Holiday mode itself is running fine on Eastbourne — gathering every 4 hours, writing stories, illustrating and publishing, with no errors.
+Holiday mode itself runs fine on Eastbourne — gathering every 4 hours, writing, illustrating and publishing, no errors.
 
-The problem is the automatic story-writing step only looks at the 20 highest-scoring unprocessed articles each run. Eastbourne currently has 225 unprocessed articles scoring 75% or above, and every one of the top 20 is an old item (July and August) that was held because it names Hailsham, Pevensey, Uckfield or similar rather than Eastbourne.
+The jam is that the automatic writing step only looks at the 20 highest-scoring unreviewed articles each run. Eastbourne has 225 unreviewed articles scoring 75% or more, and all 20 at the top are old July/August items held because they name Hailsham, Pevensey or Uckfield rather than Eastbourne. They are re-checked and re-held every run, so today's genuine Eastbourne arrivals are never reached. That is why a strong local headline can sit there untouched.
 
-Those held items are never set aside, so they sit at the top of the list forever. Each run re-checks the same 20, holds the same 20, and never gets far enough down the list to see today's genuine Eastbourne stories. That's why a high-scoring article with the town in its headline can still sit there untouched.
+## What we'll do
 
-## The fix
+1. **Clear the old backlog.** Every unreviewed article older than 4 days that was never turned into a story gets discarded. For Eastbourne that clears roughly 490 items, including the 225 blocking the top of the queue. Nothing published is touched.
 
-1. **Stop held items blocking the queue.** When an article is held by the place check or the category check, record that on the article (a "held" note with the date and reason) instead of leaving it looking brand new. Held items no longer get re-examined on every run.
+2. **Stop the jam recurring.** Articles held by the place or category check get marked as held so they stop occupying the queue window, and the queue looks at newest first rather than highest-scored first. The batch per feed goes from 20 to 50.
 
-2. **Recheck held items occasionally, not constantly.** A held item is re-examined once a day rather than every ten minutes, so a change to your places or categories still lets it through, without it clogging the list.
+3. **Auto-publish what clearly qualifies.** Articles at or above the feed's threshold that pass the place check are written, illustrated and published automatically — as now, but they will actually be reached.
 
-3. **Look at newest first, not highest-scored first.** Within the articles that clear the threshold, today's arrivals get looked at before a two-month-old backlog item.
+4. **Send the doubtful ones to review.** Anything below threshold, or held by the place or category check, stays in Arrivals for manual approval exactly as today.
 
-4. **Look at more per run.** Raise the per-feed batch from 20 to 50 so a burst of arrivals is cleared in one pass.
+5. **Age out the review pile.** A nightly job discards anything still unreviewed after 4 days. Past that point a news story has missed its window anyway, so no legacy backlog can build up again.
 
-5. **Clear the existing jam.** Mark the current backlog of held articles as held so the queue starts fresh from today's stories. Nothing is deleted — they stay visible in Arrivals for manual approval exactly as now.
+Discarded items go into the existing discarded list, so they are recorded and won't be re-scraped — they are not silently deleted.
 
 ## Technical detail
 
-- Add `held_at timestamptz` and `held_reason text` to `topic_articles` (nullable, no default) via migration; no grant changes needed as the table is already exposed.
-- In `auto-simplify-queue`:
-  - main article fetch adds `.or('held_at.is.null,held_at.lt.<now-24h>')` and changes ordering to `created_at desc` then `content_quality_score desc`; `maxPerTopic` 20 → 50.
-  - locality-gate and category-gate hold branches write `{ held_at: now, held_reason }` before `continue`, and a successful pass clears them back to null.
-  - orphan-recovery reset to `'new'` also clears `held_at` so a genuinely re-opened article is looked at immediately.
-- One-off backfill in the same migration: set `held_at = now()`, `held_reason = 'backlog'` for `processing_status = 'new'` rows older than 48 hours in regional topics, so the window starts clear.
-- No change to publishing, illustration or scraping paths.
+- Migration: add `held_at timestamptz` and `held_reason text` to `topic_articles`.
+- `auto-simplify-queue`:
+  - main fetch adds `.or('held_at.is.null,held_at.lt.<now-24h>')`, orders `created_at desc` then score desc, `maxPerTopic` 20 → 50;
+  - locality and category hold branches set `held_at`/`held_reason`; a pass clears them;
+  - orphan recovery clears `held_at` when resetting to `'new'`.
+- New edge function `expire-stale-arrivals`: for every topic, set `processing_status = 'discarded'` on `topic_articles` still `'new'` (or held) with `created_at < now() - 4 days` and no linked story, and upsert a `discarded_articles` row with reason `stale_arrival`. Bounded per run (500 rows), idempotent, service-role only.
+- Scheduled once daily at 04:00 UTC via pg_cron, chosen because expiry is time-based and a day's precision is enough.
+- One-off run of the same logic to clear today's existing backlog.
+- Publishing, illustration and scraping paths unchanged.
 
 ## Verification
 
-After deploying, confirm the next run's logs queue today's Eastbourne arrivals, and check that the count of articles queued in the following hour is non-zero while the 225-item backlog stays in Arrivals.
+After the clear-out, confirm Eastbourne's unreviewed count drops to the last 4 days only, then check the next auto-simplify run queues today's Eastbourne arrivals and that new stories appear published within the hour.
+
+## Decisions assumed
+
+- Age limit: 4 days (from your "three or four days").
+- Applies to every feed, not just Eastbourne.
