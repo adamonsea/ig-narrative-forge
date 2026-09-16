@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LiveInsightStrip } from "@/components/topics/insight/LiveInsightStrip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
+  const [mobileView, setMobileView] = useState<'arrivals' | 'live'>('arrivals');
   const [loadingPreview, setLoadingPreview] = useState(false);
   const { toast } = useToast();
   
@@ -330,31 +331,43 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           </Button>
         </div>
       )}
-      {/* Two-tab pipeline */}
-      <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="articles" className="relative">
-            <div className="flex items-center gap-2">
-              <span>Arrivals ({totalArticles})</span>
-              <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="published">
-            <div className="flex items-center gap-2">
-              <span>Stories ({visibleStories.length})</span>
-              {queueItems.length > 0 && (
-                <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span className="text-xs">{queueItems.length}</span>
-                </span>
-              )}
-              <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
-            </div>
-          </TabsTrigger>
-        </TabsList>
+      {/* Live insight over the working columns */}
+      <LiveInsightStrip
+        topicId={selectedTopicId}
+        liveCount={totalPublishedCount || visibleStories.length}
+        arrivalsCount={totalArticles}
+      />
 
-        {/* Articles Tab */}
-        <TabsContent value="articles" className="space-y-3">
+      {/* Mobile switch between the two columns */}
+      <div className="md:hidden flex items-center gap-2" role="tablist" aria-label="Pipeline view">
+        {(["arrivals", "live"] as const).map((view) => (
+          <button
+            key={view}
+            type="button"
+            role="tab"
+            aria-selected={mobileView === view}
+            onClick={() => setMobileView(view)}
+            className={`flex-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+              mobileView === view ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {view === "arrivals" ? `Arrivals (${totalArticles})` : `Live (${visibleStories.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Arrivals beside Live */}
+      <div className="grid gap-6 md:grid-cols-3 items-start">
+        {/* Arrivals — one third */}
+        <section
+          className={`md:col-span-1 space-y-3 ${mobileView === "arrivals" ? "" : "hidden md:block"}`}
+          aria-label="Arrivals"
+        >
+          <div className="flex items-center gap-2 pb-2 border-b">
+            <h3 className="section-label text-foreground">Arrivals</h3>
+            <span className="text-xs text-muted-foreground tabular-nums">{totalArticles}</span>
+            <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
+          </div>
           {totalArticles === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -392,11 +405,23 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               onLoadMore={loadMoreArticles}
             />
           )}
-        </TabsContent>
+        </section>
 
-        {/* Published Tab */}
-        <TabsContent value="published" className="space-y-3">
-          <div className="flex justify-end items-center gap-2 mb-2">
+        {/* Live — two thirds */}
+        <section
+          className={`md:col-span-2 space-y-3 ${mobileView === "live" ? "" : "hidden md:block"}`}
+          aria-label="Live stories"
+        >
+          <div className="flex items-center gap-2 pb-2 border-b">
+            <h3 className="section-label text-foreground">Live</h3>
+            <span className="text-xs text-muted-foreground tabular-nums">{visibleStories.length}</span>
+            {queueItems.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-purple-bright animate-fade-in">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="text-xs">{queueItems.length} being prepared</span>
+              </span>
+            )}
+            <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
             {stuckCount > 0 && (
               <Button
                 size="sm"
@@ -456,8 +481,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               onLoadMorePublished={loadMorePublished}
             />
           )}
-        </TabsContent>
-      </Tabs>
+        </section>
+      </div>
 
       {/* Article Preview Dialog */}
       <Dialog open={previewArticle !== null} onOpenChange={(open) => !open && setPreviewArticle(null)}>

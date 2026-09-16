@@ -5999,6 +5999,22 @@ export type Database = {
           word_count: number
         }[]
       }
+      get_topic_coverage_mix: {
+        Args: { p_topic_id: string }
+        Returns: {
+          category_name: string
+          current_count: number
+          previous_count: number
+        }[]
+      }
+      get_topic_daily_flow: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          day: string
+          gathered: number
+          published: number
+        }[]
+      }
       get_topic_engagement_averages: {
         Args: { p_days?: number; p_topic_id: string }
         Returns: {
@@ -6072,6 +6088,13 @@ export type Database = {
           total_swipes: number
         }[]
       }
+      get_topic_live_readers: {
+        Args: { p_topic_id: string }
+        Returns: {
+          readers_last_hour: number
+          readers_today: number
+        }[]
+      }
       get_topic_quiz_stats: {
         Args: { p_days?: number; p_topic_id: string }
         Returns: {
@@ -6084,6 +6107,14 @@ export type Database = {
         Returns: {
           registrants_this_week: number
           registrants_total: number
+        }[]
+      }
+      get_topic_rising_terms: {
+        Args: { p_topic_id: string }
+        Returns: {
+          baseline_count: number
+          recent_count: number
+          term: string
         }[]
       }
       get_topic_source_stats: {

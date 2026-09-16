@@ -490,17 +490,11 @@ function OverviewBriefing({
         <StatusPill live={topic.is_public} />
       </header>
 
-      <section aria-labelledby="flow-heading">
-        <div className="mb-4 flex items-center justify-between">
-          <div><h3 id="flow-heading" className="text-base font-semibold">Current flow</h3><p className="text-sm text-muted-foreground">What is moving through the newsroom now.</p></div>
-          <Button variant="ghost" size="sm" asChild><Link to="?tab=feed">Pipeline <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-        </div>
-        <div className="grid grid-cols-2 divide-x divide-y divide-border border-y border-border sm:grid-cols-4 sm:divide-y-0">
-          <FlowMetric value={stats.pending_articles} label="Arrivals to review" />
-          <FlowMetric value={stats.processing_queue} label="Being prepared" />
-          <FlowMetric value={stats.ready_stories} label="Ready" />
-          <FlowMetric value={stats.simplified_stories_24h} label="Prepared today" />
-        </div>
+      <section aria-labelledby="flow-heading" className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-4">
+        <p id="flow-heading" className="text-sm text-muted-foreground">
+          {stats.pending_articles} waiting on you · {stats.processing_queue} being prepared · {stats.simplified_stories_24h} prepared today
+        </p>
+        <Button variant="ghost" size="sm" asChild><Link to="?tab=feed">Pipeline <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
       </section>
 
       {attention.length > 0 && (
@@ -540,9 +534,6 @@ function OverviewBriefing({
   );
 }
 
-function FlowMetric({ value, label }: { value: number; label: string }) {
-  return <div className="px-4 py-5 sm:px-6"><p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></div>;
-}
 
 function ChannelRow({ icon: Icon, label, description, checked, onCheckedChange, disabled = false }: { icon: typeof Mail; label: string; description: string; checked: boolean; onCheckedChange?: (checked: boolean) => void; disabled?: boolean }) {
   return <div className="flex items-center justify-between gap-5 py-5"><div className="flex items-center gap-3"><Icon className="h-4 w-4 text-muted-foreground" /><div><Label className="text-sm">{label}</Label><p className="mt-0.5 text-xs text-muted-foreground">{description}</p></div></div>{disabled ? <CheckCircle2 className="h-4 w-4 text-pop" /> : <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={`Enable ${label}`} />}</div>;

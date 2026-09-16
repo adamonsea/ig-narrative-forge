@@ -415,6 +415,40 @@ All colors MUST be HSL.
   }
 }
 
+/* Live workspace motion */
+@keyframes flow-draw {
+  from { stroke-dasharray: 2000; stroke-dashoffset: 2000; }
+  to { stroke-dasharray: 2000; stroke-dashoffset: 0; }
+}
+
+.flow-draw {
+  animation: flow-draw 900ms ease-out both;
+}
+
+.flow-draw-slow {
+  animation-duration: 1300ms;
+}
+
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 hsl(var(--purple-bright) / 0.45); }
+  70% { box-shadow: 0 0 0 6px hsl(var(--purple-bright) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--purple-bright) / 0); }
+}
+
+.live-pulse {
+  animation: live-pulse 2.2s ease-out infinite;
+}
+
+/* A newly arrived or newly live card settles in rather than popping */
+@keyframes settle-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+.settle-in {
+  animation: settle-in 320ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
