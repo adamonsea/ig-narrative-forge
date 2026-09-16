@@ -204,24 +204,26 @@ export const FeedSetupGuide = ({
         )}
 
         {step === 2 && (
-          <CoverageTerms
-            topicId={topic.id}
-            keywords={topic.keywords || []}
-            setupState={(topic as any).coverage_setup_state || {}}
-            onChange={(patch) => onTopicChange(patch as never)}
-          />
-          {topic.topic_type === "regional" && (
-            <PictureReferences
+          <div className="space-y-8">
+            <CoverageTerms
               topicId={topic.id}
-              topicName={topic.name}
-              region={topic.region}
-              landmarks={topic.landmarks || []}
-              descriptions={(topic as any).landmark_descriptions || {}}
-              photos={(topic as any).landmark_reference_images || {}}
-              setupState={(topic as any).landmark_setup_state || {}}
+              keywords={topic.keywords || []}
+              setupState={(topic as any).coverage_setup_state || {}}
               onChange={(patch) => onTopicChange(patch as never)}
             />
-          )}
+            {topic.topic_type === "regional" && (
+              <PictureReferences
+                topicId={topic.id}
+                topicName={topic.name}
+                region={topic.region}
+                landmarks={topic.landmarks || []}
+                descriptions={(topic as any).landmark_descriptions || {}}
+                photos={(topic as any).landmark_reference_images || {}}
+                setupState={(topic as any).landmark_setup_state || {}}
+                onChange={(patch) => onTopicChange(patch as never)}
+              />
+            )}
+          </div>
         )}
 
         {step === 3 && (
