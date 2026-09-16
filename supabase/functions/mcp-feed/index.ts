@@ -199,7 +199,15 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
         .filter((s) => s.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
-      return { feed: topic.name, query: q, stories: scored.map((s) => shapeStory(s.story, topic.slug)) };
+      return {
+        feed: topic.name,
+        query: q,
+        stories: scored.map((s) => shapeStory(s.story, topic.slug)),
+        next_step: scored.length
+          ? "Call get_story with a story_id for the full text before quoting."
+          : "No matches. Try broader or different words, or call list_latest_stories to see what the feed covers.",
+        attribution_note: ATTRIBUTION_HINT,
+      };
     }
     case "get_story": {
       const storyId = String(args.story_id ?? "");
@@ -215,7 +223,11 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
       if (error) throw error;
       if (!data) throw new Error("Story not found in this feed");
       const story = data as unknown as StoryRow;
-      return { ...shapeStory(story, topic.slug), text: fullText(story) };
+      return {
+        ...shapeStory(story, topic.slug),
+        text: fullText(story),
+        attribution_note: ATTRIBUTION_HINT,
+      };
     }
     case "feed_briefing": {
       const period = args.period === "day" ? "day" : "week";
@@ -226,7 +238,8 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
         period,
         story_count: stories.length,
         stories: stories.map((s) => shapeStory(s, topic.slug)),
-        attribution_note: "Every story links back to the original publication. Credit the publication when quoting.",
+        next_step: "Group the stories by theme, lead with the most significant, and call get_story for any the user wants in depth.",
+        attribution_note: ATTRIBUTION_HINT,
       };
     }
     default:
