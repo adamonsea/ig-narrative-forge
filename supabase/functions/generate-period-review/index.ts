@@ -745,7 +745,7 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
     const covered = current
       .filter((s) => !!s.cover_illustration_url)
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
-    const MOSAIC_MAX = 72;
+    const MOSAIC_MAX = 260;
     const step = Math.max(1, Math.ceil(covered.length / MOSAIC_MAX));
     const mosaic = covered
       .filter((_, i) => i % step === 0)

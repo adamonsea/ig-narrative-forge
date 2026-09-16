@@ -133,7 +133,7 @@ const monthLabel = (m: string) =>
 const compact = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}m` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
 
-/** A dense wall of every cover from the period — the archive, at a glance. */
+/** A dense, full-width wall of covers from the period — the archive at a glance. */
 const MosaicWall = ({
   covers,
   feedSlug,
@@ -143,29 +143,37 @@ const MosaicWall = ({
 }) => {
   const reduce = useReducedMotion();
   return (
-    <div className="grid grid-cols-6 gap-1 sm:gap-1.5">
-      {covers.map((c, i) => (
-        <motion.div
-          key={c.id}
-          initial={reduce ? false : { opacity: 0, scale: 0.94 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, margin: '-40px' }}
-          transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : Math.min(1.2, i * 0.012) }}
-        >
-          <Link
-            to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
-            title={c.title}
-            className="block aspect-square overflow-hidden rounded-[3px]"
+    <div
+      className="max-h-[68vh] overflow-hidden"
+      style={{
+        maskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
+      }}
+    >
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-[3px] sm:grid-cols-[repeat(auto-fill,minmax(64px,1fr))] sm:gap-1">
+        {covers.map((c, i) => (
+          <motion.div
+            key={c.id}
+            initial={reduce ? false : { opacity: 0, scale: 0.94 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: reduce ? 0 : 0.45, delay: reduce ? 0 : Math.min(1.4, i * 0.006) }}
           >
-            <img
-              src={optimizeImageUrl(c.cover_illustration_url, { width: 200, height: 200, quality: 70 }) ?? c.cover_illustration_url ?? ''}
-              alt=""
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          </Link>
-        </motion.div>
-      ))}
+            <Link
+              to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
+              title={c.title}
+              className="block aspect-square overflow-hidden rounded-[2px] transition-transform duration-300 hover:scale-105 hover:rounded-[4px]"
+            >
+              <img
+                src={optimizeImageUrl(c.cover_illustration_url, { width: 160, height: 160, quality: 66 }) ?? c.cover_illustration_url ?? ''}
+                alt=""
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            </Link>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -431,16 +439,21 @@ const PeriodReview = () => {
         </motion.div>
       </ReviewSlide>
 
-      {/* The archive, in pictures */}
+      {/* The archive, in pictures — full width */}
       {mosaic.length >= 12 && (
-        <ReviewSlide label="The archive" hue={h(1)}>
-          <MosaicWall covers={mosaic} feedSlug={slug} />
-          <Reveal delay={0.3} className="mt-8">
-            <p className="text-lg leading-snug text-muted-foreground">
-              Every picture drawn for {place} this period — {summary.total_stories.toLocaleString()} stories in all.
-            </p>
-          </Reveal>
-        </ReviewSlide>
+        <section className="snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden bg-background px-4 py-14 sm:px-6">
+          <div className="w-full">
+            <p className="mb-5 text-sm uppercase tracking-[0.22em] text-muted-foreground">The archive</p>
+            <MosaicWall covers={mosaic} feedSlug={slug} />
+            <Reveal delay={0.3} className="mt-6">
+              <p className="text-lg leading-snug text-muted-foreground">
+                {mosaic.length < summary.total_stories
+                  ? `${mosaic.length} of the ${summary.total_stories.toLocaleString()} pictures drawn for ${place} this period.`
+                  : `Every picture drawn for ${place} this period — ${summary.total_stories.toLocaleString()} stories in all.`}
+              </p>
+            </Reveal>
+          </div>
+        </section>
       )}
 
       {/* Words written */}
