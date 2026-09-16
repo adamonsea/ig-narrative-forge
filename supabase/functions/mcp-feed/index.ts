@@ -72,6 +72,9 @@ const shapeStory = (story: StoryRow, slug: string) => {
   if (!publication && sourceUrl) {
     try { publication = new URL(sourceUrl).hostname.replace(/^www\./, ""); } catch { publication = null; }
   }
+  const illustration = story.cover_illustration_url || null;
+  const sourceImage = shared?.image_url || null;
+  const imageUrl = illustration || sourceImage;
   return {
     id: story.id,
     headline: story.title || parts[0] || "Untitled story",
@@ -81,6 +84,8 @@ const shapeStory = (story: StoryRow, slug: string) => {
     author: story.author || shared?.author || null,
     original_article_url: sourceUrl,
     curatr_url: `${SITE_URL}/feed/${slug}/story/${story.slug || story.id}`,
+    image_url: imageUrl,
+    image_source: imageUrl ? (illustration ? "curatr_illustration" : "original_publication") : null,
   };
 };
 
@@ -92,10 +97,11 @@ const STORY_SELECT = `
   publication_name,
   created_at,
   published_at,
+  cover_illustration_url,
   slides ( slide_number, content ),
   topic_articles!inner (
     topic_id,
-    shared_article_content ( url, author, source_domain )
+    shared_article_content ( url, author, source_domain, image_url )
   )
 `;
 
