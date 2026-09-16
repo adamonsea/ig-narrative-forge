@@ -23,15 +23,18 @@ The result should pass a simple test: every screen answers three questions witho
 
 ## What the audit found
 
-- The public site has a distinctive editorial identity, while the signed-in product mostly uses generic component styling with isolated hardcoded purple and green accents.
-- The topic workspace has three top-level tabs, while Settings introduces another hub of six destinations. Moving between overview cards and detail pages creates more navigation and repeated headings than necessary.
-- Several detail areas repeat their section name inside a parent heading. News values is currently both a section heading and a titled card; Identity also wraps a second “Topic Branding” card title.
-- Settings mix multiple framing styles: bordered cards, bordered rows, accordions, dividers and nested panels. This makes every item appear equally important.
-- Rare controls are technically grouped, but enabled and disabled specialist features can still expose substantial detail rather than staying as compact summaries.
-- Publishing state appears in the topic header, topic cards and Distribution with different interactions. This weakens confidence about which control is authoritative.
-- The topics page presents many metrics with similar visual weight, but does not prioritise feeds that need attention.
-- Naming remains inconsistent across Dashboard, Topics, Feed and Pipeline, requiring users to remember which term means the workspace, public output or editorial queue.
-- Routine saving is not fully consistent: some areas show quiet save state, while others still use success notifications.
+Confirmed in code during this pass:
+
+- **Fonts are not the chosen pair yet.** The document loads Inter, Playfair Display and Lexend; dashboard headings inherit plain Inter, and `font-display` is used only for the sidebar wordmark. Instrument Serif and Work Sans are not loaded at all.
+- **The primary token is a vestigial dark green** (`--primary: 146 41% 7%`). It silently drives buttons, tab underlines, focus rings and the header hairline — so the “brand” the workspace shows is a leftover, not the mint/violet direction.
+- **Accent colours are hardcoded**, not tokenised: the violet appears as raw `hsl(270,100%,68%)` in the topics page (create button, hover states, feed button), and the live pill uses raw `green-500/15` — a third, untokenised green.
+- **Headings repeat**: “News values” is both the section heading and the panel’s own card title; Identity’s “Brand” heading wraps a second “Topic Branding” card title inside it.
+- **Publish state exists in three forms**: an unlabelled switch in the topic header (with the shared confirm dialog), a Live/Draft pill on topic cards (using a browser-native confirm), and a read-only “Public feed” row in Distribution — three labels (Live/Draft, Live/Private) for one boolean.
+- **Saving feedback is inconsistent**: automation toasts “Saved” on every change and also shows a quiet indicator; voice shows a quiet indicator only; coverage terms toast on each add/remove.
+- **Vocabulary drift**: sidebar says “My Topics”, the page says “Your topics”, the breadcrumb says “Dashboard”; the tab is “Pipeline” while state and links call it `feed`.
+- The settings hub still requires an overview-card detour into six sections with a “back” button rather than persistent section navigation, and the topics list shows eight-plus numbers per card with no attention prioritisation.
+- Settings mix framing styles — bordered cards, bordered rows, dividers, accordions and nested panels — so nothing signals its own importance.
+
 
 ## New workspace structure
 
