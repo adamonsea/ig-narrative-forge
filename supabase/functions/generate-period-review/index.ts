@@ -422,6 +422,10 @@ Deno.serve(async (req) => {
       'october', 'november', 'december', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday',
       'saturday', 'sunday', 'christmas', 'summer', 'winter', 'spring', 'autumn', 'easter',
       'uk', 'britain', 'england', 'english', 'british',
+      // parliamentary and civic furniture that recurs in every political headline
+      'bill', 'bills', 'act', 'reading', 'amendment', 'commons', 'lords', 'parliament',
+      'government', 'minister', 'ministers', 'secretary', 'consultation', 'devolution',
+      'empowerment', 'committee', 'scheme', 'plans', 'plan', 'report',
       'best', 'top', 'new', 'here', 'what', 'when', 'where', 'more', 'after', 'over',
     ]);
     // Strip possessives and hyphens so "Eastbourne's" is recognised as the
@@ -797,19 +801,23 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       .filter((m) => m.count > 0);
 
     // ---- Turning points: the spikes, told as moments ------------------------
-    const storyForTerm = (term: string, month?: string) => {
+    const storyForTerm = (term: string, month?: string, usedImages?: Set<string>) => {
       const needle = term.toLowerCase();
-      const pool = current.filter(
-        (s) => (s.title ?? '').toLowerCase().includes(needle) && (!month || monthKey(s.created_at) === month)
-      );
-      const best = pool.sort(
-        (a, b) =>
-          Number(!!b.cover_illustration_url) - Number(!!a.cover_illustration_url) || viewsOf(b.id) - viewsOf(a.id)
-      )[0];
-      return best
-        ? { id: best.id, slug: best.slug, title: best.title, cover_illustration_url: best.cover_illustration_url }
-        : null;
+      const pool = current
+        .filter((s) => (s.title ?? '').toLowerCase().includes(needle) && (!month || monthKey(s.created_at) === month))
+        .sort(
+          (a, b) =>
+            Number(!!b.cover_illustration_url) - Number(!!a.cover_illustration_url) || viewsOf(b.id) - viewsOf(a.id)
+        );
+      // Never show the same picture twice in one review.
+      const best =
+        pool.find((s) => !usedImages || !s.cover_illustration_url || !usedImages.has(s.cover_illustration_url)) ??
+        (usedImages ? undefined : pool[0]);
+      if (!best) return null;
+      if (usedImages && best.cover_illustration_url) usedImages.add(best.cover_illustration_url);
+      return { id: best.id, slug: best.slug, title: best.title, cover_illustration_url: best.cover_illustration_url };
     };
+    const usedImages = new Set<string>();
     // One turning point per subject: keep the fullest form of a name and drop
     // anything that merely repeats part of it ("Draper" after "Jack Draper"),
     // or that points at the very same story.
@@ -823,7 +831,7 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       if (turningPoints.length >= 3) break;
       const ws = words(a.term);
       if (ws.some((w) => claimedWords.has(w))) continue;
-      const story = storyForTerm(a.term, a.month);
+      const story = storyForTerm(a.term, a.month, usedImages);
       if (story && claimedStories.has(story.id)) continue;
       ws.forEach((w) => claimedWords.add(w));
       if (story) claimedStories.add(story.id);
@@ -831,13 +839,19 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
     }
 
     // ---- Recurring names and places, each with its defining story ----------
-    const recurringSource = (distinctiveTerms.length > 0 ? distinctiveTerms : entities).slice(0, 6);
-    const recurringEntities = recurringSource.map((t: any) => ({
-      term: t.term,
-      count: t.count,
-      peak_month: t.peak_month ?? null,
-      story: storyForTerm(t.term),
-    }));
+    const recurringSource = (distinctiveTerms.length > 0 ? distinctiveTerms : entities) as any[];
+    const recurringEntities: any[] = [];
+    const recurringWords = new Set<string>();
+    for (const t of recurringSource) {
+      if (recurringEntities.length >= 6) break;
+      const ws = words(t.term);
+      // No fragments of a name already shown, and no repeated pictures.
+      if (ws.some((w) => recurringWords.has(w))) continue;
+      const story = storyForTerm(t.term, undefined, usedImages);
+      if (!story) continue;
+      ws.forEach((w) => recurringWords.add(w));
+      recurringEntities.push({ term: t.term, count: t.count, peak_month: t.peak_month ?? null, story });
+    }
 
     // ---- What went quiet ----------------------------------------------------
     const wentQuiet = fadingTerms.slice(0, 6).map((t) => ({ term: t.term, previous: t.count }));
