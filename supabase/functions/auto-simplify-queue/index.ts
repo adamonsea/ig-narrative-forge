@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     }
 
     let totalQueued = 0;
-    const maxPerTopic = 20;
+    const maxPerTopic = 50;
     const topicsWithNewItems: string[] = [];
 
     // 2. Pre-fetch topic voice defaults for all topics
