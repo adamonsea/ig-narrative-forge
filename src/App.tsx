@@ -20,7 +20,6 @@ import Cookies from "./pages/Cookies";
 
 import AdminPanel from "./pages/AdminPanel";
 import AICostDashboardPage from "./pages/AICostDashboard";
-import ImageModelBench from "./pages/ImageModelBench";
 import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
@@ -105,7 +104,6 @@ const App = () => {
                 <Route path="/dashboard/widgets/test" element={<WidgetTestPage />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/admin/ai-costs" element={<AICostDashboardPage />} />
-                <Route path="/admin/image-bench" element={<ImageModelBench />} />
                 
                 {/* Redirect old URL patterns to new universal URLs */}
                 <Route path="/feed/topic/:slug" element={<FeedRedirect />} />

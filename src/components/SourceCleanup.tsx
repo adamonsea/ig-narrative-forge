@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Trash2, Settings } from 'lucide-react';
+import { Trash2, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Spinner } from '@/components/ui/spinner';
@@ -99,15 +99,6 @@ export const SourceCleanup = () => {
             Clean Orphaned Sources
           </Button>
           
-          <Button
-            onClick={() => runCleanup('cleanup_legacy_orphaned')}
-            disabled={isLoading}
-            variant="destructive"
-            className="flex items-center gap-2"
-          >
-            {isLoading ? <Spinner size="sm" className="text-destructive-foreground" /> : <AlertTriangle className="h-4 w-4" />}
-            Remove Legacy Orphaned
-          </Button>
         </div>
 
         {lastResult && (

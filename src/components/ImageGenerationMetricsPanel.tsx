@@ -99,7 +99,7 @@ export const ImageGenerationMetricsPanel: React.FC = () => {
         Array.from(byTopic.entries())
           .map(([key, value]) => ({
             key,
-            name: key === 'unassigned' ? 'Unassigned' : names.get(key) || 'Unknown feed',
+            name: key === 'unassigned' ? 'Unassigned' : names.get(key) || 'Deleted feed',
             count: value.count,
             costUsd: value.costUsd,
           }))
