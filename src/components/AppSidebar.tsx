@@ -106,7 +106,7 @@ export function AppSidebar() {
                     })
                   ) : (
                     <SidebarMenuItem>
-                      <div className="px-2 py-1 text-sm text-muted-foreground">No topics yet</div>
+                      <div className="px-2 py-1 text-sm text-muted-foreground">No feeds yet</div>
                     </SidebarMenuItem>
                   )}
                 </SidebarMenu>
