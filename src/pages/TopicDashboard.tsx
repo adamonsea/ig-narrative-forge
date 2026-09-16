@@ -17,7 +17,7 @@ import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { OnboardingSettings } from "@/components/onboarding";
 import { FeedSetupGuide, storageKeyFor } from "@/components/onboarding/FeedSetupGuide";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
-import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
+import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
@@ -901,10 +901,23 @@ const TopicDashboard = () => {
                         }}
                       />
                       {topic.topic_type === 'regional' && (
-                        <div className="grid gap-4 sm:grid-cols-2 border-t pt-4">
-                          <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={setNegativeKeywords} />
-                          <TopicCompetingRegions topicId={topic.id} competingRegions={competingRegions} onUpdate={setCompetingRegions} />
-                        </div>
+                        <>
+                          <div className="border-t pt-4">
+                            <NewsValuesPanel
+                              topicId={topic.id}
+                              region={topic.region}
+                              landmarks={(topic as any).landmarks}
+                              postcodes={(topic as any).postcodes}
+                              organizations={(topic as any).organizations}
+                              localityStrength={(topic as any).locality_strength}
+                              nearbyPlaces={(topic as any).nearby_places}
+                              bigStoryOverride={(topic as any).big_story_override}
+                            />
+                          </div>
+                          <div className="border-t pt-4">
+                            <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={setNegativeKeywords} />
+                          </div>
+                        </>
                       )}
                       <div className="border-t pt-4">
                         <SentimentKeywordSettings topicId={topic.id} />

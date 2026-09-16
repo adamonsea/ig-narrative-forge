@@ -1,4 +1,10 @@
-import { RegionConfig } from './types.ts';
+import {
+  applyNewsValues,
+  detectPlaceTier,
+  NearbyPlace,
+  NewsValueDecision,
+  NewsValuesConfig,
+} from './news-values.ts';
 
 export interface TopicRegionalConfig {
   keywords: string[];
@@ -7,13 +13,98 @@ export interface TopicRegionalConfig {
   organizations?: string[];
   competing_regions?: string[];
   region_name: string;
+  nearby_places?: NearbyPlace[];
+  locality_strength?: number | null;
+  big_story_override?: boolean | null;
 }
 
 /**
- * PHASE 1: Confidence-Based Regional Relevance Scoring
- * Trust-based approach: If a user adds a source, we trust most content is relevant
- * Focus on confidence levels rather than aggressive rejection
+ * Regional relevance, place-first.
+ *
+ * Order of business:
+ *   1. Decide the place tier (home / nearby / further out / nowhere).
+ *   2. Score the topical signals — but only once a place has been established,
+ *      so everyday keywords like "police" or "community" can never carry an
+ *      article on their own.
+ *   3. Apply the owner's dial: distance discount, nowhere cap, big-story rescue.
  */
+export function calculateRegionalRelevanceDetailed(
+  content: string,
+  title: string,
+  topicConfig: TopicRegionalConfig,
+  sourceType: string = 'national',
+  _otherRegionalTopics: TopicRegionalConfig[] = [],
+  sourceUrl?: string
+): NewsValueDecision {
+  const newsValues: NewsValuesConfig = {
+    region: topicConfig.region_name,
+    landmarks: topicConfig.landmarks,
+    postcodes: topicConfig.postcodes,
+    organizations: topicConfig.organizations,
+    nearby_places: topicConfig.nearby_places,
+    locality_strength: topicConfig.locality_strength,
+    big_story_override: topicConfig.big_story_override,
+  };
+
+  const place = detectPlaceTier(title, content, newsValues);
+  const text = `${title} ${content}`.toLowerCase();
+
+  let raw = 0;
+
+  if (place.tier === 'home') {
+    const regionName = topicConfig.region_name.toLowerCase();
+    const regionMatches = (
+      text.match(new RegExp(`\\b${regionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')) || []
+    ).length;
+    raw += Math.min(regionMatches, 3) * 20;
+    if (regionMatches === 0) raw += 20; // matched on a landmark / postcode / organisation
+  } else if (place.tier === 'nearby' || place.tier === 'far') {
+    raw += 20;
+  }
+
+  // Topical signals only count once a place is established.
+  if (place.tier !== 'nowhere') {
+    const keywordMatches = (topicConfig.keywords || []).filter((keyword) =>
+      keyword && text.includes(keyword.toLowerCase())
+    ).length;
+    raw += Math.min(keywordMatches, 5) * 8;
+
+    if (topicConfig.landmarks?.length) {
+      const landmarkMatches = topicConfig.landmarks.filter((l) => l && text.includes(l.toLowerCase())).length;
+      raw += Math.min(landmarkMatches, 3) * 15;
+    }
+    if (topicConfig.postcodes?.length) {
+      const postcodeMatches = topicConfig.postcodes.filter((p) => p && text.includes(p.toLowerCase())).length;
+      raw += Math.min(postcodeMatches, 2) * 20;
+    }
+    if (topicConfig.organizations?.length) {
+      const orgMatches = topicConfig.organizations.filter((o) => o && text.includes(o.toLowerCase())).length;
+      raw += Math.min(orgMatches, 3) * 12;
+    }
+
+    // Source trust nudges a placed story up; it can never manufacture a place.
+    const sourceBonus = { hyperlocal: 15, regional: 10, national: 0 }[sourceType] ?? 0;
+    raw += sourceBonus;
+  } else {
+    // Nowhere: a small topical read only, so the nowhere cap has something to bite on.
+    const keywordMatches = (topicConfig.keywords || []).filter((keyword) =>
+      keyword && text.includes(keyword.toLowerCase())
+    ).length;
+    raw += Math.min(keywordMatches, 3) * 5;
+  }
+
+  // A URL that belongs to another town is a real signal that this is not local.
+  if (sourceUrl && place.tier !== 'home') {
+    const nearbyNames = (topicConfig.nearby_places || []).map((p) => p.name?.toLowerCase()).filter(Boolean);
+    if (nearbyNames.some((n) => n && sourceUrl.toLowerCase().includes(n))) {
+      raw -= 10;
+    }
+  }
+
+  return applyNewsValues(raw, title, content, newsValues, place);
+}
+
+/** Back-compatible numeric entry point. */
 export function calculateRegionalRelevance(
   content: string,
   title: string,
@@ -22,190 +113,17 @@ export function calculateRegionalRelevance(
   otherRegionalTopics: TopicRegionalConfig[] = [],
   sourceUrl?: string
 ): number {
-  if (!topicConfig || !topicConfig.keywords?.length) return 0;
-
-  // Extract content structure for context-aware analysis
-  const titleLower = title.toLowerCase();
-  const leadContent = content.substring(0, 500).toLowerCase(); // First 500 chars
-  const bodyContent = content.substring(500).toLowerCase(); // Remaining content
-  const text = `${title} ${content}`.toLowerCase();
-  let score = 0;
-
-  // PHASE 1: Trust source selection - much more lenient for URL-based penalties
-  if (sourceUrl && otherRegionalTopics?.length) {
-    const currentRegion = topicConfig.region_name.toLowerCase();
-    
-    const competingRegionInUrl = otherRegionalTopics.find(other => 
-      other.region_name !== topicConfig.region_name && 
-      sourceUrl.toLowerCase().includes(other.region_name.toLowerCase())
-    );
-    
-    if (competingRegionInUrl) {
-      // PHASE 1: Reduce to confidence penalty instead of rejection
-      score -= 30; // Moderate penalty instead of -100 rejection
-    }
-  }
-
-  // Context-aware competing regions detection with weighted penalties
-  const currentRegion = topicConfig.region_name.toLowerCase();
-  
-  if (otherRegionalTopics?.length) {
-    for (const otherTopic of otherRegionalTopics) {
-      if (otherTopic.region_name === topicConfig.region_name) continue;
-      
-      const competingRegion = otherTopic.region_name.toLowerCase();
-      const regionRegex = new RegExp(`\\b${competingRegion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-      
-      // Check title mentions (highest penalty)
-      const titleMatches = (titleLower.match(regionRegex) || []).length;
-      if (titleMatches > 0) {
-        score -= titleMatches * 45; // Very strong penalty for title
-        console.log(`⚠️ Title mentions competing region "${competingRegion}": -${titleMatches * 45}`);
-      }
-      
-      // Check lead content mentions (strong penalty)
-      const leadMatches = (leadContent.match(regionRegex) || []).length;
-      if (leadMatches > 0) {
-        score -= leadMatches * 30; // Strong penalty for lead
-        console.log(`⚠️ Lead mentions competing region "${competingRegion}": -${leadMatches * 30}`);
-      }
-      
-      // Check body mentions (graduated penalty based on context)
-      const bodyMatches = (bodyContent.match(regionRegex) || []).length;
-      if (bodyMatches > 0) {
-        // Check for comparison language
-        const hasComparisonContext = 
-          text.includes(`${currentRegion} to ${competingRegion}`) ||
-          text.includes(`${competingRegion} to ${currentRegion}`) ||
-          text.includes(`${currentRegion} and ${competingRegion}`) ||
-          text.includes(`compared to ${competingRegion}`);
-        
-        const bodyPenalty = hasComparisonContext ? 5 : 15; // Lighter penalty for comparison contexts
-        score -= bodyMatches * bodyPenalty;
-        console.log(`⚠️ Body mentions competing region "${competingRegion}" (${bodyMatches}x): -${bodyMatches * bodyPenalty}${hasComparisonContext ? ' (comparison context)' : ''}`);
-      }
-    }
-  }
-
-  // PHASE 1: Enhanced region name matching with base confidence
-  const regionName = topicConfig.region_name.toLowerCase();
-  const regionNameMatches = (text.match(new RegExp(`\\b${regionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')) || []).length;
-  
-  if (regionNameMatches > 0) {
-    score += regionNameMatches * 40; // Higher boost for direct region mentions
-  } else {
-    // PHASE 1: Base confidence for any content from trusted sources
-    score += 25; // Trust the source - give base confidence even without region mention
-  }
-
-  // Keyword matching (base score)
-  const keywordMatches = topicConfig.keywords.filter(keyword => 
-    text.includes(keyword.toLowerCase())
-  ).length;
-  score += keywordMatches * 10;
-
-  // Landmark matching (higher weight)
-  if (topicConfig.landmarks?.length) {
-    const landmarkMatches = topicConfig.landmarks.filter(landmark => 
-      text.includes(landmark.toLowerCase())
-    ).length;
-    score += landmarkMatches * 15;
-  }
-
-  // Postcode matching (very specific)
-  if (topicConfig.postcodes?.length) {
-    const postcodeMatches = topicConfig.postcodes.filter(postcode => 
-      text.includes(postcode.toLowerCase())
-    ).length;
-    score += postcodeMatches * 20;
-  }
-
-  // Organization matching (institutional relevance)
-  if (topicConfig.organizations?.length) {
-    const orgMatches = topicConfig.organizations.filter(org => 
-      text.includes(org.toLowerCase())
-    ).length;
-    score += orgMatches * 12;
-  }
-
-  // PHASE 1: Much lighter negative scoring for competing regions
-  if (otherRegionalTopics?.length) {
-    const otherRegionTerms = otherRegionalTopics
-      .filter(other => other.region_name !== topicConfig.region_name)
-      .flatMap(other => [...other.keywords, ...(other.landmarks || []), ...(other.postcodes || [])])
-      .filter(term => term && term.length > 2); // Filter short/empty terms
-    
-    // Light penalty for direct competing region mentions
-    const competingRegionNames = otherRegionalTopics
-      .filter(other => other.region_name !== topicConfig.region_name)
-      .map(other => other.region_name.toLowerCase());
-    
-    const directRegionMatches = competingRegionNames.filter(regionName =>
-      text.includes(regionName) && 
-      !text.includes(`${regionName} to ${topicConfig.region_name.toLowerCase()}`) &&
-      !text.includes(`${topicConfig.region_name.toLowerCase()} to ${regionName}`) &&
-      !text.includes(`${topicConfig.region_name.toLowerCase()} and ${regionName}`) &&
-      !text.includes(`${regionName} and ${topicConfig.region_name.toLowerCase()}`)
-    ).length;
-    
-    // Light penalty for other specific regional terms
-    const negativeMatches = otherRegionTerms.filter(term => 
-      text.includes(term.toLowerCase()) && 
-      !text.includes(`${term.toLowerCase()} to ${topicConfig.region_name.toLowerCase()}`) &&
-      !text.includes(`${topicConfig.region_name.toLowerCase()} to ${term.toLowerCase()}`) &&
-      !text.includes(`${topicConfig.region_name.toLowerCase()} and ${term.toLowerCase()}`) &&
-      !text.includes(`${term.toLowerCase()} and ${topicConfig.region_name.toLowerCase()}`)
-    ).length;
-    
-    // PHASE 1: Much lighter penalties for confidence scoring
-    score -= directRegionMatches * 10; // Light penalty (-10 vs -50)
-    score -= negativeMatches * 5; // Very light penalty (-5 vs -20)
-  }
-
-  // Enhanced filtering for national sources - reduce generic geographic boost
-  if (sourceType === 'national') {
-    // Only give modest boost for very generic terms
-    const specificCountryKeywords = ['uk', 'britain', 'british', 'england', 'scotland', 'wales'];
-    const specificCountryMatches = specificCountryKeywords.filter(keyword => text.includes(keyword)).length;
-    
-    if (specificCountryMatches > 0) {
-      score += 15; // Baseline country relevance for national sources
-    }
-    
-    // Check for broader geographic context based on topic's region
-    const hasCompetingRegions = otherRegionalTopics?.some(other => 
-      other.region_name !== topicConfig.region_name && 
-      text.includes(other.region_name.toLowerCase())
-    );
-    
-    // Give minimal boost for being in the right general area, only if no competing regions
-    if (!hasCompetingRegions) {
-      // Look for broader geographic terms that might relate to the topic region
-      const broadTerms = topicConfig.landmarks?.concat(topicConfig.organizations || []) || [];
-      const broadMatches = broadTerms.filter(term => text.includes(term.toLowerCase())).length;
-      
-      if (broadMatches > 0) {
-        score += 5; // Minimal boost for broad geographic context
-      }
-    }
-  }
-
-  // PHASE 1: Enhanced source trust multipliers
-  const sourceMultiplier = {
-    'hyperlocal': 2.0, // Strong trust for local sources
-    'regional': 1.8,   // High trust for regional sources  
-    'national': 1.3    // Modest boost for national sources
-  }[sourceType] || 1.0;
-
-  // Apply source multiplier first, then ensure reasonable bounds
-  const finalScore = Math.round(score * sourceMultiplier);
-  
-  // PHASE 1: Much more permissive bounds - trust source selection
-  // Minimum score of 15 for any content from trusted sources (user-added sources)
-  const confidenceScore = Math.max(15, Math.min(100, finalScore));
-  
-  console.log(`📊 Final score for "${title.substring(0, 30)}...": ${confidenceScore} (raw: ${finalScore})`);
-  
-  // Only return very low scores for content with strong negative signals
-  return finalScore < -30 ? Math.max(-30, finalScore) : confidenceScore;
+  if (!topicConfig || !topicConfig.region_name) return 0;
+  const decision = calculateRegionalRelevanceDetailed(
+    content,
+    title,
+    topicConfig,
+    sourceType,
+    otherRegionalTopics,
+    sourceUrl
+  );
+  console.log(
+    `📊 "${(title || '').substring(0, 40)}" → ${decision.score} (${decision.reason})`
+  );
+  return decision.score;
 }

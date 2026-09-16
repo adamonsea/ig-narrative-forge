@@ -1,5 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { loadCategoryGate, applyCategoryGate } from '../_shared/category-gate.ts';
+import {
+  applyNewsValues,
+  detectPlaceTier,
+  parseNearbyPlaces,
+  type NewsValuesConfig,
+} from '../_shared/news-values.ts';
 
 
 const corsHeaders = {
@@ -186,19 +192,33 @@ Deno.serve(async (req) => {
     const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     const { data: topicDefaults } = await supabase
       .from('topics')
-      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations')
+      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations, nearby_places, locality_strength, big_story_override')
       .in('id', topicIds);
-    
-    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[]; topic_type?: string; region?: string; localityAnchors?: string[] }> = {};
+
+    const topicDefaultsMap: Record<string, {
+      tone?: string;
+      writing_style?: string;
+      audience_expertise?: string;
+      negative_keywords?: string[];
+      topic_type?: string;
+      region?: string;
+      newsValues?: NewsValuesConfig;
+      hasAnchors?: boolean;
+    }> = {};
     for (const t of (topicDefaults || [])) {
-      const anchors = [
-        t.region,
-        ...(t.landmarks || []),
-        ...(t.postcodes || []),
-        ...(t.organizations || []),
-      ]
-        .filter((a: string | null) => !!a && String(a).trim().length > 0)
-        .map((a: string) => String(a).toLowerCase().trim());
+      const newsValues: NewsValuesConfig = {
+        region: t.region,
+        landmarks: t.landmarks || [],
+        postcodes: t.postcodes || [],
+        organizations: t.organizations || [],
+        nearby_places: parseNearbyPlaces(t.nearby_places),
+        locality_strength: t.locality_strength,
+        big_story_override: t.big_story_override,
+      };
+      const hasAnchors = !!(t.region && String(t.region).trim()) ||
+        (t.landmarks || []).length > 0 ||
+        (t.postcodes || []).length > 0 ||
+        (t.organizations || []).length > 0;
       topicDefaultsMap[t.id] = {
         tone: t.default_tone,
         writing_style: t.default_writing_style,
@@ -206,7 +226,8 @@ Deno.serve(async (req) => {
         negative_keywords: t.negative_keywords || [],
         topic_type: t.topic_type,
         region: t.region || '',
-        localityAnchors: Array.from(new Set(anchors)),
+        newsValues,
+        hasAnchors,
       };
     }
 
@@ -252,8 +273,8 @@ Deno.serve(async (req) => {
 
       const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
       const topicType = topicDefaultsMap[topic_id]?.topic_type;
-      const localityAnchors = topicDefaultsMap[topic_id]?.localityAnchors || [];
-      const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
+      const newsValues = topicDefaultsMap[topic_id]?.newsValues;
+      const localityGateActive = topicType === 'regional' && !!newsValues && !!topicDefaultsMap[topic_id]?.hasAnchors;
       let topicHeldForLocality = 0;
       let topicHeldForCategory = 0;
 
@@ -333,42 +354,41 @@ Deno.serve(async (req) => {
           continue; // leave processing_status = 'new' for manual review
         }
 
-        // Locality gate (regional topics only): hold for manual review if no local
-        // anchor appears in the title or opening. Story stays 'new' in Arrivals.
-        if (localityGateActive && !categoryDecision.relaxLocality) {
+        // News values (regional topics only): decide the place tier, apply the
+        // owner's dial, and only auto-publish what clears their bar. Everything
+        // else stays 'new' in Arrivals for manual review.
+        if (localityGateActive && newsValues) {
           const title = sharedContent?.title || '';
           const body = sharedContent?.body || '';
-          const region = (topicDefaultsMap[topic_id]?.region || '').toLowerCase().trim();
 
-          // FAIL-OPEN: never hold an at/above-threshold story that literally names
-          // the region anywhere in title or body. A 100%-score "Eastbourne …"
-          // headline must always pass.
-          const regionPresent = !!region &&
-            `${title} ${body}`.toLowerCase().includes(region);
+          const place = detectPlaceTier(title, body, newsValues);
+          const verdict = applyNewsValues(
+            typeof article.content_quality_score === 'number' ? article.content_quality_score : 0,
+            title,
+            body,
+            newsValues,
+            place
+          );
 
-          const matchedAnchor = matchLocalityAnchor(title, body, localityAnchors);
+          await supabase
+            .from('topic_articles')
+            .update({ place_tier: verdict.tier })
+            .eq('id', article.id);
 
-          if (!matchedAnchor && !regionPresent) {
-            // Diagnostic: log WHY it was held (content presence + a title snippet).
+          if (!verdict.autoPublish) {
             console.log(
-              `  🧭 Locality gate HELD article ${article.id} — ` +
-              `hasContent=${!!sharedContent} anchors=${localityAnchors.length} ` +
-              `title="${title.slice(0, 80)}"`
+              `  🧭 News values HELD article ${article.id} — ${verdict.reason} ` +
+              `(score ${verdict.score}) title="${title.slice(0, 80)}"`
             );
             topicHeldForLocality++;
-            await markHeld('locality: no local anchor in title or opening');
+            await markHeld(verdict.reason);
             continue; // leave processing_status = 'new'
           }
 
-          console.log(
-            `  ✅ Locality gate PASSED article ${article.id} via ` +
-            `${matchedAnchor ? `anchor "${matchedAnchor}"` : `region "${region}"`}`
-          );
-        } else if (localityGateActive && categoryDecision.relaxLocality) {
-          console.log(
-            `  🌍 Locality gate relaxed for article ${article.id} — wide radius on category "${categoryDecision.category?.slug}"`
-          );
+          console.log(`  ✅ News values PASSED article ${article.id} — ${verdict.reason} (score ${verdict.score})`);
         }
+
+
 
 
         // Check for an ACTIVE queue item only (pending/processing).
