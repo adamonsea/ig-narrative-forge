@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { editorialEase } from './ReviewChapter';
 import { GrainOverlay } from './GrainOverlay';
+import { SlideBackdrop } from './SlideBackdrop';
 import { Odometer } from './Odometer';
 import { Shimmer } from './Shimmer';
 import { slideSkin } from '@/lib/reviewPalette';
