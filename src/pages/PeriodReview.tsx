@@ -632,9 +632,9 @@ const PeriodReview = () => {
           />
           {m.lead && (
             <Reveal delay={0.15}>
-              <Link
-                to={`/feed/${slug}/story/${m.lead.slug ?? m.lead.id}`}
-                className="group block overflow-hidden rounded-2xl border border-border"
+              <PreviewTrigger
+                story={m.lead}
+                className="group block w-full overflow-hidden rounded-2xl border border-border text-left"
               >
                 {m.lead.cover_illustration_url && (
                   <img
@@ -655,9 +655,9 @@ const PeriodReview = () => {
             <Reveal delay={0.3} className="mt-4">
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {m.covers.slice(0, 8).map((c) => (
-                  <Link
+                  <PreviewTrigger
                     key={c.id}
-                    to={`/feed/${slug}/story/${c.slug ?? c.id}`}
+                    story={c}
                     title={c.title}
                     className="h-16 w-16 shrink-0 overflow-hidden rounded-lg"
                   >
@@ -698,8 +698,8 @@ const PeriodReview = () => {
               <Reveal key={`${t.term}-${t.month}`} delay={i * 0.1}>
                 <li className="flex items-center gap-4">
                   {t.story?.cover_illustration_url ? (
-                    <Link
-                      to={`/feed/${slug}/story/${t.story.slug ?? t.story.id}`}
+                    <PreviewTrigger
+                      story={t.story}
                       className="h-20 w-20 shrink-0 overflow-hidden rounded-xl"
                     >
                       <img
@@ -746,9 +746,9 @@ const PeriodReview = () => {
               .slice(0, 4)
               .map((r, i) => (
                 <Reveal key={r.term} delay={i * 0.08}>
-                  <Link
-                    to={`/feed/${slug}/story/${r.story!.slug ?? r.story!.id}`}
-                    className="block overflow-hidden rounded-xl border border-border"
+                  <PreviewTrigger
+                    story={r.story!}
+                    className="block w-full overflow-hidden rounded-xl border border-border text-left"
                   >
                     <img
                       src={
@@ -1051,9 +1051,9 @@ const PeriodReview = () => {
               {topStories.slice(0, 3).map((s, i) => (
                 <Reveal key={s.id} delay={i * 0.08}>
                   <li>
-                    <Link
-                      to={`/feed/${slug}/story/${s.slug ?? s.id}`}
-                      className="flex items-center gap-4 rounded-2xl border border-border p-3 transition-colors hover:bg-muted"
+                    <PreviewTrigger
+                      story={s}
+                      className="flex w-full items-center gap-4 rounded-2xl border border-border p-3 text-left transition-colors hover:bg-muted"
                     >
                       <span className="w-8 shrink-0 text-2xl font-semibold tabular-nums text-muted-foreground/50">
                         {i + 1}
