@@ -344,7 +344,7 @@ Deno.serve(async (req) => {
 
     const sourceCounts: Record<string, number> = {};
     for (const r of current) {
-      const name = (r.publication_name ?? '').trim();
+      const name = (r.source_label ?? r.publication_name ?? '').trim();
       if (!name) continue;
       sourceCounts[name] = (sourceCounts[name] ?? 0) + 1;
     }
