@@ -179,12 +179,8 @@ export function EditorialControlCenter({
   );
   type AttentionItem = { text: string; section?: SectionKey; anchor?: string };
   const attention: AttentionItem[] = [];
-  if (stats.pending_articles > 20) {
-    attention.push({ text: `${stats.pending_articles} arrivals are waiting for editorial review` });
-  }
-  if (stats.processing_queue > 10) {
-    attention.push({ text: `${stats.processing_queue} stories are still being prepared` });
-  }
+  // Story volumes live in the Pipeline dashboard now — this list is only for
+  // settings that need a decision.
   if (!topic.is_public) {
     attention.push({ text: "This feed is a draft and cannot currently reach readers", section: "distribution" });
   }
