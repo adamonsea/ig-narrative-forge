@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bot, Check, Copy, KeyRound, Loader2, Trash2 } from "lucide-react";
+import { Bot, Check, Copy, KeyRound, Loader2, Newspaper, Search, FileText, Sparkles, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const MCP_BASE = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/mcp-feed";
@@ -134,8 +135,24 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
               <Badge variant="secondary" className="text-[10px]">Add-on</Badge>
             </div>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Let ChatGPT, Claude and other assistants read {topicName} directly — latest stories, search, full stories and a briefing, always crediting the original publication.
+              Connect {topicName} to ChatGPT or Claude, so readers can ask questions and get answers straight from your published stories — never anyone else's.
             </p>
+            <ul className="mt-3 grid max-w-xl gap-2 sm:grid-cols-2">
+              {[
+                { icon: Newspaper, title: "Catch me up", body: `"What's new in ${topicName}?" — the latest stories, newest first.` },
+                { icon: Search, title: "Find a story", body: `"Anything about the seafront?" — searches everything you've published.` },
+                { icon: FileText, title: "Read it in full", body: "The whole story, with the original publication named and linked." },
+                { icon: Sparkles, title: "Daily or weekly briefing", body: "A short round-up of your feed on demand." },
+              ].map(({ icon: Icon, title, body }) => (
+                <li key={title} className="flex items-start gap-2 rounded-lg border border-border bg-background/60 p-3">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs font-medium">{title}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
             {saveError && <p className="mt-1 text-xs text-destructive">Not saved</p>}
           </div>
         </div>
@@ -176,9 +193,10 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                 {copied === "endpoint" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              In ChatGPT or Claude, add a custom connector and paste this address{access === "key" ? ", then paste your key as the authentication token." : "."}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <SetupGuide tool="ChatGPT" endpoint={endpoint} topicName={topicName} needsKey={access === "key"} />
+              <SetupGuide tool="Claude" endpoint={endpoint} topicName={topicName} needsKey={access === "key"} />
+            </div>
           </div>
 
           {access === "key" && (
@@ -231,5 +249,83 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
         </div>
       )}
     </div>
+  );
+};
+
+interface SetupGuideProps {
+  tool: "ChatGPT" | "Claude";
+  endpoint: string;
+  topicName: string;
+  needsKey: boolean;
+}
+
+const SetupGuide = ({ tool, endpoint, topicName, needsKey }: SetupGuideProps) => {
+  const [copied, setCopied] = useState(false);
+
+  const steps =
+    tool === "ChatGPT"
+      ? [
+          "Open ChatGPT on a computer and sign in.",
+          "Click your name at the bottom left, then Settings.",
+          "Choose Connectors, then Create (or Add custom connector).",
+          `Name it "${topicName}" and paste the address below.`,
+          needsKey ? "Choose access token / API key and paste one of your keys." : "Leave authentication set to none.",
+          "Save, then start a chat and pick the connector to ask about your feed.",
+        ]
+      : [
+          "Open Claude on a computer and sign in.",
+          "Click your name at the bottom left, then Settings.",
+          "Choose Connectors, then Add custom connector.",
+          `Name it "${topicName}" and paste the address below.`,
+          needsKey ? "Add one of your keys as the authentication token." : "Leave authentication empty.",
+          "Save, then ask Claude about your feed in any chat.",
+        ];
+
+  const copy = () => {
+    navigator.clipboard.writeText(endpoint);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">Add to {tool}</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add {topicName} to {tool}</DialogTitle>
+          <DialogDescription>Six short steps. You only do this once.</DialogDescription>
+        </DialogHeader>
+
+        <ol className="space-y-3">
+          {steps.map((step, index) => (
+            <li key={step} className="flex items-start gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-medium text-background">
+                {index + 1}
+              </span>
+              <span className="pt-0.5 text-sm text-muted-foreground">{step}</span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+          <Label className="text-xs font-medium uppercase text-muted-foreground">Address to paste</Label>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-md border border-border bg-background px-3 py-2 text-xs">{endpoint}</code>
+            <Button variant="outline" size="sm" onClick={copy}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          {needsKey && (
+            <p className="text-xs text-muted-foreground">You'll also need a key from the Keys list below — create one if you haven't.</p>
+          )}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Once connected, ask things like "What's new in {topicName} this week?" — answers come only from your published stories, with the original publication credited.
+        </p>
+      </DialogContent>
+    </Dialog>
   );
 };
