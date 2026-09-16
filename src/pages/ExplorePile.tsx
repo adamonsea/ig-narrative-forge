@@ -108,7 +108,7 @@ export default function ExplorePile() {
           article: { source_url: '' }
         }));
 
-        setStories(mappedStories);
+        setStories(await applySimplifiedHeadlines(mappedStories));
         setLoading(false);
         return;
       }
