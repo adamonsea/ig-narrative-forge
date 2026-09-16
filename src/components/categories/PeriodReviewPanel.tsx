@@ -178,7 +178,8 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           label,
           slug: `${start}_${end}${scopeSuffix()}`,
           categoryIds: selectedCategories,
-          sourceNames: selectedSources,
+          sourceIds: selectedSourceIds(),
+          sourceNames: selectedSourceNames(),
           includeParliamentary,
         },
       });
