@@ -133,11 +133,19 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     }
   };
 
+  const selectedSourceIds = () =>
+    sources.filter((s) => selectedSources.includes(s.id)).flatMap((s) => s.ids);
+
+  const selectedSourceNames = () =>
+    sources.filter((s) => selectedSources.includes(s.id)).map((s) => s.name);
+
   const scopeSuffix = () => {
     const parts: string[] = [];
     if (selectedCategories.length) parts.push(`c${selectedCategories.length}-${selectedCategories[0].slice(0, 6)}`);
     if (selectedSources.length)
-      parts.push(`s${selectedSources.length}-${selectedSources[0].toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`);
+      parts.push(
+        `s${selectedSources.length}-${(selectedSourceNames()[0] ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`
+      );
     if (includeParliamentary) parts.push('parl');
     return parts.length ? `_${parts.join('_')}` : '';
   };
@@ -149,7 +157,8 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
       bits.push(names.length <= 2 ? names.join(' & ') : `${names.length} topics`);
     }
     if (selectedSources.length) {
-      bits.push(selectedSources.length <= 2 ? selectedSources.join(' & ') : `${selectedSources.length} sources`);
+      const names = selectedSourceNames();
+      bits.push(names.length <= 2 ? names.join(' & ') : `${names.length} sources`);
     }
     if (includeParliamentary) bits.push('incl. Parliament');
     return bits.length ? ` · ${bits.join(', ')}` : '';
