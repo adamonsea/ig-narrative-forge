@@ -14,6 +14,7 @@ import { ImageCarousel } from '@/components/review/ImageCarousel';
 import { ImageTapestry } from '@/components/review/ImageTapestry';
 import { baseHueFor, hueForIndex } from '@/lib/reviewPalette';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { makeTermGuard } from '@/lib/reviewTerms';
 
 interface Movement {
   name: string;
@@ -379,26 +380,39 @@ const PeriodReview = () => {
     categoryBreakdown,
     subcategoryInsights = [],
     subcategoryMovers = [],
-    distinctiveTerms = [],
+    distinctiveTerms: rawDistinctiveTerms = [],
     termTrends = [],
     trendMonths = [],
-    anomalies = [],
-    risingTerms = [],
-    places = [],
-    entities = [],
+    anomalies: rawAnomalies = [],
+    risingTerms: rawRisingTerms = [],
+    places: rawPlaces = [],
+    entities: rawEntities = [],
     sourceScorecard = [],
     timeline,
-    hotTopics,
+    hotTopics: rawHotTopics,
     topStories,
     categoryStories = [],
     mosaic = [],
     monthChapters = [],
-    turningPoints = [],
-    recurringEntities = [],
-    wentQuiet = [],
+    turningPoints: rawTurningPoints = [],
+    recurringEntities: rawRecurringEntities = [],
+    wentQuiet: rawWentQuiet = [],
     readingMinutes,
     topic,
   } = d;
+
+  // The feed's own name and ordinary news furniture are never "unusual" —
+  // filter on read so older saved reviews are clean too.
+  const isFurniture = makeTermGuard(topic?.name, topic?.region);
+  const anomalies = rawAnomalies.filter((a) => !isFurniture(a.term));
+  const risingTerms = rawRisingTerms.filter((t) => !isFurniture(t.term));
+  const distinctiveTerms = rawDistinctiveTerms.filter((t) => !isFurniture(t.term));
+  const places = rawPlaces.filter((p) => !isFurniture(p.term));
+  const entities = rawEntities.filter((e) => !isFurniture(e.term));
+  const hotTopics = (rawHotTopics ?? []).filter((t) => !isFurniture(t.term));
+  const turningPoints = rawTurningPoints.filter((t) => !isFurniture(t.term));
+  const recurringEntities = rawRecurringEntities.filter((r) => !isFurniture(r.term));
+  const wentQuiet = rawWentQuiet.filter((w) => !isFurniture(w.term));
 
   // The months worth their own chapter: busiest first, shown in order.
   const featuredMonths = [...monthChapters]
