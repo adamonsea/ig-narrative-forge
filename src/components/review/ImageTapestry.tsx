@@ -22,7 +22,7 @@ export const ImageTapestry = ({
 }) => {
   const reduce = useReducedMotion();
   const { open: openPreview } = useStoryPreview();
-  const tiles = covers.filter((c) => c.cover_illustration_url).slice(0, 9);
+  const tiles = covers.filter((c) => c.cover_illustration_url).slice(0, 6);
   if (tiles.length < 4) return null;
 
   return (
@@ -33,7 +33,7 @@ export const ImageTapestry = ({
       >
         Tap a picture to read the story
       </p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-[clamp(0.5rem,0.8vw,1rem)]">
         {tiles.map((c, i) => (
           <motion.div
             key={c.id}
@@ -51,20 +51,20 @@ export const ImageTapestry = ({
               onClick={() => openPreview(c)}
               title={c.title}
               aria-label={`Open story: ${c.title}`}
-              className="group relative block w-full overflow-hidden rounded-lg border border-current/10 focus:outline-none focus-visible:ring-2"
+              className="group block w-full overflow-hidden rounded-lg border border-current/10 text-left focus:outline-none focus-visible:ring-2"
               style={{ borderColor: 'var(--review-accent, currentColor)' }}
             >
               <img
                 src={
-                  optimizeImageUrl(c.cover_illustration_url, { width: 400, height: 400, quality: 70 }) ??
+                  optimizeImageUrl(c.cover_illustration_url, { width: 600, height: 450, quality: 74 }) ??
                   c.cover_illustration_url ??
                   ''
                 }
                 alt=""
                 loading="lazy"
-                className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <span className="pointer-events-none absolute inset-x-0 bottom-0 line-clamp-2 bg-gradient-to-t from-black/85 to-transparent p-2 text-left text-[0.65rem] leading-tight text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+              <span className="block p-[clamp(0.5rem,0.7vw,0.85rem)] text-[clamp(0.8rem,0.85vw,1rem)] font-medium leading-snug line-clamp-2">
                 {c.title}
               </span>
             </button>

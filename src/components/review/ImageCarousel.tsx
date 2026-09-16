@@ -83,7 +83,7 @@ export const ImageCarousel = ({
         {items.map((story, i) => (
           <motion.div
             key={story.id}
-            className="w-[78%] shrink-0 snap-center sm:w-[62%]"
+            className="w-[80%] shrink-0 snap-center sm:w-[46%] xl:w-[31%]"
             initial={reduce ? undefined : { opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}

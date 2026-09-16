@@ -10,86 +10,62 @@ export interface GridStory {
   cover_illustration_url?: string | null;
 }
 
-const Tile = ({
-  story,
-  feedSlug,
-  index,
-  lead,
-}: {
-  story: GridStory;
-  feedSlug?: string;
-  index: number;
-  lead?: boolean;
-}) => {
+const Card = ({ story, index }: { story: GridStory; index: number }) => {
   const reduce = useReducedMotion();
   const { open: openPreview } = useStoryPreview();
   const src = story.cover_illustration_url
-    ? optimizeImageUrl(story.cover_illustration_url, { width: lead ? 720 : 360, height: lead ? 760 : 224, quality: 78 })
+    ? optimizeImageUrl(story.cover_illustration_url, { width: 720, height: 540, quality: 78 })
     : null;
 
   return (
     <motion.div
-      initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94, clipPath: 'inset(0 0 100% 0)' }}
-      whileInView={{ opacity: 1, scale: 1, clipPath: 'inset(0 0 0% 0)' }}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: reduce ? 0.3 : 0.75, delay: reduce ? 0 : index * 0.09, ease: editorialEase }}
-      className={lead ? 'row-span-2' : undefined}
+      transition={{ duration: reduce ? 0.3 : 0.6, delay: reduce ? 0 : index * 0.07, ease: editorialEase }}
     >
       <button
         type="button"
         onClick={() => openPreview(story)}
-        className="group relative block h-full w-full overflow-hidden rounded-2xl border border-border/60 bg-muted text-left transition-transform duration-300 hover:-translate-y-1"
-        style={{ aspectRatio: lead ? '0.95' : '1.618' }}
+        aria-label={`Open story: ${story.title}`}
+        className="group block h-full w-full overflow-hidden rounded-2xl border border-border/60 bg-background/40 text-left transition-transform duration-300 hover:-translate-y-1"
       >
         {src ? (
           <img
             src={src}
             alt=""
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+            className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
           />
         ) : (
           <span
-            className="flex h-full w-full items-end p-3 text-sm font-medium leading-tight"
+            className="flex aspect-[4/3] w-full items-end p-4 text-[clamp(0.95rem,1.1vw,1.15rem)] font-medium leading-tight"
             style={{ background: 'var(--review-accent-soft)' }}
           >
             {story.title}
           </span>
         )}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        >
-          <span className="line-clamp-2 text-sm font-medium text-white">{story.title}</span>
-        </span>
-        <span className="sr-only">{story.title}</span>
+        <p className="p-[clamp(0.85rem,1vw,1.25rem)] text-[clamp(0.95rem,1.05vw,1.2rem)] font-medium leading-snug line-clamp-3">
+          {story.title}
+        </p>
       </button>
     </motion.div>
   );
 };
 
 /**
- * Golden-ratio grid of story covers for one beat: a large lead tile alongside
- * a column of smaller ones, collapsing to a uniform grid on narrow screens.
+ * Even grid of story covers for one beat. Every card is the same size with its
+ * headline always visible, so the set is readable and clickable at any width.
  */
-export const StoryImageGrid = ({
-  stories,
-  feedSlug,
-}: {
-  stories: GridStory[];
-  feedSlug?: string;
-}) => {
+export const StoryImageGrid = ({ stories }: { stories: GridStory[]; feedSlug?: string }) => {
   if (stories.length === 0) return null;
-  const [lead, ...rest] = stories.slice(0, 5);
+  const items = stories.slice(0, 6);
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1.618fr_1fr]">
-      <Tile story={lead} feedSlug={feedSlug} index={0} lead />
-      <div className="flex flex-col gap-3">
-        {rest.map((s, i) => (
-          <Tile key={s.id} story={s} feedSlug={feedSlug} index={i + 1} />
-        ))}
-      </div>
+    <div className="grid grid-cols-1 gap-[clamp(0.75rem,1.2vw,1.5rem)] sm:grid-cols-2 xl:grid-cols-3">
+      {items.map((s, i) => (
+        <Card key={s.id} story={s} index={i} />
+      ))}
     </div>
   );
 };
