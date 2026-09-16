@@ -995,35 +995,39 @@ const PeriodReview = () => {
       {/* Most read */}
       {topStories.length > 0 && (
         <ReviewSlide label="Most read" hue={h(7)}>
-          <ul className="space-y-4">
-            {topStories.slice(0, 3).map((s, i) => (
-              <Reveal key={s.id} delay={i * 0.08}>
-                <li>
-                  <Link
-                    to={`/feed/${slug}/story/${s.slug ?? s.id}`}
-                    className="flex items-center gap-4 rounded-2xl border border-border p-3 transition-colors hover:bg-muted"
-                  >
-                    {s.cover_illustration_url ? (
-                      <img
-                        src={s.cover_illustration_url}
-                        alt=""
-                        loading="lazy"
-                        className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                      />
-                    ) : (
+          {topStories.some((s) => s.cover_illustration_url) ? (
+            <ImageCarousel
+              stories={topStories.slice(0, 6).map((s) => ({
+                id: s.id,
+                slug: s.slug,
+                title: s.title,
+                cover_illustration_url: s.cover_illustration_url,
+                note: `${compact(s.views)} reads`,
+              }))}
+              feedSlug={slug}
+            />
+          ) : (
+            <ul className="space-y-4">
+              {topStories.slice(0, 3).map((s, i) => (
+                <Reveal key={s.id} delay={i * 0.08}>
+                  <li>
+                    <Link
+                      to={`/feed/${slug}/story/${s.slug ?? s.id}`}
+                      className="flex items-center gap-4 rounded-2xl border border-border p-3 transition-colors hover:bg-muted"
+                    >
                       <span className="w-8 shrink-0 text-2xl font-semibold tabular-nums text-muted-foreground/50">
                         {i + 1}
                       </span>
-                    )}
-                    <div className="min-w-0">
-                      <p className="line-clamp-2 text-base font-medium">{s.title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{compact(s.views)} reads</p>
-                    </div>
-                  </Link>
-                </li>
-              </Reveal>
-            ))}
-          </ul>
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-base font-medium">{s.title}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{compact(s.views)} reads</p>
+                      </div>
+                    </Link>
+                  </li>
+                </Reveal>
+              ))}
+            </ul>
+          )}
         </ReviewSlide>
       )}
 
