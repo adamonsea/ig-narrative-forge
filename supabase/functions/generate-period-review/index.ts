@@ -98,12 +98,13 @@ Deno.serve(async (req) => {
     // so page through the topic's articles explicitly — otherwise only a
     // fraction of the archive is ever considered.
     const taIds: string[] = [];
+    const taSourceId = new Map<string, string | null>();
     const PAGE = 1000;
     for (let page = 0; page < 60; page++) {
       const from = page * PAGE;
       let q = service
         .from('topic_articles')
-        .select('id')
+        .select('id, source_id')
         .eq('topic_id', topicId);
       if (sourceIds.length > 0) q = q.in('source_id', sourceIds);
       const { data: rows, error } = await q
@@ -111,9 +112,25 @@ Deno.serve(async (req) => {
         .range(from, from + PAGE - 1);
       if (error) break;
       const batch = rows ?? [];
-      taIds.push(...batch.map((r: any) => r.id));
+      for (const r of batch as any[]) {
+        taIds.push(r.id);
+        taSourceId.set(r.id, r.source_id ?? null);
+      }
       if (batch.length < PAGE) break;
     }
+
+    // Name each gathering source, so attribution follows the source the feed
+    // collected from rather than a byline the article happened to carry.
+    const sourceNameById = new Map<string, string>();
+    {
+      const { data: srcRows } = await service
+        .from('content_sources')
+        .select('id, source_name, canonical_domain');
+      for (const s of (srcRows ?? []) as any[]) {
+        sourceNameById.set(s.id, (s.source_name || s.canonical_domain || '').trim());
+      }
+    }
+
 
     // Fetch every row matching an `in (...)` filter, paging past the
     // PostgREST 1000-row response cap (slides/interactions are many-per-story).
