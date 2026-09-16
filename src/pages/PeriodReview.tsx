@@ -9,6 +9,8 @@ import { Reveal } from '@/components/review/ReviewChapter';
 import { ReviewSlide, BigStat, RankRows } from '@/components/review/ReviewSlide';
 import { Odometer } from '@/components/review/Odometer';
 import { StoryImageGrid } from '@/components/review/StoryImageGrid';
+import { ImageCarousel } from '@/components/review/ImageCarousel';
+import { ImageTapestry } from '@/components/review/ImageTapestry';
 import { baseHueFor, hueForIndex } from '@/lib/reviewPalette';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 
@@ -424,6 +426,23 @@ const PeriodReview = () => {
   const baseHue = baseHueFor(slug);
   const h = (i: number) => hueForIndex(baseHue, i);
 
+  // A pool of the period's own illustrations, used for full-bleed backdrops.
+  const imagePool = mosaic
+    .map((m) => m.cover_illustration_url)
+    .filter((u): u is string => Boolean(u));
+  /** Evenly spread slice of the pool, offset so slides don't repeat the same wall. */
+  const backdropFrom = (offset: number, count = 24) => {
+    if (imagePool.length < 6) return undefined;
+    const step = Math.max(1, Math.floor(imagePool.length / count));
+    const picked: string[] = [];
+    for (let i = 0; i < imagePool.length && picked.length < count; i += step) {
+      picked.push(imagePool[(i + offset) % imagePool.length]);
+    }
+    return picked;
+  };
+  const coversForCategory = (catSlug: string) =>
+    categoryStories.find((c) => c.slug === catSlug)?.stories ?? [];
+
 
   return (
     <main
@@ -498,7 +517,7 @@ const PeriodReview = () => {
 
       {/* Words written */}
       {totalWords > 0 && (
-        <ReviewSlide tone="inverted" label="The scale" hue={h(1)}>
+        <ReviewSlide tone="inverted" label="The scale" hue={h(1)} backdrop={backdropFrom(0)}>
           <BigStat count={totalWords} caption={`words published about ${place}`} />
           {scale && (
             <Reveal delay={0.2} className="mt-10 flex flex-wrap gap-x-10 gap-y-3 text-lg opacity-80">
@@ -518,7 +537,7 @@ const PeriodReview = () => {
 
       {/* Pull quote */}
       {pullQuote && (
-        <ReviewSlide label="In short" hue={h(2)}>
+        <ReviewSlide label="In short" hue={h(2)} backdrop={backdropFrom(7)}>
           <Reveal>
             <p className="text-3xl sm:text-4xl font-medium leading-snug tracking-tight">{pullQuote}</p>
           </Reveal>
@@ -527,7 +546,17 @@ const PeriodReview = () => {
 
       {/* Top beats */}
       {categoryBreakdown.length > 0 && (
-        <ReviewSlide tone="accent" label="What we covered" hue={h(3)}>
+        <ReviewSlide
+          tone="accent"
+          label="What we covered"
+          hue={h(3)}
+          aside={
+            <ImageTapestry
+              covers={coversForCategory(categoryBreakdown[0]?.slug ?? '')}
+              feedSlug={slug}
+            />
+          }
+        >
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'The five ' }, { text: 'biggest beats', italic: true }]}
@@ -550,7 +579,11 @@ const PeriodReview = () => {
             className="mb-6 text-4xl font-semibold tracking-tight"
             segments={[{ text: `${c.count} stories on ` }, { text: c.name.toLowerCase(), italic: true }]}
           />
-          <StoryImageGrid stories={c.stories} feedSlug={slug} />
+          {idx % 2 === 0 ? (
+            <StoryImageGrid stories={c.stories} feedSlug={slug} />
+          ) : (
+            <ImageCarousel stories={c.stories} feedSlug={slug} />
+          )}
         </ReviewSlide>
       ))}
 
@@ -728,7 +761,12 @@ const PeriodReview = () => {
 
       {/* Sub-beat deep dives — the detail inside each beat */}
       {subDeepDives.map((p, idx) => (
-        <ReviewSlide key={p.slug} label={`Inside ${p.name.toLowerCase()}`} hue={h(5 + idx)}>
+        <ReviewSlide
+          key={p.slug}
+          label={`Inside ${p.name.toLowerCase()}`}
+          hue={h(5 + idx)}
+          aside={<ImageTapestry covers={coversForCategory(p.slug)} feedSlug={slug} />}
+        >
           <MaskRevealHeading
             className="mb-3 text-4xl font-semibold tracking-tight"
             segments={[{ text: `${p.total} ` }, { text: p.name.toLowerCase(), italic: true }, { text: ' stories' }]}
@@ -959,35 +997,39 @@ const PeriodReview = () => {
       {/* Most read */}
       {topStories.length > 0 && (
         <ReviewSlide label="Most read" hue={h(7)}>
-          <ul className="space-y-4">
-            {topStories.slice(0, 3).map((s, i) => (
-              <Reveal key={s.id} delay={i * 0.08}>
-                <li>
-                  <Link
-                    to={`/feed/${slug}/story/${s.slug ?? s.id}`}
-                    className="flex items-center gap-4 rounded-2xl border border-border p-3 transition-colors hover:bg-muted"
-                  >
-                    {s.cover_illustration_url ? (
-                      <img
-                        src={s.cover_illustration_url}
-                        alt=""
-                        loading="lazy"
-                        className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                      />
-                    ) : (
+          {topStories.some((s) => s.cover_illustration_url) ? (
+            <ImageCarousel
+              stories={topStories.slice(0, 6).map((s) => ({
+                id: s.id,
+                slug: s.slug,
+                title: s.title,
+                cover_illustration_url: s.cover_illustration_url,
+                note: `${compact(s.views)} reads`,
+              }))}
+              feedSlug={slug}
+            />
+          ) : (
+            <ul className="space-y-4">
+              {topStories.slice(0, 3).map((s, i) => (
+                <Reveal key={s.id} delay={i * 0.08}>
+                  <li>
+                    <Link
+                      to={`/feed/${slug}/story/${s.slug ?? s.id}`}
+                      className="flex items-center gap-4 rounded-2xl border border-border p-3 transition-colors hover:bg-muted"
+                    >
                       <span className="w-8 shrink-0 text-2xl font-semibold tabular-nums text-muted-foreground/50">
                         {i + 1}
                       </span>
-                    )}
-                    <div className="min-w-0">
-                      <p className="line-clamp-2 text-base font-medium">{s.title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{compact(s.views)} reads</p>
-                    </div>
-                  </Link>
-                </li>
-              </Reveal>
-            ))}
-          </ul>
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-base font-medium">{s.title}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{compact(s.views)} reads</p>
+                      </div>
+                    </Link>
+                  </li>
+                </Reveal>
+              ))}
+            </ul>
+          )}
         </ReviewSlide>
       )}
 
@@ -1002,7 +1044,7 @@ const PeriodReview = () => {
       )}
 
       {/* Outro */}
-      <ReviewSlide className="text-center" hue={h(0)}>
+      <ReviewSlide className="text-center" hue={h(0)} backdrop={backdropFrom(13)}>
         <Reveal>
           <p className="text-xl font-medium tracking-tight">Every story, gathered and written for {place}.</p>
           <Link

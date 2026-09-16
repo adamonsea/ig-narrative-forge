@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { editorialEase } from './ReviewChapter';
 import { GrainOverlay } from './GrainOverlay';
+import { SlideBackdrop } from './SlideBackdrop';
 import { Odometer } from './Odometer';
 import { Shimmer } from './Shimmer';
 import { slideSkin } from '@/lib/reviewPalette';
@@ -14,6 +15,8 @@ export const ReviewSlide = ({
   tone = 'default',
   label,
   hue,
+  backdrop,
+  aside,
 }: {
   children: ReactNode;
   className?: string;
@@ -21,6 +24,10 @@ export const ReviewSlide = ({
   label?: string;
   /** Feed-derived hue for this slide's wash and accent. */
   hue?: number;
+  /** Illustration URLs to build a full-bleed background wall from. */
+  backdrop?: string[];
+  /** Optional imagery column shown beside the content on wide screens. */
+  aside?: ReactNode;
 }) => {
   const skin = hue != null ? slideSkin(hue, tone === 'inverted') : null;
 
@@ -34,16 +41,29 @@ export const ReviewSlide = ({
       )}
       style={skin ? (skin.vars as CSSProperties) : undefined}
     >
+      {backdrop && backdrop.length > 0 && (
+        <SlideBackdrop images={backdrop} inverted={tone === 'inverted'} />
+      )}
       {skin && (
         <>
           <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: skin.gradient }} />
           <GrainOverlay opacity={tone === 'inverted' ? 0.07 : 0.045} />
         </>
       )}
-      <div className="relative mx-auto w-full max-w-lg">
-        {label && <p className="mb-6 text-sm uppercase tracking-[0.22em] opacity-70">{label}</p>}
-        {children}
-      </div>
+      {aside ? (
+        <div className="relative mx-auto grid w-full max-w-4xl gap-8 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
+          <div className="w-full max-w-lg">
+            {label && <p className="mb-6 text-sm uppercase tracking-[0.22em] opacity-70">{label}</p>}
+            {children}
+          </div>
+          <div className="w-full">{aside}</div>
+        </div>
+      ) : (
+        <div className="relative mx-auto w-full max-w-lg">
+          {label && <p className="mb-6 text-sm uppercase tracking-[0.22em] opacity-70">{label}</p>}
+          {children}
+        </div>
+      )}
     </section>
   );
 };
