@@ -6007,6 +6007,14 @@ export type Database = {
           previous_count: number
         }[]
       }
+      get_topic_daily_flow: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          day: string
+          gathered: number
+          published: number
+        }[]
+      }
       get_topic_engagement_averages: {
         Args: { p_days?: number; p_topic_id: string }
         Returns: {
