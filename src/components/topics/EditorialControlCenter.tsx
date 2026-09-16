@@ -104,7 +104,7 @@ interface EditorialControlCenterProps {
   onToast: (title: string, description?: string) => void;
 }
 
-const titleCase = (value?: string) => value ? value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Not set";
+const titleCase = (value?: string) => value ? value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Not set";
 
 export function EditorialControlCenter({
   topic,
@@ -357,12 +357,12 @@ export function EditorialControlCenter({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {controls.map(({ key, icon: Icon, eyebrow, title, summary }) => (
-            <button key={key} type="button" onClick={() => openSection(key)} className="group rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Button key={key} type="button" variant="outline" onClick={() => openSection(key)} className="group h-auto min-h-44 flex-col items-stretch justify-start whitespace-normal p-5 text-left hover:border-primary/40 hover:bg-accent/40">
               <div className="flex items-start justify-between gap-4"><div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground"><Icon className="h-4 w-4" /></div><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></div>
               <p className="mt-5 text-xs font-medium uppercase text-muted-foreground">{eyebrow}</p>
               <h4 className="mt-1 font-semibold text-foreground">{title}</h4>
               <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
-            </button>
+            </Button>
           ))}
         </div>
       </section>
