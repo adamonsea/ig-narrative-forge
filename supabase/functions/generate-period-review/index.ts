@@ -918,7 +918,14 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       topStories,
       categoryStories,
 
+      filters: {
+        categories: categoryIds
+          .map((id) => (catById.get(id) as any)?.name)
+          .filter(Boolean),
+        sources: sourceNames,
+      },
       topic: { name: topic?.name, region: topic?.region, slug: topic?.slug },
+
     };
 
     const { data: saved, error: saveError } = await service
