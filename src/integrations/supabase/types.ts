@@ -3900,6 +3900,8 @@ export type Database = {
         Row: {
           content_quality_score: number | null
           created_at: string
+          held_at: string | null
+          held_reason: string | null
           id: string
           import_metadata: Json | null
           is_snippet: boolean | null
@@ -3916,6 +3918,8 @@ export type Database = {
         Insert: {
           content_quality_score?: number | null
           created_at?: string
+          held_at?: string | null
+          held_reason?: string | null
           id?: string
           import_metadata?: Json | null
           is_snippet?: boolean | null
@@ -3932,6 +3936,8 @@ export type Database = {
         Update: {
           content_quality_score?: number | null
           created_at?: string
+          held_at?: string | null
+          held_reason?: string | null
           id?: string
           import_metadata?: Json | null
           is_snippet?: boolean | null

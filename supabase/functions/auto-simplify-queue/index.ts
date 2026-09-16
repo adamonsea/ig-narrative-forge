@@ -173,13 +173,13 @@ Deno.serve(async (req) => {
       for (const part of chunk(orphanIds, 200)) {
         await supabase
           .from('topic_articles')
-          .update({ processing_status: 'new' })
+          .update({ processing_status: 'new', held_at: null, held_reason: null })
           .in('id', part);
       }
     }
 
     let totalQueued = 0;
-    const maxPerTopic = 20;
+    const maxPerTopic = 50;
     const topicsWithNewItems: string[] = [];
 
     // 2. Pre-fetch topic voice defaults for all topics
@@ -221,14 +221,19 @@ Deno.serve(async (req) => {
       // locality gate always sees real content. A per-row fetch that silently
       // returns null on transient errors was causing valid local stories to be
       // held at random ("intermittent" gate failures).
+      // Held articles (locality/category gate) are parked for 24h so they cannot
+      // occupy the top of the window forever and starve fresh arrivals.
+      const heldRecheckBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
       const { data: articles, error: articlesError } = await supabase
         .from('topic_articles')
         .select('id, shared_content_id, content_quality_score, topic_id, shared_article_content(title, body, url)')
         .eq('topic_id', topic_id)
         .eq('processing_status', 'new')
         .gte('content_quality_score', quality_threshold)
-        .order('content_quality_score', { ascending: false })
+        .or(`held_at.is.null,held_at.lt.${heldRecheckBefore}`)
         .order('created_at', { ascending: false })
+        .order('content_quality_score', { ascending: false })
         .limit(maxPerTopic);
 
       if (articlesError) {
@@ -313,9 +318,18 @@ Deno.serve(async (req) => {
           typeof article.content_quality_score === 'number' ? article.content_quality_score : null
         );
 
+        // Park a held article for 24h so it stops occupying the queue window.
+        const markHeld = async (reason: string) => {
+          await supabase
+            .from('topic_articles')
+            .update({ held_at: new Date().toISOString(), held_reason: reason.slice(0, 200) })
+            .eq('id', article.id);
+        };
+
         if (categoryDecision.hold) {
           console.log(`  🗂️ Category gate HELD article ${article.id} — ${categoryDecision.reason}`);
           topicHeldForCategory++;
+          await markHeld(`category: ${categoryDecision.reason ?? 'held'}`);
           continue; // leave processing_status = 'new' for manual review
         }
 
@@ -342,6 +356,7 @@ Deno.serve(async (req) => {
               `title="${title.slice(0, 80)}"`
             );
             topicHeldForLocality++;
+            await markHeld('locality: no local anchor in title or opening');
             continue; // leave processing_status = 'new'
           }
 
@@ -407,10 +422,10 @@ Deno.serve(async (req) => {
           console.log(`  ↩︎ Article ${article.id} already has an active queue job — skipping`);
         }
 
-        // Mark topic_article as processed
+        // Mark topic_article as processed (and clear any previous hold)
         await supabase
           .from('topic_articles')
-          .update({ processing_status: 'processed' })
+          .update({ processing_status: 'processed', held_at: null, held_reason: null })
           .eq('id', article.id);
 
         console.log(`  ✅ Queued article ${article.id} (score: ${article.content_quality_score}%)`);
