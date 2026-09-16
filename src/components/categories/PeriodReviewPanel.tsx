@@ -4,6 +4,7 @@ import { edgeErrorMessage } from '@/lib/edgeError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Disclosure } from '@/components/ui/editorial';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ExternalLink, Trash2 } from 'lucide-react';
@@ -58,6 +59,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   const [generating, setGenerating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [months, setMonths] = useState<number>(6);
+  const [includeParliamentary, setIncludeParliamentary] = useState(false);
   const [customStart, setCustomStart] = useState(monthsAgo(6));
   const [customEnd, setCustomEnd] = useState(isoDate(new Date()));
   const [useCustom, setUseCustom] = useState(false);
@@ -133,6 +135,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     if (selectedCategories.length) parts.push(`c${selectedCategories.length}-${selectedCategories[0].slice(0, 6)}`);
     if (selectedSources.length)
       parts.push(`s${selectedSources.length}-${selectedSources[0].toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`);
+    if (includeParliamentary) parts.push('parl');
     return parts.length ? `_${parts.join('_')}` : '';
   };
 
@@ -145,6 +148,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     if (selectedSources.length) {
       bits.push(selectedSources.length <= 2 ? selectedSources.join(' & ') : `${selectedSources.length} sources`);
     }
+    if (includeParliamentary) bits.push('incl. Parliament');
     return bits.length ? ` · ${bits.join(', ')}` : '';
   };
 
@@ -163,6 +167,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           slug: `${start}_${end}${scopeSuffix()}`,
           categoryIds: selectedCategories,
           sourceNames: selectedSources,
+          includeParliamentary,
         },
       });
       if (error) {
@@ -264,6 +269,19 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                   ))}
                 </div>
               )}
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+              <Label htmlFor="review-parliamentary" className="text-xs font-medium">
+                Include Parliament coverage
+                <span className="block font-normal text-muted-foreground">
+                  Off by default so it doesn’t skew local comparisons.
+                </span>
+              </Label>
+              <Switch
+                id="review-parliamentary"
+                checked={includeParliamentary}
+                onCheckedChange={setIncludeParliamentary}
+              />
             </div>
             <p className="text-xs text-muted-foreground">Nothing selected means everything is included.</p>
           </div>

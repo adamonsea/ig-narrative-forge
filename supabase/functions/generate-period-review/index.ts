@@ -67,6 +67,8 @@ Deno.serve(async (req) => {
     const sourceNames: string[] = Array.isArray(body.sourceNames)
       ? body.sourceNames.filter((v: unknown) => typeof v === 'string' && v.trim().length > 0).map((v: string) => v.trim())
       : [];
+    // Parliamentary coverage skews local comparisons, so it is excluded unless asked for.
+    const includeParliamentary: boolean = body.includeParliamentary === true;
 
 
     if (!topicId || !periodStart || !periodEnd) {
@@ -145,6 +147,7 @@ Deno.serve(async (req) => {
       cover_illustration_url: string | null;
       slug: string | null;
       publication_name: string | null;
+      is_parliamentary?: boolean | null;
     };
     let current: Row[] = [];
     let previous: Row[] = [];
@@ -154,7 +157,7 @@ Deno.serve(async (req) => {
       const chunk = taIds.slice(i, i + 200);
       const { data: rows } = await service
         .from('stories')
-        .select('id, title, created_at, cover_illustration_url, slug, publication_name')
+        .select('id, title, created_at, cover_illustration_url, slug, publication_name, is_parliamentary')
         .in('topic_article_id', chunk)
         .eq('is_published', true)
         .gte('created_at', prevStartISO)
@@ -182,6 +185,13 @@ Deno.serve(async (req) => {
       .select('id, slug, name, parent_id')
       .or(`topic_id.is.null,topic_id.eq.${topicId}`);
     const catById = new Map((categories ?? []).map((c: any) => [c.id, c]));
+
+    // Parliamentary coverage is kept out of local comparisons unless explicitly included.
+    if (!includeParliamentary) {
+      const notParliamentary = (r: Row) => r.is_parliamentary !== true;
+      current = current.filter(notParliamentary);
+      previous = previous.filter(notParliamentary);
+    }
 
     // Apply optional scoping now that we know each story's category + source.
     if (categoryIds.length > 0 || sourceNames.length > 0) {
@@ -923,6 +933,7 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
           .map((id) => (catById.get(id) as any)?.name)
           .filter(Boolean),
         sources: sourceNames,
+        parliamentary: includeParliamentary,
       },
       topic: { name: topic?.name, region: topic?.region, slug: topic?.slug },
 
