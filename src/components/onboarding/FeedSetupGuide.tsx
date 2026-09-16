@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
-import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
+import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { SourceScanLoop, ClippingStackLoop } from "@/components/onboarding/WaitingAnimations";
 import {
   ILLUSTRATION_STYLES,
@@ -273,10 +273,15 @@ export const FeedSetupGuide = ({
               onUpdate={onNegativeKeywordsChange}
             />
             {topic.topic_type === "regional" && (
-              <TopicCompetingRegions
+              <NewsValuesPanel
                 topicId={topic.id}
-                competingRegions={competingRegions}
-                onUpdate={onCompetingRegionsChange}
+                region={topic.region}
+                landmarks={topic.landmarks}
+                postcodes={topic.postcodes}
+                organizations={topic.organizations}
+                localityStrength={(topic as any).locality_strength}
+                nearbyPlaces={(topic as any).nearby_places}
+                bigStoryOverride={(topic as any).big_story_override}
               />
             )}
           </div>

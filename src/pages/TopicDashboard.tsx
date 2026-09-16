@@ -17,7 +17,7 @@ import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { OnboardingSettings } from "@/components/onboarding";
 import { FeedSetupGuide, storageKeyFor } from "@/components/onboarding/FeedSetupGuide";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
-import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
+import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
