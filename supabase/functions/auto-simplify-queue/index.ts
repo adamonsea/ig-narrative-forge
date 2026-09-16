@@ -192,19 +192,33 @@ Deno.serve(async (req) => {
     const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     const { data: topicDefaults } = await supabase
       .from('topics')
-      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations')
+      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations, nearby_places, locality_strength, big_story_override')
       .in('id', topicIds);
-    
-    const topicDefaultsMap: Record<string, { tone?: string; writing_style?: string; audience_expertise?: string; negative_keywords?: string[]; topic_type?: string; region?: string; localityAnchors?: string[] }> = {};
+
+    const topicDefaultsMap: Record<string, {
+      tone?: string;
+      writing_style?: string;
+      audience_expertise?: string;
+      negative_keywords?: string[];
+      topic_type?: string;
+      region?: string;
+      newsValues?: NewsValuesConfig;
+      hasAnchors?: boolean;
+    }> = {};
     for (const t of (topicDefaults || [])) {
-      const anchors = [
-        t.region,
-        ...(t.landmarks || []),
-        ...(t.postcodes || []),
-        ...(t.organizations || []),
-      ]
-        .filter((a: string | null) => !!a && String(a).trim().length > 0)
-        .map((a: string) => String(a).toLowerCase().trim());
+      const newsValues: NewsValuesConfig = {
+        region: t.region,
+        landmarks: t.landmarks || [],
+        postcodes: t.postcodes || [],
+        organizations: t.organizations || [],
+        nearby_places: parseNearbyPlaces(t.nearby_places),
+        locality_strength: t.locality_strength,
+        big_story_override: t.big_story_override,
+      };
+      const hasAnchors = !!(t.region && String(t.region).trim()) ||
+        (t.landmarks || []).length > 0 ||
+        (t.postcodes || []).length > 0 ||
+        (t.organizations || []).length > 0;
       topicDefaultsMap[t.id] = {
         tone: t.default_tone,
         writing_style: t.default_writing_style,
@@ -212,7 +226,8 @@ Deno.serve(async (req) => {
         negative_keywords: t.negative_keywords || [],
         topic_type: t.topic_type,
         region: t.region || '',
-        localityAnchors: Array.from(new Set(anchors)),
+        newsValues,
+        hasAnchors,
       };
     }
 
