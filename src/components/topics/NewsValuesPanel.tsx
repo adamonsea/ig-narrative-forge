@@ -174,14 +174,7 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
   const dial = getDial(strength);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Compass className="w-4 h-4" />
-          News values
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-6">
         {/* The dial */}
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
@@ -272,7 +265,6 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
           </div>
           <Switch id="big-story-override" checked={override} onCheckedChange={setOverride} />
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 };
