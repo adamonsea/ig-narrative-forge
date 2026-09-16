@@ -933,6 +933,7 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
           .map((id) => (catById.get(id) as any)?.name)
           .filter(Boolean),
         sources: sourceNames,
+        parliamentary: includeParliamentary,
       },
       topic: { name: topic?.name, region: topic?.region, slug: topic?.slug },
 
