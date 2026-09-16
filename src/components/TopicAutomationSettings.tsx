@@ -3,12 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, Loader2 } from 'lucide-react';
+import { Check, Clock, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TopicAutomationSettingsProps {
   topicId: string;
+  onModeChange?: (mode: AutomationMode) => void;
 }
 
 type AutomationMode = 'manual' | 'auto_gather' | 'auto_simplify' | 'auto_illustrate' | 'holiday';
@@ -22,14 +24,20 @@ const MODE_LABELS: Record<AutomationMode, string> = {
 };
 
 const MODE_DESCRIPTIONS: Record<AutomationMode, string> = {
-  manual: 'Review and approve everything yourself',
-  auto_gather: 'Scrape articles automatically, review manually',
-  auto_simplify: 'Auto-generate stories for high-quality articles',
-  auto_illustrate: 'Auto-generate images for high-scoring stories',
-  holiday: 'Full automation — gather, simplify, and illustrate',
+  manual: 'Nothing is gathered or published without you starting it.',
+  auto_gather: 'Curatr gathers new articles; every publishing decision remains yours.',
+  auto_simplify: 'Strong stories are prepared automatically and held for your review.',
+  auto_illustrate: 'High-scoring prepared stories receive artwork automatically.',
+  holiday: 'Curatr gathers, prepares, illustrates and publishes qualifying stories.',
 };
 
-export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProps) {
+const MODE_GROUPS: { label: string; modes: AutomationMode[]; summary: string }[] = [
+  { label: 'Hands-on', modes: ['manual'], summary: 'You make every decision' },
+  { label: 'Assisted', modes: ['auto_gather', 'auto_simplify', 'auto_illustrate'], summary: 'Curatr prepares; you stay in control' },
+  { label: 'Automatic', modes: ['holiday'], summary: 'Qualifying stories can publish unattended' },
+];
+
+export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomationSettingsProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,6 +66,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
 
       if (data) {
         setAutomationMode((data.automation_mode || 'manual') as AutomationMode);
+        onModeChange?.((data.automation_mode || 'manual') as AutomationMode);
         setScrapeFrequency(data.scrape_frequency_hours || 12);
         setQualityThreshold(data.quality_threshold || 60);
         setIllustrationThreshold(data.illustration_quality_threshold || 70);
@@ -95,6 +104,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
   // Auto-save mode changes immediately
   const handleModeChange = (mode: AutomationMode) => {
     setAutomationMode(mode);
+    onModeChange?.(mode);
     const nextRun = mode !== 'manual'
       ? new Date(Date.now() + scrapeFrequency * 60 * 60 * 1000).toISOString()
       : null;
@@ -149,24 +159,30 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
 
   return (
     <div className="space-y-4">
-      {/* Mode selector */}
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">Mode</Label>
-        <div className="flex items-center gap-2">
-          {saving && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
-          <Select value={automationMode} onValueChange={(v) => handleModeChange(v as AutomationMode)}>
-            <SelectTrigger className="w-[180px] h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(MODE_LABELS) as AutomationMode[]).map((mode) => (
-                <SelectItem key={mode} value={mode}>{MODE_LABELS[mode]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <div><Label className="text-sm">Level of control</Label><p className="mt-1 text-xs text-muted-foreground">Choose the closest starting point, then refine it below.</p></div>
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">{saving && <Loader2 className="h-3 w-3 animate-spin" />}{saving ? 'Saving' : 'Saved'}</span>
       </div>
-      <p className="text-xs text-muted-foreground">{MODE_DESCRIPTIONS[automationMode]}</p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {MODE_GROUPS.map((group) => {
+          const active = group.modes.includes(automationMode);
+          const targetMode = group.modes[0];
+          return (
+            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-md p-3 text-left ${active ? 'border-primary bg-primary/5' : 'hover:border-primary/40'}`}>
+              <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-primary" />}{group.label}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{group.summary}</span>
+            </Button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between gap-4 border-y border-border py-3">
+        <div><p className="text-sm font-medium">Current behaviour</p><p className="mt-0.5 text-xs text-muted-foreground">{MODE_DESCRIPTIONS[automationMode]}</p></div>
+        <Select value={automationMode} onValueChange={(v) => handleModeChange(v as AutomationMode)}>
+          <SelectTrigger className="w-[160px] shrink-0 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>{(Object.keys(MODE_LABELS) as AutomationMode[]).map((mode) => <SelectItem key={mode} value={mode}>{MODE_LABELS[mode]}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
 
       {/* Conditional sliders */}
       {(automationMode === 'auto_gather' || automationMode === 'holiday') && (

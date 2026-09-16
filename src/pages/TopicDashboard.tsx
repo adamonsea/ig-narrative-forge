@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
@@ -10,33 +9,16 @@ import { AppLayout } from "@/components/AppLayout";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { AddStoryDialog } from "@/components/manual/AddStoryDialog";
 import { GatheringProgressIndicator } from "@/components/GatheringProgressIndicator";
-import { KeywordManager } from "@/components/KeywordManager";
-import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
-import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
-import { OnboardingSettings } from "@/components/onboarding";
 import { FeedSetupGuide, storageKeyFor } from "@/components/onboarding/FeedSetupGuide";
-import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
-import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
-import { TopicDonationSettings } from "@/components/TopicDonationSettings";
-import { TopicInsightSettings } from "@/components/TopicInsightSettings";
-import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
-import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
-import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
-import { SentimentKeywordSettings } from "@/components/SentimentKeywordSettings";
-import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
-import { DripFeedSettings } from "@/components/DripFeedSettings";
-import { TrendingKeywordsReview } from "@/components/TrendingKeywordsReview";
-import { WidgetAnalytics } from "@/components/WidgetAnalytics";
-import { SectionLabel } from "@/components/ui/section-label";
+import { EditorialControlCenter } from "@/components/topics/EditorialControlCenter";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { ExternalLink, MapPin, Hash, Clock, ChevronDown, Loader2, Globe, Users, Palette, Sparkles } from "lucide-react";
-import { Label } from "@/components/ui/label";
+import { ExternalLink, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
@@ -105,6 +87,15 @@ interface Topic {
   public_widget_builder_enabled?: boolean;
   rss_enabled?: boolean;
   email_subscriptions_enabled?: boolean;
+  audio_briefings_daily_enabled?: boolean;
+  audio_briefings_weekly_enabled?: boolean;
+  events_enabled?: boolean;
+  event_source_url?: string;
+  house_style_notes?: string | null;
+  house_style_examples?: string | null;
+  locality_strength?: number;
+  nearby_places?: unknown;
+  big_story_override?: boolean;
 }
 
 const SCRAPING_WINDOW_OPTIONS = new Set([7, 30, 60, 100]);
@@ -143,7 +134,7 @@ const TopicDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [gatheringAll, setGatheringAll] = useState(false);
-  const [activeTab, setActiveTab] = useState("feed");
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "feed");
   const [autoSuggestSources, setAutoSuggestSources] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
@@ -178,6 +169,11 @@ const TopicDashboard = () => {
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'feed' || tab === 'insights' || tab === 'settings') setActiveTab(tab);
+  }, [searchParams]);
 
   const loadTopicAndStats = async () => {
     try {
@@ -564,8 +560,9 @@ const TopicDashboard = () => {
       .update({ [field]: checked } as any)
       .eq('id', topic!.id);
     if (!error) {
-      loadTopicAndStats();
-      toast({ title: `${label} ${checked ? 'enabled' : 'disabled'}` });
+      setTopic((current) => current ? { ...current, [field]: checked } : current);
+    } else {
+      toast({ title: 'Not saved', description: `${label} could not be updated.`, variant: 'destructive' });
     }
   };
 
@@ -667,7 +664,13 @@ const TopicDashboard = () => {
           {/* 2 Tabs: Feed + Settings */}
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              setActiveTab(value);
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.set('tab', value);
+              if (value !== 'settings') nextParams.delete('section');
+              setSearchParams(nextParams, { replace: true });
+            }}
             className={`space-y-6 ${isNewFeed && !setupDismissed ? "hidden" : ""}`}
           >
             <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
@@ -744,234 +747,18 @@ const TopicDashboard = () => {
               </Collapsible>
             </TabsContent>
 
-            {/* ===== SETTINGS TAB — flat sections ===== */}
-            <TabsContent value="settings" className="space-y-6">
-
-              {/* Voice */}
-              <section>
-                <SectionLabel>Voice</SectionLabel>
-                <ContentVoiceSettings
-                  topicId={topic.id}
-                  currentExpertise={topic.audience_expertise}
-                  currentTone={topic.default_tone}
-                  currentWritingStyle={topic.default_writing_style}
-                  currentIllustrationStyle={topic.illustration_style}
-                  currentHouseStyleNotes={(topic as any).house_style_notes}
-                  currentHouseStyleExamples={(topic as any).house_style_examples}
-                  onUpdate={() => loadTopicAndStats()}
-                />
-              </section>
-
-              {/* Automation */}
-              <section className="border-t border-border/40 pt-4">
-                <SectionLabel>Automation</SectionLabel>
-                <div className="space-y-4">
-                  <TopicAutomationSettings topicId={topic.id} />
-                  <DripFeedSettings topicId={topic.id} onUpdate={() => loadTopicAndStats()} />
-                </div>
-              </section>
-
-              {/* Channels */}
-              <section className="border-t border-border/40 pt-4">
-                <SectionLabel>Channels</SectionLabel>
-                <div className="space-y-3">
-                  {/* Widget Builder */}
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Widget Builder</Label>
-                    <Switch
-                      checked={topic.public_widget_builder_enabled || false}
-                      onCheckedChange={(checked) => handleChannelToggle('public_widget_builder_enabled', checked, 'Widget builder')}
-                    />
-                  </div>
-                  {topic.public_widget_builder_enabled && (
-                    <>
-                      <Button variant="outline" size="sm" asChild className="ml-6">
-                        <Link to={`/feed/${topic.slug}/widget`} target="_blank">
-                          <ExternalLink className="w-3 h-3 mr-2" />Open Widget Builder
-                        </Link>
-                      </Button>
-                      <div className="ml-6">
-                        <WidgetAnalytics 
-                          topicId={topic.id} 
-                          onNewSiteDetected={(domain) => toast({ title: "New widget integration!", description: `Your widget is now live on ${domain}` })}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {/* RSS */}
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">RSS Feed</Label>
-                    <Switch
-                      checked={topic.rss_enabled || false}
-                      onCheckedChange={(checked) => handleChannelToggle('rss_enabled', checked, 'RSS feed')}
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Email Subscriptions</Label>
-                    <Switch
-                      checked={topic.email_subscriptions_enabled || false}
-                      onCheckedChange={(checked) => handleChannelToggle('email_subscriptions_enabled', checked, 'Email subscriptions')}
-                    />
-                  </div>
-
-                  {/* Audio — daily */}
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Daily Audio</Label>
-                    <Switch
-                      checked={(topic as any).audio_briefings_daily_enabled || false}
-                      onCheckedChange={(checked) => handleChannelToggle('audio_briefings_daily_enabled', checked, 'Daily audio briefings')}
-                    />
-                  </div>
-
-                  {/* Audio — weekly */}
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Weekly Audio</Label>
-                    <Switch
-                      checked={(topic as any).audio_briefings_weekly_enabled || false}
-                      onCheckedChange={(checked) => handleChannelToggle('audio_briefings_weekly_enabled', checked, 'Weekly audio briefings')}
-                    />
-                  </div>
-
-                  {/* Donations */}
-                  <div className="border-t pt-4">
-                    <TopicDonationSettings
-                      topicId={topic.id}
-                      donationEnabled={topic.donation_enabled || false}
-                      donationConfig={topic.donation_config || { button_text: "Support this feed", tiers: [] }}
-                      onUpdate={loadTopicAndStats}
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* More — set-once-and-forget settings */}
-              <section className="border-t border-border/40 pt-4">
-                <SectionLabel>More</SectionLabel>
-                <div className="space-y-6">
-                  {/* Branding & Onboarding */}
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
-                        <span className="flex items-center gap-2 text-sm font-medium"><Palette className="w-4 h-4" />Branding & Onboarding</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4 space-y-6">
-                      <TopicBrandingSettings
-                        topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config }}
-                        onUpdate={() => loadTopicAndStats()}
-                      />
-                      <OnboardingSettings
-                        topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
-                        onUpdate={() => loadTopicAndStats()}
-                      />
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Insight Cards */}
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
-                        <span className="flex items-center gap-2 text-sm font-medium"><Sparkles className="w-4 h-4" />Insight Cards</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4">
-                      <TopicInsightSettings topicId={topic.id} />
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Keywords & Discovery */}
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
-                        <span className="flex items-center gap-2 text-sm font-medium"><Hash className="w-4 h-4" />Keywords & Discovery</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4 space-y-4">
-                      <KeywordManager
-                        topic={topic}
-                        onTopicUpdate={(updatedTopic: Topic) => {
-                          setTopic((prevTopic) => ({ ...prevTopic!, ...updatedTopic }));
-                          loadTopicAndStats();
-                        }}
-                      />
-                      {topic.topic_type === 'regional' && (
-                        <>
-                          <div className="border-t pt-4">
-                            <NewsValuesPanel
-                              topicId={topic.id}
-                              region={topic.region}
-                              landmarks={(topic as any).landmarks}
-                              postcodes={(topic as any).postcodes}
-                              organizations={(topic as any).organizations}
-                              localityStrength={(topic as any).locality_strength}
-                              nearbyPlaces={(topic as any).nearby_places}
-                              bigStoryOverride={(topic as any).big_story_override}
-                            />
-                          </div>
-                          <div className="border-t pt-4">
-                            <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={setNegativeKeywords} />
-                          </div>
-                        </>
-                      )}
-                      <div className="border-t pt-4">
-                        <SentimentKeywordSettings topicId={topic.id} />
-                      </div>
-                      <div className="border-t pt-4">
-                        <CommunityVoiceSettings
-                          topicId={topic.id}
-                          enabled={topic.community_intelligence_enabled}
-                          pulseFrequency={topic.community_pulse_frequency}
-                          config={topic.community_config}
-                          topicType={topic.topic_type}
-                          region={topic.region}
-                          onUpdate={() => loadTopicAndStats()}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Regional Features — only for regional topics */}
-                  {topic.topic_type === 'regional' && (
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
-                          <span className="flex items-center gap-2 text-sm font-medium"><MapPin className="w-4 h-4" />Regional Features</span>
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-4">
-                        <RegionalFeaturesSettings
-                          topicId={topic.id}
-                          region={topic.region}
-                          parliamentaryEnabled={topic.parliamentary_tracking_enabled}
-                          eventsEnabled={(topic as any).events_enabled}
-                          eventSourceUrl={(topic as any).event_source_url}
-                          onUpdate={() => loadTopicAndStats()}
-                        />
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-
-                  {/* Subscribers */}
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between px-0 h-auto py-2">
-                        <span className="flex items-center gap-2 text-sm font-medium"><Users className="w-4 h-4" />Subscribers</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4">
-                      <NewsletterSignupsManager topicId={topic.id} />
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
-              </section>
+            {/* ===== EDITORIAL CONTROL CENTRE ===== */}
+            <TabsContent value="settings" className="mt-0 pt-2">
+              <EditorialControlCenter
+                topic={topic}
+                stats={stats}
+                negativeKeywords={negativeKeywords}
+                onNegativeKeywordsChange={setNegativeKeywords}
+                onTopicChange={(updatedTopic) => setTopic((current) => current ? { ...current, ...updatedTopic } : current)}
+                onUpdate={loadTopicAndStats}
+                onChannelToggle={handleChannelToggle}
+                onToast={(title, description) => toast({ title, description })}
+              />
             </TabsContent>
           </Tabs>
         </div>
