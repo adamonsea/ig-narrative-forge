@@ -2,9 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Zap, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,12 +20,6 @@ interface DripFeedConfig {
   drip_end_hour: number;
 }
 
-interface QueuedStory {
-  id: string;
-  title: string;
-  scheduled_publish_at: string;
-}
-
 export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSettingsProps) => {
   const [config, setConfig] = useState<DripFeedConfig>({
     drip_feed_enabled: false,
@@ -36,27 +28,13 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     drip_start_hour: 6,
     drip_end_hour: 22,
   });
-  const [queuedStories, setQueuedStories] = useState<QueuedStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [emergencyPublishing, setEmergencyPublishing] = useState(false);
   const { toast } = useToast();
   const loadedRef = useRef(false);
 
   useEffect(() => {
     loadConfig();
-    loadQueuedStories();
-
-    const channel = supabase
-      .channel('drip-feed-stories')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stories' }, (payload) => {
-        if (payload.new && (payload.new as any).status === 'published') {
-          loadQueuedStories();
-        }
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [topicId]);
 
   const loadConfig = async () => {
@@ -84,40 +62,6 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     }
   };
 
-  const loadQueuedStories = async () => {
-    try {
-      const { data: stories, error } = await supabase
-        .from('stories')
-        .select('id, title, scheduled_publish_at, topic_article_id')
-        .eq('status', 'ready')
-        .not('scheduled_publish_at', 'is', null)
-        .gt('scheduled_publish_at', new Date().toISOString())
-        .order('scheduled_publish_at', { ascending: true });
-
-      if (error) throw error;
-
-      const topicStories: QueuedStory[] = [];
-      for (const story of stories || []) {
-        if (story.topic_article_id) {
-          const { data: ta } = await supabase
-            .from('topic_articles')
-            .select('topic_id')
-            .eq('id', story.topic_article_id)
-            .single();
-          if (ta?.topic_id === topicId) {
-            topicStories.push({
-              id: story.id,
-              title: story.title || 'Untitled',
-              scheduled_publish_at: story.scheduled_publish_at!,
-            });
-          }
-        }
-      }
-      setQueuedStories(topicStories);
-    } catch (error) {
-      console.error('Error loading queued stories:', error);
-    }
-  };
 
   const saveConfig = useCallback(async (updates: Partial<DripFeedConfig>) => {
     if (!loadedRef.current) return;
@@ -155,34 +99,10 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     }
   };
 
-  const handleEmergencyPublish = async () => {
-    if (!confirm('Immediately publish all queued stories?')) return;
-    setEmergencyPublishing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('drip-feed-scheduler', {
-        body: { topic_id: topicId, emergency_publish_all: true },
-      });
-      if (error) throw error;
-      toast({ title: 'Published', description: `Released ${data.stories_released || 0} stories` });
-      loadQueuedStories();
-      onUpdate?.();
-    } catch (error) {
-      console.error('Error in emergency publish:', error);
-      toast({ title: 'Error', description: 'Failed to publish', variant: 'destructive' });
-    } finally {
-      setEmergencyPublishing(false);
-    }
-  };
-
   const formatTime = (hour: number) => {
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
     return `${displayHour}:00 ${period}`;
-  };
-
-  const formatScheduledTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
   };
 
   const activeHours = config.drip_end_hour - config.drip_start_hour;
@@ -264,33 +184,6 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
             Up to {totalStories} stories across {slots} slots, {formatTime(config.drip_start_hour)}–{formatTime(config.drip_end_hour)}
           </p>
 
-          {/* Queued */}
-          {queuedStories.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5">
-                Queued <Badge variant="secondary" className="h-4 text-[10px]">{queuedStories.length}</Badge>
-              </Label>
-              <div className="max-h-32 overflow-y-auto space-y-1">
-                {queuedStories.map((story) => (
-                  <div key={story.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 text-amber-500 shrink-0" />
-                    <span className="truncate">{story.title}</span>
-                    <span className="text-[10px] shrink-0">{formatScheduledTime(story.scheduled_publish_at)}</span>
-                  </div>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEmergencyPublish}
-                disabled={emergencyPublishing}
-                className="w-full h-7 text-xs"
-              >
-                {emergencyPublishing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Zap className="w-3 h-3 mr-1" />}
-                {emergencyPublishing ? 'Publishing...' : `Publish All ${queuedStories.length} Now`}
-              </Button>
-            </div>
-          )}
         </div>
       )}
     </div>
