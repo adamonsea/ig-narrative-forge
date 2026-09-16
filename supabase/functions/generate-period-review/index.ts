@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       const chunk = taIds.slice(i, i + 200);
       const { data: rows } = await service
         .from('stories')
-        .select('id, title, created_at, cover_illustration_url, slug, publication_name')
+        .select('id, title, created_at, cover_illustration_url, slug, publication_name, is_parliamentary')
         .in('topic_article_id', chunk)
         .eq('is_published', true)
         .gte('created_at', prevStartISO)
@@ -185,6 +185,13 @@ Deno.serve(async (req) => {
       .select('id, slug, name, parent_id')
       .or(`topic_id.is.null,topic_id.eq.${topicId}`);
     const catById = new Map((categories ?? []).map((c: any) => [c.id, c]));
+
+    // Parliamentary coverage is kept out of local comparisons unless explicitly included.
+    if (!includeParliamentary) {
+      const notParliamentary = (r: Row) => r.is_parliamentary !== true;
+      current = current.filter(notParliamentary);
+      previous = previous.filter(notParliamentary);
+    }
 
     // Apply optional scoping now that we know each story's category + source.
     if (categoryIds.length > 0 || sourceNames.length > 0) {
