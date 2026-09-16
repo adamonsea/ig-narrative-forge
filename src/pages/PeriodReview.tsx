@@ -502,23 +502,23 @@ const PeriodReview = () => {
           <ArrowLeft className="h-3.5 w-3.5" />
           {topic?.name ?? 'Feed'}
         </Link>
-        <p className="text-sm uppercase tracking-[0.22em] text-muted-foreground mb-4">{review.label}</p>
+        <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground sm:text-sm mb-4">{review.label}</p>
         <MaskRevealHeading
           as="h1"
           onScroll={false}
-          className="text-[clamp(2.5rem,11vw,4.5rem)] font-semibold tracking-tight leading-[1.02]"
+          className="font-display font-normal tracking-[-0.015em] leading-[0.98] text-[clamp(3rem,8.5vw,8rem)]"
           segments={[{ text: 'The state of ' }, { text: place, italic: true }]}
         />
         <Reveal delay={0.4} className="mt-10">
           <div className="flex items-end gap-8">
             <div>
-              <div className="text-5xl font-semibold tracking-tight" style={{ color: 'var(--review-accent)' }}>
+              <div className="text-[clamp(3rem,5.5vw,6rem)] font-semibold tracking-tight leading-[0.95]" style={{ color: 'var(--review-accent)' }}>
                 <Odometer value={summary.total_stories} />
               </div>
               <p className="mt-2 text-sm uppercase tracking-wide text-muted-foreground">Stories</p>
             </div>
             <div>
-              <div className="text-5xl font-semibold tracking-tight" style={{ color: 'var(--review-accent)' }}>
+              <div className="text-[clamp(3rem,5.5vw,6rem)] font-semibold tracking-tight leading-[0.95]" style={{ color: 'var(--review-accent)' }}>
                 <Odometer value={summary.categories_covered} />
               </div>
               <p className="mt-2 text-sm uppercase tracking-wide text-muted-foreground">Beats</p>
@@ -539,7 +539,7 @@ const PeriodReview = () => {
       {mosaic.length >= 12 && (
         <section className="snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden bg-background px-4 py-14 sm:px-6">
           <div className="w-full">
-            <p className="mb-5 text-sm uppercase tracking-[0.22em] text-muted-foreground">The archive</p>
+            <p className="mb-5 text-xs uppercase tracking-[0.24em] text-muted-foreground sm:text-sm">The archive</p>
             <MosaicWall covers={mosaic} />
             <Reveal delay={0.3} className="mt-6">
               <p className="text-lg leading-snug text-muted-foreground">
@@ -576,7 +576,7 @@ const PeriodReview = () => {
       {pullQuote && (
         <ReviewSlide label="In short" hue={h(2)} backdrop={backdropFrom(7)}>
           <Reveal>
-            <p className="text-3xl sm:text-4xl font-medium leading-snug tracking-tight">{pullQuote}</p>
+            <p className="font-display font-normal leading-[1.15] tracking-[-0.01em] text-[clamp(2rem,4.4vw,4.25rem)]">{pullQuote}</p>
           </Reveal>
         </ReviewSlide>
       )}
@@ -595,7 +595,7 @@ const PeriodReview = () => {
           }
         >
           <MaskRevealHeading
-            className="mb-8 text-4xl font-semibold tracking-tight"
+            className="mb-8 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'The five ' }, { text: 'biggest beats', italic: true }]}
           />
           <RankRows
@@ -613,7 +613,7 @@ const PeriodReview = () => {
       {categoryStories.slice(0, 3).map((c, idx) => (
         <ReviewSlide key={`imgs-${c.slug}`} label={c.name} hue={h(12 + idx)}>
           <MaskRevealHeading
-            className="mb-6 text-4xl font-semibold tracking-tight"
+            className="mb-6 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: `${c.count} stories on ` }, { text: c.name.toLowerCase(), italic: true }]}
           />
           {idx % 2 === 0 ? (
@@ -628,7 +628,7 @@ const PeriodReview = () => {
       {featuredMonths.map((m, idx) => (
         <ReviewSlide key={`month-${m.month}`} label={fullMonthLabel(m.month)} hue={h(14 + idx)}>
           <MaskRevealHeading
-            className="mb-6 text-4xl font-semibold tracking-tight"
+            className="mb-6 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: `${m.count} stories in ` }, { text: monthLabel(m.month), italic: true }]}
           />
           {m.lead && (
@@ -691,7 +691,7 @@ const PeriodReview = () => {
       {turningPoints.length > 0 && (
         <ReviewSlide tone="accent" label="Turning points" hue={h(13)}>
           <MaskRevealHeading
-            className="mb-8 text-4xl font-semibold tracking-tight"
+            className="mb-8 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'When the coverage ' }, { text: 'changed direction', italic: true }]}
           />
           <ul className="space-y-5">
@@ -720,7 +720,7 @@ const PeriodReview = () => {
                     <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
                       {monthLabel(t.month)}
                     </p>
-                    <p className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--review-accent)' }}>
+                    <p className="text-[clamp(1.6rem,2.8vw,2.75rem)] font-semibold tracking-tight" style={{ color: 'var(--review-accent)' }}>
                       {t.term}
                     </p>
                     <p className="text-base text-muted-foreground">
@@ -738,7 +738,7 @@ const PeriodReview = () => {
       {recurringEntities.filter((r) => r.story?.cover_illustration_url).length >= 3 && (
         <ReviewSlide label="Kept coming back" hue={h(15)}>
           <MaskRevealHeading
-            className="mb-6 text-4xl font-semibold tracking-tight"
+            className="mb-6 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'The names of ' }, { text: 'the period', italic: true }]}
           />
           <div className="grid grid-cols-2 gap-3">
@@ -778,7 +778,7 @@ const PeriodReview = () => {
       {wentQuiet.length > 0 && (
         <ReviewSlide tone="inverted" label="What went quiet" hue={h(16)}>
           <MaskRevealHeading
-            className="mb-8 text-4xl font-semibold tracking-tight"
+            className="mb-8 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'Stopped being ' }, { text: 'news', italic: true }]}
           />
           <ul className="space-y-4">
@@ -805,7 +805,7 @@ const PeriodReview = () => {
           aside={<ImageTapestry covers={coversForCategory(p.slug)} feedSlug={slug} />}
         >
           <MaskRevealHeading
-            className="mb-3 text-4xl font-semibold tracking-tight"
+            className="mb-3 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: `${p.total} ` }, { text: p.name.toLowerCase(), italic: true }, { text: ' stories' }]}
           />
           <Reveal delay={0.15}>
@@ -832,7 +832,7 @@ const PeriodReview = () => {
       {subcategoryMovers.length > 0 && (
         <ReviewSlide tone="inverted" label="What actually changed" hue={h(8)}>
           <MaskRevealHeading
-            className="mb-8 text-4xl font-semibold tracking-tight"
+            className="mb-8 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'The sub-beats that ' }, { text: 'moved', italic: true }]}
           />
           <ul className="space-y-6">
@@ -846,7 +846,7 @@ const PeriodReview = () => {
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 text-3xl font-semibold tabular-nums ${
+                    className={`shrink-0 text-[clamp(1.85rem,3.2vw,3.25rem)] font-semibold tabular-nums ${
                       (m.change_percent ?? 0) >= 0 ? '' : 'opacity-60'
                     }`}
                   >
@@ -864,7 +864,7 @@ const PeriodReview = () => {
       {termTrends.length > 0 && chartMonths.length > 2 && (
         <ReviewSlide tone="accent" label="Rise and fall" hue={h(9)}>
           <MaskRevealHeading
-            className="mb-8 text-4xl font-semibold tracking-tight"
+            className="mb-8 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'Words that ' }, { text: 'came and went', italic: true }]}
           />
           <div className="space-y-6">
@@ -966,7 +966,7 @@ const PeriodReview = () => {
               {monthLabel(spike.month)}
             </div>
             <p
-              className="mt-4 text-[clamp(2.5rem,12vw,4.5rem)] font-semibold leading-none tracking-tight"
+              className="mt-4 font-display font-normal leading-[0.95] tracking-[-0.015em] text-[clamp(3rem,9vw,8rem)]"
               style={{ color: 'var(--review-accent)' }}
             >
               {spike.term}
@@ -982,7 +982,7 @@ const PeriodReview = () => {
       {(risingTerms.length > 0 || names.length > 0) && (
         <ReviewSlide label="The words" hue={h(4)}>
           <MaskRevealHeading
-            className="mb-8 text-4xl font-semibold tracking-tight"
+            className="mb-8 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'Names that ' }, { text: 'kept coming up', italic: true }]}
           />
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
@@ -1002,8 +1002,8 @@ const PeriodReview = () => {
               {risingTerms.slice(0, 6).map((t, i) => (
                 <Reveal key={t.term} delay={Math.min(0.4, i * 0.05)}>
                   <span
-                    className="rounded-full border px-4 py-2 text-lg"
-                    style={{ borderColor: 'var(--review-accent)', background: 'var(--review-accent-soft)' }}
+                    className="rounded-full border-2 px-5 py-2.5 text-[clamp(1.05rem,1.6vw,1.5rem)] font-medium"
+                    style={{ borderColor: 'var(--review-accent)', background: 'var(--review-accent-soft)', color: 'var(--review-accent)' }}
                   >
                     ↑ {t.term}
                   </span>
@@ -1018,13 +1018,15 @@ const PeriodReview = () => {
       {places.length > 0 && (
         <ReviewSlide tone="accent" label="On the map" hue={h(6)}>
           <MaskRevealHeading
-            className="mb-8 text-4xl font-semibold tracking-tight"
+            className="mb-8 font-display font-normal tracking-[-0.01em] leading-[1.06] text-[clamp(2.5rem,4.6vw,5rem)]"
             segments={[{ text: 'Places in ' }, { text: 'the news', italic: true }]}
           />
           <div className="flex flex-wrap gap-x-5 gap-y-4">
             {places.slice(0, 8).map((p, i) => (
               <Reveal key={p.term} delay={Math.min(0.4, i * 0.05)}>
-                <span className="rounded-full border border-border px-8 py-4 text-2xl font-medium tracking-tight">
+                <span
+                  style={{ borderColor: 'var(--review-accent)', color: 'var(--review-accent)' }}
+                  className="rounded-full border-2 px-8 py-4 text-[clamp(1.35rem,2.4vw,2.25rem)] font-medium tracking-tight">
                   {p.term}
                 </span>
               </Reveal>
@@ -1056,7 +1058,7 @@ const PeriodReview = () => {
                       story={s}
                       className="flex w-full items-center gap-4 rounded-2xl border border-border p-3 text-left transition-colors hover:bg-muted"
                     >
-                      <span className="w-8 shrink-0 text-2xl font-semibold tabular-nums text-muted-foreground/50">
+                      <span className="w-10 shrink-0 text-[clamp(1.5rem,2.6vw,2.5rem)] font-semibold tabular-nums">
                         {i + 1}
                       </span>
                       <div className="min-w-0">
@@ -1085,10 +1087,10 @@ const PeriodReview = () => {
       {/* Outro */}
       <ReviewSlide className="text-center" hue={h(0)} backdrop={backdropFrom(13)}>
         <Reveal>
-          <p className="text-xl font-medium tracking-tight">Every story, gathered and written for {place}.</p>
+          <p className="font-display text-[clamp(1.75rem,3.4vw,3.25rem)] font-normal leading-[1.15] tracking-tight">Every story, gathered and written for {place}.</p>
           <Link
             to={`/feed/${slug}`}
-            className="mt-8 inline-block rounded-full bg-primary px-6 py-3 text-base font-medium text-primary-foreground"
+            className="mt-10 inline-block rounded-full bg-primary px-8 py-4 text-lg font-medium text-primary-foreground sm:text-xl"
           >
             Read the feed
           </Link>
