@@ -356,10 +356,12 @@ export function EditorialControlCenter({
               <div className="space-y-10">
                 <ContentVoiceSettings
                   topicId={topic.id}
+                  topicName={topic.name}
+                  topicType={topic.topic_type}
+                  region={topic.region}
                   currentExpertise={topic.audience_expertise}
                   currentTone={topic.default_tone}
                   currentWritingStyle={topic.default_writing_style}
-                  currentIllustrationStyle={topic.illustration_style}
                   currentHouseStyleNotes={topic.house_style_notes}
                   currentHouseStyleExamples={topic.house_style_examples}
                   onUpdate={onUpdate}
@@ -373,6 +375,15 @@ export function EditorialControlCenter({
                     descriptions={topic.landmark_descriptions || {}}
                     photos={topic.landmark_reference_images || {}}
                     setupState={topic.landmark_setup_state || {}}
+                    illustrationStyle={topic.illustration_style}
+                    onIllustrationStyleChange={async (style) => {
+                      onTopicChange({ ...topic, illustration_style: style });
+                      await supabase
+                        .from('topics')
+                        .update({ illustration_style: style, updated_at: new Date().toISOString() } as never)
+                        .eq('id', topic.id);
+                      onUpdate?.();
+                    }}
                     onChange={(patch) => onTopicChange({ ...topic, ...patch })}
                   />
                 </section>
