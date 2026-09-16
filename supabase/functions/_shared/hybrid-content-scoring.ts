@@ -47,7 +47,10 @@ export function calculateTopicRelevance(
       postcodes: topicConfig.postcodes,
       organizations: topicConfig.organizations,
       competing_regions: topicConfig.competing_regions,
-      region_name: topicConfig.region
+      region_name: topicConfig.region,
+      nearby_places: parseNearbyPlaces(topicConfig.nearby_places),
+      locality_strength: topicConfig.locality_strength,
+      big_story_override: topicConfig.big_story_override
     };
     
     const regionalScore = calculateRegionalRelevance(
