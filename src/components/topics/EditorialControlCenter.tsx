@@ -397,7 +397,7 @@ export function EditorialControlCenter({
         <section className="border-l-2 border-destructive bg-destructive/5 px-5 py-4" aria-labelledby="attention-heading">
           <div className="flex gap-3">
             <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-            <div><h3 id="attention-heading" className="text-sm font-semibold">Needs your attention</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((item) => <li key={item}>{item}</li>)}</ul></div>
+            <div><h3 id="attention-heading" className="text-sm font-semibold">Needs your attention</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((item) => <li key={item.text}>{item.section ? <button type="button" onClick={() => goToAttention(item)} className="text-left underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground">{item.text}</button> : item.text}</li>)}</ul></div>
           </div>
         </section>
       )}
