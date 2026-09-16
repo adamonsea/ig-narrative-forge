@@ -107,7 +107,6 @@ serve(async (req) => {
           normalized_url: String(url).toLowerCase().trim(),
           title: content?.title ?? null,
           discarded_reason: `Stale arrival: unreviewed for more than ${maxAgeDays} days`,
-          discarded_by: 'expire-stale-arrivals',
         };
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
