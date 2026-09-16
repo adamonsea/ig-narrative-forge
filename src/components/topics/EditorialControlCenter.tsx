@@ -158,17 +158,27 @@ export function EditorialControlCenter({
   const unconfirmedPlaces = (topic.landmarks || []).filter(
     (place) => topic.landmark_setup_state?.[place]?.status !== "confirmed"
   );
-  const attention = [
-    stats.pending_articles > 20 ? `${stats.pending_articles} arrivals are waiting for editorial review` : null,
-    stats.processing_queue > 10 ? `${stats.processing_queue} stories are still being prepared` : null,
-    !topic.is_public ? "This feed is private and cannot currently reach readers" : null,
+  const attention: { text: string; section?: SectionKey; anchor?: string }[] = [
+    stats.pending_articles > 20 ? { text: `${stats.pending_articles} arrivals are waiting for editorial review` } : null,
+    stats.processing_queue > 10 ? { text: `${stats.processing_queue} stories are still being prepared` } : null,
+    !topic.is_public ? { text: "This feed is private and cannot currently reach readers", section: "distribution" } : null,
     (topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0
-      ? `${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references`
+      ? { text: `${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references`, section: "coverage", anchor: "picture-references-heading" }
       : null,
     (topic.landmarks || []).length === 0
-      ? "Add picture references so illustrations draw your local places accurately"
+      ? { text: "Add picture references so illustrations draw your local places accurately", section: "coverage", anchor: "picture-references-heading" }
       : null,
-  ].filter((item): item is string => Boolean(item));
+  ].filter((item): item is { text: string; section?: SectionKey; anchor?: string } => Boolean(item));
+
+  const goToAttention = (item: { section?: SectionKey; anchor?: string }) => {
+    if (!item.section) return;
+    openSection(item.section);
+    if (item.anchor) {
+      window.setTimeout(() => {
+        document.getElementById(item.anchor!)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    }
+  };
 
   const controls = [
     {
