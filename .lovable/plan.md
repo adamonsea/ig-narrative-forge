@@ -160,13 +160,16 @@ Neither accent should wash across whole sections. Colour appears in active indic
 
 ## Technical implementation
 
-- Introduce the selected font pair through the document font links, then update the Tailwind font families and shared typography classes.
-- Consolidate dashboard colour, surface, status, focus and motion roles in the global semantic tokens; replace raw colour utilities in the affected dashboard components.
-- Refactor `EditorialControlCenter` into a responsive section-navigation shell plus small overview/detail components.
-- Remove duplicate headings and nested card wrappers from child settings panels so parent sections own their hierarchy.
-- Add reusable primitives for section headers, summary rows, disclosure groups and save status rather than styling each settings panel independently.
-- Keep the existing global sidebar, query parameters, owner/admin checks and data calls intact.
-- Make no database or business-rule changes.
+Concrete steps, in order:
+
+1. **Foundation first.** Add Instrument Serif (400 + italic) and Work Sans (400–600) to the font link in `index.html`; update Tailwind font families (`display` → Instrument Serif, `sans` → Work Sans, keeping Inter as a fallback). Add a small set of display/eyebrow/section-title utility classes so headings opt into the editorial voice consistently.
+2. **Token pass.** Recast the semantic tokens in `index.css`: ink foreground on white/pale-green surfaces; mint (`--pop`) as the positive/live accent; violet (`--purple-bright`) as the selection/navigation accent; one status vocabulary for success/warning/error. Give dark mode considered equivalents. Then replace raw `hsl(...)` and Tailwind-palette colour classes in the topics page, topic header, settings panels and pills with the token classes.
+3. **Shared primitives.** Add small reusable pieces: a section header (title + one sentence, no card), a summary row (label + current value + chevron), a disclosure group, a quiet save indicator, and a shared page/empty-state. Build them on the existing shadcn components so behaviour stays consistent.
+4. **Workspace shell.** Restructure the topic page so Pipeline / Insights / Editorial control live in a persistent section rail with URL-driven state (`?tab=`, `?section=` preserved); Editorial control becomes a shell with its own section rail instead of the overview-card detour and back button. Mobile gets a compact section picker.
+5. **Detail passes per section** applying the disclosure model above, including removing the duplicated “News values” card title, unwrapping the nested “Topic Branding” card, converting the automation “Saved” toast to the quiet indicator, and labelling the publish switch.
+6. **Feed list pass**: triage-first cards, attention surfacing, shared confirm dialog, tokenised accents.
+
+Keep the existing global sidebar, routing contracts, owner/admin checks, queries and data calls intact. Make no database or business-rule changes. Where a change touches a shared component (tabs, cards, badges), verify public feed pages that reuse them still look right.
 
 ## Verification
 
