@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, useScroll, useSpring, useReducedMotion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, ChevronDown, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { Reveal } from '@/components/review/ReviewChapter';
