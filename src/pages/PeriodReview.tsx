@@ -1042,7 +1042,7 @@ const PeriodReview = () => {
       )}
 
       {/* Outro */}
-      <ReviewSlide className="text-center" hue={h(0)}>
+      <ReviewSlide className="text-center" hue={h(0)} backdrop={backdropFrom(13)}>
         <Reveal>
           <p className="text-xl font-medium tracking-tight">Every story, gathered and written for {place}.</p>
           <Link
