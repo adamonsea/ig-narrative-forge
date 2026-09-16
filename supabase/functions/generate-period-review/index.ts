@@ -171,6 +171,7 @@ Deno.serve(async (req) => {
       slug: string | null;
       publication_name: string | null;
       is_parliamentary?: boolean | null;
+      source_label?: string | null;
     };
     let current: Row[] = [];
     let previous: Row[] = [];
@@ -180,16 +181,22 @@ Deno.serve(async (req) => {
       const chunk = taIds.slice(i, i + 200);
       const { data: rows } = await service
         .from('stories')
-        .select('id, title, created_at, cover_illustration_url, slug, publication_name, is_parliamentary')
+        .select('id, title, created_at, cover_illustration_url, slug, publication_name, is_parliamentary, topic_article_id')
         .in('topic_article_id', chunk)
         .eq('is_published', true)
         .gte('created_at', prevStartISO)
         .lte('created_at', endISO);
       for (const r of rows ?? []) {
-        if (r.created_at >= startISO) current.push(r as Row);
-        else previous.push(r as Row);
+        const sid = taSourceId.get((r as any).topic_article_id) ?? null;
+        const row = {
+          ...(r as any),
+          source_label: (sid ? sourceNameById.get(sid) : null) || r.publication_name || null,
+        } as Row;
+        if (r.created_at >= startISO) current.push(row);
+        else previous.push(row);
       }
     }
+
 
     // Category assignments for both windows.
     const allIds = [...current, ...previous].map((s) => s.id);
