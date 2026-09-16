@@ -273,8 +273,8 @@ Deno.serve(async (req) => {
 
       const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
       const topicType = topicDefaultsMap[topic_id]?.topic_type;
-      const localityAnchors = topicDefaultsMap[topic_id]?.localityAnchors || [];
-      const localityGateActive = topicType === 'regional' && localityAnchors.length > 0;
+      const newsValues = topicDefaultsMap[topic_id]?.newsValues;
+      const localityGateActive = topicType === 'regional' && !!newsValues && !!topicDefaultsMap[topic_id]?.hasAnchors;
       let topicHeldForLocality = 0;
       let topicHeldForCategory = 0;
 
