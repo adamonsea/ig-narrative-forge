@@ -147,6 +147,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     if (selectedSources.length) {
       bits.push(selectedSources.length <= 2 ? selectedSources.join(' & ') : `${selectedSources.length} sources`);
     }
+    if (includeParliamentary) bits.push('incl. Parliament');
     return bits.length ? ` · ${bits.join(', ')}` : '';
   };
 
@@ -165,6 +166,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           slug: `${start}_${end}${scopeSuffix()}`,
           categoryIds: selectedCategories,
           sourceNames: selectedSources,
+          includeParliamentary,
         },
       });
       if (error) {
