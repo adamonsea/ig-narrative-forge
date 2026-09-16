@@ -67,6 +67,10 @@ Deno.serve(async (req) => {
     const sourceNames: string[] = Array.isArray(body.sourceNames)
       ? body.sourceNames.filter((v: unknown) => typeof v === 'string' && v.trim().length > 0).map((v: string) => v.trim())
       : [];
+    // Preferred source scoping: real source ids, matched on topic_articles.source_id.
+    const sourceIds: string[] = Array.isArray(body.sourceIds)
+      ? body.sourceIds.filter((v: unknown) => typeof v === 'string' && v.length > 0)
+      : [];
     // Parliamentary coverage skews local comparisons, so it is excluded unless asked for.
     const includeParliamentary: boolean = body.includeParliamentary === true;
 
@@ -97,10 +101,12 @@ Deno.serve(async (req) => {
     const PAGE = 1000;
     for (let page = 0; page < 60; page++) {
       const from = page * PAGE;
-      const { data: rows, error } = await service
+      let q = service
         .from('topic_articles')
         .select('id')
-        .eq('topic_id', topicId)
+        .eq('topic_id', topicId);
+      if (sourceIds.length > 0) q = q.in('source_id', sourceIds);
+      const { data: rows, error } = await q
         .order('id', { ascending: true })
         .range(from, from + PAGE - 1);
       if (error) break;
@@ -194,11 +200,13 @@ Deno.serve(async (req) => {
     }
 
     // Apply optional scoping now that we know each story's category + source.
-    if (categoryIds.length > 0 || sourceNames.length > 0) {
+    const useNameScoping = sourceIds.length === 0 && sourceNames.length > 0;
+    if (categoryIds.length > 0 || useNameScoping) {
       const catSet = new Set(categoryIds);
-      const srcSet = new Set(sourceNames.map((s) => s.toLowerCase()));
+      const normalise = (v: string) => v.trim().toLowerCase().replace(/^www\./, '').replace(/[^a-z0-9]/g, '');
+      const srcSet = new Set(useNameScoping ? sourceNames.map(normalise) : []);
       const keep = (r: Row) => {
-        if (srcSet.size > 0 && !srcSet.has((r.publication_name ?? '').trim().toLowerCase())) return false;
+        if (srcSet.size > 0 && !srcSet.has(normalise(r.publication_name ?? ''))) return false;
         if (catSet.size > 0) {
           const a = assignments.get(r.id);
           if (!a) return false;

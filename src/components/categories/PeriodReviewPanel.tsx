@@ -51,6 +51,7 @@ const PRESETS = [
 interface OptionRow {
   id: string;
   name: string;
+  ids?: string[];
 }
 
 export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps) => {
@@ -91,14 +92,16 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
         .filter((c) => !c.parent_id)
         .map((c) => ({ id: c.id as string, name: c.name as string }))
     );
-    const names = new Set<string>();
-    const sourceRows: OptionRow[] = [];
+    const byName = new Map<string, OptionRow>();
     for (const s of (srcs ?? []) as any[]) {
       const name = (s.source_name ?? '').trim();
-      if (!name || names.has(name)) continue;
-      names.add(name);
-      sourceRows.push({ id: name, name });
+      const sourceId = s.source_id as string | undefined;
+      if (!name || !sourceId) continue;
+      const existing = byName.get(name);
+      if (existing) existing.ids?.push(sourceId);
+      else byName.set(name, { id: sourceId, name, ids: [sourceId] });
     }
+    const sourceRows: OptionRow[] = [...byName.values()];
     setSources(sourceRows.sort((a, b) => a.name.localeCompare(b.name)));
   };
 
@@ -130,11 +133,19 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     }
   };
 
+  const selectedSourceIds = () =>
+    sources.filter((s) => selectedSources.includes(s.id)).flatMap((s) => s.ids ?? [s.id]);
+
+  const selectedSourceNames = () =>
+    sources.filter((s) => selectedSources.includes(s.id)).map((s) => s.name);
+
   const scopeSuffix = () => {
     const parts: string[] = [];
     if (selectedCategories.length) parts.push(`c${selectedCategories.length}-${selectedCategories[0].slice(0, 6)}`);
     if (selectedSources.length)
-      parts.push(`s${selectedSources.length}-${selectedSources[0].toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`);
+      parts.push(
+        `s${selectedSources.length}-${(selectedSourceNames()[0] ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`
+      );
     if (includeParliamentary) parts.push('parl');
     return parts.length ? `_${parts.join('_')}` : '';
   };
@@ -146,7 +157,8 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
       bits.push(names.length <= 2 ? names.join(' & ') : `${names.length} topics`);
     }
     if (selectedSources.length) {
-      bits.push(selectedSources.length <= 2 ? selectedSources.join(' & ') : `${selectedSources.length} sources`);
+      const names = selectedSourceNames();
+      bits.push(names.length <= 2 ? names.join(' & ') : `${names.length} sources`);
     }
     if (includeParliamentary) bits.push('incl. Parliament');
     return bits.length ? ` · ${bits.join(', ')}` : '';
@@ -166,7 +178,8 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           label,
           slug: `${start}_${end}${scopeSuffix()}`,
           categoryIds: selectedCategories,
-          sourceNames: selectedSources,
+          sourceIds: selectedSourceIds(),
+          sourceNames: selectedSourceNames(),
           includeParliamentary,
         },
       });
