@@ -135,13 +135,15 @@ const monthLabel = (m: string) =>
 const compact = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}m` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
 
+type MosaicCover = { id: string; slug: string | null; title: string; cover_illustration_url: string | null };
+
 /** A dense, full-width wall of covers from the period — the archive at a glance. */
 const MosaicWall = ({
   covers,
-  feedSlug,
+  onOpen,
 }: {
-  covers: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
-  feedSlug?: string;
+  covers: MosaicCover[];
+  onOpen: (cover: MosaicCover) => void;
 }) => {
   const reduce = useReducedMotion();
   const boxRef = useRef<HTMLDivElement>(null);
