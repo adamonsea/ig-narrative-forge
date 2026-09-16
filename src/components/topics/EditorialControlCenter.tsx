@@ -172,12 +172,12 @@ export function EditorialControlCenter({
   if ((topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0) {
     attention.push({
       text: `${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references`,
-      section: "coverage",
+      section: "voice",
       anchor: "picture-references-heading",
     });
   }
   if ((topic.landmarks || []).length === 0) {
-    attention.push({ text: "Add picture references so illustrations draw your local places accurately", section: "coverage", anchor: "picture-references-heading" });
+    attention.push({ text: "Add picture references so illustrations draw your local places accurately", section: "voice", anchor: "picture-references-heading" });
   }
 
   const goToAttention = (item: { section?: SectionKey; anchor?: string }) => {
