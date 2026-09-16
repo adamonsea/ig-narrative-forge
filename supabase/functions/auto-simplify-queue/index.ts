@@ -221,14 +221,19 @@ Deno.serve(async (req) => {
       // locality gate always sees real content. A per-row fetch that silently
       // returns null on transient errors was causing valid local stories to be
       // held at random ("intermittent" gate failures).
+      // Held articles (locality/category gate) are parked for 24h so they cannot
+      // occupy the top of the window forever and starve fresh arrivals.
+      const heldRecheckBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
       const { data: articles, error: articlesError } = await supabase
         .from('topic_articles')
         .select('id, shared_content_id, content_quality_score, topic_id, shared_article_content(title, body, url)')
         .eq('topic_id', topic_id)
         .eq('processing_status', 'new')
         .gte('content_quality_score', quality_threshold)
-        .order('content_quality_score', { ascending: false })
+        .or(`held_at.is.null,held_at.lt.${heldRecheckBefore}`)
         .order('created_at', { ascending: false })
+        .order('content_quality_score', { ascending: false })
         .limit(maxPerTopic);
 
       if (articlesError) {
