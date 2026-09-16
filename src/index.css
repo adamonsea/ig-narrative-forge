@@ -458,3 +458,11 @@ All colors MUST be HSL.
     transition-duration: 0.01ms !important;
   }
 }
+/* Review archive wall: pictures drift gently in and out so the wall feels alive. */
+@keyframes tile-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="tile-breathe"] { animation: none !important; }
+}
