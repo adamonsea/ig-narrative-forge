@@ -1002,7 +1002,7 @@ const PeriodReview = () => {
               {risingTerms.slice(0, 6).map((t, i) => (
                 <Reveal key={t.term} delay={Math.min(0.4, i * 0.05)}>
                   <span
-                    className="rounded-full border-2 px-5 py-2.5 text-[clamp(1.05rem,1.6vw,1.5rem)] font-medium"
+                    className="rounded-full border-2 px-[1.35em] py-[0.55em] text-[clamp(1.05rem,1.6vw,1.5rem)] font-medium leading-[1.2]"
                     style={{ borderColor: 'var(--review-accent)', background: 'var(--review-accent-soft)', color: 'var(--review-accent)' }}
                   >
                     ↑ {t.term}
@@ -1026,7 +1026,7 @@ const PeriodReview = () => {
               <Reveal key={p.term} delay={Math.min(0.4, i * 0.05)}>
                 <span
                   style={{ borderColor: 'var(--review-accent)', color: 'var(--review-accent)' }}
-                  className="rounded-full border-2 px-8 py-4 text-[clamp(1.35rem,2.4vw,2.25rem)] font-medium tracking-tight">
+                  className="rounded-full border-2 px-[1.5em] py-[0.62em] text-[clamp(1.35rem,2.4vw,2.25rem)] font-medium leading-[1.2] tracking-tight">
                   {p.term}
                 </span>
               </Reveal>
