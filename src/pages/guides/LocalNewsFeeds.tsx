@@ -211,7 +211,7 @@ export default function LocalNewsFeedsGuide() {
                   { text: 'How to build a niche' },
                   { text: 'local news feed', italic: true },
                 ]}
-                className="text-5xl md:text-6xl font-display font-medium tracking-tight text-white leading-[1.1]"
+                className="text-5xl md:text-6xl font-display font-normal tracking-tight text-white leading-[1.1]"
               />
               <motion.p
                 variants={motionReveal}
@@ -482,7 +482,7 @@ export default function LocalNewsFeedsGuide() {
             className="max-w-4xl mx-auto py-24 text-center border-t border-white/10"
           >
             <motion.div variants={motionReveal} className="space-y-6">
-              <h2 className="text-4xl md:text-5xl font-display font-medium tracking-tight text-white">
+              <h2 className="text-4xl md:text-5xl font-display font-normal tracking-tight text-white">
                 Ready to build your feed?
               </h2>
               <p className="text-xl text-white/50 max-w-xl mx-auto font-light">

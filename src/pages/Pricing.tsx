@@ -121,7 +121,7 @@ const Pricing = () => {
         <main className="container mx-auto px-6 pb-24">
           {/* Hero */}
           <section className="max-w-4xl mx-auto text-center py-16 space-y-6">
-            <h1 className="text-5xl md:text-6xl font-display font-semibold tracking-tight text-white">
+            <h1 className="text-5xl md:text-6xl font-display font-normal tracking-tight text-white">
               Simple, transparent pricing
             </h1>
             <p className="text-xl text-white/70 max-w-2xl mx-auto">

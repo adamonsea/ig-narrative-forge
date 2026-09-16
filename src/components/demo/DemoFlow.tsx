@@ -92,7 +92,7 @@ export const DemoFlow = ({ isOverlay = false }: DemoFlowProps) => {
     <section className={isOverlay ? '' : 'max-w-5xl mx-auto py-24'}>
       {!isOverlay && (
         <div className="text-center mb-10">
-          <h2 className="font-display font-semibold tracking-tight text-white mb-4 text-4xl md:text-5xl">
+          <h2 className="font-display font-normal tracking-tight text-white mb-4 text-4xl md:text-5xl">
             Try it now
           </h2>
           <p className="text-xl text-white/60 max-w-2xl mx-auto">

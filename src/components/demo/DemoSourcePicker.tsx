@@ -14,7 +14,7 @@ export const DemoSourcePicker = ({ onSelect, selected, topicId }: DemoSourcePick
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl md:text-3xl font-display font-semibold text-white">
+        <h3 className="text-2xl md:text-3xl font-display font-normal text-white">
           Pick a source
         </h3>
       </div>
