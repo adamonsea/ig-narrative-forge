@@ -515,7 +515,7 @@ const PeriodReview = () => {
 
       {/* Words written */}
       {totalWords > 0 && (
-        <ReviewSlide tone="inverted" label="The scale" hue={h(1)}>
+        <ReviewSlide tone="inverted" label="The scale" hue={h(1)} backdrop={backdropFrom(0)}>
           <BigStat count={totalWords} caption={`words published about ${place}`} />
           {scale && (
             <Reveal delay={0.2} className="mt-10 flex flex-wrap gap-x-10 gap-y-3 text-lg opacity-80">
