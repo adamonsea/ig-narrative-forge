@@ -521,7 +521,7 @@ export const SceneClose = ({ reduced, cue }: SceneProps) => {
           ))}
         </div>
         <motion.div
-          className="text-center font-display text-[calc(var(--u)*9)] leading-none tracking-tight text-white"
+          className="text-center font-logo text-[calc(var(--u)*9)] leading-none tracking-tight text-white"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: reduced ? 0.1 : 0.9 }}
