@@ -1865,7 +1865,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     const storyItem: FeedContent = {
       type: 'story',
       id: normalizedStory.id,
-      content_date: normalizedStory.created_at,
+      content_date: getDisplayDate(normalizedStory.created_at, normalizedStory.article?.published_at),
       data: normalizedStory,
     };
 
