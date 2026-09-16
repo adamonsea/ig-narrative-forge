@@ -197,61 +197,62 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
             </Select>
           </div>
 
-      {/* Conditional sliders */}
-      {(automationMode === 'auto_gather' || automationMode === 'holiday') && (
-        <div className="space-y-2 pt-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm">Scrape frequency</Label>
-            <span className="text-xs text-muted-foreground">{scrapeFrequency}h</span>
-          </div>
-          <Slider
-            value={[scrapeFrequency]}
-            onValueChange={([v]) => handleScrapeFrequency(v)}
-            min={4} max={24} step={4}
-          />
-        </div>
-      )}
-
-      {(automationMode === 'auto_simplify' || automationMode === 'holiday') && (
-        <div className="space-y-2 pt-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm">Story threshold</Label>
-            <span className="text-xs text-muted-foreground">{qualityThreshold}%</span>
-          </div>
-          <Slider
-            value={[qualityThreshold]}
-            onValueChange={([v]) => handleQualityThreshold(v)}
-            min={30} max={100} step={5}
-          />
-        </div>
-      )}
-
-      {(automationMode === 'auto_illustrate' || automationMode === 'holiday') && (
-        <div className="space-y-3 pt-2">
-          {automationMode === 'holiday' && (
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Auto-illustrate</Label>
-              <Switch checked={autoIllustrateInHoliday} onCheckedChange={handleAutoIllustrateToggle} />
-            </div>
-          )}
-          {(automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday)) && (
+          {(automationMode === 'auto_gather' || automationMode === 'holiday') && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Illustration threshold</Label>
-                <span className="text-xs text-muted-foreground">{illustrationThreshold}%</span>
+                <Label className="text-sm">Check for new stories every</Label>
+                <span className="text-xs text-muted-foreground">{scrapeFrequency}h</span>
               </div>
               <Slider
-                value={[illustrationThreshold]}
-                onValueChange={([v]) => handleIllustrationThreshold(v)}
-                min={50} max={100} step={5}
+                value={[scrapeFrequency]}
+                onValueChange={([v]) => handleScrapeFrequency(v)}
+                min={4} max={24} step={4}
               />
             </div>
           )}
+
+          {(automationMode === 'auto_simplify' || automationMode === 'holiday') && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Quality a story needs to be prepared</Label>
+                <span className="text-xs text-muted-foreground">{qualityThreshold}%</span>
+              </div>
+              <Slider
+                value={[qualityThreshold]}
+                onValueChange={([v]) => handleQualityThreshold(v)}
+                min={30} max={100} step={5}
+              />
+            </div>
+          )}
+
+          {(automationMode === 'auto_illustrate' || automationMode === 'holiday') && (
+            <div className="space-y-3">
+              {automationMode === 'holiday' && (
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Add artwork automatically</Label>
+                  <Switch checked={autoIllustrateInHoliday} onCheckedChange={handleAutoIllustrateToggle} />
+                </div>
+              )}
+              {(automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday)) && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Quality a story needs for artwork</Label>
+                    <span className="text-xs text-muted-foreground">{illustrationThreshold}%</span>
+                  </div>
+                  <Slider
+                    value={[illustrationThreshold]}
+                    onValueChange={([v]) => handleIllustrationThreshold(v)}
+                    min={50} max={100} step={5}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </Disclosure>
 
       {automationMode !== 'manual' && nextRunAt && (
-        <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
           <span>
             Next run: {new Date(nextRunAt) > new Date()
