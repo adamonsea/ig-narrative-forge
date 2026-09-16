@@ -41,63 +41,60 @@ const clampLimit = (value: unknown, fallback = 10) => {
   return Math.min(MAX_STORIES, Math.max(1, Math.round(n)));
 };
 
-const slideText = (slides: unknown, index: number): string => {
-  const list = Array.isArray(slides) ? slides : [];
-  const slide = list[index] as { text?: string; content?: string } | undefined;
-  return (slide?.text || slide?.content || "").toString();
-};
-
-const fullText = (slides: unknown): string => {
-  const list = Array.isArray(slides) ? slides : [];
-  return list
-    .map((s) => ((s as { text?: string; content?: string })?.text || (s as { content?: string })?.content || "").toString())
-    .filter(Boolean)
-    .join("\n\n");
-};
+interface SlideRow { slide_number: number | null; content: string | null }
 
 interface StoryRow {
   id: string;
   title: string | null;
-  slides: unknown;
+  slug: string | null;
+  author: string | null;
+  publication_name: string | null;
   published_at: string | null;
   created_at: string | null;
-  topic_articles?: {
-    articles?: { source_url?: string | null; author?: string | null } | null;
-    shared_article_content?: { source_url?: string | null; author?: string | null } | null;
-  } | null;
+  slides?: SlideRow[] | null;
+  topic_articles?: { topic_id?: string; shared_article_content?: { url?: string | null; author?: string | null; source_domain?: string | null } | null } | null;
 }
 
+const orderedSlides = (story: StoryRow): string[] =>
+  [...(story.slides || [])]
+    .sort((a, b) => (a.slide_number || 0) - (b.slide_number || 0))
+    .map((s) => (s.content || "").trim())
+    .filter(Boolean);
+
+const fullText = (story: StoryRow): string => orderedSlides(story).join("\n\n");
+
 const shapeStory = (story: StoryRow, slug: string) => {
-  const headline = story.title || slideText(story.slides, 0) || "Untitled story";
-  const ta = story.topic_articles as StoryRow["topic_articles"];
-  const sourceUrl = ta?.articles?.source_url || ta?.shared_article_content?.source_url || null;
-  const author = ta?.articles?.author || ta?.shared_article_content?.author || null;
-  let publication: string | null = null;
-  if (sourceUrl) {
+  const parts = orderedSlides(story);
+  const shared = story.topic_articles?.shared_article_content || null;
+  const sourceUrl = shared?.url || null;
+  let publication = story.publication_name || shared?.source_domain || null;
+  if (!publication && sourceUrl) {
     try { publication = new URL(sourceUrl).hostname.replace(/^www\./, ""); } catch { publication = null; }
   }
   return {
     id: story.id,
-    headline,
-    summary: slideText(story.slides, 1) || slideText(story.slides, 0),
+    headline: story.title || parts[0] || "Untitled story",
+    summary: parts[1] || parts[0] || "",
     published_at: story.published_at || story.created_at,
     publication,
-    author,
+    author: story.author || shared?.author || null,
     original_article_url: sourceUrl,
-    curatr_url: `${SITE_URL}/feed/${slug}/story/${story.id}`,
+    curatr_url: `${SITE_URL}/feed/${slug}/story/${story.slug || story.id}`,
   };
 };
 
 const STORY_SELECT = `
   id,
   title,
-  slides,
+  slug,
+  author,
+  publication_name,
   created_at,
   published_at,
+  slides ( slide_number, content ),
   topic_articles!inner (
     topic_id,
-    articles ( source_url, author ),
-    shared_article_content ( source_url, author )
+    shared_article_content ( url, author, source_domain )
   )
 `;
 
