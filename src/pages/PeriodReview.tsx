@@ -194,10 +194,11 @@ const MosaicWall = ({
               ease: [0.2, 0.7, 0.3, 1],
             }}
           >
-            <Link
-              to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
+            <button
+              type="button"
+              onClick={() => onOpen(c)}
               title={c.title}
-              className="group block aspect-square overflow-hidden rounded-[2px]"
+              className="group block aspect-square w-full overflow-hidden rounded-[2px]"
             >
               <img
                 src={optimizeImageUrl(c.cover_illustration_url, { width: 200, height: 200, quality: 66 }) ?? c.cover_illustration_url ?? ''}
