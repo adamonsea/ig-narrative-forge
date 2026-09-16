@@ -47,6 +47,11 @@ const PRESETS = [
   { label: '12 months', months: 12 },
 ] as const;
 
+interface OptionRow {
+  id: string;
+  name: string;
+}
+
 export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps) => {
   const { toast } = useToast();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
@@ -56,6 +61,10 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   const [customStart, setCustomStart] = useState(monthsAgo(6));
   const [customEnd, setCustomEnd] = useState(isoDate(new Date()));
   const [useCustom, setUseCustom] = useState(false);
+  const [categories, setCategories] = useState<OptionRow[]>([]);
+  const [sources, setSources] = useState<OptionRow[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
 
   const load = async () => {
     const { data } = await supabase
@@ -66,10 +75,40 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     setReviews((data ?? []) as ReviewRow[]);
   };
 
+  const loadOptions = async () => {
+    const [{ data: cats }, { data: srcs }] = await Promise.all([
+      supabase
+        .from('story_categories')
+        .select('id, name, parent_id, topic_id')
+        .or(`topic_id.is.null,topic_id.eq.${topicId}`)
+        .order('name'),
+      supabase.rpc('get_topic_sources', { p_topic_id: topicId }),
+    ]);
+    setCategories(
+      ((cats ?? []) as any[])
+        .filter((c) => !c.parent_id)
+        .map((c) => ({ id: c.id as string, name: c.name as string }))
+    );
+    const names = new Set<string>();
+    const sourceRows: OptionRow[] = [];
+    for (const s of (srcs ?? []) as any[]) {
+      const name = (s.source_name ?? '').trim();
+      if (!name || names.has(name)) continue;
+      names.add(name);
+      sourceRows.push({ id: name, name });
+    }
+    setSources(sourceRows.sort((a, b) => a.name.localeCompare(b.name)));
+  };
+
   useEffect(() => {
     load();
+    loadOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId]);
+
+  const toggle = (list: string[], setList: (v: string[]) => void, value: string) =>
+    setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+
 
   const remove = async (r: ReviewRow) => {
     setDeletingId(r.id);
@@ -89,14 +128,42 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     }
   };
 
+  const scopeSuffix = () => {
+    const parts: string[] = [];
+    if (selectedCategories.length) parts.push(`c${selectedCategories.length}-${selectedCategories[0].slice(0, 6)}`);
+    if (selectedSources.length)
+      parts.push(`s${selectedSources.length}-${selectedSources[0].toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`);
+    return parts.length ? `_${parts.join('_')}` : '';
+  };
+
+  const scopeLabel = () => {
+    const bits: string[] = [];
+    if (selectedCategories.length) {
+      const names = categories.filter((c) => selectedCategories.includes(c.id)).map((c) => c.name);
+      bits.push(names.length <= 2 ? names.join(' & ') : `${names.length} topics`);
+    }
+    if (selectedSources.length) {
+      bits.push(selectedSources.length <= 2 ? selectedSources.join(' & ') : `${selectedSources.length} sources`);
+    }
+    return bits.length ? ` · ${bits.join(', ')}` : '';
+  };
+
   const generate = async (start: string, end: string) => {
     setGenerating(true);
     try {
       const label = `${new Date(start).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} – ${new Date(
         end
-      ).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`;
+      ).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}${scopeLabel()}`;
       const { error } = await supabase.functions.invoke('generate-period-review', {
-        body: { topicId, periodStart: start, periodEnd: end, label, slug: `${start}_${end}` },
+        body: {
+          topicId,
+          periodStart: start,
+          periodEnd: end,
+          label,
+          slug: `${start}_${end}${scopeSuffix()}`,
+          categoryIds: selectedCategories,
+          sourceNames: selectedSources,
+        },
       });
       if (error) {
         throw new Error(await edgeErrorMessage(error, 'The review service hit an unexpected problem. Please try again in a moment.'));
@@ -113,6 +180,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
       setGenerating(false);
     }
   };
+
 
   return (
     <div className="space-y-4">
@@ -138,7 +206,70 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
             </Button>
           ))}
         </div>
+        {(selectedCategories.length > 0 || selectedSources.length > 0) && (
+          <p className="text-xs text-muted-foreground">
+            Covering{scopeLabel().replace(/^ · /, ' ')}.{' '}
+            <button
+              type="button"
+              className="underline underline-offset-2"
+              onClick={() => {
+                setSelectedCategories([]);
+                setSelectedSources([]);
+              }}
+            >
+              Include everything
+            </button>
+          </p>
+        )}
+        <Disclosure label="Choose topics and sources">
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Topics</p>
+              {categories.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No topics set up yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {categories.map((c) => (
+                    <Button
+                      key={c.id}
+                      type="button"
+                      size="sm"
+                      variant={selectedCategories.includes(c.id) ? 'default' : 'outline'}
+                      aria-pressed={selectedCategories.includes(c.id)}
+                      onClick={() => toggle(selectedCategories, setSelectedCategories, c.id)}
+                    >
+                      {c.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Sources</p>
+              {sources.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No sources yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {sources.map((s) => (
+                    <Button
+                      key={s.id}
+                      type="button"
+                      size="sm"
+                      variant={selectedSources.includes(s.id) ? 'default' : 'outline'}
+                      aria-pressed={selectedSources.includes(s.id)}
+                      onClick={() => toggle(selectedSources, setSelectedSources, s.id)}
+                    >
+                      {s.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Nothing selected means everything is included.</p>
+          </div>
+        </Disclosure>
         <Disclosure label="Pick exact dates">
+
           <div className="flex flex-wrap items-end gap-3 pt-1">
             <div className="space-y-1">
               <Label htmlFor="review-start" className="text-xs">

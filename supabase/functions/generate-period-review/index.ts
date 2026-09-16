@@ -60,6 +60,14 @@ Deno.serve(async (req) => {
     const periodEnd: string | undefined = body.periodEnd;
     const label: string = body.label || 'Review';
     const slug: string = body.slug || `${periodStart}_${periodEnd}`;
+    // Optional scoping: limit the review to chosen categories and/or sources.
+    const categoryIds: string[] = Array.isArray(body.categoryIds)
+      ? body.categoryIds.filter((v: unknown) => typeof v === 'string' && v.length > 0)
+      : [];
+    const sourceNames: string[] = Array.isArray(body.sourceNames)
+      ? body.sourceNames.filter((v: unknown) => typeof v === 'string' && v.trim().length > 0).map((v: string) => v.trim())
+      : [];
+
 
     if (!topicId || !periodStart || !periodEnd) {
       return new Response(JSON.stringify({ error: 'topicId, periodStart and periodEnd are required' }), {
@@ -138,8 +146,9 @@ Deno.serve(async (req) => {
       slug: string | null;
       publication_name: string | null;
     };
-    const current: Row[] = [];
-    const previous: Row[] = [];
+    let current: Row[] = [];
+    let previous: Row[] = [];
+
 
     for (let i = 0; i < taIds.length; i += 200) {
       const chunk = taIds.slice(i, i + 200);
@@ -173,6 +182,25 @@ Deno.serve(async (req) => {
       .select('id, slug, name, parent_id')
       .or(`topic_id.is.null,topic_id.eq.${topicId}`);
     const catById = new Map((categories ?? []).map((c: any) => [c.id, c]));
+
+    // Apply optional scoping now that we know each story's category + source.
+    if (categoryIds.length > 0 || sourceNames.length > 0) {
+      const catSet = new Set(categoryIds);
+      const srcSet = new Set(sourceNames.map((s) => s.toLowerCase()));
+      const keep = (r: Row) => {
+        if (srcSet.size > 0 && !srcSet.has((r.publication_name ?? '').trim().toLowerCase())) return false;
+        if (catSet.size > 0) {
+          const a = assignments.get(r.id);
+          if (!a) return false;
+          if (!catSet.has(a.category_id) && !(a.subcategory_id && catSet.has(a.subcategory_id))) return false;
+        }
+        return true;
+      };
+      current = current.filter(keep);
+      previous = previous.filter(keep);
+    }
+
+
 
     const countByCat = (rows: Row[]) => {
       const counts: Record<string, number> = {};
@@ -890,7 +918,14 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       topStories,
       categoryStories,
 
+      filters: {
+        categories: categoryIds
+          .map((id) => (catById.get(id) as any)?.name)
+          .filter(Boolean),
+        sources: sourceNames,
+      },
       topic: { name: topic?.name, region: topic?.region, slug: topic?.slug },
+
     };
 
     const { data: saved, error: saveError } = await service
