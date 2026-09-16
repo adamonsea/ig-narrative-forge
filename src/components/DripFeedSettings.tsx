@@ -20,12 +20,6 @@ interface DripFeedConfig {
   drip_end_hour: number;
 }
 
-interface QueuedStory {
-  id: string;
-  title: string;
-  scheduled_publish_at: string;
-}
-
 export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSettingsProps) => {
   const [config, setConfig] = useState<DripFeedConfig>({
     drip_feed_enabled: false,
@@ -34,27 +28,13 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     drip_start_hour: 6,
     drip_end_hour: 22,
   });
-  const [queuedStories, setQueuedStories] = useState<QueuedStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [emergencyPublishing, setEmergencyPublishing] = useState(false);
   const { toast } = useToast();
   const loadedRef = useRef(false);
 
   useEffect(() => {
     loadConfig();
-    loadQueuedStories();
-
-    const channel = supabase
-      .channel('drip-feed-stories')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stories' }, (payload) => {
-        if (payload.new && (payload.new as any).status === 'published') {
-          loadQueuedStories();
-        }
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [topicId]);
 
   const loadConfig = async () => {
