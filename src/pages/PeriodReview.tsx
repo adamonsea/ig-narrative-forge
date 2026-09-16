@@ -1003,10 +1003,12 @@ const PeriodReview = () => {
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'Places in ' }, { text: 'the news', italic: true }]}
           />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-x-5 gap-y-4">
             {places.slice(0, 8).map((p, i) => (
               <Reveal key={p.term} delay={Math.min(0.4, i * 0.05)}>
-                <span className="rounded-full border border-border px-4 py-2 text-lg">{p.term}</span>
+                <span className="rounded-full border border-border px-8 py-4 text-2xl font-medium tracking-tight">
+                  {p.term}
+                </span>
               </Reveal>
             ))}
           </div>
