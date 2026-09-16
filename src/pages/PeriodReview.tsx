@@ -231,8 +231,22 @@ const PeriodReview = () => {
     hotTopics,
     topStories,
     categoryStories = [],
+    mosaic = [],
+    monthChapters = [],
+    turningPoints = [],
+    recurringEntities = [],
+    wentQuiet = [],
+    readingMinutes,
     topic,
   } = d;
+
+  // The months worth their own chapter: busiest first, shown in order.
+  const featuredMonths = [...monthChapters]
+    .sort((a, b) => (b.spike_term ? 1 : 0) - (a.spike_term ? 1 : 0) || b.count - a.count)
+    .slice(0, 4)
+    .sort((a, b) => a.month.localeCompare(b.month));
+  const fullMonthLabel = (m: string) =>
+    new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   const place = topic?.name ?? 'the area';
   const maxMonth = Math.max(1, ...timeline.map((t) => t.count));
