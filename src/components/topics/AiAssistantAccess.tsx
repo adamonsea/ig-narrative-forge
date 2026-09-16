@@ -135,8 +135,24 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
               <Badge variant="secondary" className="text-[10px]">Add-on</Badge>
             </div>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Let ChatGPT, Claude and other assistants read {topicName} directly — latest stories, search, full stories and a briefing, always crediting the original publication.
+              Connect {topicName} to ChatGPT or Claude, so readers can ask questions and get answers straight from your published stories — never anyone else's.
             </p>
+            <ul className="mt-3 grid max-w-xl gap-2 sm:grid-cols-2">
+              {[
+                { icon: Newspaper, title: "Catch me up", body: `"What's new in ${topicName}?" — the latest stories, newest first.` },
+                { icon: Search, title: "Find a story", body: `"Anything about the seafront?" — searches everything you've published.` },
+                { icon: FileText, title: "Read it in full", body: "The whole story, with the original publication named and linked." },
+                { icon: Sparkles, title: "Daily or weekly briefing", body: "A short round-up of your feed on demand." },
+              ].map(({ icon: Icon, title, body }) => (
+                <li key={title} className="flex items-start gap-2 rounded-lg border border-border bg-background/60 p-3">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs font-medium">{title}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
             {saveError && <p className="mt-1 text-xs text-destructive">Not saved</p>}
           </div>
         </div>
