@@ -170,11 +170,19 @@ async function logUsage(slug: string, operation: string) {
   } catch (_) { /* usage logging is best-effort */ }
 }
 
+const ATTRIBUTION_HINT =
+  "Credit the publication named in each story and include its original_article_url. Show image_url when the user wants pictures.";
+
 async function runTool(name: string, args: Json, topic: { id: string; slug: string; name: string; description: string | null }) {
   switch (name) {
     case "list_latest_stories": {
       const stories = await fetchStories(topic.id, clampLimit(args.limit));
-      return { feed: topic.name, stories: stories.map((s) => shapeStory(s, topic.slug)) };
+      return {
+        feed: topic.name,
+        stories: stories.map((s) => shapeStory(s, topic.slug)),
+        next_step: "Call get_story with a story_id before quoting or summarising in depth — these are headlines and summaries only.",
+        attribution_note: ATTRIBUTION_HINT,
+      };
     }
     case "search_stories": {
       const q = String(args.query ?? "").trim().slice(0, 200);
