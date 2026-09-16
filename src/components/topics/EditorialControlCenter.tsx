@@ -348,8 +348,10 @@ export function EditorialControlCenter({
                   />
                 </section>
                 <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
-                  <h3 id="exclusions-heading" className="mb-1 text-base font-semibold">Exclusions</h3>
-                  <p className="mb-5 text-sm text-muted-foreground">Keep predictable near-misses out of the review queue.</p>
+                  <h3 id="exclusions-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
+                    Exclusions
+                    <InfoHint label="About exclusions">Keeps predictable near-misses out of the review queue.</InfoHint>
+                  </h3>
                   <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
                 </section>
               </div>
