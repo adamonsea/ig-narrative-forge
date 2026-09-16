@@ -277,6 +277,7 @@ const Index = () => {
                 { label: 'Channel 01', title: 'Email newsletters', body: 'Automated daily or weekly digests sent directly to subscribers. Beautiful templates, zero manual work.' },
                 { label: 'Channel 02', title: 'Social carousels', body: 'Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post in seconds — driving traffic back to your feed.' },
                 { label: 'Channel 03', title: 'Mobile-first feed', body: 'Your own branded news feed with swipe navigation, reader ratings, and instant story sharing.' },
+                { label: 'Channel 04', title: 'ChatGPT & Claude', body: 'Publish your feed as an AI connector. Assistants can browse, search and summarise your stories — with your sources credited and linked every time.' },
               ].map((c) => (
                 <motion.div
                   key={c.title}

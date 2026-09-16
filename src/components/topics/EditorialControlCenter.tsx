@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PictureReferences } from "@/components/topics/PictureReferences";
 import { CoverageTerms } from "@/components/topics/CoverageTerms";
+import { AiAssistantAccess } from "@/components/topics/AiAssistantAccess";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
@@ -80,6 +81,8 @@ export interface EditorialTopic {
   drip_feed_enabled?: boolean;
   public_widget_builder_enabled?: boolean;
   rss_enabled?: boolean;
+  mcp_enabled?: boolean;
+  mcp_access?: "open" | "key";
   email_subscriptions_enabled?: boolean;
   audio_briefings_daily_enabled?: boolean;
   audio_briefings_weekly_enabled?: boolean;
@@ -313,6 +316,14 @@ export function EditorialControlCenter({
             )}
             <ChannelRow icon={Mic2} label="Daily audio" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
             <ChannelRow icon={Mic2} label="Weekly audio" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
+            <AiAssistantAccess
+              topicId={topic.id}
+              topicSlug={topic.slug}
+              topicName={topic.name}
+              enabled={topic.mcp_enabled || false}
+              access={topic.mcp_access === "open" ? "open" : "key"}
+              onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+            />
             <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
           </div>
         )}

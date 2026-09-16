@@ -573,3 +573,6 @@ verify_jwt = false
 
 [functions.resend-webhook]
 verify_jwt = false
+
+[functions.mcp-feed]
+verify_jwt = false

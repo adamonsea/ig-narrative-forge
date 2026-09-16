@@ -1663,6 +1663,30 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_entitlements: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       newsletter_signup_rate_limits: {
         Row: {
           created_at: string | null
@@ -4293,6 +4317,57 @@ export type Database = {
           },
         ]
       }
+      topic_mcp_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          label: string | null
+          last_used_at: string | null
+          revoked_at: string | null
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          label?: string | null
+          last_used_at?: string | null
+          revoked_at?: string | null
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          label?: string | null
+          last_used_at?: string | null
+          revoked_at?: string | null
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_mcp_keys_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_mcp_keys_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_memberships: {
         Row: {
           created_at: string | null
@@ -4775,6 +4850,8 @@ export type Database = {
           landmarks: string[] | null
           locality_strength: number
           max_article_age_days: number | null
+          mcp_access: string
+          mcp_enabled: boolean
           name: string
           nearby_places: Json
           negative_keywords: string[] | null
@@ -4843,6 +4920,8 @@ export type Database = {
           landmarks?: string[] | null
           locality_strength?: number
           max_article_age_days?: number | null
+          mcp_access?: string
+          mcp_enabled?: boolean
           name: string
           nearby_places?: Json
           negative_keywords?: string[] | null
@@ -4911,6 +4990,8 @@ export type Database = {
           landmarks?: string[] | null
           locality_strength?: number
           max_article_age_days?: number | null
+          mcp_access?: string
+          mcp_enabled?: boolean
           name?: string
           nearby_places?: Json
           negative_keywords?: string[] | null

@@ -11,6 +11,7 @@ import { LifecycleAudit } from '@/components/LifecycleAudit';
 import { ImageGenerationMetricsPanel } from '@/components/ImageGenerationMetricsPanel';
 import { ABTestDashboard } from '@/components/admin/ABTestDashboard';
 import { WaitlistPanel } from '@/components/admin/WaitlistPanel';
+import { McpEntitlementsPanel } from '@/components/admin/McpEntitlementsPanel';
 import { SectionLabel } from '@/components/ui/section-label';
 
 export default function AdminPanel() {
@@ -42,6 +43,11 @@ export default function AdminPanel() {
           <section>
             <SectionLabel>Waitlist</SectionLabel>
             <WaitlistPanel />
+          </section>
+
+          <section>
+            <SectionLabel>AI assistant add-on</SectionLabel>
+            <McpEntitlementsPanel />
           </section>
 
           <section>
