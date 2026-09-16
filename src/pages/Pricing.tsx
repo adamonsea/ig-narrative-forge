@@ -109,7 +109,7 @@ const Pricing = () => {
         {/* Header */}
         <header className="container mx-auto px-6 py-8">
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
-            <Link to="/" className="text-3xl font-display font-semibold tracking-tight text-white">
+            <Link to="/" className="text-3xl font-logo font-semibold tracking-tight text-white">
               Curatr<span className="text-xl opacity-70">.pro</span>
             </Link>
             <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30">

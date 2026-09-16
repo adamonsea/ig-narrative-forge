@@ -321,10 +321,10 @@ export default function WaitlistWelcome() {
 
   const Brand = ({ className = '' }: { className?: string }) => (
     <span className={`inline-flex items-baseline ${className}`}>
-      <span className="font-display font-semibold tracking-tight text-foreground text-2xl sm:text-3xl">
+      <span className="font-logo font-semibold tracking-tight text-foreground text-2xl sm:text-3xl">
         Curatr
       </span>
-      <span className="font-display font-light tracking-tight text-[hsl(155,100%,67%)] text-lg sm:text-xl">
+      <span className="font-logo font-light tracking-tight text-[hsl(155,100%,67%)] text-lg sm:text-xl">
         .pro
       </span>
     </span>

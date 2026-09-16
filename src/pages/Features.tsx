@@ -49,7 +49,7 @@ const Features = () => {
 
       <header className="border-b border-white/10">
         <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
-          <Link to="/" className="font-display text-xl text-white">
+          <Link to="/" className="font-logo text-xl text-white">
             Curatr
           </Link>
           <div className="flex items-center gap-6 text-sm">

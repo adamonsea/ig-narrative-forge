@@ -27,7 +27,7 @@ const Discover = () => {
 
       <header className="border-b border-border">
         <div className="container mx-auto px-6 py-6 flex justify-between items-center">
-          <Link to="/" className="text-2xl font-display font-semibold tracking-tight text-foreground">
+          <Link to="/" className="text-2xl font-logo font-semibold tracking-tight text-foreground">
             Curatr<span className="text-lg opacity-60">.pro</span>
           </Link>
           <div className="flex items-center gap-4">

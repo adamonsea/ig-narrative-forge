@@ -167,8 +167,8 @@ const Auth = () => {
               alt="Curatr" 
               className="h-8 w-8"
             />
-            <div className="text-3xl font-display font-semibold tracking-tight text-foreground">
-              Curatr<span className="text-xl font-display font-light tracking-tight opacity-70">.pro</span>
+            <div className="text-3xl font-logo font-semibold tracking-tight text-foreground">
+              Curatr<span className="text-xl font-logo font-light tracking-tight opacity-70">.pro</span>
             </div>
           </div>
           <div className="text-xs text-muted-foreground font-medium tracking-wider uppercase">
