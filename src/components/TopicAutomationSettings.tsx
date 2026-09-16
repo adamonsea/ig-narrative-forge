@@ -164,28 +164,38 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div><Label className="text-sm">Level of control</Label><p className="mt-1 text-xs text-muted-foreground">Choose the closest starting point, then refine it below.</p></div>
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">{saving && <Loader2 className="h-3 w-3 animate-spin" />}{saving ? 'Saving' : 'Saved'}</span>
+        <SaveIndicator state={saveState} />
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
         {MODE_GROUPS.map((group) => {
           const active = group.modes.includes(automationMode);
           const targetMode = group.modes[0];
           return (
-            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-md p-3 text-left ${active ? 'border-primary bg-primary/5' : 'hover:border-primary/40'}`}>
-              <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-primary" />}{group.label}</span>
+            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-md p-3 text-left transition-colors ${active ? 'border-purple-bright/50 bg-purple-soft/60' : 'hover:border-purple-bright/40'}`}>
+              <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-purple-bright" />}{group.label}</span>
               <span className="mt-1 block text-xs text-muted-foreground">{group.summary}</span>
             </Button>
           );
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-4 border-y border-border py-3">
-        <div><p className="text-sm font-medium">Current behaviour</p><p className="mt-0.5 text-xs text-muted-foreground">{MODE_DESCRIPTIONS[automationMode]}</p></div>
-        <Select value={automationMode} onValueChange={(v) => handleModeChange(v as AutomationMode)}>
-          <SelectTrigger className="w-[160px] shrink-0 text-sm"><SelectValue /></SelectTrigger>
-          <SelectContent>{(Object.keys(MODE_LABELS) as AutomationMode[]).map((mode) => <SelectItem key={mode} value={mode}>{MODE_LABELS[mode]}</SelectItem>)}</SelectContent>
-        </Select>
+      <div className="border-y border-border py-3">
+        <p className="text-sm font-medium">Current behaviour</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{MODE_DESCRIPTIONS[automationMode]}</p>
       </div>
+
+      <Disclosure label="Fine-tune the details">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label className="text-sm">Exact behaviour</Label>
+              <p className="mt-1 text-xs text-muted-foreground">{MODE_LABELS[automationMode]} — {MODE_DESCRIPTIONS[automationMode]}</p>
+            </div>
+            <Select value={automationMode} onValueChange={(v) => handleModeChange(v as AutomationMode)}>
+              <SelectTrigger className="w-[160px] shrink-0 text-sm" aria-label="Exact automation behaviour"><SelectValue /></SelectTrigger>
+              <SelectContent>{(Object.keys(MODE_LABELS) as AutomationMode[]).map((mode) => <SelectItem key={mode} value={mode}>{MODE_LABELS[mode]}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
 
       {/* Conditional sliders */}
       {(automationMode === 'auto_gather' || automationMode === 'holiday') && (
