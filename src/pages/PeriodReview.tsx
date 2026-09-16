@@ -648,7 +648,7 @@ const PeriodReview = () => {
                   />
                 )}
                 <p className="p-4 text-lg font-medium leading-snug">{m.lead.title}</p>
-              </Link>
+              </PreviewTrigger>
             </Reveal>
           )}
           {m.covers.length > 1 && (
@@ -671,7 +671,7 @@ const PeriodReview = () => {
                       loading="lazy"
                       className="h-full w-full object-cover"
                     />
-                  </Link>
+                  </PreviewTrigger>
                 ))}
               </div>
             </Reveal>
@@ -711,7 +711,7 @@ const PeriodReview = () => {
                         loading="lazy"
                         className="h-full w-full object-cover"
                       />
-                    </Link>
+                    </PreviewTrigger>
                   ) : (
                     <span className="h-20 w-20 shrink-0 rounded-xl border border-border" aria-hidden />
                   )}
@@ -766,7 +766,7 @@ const PeriodReview = () => {
                         {r.count} stories{r.peak_month ? ` · peak ${monthLabel(r.peak_month)}` : ''}
                       </p>
                     </div>
-                  </Link>
+                  </PreviewTrigger>
                 </Reveal>
               ))}
           </div>
@@ -1062,7 +1062,7 @@ const PeriodReview = () => {
                         <p className="line-clamp-2 text-base font-medium">{s.title}</p>
                         <p className="mt-1 text-sm text-muted-foreground">{compact(s.views)} reads</p>
                       </div>
-                    </Link>
+                    </PreviewTrigger>
                   </li>
                 </Reveal>
               ))}
