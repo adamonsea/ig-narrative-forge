@@ -544,7 +544,17 @@ const PeriodReview = () => {
 
       {/* Top beats */}
       {categoryBreakdown.length > 0 && (
-        <ReviewSlide tone="accent" label="What we covered" hue={h(3)}>
+        <ReviewSlide
+          tone="accent"
+          label="What we covered"
+          hue={h(3)}
+          aside={
+            <ImageTapestry
+              covers={coversForCategory(categoryBreakdown[0]?.slug ?? '')}
+              feedSlug={slug}
+            />
+          }
+        >
           <MaskRevealHeading
             className="mb-8 text-4xl font-semibold tracking-tight"
             segments={[{ text: 'The five ' }, { text: 'biggest beats', italic: true }]}
