@@ -167,10 +167,10 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
           const active = group.modes.includes(automationMode);
           const targetMode = group.modes[0];
           return (
-            <button key={group.label} type="button" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`rounded-md border p-3 text-left transition-colors ${active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
+            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-md p-3 text-left ${active ? 'border-primary bg-primary/5' : 'hover:border-primary/40'}`}>
               <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-primary" />}{group.label}</span>
               <span className="mt-1 block text-xs text-muted-foreground">{group.summary}</span>
-            </button>
+            </Button>
           );
         })}
       </div>

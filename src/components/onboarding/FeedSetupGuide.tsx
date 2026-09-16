@@ -8,10 +8,7 @@ import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 import { SourceScanLoop, ClippingStackLoop } from "@/components/onboarding/WaitingAnimations";
-import {
-  ILLUSTRATION_STYLES,
-  type IllustrationStyle,
-} from "@/lib/constants/illustrationStyles";
+import { type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { cn } from "@/lib/utils";
 
 export interface FeedSetupGuideTopic {

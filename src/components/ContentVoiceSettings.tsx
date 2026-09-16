@@ -28,6 +28,7 @@ export const ContentVoiceSettings = ({
   onUpdate
 }: ContentVoiceSettingsProps) => {
   const { toast } = useToast();
+  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const [houseStyleNotes, setHouseStyleNotes] = useState(currentHouseStyleNotes ?? '');
   const [houseStyleExamples, setHouseStyleExamples] = useState(currentHouseStyleExamples ?? '');
 
@@ -40,6 +41,7 @@ export const ContentVoiceSettings = ({
   }, [currentHouseStyleExamples]);
 
   const autoSave = useCallback(async (field: string, value: string) => {
+    setSaveState('saving');
     try {
       const { error } = await supabase
         .from('topics')
@@ -47,16 +49,21 @@ export const ContentVoiceSettings = ({
         .eq('id', topicId);
 
       if (error) throw error;
-      toast({ title: "Saved" });
+      setSaveState('saved');
       onUpdate?.();
     } catch (error) {
       console.error('Error updating setting:', error);
+      setSaveState('error');
       toast({ title: "Error", description: "Failed to save", variant: "destructive" });
     }
   }, [topicId, onUpdate, toast]);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-5">
+      <div className="flex justify-end text-xs text-muted-foreground" aria-live="polite">
+        {saveState === 'saving' ? 'Saving' : saveState === 'error' ? 'Not saved' : 'Saved'}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label>Audience Expertise</Label>
         <Select
@@ -164,6 +171,7 @@ export const ContentVoiceSettings = ({
             }
           }}
         />
+      </div>
       </div>
     </div>
   );
