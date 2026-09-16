@@ -47,6 +47,11 @@ const PRESETS = [
   { label: '12 months', months: 12 },
 ] as const;
 
+interface OptionRow {
+  id: string;
+  name: string;
+}
+
 export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps) => {
   const { toast } = useToast();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
@@ -56,6 +61,10 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   const [customStart, setCustomStart] = useState(monthsAgo(6));
   const [customEnd, setCustomEnd] = useState(isoDate(new Date()));
   const [useCustom, setUseCustom] = useState(false);
+  const [categories, setCategories] = useState<OptionRow[]>([]);
+  const [sources, setSources] = useState<OptionRow[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
 
   const load = async () => {
     const { data } = await supabase
@@ -66,10 +75,40 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     setReviews((data ?? []) as ReviewRow[]);
   };
 
+  const loadOptions = async () => {
+    const [{ data: cats }, { data: srcs }] = await Promise.all([
+      supabase
+        .from('story_categories')
+        .select('id, name, parent_id, topic_id')
+        .or(`topic_id.is.null,topic_id.eq.${topicId}`)
+        .order('name'),
+      supabase.rpc('get_topic_sources', { p_topic_id: topicId }),
+    ]);
+    setCategories(
+      ((cats ?? []) as any[])
+        .filter((c) => !c.parent_id)
+        .map((c) => ({ id: c.id as string, name: c.name as string }))
+    );
+    const names = new Set<string>();
+    const sourceRows: OptionRow[] = [];
+    for (const s of (srcs ?? []) as any[]) {
+      const name = (s.source_name ?? '').trim();
+      if (!name || names.has(name)) continue;
+      names.add(name);
+      sourceRows.push({ id: name, name });
+    }
+    setSources(sourceRows.sort((a, b) => a.name.localeCompare(b.name)));
+  };
+
   useEffect(() => {
     load();
+    loadOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId]);
+
+  const toggle = (list: string[], setList: (v: string[]) => void, value: string) =>
+    setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+
 
   const remove = async (r: ReviewRow) => {
     setDeletingId(r.id);
