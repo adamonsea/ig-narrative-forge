@@ -404,11 +404,23 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               onLoadMore={loadMoreArticles}
             />
           )}
-        </TabsContent>
+        </section>
 
-        {/* Published Tab */}
-        <TabsContent value="published" className="space-y-3">
-          <div className="flex justify-end items-center gap-2 mb-2">
+        {/* Live — two thirds */}
+        <section
+          className={`md:col-span-2 space-y-3 ${mobileView === "live" ? "" : "hidden md:block"}`}
+          aria-label="Live stories"
+        >
+          <div className="flex items-center gap-2 pb-2 border-b">
+            <h3 className="section-label text-foreground">Live</h3>
+            <span className="text-xs text-muted-foreground tabular-nums">{visibleStories.length}</span>
+            {queueItems.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-purple-bright animate-fade-in">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="text-xs">{queueItems.length} being prepared</span>
+              </span>
+            )}
+            <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
             {stuckCount > 0 && (
               <Button
                 size="sm"
