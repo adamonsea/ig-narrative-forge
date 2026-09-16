@@ -39,7 +39,7 @@ import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
 import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { WidgetAnalytics } from "@/components/WidgetAnalytics";
-import { StatusPill, InfoHint } from "@/components/ui/editorial";
+import { InfoHint } from "@/components/ui/editorial";
 import { ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { getDial, parseNearbyPlaces } from "@/lib/newsValues";
 import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
@@ -179,12 +179,8 @@ export function EditorialControlCenter({
   );
   type AttentionItem = { text: string; section?: SectionKey; anchor?: string };
   const attention: AttentionItem[] = [];
-  if (stats.pending_articles > 20) {
-    attention.push({ text: `${stats.pending_articles} arrivals are waiting for editorial review` });
-  }
-  if (stats.processing_queue > 10) {
-    attention.push({ text: `${stats.processing_queue} stories are still being prepared` });
-  }
+  // Story volumes live in the Pipeline dashboard now — this list is only for
+  // settings that need a decision.
   if (!topic.is_public) {
     attention.push({ text: "This feed is a draft and cannot currently reach readers", section: "distribution" });
   }
@@ -302,7 +298,6 @@ export function EditorialControlCenter({
         {section === "overview" && (
           <OverviewBriefing
             topic={topic}
-            stats={stats}
             policy={policy}
             attention={attention}
             controlRows={controlRows}
@@ -473,7 +468,6 @@ export function EditorialControlCenter({
 
 function OverviewBriefing({
   topic,
-  stats,
   policy,
   attention,
   controlRows,
@@ -481,7 +475,6 @@ function OverviewBriefing({
   onGoToAttention,
 }: {
   topic: EditorialTopic;
-  stats: EditorialStats;
   policy: string;
   attention: { text: string; section?: SectionKey; anchor?: string }[];
   controlRows: { key: SectionKey; icon: typeof MapPin; title: string; summary: string }[];
@@ -490,20 +483,11 @@ function OverviewBriefing({
 }) {
   return (
     <div className="mx-auto max-w-4xl space-y-10">
-      <header className="flex flex-col justify-between gap-4 border-b border-border pb-7 sm:flex-row sm:items-end">
-        <div>
-          <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">Your feed at a glance</h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">See what needs judgement, then tune how Curatr selects, prepares and shares stories.</p>
-        </div>
-        <StatusPill live={topic.is_public} />
+      <header className="border-b border-border pb-7">
+        <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">How this feed behaves</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{policy}</p>
       </header>
 
-      <section aria-labelledby="flow-heading" className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-4">
-        <p id="flow-heading" className="text-sm text-muted-foreground">
-          {stats.pending_articles} waiting on you · {stats.processing_queue} being prepared · {stats.simplified_stories_24h} prepared today
-        </p>
-        <Button variant="ghost" size="sm" asChild><Link to="?tab=feed">Pipeline <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-      </section>
 
       {attention.length > 0 && (
         <section className="border-l-2 border-destructive bg-destructive/5 px-5 py-4" aria-labelledby="attention-heading">
@@ -513,11 +497,6 @@ function OverviewBriefing({
           </div>
         </section>
       )}
-
-      <section aria-labelledby="policy-heading">
-        <h3 id="policy-heading" className="text-base font-semibold">Editorial policy</h3>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{policy}</p>
-      </section>
 
       <section aria-label="Control areas">
         <div className="divide-y divide-border border-y border-border">
