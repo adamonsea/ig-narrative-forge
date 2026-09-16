@@ -484,20 +484,11 @@ function OverviewBriefing({
 }) {
   return (
     <div className="mx-auto max-w-4xl space-y-10">
-      <header className="flex flex-col justify-between gap-4 border-b border-border pb-7 sm:flex-row sm:items-end">
-        <div>
-          <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">Your feed at a glance</h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">See what needs judgement, then tune how Curatr selects, prepares and shares stories.</p>
-        </div>
-        <StatusPill live={topic.is_public} />
+      <header className="border-b border-border pb-7">
+        <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">How this feed behaves</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{policy}</p>
       </header>
 
-      <section aria-labelledby="flow-heading" className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-4">
-        <p id="flow-heading" className="text-sm text-muted-foreground">
-          {stats.pending_articles} waiting on you · {stats.processing_queue} being prepared · {stats.simplified_stories_24h} prepared today
-        </p>
-        <Button variant="ghost" size="sm" asChild><Link to="?tab=feed">Pipeline <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-      </section>
 
       {attention.length > 0 && (
         <section className="border-l-2 border-destructive bg-destructive/5 px-5 py-4" aria-labelledby="attention-heading">
