@@ -60,6 +60,14 @@ Deno.serve(async (req) => {
     const periodEnd: string | undefined = body.periodEnd;
     const label: string = body.label || 'Review';
     const slug: string = body.slug || `${periodStart}_${periodEnd}`;
+    // Optional scoping: limit the review to chosen categories and/or sources.
+    const categoryIds: string[] = Array.isArray(body.categoryIds)
+      ? body.categoryIds.filter((v: unknown) => typeof v === 'string' && v.length > 0)
+      : [];
+    const sourceNames: string[] = Array.isArray(body.sourceNames)
+      ? body.sourceNames.filter((v: unknown) => typeof v === 'string' && v.trim().length > 0).map((v: string) => v.trim())
+      : [];
+
 
     if (!topicId || !periodStart || !periodEnd) {
       return new Response(JSON.stringify({ error: 'topicId, periodStart and periodEnd are required' }), {
