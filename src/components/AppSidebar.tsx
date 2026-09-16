@@ -79,7 +79,7 @@ export function AppSidebar() {
           <Collapsible defaultOpen={hasActiveTopicRoute} className="group/collapsible">
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger className="flex w-full items-center">
-                My Topics
+                My feeds
                 <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
@@ -106,7 +106,7 @@ export function AppSidebar() {
                     })
                   ) : (
                     <SidebarMenuItem>
-                      <div className="px-2 py-1 text-sm text-muted-foreground">No topics yet</div>
+                      <div className="px-2 py-1 text-sm text-muted-foreground">No feeds yet</div>
                     </SidebarMenuItem>
                   )}
                 </SidebarMenu>

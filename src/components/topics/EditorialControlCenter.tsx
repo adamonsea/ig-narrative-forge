@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft,
   ArrowRight,
   BookOpen,
   CheckCircle2,
@@ -16,14 +15,12 @@ import {
   Radio,
   Rss,
   Settings2,
-  SlidersHorizontal,
   Sparkles,
-  Users,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { PictureReferences } from "@/components/topics/PictureReferences";
 import { CoverageTerms } from "@/components/topics/CoverageTerms";
 import { AiAssistantAccess } from "@/components/topics/AiAssistantAccess";
@@ -41,6 +38,7 @@ import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
 import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { WidgetAnalytics } from "@/components/WidgetAnalytics";
+import { StatusPill } from "@/components/ui/editorial";
 import { ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { getDial, parseNearbyPlaces } from "@/lib/newsValues";
 import { cn } from "@/lib/utils";
@@ -112,6 +110,25 @@ interface EditorialControlCenterProps {
 
 const titleCase = (value?: string) => value ? value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Not set";
 
+const sections: { key: SectionKey; label: string; icon: typeof MapPin }[] = [
+  { key: "overview", label: "Overview", icon: SlidersHorizontal },
+  { key: "coverage", label: "Coverage", icon: MapPin },
+  { key: "voice", label: "Voice & pictures", icon: BookOpen },
+  { key: "automation", label: "Automation", icon: Gauge },
+  { key: "distribution", label: "Distribution", icon: Radio },
+  { key: "identity", label: "Identity", icon: Palette },
+  { key: "features", label: "Optional features", icon: Sparkles },
+];
+
+const sectionHeadings: Record<Exclude<SectionKey, "overview">, { title: string; copy: string }> = {
+  coverage: { title: "Coverage", copy: "Define what belongs in this feed and what should wait for your judgement." },
+  voice: { title: "Voice & pictures", copy: "Set the audience, writing character and visual treatment for every story." },
+  automation: { title: "Automation", copy: "Choose what Curatr may prepare or publish without waiting for you." },
+  distribution: { title: "Distribution", copy: "Control where the feed reaches readers and monitor each destination." },
+  identity: { title: "Identity", copy: "Shape how the feed introduces itself and appears to readers." },
+  features: { title: "Optional features", copy: "Turn on specialist editorial tools only when they are useful." },
+};
+
 export function EditorialControlCenter({
   topic,
   stats,
@@ -167,7 +184,7 @@ export function EditorialControlCenter({
     attention.push({ text: `${stats.processing_queue} stories are still being prepared` });
   }
   if (!topic.is_public) {
-    attention.push({ text: "This feed is private and cannot currently reach readers", section: "distribution" });
+    attention.push({ text: "This feed is a draft and cannot currently reach readers", section: "distribution" });
   }
   if ((topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0) {
     attention.push({
@@ -190,11 +207,10 @@ export function EditorialControlCenter({
     }
   };
 
-  const controls = [
+  const controlRows = [
     {
       key: "coverage" as const,
       icon: MapPin,
-      eyebrow: "What belongs",
       title: "Coverage",
       summary: topic.topic_type === "regional"
         ? `${dial.label} · ${nearbyCount} nearby ${nearbyCount === 1 ? "place" : "places"}`
@@ -203,197 +219,265 @@ export function EditorialControlCenter({
     {
       key: "voice" as const,
       icon: BookOpen,
-      eyebrow: "How stories feel",
-      title: "Voice & presentation",
+      title: "Voice & pictures",
       summary: `${titleCase(topic.default_tone || "conversational")} · ${titleCase(topic.default_writing_style || "journalistic")}`,
     },
     {
       key: "automation" as const,
       icon: Gauge,
-      eyebrow: "What Curatr may do",
       title: "Automation",
-      summary: "Choose the level of editorial control",
+      summary: "How much Curatr may do without you",
     },
     {
       key: "distribution" as const,
       icon: Radio,
-      eyebrow: "Where readers find it",
       title: "Distribution",
       summary: `${activeChannels} active ${activeChannels === 1 ? "channel" : "channels"}`,
     },
+    {
+      key: "identity" as const,
+      icon: Palette,
+      title: "Identity",
+      summary: "Brand, colour, welcome and About",
+    },
+    {
+      key: "features" as const,
+      icon: Sparkles,
+      title: "Optional features",
+      summary: "Insights, sentiment, community and local tools",
+    },
   ];
 
-  if (section !== "overview") {
-    const headings: Record<Exclude<SectionKey, "overview">, { title: string; copy: string }> = {
-      coverage: { title: "Coverage", copy: "Define what belongs in this feed and what should wait for your judgement." },
-      voice: { title: "Voice & presentation", copy: "Set the audience, writing character and visual treatment for every story." },
-      automation: { title: "Automation", copy: "Choose what Curatr may prepare or publish without waiting for you." },
-      distribution: { title: "Distribution", copy: "Control where the feed reaches readers and monitor each destination." },
-      identity: { title: "Identity", copy: "Shape how the feed introduces itself and appears to readers." },
-      features: { title: "Optional features", copy: "Turn on specialist editorial tools only when they are useful." },
-    };
-    const heading = headings[section];
+  return (
+    <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
+      {/* Section rail — desktop */}
+      <nav aria-label="Editorial control sections" className="hidden lg:block">
+        <div className="sticky top-24 space-y-0.5">
+          {sections.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => openSection(key)}
+              aria-current={section === key ? "page" : undefined}
+              className={cn(
+                "relative flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors text-left",
+                section === key
+                  ? "bg-accent font-medium text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              )}
+            >
+              {section === key && <span className="nav-marker" />}
+              <Icon className={cn("h-4 w-4 flex-shrink-0", section === key ? "text-purple-bright" : "text-muted-foreground")} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
 
-    return (
-      <div className="mx-auto max-w-4xl space-y-8">
-        <header className="space-y-4 border-b border-border pb-6">
-          <Button variant="ghost" size="sm" className="-ml-3" onClick={() => openSection("overview")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Editorial control
-          </Button>
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">{heading.title}</h2>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{heading.copy}</p>
+      <div className="min-w-0">
+        {/* Section picker — mobile */}
+        <div className="lg:hidden mb-6 -mx-4 px-4 overflow-x-auto">
+          <div className="flex gap-1.5 pb-1">
+            {sections.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => openSection(key)}
+                aria-current={section === key ? "page" : undefined}
+                className={cn(
+                  "flex-shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                  section === key
+                    ? "border-transparent bg-purple-soft text-purple-dark"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        </header>
+        </div>
 
-        {section === "coverage" && (
-          <div className="space-y-10">
-            {topic.topic_type === "regional" && (
-              <section aria-labelledby="news-values-heading">
-                <h3 id="news-values-heading" className="mb-4 text-base font-semibold">News values</h3>
-                <NewsValuesPanel
-                  topicId={topic.id}
-                  region={topic.region}
-                  landmarks={topic.landmarks}
-                  postcodes={topic.postcodes}
-                  organizations={topic.organizations}
-                  localityStrength={topic.locality_strength}
-                  nearbyPlaces={topic.nearby_places}
-                  bigStoryOverride={topic.big_story_override}
-                  onChange={(values) => onTopicChange({ ...topic, ...values })}
-                />
-              </section>
-            )}
-            <section className="border-t border-border pt-8" aria-labelledby="discovery-heading">
-              <h3 id="discovery-heading" className="mb-1 text-base font-semibold">Coverage terms</h3>
-              <p className="mb-5 text-sm text-muted-foreground">Words that tell Curatr what belongs — suggested from your own recent stories.</p>
-              <CoverageTerms
-                topicId={topic.id}
-                keywords={topic.keywords}
-                setupState={topic.coverage_setup_state || {}}
-                onChange={(patch) => onTopicChange({ ...topic, ...patch })}
-              />
-            </section>
-            <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
-              <h3 id="exclusions-heading" className="mb-1 text-base font-semibold">Exclusions</h3>
-              <p className="mb-5 text-sm text-muted-foreground">Keep predictable near-misses out of the review queue.</p>
-              <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
-            </section>
-          </div>
+        {section === "overview" && (
+          <OverviewBriefing
+            topic={topic}
+            stats={stats}
+            policy={policy}
+            attention={attention}
+            controlRows={controlRows}
+            onOpenSection={openSection}
+            onGoToAttention={goToAttention}
+          />
         )}
 
-        {section === "voice" && (
-          <div className="space-y-10">
-            <ContentVoiceSettings
-              topicId={topic.id}
-              currentExpertise={topic.audience_expertise}
-              currentTone={topic.default_tone}
-              currentWritingStyle={topic.default_writing_style}
-              currentIllustrationStyle={topic.illustration_style}
-              currentHouseStyleNotes={topic.house_style_notes}
-              currentHouseStyleExamples={topic.house_style_examples}
-              onUpdate={onUpdate}
-            />
-            <section className="border-t border-border pt-8" aria-labelledby="picture-references-heading">
-              <PictureReferences
-                topicId={topic.id}
-                topicName={topic.name}
-                region={topic.region}
-                landmarks={topic.landmarks || []}
-                descriptions={topic.landmark_descriptions || {}}
-                photos={topic.landmark_reference_images || {}}
-                setupState={topic.landmark_setup_state || {}}
-                onChange={(patch) => onTopicChange({ ...topic, ...patch })}
-              />
-            </section>
-          </div>
-        )}
+        {section !== "overview" && (
+          <div className="mx-auto max-w-4xl space-y-8">
+            <header className="space-y-1 border-b border-border pb-6">
+              <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">{sectionHeadings[section].title}</h2>
+              <p className="max-w-2xl text-sm text-muted-foreground">{sectionHeadings[section].copy}</p>
+            </header>
 
-        {section === "automation" && (
-          <div className="space-y-10">
-            <TopicAutomationSettings topicId={topic.id} />
-            <section className="border-t border-border pt-8">
-              <h3 className="mb-4 text-base font-semibold">Publishing pace</h3>
-              <DripFeedSettings topicId={topic.id} onUpdate={onUpdate} />
-            </section>
-          </div>
-        )}
-
-        {section === "distribution" && (
-          <div className="divide-y divide-border border-y border-border">
-            <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Private"} checked={topic.is_public} disabled />
-            <ChannelRow icon={Mail} label="Email" description={`${stats.email_subscribers_total || 0} subscribers`} checked={topic.email_subscriptions_enabled || false} onCheckedChange={(checked) => onChannelToggle("email_subscriptions_enabled", checked, "Email subscriptions")} />
-            {topic.email_subscriptions_enabled && <div className="py-6"><NewsletterSignupsManager topicId={topic.id} /></div>}
-            <ChannelRow icon={Rss} label="RSS" description="A live feed for reader apps" checked={topic.rss_enabled || false} onCheckedChange={(checked) => onChannelToggle("rss_enabled", checked, "RSS feed")} />
-            <ChannelRow icon={Settings2} label="Website widget" description="Embed this feed on another website" checked={topic.public_widget_builder_enabled || false} onCheckedChange={(checked) => onChannelToggle("public_widget_builder_enabled", checked, "Widget builder")} />
-            {topic.public_widget_builder_enabled && (
-              <div className="space-y-4 py-6">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/feed/${topic.slug}/widget`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Open widget builder</Link>
-                </Button>
-                <WidgetAnalytics topicId={topic.id} onNewSiteDetected={(domain) => onToast("New widget integration", `Your widget is now live on ${domain}`)} />
+            {section === "coverage" && (
+              <div className="space-y-10">
+                {topic.topic_type === "regional" && (
+                  <section aria-labelledby="news-values-heading">
+                    <h3 id="news-values-heading" className="mb-4 text-base font-semibold">News values</h3>
+                    <NewsValuesPanel
+                      topicId={topic.id}
+                      region={topic.region}
+                      landmarks={topic.landmarks}
+                      postcodes={topic.postcodes}
+                      organizations={topic.organizations}
+                      localityStrength={topic.locality_strength}
+                      nearbyPlaces={topic.nearby_places}
+                      bigStoryOverride={topic.big_story_override}
+                      onChange={(values) => onTopicChange({ ...topic, ...values })}
+                    />
+                  </section>
+                )}
+                <section className="border-t border-border pt-8" aria-labelledby="discovery-heading">
+                  <h3 id="discovery-heading" className="mb-1 text-base font-semibold">Coverage terms</h3>
+                  <p className="mb-5 text-sm text-muted-foreground">Words that tell Curatr what belongs — suggested from your own recent stories.</p>
+                  <CoverageTerms
+                    topicId={topic.id}
+                    keywords={topic.keywords}
+                    setupState={topic.coverage_setup_state || {}}
+                    onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+                  />
+                </section>
+                <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
+                  <h3 id="exclusions-heading" className="mb-1 text-base font-semibold">Exclusions</h3>
+                  <p className="mb-5 text-sm text-muted-foreground">Keep predictable near-misses out of the review queue.</p>
+                  <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
+                </section>
               </div>
             )}
-            <ChannelRow icon={Mic2} label="Daily audio" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
-            <ChannelRow icon={Mic2} label="Weekly audio" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
-            <AiAssistantAccess
-              topicId={topic.id}
-              topicSlug={topic.slug}
-              topicName={topic.name}
-              enabled={topic.mcp_enabled || false}
-              access={topic.mcp_access === "open" ? "open" : "key"}
-              onChange={(patch) => onTopicChange({ ...topic, ...patch })}
-            />
-            <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
-          </div>
-        )}
 
-        {section === "identity" && (
-          <div className="space-y-10">
-            <section>
-              <h3 className="mb-4 text-base font-semibold">Brand</h3>
-              <TopicBrandingSettings topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
-            </section>
-            <section className="border-t border-border pt-8">
-              <h3 className="mb-1 text-base font-semibold">Welcome & About</h3>
-              <p className="mb-5 text-sm text-muted-foreground">Introduce the feed to first-time readers and explain its purpose.</p>
-              <OnboardingSettings topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
-            </section>
-          </div>
-        )}
+            {section === "voice" && (
+              <div className="space-y-10">
+                <ContentVoiceSettings
+                  topicId={topic.id}
+                  currentExpertise={topic.audience_expertise}
+                  currentTone={topic.default_tone}
+                  currentWritingStyle={topic.default_writing_style}
+                  currentIllustrationStyle={topic.illustration_style}
+                  currentHouseStyleNotes={topic.house_style_notes}
+                  currentHouseStyleExamples={topic.house_style_examples}
+                  onUpdate={onUpdate}
+                />
+                <section className="border-t border-border pt-8" aria-labelledby="picture-references-heading">
+                  <PictureReferences
+                    topicId={topic.id}
+                    topicName={topic.name}
+                    region={topic.region}
+                    landmarks={topic.landmarks || []}
+                    descriptions={topic.landmark_descriptions || {}}
+                    photos={topic.landmark_reference_images || {}}
+                    setupState={topic.landmark_setup_state || {}}
+                    onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+                  />
+                </section>
+              </div>
+            )}
 
-        {section === "features" && (
-          <div className="space-y-10">
-            <section><h3 className="mb-4 text-base font-semibold">Insight cards</h3><TopicInsightSettings topicId={topic.id} /></section>
-            <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Sentiment tracking</h3><SentimentKeywordSettings topicId={topic.id} /></section>
-            <section className="border-t border-border pt-8"><h3 className="mb-1 text-base font-semibold">Community signals</h3><p className="mb-5 text-sm text-muted-foreground">Monitor community discussion without changing the feed’s writing voice.</p><CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} /></section>
-            {topic.topic_type === "regional" && <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Local reporting tools</h3><RegionalFeaturesSettings topicId={topic.id} region={topic.region} parliamentaryEnabled={topic.parliamentary_tracking_enabled} eventsEnabled={topic.events_enabled} eventSourceUrl={topic.event_source_url} onUpdate={onUpdate} /></section>}
+            {section === "automation" && (
+              <div className="space-y-10">
+                <TopicAutomationSettings topicId={topic.id} />
+                <section className="border-t border-border pt-8">
+                  <h3 className="mb-4 text-base font-semibold">Publishing pace</h3>
+                  <DripFeedSettings topicId={topic.id} onUpdate={onUpdate} />
+                </section>
+              </div>
+            )}
+
+            {section === "distribution" && (
+              <div className="divide-y divide-border border-y border-border">
+                <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} disabled />
+                <ChannelRow icon={Mail} label="Email" description={`${stats.email_subscribers_total || 0} subscribers`} checked={topic.email_subscriptions_enabled || false} onCheckedChange={(checked) => onChannelToggle("email_subscriptions_enabled", checked, "Email subscriptions")} />
+                {topic.email_subscriptions_enabled && <div className="py-6"><NewsletterSignupsManager topicId={topic.id} /></div>}
+                <ChannelRow icon={Rss} label="RSS" description="A live feed for reader apps" checked={topic.rss_enabled || false} onCheckedChange={(checked) => onChannelToggle("rss_enabled", checked, "RSS feed")} />
+                <ChannelRow icon={Settings2} label="Website widget" description="Embed this feed on another website" checked={topic.public_widget_builder_enabled || false} onCheckedChange={(checked) => onChannelToggle("public_widget_builder_enabled", checked, "Widget builder")} />
+                {topic.public_widget_builder_enabled && (
+                  <div className="space-y-4 py-6">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/feed/${topic.slug}/widget`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Open widget builder</Link>
+                    </Button>
+                    <WidgetAnalytics topicId={topic.id} onNewSiteDetected={(domain) => onToast("New widget integration", `Your widget is now live on ${domain}`)} />
+                  </div>
+                )}
+                <ChannelRow icon={Mic2} label="Daily audio" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
+                <ChannelRow icon={Mic2} label="Weekly audio" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
+                <AiAssistantAccess
+                  topicId={topic.id}
+                  topicSlug={topic.slug}
+                  topicName={topic.name}
+                  enabled={topic.mcp_enabled || false}
+                  access={topic.mcp_access === "open" ? "open" : "key"}
+                  onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+                />
+                <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
+              </div>
+            )}
+
+            {section === "identity" && (
+              <div className="space-y-10">
+                <section>
+                  <h3 className="mb-4 text-base font-semibold">Brand</h3>
+                  <TopicBrandingSettings topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
+                </section>
+                <section className="border-t border-border pt-8">
+                  <h3 className="mb-1 text-base font-semibold">Welcome & About</h3>
+                  <p className="mb-5 text-sm text-muted-foreground">Introduce the feed to first-time readers and explain its purpose.</p>
+                  <OnboardingSettings topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
+                </section>
+              </div>
+            )}
+
+            {section === "features" && (
+              <div className="space-y-10">
+                <section><h3 className="mb-4 text-base font-semibold">Insight cards</h3><TopicInsightSettings topicId={topic.id} /></section>
+                <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Sentiment tracking</h3><SentimentKeywordSettings topicId={topic.id} /></section>
+                <section className="border-t border-border pt-8"><h3 className="mb-1 text-base font-semibold">Community signals</h3><p className="mb-5 text-sm text-muted-foreground">Monitor community discussion without changing the feed’s writing voice.</p><CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} /></section>
+                {topic.topic_type === "regional" && <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Local reporting tools</h3><RegionalFeaturesSettings topicId={topic.id} region={topic.region} parliamentaryEnabled={topic.parliamentary_tracking_enabled} eventsEnabled={topic.events_enabled} eventSourceUrl={topic.event_source_url} onUpdate={onUpdate} /></section>}
+              </div>
+            )}
           </div>
         )}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
+function OverviewBriefing({
+  topic,
+  stats,
+  policy,
+  attention,
+  controlRows,
+  onOpenSection,
+  onGoToAttention,
+}: {
+  topic: EditorialTopic;
+  stats: EditorialStats;
+  policy: string;
+  attention: { text: string; section?: SectionKey; anchor?: string }[];
+  controlRows: { key: SectionKey; icon: typeof MapPin; title: string; summary: string }[];
+  onOpenSection: (key: SectionKey) => void;
+  onGoToAttention: (item: { section?: SectionKey; anchor?: string }) => void;
+}) {
   return (
-    <div className="mx-auto max-w-6xl space-y-10">
-      <header className="border-b border-border pb-7">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">Editorial control</p>
-            <h2 className="text-2xl font-semibold text-foreground">Your feed at a glance</h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">See what needs judgement, then tune how Curatr selects, prepares and shares stories.</p>
-          </div>
-          <Badge variant={topic.is_public ? "default" : "secondary"} className="w-fit gap-1.5">
-            <span className={cn("h-1.5 w-1.5 rounded-full", topic.is_public ? "bg-pop" : "bg-muted-foreground")} />
-            {topic.is_public ? "Live" : "Private"}
-          </Badge>
+    <div className="mx-auto max-w-4xl space-y-10">
+      <header className="flex flex-col justify-between gap-4 border-b border-border pb-7 sm:flex-row sm:items-end">
+        <div>
+          <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">Your feed at a glance</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">See what needs judgement, then tune how Curatr selects, prepares and shares stories.</p>
         </div>
+        <StatusPill live={topic.is_public} />
       </header>
 
       <section aria-labelledby="flow-heading">
         <div className="mb-4 flex items-center justify-between">
           <div><h3 id="flow-heading" className="text-base font-semibold">Current flow</h3><p className="text-sm text-muted-foreground">What is moving through the newsroom now.</p></div>
-          <Button variant="ghost" size="sm" asChild><Link to="?tab=feed">Open pipeline <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link to="?tab=feed">Pipeline <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </div>
         <div className="grid grid-cols-2 divide-x divide-y divide-border border-y border-border sm:grid-cols-4 sm:divide-y-0">
           <FlowMetric value={stats.pending_articles} label="Arrivals to review" />
@@ -407,31 +491,34 @@ export function EditorialControlCenter({
         <section className="border-l-2 border-destructive bg-destructive/5 px-5 py-4" aria-labelledby="attention-heading">
           <div className="flex gap-3">
             <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-            <div><h3 id="attention-heading" className="text-sm font-semibold">Needs your attention</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((item) => <li key={item.text}>{item.section ? <button type="button" onClick={() => goToAttention(item)} className="text-left underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground">{item.text}</button> : item.text}</li>)}</ul></div>
+            <div><h3 id="attention-heading" className="text-sm font-semibold">Needs your attention</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((item) => <li key={item.text}>{item.section ? <button type="button" onClick={() => onGoToAttention(item)} className="text-left underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground">{item.text}</button> : item.text}</li>)}</ul></div>
           </div>
         </section>
       )}
 
-      <section aria-labelledby="policy-heading" className="grid gap-6 lg:grid-cols-[1fr_2fr]">
-        <div>
-          <h3 id="policy-heading" className="text-base font-semibold">Editorial policy</h3>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">{policy}</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {controls.map(({ key, icon: Icon, eyebrow, title, summary }) => (
-            <Button key={key} type="button" variant="outline" onClick={() => openSection(key)} className="group h-auto min-h-44 flex-col items-stretch justify-start whitespace-normal p-5 text-left hover:border-primary/40 hover:bg-accent/40">
-              <div className="flex items-start justify-between gap-4"><div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground"><Icon className="h-4 w-4" /></div><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></div>
-              <p className="mt-5 text-xs font-medium uppercase text-muted-foreground">{eyebrow}</p>
-              <h4 className="mt-1 font-semibold text-foreground">{title}</h4>
-              <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
-            </Button>
-          ))}
-        </div>
+      <section aria-labelledby="policy-heading">
+        <h3 id="policy-heading" className="text-base font-semibold">Editorial policy</h3>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{policy}</p>
       </section>
 
-      <section className="grid gap-3 border-t border-border pt-8 sm:grid-cols-2">
-        <SecondarySection icon={Palette} title="Identity" copy="Brand, colour, welcome and About" onClick={() => openSection("identity")} />
-        <SecondarySection icon={Sparkles} title="Optional features" copy="Insights, sentiment, community and local tools" onClick={() => openSection("features")} />
+      <section aria-label="Control areas">
+        <div className="divide-y divide-border border-y border-border">
+          {controlRows.map(({ key, icon: Icon, title, summary }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onOpenSection(key)}
+              className="group flex w-full items-center gap-4 py-4 text-left transition-colors hover:bg-accent/40"
+            >
+              <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-medium text-foreground">{title}</span>
+                <span className="block truncate text-xs text-muted-foreground">{summary}</span>
+              </span>
+              <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </button>
+          ))}
+        </div>
       </section>
     </div>
   );
@@ -441,10 +528,6 @@ function FlowMetric({ value, label }: { value: number; label: string }) {
   return <div className="px-4 py-5 sm:px-6"><p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></div>;
 }
 
-function SecondarySection({ icon: Icon, title, copy, onClick }: { icon: typeof Palette; title: string; copy: string; onClick: () => void }) {
-  return <Button variant="ghost" className="h-auto justify-between px-4 py-4 text-left" onClick={onClick}><span className="flex items-center gap-3"><Icon className="h-4 w-4 text-muted-foreground" /><span><span className="block text-sm font-medium">{title}</span><span className="block text-xs font-normal text-muted-foreground">{copy}</span></span></span><ArrowRight className="h-4 w-4 text-muted-foreground" /></Button>;
-}
-
 function ChannelRow({ icon: Icon, label, description, checked, onCheckedChange, disabled = false }: { icon: typeof Mail; label: string; description: string; checked: boolean; onCheckedChange?: (checked: boolean) => void; disabled?: boolean }) {
-  return <div className="flex items-center justify-between gap-5 py-5"><div className="flex items-center gap-3"><Icon className="h-4 w-4 text-muted-foreground" /><div><Label className="text-sm">{label}</Label><p className="mt-0.5 text-xs text-muted-foreground">{description}</p></div></div>{disabled ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={`Enable ${label}`} />}</div>;
+  return <div className="flex items-center justify-between gap-5 py-5"><div className="flex items-center gap-3"><Icon className="h-4 w-4 text-muted-foreground" /><div><Label className="text-sm">{label}</Label><p className="mt-0.5 text-xs text-muted-foreground">{description}</p></div></div>{disabled ? <CheckCircle2 className="h-4 w-4 text-pop" /> : <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={`Enable ${label}`} />}</div>;
 }

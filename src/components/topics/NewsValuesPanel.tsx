@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Compass, MapPin, Plus, X } from 'lucide-react';
+import { MapPin, Plus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -174,14 +174,7 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
   const dial = getDial(strength);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Compass className="w-4 h-4" />
-          News values
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-6">
         {/* The dial */}
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
@@ -272,7 +265,6 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
           </div>
           <Switch id="big-story-override" checked={override} onCheckedChange={setOverride} />
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 };

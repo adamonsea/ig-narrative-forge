@@ -223,34 +223,34 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Light Mode with Dark Green (#0a1810) */
+    /* Quiet editorial workspace — light theme */
     --background: 0 0% 100%;
-    --foreground: 146 41% 7%;
+    --foreground: 214 50% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 146 41% 7%;
+    --card-foreground: 214 50% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 146 41% 7%;
+    --popover-foreground: 214 50% 9%;
 
-    --primary: 146 41% 7%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 214 50% 9%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 146 41% 7%;
+    --secondary: 150 20% 96%;
+    --secondary-foreground: 214 50% 9%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 146 20% 35%;
+    --muted: 150 20% 96%;
+    --muted-foreground: 215 14% 40%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 146 41% 7%;
+    --accent: 150 25% 95%;
+    --accent-foreground: 214 50% 9%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 146 41% 7%;
+    --border: 214 18% 90%;
+    --input: 214 18% 90%;
+    --ring: 270 65% 58%;
 
     --radius: 0.5rem;
 
@@ -261,76 +261,81 @@ All colors MUST be HSL.
     --feed-card-header: 210 7% 97%;
     --feed-header-background: 0 0% 100%;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 146 41% 7%;
-    --sidebar-primary: 146 41% 7%;
+    --sidebar-background: 150 20% 98%;
+    --sidebar-foreground: 214 50% 9%;
+    --sidebar-primary: 270 65% 58%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 146 41% 7%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Pop color for highlights and accents */
-    --pop: 155 100% 67%;
-    --pop-foreground: 146 41% 7%;
-    
-    /* Purple accent colors for badges and highlights */
-    --purple-bright: 270 95% 75%;
-    --purple-dark: 270 80% 45%;
+    --sidebar-accent: 150 25% 94%;
+    --sidebar-accent-foreground: 214 50% 9%;
+    --sidebar-border: 214 18% 90%;
+    --sidebar-ring: 270 65% 58%;
+
+    /* Mint — healthy activity, live state, positive actions */
+    --pop: 155 85% 38%;
+    --pop-foreground: 214 50% 9%;
+    --mint-soft: 155 70% 93%;
+
+    /* Violet — selection, navigation, creative moments */
+    --purple-bright: 270 65% 58%;
+    --purple-dark: 270 65% 40%;
+    --purple-soft: 270 70% 96%;
   }
 
   .dark {
-    --background: 146 41% 7%;
-    --foreground: 210 40% 98%;
+    /* Quiet editorial workspace — dark theme */
+    --background: 214 45% 8%;
+    --foreground: 210 25% 96%;
 
-    --card: 146 41% 7%;
-    --card-foreground: 210 40% 98%;
+    --card: 214 40% 10%;
+    --card-foreground: 210 25% 96%;
 
-    --popover: 146 41% 7%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 214 40% 10%;
+    --popover-foreground: 210 25% 96%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 146 41% 7%;
+    --primary: 210 25% 96%;
+    --primary-foreground: 214 50% 9%;
 
-    --secondary: 146 30% 15%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 214 30% 15%;
+    --secondary-foreground: 210 25% 96%;
 
-    --muted: 146 30% 15%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 214 30% 15%;
+    --muted-foreground: 215 15% 65%;
 
-    --accent: 146 30% 15%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 214 30% 15%;
+    --accent-foreground: 210 25% 96%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 210 25% 96%;
 
-    --border: 146 30% 15%;
-    --input: 146 30% 15%;
-    --ring: 212.7 26.8% 83.9%;
-    
+    --border: 214 25% 17%;
+    --input: 214 25% 17%;
+    --ring: 270 80% 72%;
+
     /* Dark mode feed-specific overrides */
     --feed-background: 210 11% 15%;
     --feed-card: 146 41% 7%;
     --feed-card-foreground: 210 40% 98%;
     --feed-card-header: 146 30% 15%;
     --feed-header-background: 0 0% 100%;
-    
-    --sidebar-background: 146 41% 7%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 146 30% 12%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 146 30% 12%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Pop color for highlights and accents (same in dark mode) */
-    --pop: 155 100% 67%;
-    --pop-foreground: 146 41% 7%;
-    
-    /* Purple accent colors for badges and highlights */
-    --purple-bright: 270 95% 75%;
-    --purple-dark: 270 80% 45%;
+
+    --sidebar-background: 214 45% 7%;
+    --sidebar-foreground: 210 25% 96%;
+    --sidebar-primary: 270 80% 72%;
+    --sidebar-primary-foreground: 214 50% 9%;
+    --sidebar-accent: 214 30% 13%;
+    --sidebar-accent-foreground: 210 25% 96%;
+    --sidebar-border: 214 25% 14%;
+    --sidebar-ring: 270 80% 72%;
+
+    /* Mint — healthy activity, live state, positive actions */
+    --pop: 155 90% 55%;
+    --pop-foreground: 214 50% 9%;
+    --mint-soft: 155 50% 15%;
+
+    /* Violet — selection, navigation, creative moments */
+    --purple-bright: 270 90% 74%;
+    --purple-dark: 270 70% 58%;
+    --purple-soft: 270 50% 18%;
   }
 }
 
@@ -384,5 +389,38 @@ All colors MUST be HSL.
     100% {
       transform: translateY(0);
     }
+  }
+}
+
+/* Quiet editorial workspace utilities */
+@layer components {
+  /* One strong editorial heading per view */
+  .display-heading {
+    @apply font-display tracking-tight;
+  }
+
+  /* Section label: sentence case, no uppercase tracking */
+  .section-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  /* Quiet persistent save indicator */
+  .save-indicator {
+    @apply inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-opacity duration-200;
+  }
+
+  /* Slim violet marker used by active navigation */
+  .nav-marker {
+    @apply absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full bg-purple-bright;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

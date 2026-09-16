@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -267,14 +267,10 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Topic Branding</CardTitle>
-          <CardDescription>
-            Customize how your topic appears to readers with a logo and custom subheader
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <div className="space-y-6">
+        <p className="text-sm text-muted-foreground">
+          Customise how your feed appears to readers with a logo and custom subheader.
+        </p>
           {/* Logo Upload */}
           <div>
             <Label className="text-base font-medium">Logo (Header Branding)</Label>
@@ -489,8 +485,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
               "Save Branding"
             )}
           </Button>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

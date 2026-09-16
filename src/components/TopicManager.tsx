@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Hash, Archive, ExternalLink, TrendingUp, TrendingDown, AlertTriangle, MoreHorizontal, ShieldCheck } from "lucide-react";
+import { Plus, Archive, ExternalLink, TrendingDown, TrendingUp, AlertTriangle, MoreHorizontal, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 import { CreateTopicDialog } from "@/components/CreateTopicDialog";
-import { EngagementSparkline } from "@/components/EngagementSparkline";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FeedSafetyDialog } from "@/components/topics/FeedSafetyDialog";
 import { FeedBackupsDialog } from "@/components/topics/FeedBackupsDialog";
-
+import { StatusPill, PageState } from "@/components/ui/editorial";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface Topic {
   id: string;
@@ -55,6 +55,7 @@ export const TopicManager = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [safetyTarget, setSafetyTarget] = useState<{ id: string; name: string } | null>(null);
   const [backupsTarget, setBackupsTarget] = useState<{ id: string; name: string } | null>(null);
+  const [unpublishTarget, setUnpublishTarget] = useState<Topic | null>(null);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -75,9 +76,9 @@ export const TopicManager = () => {
         .order('created_at', { ascending: false });
 
       if (topicsRes.error) throw topicsRes.error;
-      
+
       const topicIds = (topicsRes.data || []).map(t => t.id);
-      
+
       const [statsRes, subscribersRes, sourcesRes] = await Promise.all([
         supabase.rpc('get_user_dashboard_stats', { p_user_id: user?.id }),
         topicIds.length > 0 ? supabase
@@ -91,7 +92,7 @@ export const TopicManager = () => {
           .in('topic_id', topicIds)
           .eq('is_active', true) : Promise.resolve({ data: [] })
       ]);
-      
+
       const statsMap = new Map<string, any>();
       (statsRes.data || []).forEach((stat: any) => {
         statsMap.set(stat.topic_id, stat);
@@ -121,7 +122,7 @@ export const TopicManager = () => {
           articles_in_arrivals: Number(stats.articles_in_arrivals) || 0,
           stories_published_this_week: Number(stats.stories_published_week) || 0,
           visits_this_week: Number(stats.visits_this_week) || 0,
-          visits_last_week: Number(stats.visits_last_week) || 0,  // Now from RPC
+          visits_last_week: Number(stats.visits_last_week) || 0,
           articles_liked: Number(stats.articles_liked) || 0,
           articles_disliked: Number(stats.articles_disliked) || 0,
           avg_stories_engaged: Number(stats.avg_stories_engaged) || 0,
@@ -135,13 +136,13 @@ export const TopicManager = () => {
           }
         };
       });
-      
+
       setTopics(topicsWithStats);
     } catch (error) {
       console.error('Error loading topics:', error);
       toast({
         title: "Error",
-        description: "Failed to load topics",
+        description: "Failed to load feeds",
         variant: "destructive"
       });
     } finally {
@@ -154,29 +155,31 @@ export const TopicManager = () => {
     navigate(`/dashboard/topic/${topicSlug}`);
   };
 
-  const handlePublishToggle = async (topicId: string, currentlyPublic: boolean) => {
-    if (currentlyPublic) {
-      if (!confirm('Take this topic offline? It will no longer be visible to readers.')) return;
-    }
-    const newPublic = !currentlyPublic;
+  const setPublishState = async (topicId: string, isPublic: boolean) => {
     try {
       const { error } = await supabase
         .from('topics')
-        .update({ is_public: newPublic, is_active: newPublic })
+        .update({ is_public: isPublic, is_active: isPublic })
         .eq('id', topicId);
       if (error) throw error;
-      setTopics(prev => prev.map(t => t.id === topicId ? { ...t, is_public: newPublic, is_active: newPublic } : t));
+      setTopics(prev => prev.map(t => t.id === topicId ? { ...t, is_public: isPublic, is_active: isPublic } : t));
     } catch (error) {
       console.error('Error toggling publish:', error);
       toast({ title: "Error", description: "Failed to update publish state", variant: "destructive" });
     }
   };
 
+  const handlePublishToggle = (topic: Topic) => {
+    if (topic.is_public) {
+      setUnpublishTarget(topic);
+    } else {
+      setPublishState(topic.id, true);
+    }
+  };
+
   const handleArchiveTopic = (topicId: string, topicName: string) => {
     setSafetyTarget({ id: topicId, name: topicName });
   };
-
-
 
   if (loading) {
     return (
@@ -189,12 +192,6 @@ export const TopicManager = () => {
   const getWowChange = (thisWeek: number, lastWeek: number) => {
     if (lastWeek === 0) return thisWeek > 0 ? 100 : 0;
     return Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
-  };
-
-  const getApprovalRate = (liked: number, disliked: number) => {
-    const total = liked + disliked;
-    if (total === 0) return null;
-    return Math.round((liked / total) * 100);
   };
 
   const getAudienceBreakdown = (topic: Topic) => {
@@ -215,9 +212,9 @@ export const TopicManager = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-end">
-        <Button onClick={() => setShowCreateDialog(true)} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white">
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Create Topic
+          Create feed
         </Button>
       </div>
 
@@ -228,32 +225,27 @@ export const TopicManager = () => {
       />
 
       {topics.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <div className="mb-4">
-              <Hash className="w-16 h-16 mx-auto text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No topics yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first topic to start curating content feeds
-            </p>
-            <Button onClick={() => setShowCreateDialog(true)} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white">
+        <PageState
+          title="No feeds yet"
+          description="Create your first feed to start curating stories into your own publication."
+          action={
+            <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Create Your First Topic
+              Create your first feed
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-5">
           {topics.map((topic) => {
             const wowChange = getWowChange(topic.visits_this_week || 0, topic.visits_last_week || 0);
-            const approvalRate = getApprovalRate(topic.articles_liked || 0, topic.articles_disliked || 0);
             const audience = getAudienceBreakdown(topic);
             const trafficAlert = wowChange < -50;
+            const arrivalsAttention = (topic.articles_in_arrivals || 0) > 20;
 
             return (
-              <Card key={topic.id} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-card border-border">
-                <Link 
+              <Card key={topic.id} className="relative overflow-hidden group hover:shadow-md transition-shadow duration-200 bg-card border-border">
+                <Link
                   to={`/dashboard/topic/${topic.slug}`}
                   className="block"
                   onClick={(e) => {
@@ -263,39 +255,26 @@ export const TopicManager = () => {
                     }
                   }}
                 >
-                  <CardContent className="p-4 md:p-6">
-                    {/* Header: Name + pill + actions */}
-                    <div className="flex items-start justify-between gap-4 mb-5">
+                  <CardContent className="p-4 md:p-6 space-y-4">
+                    {/* Identity row: name, state, actions */}
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 min-w-0">
                         {topic.branding_config?.logo_url && (
-                          <img 
-                            src={topic.branding_config.logo_url} 
+                          <img
+                            src={topic.branding_config.logo_url}
                             alt={`${topic.name} logo`}
                             className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                           />
                         )}
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-lg md:text-xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors truncate">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <h3 className="text-lg md:text-xl font-semibold tracking-tight group-hover:text-purple-dark transition-colors truncate">
                               {topic.name}
                             </h3>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handlePublishToggle(topic.id, topic.is_public);
-                              }}
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 transition-colors ${
-                                topic.is_public
-                                  ? 'bg-green-500/15 text-green-600 dark:text-green-400 hover:bg-green-500/25'
-                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                              }`}
-                            >
-                              {topic.is_public ? 'Live' : 'Draft'}
-                            </button>
+                            <StatusPill live={topic.is_public} onToggle={() => handlePublishToggle(topic)} />
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {topic.articles_in_arrivals || 0} in arrivals · {topic.stories_published_this_week || 0} published · {topic._count?.sources || 0} sources
+                          <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                            {topic.articles_in_arrivals || 0} in arrivals · {topic.stories_published_this_week || 0} published this week · {topic._count?.sources || 0} sources
                           </p>
                         </div>
                       </div>
@@ -304,7 +283,7 @@ export const TopicManager = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30"
+                          className="h-8 hover:bg-purple-soft hover:text-purple-dark hover:border-purple-bright/30"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -312,7 +291,7 @@ export const TopicManager = () => {
                           }}
                         >
                           <ExternalLink className="w-3 h-3 mr-1.5" />
-                          <span className="hidden md:inline text-xs">Feed</span>
+                          <span className="hidden md:inline text-xs">View</span>
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -329,6 +308,16 @@ export const TopicManager = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                navigate(`/dashboard/topic/${topic.slug}?tab=insights`);
+                              }}
+                            >
+                              <TrendingUp className="w-3.5 h-3.5 mr-2" />
+                              Insights
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.preventDefault();
@@ -351,52 +340,39 @@ export const TopicManager = () => {
                               Archive
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-
                         </DropdownMenu>
                       </div>
                     </div>
 
-                    {/* Inline Stats Row */}
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                      {/* Visitors */}
-                      <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1" title="Unique visitors to your feed this week">Visitors</div>
-                        <div className="text-xl font-bold">{topic.visits_this_week || 0}</div>
-                        <div className={`text-xs flex items-center gap-0.5 mt-0.5 ${
-                          trafficAlert ? 'text-destructive font-medium' : 
-                          wowChange > 0 ? 'text-green-600 dark:text-green-400' : 
-                          wowChange < 0 ? 'text-muted-foreground' : 'text-muted-foreground'
-                        }`}>
-                          {trafficAlert && <AlertTriangle className="w-3 h-3" />}
-                          {wowChange > 0 && <TrendingUp className="w-3 h-3" />}
-                          {wowChange < 0 && !trafficAlert && <TrendingDown className="w-3 h-3" />}
-                          {wowChange > 0 ? '+' : ''}{wowChange}% WoW
-                        </div>
+                    {/* Attention states first, one primary audience signal otherwise */}
+                    {trafficAlert ? (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                        <span>
+                          Visitors down {Math.abs(wowChange)}% this week ({topic.visits_this_week || 0} vs {topic.visits_last_week || 0} last week)
+                        </span>
                       </div>
-
-                      {/* Approval */}
-                      <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1" title="% of stories readers swiped right on">Approval</div>
-                        <div className="text-xl font-bold">
-                          {approvalRate !== null ? `${approvalRate}%` : '—'}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {(topic.avg_stories_engaged || 0) > 0 
-                            ? `${(topic.avg_stories_engaged || 0).toFixed(1)} avg engaged` 
-                            : 'No data'}
-                        </div>
+                    ) : arrivalsAttention ? (
+                      <div className="flex items-center gap-2 text-sm text-foreground">
+                        <TrendingUp className="w-4 h-4 text-purple-bright flex-shrink-0" />
+                        <span className="tabular-nums">
+                          {topic.articles_in_arrivals} stories waiting in Arrivals
+                        </span>
                       </div>
-
-                      {/* Audience */}
-                      <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1" title="People subscribed to your feed updates">Audience</div>
-                        <div className="text-xl font-bold">{audience.total}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{audience.label}</div>
+                    ) : (
+                      <div className="flex items-baseline gap-3 text-sm">
+                        <span className="text-2xl font-semibold tabular-nums">{audience.total}</span>
+                        <span className="text-muted-foreground truncate">
+                          {audience.label === 'No subscribers yet' ? 'No subscribers yet' : `subscribers · ${audience.label}`}
+                        </span>
+                        {topic.visits_this_week ? (
+                          <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+                            {topic.visits_this_week} visitors this week
+                            {wowChange > 0 && <span className="text-pop ml-1">+{wowChange}%</span>}
+                          </span>
+                        ) : null}
                       </div>
-                    </div>
-
-                    {/* Sparkline - visitors only */}
-                    <EngagementSparkline topicId={topic.id} minimal />
+                    )}
                   </CardContent>
                 </Link>
               </Card>
@@ -404,6 +380,18 @@ export const TopicManager = () => {
           })}
         </div>
       )}
+
+      <ConfirmationDialog
+        isOpen={!!unpublishTarget}
+        onClose={() => setUnpublishTarget(null)}
+        onConfirm={() => {
+          if (unpublishTarget) setPublishState(unpublishTarget.id, false);
+        }}
+        title={`Take ${unpublishTarget?.name || 'this feed'} offline?`}
+        description="It will no longer be visible to readers. You can publish it again at any time."
+        confirmText="Take offline"
+        variant="destructive"
+      />
 
       {safetyTarget && (
         <FeedSafetyDialog
@@ -430,4 +418,3 @@ export const TopicManager = () => {
     </div>
   );
 };
-

@@ -19,8 +19,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'system-ui', 'sans-serif'],
-				display: ['Playfair Display', 'serif'],
+				sans: ['Work Sans', 'Inter', 'system-ui', 'sans-serif'],
+				display: ['Instrument Serif', 'Playfair Display', 'serif'],
 				lexend: ['Lexend', 'system-ui', 'sans-serif'],
 			},
 			colors: {
@@ -71,9 +71,13 @@ export default {
 					DEFAULT: 'hsl(var(--pop))',
 					foreground: 'hsl(var(--pop-foreground))'
 				},
+				mint: {
+					soft: 'hsl(var(--mint-soft))'
+				},
 				purple: {
 					bright: 'hsl(var(--purple-bright))',
-					dark: 'hsl(var(--purple-dark))'
+					dark: 'hsl(var(--purple-dark))',
+					soft: 'hsl(var(--purple-soft))'
 				}
 			},
 			borderRadius: {

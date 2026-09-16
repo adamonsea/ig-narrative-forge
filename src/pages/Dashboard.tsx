@@ -40,10 +40,10 @@ const Dashboard = () => {
   return (
     <AppLayout>
       <Helmet>
-        <title>Your Topics | Curatr</title>
+        <title>Your feeds | Curatr</title>
         <meta name="description" content="Manage your curated news feeds, sources, and editorial pipeline from your Curatr dashboard." />
         <link rel="canonical" href="https://curatr.pro/dashboard" />
-        <meta property="og:title" content="Your Topics | Curatr" />
+        <meta property="og:title" content="Your feeds | Curatr" />
         <meta property="og:description" content="Manage your curated news feeds, sources, and editorial pipeline from your Curatr dashboard." />
         <meta property="og:url" content="https://curatr.pro/dashboard" />
       </Helmet>
@@ -51,8 +51,8 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">
-              Your topics
+            <h1 className="display-heading text-4xl">
+              Your feeds
             </h1>
           </div>
 
