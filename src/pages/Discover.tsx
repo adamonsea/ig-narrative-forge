@@ -43,7 +43,7 @@ const Discover = () => {
 
       <main className="container mx-auto px-6 py-12 max-w-5xl">
         <div className="space-y-2 mb-10">
-          <h1 className="text-4xl font-display font-semibold tracking-tight text-foreground">
+          <h1 className="text-4xl font-display font-normal tracking-tight text-foreground">
             Discover Feeds
           </h1>
           <p className="text-lg text-muted-foreground">

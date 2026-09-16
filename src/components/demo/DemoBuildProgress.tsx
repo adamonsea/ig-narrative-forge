@@ -59,7 +59,7 @@ export const DemoBuildProgress = ({ sourceName, tone, imageStyle, onComplete }: 
     <div className="space-y-8">
       <div className="text-center space-y-2">
         <p className="text-sm uppercase tracking-widest text-[hsl(155,100%,67%)] font-medium">Step 4</p>
-        <h3 className="text-2xl md:text-3xl font-display font-semibold text-white">
+        <h3 className="text-2xl md:text-3xl font-display font-normal text-white">
           Building your feed…
         </h3>
       </div>

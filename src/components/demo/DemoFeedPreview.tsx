@@ -56,7 +56,7 @@ export const DemoFeedPreview = ({ topicName, topicId, topicSlug }: DemoFeedPrevi
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl md:text-3xl font-display font-semibold text-white">
+        <h3 className="text-2xl md:text-3xl font-display font-normal text-white">
           Your feed is live
         </h3>
       </div>

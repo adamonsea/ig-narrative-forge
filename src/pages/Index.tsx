@@ -152,7 +152,7 @@ const Index = () => {
           <section className="max-w-5xl mx-auto text-center py-24 relative">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[hsl(270,100%,68%)]/10 blur-[120px] rounded-full -z-10" />
             <motion.div initial="hidden" animate="show" variants={container} className="space-y-8">
-              <motion.h1 variants={maskWordContainer} className="text-6xl md:text-8xl font-display font-medium tracking-tight leading-[1.05] text-white">
+              <motion.h1 variants={maskWordContainer} className="text-6xl md:text-8xl font-display font-normal tracking-tight leading-[1.05] text-white">
                 {['Your', 'niche', 'news', 'feed,'].map((word, i) => (
                   <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] px-[0.12em] -mx-[0.12em] mr-[0.13em]">
                     <motion.span variants={maskWord} className="inline-block">

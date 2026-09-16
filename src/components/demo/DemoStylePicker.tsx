@@ -17,7 +17,7 @@ export const DemoStylePicker = ({ style, onChange }: DemoStylePickerProps) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl md:text-3xl font-display font-semibold text-white">
+        <h3 className="text-2xl md:text-3xl font-display font-normal text-white">
           Set your style
         </h3>
       </div>

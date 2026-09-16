@@ -23,7 +23,7 @@ const Terms = () => {
           </Link>
         </Button>
 
-        <h1 className="text-4xl font-display font-bold mb-8">Terms and Conditions</h1>
+        <h1 className="text-4xl font-display font-normal mb-8">Terms and Conditions</h1>
         <p className="text-muted-foreground mb-8">Last updated: 27 December 2024</p>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
