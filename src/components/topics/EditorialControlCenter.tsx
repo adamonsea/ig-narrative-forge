@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { PictureReferences } from "@/components/topics/PictureReferences";
@@ -38,7 +39,7 @@ import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
 import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { WidgetAnalytics } from "@/components/WidgetAnalytics";
-import { StatusPill } from "@/components/ui/editorial";
+import { StatusPill, InfoHint } from "@/components/ui/editorial";
 import { ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { getDial, parseNearbyPlaces } from "@/lib/newsValues";
 import { cn } from "@/lib/utils";
@@ -335,8 +336,10 @@ export function EditorialControlCenter({
                   </section>
                 )}
                 <section className="border-t border-border pt-8" aria-labelledby="discovery-heading">
-                  <h3 id="discovery-heading" className="mb-1 text-base font-semibold">Coverage terms</h3>
-                  <p className="mb-5 text-sm text-muted-foreground">Words that tell Curatr what belongs — suggested from your own recent stories.</p>
+                  <h3 id="discovery-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
+                    Coverage terms
+                    <InfoHint label="About coverage terms">Words that tell Curatr what belongs — suggested from your own recent stories.</InfoHint>
+                  </h3>
                   <CoverageTerms
                     topicId={topic.id}
                     keywords={topic.keywords}
@@ -345,8 +348,10 @@ export function EditorialControlCenter({
                   />
                 </section>
                 <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
-                  <h3 id="exclusions-heading" className="mb-1 text-base font-semibold">Exclusions</h3>
-                  <p className="mb-5 text-sm text-muted-foreground">Keep predictable near-misses out of the review queue.</p>
+                  <h3 id="exclusions-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
+                    Exclusions
+                    <InfoHint label="About exclusions">Keeps predictable near-misses out of the review queue.</InfoHint>
+                  </h3>
                   <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
                 </section>
               </div>
@@ -356,10 +361,12 @@ export function EditorialControlCenter({
               <div className="space-y-10">
                 <ContentVoiceSettings
                   topicId={topic.id}
+                  topicName={topic.name}
+                  topicType={topic.topic_type}
+                  region={topic.region}
                   currentExpertise={topic.audience_expertise}
                   currentTone={topic.default_tone}
                   currentWritingStyle={topic.default_writing_style}
-                  currentIllustrationStyle={topic.illustration_style}
                   currentHouseStyleNotes={topic.house_style_notes}
                   currentHouseStyleExamples={topic.house_style_examples}
                   onUpdate={onUpdate}
@@ -373,6 +380,15 @@ export function EditorialControlCenter({
                     descriptions={topic.landmark_descriptions || {}}
                     photos={topic.landmark_reference_images || {}}
                     setupState={topic.landmark_setup_state || {}}
+                    illustrationStyle={topic.illustration_style}
+                    onIllustrationStyleChange={async (style) => {
+                      onTopicChange({ ...topic, illustration_style: style });
+                      await supabase
+                        .from('topics')
+                        .update({ illustration_style: style, updated_at: new Date().toISOString() } as never)
+                        .eq('id', topic.id);
+                      onUpdate?.();
+                    }}
                     onChange={(patch) => onTopicChange({ ...topic, ...patch })}
                   />
                 </section>

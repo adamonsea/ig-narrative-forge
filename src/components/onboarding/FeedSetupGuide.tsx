@@ -220,6 +220,7 @@ export const FeedSetupGuide = ({
                 descriptions={(topic as any).landmark_descriptions || {}}
                 photos={(topic as any).landmark_reference_images || {}}
                 setupState={(topic as any).landmark_setup_state || {}}
+                illustrationStyle={topic.illustration_style}
                 onChange={(patch) => onTopicChange(patch as never)}
               />
             )}
@@ -251,10 +252,12 @@ export const FeedSetupGuide = ({
         {step === 4 && (
           <ContentVoiceSettings
             topicId={topic.id}
+            topicName={topic.name}
+            topicType={topic.topic_type}
+            region={topic.region}
             currentExpertise={topic.audience_expertise}
             currentTone={topic.default_tone}
             currentWritingStyle={topic.default_writing_style}
-            currentIllustrationStyle={topic.illustration_style}
             currentHouseStyleNotes={topic.house_style_notes}
             currentHouseStyleExamples={topic.house_style_examples}
             onUpdate={onUpdate}
