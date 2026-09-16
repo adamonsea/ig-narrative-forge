@@ -51,8 +51,9 @@ interface StoryRow {
   publication_name: string | null;
   published_at: string | null;
   created_at: string | null;
+  cover_illustration_url?: string | null;
   slides?: SlideRow[] | null;
-  topic_articles?: { topic_id?: string; shared_article_content?: { url?: string | null; author?: string | null; source_domain?: string | null } | null } | null;
+  topic_articles?: { topic_id?: string; shared_article_content?: { url?: string | null; author?: string | null; source_domain?: string | null; image_url?: string | null } | null } | null;
 }
 
 const orderedSlides = (story: StoryRow): string[] =>
