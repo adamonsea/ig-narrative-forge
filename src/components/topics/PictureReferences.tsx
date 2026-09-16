@@ -4,6 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, ChevronDown, MapPin, Image as ImageIcon, Sparkles, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { InfoHint } from "@/components/ui/editorial";
+import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,6 +48,8 @@ interface PictureReferencesProps {
   descriptions: Record<string, string>;
   photos: Record<string, LandmarkPhoto[]>;
   setupState: Record<string, PlaceSetupState>;
+  illustrationStyle?: IllustrationStyle;
+  onIllustrationStyleChange?: (style: IllustrationStyle) => void;
   onChange: (patch: PictureReferencesPatch) => void;
 }
 
