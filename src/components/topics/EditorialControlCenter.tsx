@@ -469,7 +469,6 @@ export function EditorialControlCenter({
 
 function OverviewBriefing({
   topic,
-  stats,
   policy,
   attention,
   controlRows,
@@ -477,7 +476,6 @@ function OverviewBriefing({
   onGoToAttention,
 }: {
   topic: EditorialTopic;
-  stats: EditorialStats;
   policy: string;
   attention: { text: string; section?: SectionKey; anchor?: string }[];
   controlRows: { key: SectionKey; icon: typeof MapPin; title: string; summary: string }[];
