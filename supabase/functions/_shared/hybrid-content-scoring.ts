@@ -432,22 +432,17 @@ export function meetsTopicRelevance(
   }
 
   const score = calculateTopicRelevance(content, title, topicConfig, sourceType, otherRegionalTopics, sourceUrl);
-  const threshold = getRelevanceThreshold(topicConfig.topic_type, sourceType, isUserSelectedSource);
+  const threshold = getRelevanceThreshold(
+    topicConfig.topic_type,
+    sourceType,
+    isUserSelectedSource,
+    topicConfig.locality_strength
+  );
+
+  // Competing regions are no longer a separate rejection: the place gate in
+  // news-values.ts already decides home vs nearby vs nowhere, and the dial
+  // decides how much a non-home story is worth.
   
-  // For regional topics, check for competing regions
-  if (topicConfig.topic_type === 'regional' && score.relevance_score > 0) {
-    const hasStrongCompetingRegionSignals = checkForCompetingRegionSignals(
-      content, 
-      title, 
-      topicConfig, 
-      otherRegionalTopics
-    );
-    
-    if (hasStrongCompetingRegionSignals) {
-      console.log(`[Relevance] ❌ Rejected by competing regional focus`);
-      return false;
-    }
-  }
   
   const meets = score.relevance_score >= threshold && score.relevance_score > 0;
   const sourceNote = isUserSelectedSource ? ' [USER-SELECTED]' : '';
