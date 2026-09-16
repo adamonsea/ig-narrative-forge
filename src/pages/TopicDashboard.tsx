@@ -592,9 +592,9 @@ const TopicDashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 text-center space-y-4">
-          <h1 className="text-4xl font-bold text-foreground">Topic Not Found</h1>
-          <p className="text-muted-foreground">The topic you're looking for doesn't exist or you don't have access.</p>
-          <Button asChild><Link to="/dashboard">Back to Dashboard</Link></Button>
+          <h1 className="display-heading text-4xl">Feed not found</h1>
+          <p className="text-muted-foreground">This feed doesn't exist or you don't have access.</p>
+          <Button asChild><Link to="/dashboard">Back to your feeds</Link></Button>
         </div>
       </div>
     );
@@ -612,12 +612,16 @@ const TopicDashboard = () => {
           {/* Simplified Header — name + toggle + view feed icon */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold text-foreground">{topic.name}</h1>
-              <Switch
-                id="publish-toggle"
-                checked={topic.is_public}
-                onCheckedChange={handlePublishToggle}
-              />
+              <h1 className="display-heading text-2xl md:text-3xl leading-snug">{topic.name}</h1>
+              <span className="flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1">
+                <span className="text-xs text-muted-foreground" id="publish-toggle-label">{topic.is_public ? "Live" : "Draft"}</span>
+                <Switch
+                  id="publish-toggle"
+                  aria-labelledby="publish-toggle-label"
+                  checked={topic.is_public}
+                  onCheckedChange={handlePublishToggle}
+                />
+              </span>
             </div>
             <Button variant="ghost" size="icon" asChild>
               <Link to={`/feed/${topic.slug}`} target="_blank">
@@ -682,25 +686,25 @@ const TopicDashboard = () => {
             className={`space-y-6 ${isNewFeed && !setupDismissed ? "hidden" : ""}`}
           >
             <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
-              <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
+              <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Pipeline
               </TabsTrigger>
-              <TabsTrigger value="insights" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
+              <TabsTrigger value="insights" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Insights
               </TabsTrigger>
-              <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
-                Settings
+              <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
+                Editorial control
               </TabsTrigger>
             </TabsList>
 
             {/* ===== INSIGHTS TAB ===== */}
-            <TabsContent value="insights" className="space-y-8">
+            <TabsContent value="insights" className="space-y-10">
               <section className="space-y-3">
-                <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Categories</h2>
+                <h2 className="display-heading text-2xl">Categories</h2>
                 <CategoriesPanel topicId={topic.id} />
               </section>
               <section className="space-y-3">
-                <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Period reviews</h2>
+                <h2 className="display-heading text-2xl">Period reviews</h2>
                 <PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} />
               </section>
             </TabsContent>
