@@ -99,15 +99,6 @@ export const SourceCleanup = () => {
             Clean Orphaned Sources
           </Button>
           
-          <Button
-            onClick={() => runCleanup('cleanup_legacy_orphaned')}
-            disabled={isLoading}
-            variant="destructive"
-            className="flex items-center gap-2"
-          >
-            {isLoading ? <Spinner size="sm" className="text-destructive-foreground" /> : <AlertTriangle className="h-4 w-4" />}
-            Remove Legacy Orphaned
-          </Button>
         </div>
 
         {lastResult && (
