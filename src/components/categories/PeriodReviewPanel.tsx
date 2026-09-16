@@ -51,7 +51,7 @@ const PRESETS = [
 interface OptionRow {
   id: string;
   name: string;
-  ids: string[];
+  ids?: string[];
 }
 
 export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps) => {
