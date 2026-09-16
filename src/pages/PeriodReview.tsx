@@ -84,6 +84,29 @@ interface ReviewData {
   entities?: Array<{ term: string; count: number }>;
   categoryPerformance?: Array<{ slug: string; name: string; stories: number; views: number; reads_per_story: number }>;
   sourceScorecard?: Array<{ name: string; count: number }>;
+  mosaic?: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
+  monthChapters?: Array<{
+    month: string;
+    count: number;
+    spike_term: string | null;
+    lead: { id: string; slug: string | null; title: string; cover_illustration_url: string | null; views: number } | null;
+    covers: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
+  }>;
+  turningPoints?: Array<{
+    term: string;
+    month: string;
+    count: number;
+    multiple: number;
+    story: { id: string; slug: string | null; title: string; cover_illustration_url: string | null } | null;
+  }>;
+  recurringEntities?: Array<{
+    term: string;
+    count: number;
+    peak_month: string | null;
+    story: { id: string; slug: string | null; title: string; cover_illustration_url: string | null } | null;
+  }>;
+  wentQuiet?: Array<{ term: string; previous: number }>;
+  readingMinutes?: number;
   timeline: Array<{ month: string; count: number }>;
   hotTopics: Array<{ term: string; count: number }>;
   topStories: Array<{
