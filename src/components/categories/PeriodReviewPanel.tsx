@@ -4,8 +4,9 @@ import { edgeErrorMessage } from '@/lib/edgeError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Disclosure } from '@/components/ui/editorial';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BarChart3, ExternalLink, Trash2 } from 'lucide-react';
+import { Loader2, ExternalLink, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,16 +35,27 @@ interface ReviewRow {
 }
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+const monthsAgo = (months: number) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return isoDate(d);
+};
+
+const PRESETS = [
+  { label: '3 months', months: 3 },
+  { label: '6 months', months: 6 },
+  { label: '12 months', months: 12 },
+] as const;
 
 export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps) => {
   const { toast } = useToast();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [generating, setGenerating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const today = new Date();
-  const sixMonthsAgo = new Date(today.getTime() - 182 * 24 * 60 * 60 * 1000);
-  const [start, setStart] = useState(isoDate(sixMonthsAgo));
-  const [end, setEnd] = useState(isoDate(today));
+  const [months, setMonths] = useState<number>(6);
+  const [customStart, setCustomStart] = useState(monthsAgo(6));
+  const [customEnd, setCustomEnd] = useState(isoDate(new Date()));
+  const [useCustom, setUseCustom] = useState(false);
 
   const load = async () => {
     const { data } = await supabase
@@ -77,7 +89,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     }
   };
 
-  const generate = async () => {
+  const generate = async (start: string, end: string) => {
     setGenerating(true);
     try {
       const label = `${new Date(start).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} – ${new Date(
@@ -105,32 +117,66 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          <p className="text-sm font-medium">State of the area review</p>
+        <p className="text-sm font-medium">Look back over…</p>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <Button
+              key={p.months}
+              size="sm"
+              variant={!useCustom && months === p.months ? 'default' : 'outline'}
+              disabled={generating}
+              onClick={() => {
+                setUseCustom(false);
+                setMonths(p.months);
+                generate(monthsAgo(p.months), isoDate(new Date()));
+              }}
+            >
+              {generating && !useCustom && months === p.months && (
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              )}
+              {p.label}
+            </Button>
+          ))}
         </div>
-        <p className="text-xs text-muted-foreground">
-          Builds a shareable review of everything published in a period — story mix by category, what grew, hot topics
-          and the stories readers cared about.
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="review-start" className="text-xs">
-              From
-            </Label>
-            <Input id="review-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+        <Disclosure summary="Pick exact dates">
+          <div className="flex flex-wrap items-end gap-3 pt-1">
+            <div className="space-y-1">
+              <Label htmlFor="review-start" className="text-xs">
+                From
+              </Label>
+              <Input
+                id="review-start"
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="w-auto"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="review-end" className="text-xs">
+                To
+              </Label>
+              <Input
+                id="review-end"
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="w-auto"
+              />
+            </div>
+            <Button
+              size="sm"
+              disabled={generating}
+              onClick={() => {
+                setUseCustom(true);
+                generate(customStart, customEnd);
+              }}
+            >
+              {generating && useCustom && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Generate
+            </Button>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="review-end" className="text-xs">
-              To
-            </Label>
-            <Input id="review-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
-          </div>
-        </div>
-        <Button size="sm" onClick={generate} disabled={generating}>
-          {generating && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-          Generate review
-        </Button>
+        </Disclosure>
       </div>
 
       {reviews.length > 0 && (
