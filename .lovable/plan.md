@@ -1,4 +1,4 @@
-# A quieter, more delightful editorial workspace
+# A quieter, more mature editorial workspace
 
 ## Direction
 
@@ -8,17 +8,33 @@ The workspace should feel like opening an editor’s well-organised desk: the ne
 
 This is a dashboard and settings redesign. It will preserve feed behaviour, scoring, automation, publishing, permissions and existing URLs.
 
+## Maturity bar
+
+The result should pass a simple test: every screen answers three questions without explanation — *where am I, what needs me, what happens if I change this* — and nothing on screen moves, flashes or re-saves without a reason. Details that signal a finished product:
+
+- One consistent vocabulary everywhere (Feeds, Pipeline, Editorial control); no synonym drift between sidebar, page titles and breadcrumbs.
+- One consistent publish-state model: the same label pair, the same accent and one authoritative control, everywhere.
+- Every destructive action uses the shared confirm dialog; no browser-native pop-ups.
+- Every autosaving surface shows the same quiet Saved/Saving/Not saved indicator; routine saves never raise a toast.
+- Headings never repeat themselves; cards never nest inside cards; eyebrows never duplicate their own heading.
+- Numbers align (tabular numerals), states don’t shift layout, and focus rings are visible on every custom control.
+- Empty, loading and error states are designed, not afterthoughts — a new owner should find an empty dashboard welcoming rather than broken.
+
+
 ## What the audit found
 
-- The public site has a distinctive editorial identity, while the signed-in product mostly uses generic component styling with isolated hardcoded purple and green accents.
-- The topic workspace has three top-level tabs, while Settings introduces another hub of six destinations. Moving between overview cards and detail pages creates more navigation and repeated headings than necessary.
-- Several detail areas repeat their section name inside a parent heading. News values is currently both a section heading and a titled card; Identity also wraps a second “Topic Branding” card title.
-- Settings mix multiple framing styles: bordered cards, bordered rows, accordions, dividers and nested panels. This makes every item appear equally important.
-- Rare controls are technically grouped, but enabled and disabled specialist features can still expose substantial detail rather than staying as compact summaries.
-- Publishing state appears in the topic header, topic cards and Distribution with different interactions. This weakens confidence about which control is authoritative.
-- The topics page presents many metrics with similar visual weight, but does not prioritise feeds that need attention.
-- Naming remains inconsistent across Dashboard, Topics, Feed and Pipeline, requiring users to remember which term means the workspace, public output or editorial queue.
-- Routine saving is not fully consistent: some areas show quiet save state, while others still use success notifications.
+Confirmed in code during this pass:
+
+- **Fonts are not the chosen pair yet.** The document loads Inter, Playfair Display and Lexend; dashboard headings inherit plain Inter, and `font-display` is used only for the sidebar wordmark. Instrument Serif and Work Sans are not loaded at all.
+- **The primary token is a vestigial dark green** (`--primary: 146 41% 7%`). It silently drives buttons, tab underlines, focus rings and the header hairline — so the “brand” the workspace shows is a leftover, not the mint/violet direction.
+- **Accent colours are hardcoded**, not tokenised: the violet appears as raw `hsl(270,100%,68%)` in the topics page (create button, hover states, feed button), and the live pill uses raw `green-500/15` — a third, untokenised green.
+- **Headings repeat**: “News values” is both the section heading and the panel’s own card title; Identity’s “Brand” heading wraps a second “Topic Branding” card title inside it.
+- **Publish state exists in three forms**: an unlabelled switch in the topic header (with the shared confirm dialog), a Live/Draft pill on topic cards (using a browser-native confirm), and a read-only “Public feed” row in Distribution — three labels (Live/Draft, Live/Private) for one boolean.
+- **Saving feedback is inconsistent**: automation toasts “Saved” on every change and also shows a quiet indicator; voice shows a quiet indicator only; coverage terms toast on each add/remove.
+- **Vocabulary drift**: sidebar says “My Topics”, the page says “Your topics”, the breadcrumb says “Dashboard”; the tab is “Pipeline” while state and links call it `feed`.
+- The settings hub still requires an overview-card detour into six sections with a “back” button rather than persistent section navigation, and the topics list shows eight-plus numbers per card with no attention prioritisation.
+- Settings mix framing styles — bordered cards, bordered rows, dividers, accordions and nested panels — so nothing signals its own importance.
+
 
 ## New workspace structure
 
@@ -144,13 +160,16 @@ Neither accent should wash across whole sections. Colour appears in active indic
 
 ## Technical implementation
 
-- Introduce the selected font pair through the document font links, then update the Tailwind font families and shared typography classes.
-- Consolidate dashboard colour, surface, status, focus and motion roles in the global semantic tokens; replace raw colour utilities in the affected dashboard components.
-- Refactor `EditorialControlCenter` into a responsive section-navigation shell plus small overview/detail components.
-- Remove duplicate headings and nested card wrappers from child settings panels so parent sections own their hierarchy.
-- Add reusable primitives for section headers, summary rows, disclosure groups and save status rather than styling each settings panel independently.
-- Keep the existing global sidebar, query parameters, owner/admin checks and data calls intact.
-- Make no database or business-rule changes.
+Concrete steps, in order:
+
+1. **Foundation first.** Add Instrument Serif (400 + italic) and Work Sans (400–600) to the font link in `index.html`; update Tailwind font families (`display` → Instrument Serif, `sans` → Work Sans, keeping Inter as a fallback). Add a small set of display/eyebrow/section-title utility classes so headings opt into the editorial voice consistently.
+2. **Token pass.** Recast the semantic tokens in `index.css`: ink foreground on white/pale-green surfaces; mint (`--pop`) as the positive/live accent; violet (`--purple-bright`) as the selection/navigation accent; one status vocabulary for success/warning/error. Give dark mode considered equivalents. Then replace raw `hsl(...)` and Tailwind-palette colour classes in the topics page, topic header, settings panels and pills with the token classes.
+3. **Shared primitives.** Add small reusable pieces: a section header (title + one sentence, no card), a summary row (label + current value + chevron), a disclosure group, a quiet save indicator, and a shared page/empty-state. Build them on the existing shadcn components so behaviour stays consistent.
+4. **Workspace shell.** Restructure the topic page so Pipeline / Insights / Editorial control live in a persistent section rail with URL-driven state (`?tab=`, `?section=` preserved); Editorial control becomes a shell with its own section rail instead of the overview-card detour and back button. Mobile gets a compact section picker.
+5. **Detail passes per section** applying the disclosure model above, including removing the duplicated “News values” card title, unwrapping the nested “Topic Branding” card, converting the automation “Saved” toast to the quiet indicator, and labelling the publish switch.
+6. **Feed list pass**: triage-first cards, attention surfacing, shared confirm dialog, tokenised accents.
+
+Keep the existing global sidebar, routing contracts, owner/admin checks, queries and data calls intact. Make no database or business-rule changes. Where a change touches a shared component (tabs, cards, badges), verify public feed pages that reuse them still look right.
 
 ## Verification
 
