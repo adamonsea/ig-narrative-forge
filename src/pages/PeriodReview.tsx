@@ -383,6 +383,13 @@ const PeriodReview = () => {
             <Reveal delay={0.2} className="mt-10 flex flex-wrap gap-x-10 gap-y-3 text-lg opacity-80">
               <span>{scale.days_covered} days with news</span>
               <span>{scale.source_count} sources</span>
+              {readingMinutes != null && readingMinutes > 0 && (
+                <span>
+                  {readingMinutes >= 120
+                    ? `${Math.round(readingMinutes / 60)} hours to read it all`
+                    : `${readingMinutes} minutes to read it all`}
+                </span>
+              )}
             </Reveal>
           )}
         </ReviewSlide>
