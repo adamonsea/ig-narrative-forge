@@ -1,4 +1,4 @@
-# A quieter, more delightful editorial workspace
+# A quieter, more mature editorial workspace
 
 ## Direction
 
@@ -7,6 +7,19 @@ Evolve the authenticated product into a **quiet editorial workspace**: light, pr
 The workspace should feel like opening an editor’s well-organised desk: the next decision is obvious, routine machinery stays quiet, and specialist controls appear only when requested.
 
 This is a dashboard and settings redesign. It will preserve feed behaviour, scoring, automation, publishing, permissions and existing URLs.
+
+## Maturity bar
+
+The result should pass a simple test: every screen answers three questions without explanation — *where am I, what needs me, what happens if I change this* — and nothing on screen moves, flashes or re-saves without a reason. Details that signal a finished product:
+
+- One consistent vocabulary everywhere (Feeds, Pipeline, Editorial control); no synonym drift between sidebar, page titles and breadcrumbs.
+- One consistent publish-state model: the same label pair, the same accent and one authoritative control, everywhere.
+- Every destructive action uses the shared confirm dialog; no browser-native pop-ups.
+- Every autosaving surface shows the same quiet Saved/Saving/Not saved indicator; routine saves never raise a toast.
+- Headings never repeat themselves; cards never nest inside cards; eyebrows never duplicate their own heading.
+- Numbers align (tabular numerals), states don’t shift layout, and focus rings are visible on every custom control.
+- Empty, loading and error states are designed, not afterthoughts — a new owner should find an empty dashboard welcoming rather than broken.
+
 
 ## What the audit found
 
