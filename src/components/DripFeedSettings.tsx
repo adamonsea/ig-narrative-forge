@@ -84,40 +84,6 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     }
   };
 
-  const loadQueuedStories = async () => {
-    try {
-      const { data: stories, error } = await supabase
-        .from('stories')
-        .select('id, title, scheduled_publish_at, topic_article_id')
-        .eq('status', 'ready')
-        .not('scheduled_publish_at', 'is', null)
-        .gt('scheduled_publish_at', new Date().toISOString())
-        .order('scheduled_publish_at', { ascending: true });
-
-      if (error) throw error;
-
-      const topicStories: QueuedStory[] = [];
-      for (const story of stories || []) {
-        if (story.topic_article_id) {
-          const { data: ta } = await supabase
-            .from('topic_articles')
-            .select('topic_id')
-            .eq('id', story.topic_article_id)
-            .single();
-          if (ta?.topic_id === topicId) {
-            topicStories.push({
-              id: story.id,
-              title: story.title || 'Untitled',
-              scheduled_publish_at: story.scheduled_publish_at!,
-            });
-          }
-        }
-      }
-      setQueuedStories(topicStories);
-    } catch (error) {
-      console.error('Error loading queued stories:', error);
-    }
-  };
 
   const saveConfig = useCallback(async (updates: Partial<DripFeedConfig>) => {
     if (!loadedRef.current) return;
