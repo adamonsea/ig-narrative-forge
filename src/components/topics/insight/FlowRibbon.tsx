@@ -66,7 +66,7 @@ export function FlowRibbon({ data }: { data: FlowPoint[] }) {
         <path
           d={publishedPath}
           fill="none"
-          stroke="hsl(var(--purple-bright, var(--primary)))"
+          stroke="hsl(var(--purple-bright))"
           strokeWidth="1.75"
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"

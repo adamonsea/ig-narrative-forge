@@ -109,12 +109,12 @@ export function usePopularStories(topicId: string) {
       if (!ids.length) return [];
       const { data: stories } = await supabase
         .from("stories")
-        .select("id, title, article_title")
+        .select("id, title")
         .in("id", ids);
       return (stories || [])
         .map((s: any) => ({
           story_id: s.id,
-          headline: s.article_title || s.title || "Untitled story",
+          headline: s.title || "Untitled story",
           swipe_count: best.get(s.id) || 0,
         }))
         .sort((a, b) => b.swipe_count - a.swipe_count)
