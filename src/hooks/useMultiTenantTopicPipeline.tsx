@@ -1504,7 +1504,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       setArticles(prev => [...prev, ...filterTombstoned(uniqueNewArticles, removedArticlesRef.current)]);
       setArticlesPage(nextPage);
-      setHasMoreArticles(uniqueNewArticles.length === ARTICLES_PAGE_SIZE);
+      const serverPageFull = (result.data || []).length === ARTICLES_PAGE_SIZE;
+      setHasMoreArticles(serverPageFull);
+      if (!serverPageFull) {
+        setTotalArticlesCount(articles.length + uniqueNewArticles.length);
+      }
       
       console.log('📄 Loaded more articles:', {
         page: nextPage,
