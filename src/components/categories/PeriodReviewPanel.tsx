@@ -98,7 +98,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
       const sourceId = s.source_id as string | undefined;
       if (!name || !sourceId) continue;
       const existing = byName.get(name);
-      if (existing) existing.ids.push(sourceId);
+      if (existing) existing.ids?.push(sourceId);
       else byName.set(name, { id: sourceId, name, ids: [sourceId] });
     }
     const sourceRows: OptionRow[] = [...byName.values()];
