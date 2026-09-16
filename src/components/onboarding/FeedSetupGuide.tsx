@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
-import { KeywordManager } from "@/components/KeywordManager";
+import { PictureReferences } from "@/components/topics/PictureReferences";
+import { CoverageTerms } from "@/components/topics/CoverageTerms";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
@@ -203,20 +204,24 @@ export const FeedSetupGuide = ({
         )}
 
         {step === 2 && (
-          <KeywordManager
-            topic={{
-              id: topic.id,
-              name: topic.name,
-              topic_type: topic.topic_type,
-              keywords: topic.keywords || [],
-              region: topic.region,
-              landmarks: topic.landmarks,
-              landmark_descriptions: (topic as any).landmark_descriptions,
-              postcodes: topic.postcodes,
-              organizations: topic.organizations,
-            }}
-            onTopicUpdate={(updated) => onTopicChange(updated)}
+          <CoverageTerms
+            topicId={topic.id}
+            keywords={topic.keywords || []}
+            setupState={(topic as any).coverage_setup_state || {}}
+            onChange={(patch) => onTopicChange(patch as never)}
           />
+          {topic.topic_type === "regional" && (
+            <PictureReferences
+              topicId={topic.id}
+              topicName={topic.name}
+              region={topic.region}
+              landmarks={topic.landmarks || []}
+              descriptions={(topic as any).landmark_descriptions || {}}
+              photos={(topic as any).landmark_reference_images || {}}
+              setupState={(topic as any).landmark_setup_state || {}}
+              onChange={(patch) => onTopicChange(patch as never)}
+            />
+          )}
         )}
 
         {step === 3 && (
