@@ -1,5 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { loadCategoryGate, applyCategoryGate } from '../_shared/category-gate.ts';
+import {
+  applyNewsValues,
+  detectPlaceTier,
+  parseNearbyPlaces,
+  type NewsValuesConfig,
+} from '../_shared/news-values.ts';
 
 
 const corsHeaders = {
