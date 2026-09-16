@@ -5729,6 +5729,7 @@ export type Database = {
           article_published_at: string
           article_title: string
           article_url: string
+          display_date: string
           slide_alt_text: string
           slide_content: string
           slide_id: string

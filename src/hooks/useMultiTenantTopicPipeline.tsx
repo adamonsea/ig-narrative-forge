@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import { detectDuplicateGroups, DuplicateInfo } from "@/lib/titleSimilarity";
+import { getDisplayDate } from "@/lib/displayDate";
 
 export interface MultiTenantArticle {
   id: string;
@@ -338,7 +339,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           
           return true;
         })
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        .sort((a, b) =>
+          new Date(getDisplayDate(b.created_at, b.published_at)).getTime() -
+          new Date(getDisplayDate(a.created_at, a.published_at)).getTime());
 
       console.log('🧪 Multi-Tenant Only Pipeline - Articles Loaded:', {
         rawMultiTenant: (multiTenantArticlesResult.data || []).length,
@@ -521,8 +524,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         error: failedStatus?.error
       });
 
+      // Old stories slot back to their original publication date so legacy
+      // items curated today don't dominate the top of the list.
       const byNewestCreated = (a: any, b: any) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        new Date(getDisplayDate(b.created_at, b.article_published_at)).getTime() -
+        new Date(getDisplayDate(a.created_at, a.article_published_at)).getTime();
 
       let sortedStories: any[];
 

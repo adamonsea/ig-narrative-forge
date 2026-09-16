@@ -4,6 +4,7 @@ import { toast } from '@/components/ui/use-toast';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
 import { getCachedFeed, setCachedFeed, removeStoryFromCachedFeed, upsertStoryInCachedFeed } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
+import { getDisplayDate } from '@/lib/displayDate';
 
 // Optimization #3: Strip production console.log - noop in prod, real log in dev
 const devLog = import.meta.env.DEV
@@ -523,7 +524,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         const storyContent: FeedContent[] = transformedStories.map(story => ({
           type: 'story' as const,
           id: story.id,
-          content_date: story.created_at, // "new to me" ordering (stable, based on story creation)
+          content_date: getDisplayDate(story.created_at, story.article?.published_at), // old stories slot back to their original date
           data: story
         }));
 
@@ -1043,7 +1044,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const storyContent: FeedContent[] = transformedStories.map(story => ({
         type: 'story' as const,
         id: story.id,
-        content_date: story.created_at, // "new to me" ordering (stable, based on story creation)
+        content_date: getDisplayDate(story.created_at, story.article?.published_at), // old stories slot back to their original date
         data: story
       }));
 
@@ -1864,7 +1865,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     const storyItem: FeedContent = {
       type: 'story',
       id: normalizedStory.id,
-      content_date: normalizedStory.created_at,
+      content_date: getDisplayDate(normalizedStory.created_at, normalizedStory.article?.published_at),
       data: normalizedStory,
     };
 
@@ -2268,7 +2269,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             .map(story => ({
               type: 'story' as const,
               id: story.id,
-              content_date: story.created_at || new Date().toISOString(),
+              content_date: getDisplayDate(story.created_at, story.article?.published_at),
               data: {
                 id: story.id,
                 title: story.title || '',
