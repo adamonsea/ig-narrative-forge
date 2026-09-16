@@ -354,42 +354,41 @@ Deno.serve(async (req) => {
           continue; // leave processing_status = 'new' for manual review
         }
 
-        // Locality gate (regional topics only): hold for manual review if no local
-        // anchor appears in the title or opening. Story stays 'new' in Arrivals.
-        if (localityGateActive && !categoryDecision.relaxLocality) {
+        // News values (regional topics only): decide the place tier, apply the
+        // owner's dial, and only auto-publish what clears their bar. Everything
+        // else stays 'new' in Arrivals for manual review.
+        if (localityGateActive && newsValues) {
           const title = sharedContent?.title || '';
           const body = sharedContent?.body || '';
-          const region = (topicDefaultsMap[topic_id]?.region || '').toLowerCase().trim();
 
-          // FAIL-OPEN: never hold an at/above-threshold story that literally names
-          // the region anywhere in title or body. A 100%-score "Eastbourne …"
-          // headline must always pass.
-          const regionPresent = !!region &&
-            `${title} ${body}`.toLowerCase().includes(region);
+          const place = detectPlaceTier(title, body, newsValues);
+          const verdict = applyNewsValues(
+            typeof article.content_quality_score === 'number' ? article.content_quality_score : 0,
+            title,
+            body,
+            newsValues,
+            place
+          );
 
-          const matchedAnchor = matchLocalityAnchor(title, body, localityAnchors);
+          await supabase
+            .from('topic_articles')
+            .update({ place_tier: verdict.tier })
+            .eq('id', article.id);
 
-          if (!matchedAnchor && !regionPresent) {
-            // Diagnostic: log WHY it was held (content presence + a title snippet).
+          if (!verdict.autoPublish) {
             console.log(
-              `  🧭 Locality gate HELD article ${article.id} — ` +
-              `hasContent=${!!sharedContent} anchors=${localityAnchors.length} ` +
-              `title="${title.slice(0, 80)}"`
+              `  🧭 News values HELD article ${article.id} — ${verdict.reason} ` +
+              `(score ${verdict.score}) title="${title.slice(0, 80)}"`
             );
             topicHeldForLocality++;
-            await markHeld('locality: no local anchor in title or opening');
+            await markHeld(verdict.reason);
             continue; // leave processing_status = 'new'
           }
 
-          console.log(
-            `  ✅ Locality gate PASSED article ${article.id} via ` +
-            `${matchedAnchor ? `anchor "${matchedAnchor}"` : `region "${region}"`}`
-          );
-        } else if (localityGateActive && categoryDecision.relaxLocality) {
-          console.log(
-            `  🌍 Locality gate relaxed for article ${article.id} — wide radius on category "${categoryDecision.category?.slug}"`
-          );
+          console.log(`  ✅ News values PASSED article ${article.id} — ${verdict.reason} (score ${verdict.score})`);
         }
+
+
 
 
         // Check for an ACTIVE queue item only (pending/processing).
