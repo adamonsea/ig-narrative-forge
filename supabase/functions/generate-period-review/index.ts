@@ -424,7 +424,15 @@ Deno.serve(async (req) => {
       'uk', 'britain', 'england', 'english', 'british',
       'best', 'top', 'new', 'here', 'what', 'when', 'where', 'more', 'after', 'over',
     ]);
-    const words = (term: string) => term.toLowerCase().split(' ');
+    // Strip possessives and hyphens so "Eastbourne's" is recognised as the
+    // topic's own name rather than slipping through as a distinctive term.
+    const words = (term: string) =>
+      term
+        .toLowerCase()
+        .replace(/[\u2019']s\b/g, '')
+        .replace(/[\u2019']/g, '')
+        .split(/[\s-]+/)
+        .filter(Boolean);
     // Expected if it mentions the topic itself, or if every word is furniture.
     const isExpected = (term: string) => {
       const ws = words(term);
@@ -802,10 +810,25 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
         ? { id: best.id, slug: best.slug, title: best.title, cover_illustration_url: best.cover_illustration_url }
         : null;
     };
-    const turningPoints = anomalies.slice(0, 3).map((a) => ({
-      ...a,
-      story: storyForTerm(a.term, a.month),
-    }));
+    // One turning point per subject: keep the fullest form of a name and drop
+    // anything that merely repeats part of it ("Draper" after "Jack Draper"),
+    // or that points at the very same story.
+    const turningPoints: any[] = [];
+    const claimedWords = new Set<string>();
+    const claimedStories = new Set<string>();
+    const anomalyCandidates = [...anomalies].sort(
+      (a, b) => words(b.term).length - words(a.term).length || b.multiple - a.multiple
+    );
+    for (const a of anomalyCandidates) {
+      if (turningPoints.length >= 3) break;
+      const ws = words(a.term);
+      if (ws.some((w) => claimedWords.has(w))) continue;
+      const story = storyForTerm(a.term, a.month);
+      if (story && claimedStories.has(story.id)) continue;
+      ws.forEach((w) => claimedWords.add(w));
+      if (story) claimedStories.add(story.id);
+      turningPoints.push({ ...a, story });
+    }
 
     // ---- Recurring names and places, each with its defining story ----------
     const recurringSource = (distinctiveTerms.length > 0 ? distinctiveTerms : entities).slice(0, 6);
