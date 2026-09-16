@@ -67,6 +67,10 @@ Deno.serve(async (req) => {
     const sourceNames: string[] = Array.isArray(body.sourceNames)
       ? body.sourceNames.filter((v: unknown) => typeof v === 'string' && v.trim().length > 0).map((v: string) => v.trim())
       : [];
+    // Preferred source scoping: real source ids, matched on topic_articles.source_id.
+    const sourceIds: string[] = Array.isArray(body.sourceIds)
+      ? body.sourceIds.filter((v: unknown) => typeof v === 'string' && v.length > 0)
+      : [];
     // Parliamentary coverage skews local comparisons, so it is excluded unless asked for.
     const includeParliamentary: boolean = body.includeParliamentary === true;
 
