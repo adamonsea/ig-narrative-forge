@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Radar } from "lucide-react";
+
 
 interface SweepSource {
   name: string;
@@ -144,47 +144,38 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
     frequencyHours === 1 ? "every hour" : `every ${frequencyHours} hours`;
 
   return (
-    <div className="rounded-xl border bg-card/50 px-4 py-6 text-center">
-      <div className="flex items-center justify-center gap-2 text-muted-foreground">
-        <Radar className={`h-4 w-4 ${imminent ? "live-pulse" : ""}`} aria-hidden />
-        <span className="section-label">
-          {isAutomatic ? "Next sweep" : "Gathering by hand"}
-        </span>
-      </div>
+    <div className="rounded-xl border bg-card/60 px-6 py-10 text-center">
+      <p className="section-label text-muted-foreground">
+        {isAutomatic ? "Next sweep" : "Gathering by hand"}
+      </p>
 
-      {isAutomatic ? (
-        <>
-          <p className="mt-2 display-heading text-4xl tabular-nums">
-            {remaining === null
-              ? "Any moment"
-              : imminent
-              ? "Any moment"
-              : formatCountdown(remaining)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Stories are collected automatically {everyLabel}.
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="mt-2 display-heading text-4xl">
-            {sweepAt
-              ? overdue
-                ? "Due now"
-                : formatCountdown(remaining ?? 0)
-              : "Not run yet"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {sweepAt
-              ? overdue
-                ? `Last gathered ${relativeTime(sweepAt)} — worth running again.`
-                : `Last gathered ${relativeTime(sweepAt)}. Worth checking again ${everyLabel}.`
-              : `Run a gather whenever you like — ${everyLabel} keeps a feed fresh.`}
-          </p>
-        </>
-      )}
+      <p
+        className={`mt-3 display-heading text-5xl tabular-nums leading-none md:text-6xl ${
+          imminent ? "live-pulse" : ""
+        }`}
+      >
+        {isAutomatic
+          ? remaining === null || imminent
+            ? "Any moment"
+            : formatCountdown(remaining)
+          : sweepAt
+          ? overdue
+            ? "Due now"
+            : formatCountdown(remaining ?? 0)
+          : "Not run yet"}
+      </p>
 
-      <div className="mt-5 border-t pt-4 text-left">
+      <p className="mx-auto mt-4 max-w-xs text-sm text-muted-foreground">
+        {isAutomatic
+          ? `Stories are collected automatically ${everyLabel}.`
+          : sweepAt
+          ? overdue
+            ? `Last gathered ${relativeTime(sweepAt)} — worth running again.`
+            : `Last gathered ${relativeTime(sweepAt)}. Worth checking again ${everyLabel}.`
+          : `Run a gather whenever you like — ${everyLabel} keeps a feed fresh.`}
+      </p>
+
+      <div className="mt-8 text-center">
         {sweepAt ? (
           <>
             <p className="text-sm text-foreground">
@@ -194,11 +185,11 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
               {sources.length === 1 ? "source" : "sources"}.
             </p>
             {contributing.length > 0 && (
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mx-auto mt-4 inline-block space-y-1.5 text-left">
                 {contributing.slice(0, 6).map((s) => (
                   <li
                     key={s.name}
-                    className="flex items-center justify-between gap-3 text-sm"
+                    className="flex items-center justify-between gap-6 text-sm"
                   >
                     <span className="truncate text-muted-foreground">{s.name}</span>
                     <span className="tabular-nums text-foreground">{s.stored}</span>
