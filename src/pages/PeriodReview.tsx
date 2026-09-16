@@ -424,6 +424,23 @@ const PeriodReview = () => {
   const baseHue = baseHueFor(slug);
   const h = (i: number) => hueForIndex(baseHue, i);
 
+  // A pool of the period's own illustrations, used for full-bleed backdrops.
+  const imagePool = mosaic
+    .map((m) => m.cover_illustration_url)
+    .filter((u): u is string => Boolean(u));
+  /** Evenly spread slice of the pool, offset so slides don't repeat the same wall. */
+  const backdropFrom = (offset: number, count = 24) => {
+    if (imagePool.length < 6) return undefined;
+    const step = Math.max(1, Math.floor(imagePool.length / count));
+    const picked: string[] = [];
+    for (let i = 0; i < imagePool.length && picked.length < count; i += step) {
+      picked.push(imagePool[(i + offset) % imagePool.length]);
+    }
+    return picked;
+  };
+  const coversForCategory = (catSlug: string) =>
+    categoryStories.find((c) => c.slug === catSlug)?.stories ?? [];
+
 
   return (
     <main
