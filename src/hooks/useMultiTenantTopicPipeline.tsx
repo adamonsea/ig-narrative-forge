@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import { detectDuplicateGroups, DuplicateInfo } from "@/lib/titleSimilarity";
+import { getDisplayDate } from "@/lib/displayDate";
 
 export interface MultiTenantArticle {
   id: string;
