@@ -88,6 +88,8 @@ interface Topic {
   drip_feed_enabled?: boolean;
   public_widget_builder_enabled?: boolean;
   rss_enabled?: boolean;
+  mcp_enabled?: boolean;
+  mcp_access?: 'open' | 'key';
   email_subscriptions_enabled?: boolean;
   audio_briefings_daily_enabled?: boolean;
   audio_briefings_weekly_enabled?: boolean;
@@ -206,6 +208,8 @@ const TopicDashboard = () => {
           ((topicData as any).landmark_reference_images as Record<string, { url: string; credit?: string }[]>) || {},
         landmark_setup_state: ((topicData as any).landmark_setup_state as Record<string, any>) || {},
         coverage_setup_state: ((topicData as any).coverage_setup_state as Record<string, any>) || {},
+        mcp_enabled: ((topicData as any).mcp_enabled as boolean) || false,
+        mcp_access: (((topicData as any).mcp_access as 'open' | 'key') || 'key'),
         postcodes: topicData.postcodes || [],
         organizations: topicData.organizations || [],
         negative_keywords: topicData.negative_keywords || [],
