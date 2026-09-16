@@ -336,8 +336,10 @@ export function EditorialControlCenter({
                   </section>
                 )}
                 <section className="border-t border-border pt-8" aria-labelledby="discovery-heading">
-                  <h3 id="discovery-heading" className="mb-1 text-base font-semibold">Coverage terms</h3>
-                  <p className="mb-5 text-sm text-muted-foreground">Words that tell Curatr what belongs — suggested from your own recent stories.</p>
+                  <h3 id="discovery-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
+                    Coverage terms
+                    <InfoHint label="About coverage terms">Words that tell Curatr what belongs — suggested from your own recent stories.</InfoHint>
+                  </h3>
                   <CoverageTerms
                     topicId={topic.id}
                     keywords={topic.keywords}
