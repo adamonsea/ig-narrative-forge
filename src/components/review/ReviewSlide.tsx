@@ -34,7 +34,7 @@ export const ReviewSlide = ({
   return (
     <section
       className={cn(
-        'snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden px-6 py-16',
+        'snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden px-6 py-16 sm:px-10 lg:px-16 xl:px-24',
         tone === 'inverted' && 'bg-foreground text-background',
         tone === 'accent' && 'bg-muted',
         className
@@ -51,16 +51,16 @@ export const ReviewSlide = ({
         </>
       )}
       {aside ? (
-        <div className="relative mx-auto grid w-full max-w-4xl gap-8 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
-          <div className="w-full max-w-lg">
-            {label && <p className="mb-6 text-sm uppercase tracking-[0.22em] opacity-70">{label}</p>}
+        <div className="relative mx-auto grid w-full max-w-4xl gap-8 lg:max-w-6xl lg:gap-14 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center xl:max-w-7xl">
+          <div className="w-full max-w-lg lg:max-w-2xl">
+            {label && <p className="mb-6 text-xs font-medium uppercase tracking-[0.26em] sm:text-sm lg:mb-8" style={{ color: 'var(--review-accent, currentColor)', opacity: 0.85 }}>{label}</p>}
             {children}
           </div>
           <div className="w-full">{aside}</div>
         </div>
       ) : (
-        <div className="relative mx-auto w-full max-w-lg">
-          {label && <p className="mb-6 text-sm uppercase tracking-[0.22em] opacity-70">{label}</p>}
+        <div className="relative mx-auto w-full max-w-lg lg:max-w-3xl xl:max-w-4xl">
+          {label && <p className="mb-6 text-xs font-medium uppercase tracking-[0.26em] sm:text-sm lg:mb-8" style={{ color: 'var(--review-accent, currentColor)', opacity: 0.85 }}>{label}</p>}
           {children}
         </div>
       )}
@@ -87,7 +87,7 @@ export const BigStat = ({
 }) => (
   <div>
     <div
-      className="text-[clamp(3.5rem,18vw,7rem)] font-semibold leading-[0.9] tracking-tight"
+      className="text-[clamp(3.5rem,13vw,12rem)] font-semibold leading-[0.88] tracking-[-0.02em]"
       style={{ color: 'var(--review-accent, currentColor)' }}
     >
       <Shimmer>
@@ -96,7 +96,7 @@ export const BigStat = ({
         {suffix && <span className="text-[0.35em] align-top ml-1 opacity-60">{suffix}</span>}
       </Shimmer>
     </div>
-    <p className="mt-5 text-lg leading-snug opacity-80">{caption}</p>
+    <p className="mt-6 text-[clamp(1.125rem,1.8vw,1.75rem)] leading-snug opacity-80">{caption}</p>
   </div>
 );
 
@@ -111,10 +111,10 @@ export const RankRows = ({
   const reduce = useReducedMotion();
   const max = Math.max(1, ...items.map((i) => i.value));
   return (
-    <ul className="space-y-4">
+    <ul className="space-y-5 lg:space-y-7">
       {items.map((item, i) => (
         <li key={item.key} className="space-y-2">
-          <div className="flex items-baseline justify-between gap-4 text-lg">
+          <div className="flex items-baseline justify-between gap-4 text-[clamp(1.125rem,1.9vw,1.75rem)]">
             <span className="font-medium truncate">{item.label}</span>
             <span className="tabular-nums opacity-70">
               {item.value}
@@ -124,7 +124,7 @@ export const RankRows = ({
 
           <div
             className={cn(
-              'h-1.5 overflow-hidden rounded-full',
+              'h-2 overflow-hidden rounded-full lg:h-2.5',
               tone === 'inverted' ? 'bg-background/20' : 'bg-border'
             )}
           >
