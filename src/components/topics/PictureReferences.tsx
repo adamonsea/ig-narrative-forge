@@ -313,14 +313,14 @@ export function PictureReferences({
               className="text-sm"
             />
           )}
-          {descriptions[place] && (
-            <p className="text-[11px] text-muted-foreground">Drafted automatically — edit freely, it saves as you type.</p>
-          )}
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">
-            Reference photos (up to {MAX_PHOTOS}) — used for accurate architecture when a story is about this place.
+          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            Reference photos
+            <InfoHint label="About reference photos">
+              Up to {MAX_PHOTOS} photos, used so the architecture is right when a story is about this place.
+            </InfoHint>
           </p>
           {placePhotos.length > 0 && (
             <div className="flex flex-wrap gap-2">
