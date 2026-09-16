@@ -170,11 +170,19 @@ async function logUsage(slug: string, operation: string) {
   } catch (_) { /* usage logging is best-effort */ }
 }
 
+const ATTRIBUTION_HINT =
+  "Credit the publication named in each story and include its original_article_url. Show image_url when the user wants pictures.";
+
 async function runTool(name: string, args: Json, topic: { id: string; slug: string; name: string; description: string | null }) {
   switch (name) {
     case "list_latest_stories": {
       const stories = await fetchStories(topic.id, clampLimit(args.limit));
-      return { feed: topic.name, stories: stories.map((s) => shapeStory(s, topic.slug)) };
+      return {
+        feed: topic.name,
+        stories: stories.map((s) => shapeStory(s, topic.slug)),
+        next_step: "Call get_story with a story_id before quoting or summarising in depth — these are headlines and summaries only.",
+        attribution_note: ATTRIBUTION_HINT,
+      };
     }
     case "search_stories": {
       const q = String(args.query ?? "").trim().slice(0, 200);
@@ -191,7 +199,15 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
         .filter((s) => s.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
-      return { feed: topic.name, query: q, stories: scored.map((s) => shapeStory(s.story, topic.slug)) };
+      return {
+        feed: topic.name,
+        query: q,
+        stories: scored.map((s) => shapeStory(s.story, topic.slug)),
+        next_step: scored.length
+          ? "Call get_story with a story_id for the full text before quoting."
+          : "No matches. Try broader or different words, or call list_latest_stories to see what the feed covers.",
+        attribution_note: ATTRIBUTION_HINT,
+      };
     }
     case "get_story": {
       const storyId = String(args.story_id ?? "");
@@ -207,7 +223,11 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
       if (error) throw error;
       if (!data) throw new Error("Story not found in this feed");
       const story = data as unknown as StoryRow;
-      return { ...shapeStory(story, topic.slug), text: fullText(story) };
+      return {
+        ...shapeStory(story, topic.slug),
+        text: fullText(story),
+        attribution_note: ATTRIBUTION_HINT,
+      };
     }
     case "feed_briefing": {
       const period = args.period === "day" ? "day" : "week";
@@ -218,7 +238,8 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
         period,
         story_count: stories.length,
         stories: stories.map((s) => shapeStory(s, topic.slug)),
-        attribution_note: "Every story links back to the original publication. Credit the publication when quoting.",
+        next_step: "Group the stories by theme, lead with the most significant, and call get_story for any the user wants in depth.",
+        attribution_note: ATTRIBUTION_HINT,
       };
     }
     default:
@@ -289,7 +310,21 @@ Deno.serve(async (req) => {
           protocolVersion: PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: { name: `curatr-${topic.slug}`, version: "1.0.0" },
-          instructions: `Read-only access to the Curatr feed "${topic.name}". Always credit the original publication and include its link when using a story. Each story may include an image_url you can show; illustrations are Curatr-generated, other pictures belong to the original publication.`,
+          instructions: [
+            `Read-only access to the Curatr feed "${topic.name}"${topic.description ? `: ${topic.description}` : ""}. Everything here is editorially curated and already published.`,
+            "",
+            "How to use it well:",
+            "- Catch-up or roundup request: call feed_briefing (period 'day' or 'week'), group the stories by theme, lead with the most significant, and show each image_url with its publication credit.",
+            "- Question about a subject, place, person or organisation: call search_stories first; if nothing matches, call list_latest_stories to see what the feed actually covers before saying there is no coverage.",
+            "- Before quoting, summarising in depth, or writing anything publishable from a story: call get_story for its full text. Headlines and summaries alone are not enough.",
+            "- Drafting a newsletter, post or brief: combine feed_briefing with get_story on the items you lead with, and keep every link.",
+            "",
+            "Rules:",
+            "- Always name the original publication and include its original_article_url. Never present a story as your own reporting.",
+            "- Report only what the stories say; if the feed does not cover something, say so rather than filling the gap from memory.",
+            "- image_url is safe to display: when image_source is 'curatr_illustration' it is a Curatr illustration, otherwise it belongs to the original publication and must be credited to them.",
+            "- Dates are in published_at; prefer recent stories and say how old older ones are.",
+          ].join("\n"),
         });
       case "notifications/initialized":
       case "ping":
