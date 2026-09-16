@@ -3907,6 +3907,7 @@ export type Database = {
           is_snippet: boolean | null
           keyword_matches: string[] | null
           originality_confidence: number | null
+          place_tier: string | null
           processing_status: string
           regional_relevance_score: number | null
           shared_content_id: string
@@ -3925,6 +3926,7 @@ export type Database = {
           is_snippet?: boolean | null
           keyword_matches?: string[] | null
           originality_confidence?: number | null
+          place_tier?: string | null
           processing_status?: string
           regional_relevance_score?: number | null
           shared_content_id: string
@@ -3943,6 +3945,7 @@ export type Database = {
           is_snippet?: boolean | null
           keyword_matches?: string[] | null
           originality_confidence?: number | null
+          place_tier?: string | null
           processing_status?: string
           regional_relevance_score?: number | null
           shared_content_id?: string
@@ -4730,6 +4733,7 @@ export type Database = {
           auto_simplify_enabled: boolean | null
           automated_insights_enabled: boolean | null
           automation_quality_threshold: number | null
+          big_story_override: boolean
           branding_config: Json | null
           community_config: Json | null
           community_intelligence_enabled: boolean | null
@@ -4767,8 +4771,10 @@ export type Database = {
           landmark_descriptions: Json
           landmark_reference_images: Json
           landmarks: string[] | null
+          locality_strength: number
           max_article_age_days: number | null
           name: string
+          nearby_places: Json
           negative_keywords: string[] | null
           organizations: string[] | null
           parliamentary_last_collection_at: string | null
@@ -4793,6 +4799,7 @@ export type Database = {
           auto_simplify_enabled?: boolean | null
           automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
+          big_story_override?: boolean
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
@@ -4830,8 +4837,10 @@ export type Database = {
           landmark_descriptions?: Json
           landmark_reference_images?: Json
           landmarks?: string[] | null
+          locality_strength?: number
           max_article_age_days?: number | null
           name: string
+          nearby_places?: Json
           negative_keywords?: string[] | null
           organizations?: string[] | null
           parliamentary_last_collection_at?: string | null
@@ -4856,6 +4865,7 @@ export type Database = {
           auto_simplify_enabled?: boolean | null
           automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
+          big_story_override?: boolean
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
@@ -4893,8 +4903,10 @@ export type Database = {
           landmark_descriptions?: Json
           landmark_reference_images?: Json
           landmarks?: string[] | null
+          locality_strength?: number
           max_article_age_days?: number | null
           name?: string
+          nearby_places?: Json
           negative_keywords?: string[] | null
           organizations?: string[] | null
           parliamentary_last_collection_at?: string | null
