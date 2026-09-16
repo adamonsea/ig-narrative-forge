@@ -21,6 +21,8 @@ The same ordering applies in the pipeline lists, so what you see while reviewing
 3. **Pipeline ordering** — published and arrivals lists in the dashboard order by the same display date.
 4. **Date shown on cards** — cards continue to show the original publication date, which will now match their position.
 
+5. **Roadmap note** — add "Pin a story to the top of the feed" to `roadmap.md` as a future feature, so a late-but-great story can still be surfaced deliberately. Not built now.
+
 ## Out of scope
 
 No change to scoring, the four-day news window, gathering, or what gets published — this is ordering only.
