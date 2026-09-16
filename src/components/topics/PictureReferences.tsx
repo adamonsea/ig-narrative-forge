@@ -293,9 +293,12 @@ export function PictureReferences({
     return (
       <div className="space-y-3 pt-2">
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">
-            What this place actually looks like. Illustrated covers follow this note instead of guessing.
-            {!descriptions[place] && describing !== place ? ' You can write your own or save without one.' : ''}
+          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            Appearance note
+            <InfoHint label="About the appearance note">
+              What this place actually looks like. Covers follow this note instead of guessing. Curatr drafts it —
+              edit freely, or leave it blank.
+            </InfoHint>
           </p>
           {describing === place && !draft ? (
             <p className="flex items-center gap-2 text-xs text-muted-foreground"><Sparkles className="h-3 w-3 animate-pulse" /> Writing a description…</p>
