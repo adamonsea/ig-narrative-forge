@@ -14,6 +14,7 @@ import { ImageCarousel } from '@/components/review/ImageCarousel';
 import { ImageTapestry } from '@/components/review/ImageTapestry';
 import { baseHueFor, hueForIndex } from '@/lib/reviewPalette';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { makeTermGuard } from '@/lib/reviewTerms';
 
 interface Movement {
   name: string;
