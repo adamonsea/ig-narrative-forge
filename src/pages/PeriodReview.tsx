@@ -759,7 +759,12 @@ const PeriodReview = () => {
 
       {/* Sub-beat deep dives — the detail inside each beat */}
       {subDeepDives.map((p, idx) => (
-        <ReviewSlide key={p.slug} label={`Inside ${p.name.toLowerCase()}`} hue={h(5 + idx)}>
+        <ReviewSlide
+          key={p.slug}
+          label={`Inside ${p.name.toLowerCase()}`}
+          hue={h(5 + idx)}
+          aside={<ImageTapestry covers={coversForCategory(p.slug)} feedSlug={slug} />}
+        >
           <MaskRevealHeading
             className="mb-3 text-4xl font-semibold tracking-tight"
             segments={[{ text: `${p.total} ` }, { text: p.name.toLowerCase(), italic: true }, { text: ' stories' }]}
