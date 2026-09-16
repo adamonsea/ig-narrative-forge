@@ -142,33 +142,73 @@ const MosaicWall = ({
   feedSlug?: string;
 }) => {
   const reduce = useReducedMotion();
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(12);
+
+  // Choose the tile size that lets every picture fill the available space —
+  // the wall should feel like the whole archive pinned to a studio wall, not a
+  // ribbon floating in white.
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const n = covers.length;
+    const fit = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (!w || !h || n === 0) return;
+      const gap = w < 640 ? 3 : 5;
+      let best = 1;
+      for (let c = 1; c <= n; c++) {
+        const tile = (w - gap * (c - 1)) / c;
+        const rows = Math.ceil(n / c);
+        if (rows * tile + gap * (rows - 1) <= h) {
+          best = c;
+          break;
+        }
+      }
+      setCols(Math.max(1, best));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [covers.length]);
+
   return (
-    <div
-      className="max-h-[68vh] overflow-hidden"
-      style={{
-        maskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
-        WebkitMaskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
-      }}
-    >
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-[3px] sm:grid-cols-[repeat(auto-fill,minmax(64px,1fr))] sm:gap-1">
+    <div ref={boxRef} className="h-[78vh] w-full">
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 'clamp(3px, 0.35vw, 5px)' }}
+      >
         {covers.map((c, i) => (
           <motion.div
             key={c.id}
-            initial={reduce ? false : { opacity: 0, scale: 0.94 }}
+            initial={reduce ? false : { opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: reduce ? 0 : 0.45, delay: reduce ? 0 : Math.min(1.4, i * 0.006) }}
+            viewport={{ once: true, margin: '-30px' }}
+            transition={{
+              duration: reduce ? 0 : 0.5,
+              delay: reduce ? 0 : Math.min(1.6, (i % 7) * 0.05 + Math.floor(i / 7) * 0.035),
+              ease: [0.2, 0.7, 0.3, 1],
+            }}
           >
             <Link
               to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
               title={c.title}
-              className="block aspect-square overflow-hidden rounded-[2px] transition-transform duration-300 hover:scale-105 hover:rounded-[4px]"
+              className="group block aspect-square overflow-hidden rounded-[2px]"
             >
               <img
-                src={optimizeImageUrl(c.cover_illustration_url, { width: 160, height: 160, quality: 66 }) ?? c.cover_illustration_url ?? ''}
+                src={optimizeImageUrl(c.cover_illustration_url, { width: 200, height: 200, quality: 66 }) ?? c.cover_illustration_url ?? ''}
                 alt=""
                 loading="lazy"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                style={
+                  reduce
+                    ? undefined
+                    : {
+                        animation: `tile-breathe ${7 + (i % 5)}s ease-in-out ${(i % 11) * 0.7}s infinite`,
+                      }
+                }
               />
             </Link>
           </motion.div>
