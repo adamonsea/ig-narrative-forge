@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, useScroll, useSpring, useReducedMotion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { StoryPreviewProvider, useStoryPreview } from '@/components/review/StoryPreview';
 import { ArrowLeft, ChevronDown, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { Reveal } from '@/components/review/ReviewChapter';
@@ -142,11 +142,10 @@ type MosaicCover = { id: string; slug: string | null; title: string; cover_illus
 /** A dense, full-width wall of covers from the period — the archive at a glance. */
 const MosaicWall = ({
   covers,
-  onOpen,
 }: {
   covers: MosaicCover[];
-  onOpen: (cover: MosaicCover) => void;
 }) => {
+  const { open: openPreview } = useStoryPreview();
   const reduce = useReducedMotion();
   const boxRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(12);
@@ -200,7 +199,7 @@ const MosaicWall = ({
           >
             <button
               type="button"
-              onClick={() => onOpen(c)}
+              onClick={() => openPreview(c)}
               title={c.title}
               className="group block aspect-square w-full overflow-hidden rounded-[2px]"
             >
@@ -225,11 +224,29 @@ const MosaicWall = ({
   );
 };
 
+const PreviewTrigger = ({
+  story,
+  className,
+  title,
+  children,
+}: {
+  story: MosaicCover;
+  className?: string;
+  title?: string;
+  children: React.ReactNode;
+}) => {
+  const { open } = useStoryPreview();
+  return (
+    <button type="button" title={title} onClick={() => open(story)} className={className}>
+      {children}
+    </button>
+  );
+};
+
 const PeriodReview = () => {
   const { slug, reviewSlug } = useParams<{ slug: string; reviewSlug: string }>();
   const [review, setReview] = useState<{ label: string; narrative: string | null; data: ReviewData } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [previewCover, setPreviewCover] = useState<MosaicCover | null>(null);
   const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollReady, setScrollReady] = useState(false);
@@ -522,7 +539,7 @@ const PeriodReview = () => {
         <section className="snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden bg-background px-4 py-14 sm:px-6">
           <div className="w-full">
             <p className="mb-5 text-sm uppercase tracking-[0.22em] text-muted-foreground">The archive</p>
-            <MosaicWall covers={mosaic} onOpen={setPreviewCover} />
+            <MosaicWall covers={mosaic} />
             <Reveal delay={0.3} className="mt-6">
               <p className="text-lg leading-snug text-muted-foreground">
                 {mosaic.length < summary.total_stories
