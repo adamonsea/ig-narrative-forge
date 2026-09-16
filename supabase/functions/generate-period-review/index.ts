@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     const spanMs = new Date(endISO).getTime() - new Date(startISO).getTime();
     const prevStartISO = new Date(new Date(startISO).getTime() - spanMs).toISOString();
 
-    const { data: topic } = await service.from('topics').select('name, region, slug').eq('id', topicId).maybeSingle();
+    const { data: topic } = await service.from('topics').select('name, region, slug, description').eq('id', topicId).maybeSingle();
 
     // PostgREST caps a single response at 1000 rows regardless of .limit(),
     // so page through the topic's articles explicitly — otherwise only a
@@ -739,9 +739,97 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
       return [{ slug: c.slug, name: c.name, count: c.count, stories }];
     });
 
+    // ---- The archive as pictures -----------------------------------------
+    // A dense wall of covers sampled evenly across the period: the opening
+    // image of the review, and the clearest statement of its scale.
+    const covered = current
+      .filter((s) => !!s.cover_illustration_url)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const MOSAIC_MAX = 72;
+    const step = Math.max(1, Math.ceil(covered.length / MOSAIC_MAX));
+    const mosaic = covered
+      .filter((_, i) => i % step === 0)
+      .slice(0, MOSAIC_MAX)
+      .map((s) => ({ id: s.id, slug: s.slug, title: s.title, cover_illustration_url: s.cover_illustration_url }));
+
+    const viewsOf = (id: string) => interactionCounts.get(id)?.views ?? 0;
+
+    // ---- Month chapters: the defining story of each month ------------------
+    const byMonth: Record<string, Row[]> = {};
+    for (const r of current) (byMonth[monthKey(r.created_at)] ??= []).push(r);
+    const monthChapters = Object.entries(byMonth)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([month, rows]) => {
+        const ranked = [...rows].sort(
+          (a, b) =>
+            viewsOf(b.id) - viewsOf(a.id) ||
+            Number(!!b.cover_illustration_url) - Number(!!a.cover_illustration_url)
+        );
+        const lead = ranked[0];
+        const spikeThisMonth = anomalies.find((a) => a.month === month) ?? null;
+        return {
+          month,
+          count: rows.length,
+          spike_term: spikeThisMonth?.term ?? null,
+          lead: lead
+            ? {
+                id: lead.id,
+                slug: lead.slug,
+                title: lead.title,
+                cover_illustration_url: lead.cover_illustration_url,
+                views: viewsOf(lead.id),
+              }
+            : null,
+          covers: ranked
+            .filter((s) => !!s.cover_illustration_url)
+            .slice(0, 8)
+            .map((s) => ({ id: s.id, slug: s.slug, title: s.title, cover_illustration_url: s.cover_illustration_url })),
+        };
+      })
+      .filter((m) => m.count > 0);
+
+    // ---- Turning points: the spikes, told as moments ------------------------
+    const storyForTerm = (term: string, month?: string) => {
+      const needle = term.toLowerCase();
+      const pool = current.filter(
+        (s) => (s.title ?? '').toLowerCase().includes(needle) && (!month || monthKey(s.created_at) === month)
+      );
+      const best = pool.sort(
+        (a, b) =>
+          Number(!!b.cover_illustration_url) - Number(!!a.cover_illustration_url) || viewsOf(b.id) - viewsOf(a.id)
+      )[0];
+      return best
+        ? { id: best.id, slug: best.slug, title: best.title, cover_illustration_url: best.cover_illustration_url }
+        : null;
+    };
+    const turningPoints = anomalies.slice(0, 3).map((a) => ({
+      ...a,
+      story: storyForTerm(a.term, a.month),
+    }));
+
+    // ---- Recurring names and places, each with its defining story ----------
+    const recurringSource = (distinctiveTerms.length > 0 ? distinctiveTerms : entities).slice(0, 6);
+    const recurringEntities = recurringSource.map((t: any) => ({
+      term: t.term,
+      count: t.count,
+      peak_month: t.peak_month ?? null,
+      story: storyForTerm(t.term),
+    }));
+
+    // ---- What went quiet ----------------------------------------------------
+    const wentQuiet = fadingTerms.slice(0, 6).map((t) => ({ term: t.term, previous: t.count }));
+
+    const readingMinutes = Math.round(totalWords / 200);
+
     const data = {
 
       summary,
+      mosaic,
+      monthChapters,
+      turningPoints,
+      recurringEntities,
+      wentQuiet,
+      readingMinutes,
       scale,
       headline,
       categoryBreakdown,

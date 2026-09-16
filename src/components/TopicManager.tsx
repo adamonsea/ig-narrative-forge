@@ -312,11 +312,11 @@ export const TopicManager = () => {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                navigate(`/dashboard/topic/${topic.slug}?tab=insights`);
+                                navigate(`/dashboard/topic/${topic.slug}?tab=reviews`);
                               }}
                             >
                               <TrendingUp className="w-3.5 h-3.5 mr-2" />
-                              Insights
+                              Reviews
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {

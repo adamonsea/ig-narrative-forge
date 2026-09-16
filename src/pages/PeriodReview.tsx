@@ -10,6 +10,7 @@ import { ReviewSlide, BigStat, RankRows } from '@/components/review/ReviewSlide'
 import { Odometer } from '@/components/review/Odometer';
 import { StoryImageGrid } from '@/components/review/StoryImageGrid';
 import { baseHueFor, hueForIndex } from '@/lib/reviewPalette';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 
 interface Movement {
   name: string;
@@ -84,6 +85,29 @@ interface ReviewData {
   entities?: Array<{ term: string; count: number }>;
   categoryPerformance?: Array<{ slug: string; name: string; stories: number; views: number; reads_per_story: number }>;
   sourceScorecard?: Array<{ name: string; count: number }>;
+  mosaic?: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
+  monthChapters?: Array<{
+    month: string;
+    count: number;
+    spike_term: string | null;
+    lead: { id: string; slug: string | null; title: string; cover_illustration_url: string | null; views: number } | null;
+    covers: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
+  }>;
+  turningPoints?: Array<{
+    term: string;
+    month: string;
+    count: number;
+    multiple: number;
+    story: { id: string; slug: string | null; title: string; cover_illustration_url: string | null } | null;
+  }>;
+  recurringEntities?: Array<{
+    term: string;
+    count: number;
+    peak_month: string | null;
+    story: { id: string; slug: string | null; title: string; cover_illustration_url: string | null } | null;
+  }>;
+  wentQuiet?: Array<{ term: string; previous: number }>;
+  readingMinutes?: number;
   timeline: Array<{ month: string; count: number }>;
   hotTopics: Array<{ term: string; count: number }>;
   topStories: Array<{
@@ -108,6 +132,43 @@ const monthLabel = (m: string) =>
 
 const compact = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}m` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
+
+/** A dense wall of every cover from the period — the archive, at a glance. */
+const MosaicWall = ({
+  covers,
+  feedSlug,
+}: {
+  covers: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
+  feedSlug?: string;
+}) => {
+  const reduce = useReducedMotion();
+  return (
+    <div className="grid grid-cols-6 gap-1 sm:gap-1.5">
+      {covers.map((c, i) => (
+        <motion.div
+          key={c.id}
+          initial={reduce ? false : { opacity: 0, scale: 0.94 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : Math.min(1.2, i * 0.012) }}
+        >
+          <Link
+            to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
+            title={c.title}
+            className="block aspect-square overflow-hidden rounded-[3px]"
+          >
+            <img
+              src={optimizeImageUrl(c.cover_illustration_url, { width: 200, height: 200, quality: 70 }) ?? c.cover_illustration_url ?? ''}
+              alt=""
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          </Link>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
 
 const PeriodReview = () => {
   const { slug, reviewSlug } = useParams<{ slug: string; reviewSlug: string }>();
@@ -208,8 +269,22 @@ const PeriodReview = () => {
     hotTopics,
     topStories,
     categoryStories = [],
+    mosaic = [],
+    monthChapters = [],
+    turningPoints = [],
+    recurringEntities = [],
+    wentQuiet = [],
+    readingMinutes,
     topic,
   } = d;
+
+  // The months worth their own chapter: busiest first, shown in order.
+  const featuredMonths = [...monthChapters]
+    .sort((a, b) => (b.spike_term ? 1 : 0) - (a.spike_term ? 1 : 0) || b.count - a.count)
+    .slice(0, 4)
+    .sort((a, b) => a.month.localeCompare(b.month));
+  const fullMonthLabel = (m: string) =>
+    new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   const place = topic?.name ?? 'the area';
   const maxMonth = Math.max(1, ...timeline.map((t) => t.count));
@@ -288,6 +363,18 @@ const PeriodReview = () => {
         </motion.div>
       </ReviewSlide>
 
+      {/* The archive, in pictures */}
+      {mosaic.length >= 12 && (
+        <ReviewSlide label="The archive" hue={h(1)}>
+          <MosaicWall covers={mosaic} feedSlug={slug} />
+          <Reveal delay={0.3} className="mt-8">
+            <p className="text-lg leading-snug text-muted-foreground">
+              Every picture drawn for {place} this period — {summary.total_stories.toLocaleString()} stories in all.
+            </p>
+          </Reveal>
+        </ReviewSlide>
+      )}
+
       {/* Words written */}
       {totalWords > 0 && (
         <ReviewSlide tone="inverted" label="The scale" hue={h(1)}>
@@ -296,6 +383,13 @@ const PeriodReview = () => {
             <Reveal delay={0.2} className="mt-10 flex flex-wrap gap-x-10 gap-y-3 text-lg opacity-80">
               <span>{scale.days_covered} days with news</span>
               <span>{scale.source_count} sources</span>
+              {readingMinutes != null && readingMinutes > 0 && (
+                <span>
+                  {readingMinutes >= 120
+                    ? `${Math.round(readingMinutes / 60)} hours to read it all`
+                    : `${readingMinutes} minutes to read it all`}
+                </span>
+              )}
             </Reveal>
           )}
         </ReviewSlide>
@@ -338,6 +432,176 @@ const PeriodReview = () => {
           <StoryImageGrid stories={c.stories} feedSlug={slug} />
         </ReviewSlide>
       ))}
+
+      {/* Month chapters — the story that defined each month */}
+      {featuredMonths.map((m, idx) => (
+        <ReviewSlide key={`month-${m.month}`} label={fullMonthLabel(m.month)} hue={h(14 + idx)}>
+          <MaskRevealHeading
+            className="mb-6 text-4xl font-semibold tracking-tight"
+            segments={[{ text: `${m.count} stories in ` }, { text: monthLabel(m.month), italic: true }]}
+          />
+          {m.lead && (
+            <Reveal delay={0.15}>
+              <Link
+                to={`/feed/${slug}/story/${m.lead.slug ?? m.lead.id}`}
+                className="group block overflow-hidden rounded-2xl border border-border"
+              >
+                {m.lead.cover_illustration_url && (
+                  <img
+                    src={
+                      optimizeImageUrl(m.lead.cover_illustration_url, { width: 800, height: 500, quality: 78 }) ??
+                      m.lead.cover_illustration_url
+                    }
+                    alt=""
+                    loading="lazy"
+                    className="aspect-[8/5] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                  />
+                )}
+                <p className="p-4 text-lg font-medium leading-snug">{m.lead.title}</p>
+              </Link>
+            </Reveal>
+          )}
+          {m.covers.length > 1 && (
+            <Reveal delay={0.3} className="mt-4">
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {m.covers.slice(0, 8).map((c) => (
+                  <Link
+                    key={c.id}
+                    to={`/feed/${slug}/story/${c.slug ?? c.id}`}
+                    title={c.title}
+                    className="h-16 w-16 shrink-0 overflow-hidden rounded-lg"
+                  >
+                    <img
+                      src={
+                        optimizeImageUrl(c.cover_illustration_url, { width: 160, height: 160, quality: 70 }) ??
+                        c.cover_illustration_url ??
+                        ''
+                      }
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  </Link>
+                ))}
+              </div>
+            </Reveal>
+          )}
+          {m.spike_term && (
+            <Reveal delay={0.4} className="mt-5">
+              <p className="text-base text-muted-foreground">
+                The month {m.spike_term} arrived.
+              </p>
+            </Reveal>
+          )}
+        </ReviewSlide>
+      ))}
+
+      {/* Turning points */}
+      {turningPoints.length > 0 && (
+        <ReviewSlide tone="accent" label="Turning points" hue={h(13)}>
+          <MaskRevealHeading
+            className="mb-8 text-4xl font-semibold tracking-tight"
+            segments={[{ text: 'When the coverage ' }, { text: 'changed direction', italic: true }]}
+          />
+          <ul className="space-y-5">
+            {turningPoints.map((t, i) => (
+              <Reveal key={`${t.term}-${t.month}`} delay={i * 0.1}>
+                <li className="flex items-center gap-4">
+                  {t.story?.cover_illustration_url ? (
+                    <Link
+                      to={`/feed/${slug}/story/${t.story.slug ?? t.story.id}`}
+                      className="h-20 w-20 shrink-0 overflow-hidden rounded-xl"
+                    >
+                      <img
+                        src={
+                          optimizeImageUrl(t.story.cover_illustration_url, { width: 200, height: 200, quality: 72 }) ??
+                          t.story.cover_illustration_url
+                        }
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </Link>
+                  ) : (
+                    <span className="h-20 w-20 shrink-0 rounded-xl border border-border" aria-hidden />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+                      {monthLabel(t.month)}
+                    </p>
+                    <p className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--review-accent)' }}>
+                      {t.term}
+                    </p>
+                    <p className="text-base text-muted-foreground">
+                      {t.multiple}× its usual level{t.story ? ` · ${t.story.title}` : ''}
+                    </p>
+                  </div>
+                </li>
+              </Reveal>
+            ))}
+          </ul>
+        </ReviewSlide>
+      )}
+
+      {/* Recurring names, with their defining story */}
+      {recurringEntities.filter((r) => r.story?.cover_illustration_url).length >= 3 && (
+        <ReviewSlide label="Kept coming back" hue={h(15)}>
+          <MaskRevealHeading
+            className="mb-6 text-4xl font-semibold tracking-tight"
+            segments={[{ text: 'The names of ' }, { text: 'the period', italic: true }]}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            {recurringEntities
+              .filter((r) => r.story?.cover_illustration_url)
+              .slice(0, 4)
+              .map((r, i) => (
+                <Reveal key={r.term} delay={i * 0.08}>
+                  <Link
+                    to={`/feed/${slug}/story/${r.story!.slug ?? r.story!.id}`}
+                    className="block overflow-hidden rounded-xl border border-border"
+                  >
+                    <img
+                      src={
+                        optimizeImageUrl(r.story!.cover_illustration_url, { width: 400, height: 300, quality: 74 }) ??
+                        r.story!.cover_illustration_url ??
+                        ''
+                      }
+                      alt=""
+                      loading="lazy"
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                    <div className="p-3">
+                      <p className="truncate text-base font-semibold">{r.term}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {r.count} stories{r.peak_month ? ` · peak ${monthLabel(r.peak_month)}` : ''}
+                      </p>
+                    </div>
+                  </Link>
+                </Reveal>
+              ))}
+          </div>
+        </ReviewSlide>
+      )}
+
+      {/* What went quiet */}
+      {wentQuiet.length > 0 && (
+        <ReviewSlide tone="inverted" label="What went quiet" hue={h(16)}>
+          <MaskRevealHeading
+            className="mb-8 text-4xl font-semibold tracking-tight"
+            segments={[{ text: 'Stopped being ' }, { text: 'news', italic: true }]}
+          />
+          <ul className="space-y-4">
+            {wentQuiet.slice(0, 5).map((w, i) => (
+              <Reveal key={w.term} delay={i * 0.08}>
+                <li className="flex items-baseline justify-between gap-4 border-b border-background/20 pb-3">
+                  <span className="truncate text-xl font-medium">{w.term}</span>
+                  <span className="shrink-0 text-base opacity-70 tabular-nums">{w.previous} → 0</span>
+                </li>
+              </Reveal>
+            ))}
+          </ul>
+        </ReviewSlide>
+      )}
 
 
 

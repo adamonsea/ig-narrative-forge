@@ -42,6 +42,7 @@ import { WidgetAnalytics } from "@/components/WidgetAnalytics";
 import { StatusPill, InfoHint } from "@/components/ui/editorial";
 import { ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { getDial, parseNearbyPlaces } from "@/lib/newsValues";
+import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
 import { cn } from "@/lib/utils";
 
 export interface EditorialTopic {
@@ -353,6 +354,13 @@ export function EditorialControlCenter({
                     <InfoHint label="About exclusions">Keeps predictable near-misses out of the review queue.</InfoHint>
                   </h3>
                   <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
+                </section>
+                <section className="border-t border-border pt-8" aria-labelledby="coverage-categories-heading">
+                  <h3 id="coverage-categories-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
+                    Categories
+                    <InfoHint label="About categories">How published stories are grouped — this shapes your feed’s filters and period reviews.</InfoHint>
+                  </h3>
+                  <CategoriesPanel topicId={topic.id} />
                 </section>
               </div>
             )}

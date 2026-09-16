@@ -21,7 +21,6 @@ import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
 import { ExternalLink, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
-import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
 
 
@@ -138,7 +137,12 @@ const TopicDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [gatheringAll, setGatheringAll] = useState(false);
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "feed");
+  const [activeTab, setActiveTab] = useState(() => {
+    const requested = searchParams.get('tab');
+    // Legacy deep links used ?tab=insights before the tab became Reviews.
+    if (requested === 'insights') return 'reviews';
+    return requested || "feed";
+  });
   const [autoSuggestSources, setAutoSuggestSources] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
@@ -176,8 +180,15 @@ const TopicDashboard = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'feed' || tab === 'insights' || tab === 'settings') setActiveTab(tab);
-  }, [searchParams]);
+    if (tab === 'insights') {
+      setActiveTab('reviews');
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('tab', 'reviews');
+      setSearchParams(nextParams, { replace: true });
+      return;
+    }
+    if (tab === 'feed' || tab === 'reviews' || tab === 'settings') setActiveTab(tab);
+  }, [searchParams, setSearchParams]);
 
   const loadTopicAndStats = async () => {
     try {
@@ -689,24 +700,21 @@ const TopicDashboard = () => {
               <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Pipeline
               </TabsTrigger>
-              <TabsTrigger value="insights" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
-                Insights
-              </TabsTrigger>
               <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Editorial control
               </TabsTrigger>
+              <TabsTrigger value="reviews" className="ml-auto rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
+                Reviews
+              </TabsTrigger>
             </TabsList>
 
-            {/* ===== INSIGHTS TAB ===== */}
-            <TabsContent value="insights" className="space-y-10">
-              <section className="space-y-3">
-                <h2 className="display-heading text-2xl">Categories</h2>
-                <CategoriesPanel topicId={topic.id} />
-              </section>
-              <section className="space-y-3">
-                <h2 className="display-heading text-2xl">Period reviews</h2>
-                <PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} />
-              </section>
+            {/* ===== REVIEWS TAB ===== */}
+            <TabsContent value="reviews" className="space-y-3">
+              <h2 className="display-heading text-2xl">Look back over a period</h2>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Build a public review of everything published between two dates — the story of the period, its numbers and its pictures.
+              </p>
+              <PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} />
             </TabsContent>
 
 
