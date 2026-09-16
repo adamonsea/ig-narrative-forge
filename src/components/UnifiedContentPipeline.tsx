@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LiveInsightStrip } from "@/components/topics/insight/LiveInsightStrip";
+import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
