@@ -227,6 +227,7 @@ const PeriodReview = () => {
   const { slug, reviewSlug } = useParams<{ slug: string; reviewSlug: string }>();
   const [review, setReview] = useState<{ label: string; narrative: string | null; data: ReviewData } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previewCover, setPreviewCover] = useState<MosaicCover | null>(null);
   const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollReady, setScrollReady] = useState(false);
