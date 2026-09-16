@@ -220,6 +220,7 @@ export const FeedSetupGuide = ({
                 descriptions={(topic as any).landmark_descriptions || {}}
                 photos={(topic as any).landmark_reference_images || {}}
                 setupState={(topic as any).landmark_setup_state || {}}
+                illustrationStyle={topic.illustration_style}
                 onChange={(patch) => onTopicChange(patch as never)}
               />
             )}
