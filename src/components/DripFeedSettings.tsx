@@ -155,34 +155,10 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     }
   };
 
-  const handleEmergencyPublish = async () => {
-    if (!confirm('Immediately publish all queued stories?')) return;
-    setEmergencyPublishing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('drip-feed-scheduler', {
-        body: { topic_id: topicId, emergency_publish_all: true },
-      });
-      if (error) throw error;
-      toast({ title: 'Published', description: `Released ${data.stories_released || 0} stories` });
-      loadQueuedStories();
-      onUpdate?.();
-    } catch (error) {
-      console.error('Error in emergency publish:', error);
-      toast({ title: 'Error', description: 'Failed to publish', variant: 'destructive' });
-    } finally {
-      setEmergencyPublishing(false);
-    }
-  };
-
   const formatTime = (hour: number) => {
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
     return `${displayHour}:00 ${period}`;
-  };
-
-  const formatScheduledTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
   };
 
   const activeHours = config.drip_end_hour - config.drip_start_hour;
