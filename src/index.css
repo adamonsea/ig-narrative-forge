@@ -392,6 +392,14 @@ All colors MUST be HSL.
   }
 }
 
+/* Instrument Serif ships a single weight — never fake-bold it */
+.font-display,
+.font-display * {
+  font-weight: 400;
+  font-synthesis-weight: none;
+  font-synthesis: none;
+}
+
 /* Quiet editorial workspace utilities */
 @layer components {
   /* One strong editorial heading per view */
