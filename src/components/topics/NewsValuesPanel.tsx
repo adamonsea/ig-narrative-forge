@@ -108,6 +108,11 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
     return { total: samples.length, published, review, tiers };
   }, [samples, config]);
 
+  // Keep the latest onChange without making `persist` change identity,
+  // which would otherwise retrigger the auto-save effect in a loop.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
   const persist = useCallback(async (next: {
     locality_strength: number;
     nearby_places: NearbyPlace[];
@@ -131,8 +136,8 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
       });
       return;
     }
-    onChange?.(next);
-  }, [topicId, toast, onChange]);
+    onChangeRef.current?.(next);
+  }, [topicId, toast]);
 
   // Auto-save, debounced.
   useEffect(() => {
