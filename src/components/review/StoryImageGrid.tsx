@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { useStoryPreview } from './StoryPreview';
 import { editorialEase } from './ReviewChapter';
 
 export interface GridStory {
@@ -22,6 +22,7 @@ const Tile = ({
   lead?: boolean;
 }) => {
   const reduce = useReducedMotion();
+  const { open: openPreview } = useStoryPreview();
   const src = story.cover_illustration_url
     ? optimizeImageUrl(story.cover_illustration_url, { width: lead ? 720 : 360, height: lead ? 760 : 224, quality: 78 })
     : null;
@@ -34,9 +35,10 @@ const Tile = ({
       transition={{ duration: reduce ? 0.3 : 0.75, delay: reduce ? 0 : index * 0.09, ease: editorialEase }}
       className={lead ? 'row-span-2' : undefined}
     >
-      <Link
-        to={feedSlug ? `/feed/${feedSlug}/story/${story.slug ?? story.id}` : '#'}
-        className="group relative block h-full w-full overflow-hidden rounded-2xl border border-border/60 bg-muted transition-transform duration-300 hover:-translate-y-1"
+      <button
+        type="button"
+        onClick={() => openPreview(story)}
+        className="group relative block h-full w-full overflow-hidden rounded-2xl border border-border/60 bg-muted text-left transition-transform duration-300 hover:-translate-y-1"
         style={{ aspectRatio: lead ? '0.95' : '1.618' }}
       >
         {src ? (
@@ -61,7 +63,7 @@ const Tile = ({
           <span className="line-clamp-2 text-sm font-medium text-white">{story.title}</span>
         </span>
         <span className="sr-only">{story.title}</span>
-      </Link>
+      </button>
     </motion.div>
   );
 };

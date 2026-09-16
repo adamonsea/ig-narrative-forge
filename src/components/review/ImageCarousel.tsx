@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { useStoryPreview } from './StoryPreview';
 
 type CarouselStory = {
   id: string;
@@ -19,6 +19,7 @@ export const ImageCarousel = ({
   feedSlug?: string;
 }) => {
   const reduce = useReducedMotion();
+  const { open: openPreview } = useStoryPreview();
   const items = stories.filter((s) => s.cover_illustration_url).slice(0, 10);
   if (items.length === 0) return null;
 
@@ -36,9 +37,10 @@ export const ImageCarousel = ({
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : i * 0.06, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Link
-            to={feedSlug ? `/feed/${feedSlug}/story/${story.slug ?? story.id}` : '#'}
-            className="group block overflow-hidden rounded-2xl border border-border/60 bg-background/40"
+          <button
+            type="button"
+            onClick={() => openPreview(story)}
+            className="group block w-full overflow-hidden rounded-2xl border border-border/60 bg-background/40 text-left"
           >
             <img
               src={
@@ -54,7 +56,7 @@ export const ImageCarousel = ({
               <p className="text-base font-medium leading-snug line-clamp-3">{story.title}</p>
               {story.note && <p className="mt-1.5 text-sm opacity-60">{story.note}</p>}
             </div>
-          </Link>
+          </button>
         </motion.div>
       ))}
     </div>

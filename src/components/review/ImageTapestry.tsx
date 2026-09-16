@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { useStoryPreview } from './StoryPreview';
 
 type TapestryCover = {
   id: string;
@@ -21,6 +21,7 @@ export const ImageTapestry = ({
   feedSlug?: string;
 }) => {
   const reduce = useReducedMotion();
+  const { open: openPreview } = useStoryPreview();
   const tiles = covers.filter((c) => c.cover_illustration_url).slice(0, 12);
   if (tiles.length < 4) return null;
 
@@ -39,10 +40,11 @@ export const ImageTapestry = ({
           }}
           className={i % 5 === 0 ? 'lg:col-span-2' : undefined}
         >
-          <Link
-            to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
+          <button
+            type="button"
+            onClick={() => openPreview(c)}
             title={c.title}
-            className="block overflow-hidden rounded-md"
+            className="block w-full overflow-hidden rounded-md"
           >
             <img
               src={
@@ -56,7 +58,7 @@ export const ImageTapestry = ({
                 i % 5 === 0 ? 'aspect-[16/10]' : 'aspect-square'
               }`}
             />
-          </Link>
+          </button>
         </motion.div>
       ))}
     </div>
