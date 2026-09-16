@@ -5,7 +5,8 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, Clock, Loader2 } from 'lucide-react';
+import { Disclosure, SaveIndicator, type SaveState } from '@/components/ui/editorial';
+import { Check, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TopicAutomationSettingsProps {
@@ -40,8 +41,8 @@ const MODE_GROUPS: { label: string; modes: AutomationMode[]; summary: string }[]
 export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomationSettingsProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  
+  const [saveState, setSaveState] = useState<SaveState>(null);
+
   const [automationMode, setAutomationMode] = useState<AutomationMode>('manual');
   const [scrapeFrequency, setScrapeFrequency] = useState(12);
   const [qualityThreshold, setQualityThreshold] = useState(60);
@@ -49,6 +50,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
   const [autoIllustrateInHoliday, setAutoIllustrateInHoliday] = useState(true);
   const [nextRunAt, setNextRunAt] = useState<string | null>(null);
   const loadedRef = useRef(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -84,7 +86,8 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
 
   const saveSettings = useCallback(async (updates: Record<string, any>) => {
     if (!loadedRef.current) return;
-    setSaving(true);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    setSaveState('saving');
     try {
       const { error } = await supabase
         .from('topic_automation_settings')
@@ -92,12 +95,12 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
         .eq('topic_id', topicId);
 
       if (error) throw error;
-      toast({ title: 'Saved' });
+      setSaveState('saved');
+      savedTimerRef.current = setTimeout(() => setSaveState(null), 2500);
     } catch (error) {
       console.error('Error saving automation settings:', error);
-      toast({ title: 'Error', description: 'Failed to save', variant: 'destructive' });
-    } finally {
-      setSaving(false);
+      setSaveState(null);
+      toast({ title: 'Not saved', description: 'Your automation settings could not be saved. Try again.', variant: 'destructive' });
     }
   }, [topicId, toast]);
 
