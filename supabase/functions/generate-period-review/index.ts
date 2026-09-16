@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
       const normalise = (v: string) => v.trim().toLowerCase().replace(/^www\./, '').replace(/[^a-z0-9]/g, '');
       const srcSet = new Set(useNameScoping ? sourceNames.map(normalise) : []);
       const keep = (r: Row) => {
-        if (srcSet.size > 0 && !srcSet.has(normalise(r.publication_name ?? ''))) return false;
+        if (srcSet.size > 0 && !srcSet.has(normalise(r.source_label ?? r.publication_name ?? ''))) return false;
         if (catSet.size > 0) {
           const a = assignments.get(r.id);
           if (!a) return false;
