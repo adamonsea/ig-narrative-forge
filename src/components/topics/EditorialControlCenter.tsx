@@ -316,6 +316,14 @@ export function EditorialControlCenter({
             )}
             <ChannelRow icon={Mic2} label="Daily audio" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
             <ChannelRow icon={Mic2} label="Weekly audio" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
+            <AiAssistantAccess
+              topicId={topic.id}
+              topicSlug={topic.slug}
+              topicName={topic.name}
+              enabled={topic.mcp_enabled || false}
+              access={topic.mcp_access === "open" ? "open" : "key"}
+              onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+            />
             <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
           </div>
         )}
