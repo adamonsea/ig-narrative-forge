@@ -31,7 +31,7 @@ export function AnimatedNumber({
   const reduced = useReducedMotion();
   const [display, setDisplay] = useState(reduced ? value : 0);
   const fromRef = useRef(0);
-  const frameRef = useRef<number>();
+  const frameRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (reduced) {

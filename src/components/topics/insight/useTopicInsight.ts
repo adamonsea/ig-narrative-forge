@@ -128,7 +128,7 @@ export function usePopularStories(topicId: string) {
 /** Readers today and in the last hour, refreshed while the tab is visible. */
 export function useLiveReaders(topicId: string) {
   const [readers, setReaders] = useState<{ hour: number; today: number } | null>(null);
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (!topicId) return;
