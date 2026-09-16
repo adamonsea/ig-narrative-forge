@@ -372,9 +372,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       setArticles(filterTombstoned(allArticles, removedArticlesRef.current));
 
       
-      // Update hasMoreArticles based on total count
-      const filteredTotal = totalCount || 0;
-      setHasMoreArticles(allArticles.length < filteredTotal);
+      // There is only more to fetch if the server actually filled this page.
+      // The raw database count includes arrivals that are then hidden here
+      // (already queued, duplicates, parliamentary, discarded), so counting
+      // against it used to promise more arrivals that could never appear.
+      const serverPageFull = (multiTenantArticlesResult.data || []).length === ARTICLES_PAGE_SIZE;
+      setHasMoreArticles(serverPageFull);
+      if (!serverPageFull) {
+        setTotalArticlesCount(allArticles.length);
+      }
 
       // Detect new arrivals for visual indicator
       if (previousCountsRef.current.articles > 0 && allArticles.length > previousCountsRef.current.articles) {
@@ -1498,7 +1504,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       setArticles(prev => [...prev, ...filterTombstoned(uniqueNewArticles, removedArticlesRef.current)]);
       setArticlesPage(nextPage);
-      setHasMoreArticles(uniqueNewArticles.length === ARTICLES_PAGE_SIZE);
+      const serverPageFull = (result.data || []).length === ARTICLES_PAGE_SIZE;
+      setHasMoreArticles(serverPageFull);
+      if (!serverPageFull) {
+        setTotalArticlesCount(articles.length + uniqueNewArticles.length);
+      }
       
       console.log('📄 Loaded more articles:', {
         page: nextPage,
