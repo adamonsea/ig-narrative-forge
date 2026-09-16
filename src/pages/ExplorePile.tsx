@@ -23,6 +23,31 @@ interface Story {
   };
 }
 
+// Replace original publisher headlines with our own simplified slide-one headline
+const applySimplifiedHeadlines = async (list: Story[]): Promise<Story[]> => {
+  if (!list.length) return list;
+  try {
+    const { data, error } = await supabase.rpc('get_public_slides_for_stories', {
+      p_story_ids: list.map(s => s.id)
+    });
+    if (error || !data) return list;
+
+    const firstSlide = new Map<string, string>();
+    (data as any[]).forEach(row => {
+      if (row.slide_number === 1 && row.content) {
+        firstSlide.set(row.story_id, String(row.content).replace(/<[^>]*>/g, '').trim());
+      }
+    });
+
+    return list.map(s => {
+      const headline = firstSlide.get(s.id);
+      return headline ? { ...s, title: headline } : s;
+    });
+  } catch {
+    return list;
+  }
+};
+
 export default function ExplorePile() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
