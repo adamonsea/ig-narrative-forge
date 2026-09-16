@@ -183,6 +183,25 @@ Deno.serve(async (req) => {
       .or(`topic_id.is.null,topic_id.eq.${topicId}`);
     const catById = new Map((categories ?? []).map((c: any) => [c.id, c]));
 
+    // Apply optional scoping now that we know each story's category + source.
+    if (categoryIds.length > 0 || sourceNames.length > 0) {
+      const catSet = new Set(categoryIds);
+      const srcSet = new Set(sourceNames.map((s) => s.toLowerCase()));
+      const keep = (r: Row) => {
+        if (srcSet.size > 0 && !srcSet.has((r.publication_name ?? '').trim().toLowerCase())) return false;
+        if (catSet.size > 0) {
+          const a = assignments.get(r.id);
+          if (!a) return false;
+          if (!catSet.has(a.category_id) && !(a.subcategory_id && catSet.has(a.subcategory_id))) return false;
+        }
+        return true;
+      };
+      current = current.filter(keep);
+      previous = previous.filter(keep);
+    }
+
+
+
     const countByCat = (rows: Row[]) => {
       const counts: Record<string, number> = {};
       for (const r of rows) {
