@@ -138,7 +138,12 @@ const TopicDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [gatheringAll, setGatheringAll] = useState(false);
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "feed");
+  const [activeTab, setActiveTab] = useState(() => {
+    const requested = searchParams.get('tab');
+    // Legacy deep links used ?tab=insights before the tab became Reviews.
+    if (requested === 'insights') return 'reviews';
+    return requested || "feed";
+  });
   const [autoSuggestSources, setAutoSuggestSources] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
@@ -176,8 +181,15 @@ const TopicDashboard = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'feed' || tab === 'insights' || tab === 'settings') setActiveTab(tab);
-  }, [searchParams]);
+    if (tab === 'insights') {
+      setActiveTab('reviews');
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('tab', 'reviews');
+      setSearchParams(nextParams, { replace: true });
+      return;
+    }
+    if (tab === 'feed' || tab === 'reviews' || tab === 'settings') setActiveTab(tab);
+  }, [searchParams, setSearchParams]);
 
   const loadTopicAndStats = async () => {
     try {
