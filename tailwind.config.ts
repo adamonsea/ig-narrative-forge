@@ -71,9 +71,13 @@ export default {
 					DEFAULT: 'hsl(var(--pop))',
 					foreground: 'hsl(var(--pop-foreground))'
 				},
+				mint: {
+					soft: 'hsl(var(--mint-soft))'
+				},
 				purple: {
 					bright: 'hsl(var(--purple-bright))',
-					dark: 'hsl(var(--purple-dark))'
+					dark: 'hsl(var(--purple-dark))',
+					soft: 'hsl(var(--purple-soft))'
 				}
 			},
 			borderRadius: {
