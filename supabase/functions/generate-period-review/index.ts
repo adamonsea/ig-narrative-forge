@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     const spanMs = new Date(endISO).getTime() - new Date(startISO).getTime();
     const prevStartISO = new Date(new Date(startISO).getTime() - spanMs).toISOString();
 
-    const { data: topic } = await service.from('topics').select('name, region, slug').eq('id', topicId).maybeSingle();
+    const { data: topic } = await service.from('topics').select('name, region, slug, description').eq('id', topicId).maybeSingle();
 
     // PostgREST caps a single response at 1000 rows regardless of .limit(),
     // so page through the topic's articles explicitly — otherwise only a
