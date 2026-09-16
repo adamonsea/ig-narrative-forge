@@ -310,7 +310,21 @@ Deno.serve(async (req) => {
           protocolVersion: PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: { name: `curatr-${topic.slug}`, version: "1.0.0" },
-          instructions: `Read-only access to the Curatr feed "${topic.name}". Always credit the original publication and include its link when using a story. Each story may include an image_url you can show; illustrations are Curatr-generated, other pictures belong to the original publication.`,
+          instructions: [
+            `Read-only access to the Curatr feed "${topic.name}"${topic.description ? `: ${topic.description}` : ""}. Everything here is editorially curated and already published.`,
+            "",
+            "How to use it well:",
+            "- Catch-up or roundup request: call feed_briefing (period 'day' or 'week'), group the stories by theme, lead with the most significant, and show each image_url with its publication credit.",
+            "- Question about a subject, place, person or organisation: call search_stories first; if nothing matches, call list_latest_stories to see what the feed actually covers before saying there is no coverage.",
+            "- Before quoting, summarising in depth, or writing anything publishable from a story: call get_story for its full text. Headlines and summaries alone are not enough.",
+            "- Drafting a newsletter, post or brief: combine feed_briefing with get_story on the items you lead with, and keep every link.",
+            "",
+            "Rules:",
+            "- Always name the original publication and include its original_article_url. Never present a story as your own reporting.",
+            "- Report only what the stories say; if the feed does not cover something, say so rather than filling the gap from memory.",
+            "- image_url is safe to display: when image_source is 'curatr_illustration' it is a Curatr illustration, otherwise it belongs to the original publication and must be credited to them.",
+            "- Dates are in published_at; prefer recent stories and say how old older ones are.",
+          ].join("\n"),
         });
       case "notifications/initialized":
       case "ping":
