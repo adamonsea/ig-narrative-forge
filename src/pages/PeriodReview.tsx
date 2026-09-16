@@ -481,6 +481,7 @@ const PeriodReview = () => {
 
 
   return (
+    <StoryPreviewProvider feedSlug={slug} placeLabel={place}>
     <main
       ref={scrollRef}
       tabIndex={0}
@@ -1094,37 +1095,8 @@ const PeriodReview = () => {
         </Reveal>
       </ReviewSlide>
 
-      <Dialog open={previewCover != null} onOpenChange={(open) => !open && setPreviewCover(null)}>
-        <DialogContent className="max-w-lg overflow-hidden p-0">
-          {previewCover && (
-            <>
-              {previewCover.cover_illustration_url && (
-                <img
-                  src={
-                    optimizeImageUrl(previewCover.cover_illustration_url, {
-                      width: 900,
-                      height: 700,
-                      quality: 80,
-                    }) ?? previewCover.cover_illustration_url
-                  }
-                  alt=""
-                  className="aspect-[9/7] w-full object-cover"
-                />
-              )}
-              <div className="p-5">
-                <DialogTitle className="text-xl font-semibold leading-snug">{previewCover.title}</DialogTitle>
-                <Link
-                  to={`/feed/${slug}`}
-                  className="mt-4 inline-block text-sm font-medium text-primary underline"
-                >
-                  Read in {place}
-                </Link>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </main>
+    </StoryPreviewProvider>
   );
 };
 
