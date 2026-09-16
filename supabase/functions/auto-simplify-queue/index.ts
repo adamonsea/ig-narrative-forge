@@ -318,9 +318,18 @@ Deno.serve(async (req) => {
           typeof article.content_quality_score === 'number' ? article.content_quality_score : null
         );
 
+        // Park a held article for 24h so it stops occupying the queue window.
+        const markHeld = async (reason: string) => {
+          await supabase
+            .from('topic_articles')
+            .update({ held_at: new Date().toISOString(), held_reason: reason.slice(0, 200) })
+            .eq('id', article.id);
+        };
+
         if (categoryDecision.hold) {
           console.log(`  🗂️ Category gate HELD article ${article.id} — ${categoryDecision.reason}`);
           topicHeldForCategory++;
+          await markHeld(`category: ${categoryDecision.reason ?? 'held'}`);
           continue; // leave processing_status = 'new' for manual review
         }
 
@@ -347,6 +356,7 @@ Deno.serve(async (req) => {
               `title="${title.slice(0, 80)}"`
             );
             topicHeldForLocality++;
+            await markHeld('locality: no local anchor in title or opening');
             continue; // leave processing_status = 'new'
           }
 
