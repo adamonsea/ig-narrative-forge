@@ -134,7 +134,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   };
 
   const selectedSourceIds = () =>
-    sources.filter((s) => selectedSources.includes(s.id)).flatMap((s) => s.ids);
+    sources.filter((s) => selectedSources.includes(s.id)).flatMap((s) => s.ids ?? [s.id]);
 
   const selectedSourceNames = () =>
     sources.filter((s) => selectedSources.includes(s.id)).map((s) => s.name);
