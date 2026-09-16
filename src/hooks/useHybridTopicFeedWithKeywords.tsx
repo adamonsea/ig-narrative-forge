@@ -1044,7 +1044,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const storyContent: FeedContent[] = transformedStories.map(story => ({
         type: 'story' as const,
         id: story.id,
-        content_date: story.created_at, // "new to me" ordering (stable, based on story creation)
+        content_date: getDisplayDate(story.created_at, story.article?.published_at), // old stories slot back to their original date
         data: story
       }));
 
