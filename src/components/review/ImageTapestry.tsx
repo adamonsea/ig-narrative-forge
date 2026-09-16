@@ -22,7 +22,7 @@ export const ImageTapestry = ({
 }) => {
   const reduce = useReducedMotion();
   const { open: openPreview } = useStoryPreview();
-  const tiles = covers.filter((c) => c.cover_illustration_url).slice(0, 9);
+  const tiles = covers.filter((c) => c.cover_illustration_url).slice(0, 6);
   if (tiles.length < 4) return null;
 
   return (
