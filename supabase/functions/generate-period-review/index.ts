@@ -97,10 +97,12 @@ Deno.serve(async (req) => {
     const PAGE = 1000;
     for (let page = 0; page < 60; page++) {
       const from = page * PAGE;
-      const { data: rows, error } = await service
+      let q = service
         .from('topic_articles')
         .select('id')
-        .eq('topic_id', topicId)
+        .eq('topic_id', topicId);
+      if (sourceIds.length > 0) q = q.in('source_id', sourceIds);
+      const { data: rows, error } = await q
         .order('id', { ascending: true })
         .range(from, from + PAGE - 1);
       if (error) break;
