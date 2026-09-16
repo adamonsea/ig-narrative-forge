@@ -132,6 +132,43 @@ const monthLabel = (m: string) =>
 const compact = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}m` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
 
+/** A dense wall of every cover from the period — the archive, at a glance. */
+const MosaicWall = ({
+  covers,
+  feedSlug,
+}: {
+  covers: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
+  feedSlug?: string;
+}) => {
+  const reduce = useReducedMotion();
+  return (
+    <div className="grid grid-cols-6 gap-1 sm:gap-1.5">
+      {covers.map((c, i) => (
+        <motion.div
+          key={c.id}
+          initial={reduce ? false : { opacity: 0, scale: 0.94 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : Math.min(1.2, i * 0.012) }}
+        >
+          <Link
+            to={feedSlug ? `/feed/${feedSlug}/story/${c.slug ?? c.id}` : '#'}
+            title={c.title}
+            className="block aspect-square overflow-hidden rounded-[3px]"
+          >
+            <img
+              src={optimizeImageUrl(c.cover_illustration_url ?? '', { width: 160, quality: 70 })}
+              alt=""
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          </Link>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
 const PeriodReview = () => {
   const { slug, reviewSlug } = useParams<{ slug: string; reviewSlug: string }>();
   const [review, setReview] = useState<{ label: string; narrative: string | null; data: ReviewData } | null>(null);
