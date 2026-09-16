@@ -123,7 +123,7 @@ async function fetchStories(topicId: string, limit: number, sinceIso?: string) {
 const TOOLS = [
   {
     name: "list_latest_stories",
-    description: "List the most recently published stories in this feed, with source attribution and links.",
+    description: "List the most recently published stories in this feed, with their picture, source attribution and links.",
     inputSchema: {
       type: "object",
       properties: { limit: { type: "number", description: "How many stories to return (1-25, default 10)" } },
@@ -145,7 +145,7 @@ const TOOLS = [
   },
   {
     name: "get_story",
-    description: "Read one published story in full, with its source attribution and link.",
+    description: "Read one published story in full, with its picture, source attribution and link.",
     inputSchema: {
       type: "object",
       properties: { story_id: { type: "string", description: "The story id returned by the other tools" } },
@@ -289,7 +289,7 @@ Deno.serve(async (req) => {
           protocolVersion: PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: { name: `curatr-${topic.slug}`, version: "1.0.0" },
-          instructions: `Read-only access to the Curatr feed "${topic.name}". Always credit the original publication and include its link when using a story.`,
+          instructions: `Read-only access to the Curatr feed "${topic.name}". Always credit the original publication and include its link when using a story. Each story may include an image_url you can show; illustrations are Curatr-generated, other pictures belong to the original publication.`,
         });
       case "notifications/initialized":
       case "ping":
