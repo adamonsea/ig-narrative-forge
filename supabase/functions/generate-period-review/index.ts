@@ -817,7 +817,7 @@ Return ONLY JSON: {"headline":"...","narrative":"three short paragraphs separate
     const claimedWords = new Set<string>();
     const claimedStories = new Set<string>();
     const anomalyCandidates = [...anomalies].sort(
-      (a, b) => words(b.term).length - words(a.term).length || (b.ratio ?? 0) - (a.ratio ?? 0)
+      (a, b) => words(b.term).length - words(a.term).length || b.multiple - a.multiple
     );
     for (const a of anomalyCandidates) {
       if (turningPoints.length >= 3) break;
