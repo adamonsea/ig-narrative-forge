@@ -98,12 +98,13 @@ Deno.serve(async (req) => {
     // so page through the topic's articles explicitly — otherwise only a
     // fraction of the archive is ever considered.
     const taIds: string[] = [];
+    const taSourceId = new Map<string, string | null>();
     const PAGE = 1000;
     for (let page = 0; page < 60; page++) {
       const from = page * PAGE;
       let q = service
         .from('topic_articles')
-        .select('id')
+        .select('id, source_id')
         .eq('topic_id', topicId);
       if (sourceIds.length > 0) q = q.in('source_id', sourceIds);
       const { data: rows, error } = await q
@@ -111,9 +112,25 @@ Deno.serve(async (req) => {
         .range(from, from + PAGE - 1);
       if (error) break;
       const batch = rows ?? [];
-      taIds.push(...batch.map((r: any) => r.id));
+      for (const r of batch as any[]) {
+        taIds.push(r.id);
+        taSourceId.set(r.id, r.source_id ?? null);
+      }
       if (batch.length < PAGE) break;
     }
+
+    // Name each gathering source, so attribution follows the source the feed
+    // collected from rather than a byline the article happened to carry.
+    const sourceNameById = new Map<string, string>();
+    {
+      const { data: srcRows } = await service
+        .from('content_sources')
+        .select('id, source_name, canonical_domain');
+      for (const s of (srcRows ?? []) as any[]) {
+        sourceNameById.set(s.id, (s.source_name || s.canonical_domain || '').trim());
+      }
+    }
+
 
     // Fetch every row matching an `in (...)` filter, paging past the
     // PostgREST 1000-row response cap (slides/interactions are many-per-story).
@@ -154,6 +171,7 @@ Deno.serve(async (req) => {
       slug: string | null;
       publication_name: string | null;
       is_parliamentary?: boolean | null;
+      source_label?: string | null;
     };
     let current: Row[] = [];
     let previous: Row[] = [];
@@ -163,16 +181,22 @@ Deno.serve(async (req) => {
       const chunk = taIds.slice(i, i + 200);
       const { data: rows } = await service
         .from('stories')
-        .select('id, title, created_at, cover_illustration_url, slug, publication_name, is_parliamentary')
+        .select('id, title, created_at, cover_illustration_url, slug, publication_name, is_parliamentary, topic_article_id')
         .in('topic_article_id', chunk)
         .eq('is_published', true)
         .gte('created_at', prevStartISO)
         .lte('created_at', endISO);
       for (const r of rows ?? []) {
-        if (r.created_at >= startISO) current.push(r as Row);
-        else previous.push(r as Row);
+        const sid = taSourceId.get((r as any).topic_article_id) ?? null;
+        const row = {
+          ...(r as any),
+          source_label: (sid ? sourceNameById.get(sid) : null) || r.publication_name || null,
+        } as Row;
+        if (r.created_at >= startISO) current.push(row);
+        else previous.push(row);
       }
     }
+
 
     // Category assignments for both windows.
     const allIds = [...current, ...previous].map((s) => s.id);
@@ -206,7 +230,7 @@ Deno.serve(async (req) => {
       const normalise = (v: string) => v.trim().toLowerCase().replace(/^www\./, '').replace(/[^a-z0-9]/g, '');
       const srcSet = new Set(useNameScoping ? sourceNames.map(normalise) : []);
       const keep = (r: Row) => {
-        if (srcSet.size > 0 && !srcSet.has(normalise(r.publication_name ?? ''))) return false;
+        if (srcSet.size > 0 && !srcSet.has(normalise(r.source_label ?? r.publication_name ?? ''))) return false;
         if (catSet.size > 0) {
           const a = assignments.get(r.id);
           if (!a) return false;
@@ -320,7 +344,7 @@ Deno.serve(async (req) => {
 
     const sourceCounts: Record<string, number> = {};
     for (const r of current) {
-      const name = (r.publication_name ?? '').trim();
+      const name = (r.source_label ?? r.publication_name ?? '').trim();
       if (!name) continue;
       sourceCounts[name] = (sourceCounts[name] ?? 0) + 1;
     }
