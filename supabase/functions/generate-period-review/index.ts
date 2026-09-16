@@ -67,6 +67,8 @@ Deno.serve(async (req) => {
     const sourceNames: string[] = Array.isArray(body.sourceNames)
       ? body.sourceNames.filter((v: unknown) => typeof v === 'string' && v.trim().length > 0).map((v: string) => v.trim())
       : [];
+    // Parliamentary coverage skews local comparisons, so it is excluded unless asked for.
+    const includeParliamentary: boolean = body.includeParliamentary === true;
 
 
     if (!topicId || !periodStart || !periodEnd) {
@@ -145,6 +147,7 @@ Deno.serve(async (req) => {
       cover_illustration_url: string | null;
       slug: string | null;
       publication_name: string | null;
+      is_parliamentary?: boolean | null;
     };
     let current: Row[] = [];
     let previous: Row[] = [];
