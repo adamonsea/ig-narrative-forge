@@ -167,7 +167,7 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
 
       <p className="mx-auto mt-4 max-w-xs text-sm text-muted-foreground">
         {isAutomatic
-          ? `Stories are collected automatically ${everyLabel}.`
+          ? "Auto collection every 4 hours."
           : sweepAt
           ? overdue
             ? `Last gathered ${relativeTime(sweepAt)} — worth running again.`
@@ -200,7 +200,7 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No sweeps recorded yet for this feed.
+            No current stories in arrivals.
           </p>
         )}
       </div>
