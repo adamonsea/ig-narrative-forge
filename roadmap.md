@@ -29,3 +29,9 @@ Published queue steadiness (plan: .lovable/plan/steady-up-the-published-queue-20
 - [x] 30s fallback poll stands down when realtime is live or tab hidden
 - [x] Load-error toasts replaced by one quiet inline banner with retry
 - [x] Thumbnails via Supabase image transformation + lazy loading
+
+Feed ordering
+- [x] Old stories slot into the feed/pipeline at their original publication date
+      (anything older than 3 days no longer jumps to the top)
+- [ ] Pin a story to the top of the feed — lets an owner deliberately surface a
+      late-but-great story that would otherwise sit at its original date
