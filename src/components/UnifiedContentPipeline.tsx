@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LiveInsightStrip } from "@/components/topics/insight/LiveInsightStrip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
+  const [mobileView, setMobileView] = useState<'arrivals' | 'live'>('arrivals');
   const [loadingPreview, setLoadingPreview] = useState(false);
   const { toast } = useToast();
   
