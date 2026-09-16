@@ -21,7 +21,6 @@ import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
 import { ExternalLink, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
-import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
 
 
