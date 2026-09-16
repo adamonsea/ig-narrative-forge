@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
       for (const part of chunk(orphanIds, 200)) {
         await supabase
           .from('topic_articles')
-          .update({ processing_status: 'new' })
+          .update({ processing_status: 'new', held_at: null, held_reason: null })
           .in('id', part);
       }
     }
