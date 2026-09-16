@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-const MCP_BASE = "https://curatr.pro/mcp";
+const MCP_BASE = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/mcp-feed";
 
 interface KeyRow {
   id: string;
