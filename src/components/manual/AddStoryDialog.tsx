@@ -193,7 +193,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
     >
       <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-2">
         <Plus className="w-4 h-4" />
-        Add story
+        Story
       </Button>
 
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
