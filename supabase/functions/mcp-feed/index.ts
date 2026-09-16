@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
         description: topic.description || `Curated stories from ${topic.name}`,
         protocol: "mcp",
         transport: "streamable-http",
-        endpoint: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mcp-feed/${topic.slug}`,
+        endpoint: `${SITE_URL}/mcp/${topic.slug}`,
       });
     }
 
