@@ -298,7 +298,6 @@ export function EditorialControlCenter({
         {section === "overview" && (
           <OverviewBriefing
             topic={topic}
-            stats={stats}
             policy={policy}
             attention={attention}
             controlRows={controlRows}
@@ -498,11 +497,6 @@ function OverviewBriefing({
           </div>
         </section>
       )}
-
-      <section aria-labelledby="policy-heading">
-        <h3 id="policy-heading" className="text-base font-semibold">Editorial policy</h3>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{policy}</p>
-      </section>
 
       <section aria-label="Control areas">
         <div className="divide-y divide-border border-y border-border">
