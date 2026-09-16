@@ -4,6 +4,7 @@ import { toast } from '@/components/ui/use-toast';
 import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/deviceUtils';
 import { getCachedFeed, setCachedFeed, removeStoryFromCachedFeed, upsertStoryInCachedFeed } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
+import { getDisplayDate } from '@/lib/displayDate';
 
 // Optimization #3: Strip production console.log - noop in prod, real log in dev
 const devLog = import.meta.env.DEV
