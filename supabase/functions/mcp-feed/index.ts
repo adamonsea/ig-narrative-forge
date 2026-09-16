@@ -177,7 +177,7 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
       const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
       const scored = pool
         .map((story) => {
-          const hay = `${story.title || ""} ${fullText(story.slides)}`.toLowerCase();
+          const hay = `${story.title || ""} ${fullText(story)}`.toLowerCase();
           const score = terms.reduce((acc, t) => acc + (hay.includes(t) ? 1 : 0), 0);
           return { story, score };
         })
@@ -200,7 +200,7 @@ async function runTool(name: string, args: Json, topic: { id: string; slug: stri
       if (error) throw error;
       if (!data) throw new Error("Story not found in this feed");
       const story = data as unknown as StoryRow;
-      return { ...shapeStory(story, topic.slug), text: fullText(story.slides) };
+      return { ...shapeStory(story, topic.slug), text: fullText(story) };
     }
     case "feed_briefing": {
       const period = args.period === "day" ? "day" : "week";
