@@ -534,9 +534,6 @@ function OverviewBriefing({
   );
 }
 
-function FlowMetric({ value, label }: { value: number; label: string }) {
-  return <div className="px-4 py-5 sm:px-6"><p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></div>;
-}
 
 function ChannelRow({ icon: Icon, label, description, checked, onCheckedChange, disabled = false }: { icon: typeof Mail; label: string; description: string; checked: boolean; onCheckedChange?: (checked: boolean) => void; disabled?: boolean }) {
   return <div className="flex items-center justify-between gap-5 py-5"><div className="flex items-center gap-3"><Icon className="h-4 w-4 text-muted-foreground" /><div><Label className="text-sm">{label}</Label><p className="mt-0.5 text-xs text-muted-foreground">{description}</p></div></div>{disabled ? <CheckCircle2 className="h-4 w-4 text-pop" /> : <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={`Enable ${label}`} />}</div>;
