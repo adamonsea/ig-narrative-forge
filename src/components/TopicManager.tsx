@@ -316,7 +316,7 @@ export const TopicManager = () => {
                               }}
                             >
                               <TrendingUp className="w-3.5 h-3.5 mr-2" />
-                              Insights
+                              Reviews
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
