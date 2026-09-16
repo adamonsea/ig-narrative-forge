@@ -223,6 +223,73 @@ const PeriodReview = () => {
     }
   }, [loading, review]);
 
+  // Deliberate, one-slide-at-a-time navigation. A mouse wheel fires dozens of
+  // small events per flick; native scroll-snap reacts to every one of them, so
+  // the deck slips between slides. Here a gesture has to clear a threshold
+  // before it moves, and then the deck locks until the slide has settled.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !scrollReady) return;
+
+    let locked = false;
+    let travel = 0;
+    let lastEventAt = 0;
+    let unlockTimer: ReturnType<typeof setTimeout> | undefined;
+    const THRESHOLD = 90; // px of intent before a slide change
+    const GESTURE_GAP = 220; // ms of quiet that ends a gesture
+
+    const slides = () => Array.from(el.querySelectorAll<HTMLElement>('section'));
+
+    const goTo = (direction: 1 | -1) => {
+      const items = slides();
+      if (items.length === 0) return;
+      const containerTop = el.getBoundingClientRect().top;
+      const tops = items.map((node) => el.scrollTop + node.getBoundingClientRect().top - containerTop);
+      const current = tops.reduce(
+        (best, top, i) => (Math.abs(top - el.scrollTop) < Math.abs(tops[best] - el.scrollTop) ? i : best),
+        0
+      );
+      const nextIndex = Math.min(items.length - 1, Math.max(0, current + direction));
+      if (nextIndex === current) return;
+      locked = true;
+      travel = 0;
+      el.scrollTo({ top: tops[nextIndex], behavior: reduce ? 'auto' : 'smooth' });
+      clearTimeout(unlockTimer);
+      unlockTimer = setTimeout(() => {
+        locked = false;
+        travel = 0;
+      }, reduce ? 120 : 760);
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (locked) return;
+      const now = performance.now();
+      if (now - lastEventAt > GESTURE_GAP) travel = 0;
+      lastEventAt = now;
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      if (dy !== 0 && Math.sign(dy) !== Math.sign(travel)) travel = 0;
+      travel += dy;
+      if (Math.abs(travel) >= THRESHOLD) goTo(travel > 0 ? 1 : -1);
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      const forward = e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ';
+      const back = e.key === 'ArrowUp' || e.key === 'PageUp';
+      if (!forward && !back) return;
+      e.preventDefault();
+      if (!locked) goTo(forward ? 1 : -1);
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(unlockTimer);
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('keydown', onKey);
+    };
+  }, [scrollReady, reduce]);
+
 
   if (loading) {
     return (
@@ -313,7 +380,8 @@ const PeriodReview = () => {
   return (
     <main
       ref={scrollRef}
-      className="h-dvh overflow-y-auto snap-y snap-mandatory bg-background scroll-smooth"
+      tabIndex={0}
+      className="h-dvh overflow-y-auto overscroll-contain snap-y snap-mandatory bg-background outline-none"
     >
       <motion.div
         className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-primary"
