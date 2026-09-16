@@ -213,7 +213,7 @@ const MosaicWall = ({
                       }
                 }
               />
-            </Link>
+            </button>
           </motion.div>
         ))}
       </div>
