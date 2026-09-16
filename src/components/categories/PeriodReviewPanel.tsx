@@ -51,6 +51,7 @@ const PRESETS = [
 interface OptionRow {
   id: string;
   name: string;
+  ids: string[];
 }
 
 export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps) => {
@@ -91,14 +92,16 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
         .filter((c) => !c.parent_id)
         .map((c) => ({ id: c.id as string, name: c.name as string }))
     );
-    const names = new Set<string>();
-    const sourceRows: OptionRow[] = [];
+    const byName = new Map<string, OptionRow>();
     for (const s of (srcs ?? []) as any[]) {
       const name = (s.source_name ?? '').trim();
-      if (!name || names.has(name)) continue;
-      names.add(name);
-      sourceRows.push({ id: name, name });
+      const sourceId = s.source_id as string | undefined;
+      if (!name || !sourceId) continue;
+      const existing = byName.get(name);
+      if (existing) existing.ids.push(sourceId);
+      else byName.set(name, { id: sourceId, name, ids: [sourceId] });
     }
+    const sourceRows: OptionRow[] = [...byName.values()];
     setSources(sourceRows.sort((a, b) => a.name.localeCompare(b.name)));
   };
 
