@@ -521,8 +521,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         error: failedStatus?.error
       });
 
+      // Old stories slot back to their original publication date so legacy
+      // items curated today don't dominate the top of the list.
       const byNewestCreated = (a: any, b: any) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        new Date(getDisplayDate(b.created_at, b.article_published_at)).getTime() -
+        new Date(getDisplayDate(a.created_at, a.article_published_at)).getTime();
 
       let sortedStories: any[];
 
