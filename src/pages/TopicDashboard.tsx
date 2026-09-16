@@ -712,7 +712,7 @@ const TopicDashboard = () => {
             <TabsContent value="reviews" className="space-y-3">
               <h2 className="display-heading text-2xl">Look back over a period</h2>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Build a public review of everything published between two dates — the story of the period, its numbers and its pictures.
+                Build a public visual review of everything published between two dates.
               </p>
               <PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} />
             </TabsContent>
