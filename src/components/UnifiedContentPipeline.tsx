@@ -480,8 +480,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               onLoadMorePublished={loadMorePublished}
             />
           )}
-        </TabsContent>
-      </Tabs>
+        </section>
+      </div>
 
       {/* Article Preview Dialog */}
       <Dialog open={previewArticle !== null} onOpenChange={(open) => !open && setPreviewArticle(null)}>
