@@ -158,17 +158,37 @@ export function EditorialControlCenter({
   const unconfirmedPlaces = (topic.landmarks || []).filter(
     (place) => topic.landmark_setup_state?.[place]?.status !== "confirmed"
   );
-  const attention = [
-    stats.pending_articles > 20 ? `${stats.pending_articles} arrivals are waiting for editorial review` : null,
-    stats.processing_queue > 10 ? `${stats.processing_queue} stories are still being prepared` : null,
-    !topic.is_public ? "This feed is private and cannot currently reach readers" : null,
-    (topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0
-      ? `${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references`
-      : null,
-    (topic.landmarks || []).length === 0
-      ? "Add picture references so illustrations draw your local places accurately"
-      : null,
-  ].filter((item): item is string => Boolean(item));
+  type AttentionItem = { text: string; section?: SectionKey; anchor?: string };
+  const attention: AttentionItem[] = [];
+  if (stats.pending_articles > 20) {
+    attention.push({ text: `${stats.pending_articles} arrivals are waiting for editorial review` });
+  }
+  if (stats.processing_queue > 10) {
+    attention.push({ text: `${stats.processing_queue} stories are still being prepared` });
+  }
+  if (!topic.is_public) {
+    attention.push({ text: "This feed is private and cannot currently reach readers", section: "distribution" });
+  }
+  if ((topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0) {
+    attention.push({
+      text: `${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references`,
+      section: "coverage",
+      anchor: "picture-references-heading",
+    });
+  }
+  if ((topic.landmarks || []).length === 0) {
+    attention.push({ text: "Add picture references so illustrations draw your local places accurately", section: "coverage", anchor: "picture-references-heading" });
+  }
+
+  const goToAttention = (item: { section?: SectionKey; anchor?: string }) => {
+    if (!item.section) return;
+    openSection(item.section);
+    if (item.anchor) {
+      window.setTimeout(() => {
+        document.getElementById(item.anchor!)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    }
+  };
 
   const controls = [
     {
@@ -387,7 +407,7 @@ export function EditorialControlCenter({
         <section className="border-l-2 border-destructive bg-destructive/5 px-5 py-4" aria-labelledby="attention-heading">
           <div className="flex gap-3">
             <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-            <div><h3 id="attention-heading" className="text-sm font-semibold">Needs your attention</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((item) => <li key={item}>{item}</li>)}</ul></div>
+            <div><h3 id="attention-heading" className="text-sm font-semibold">Needs your attention</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((item) => <li key={item.text}>{item.section ? <button type="button" onClick={() => goToAttention(item)} className="text-left underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground">{item.text}</button> : item.text}</li>)}</ul></div>
           </div>
         </section>
       )}
