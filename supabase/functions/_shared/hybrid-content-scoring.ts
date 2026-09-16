@@ -2,6 +2,7 @@
 // Uses regional relevance for 'regional' topics and keyword scoring for 'keyword' topics
 
 import { calculateRegionalRelevance, TopicRegionalConfig } from './region-config.ts';
+import { getDial, NearbyPlace, parseNearbyPlaces } from './news-values.ts';
 
 export interface TopicConfig {
   id: string;
@@ -13,6 +14,9 @@ export interface TopicConfig {
   postcodes?: string[];
   organizations?: string[];
   competing_regions?: string[];
+  nearby_places?: NearbyPlace[] | unknown;
+  locality_strength?: number | null;
+  big_story_override?: boolean | null;
 }
 
 export interface ContentScore {
