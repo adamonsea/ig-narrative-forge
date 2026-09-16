@@ -10,6 +10,7 @@ import { ReviewSlide, BigStat, RankRows } from '@/components/review/ReviewSlide'
 import { Odometer } from '@/components/review/Odometer';
 import { StoryImageGrid } from '@/components/review/StoryImageGrid';
 import { baseHueFor, hueForIndex } from '@/lib/reviewPalette';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 
 interface Movement {
   name: string;
@@ -157,7 +158,7 @@ const MosaicWall = ({
             className="block aspect-square overflow-hidden rounded-[3px]"
           >
             <img
-              src={optimizeImageUrl(c.cover_illustration_url ?? '', { width: 160, quality: 70 })}
+              src={optimizeImageUrl(c.cover_illustration_url, { width: 200, height: 200, quality: 70 }) ?? c.cover_illustration_url ?? ''}
               alt=""
               loading="lazy"
               className="h-full w-full object-cover"
