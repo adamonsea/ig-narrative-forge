@@ -9,6 +9,8 @@ import { Reveal } from '@/components/review/ReviewChapter';
 import { ReviewSlide, BigStat, RankRows } from '@/components/review/ReviewSlide';
 import { Odometer } from '@/components/review/Odometer';
 import { StoryImageGrid } from '@/components/review/StoryImageGrid';
+import { ImageCarousel } from '@/components/review/ImageCarousel';
+import { ImageTapestry } from '@/components/review/ImageTapestry';
 import { baseHueFor, hueForIndex } from '@/lib/reviewPalette';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 
