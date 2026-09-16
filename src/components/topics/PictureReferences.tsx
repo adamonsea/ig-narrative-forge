@@ -416,12 +416,13 @@ export function PictureReferences({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 id="picture-references-heading" className="text-base font-semibold">Picture references</h3>
-          <p className="text-sm text-muted-foreground">
-            So illustrations draw real local buildings correctly. Add a place and Curatr writes its appearance note and finds photos for you.
-          </p>
-        </div>
+        <h3 id="picture-references-heading" className="flex items-center gap-1.5 text-base font-semibold">
+          Pictures
+          <InfoHint label="About pictures">
+            Choose how covers look, then add the places your feed writes about. Curatr writes each place's appearance
+            note and finds reference photos, so illustrations draw the real buildings.
+          </InfoHint>
+        </h3>
         {landmarks.length > 0 && (
           <Badge variant={readyCount === landmarks.length ? 'default' : 'secondary'} className="shrink-0">
             {readyCount} of {landmarks.length} ready
@@ -429,11 +430,32 @@ export function PictureReferences({
         )}
       </div>
 
+      {onIllustrationStyleChange && (
+        <div className="space-y-1.5 max-w-sm">
+          <Label htmlFor="visual-style">Visual style</Label>
+          <Select
+            value={illustrationStyle || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE}
+            onValueChange={(v) => onIllustrationStyleChange(v as IllustrationStyle)}
+          >
+            <SelectTrigger id="visual-style"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE}>
+                {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE]}
+              </SelectItem>
+              <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC}>
+                {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC]}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {pending.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          {pending.length === 1 ? '1 place is' : `${pending.length} places are`} waiting for your confirmation — they stay at the top until you've reviewed them.
+          {pending.length === 1 ? '1 place is' : `${pending.length} places are`} awaiting confirmation.
         </p>
       )}
+
 
       <div className="flex gap-2">
         <Input
