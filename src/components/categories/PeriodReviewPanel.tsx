@@ -58,6 +58,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   const [generating, setGenerating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [months, setMonths] = useState<number>(6);
+  const [includeParliamentary, setIncludeParliamentary] = useState(false);
   const [customStart, setCustomStart] = useState(monthsAgo(6));
   const [customEnd, setCustomEnd] = useState(isoDate(new Date()));
   const [useCustom, setUseCustom] = useState(false);
@@ -133,6 +134,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
     if (selectedCategories.length) parts.push(`c${selectedCategories.length}-${selectedCategories[0].slice(0, 6)}`);
     if (selectedSources.length)
       parts.push(`s${selectedSources.length}-${selectedSources[0].toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`);
+    if (includeParliamentary) parts.push('parl');
     return parts.length ? `_${parts.join('_')}` : '';
   };
 
