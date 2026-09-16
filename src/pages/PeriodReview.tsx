@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, useScroll, useSpring, useReducedMotion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { StoryPreviewProvider, useStoryPreview } from '@/components/review/StoryPreview';
 import { ArrowLeft, ChevronDown, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { Reveal } from '@/components/review/ReviewChapter';
@@ -142,11 +142,10 @@ type MosaicCover = { id: string; slug: string | null; title: string; cover_illus
 /** A dense, full-width wall of covers from the period — the archive at a glance. */
 const MosaicWall = ({
   covers,
-  onOpen,
 }: {
   covers: MosaicCover[];
-  onOpen: (cover: MosaicCover) => void;
 }) => {
+  const { open: openPreview } = useStoryPreview();
   const reduce = useReducedMotion();
   const boxRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(12);
@@ -200,7 +199,7 @@ const MosaicWall = ({
           >
             <button
               type="button"
-              onClick={() => onOpen(c)}
+              onClick={() => openPreview(c)}
               title={c.title}
               className="group block aspect-square w-full overflow-hidden rounded-[2px]"
             >
@@ -225,11 +224,29 @@ const MosaicWall = ({
   );
 };
 
+const PreviewTrigger = ({
+  story,
+  className,
+  title,
+  children,
+}: {
+  story: MosaicCover;
+  className?: string;
+  title?: string;
+  children: React.ReactNode;
+}) => {
+  const { open } = useStoryPreview();
+  return (
+    <button type="button" title={title} onClick={() => open(story)} className={className}>
+      {children}
+    </button>
+  );
+};
+
 const PeriodReview = () => {
   const { slug, reviewSlug } = useParams<{ slug: string; reviewSlug: string }>();
   const [review, setReview] = useState<{ label: string; narrative: string | null; data: ReviewData } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [previewCover, setPreviewCover] = useState<MosaicCover | null>(null);
   const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollReady, setScrollReady] = useState(false);
@@ -464,6 +481,7 @@ const PeriodReview = () => {
 
 
   return (
+    <StoryPreviewProvider feedSlug={slug} placeLabel={place}>
     <main
       ref={scrollRef}
       tabIndex={0}
@@ -522,7 +540,7 @@ const PeriodReview = () => {
         <section className="snap-start snap-always relative flex min-h-dvh flex-col justify-center overflow-hidden bg-background px-4 py-14 sm:px-6">
           <div className="w-full">
             <p className="mb-5 text-sm uppercase tracking-[0.22em] text-muted-foreground">The archive</p>
-            <MosaicWall covers={mosaic} onOpen={setPreviewCover} />
+            <MosaicWall covers={mosaic} />
             <Reveal delay={0.3} className="mt-6">
               <p className="text-lg leading-snug text-muted-foreground">
                 {mosaic.length < summary.total_stories
@@ -615,9 +633,9 @@ const PeriodReview = () => {
           />
           {m.lead && (
             <Reveal delay={0.15}>
-              <Link
-                to={`/feed/${slug}/story/${m.lead.slug ?? m.lead.id}`}
-                className="group block overflow-hidden rounded-2xl border border-border"
+              <PreviewTrigger
+                story={m.lead}
+                className="group block w-full overflow-hidden rounded-2xl border border-border text-left"
               >
                 {m.lead.cover_illustration_url && (
                   <img
@@ -631,16 +649,16 @@ const PeriodReview = () => {
                   />
                 )}
                 <p className="p-4 text-lg font-medium leading-snug">{m.lead.title}</p>
-              </Link>
+              </PreviewTrigger>
             </Reveal>
           )}
           {m.covers.length > 1 && (
             <Reveal delay={0.3} className="mt-4">
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {m.covers.slice(0, 8).map((c) => (
-                  <Link
+                  <PreviewTrigger
                     key={c.id}
-                    to={`/feed/${slug}/story/${c.slug ?? c.id}`}
+                    story={c}
                     title={c.title}
                     className="h-16 w-16 shrink-0 overflow-hidden rounded-lg"
                   >
@@ -654,7 +672,7 @@ const PeriodReview = () => {
                       loading="lazy"
                       className="h-full w-full object-cover"
                     />
-                  </Link>
+                  </PreviewTrigger>
                 ))}
               </div>
             </Reveal>
@@ -681,8 +699,8 @@ const PeriodReview = () => {
               <Reveal key={`${t.term}-${t.month}`} delay={i * 0.1}>
                 <li className="flex items-center gap-4">
                   {t.story?.cover_illustration_url ? (
-                    <Link
-                      to={`/feed/${slug}/story/${t.story.slug ?? t.story.id}`}
+                    <PreviewTrigger
+                      story={t.story}
                       className="h-20 w-20 shrink-0 overflow-hidden rounded-xl"
                     >
                       <img
@@ -694,7 +712,7 @@ const PeriodReview = () => {
                         loading="lazy"
                         className="h-full w-full object-cover"
                       />
-                    </Link>
+                    </PreviewTrigger>
                   ) : (
                     <span className="h-20 w-20 shrink-0 rounded-xl border border-border" aria-hidden />
                   )}
@@ -729,9 +747,9 @@ const PeriodReview = () => {
               .slice(0, 4)
               .map((r, i) => (
                 <Reveal key={r.term} delay={i * 0.08}>
-                  <Link
-                    to={`/feed/${slug}/story/${r.story!.slug ?? r.story!.id}`}
-                    className="block overflow-hidden rounded-xl border border-border"
+                  <PreviewTrigger
+                    story={r.story!}
+                    className="block w-full overflow-hidden rounded-xl border border-border text-left"
                   >
                     <img
                       src={
@@ -749,7 +767,7 @@ const PeriodReview = () => {
                         {r.count} stories{r.peak_month ? ` · peak ${monthLabel(r.peak_month)}` : ''}
                       </p>
                     </div>
-                  </Link>
+                  </PreviewTrigger>
                 </Reveal>
               ))}
           </div>
@@ -1034,9 +1052,9 @@ const PeriodReview = () => {
               {topStories.slice(0, 3).map((s, i) => (
                 <Reveal key={s.id} delay={i * 0.08}>
                   <li>
-                    <Link
-                      to={`/feed/${slug}/story/${s.slug ?? s.id}`}
-                      className="flex items-center gap-4 rounded-2xl border border-border p-3 transition-colors hover:bg-muted"
+                    <PreviewTrigger
+                      story={s}
+                      className="flex w-full items-center gap-4 rounded-2xl border border-border p-3 text-left transition-colors hover:bg-muted"
                     >
                       <span className="w-8 shrink-0 text-2xl font-semibold tabular-nums text-muted-foreground/50">
                         {i + 1}
@@ -1045,7 +1063,7 @@ const PeriodReview = () => {
                         <p className="line-clamp-2 text-base font-medium">{s.title}</p>
                         <p className="mt-1 text-sm text-muted-foreground">{compact(s.views)} reads</p>
                       </div>
-                    </Link>
+                    </PreviewTrigger>
                   </li>
                 </Reveal>
               ))}
@@ -1077,37 +1095,8 @@ const PeriodReview = () => {
         </Reveal>
       </ReviewSlide>
 
-      <Dialog open={previewCover != null} onOpenChange={(open) => !open && setPreviewCover(null)}>
-        <DialogContent className="max-w-lg overflow-hidden p-0">
-          {previewCover && (
-            <>
-              {previewCover.cover_illustration_url && (
-                <img
-                  src={
-                    optimizeImageUrl(previewCover.cover_illustration_url, {
-                      width: 900,
-                      height: 700,
-                      quality: 80,
-                    }) ?? previewCover.cover_illustration_url
-                  }
-                  alt=""
-                  className="aspect-[9/7] w-full object-cover"
-                />
-              )}
-              <div className="p-5">
-                <DialogTitle className="text-xl font-semibold leading-snug">{previewCover.title}</DialogTitle>
-                <Link
-                  to={`/feed/${slug}`}
-                  className="mt-4 inline-block text-sm font-medium text-primary underline"
-                >
-                  Read in {place}
-                </Link>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </main>
+    </StoryPreviewProvider>
   );
 };
 
