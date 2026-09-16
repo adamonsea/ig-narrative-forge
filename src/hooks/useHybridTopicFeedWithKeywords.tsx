@@ -2269,7 +2269,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             .map(story => ({
               type: 'story' as const,
               id: story.id,
-              content_date: story.created_at || new Date().toISOString(),
+              content_date: getDisplayDate(story.created_at, story.article?.published_at),
               data: {
                 id: story.id,
                 title: story.title || '',
