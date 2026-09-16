@@ -363,7 +363,7 @@ const PhotoCardComponent = ({
           />
           
           {/* Image container with sepia tint */}
-          <div className="relative w-full aspect-[4/3] overflow-hidden">
+          <div className="relative w-full aspect-[3/2] overflow-hidden">
             {/* Tiny blurred placeholder - loads first */}
             {placeholderUrl && !thumbnailLoaded && (
               <img

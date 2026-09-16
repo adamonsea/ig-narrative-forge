@@ -194,7 +194,7 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         {/* Cover Image with sepia treatment - optimized */}
         {optimizedCoverUrl && (
           <div 
-            className="relative w-full aspect-[4/3] overflow-hidden"
+            className="relative w-full aspect-[3/2] overflow-hidden"
             style={{ 
               transform: 'translateZ(0)', 
               backfaceVisibility: 'hidden' 

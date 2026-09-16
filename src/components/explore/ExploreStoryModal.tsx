@@ -58,7 +58,7 @@ export function ExploreStoryModal({ story, open, onOpenChange, topicSlug }: Expl
         <div className="flex-1 overflow-y-auto pb-24">
           {/* Cover Image */}
           {story.cover_illustration_url && (
-            <div className="w-full aspect-[21/9] md:aspect-video overflow-hidden bg-muted">
+            <div className="w-full aspect-[3/2] overflow-hidden bg-muted">
               <img
                 src={story.cover_illustration_url}
                 alt={story.title}
