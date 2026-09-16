@@ -63,6 +63,8 @@ export function PictureReferences({
   descriptions,
   photos,
   setupState,
+  illustrationStyle,
+  onIllustrationStyleChange,
   onChange,
 }: PictureReferencesProps) {
   const { toast } = useToast();
