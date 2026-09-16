@@ -535,7 +535,7 @@ const PeriodReview = () => {
 
       {/* Pull quote */}
       {pullQuote && (
-        <ReviewSlide label="In short" hue={h(2)}>
+        <ReviewSlide label="In short" hue={h(2)} backdrop={backdropFrom(7)}>
           <Reveal>
             <p className="text-3xl sm:text-4xl font-medium leading-snug tracking-tight">{pullQuote}</p>
           </Reveal>
