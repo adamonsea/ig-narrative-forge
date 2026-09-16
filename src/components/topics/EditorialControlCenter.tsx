@@ -24,7 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { KeywordManager } from "@/components/KeywordManager";
+import { PictureReferences } from "@/components/topics/PictureReferences";
+import { CoverageTerms } from "@/components/topics/CoverageTerms";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
@@ -53,6 +54,8 @@ export interface EditorialTopic {
   landmarks?: string[];
   landmark_descriptions?: Record<string, string>;
   landmark_reference_images?: Record<string, { url: string; credit?: string }[]>;
+  landmark_setup_state?: Record<string, any>;
+  coverage_setup_state?: Record<string, any>;
   postcodes?: string[];
   organizations?: string[];
   audience_expertise?: "beginner" | "intermediate" | "expert";
@@ -149,10 +152,19 @@ export function EditorialControlCenter({
     return `Prioritise ${topic.region || topic.name}; use ${place}${exception}.`;
   }, [topic, dial.label, nearbyCount]);
 
+  const unconfirmedPlaces = (topic.landmarks || []).filter(
+    (place) => topic.landmark_setup_state?.[place]?.status !== "confirmed"
+  );
   const attention = [
     stats.pending_articles > 20 ? `${stats.pending_articles} arrivals are waiting for editorial review` : null,
     stats.processing_queue > 10 ? `${stats.processing_queue} stories are still being prepared` : null,
     !topic.is_public ? "This feed is private and cannot currently reach readers" : null,
+    (topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0
+      ? `${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references`
+      : null,
+    (topic.landmarks || []).length === 0
+      ? "Add picture references so illustrations draw your local places accurately"
+      : null,
   ].filter((item): item is string => Boolean(item));
 
   const controls = [
@@ -230,9 +242,14 @@ export function EditorialControlCenter({
               </section>
             )}
             <section className="border-t border-border pt-8" aria-labelledby="discovery-heading">
-              <h3 id="discovery-heading" className="mb-1 text-base font-semibold">Places and discovery terms</h3>
-              <p className="mb-5 text-sm text-muted-foreground">The names and signals Curatr uses to recognise relevant stories.</p>
-              <KeywordManager topic={topic as never} onTopicUpdate={(updated) => onTopicChange({ ...topic, ...updated })} />
+              <h3 id="discovery-heading" className="mb-1 text-base font-semibold">Coverage terms</h3>
+              <p className="mb-5 text-sm text-muted-foreground">Words that tell Curatr what belongs — suggested from your own recent stories.</p>
+              <CoverageTerms
+                topicId={topic.id}
+                keywords={topic.keywords}
+                setupState={topic.coverage_setup_state || {}}
+                onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+              />
             </section>
             <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
               <h3 id="exclusions-heading" className="mb-1 text-base font-semibold">Exclusions</h3>
@@ -243,16 +260,30 @@ export function EditorialControlCenter({
         )}
 
         {section === "voice" && (
-          <ContentVoiceSettings
-            topicId={topic.id}
-            currentExpertise={topic.audience_expertise}
-            currentTone={topic.default_tone}
-            currentWritingStyle={topic.default_writing_style}
-            currentIllustrationStyle={topic.illustration_style}
-            currentHouseStyleNotes={topic.house_style_notes}
-            currentHouseStyleExamples={topic.house_style_examples}
-            onUpdate={onUpdate}
-          />
+          <div className="space-y-10">
+            <ContentVoiceSettings
+              topicId={topic.id}
+              currentExpertise={topic.audience_expertise}
+              currentTone={topic.default_tone}
+              currentWritingStyle={topic.default_writing_style}
+              currentIllustrationStyle={topic.illustration_style}
+              currentHouseStyleNotes={topic.house_style_notes}
+              currentHouseStyleExamples={topic.house_style_examples}
+              onUpdate={onUpdate}
+            />
+            <section className="border-t border-border pt-8" aria-labelledby="picture-references-heading">
+              <PictureReferences
+                topicId={topic.id}
+                topicName={topic.name}
+                region={topic.region}
+                landmarks={topic.landmarks || []}
+                descriptions={topic.landmark_descriptions || {}}
+                photos={topic.landmark_reference_images || {}}
+                setupState={topic.landmark_setup_state || {}}
+                onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+              />
+            </section>
+          </div>
         )}
 
         {section === "automation" && (

@@ -56,6 +56,8 @@ interface Topic {
   landmarks?: string[];
   landmark_descriptions?: Record<string, string>;
   landmark_reference_images?: Record<string, { url: string; credit?: string }[]>;
+  landmark_setup_state?: Record<string, any>;
+  coverage_setup_state?: Record<string, any>;
   postcodes?: string[];
   organizations?: string[];
   negative_keywords?: string[];
@@ -179,7 +181,7 @@ const TopicDashboard = () => {
     try {
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color, drip_feed_enabled, rss_enabled, email_subscriptions_enabled')
+        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color, drip_feed_enabled, rss_enabled, email_subscriptions_enabled, landmark_setup_state, coverage_setup_state')
         .eq('slug', slug)
         .single();
 
@@ -202,6 +204,8 @@ const TopicDashboard = () => {
         landmark_descriptions: (topicData.landmark_descriptions as Record<string, string>) || {},
         landmark_reference_images:
           ((topicData as any).landmark_reference_images as Record<string, { url: string; credit?: string }[]>) || {},
+        landmark_setup_state: ((topicData as any).landmark_setup_state as Record<string, any>) || {},
+        coverage_setup_state: ((topicData as any).coverage_setup_state as Record<string, any>) || {},
         postcodes: topicData.postcodes || [],
         organizations: topicData.organizations || [],
         negative_keywords: topicData.negative_keywords || [],

@@ -4739,6 +4739,7 @@ export type Database = {
           community_intelligence_enabled: boolean | null
           community_pulse_frequency: number | null
           competing_regions: string[] | null
+          coverage_setup_state: Json
           created_at: string | null
           created_by: string
           custom_css: Json | null
@@ -4770,6 +4771,7 @@ export type Database = {
           keywords: string[] | null
           landmark_descriptions: Json
           landmark_reference_images: Json
+          landmark_setup_state: Json
           landmarks: string[] | null
           locality_strength: number
           max_article_age_days: number | null
@@ -4805,6 +4807,7 @@ export type Database = {
           community_intelligence_enabled?: boolean | null
           community_pulse_frequency?: number | null
           competing_regions?: string[] | null
+          coverage_setup_state?: Json
           created_at?: string | null
           created_by: string
           custom_css?: Json | null
@@ -4836,6 +4839,7 @@ export type Database = {
           keywords?: string[] | null
           landmark_descriptions?: Json
           landmark_reference_images?: Json
+          landmark_setup_state?: Json
           landmarks?: string[] | null
           locality_strength?: number
           max_article_age_days?: number | null
@@ -4871,6 +4875,7 @@ export type Database = {
           community_intelligence_enabled?: boolean | null
           community_pulse_frequency?: number | null
           competing_regions?: string[] | null
+          coverage_setup_state?: Json
           created_at?: string | null
           created_by?: string
           custom_css?: Json | null
@@ -4902,6 +4907,7 @@ export type Database = {
           keywords?: string[] | null
           landmark_descriptions?: Json
           landmark_reference_images?: Json
+          landmark_setup_state?: Json
           landmarks?: string[] | null
           locality_strength?: number
           max_article_age_days?: number | null
