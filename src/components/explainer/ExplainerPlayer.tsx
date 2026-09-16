@@ -151,7 +151,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <h2 className="font-display text-[clamp(2rem,7vw,4.5rem)] leading-none tracking-tight">
+              <h2 className="font-logo text-[clamp(2rem,7vw,4.5rem)] leading-none tracking-tight">
                 Curatr<span style={{ color: ACCENT }}>.</span>
                 <span className="text-2xl opacity-70">pro</span>
               </h2>
