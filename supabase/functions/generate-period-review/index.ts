@@ -200,11 +200,13 @@ Deno.serve(async (req) => {
     }
 
     // Apply optional scoping now that we know each story's category + source.
-    if (categoryIds.length > 0 || sourceNames.length > 0) {
+    const useNameScoping = sourceIds.length === 0 && sourceNames.length > 0;
+    if (categoryIds.length > 0 || useNameScoping) {
       const catSet = new Set(categoryIds);
-      const srcSet = new Set(sourceNames.map((s) => s.toLowerCase()));
+      const normalise = (v: string) => v.trim().toLowerCase().replace(/^www\./, '').replace(/[^a-z0-9]/g, '');
+      const srcSet = new Set(useNameScoping ? sourceNames.map(normalise) : []);
       const keep = (r: Row) => {
-        if (srcSet.size > 0 && !srcSet.has((r.publication_name ?? '').trim().toLowerCase())) return false;
+        if (srcSet.size > 0 && !srcSet.has(normalise(r.publication_name ?? ''))) return false;
         if (catSet.size > 0) {
           const a = assignments.get(r.id);
           if (!a) return false;
