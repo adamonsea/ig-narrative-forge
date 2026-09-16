@@ -1,7 +1,51 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+/**
+ * A quiet info icon. Explanatory copy lives in here instead of on the page,
+ * so every settings surface stays light. Hover on desktop, tap on touch.
+ */
+export function InfoHint({ label, children }: { label?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const trigger = (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={label || "More information"}
+      onClick={() => setOpen((o) => !o)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOpen((o) => !o);
+        }
+      }}
+      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-help align-middle"
+    >
+      <Info className="h-3.5 w-3.5" />
+    </span>
+  );
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+            {children}
+          </TooltipContent>
+        </Tooltip>
+        <PopoverContent side="top" className="max-w-xs text-xs leading-relaxed md:hidden">
+          {children}
+        </PopoverContent>
+      </Popover>
+    </TooltipProvider>
+  );
+}
 
 /**
  * Quiet editorial workspace primitives.
