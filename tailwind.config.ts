@@ -19,8 +19,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'system-ui', 'sans-serif'],
-				display: ['Playfair Display', 'serif'],
+				sans: ['Work Sans', 'Inter', 'system-ui', 'sans-serif'],
+				display: ['Instrument Serif', 'Playfair Display', 'serif'],
 				lexend: ['Lexend', 'system-ui', 'sans-serif'],
 			},
 			colors: {
