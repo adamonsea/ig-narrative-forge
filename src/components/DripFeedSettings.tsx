@@ -264,33 +264,6 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
             Up to {totalStories} stories across {slots} slots, {formatTime(config.drip_start_hour)}–{formatTime(config.drip_end_hour)}
           </p>
 
-          {/* Queued */}
-          {queuedStories.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5">
-                Queued <Badge variant="secondary" className="h-4 text-[10px]">{queuedStories.length}</Badge>
-              </Label>
-              <div className="max-h-32 overflow-y-auto space-y-1">
-                {queuedStories.map((story) => (
-                  <div key={story.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 text-amber-500 shrink-0" />
-                    <span className="truncate">{story.title}</span>
-                    <span className="text-[10px] shrink-0">{formatScheduledTime(story.scheduled_publish_at)}</span>
-                  </div>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEmergencyPublish}
-                disabled={emergencyPublishing}
-                className="w-full h-7 text-xs"
-              >
-                {emergencyPublishing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Zap className="w-3 h-3 mr-1" />}
-                {emergencyPublishing ? 'Publishing...' : `Publish All ${queuedStories.length} Now`}
-              </Button>
-            </div>
-          )}
         </div>
       )}
     </div>
