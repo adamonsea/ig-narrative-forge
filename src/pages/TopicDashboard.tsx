@@ -22,6 +22,7 @@ import { ExternalLink, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
+import { OwnerAssistant } from "@/components/assistant/OwnerAssistant";
 
 
 interface TopicDashboardStats {
@@ -735,7 +736,7 @@ const TopicDashboard = () => {
                 />
               )}
               
-              <div className="mb-6">
+              <div className="mb-6" id="assistant-add-story">
                 <AddStoryDialog
                   topicId={topic.id}
                   onContentProcessed={loadTopicAndStats}
@@ -795,7 +796,10 @@ const TopicDashboard = () => {
           confirmText="Unpublish"
           variant="destructive"
         />
-        
+
+        {isOwner && (
+          <OwnerAssistant topicId={topic.id} topicSlug={topic.slug} topicName={topic.name} />
+        )}
       </div>
     </AppLayout>
   );
