@@ -796,7 +796,10 @@ const TopicDashboard = () => {
           confirmText="Unpublish"
           variant="destructive"
         />
-        
+
+        {isOwner && (
+          <OwnerAssistant topicId={topic.id} topicSlug={topic.slug} topicName={topic.name} />
+        )}
       </div>
     </AppLayout>
   );
