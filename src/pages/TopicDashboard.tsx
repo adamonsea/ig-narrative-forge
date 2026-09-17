@@ -22,6 +22,7 @@ import { ExternalLink, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
+import { OwnerAssistant } from "@/components/assistant/OwnerAssistant";
 
 
 interface TopicDashboardStats {
