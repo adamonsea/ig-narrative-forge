@@ -77,6 +77,7 @@ export const ImageCarousel = ({
 
       <div
         ref={scrollerRef}
+        data-review-scroller
         className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-2"
         style={{ scrollbarWidth: 'none' }}
       >

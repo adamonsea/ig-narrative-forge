@@ -356,6 +356,10 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
               size="sm"
               disabled={!periodSummary() || generating}
               onClick={() => {
+                if (useCustom) {
+                  generate(customStart, customEnd);
+                  return;
+                }
                 if (months === null) return;
                 generate(
                   useCustom ? customStart : monthsAgo(months),
