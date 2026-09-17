@@ -74,9 +74,9 @@ Deno.serve(async (req) => {
     const [sources, arrivals, published, recent, subscribers] = await Promise.all([
       service.from('topic_sources').select('id', { count: 'exact', head: true }).eq('topic_id', topicId).eq('is_active', true),
       service.from('topic_articles').select('id', { count: 'exact', head: true }).eq('topic_id', topicId).eq('processing_status', 'new'),
-      service.from('stories').select('id', { count: 'exact', head: true }).eq('topic_id', topicId).eq('is_published', true),
-      service.from('stories').select('id', { count: 'exact', head: true }).eq('topic_id', topicId).eq('is_published', true).gte('created_at', since),
-      service.from('topic_newsletter_signups').select('id', { count: 'exact', head: true }).eq('topic_id', topicId).eq('is_verified', true),
+      service.from('stories').select('id, topic_articles!inner(topic_id)', { count: 'exact', head: true }).eq('topic_articles.topic_id', topicId).eq('is_published', true),
+      service.from('stories').select('id, topic_articles!inner(topic_id)', { count: 'exact', head: true }).eq('topic_articles.topic_id', topicId).eq('is_published', true).gte('created_at', since),
+      service.from('topic_newsletter_signups').select('id', { count: 'exact', head: true }).eq('topic_id', topicId).eq('is_active', true).eq('email_verified', true),
     ]);
 
     const unconfirmedPlaces = (topic?.landmarks || []).filter(
