@@ -671,7 +671,7 @@ const PeriodReview = () => {
           )}
           {m.covers.length > 1 && (
             <Reveal delay={0.3} className="mt-4">
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div data-review-scroller className="flex gap-2 overflow-x-auto pb-1">
                 {m.covers.slice(0, 8).map((c) => (
                   <PreviewTrigger
                     key={c.id}
