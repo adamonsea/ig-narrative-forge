@@ -335,12 +335,29 @@ const PeriodReview = () => {
     };
 
     const onWheel = (e: WheelEvent) => {
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      // Horizontal gestures and nested scroll strips keep their native behaviour.
+      if (Math.abs(e.deltaX) > Math.abs(dy)) return;
+      if ((e.target as HTMLElement | null)?.closest?.('[data-review-scroller]')) return;
+      // If the current slide is taller than the viewport, let the wheel scroll
+      // within it naturally until its edge is reached.
+      if (!locked) {
+        const items = slides();
+        if (items.length > 0) {
+          const containerTop = el.getBoundingClientRect().top;
+          const tops = items.map((node) => el.scrollTop + node.getBoundingClientRect().top - containerTop);
+          let current = 0;
+          for (let i = 0; i < tops.length; i++) if (tops[i] <= el.scrollTop + 4) current = i;
+          const offset = el.scrollTop - tops[current];
+          const scrollable = items[current].offsetHeight - el.clientHeight;
+          if ((dy > 0 && offset < scrollable - 1) || (dy < 0 && offset > 1)) return;
+        }
+      }
       e.preventDefault();
       if (locked) return;
       const now = performance.now();
       if (now - lastEventAt > GESTURE_GAP) travel = 0;
       lastEventAt = now;
-      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
       if (dy !== 0 && Math.sign(dy) !== Math.sign(travel)) travel = 0;
       travel += dy;
       if (Math.abs(travel) >= THRESHOLD) goTo(travel > 0 ? 1 : -1);
