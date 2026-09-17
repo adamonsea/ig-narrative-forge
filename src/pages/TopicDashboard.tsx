@@ -735,7 +735,7 @@ const TopicDashboard = () => {
                 />
               )}
               
-              <div className="mb-6">
+              <div className="mb-6" id="assistant-add-story">
                 <AddStoryDialog
                   topicId={topic.id}
                   onContentProcessed={loadTopicAndStats}
