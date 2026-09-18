@@ -16,11 +16,18 @@ interface Action {
   destination: string;
 }
 
+interface Nudge {
+  title: string;
+  body: string;
+  destination?: string;
+}
+
 interface Turn {
   role: "user" | "assistant";
   content: string;
   steps?: string[];
   actions?: Action[];
+  nudge?: Nudge | null;
 }
 
 const OPENING_PILLS = [
@@ -85,6 +92,7 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
         content: (data as any).answer || "",
         steps: (data as any).steps || [],
         actions: (data as any).actions || [],
+        nudge: (data as any).nudge || null,
       },
     ]);
     const next = (data as any).suggestions;
@@ -173,6 +181,25 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
                       {action.label}
                     </Button>
                   ))}
+                </div>
+              )}
+              {turn.nudge && (
+                <div className="rounded-xl border border-dashed border-border bg-muted/40 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Not using this yet
+                  </p>
+                  <p className="mt-1 font-medium">{turn.nudge.title}</p>
+                  <p className="mt-0.5 text-muted-foreground">{turn.nudge.body}</p>
+                  {turn.nudge.destination && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 -ml-2 h-8"
+                      onClick={() => go(turn.nudge!.destination!)}
+                    >
+                      Take a look
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

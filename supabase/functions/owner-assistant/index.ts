@@ -112,6 +112,20 @@ Deno.serve(async (req) => {
       ].filter(Boolean),
     };
 
+    // Things this feed has available but has never switched on or filled in.
+    const notYetUsed = [
+      !topic?.email_subscriptions_enabled && { name: 'Reader email edition', what: 'Send published stories to readers by email.', destination: 'distribution' },
+      !topic?.rss_enabled && { name: 'RSS feed', what: 'Let readers and other apps follow the feed automatically.', destination: 'distribution' },
+      !topic?.public_widget_builder_enabled && { name: 'Website widget', what: 'Put a live strip of your stories on any website.', destination: 'distribution' },
+      !(topic?.audio_briefings_daily_enabled || topic?.audio_briefings_weekly_enabled) && { name: 'Audio briefings', what: 'A spoken version of the feed for listeners.', destination: 'distribution' },
+      !topic?.mcp_enabled && { name: 'ChatGPT and Claude access', what: 'Readers can ask an AI assistant about your feed.', destination: 'ai-assistants' },
+      !(topic?.landmarks || []).length && { name: 'Picture references', what: 'Add local places so illustrations look like the real thing.', destination: 'picture-references' },
+      !(topic?.negative_keywords || []).length && { name: 'Exclusions', what: 'Words that keep unwanted stories out of arrivals.', destination: 'exclusions' },
+      !topic?.auto_simplify_enabled && { name: 'Automatic publishing', what: 'Let Curatr publish clear-cut stories without you.', destination: 'automation' },
+      !topic?.drip_feed_enabled && { name: 'Publishing pace', what: 'Space published stories out through the day.', destination: 'automation' },
+      published.count && published.count > 20 ? { name: 'Reviews', what: 'Build a public visual look-back over a few months.', destination: 'reviews' } : null,
+    ].filter(Boolean);
+
     const system = `You are the in-app helper for Curatr, a tool people use to run their own curated news feed.
 You are talking to the owner of the feed "${topic?.name}". You help them run it — you do not write stories.
 
@@ -130,14 +144,22 @@ ${DESTINATIONS}
 LIVE STATE OF THIS FEED (facts, use them):
 ${JSON.stringify(liveState, null, 2)}
 
+THINGS THIS FEED HAS NOT TURNED ON OR FILLED IN YET:
+${JSON.stringify(notYetUsed, null, 2)}
+
+NUDGES
+- When one of the unused things above genuinely relates to what they just asked, add a single short nudge: what it does for them in one sentence, plus its destination.
+- Only one nudge, only when it clearly helps. Leave it out otherwise — never nudge twice about the same thing in a conversation, and never nudge just to fill the field.
+
 Reply as JSON only:
 {
   "answer": "one or two short sentences",
   "steps": ["short step", "short step"],
   "actions": [{"label": "Open Picture references", "destination": "picture-references"}],
+  "nudge": {"title": "Audio briefings", "body": "one short sentence on why it would help them", "destination": "distribution"},
   "suggestions": ["short follow-up question the owner might ask next", "another"]
 }
-steps, actions and suggestions may be empty arrays. Give 1-3 actions when a place is relevant, and always 2-3 suggestions.`;
+steps, actions and suggestions may be empty arrays and nudge may be null. Give 1-3 actions when a place is relevant, and always 2-3 suggestions.`;
 
     const response = await llmFetch(
       {
@@ -185,6 +207,14 @@ steps, actions and suggestions may be empty arrays. Give 1-3 actions when a plac
             destination: String(a?.destination ?? ''),
           })).filter((a: any) => a.label && a.destination)
         : [],
+      nudge:
+        parsed.nudge && parsed.nudge.title && parsed.nudge.body
+          ? {
+              title: String(parsed.nudge.title).slice(0, 60),
+              body: String(parsed.nudge.body).slice(0, 200),
+              destination: String(parsed.nudge.destination ?? ''),
+            }
+          : null,
       suggestions: Array.isArray(parsed.suggestions)
         ? parsed.suggestions.slice(0, 3).map((s: any) => String(s).slice(0, 90))
         : [],
