@@ -92,6 +92,7 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
         content: (data as any).answer || "",
         steps: (data as any).steps || [],
         actions: (data as any).actions || [],
+        nudge: (data as any).nudge || null,
       },
     ]);
     const next = (data as any).suggestions;
