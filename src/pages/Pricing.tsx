@@ -249,14 +249,15 @@ const Pricing = () => {
 
                     {/* CTA Button */}
                     <Button
-                      onClick={() => openWaitlist(tier.name)}
+                      onClick={() => subscribe(tier)}
+                      disabled={startingPlan === tier.id}
                       className={`w-full h-12 rounded-full font-medium ${
                         tier.highlight
                           ? 'bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white'
                           : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
                       }`}
                     >
-                      Coming soon
+                      {startingPlan === tier.id ? 'Opening checkout…' : `Choose ${tier.name}`}
                     </Button>
 
                     {/* Features */}
