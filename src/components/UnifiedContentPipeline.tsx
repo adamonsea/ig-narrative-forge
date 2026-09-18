@@ -361,7 +361,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       <div className="grid gap-6 md:grid-cols-3 items-start">
         {/* Arrivals — one third */}
         <section
-          className={`md:col-span-1 space-y-3 ${mobileView === "arrivals" ? "" : "hidden md:block"}`}
+          className={`md:col-span-1 space-y-3 rounded-2xl bg-muted/40 p-3 md:p-4 ${mobileView === "arrivals" ? "" : "hidden md:block"}`}
           aria-label="Arrivals"
         >
           <div className="flex items-center gap-2 pb-2 border-b">
