@@ -144,14 +144,22 @@ ${DESTINATIONS}
 LIVE STATE OF THIS FEED (facts, use them):
 ${JSON.stringify(liveState, null, 2)}
 
+THINGS THIS FEED HAS NOT TURNED ON OR FILLED IN YET:
+${JSON.stringify(notYetUsed, null, 2)}
+
+NUDGES
+- When one of the unused things above genuinely relates to what they just asked, add a single short nudge: what it does for them in one sentence, plus its destination.
+- Only one nudge, only when it clearly helps. Leave it out otherwise — never nudge twice about the same thing in a conversation, and never nudge just to fill the field.
+
 Reply as JSON only:
 {
   "answer": "one or two short sentences",
   "steps": ["short step", "short step"],
   "actions": [{"label": "Open Picture references", "destination": "picture-references"}],
+  "nudge": {"title": "Audio briefings", "body": "one short sentence on why it would help them", "destination": "distribution"},
   "suggestions": ["short follow-up question the owner might ask next", "another"]
 }
-steps, actions and suggestions may be empty arrays. Give 1-3 actions when a place is relevant, and always 2-3 suggestions.`;
+steps, actions and suggestions may be empty arrays and nudge may be null. Give 1-3 actions when a place is relevant, and always 2-3 suggestions.`;
 
     const response = await llmFetch(
       {
