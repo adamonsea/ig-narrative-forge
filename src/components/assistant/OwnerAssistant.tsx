@@ -16,11 +16,18 @@ interface Action {
   destination: string;
 }
 
+interface Nudge {
+  title: string;
+  body: string;
+  destination?: string;
+}
+
 interface Turn {
   role: "user" | "assistant";
   content: string;
   steps?: string[];
   actions?: Action[];
+  nudge?: Nudge | null;
 }
 
 const OPENING_PILLS = [
