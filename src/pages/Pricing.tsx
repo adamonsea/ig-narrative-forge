@@ -38,6 +38,7 @@ const tiers: PricingTier[] = [
     ],
   },
   {
+    id: 'pro',
     name: 'Pro',
     price: '$49',
     credits: '2,000 AI credits/mo',
@@ -55,6 +56,7 @@ const tiers: PricingTier[] = [
     ],
   },
   {
+    id: 'team',
     name: 'Team',
     price: '$149',
     credits: '10,000 AI credits/mo',
