@@ -72,6 +72,17 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </BreadcrumbList>
               </Breadcrumb>
             )}
+
+            {/* Always-visible sign out */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={signOut}
+              className="ml-auto h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
             {/* Brand accent line */}
             <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-primary/40 via-primary/10 to-transparent" />
           </header>
