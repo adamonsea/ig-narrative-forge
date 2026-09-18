@@ -341,7 +341,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
             </div>
           </div>
         </Disclosure>
-        <div className="sticky bottom-4 z-10">
+        <div className="sticky bottom-24 z-10">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg backdrop-blur">
             <p className="text-sm text-muted-foreground">
               {periodSummary() ? (
