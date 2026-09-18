@@ -14,9 +14,10 @@ import { WaitlistPanel } from '@/components/admin/WaitlistPanel';
 import { McpEntitlementsPanel } from '@/components/admin/McpEntitlementsPanel';
 import { SectionLabel } from '@/components/ui/section-label';
 import { Disclosure } from '@/components/ui/editorial';
+import { VoucherCodesPanel } from '@/components/admin/VoucherCodesPanel';
 
 export default function AdminPanel() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isProductOwner } = useAuth();
   usePageFavicon();
 
   if (loading) {
@@ -55,6 +56,13 @@ export default function AdminPanel() {
             <SectionLabel>Add-on access</SectionLabel>
             <McpEntitlementsPanel />
           </section>
+
+          {isProductOwner && (
+            <section>
+              <SectionLabel>Voucher codes</SectionLabel>
+              <VoucherCodesPanel />
+            </section>
+          )}
 
           <section className="space-y-4 border-t pt-6">
             <Disclosure label="Experiments">
