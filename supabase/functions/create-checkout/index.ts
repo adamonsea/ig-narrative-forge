@@ -2,7 +2,7 @@
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getUser } from '../_shared/auth.ts';
-import { planById } from '../_shared/plans.ts';
+import { planById, priceIdFor, type BillingInterval } from '../_shared/plans.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
     const user = await getUser(req);
     if (!user?.email) return json({ error: 'Unauthorized' }, 401);
 
-    const { plan: planId, voucherCode, returnUrl } = await req.json().catch(() => ({}));
+    const { plan: planId, voucherCode, returnUrl, interval } = await req.json().catch(() => ({}));
+    const billingInterval: BillingInterval = interval === 'year' ? 'year' : 'month';
     const plan = planById(planId);
     if (!plan) return json({ error: 'Unknown plan' }, 400);
 
@@ -74,13 +75,13 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
-      line_items: [{ price: plan.priceId, quantity: 1 }],
+      line_items: [{ price: priceIdFor(plan, billingInterval), quantity: 1 }],
       mode: 'subscription',
       allow_promotion_codes: discounts ? undefined : true,
       discounts,
       success_url: `${origin}/dashboard?checkout=success`,
       cancel_url: `${origin}/pricing?checkout=cancelled`,
-      metadata: { user_id: user.id, plan: plan.id, voucher_code: code || '' },
+      metadata: { user_id: user.id, plan: plan.id, interval: billingInterval, voucher_code: code || '' },
     });
 
     return json({ url: session.url });

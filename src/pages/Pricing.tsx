@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 interface PricingTier {
   id: string;
   name: string;
-  price: string;
+  price: number;
   credits: string;
   description: string;
   features: string[];
@@ -25,7 +25,7 @@ const tiers: PricingTier[] = [
   {
     id: 'starter',
     name: 'Starter',
-    price: '$19',
+    price: 19,
     credits: '500 AI credits/mo',
     description: 'Perfect for individual creators getting started',
     accentColor: 'hsl(155,100%,67%)',
@@ -40,7 +40,7 @@ const tiers: PricingTier[] = [
   {
     id: 'pro',
     name: 'Pro',
-    price: '$49',
+    price: 49,
     credits: '2,000 AI credits/mo',
     description: 'For serious curators building engaged audiences',
     accentColor: 'hsl(270,100%,68%)',
@@ -58,7 +58,7 @@ const tiers: PricingTier[] = [
   {
     id: 'team',
     name: 'Team',
-    price: '$149',
+    price: 149,
     credits: '10,000 AI credits/mo',
     description: 'For organizations with multiple editorial teams',
     accentColor: 'hsl(155,100%,67%)',
@@ -91,6 +91,7 @@ const Pricing = () => {
   const [voucherNote, setVoucherNote] = useState<string | null>(null);
   const [checkingVoucher, setCheckingVoucher] = useState(false);
   const [startingPlan, setStartingPlan] = useState<string | null>(null);
+  const [interval, setInterval] = useState<'month' | 'year'>('month');
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -105,17 +106,31 @@ const Pricing = () => {
 
   const subscribe = async (tier: PricingTier) => {
     if (!user) {
+      toast({ title: 'Please sign in first — then pick your plan.' });
       navigate('/auth?redirect=/pricing');
       return;
     }
     setStartingPlan(tier.id);
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { plan: tier.id, voucherCode: voucher.trim() || undefined },
+        body: {
+          plan: tier.id,
+          interval,
+          voucherCode: voucher.trim() || undefined,
+          returnUrl: window.location.origin,
+        },
       });
-      if (error || data?.error || !data?.url) {
+      let message: string | null = data?.error ?? null;
+      if (error && !message) {
+        try {
+          message = (await (error as any).context?.json())?.error ?? null;
+        } catch {
+          message = null;
+        }
+      }
+      if (message || !data?.url) {
         toast({
-          title: data?.error || 'Could not start checkout. Please try again.',
+          title: message || 'Could not start checkout. Please try again.',
           variant: 'destructive',
         });
         return;
@@ -212,6 +227,33 @@ const Pricing = () => {
             </div>
           </section>
 
+          {/* Billing interval toggle */}
+          <section className="max-w-6xl mx-auto mb-10 flex justify-center">
+            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/15">
+              <button
+                type="button"
+                onClick={() => setInterval('month')}
+                aria-pressed={interval === 'month'}
+                className={`px-5 h-10 rounded-full text-sm font-medium transition-colors ${
+                  interval === 'month' ? 'bg-white text-[hsl(214,50%,9%)]' : 'text-white/70 hover:text-white'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setInterval('year')}
+                aria-pressed={interval === 'year'}
+                className={`px-5 h-10 rounded-full text-sm font-medium transition-colors ${
+                  interval === 'year' ? 'bg-white text-[hsl(214,50%,9%)]' : 'text-white/70 hover:text-white'
+                }`}
+              >
+                Yearly
+                <span className="ml-2 text-xs text-[hsl(155,100%,45%)]">2 months free</span>
+              </button>
+            </div>
+          </section>
+
           {/* Pricing cards */}
           <section className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-3 gap-8">
@@ -236,9 +278,16 @@ const Pricing = () => {
                     {/* Price */}
                     <div>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-white">{tier.price}</span>
-                        <span className="text-white/50">/month</span>
+                        <span className="text-4xl font-bold text-white">
+                          ${interval === 'year' ? tier.price * 10 : tier.price}
+                        </span>
+                        <span className="text-white/50">{interval === 'year' ? '/year' : '/month'}</span>
                       </div>
+                      {interval === 'year' && (
+                        <div className="text-xs text-white/50 mt-1">
+                          ${tier.price}/month billed monthly — save ${tier.price * 2} a year
+                        </div>
+                      )}
                       <div className="text-sm mt-1" style={{ color: tier.accentColor }}>
                         {tier.credits}
                       </div>
