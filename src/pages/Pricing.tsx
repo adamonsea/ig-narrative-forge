@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Check } from 'lucide-react';
 import { WaitlistModal } from '@/components/WaitlistModal';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PricingTier {
+  id: string;
   name: string;
   price: string;
   credits: string;
@@ -18,6 +23,7 @@ interface PricingTier {
 
 const tiers: PricingTier[] = [
   {
+    id: 'starter',
     name: 'Starter',
     price: '$19',
     credits: '500 AI credits/mo',
@@ -32,6 +38,7 @@ const tiers: PricingTier[] = [
     ],
   },
   {
+    id: 'pro',
     name: 'Pro',
     price: '$49',
     credits: '2,000 AI credits/mo',
@@ -49,6 +56,7 @@ const tiers: PricingTier[] = [
     ],
   },
   {
+    id: 'team',
     name: 'Team',
     price: '$149',
     credits: '10,000 AI credits/mo',
@@ -79,12 +87,68 @@ const Pricing = () => {
 
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
-  
+  const [voucher, setVoucher] = useState('');
+  const [voucherNote, setVoucherNote] = useState<string | null>(null);
+  const [checkingVoucher, setCheckingVoucher] = useState(false);
+  const [startingPlan, setStartingPlan] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   usePageFavicon();
 
   const openWaitlist = (planName: string) => {
     setSelectedPlan(planName);
     setWaitlistOpen(true);
+  };
+
+  const subscribe = async (tier: PricingTier) => {
+    if (!user) {
+      navigate('/auth?redirect=/pricing');
+      return;
+    }
+    setStartingPlan(tier.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { plan: tier.id, voucherCode: voucher.trim() || undefined },
+      });
+      if (error || data?.error || !data?.url) {
+        toast({
+          title: data?.error || 'Could not start checkout. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      window.location.href = data.url as string;
+    } finally {
+      setStartingPlan(null);
+    }
+  };
+
+  const applyVoucher = async () => {
+    if (!user) {
+      navigate('/auth?redirect=/pricing');
+      return;
+    }
+    setCheckingVoucher(true);
+    setVoucherNote(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('redeem-voucher', {
+        body: { code: voucher.trim() },
+      });
+      if (error || data?.error) {
+        setVoucherNote(data?.error || 'Could not check that code right now.');
+        return;
+      }
+      setVoucherNote(data.message);
+      if (data.applied) {
+        toast({ title: data.message });
+        setTimeout(() => navigate('/dashboard'), 1200);
+      }
+    } finally {
+      setCheckingVoucher(false);
+    }
   };
 
   return (
@@ -129,7 +193,7 @@ const Pricing = () => {
             </p>
             <div className="inline-block bg-[hsl(270,100%,68%)]/10 border border-[hsl(270,100%,68%)]/30 rounded-full px-5 py-2">
               <p className="text-sm text-white/70">
-                Pricing is in development — tiers, features, and credit limits below are indicative and may change before launch.
+                Cancel any time. Features marked “Planned” are still being built.
               </p>
             </div>
           </section>
@@ -185,14 +249,15 @@ const Pricing = () => {
 
                     {/* CTA Button */}
                     <Button
-                      onClick={() => openWaitlist(tier.name)}
+                      onClick={() => subscribe(tier)}
+                      disabled={startingPlan === tier.id}
                       className={`w-full h-12 rounded-full font-medium ${
                         tier.highlight
                           ? 'bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white'
                           : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
                       }`}
                     >
-                      Coming soon
+                      {startingPlan === tier.id ? 'Opening checkout…' : `Choose ${tier.name}`}
                     </Button>
 
                     {/* Features */}
@@ -222,6 +287,35 @@ const Pricing = () => {
               ))}
             </div>
           </section>
+
+          {/* Voucher code */}
+          <section className="max-w-xl mx-auto mt-16">
+            <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-3">
+              <h3 className="text-lg font-semibold text-white">Have a code?</h3>
+              <p className="text-white/60 text-sm">
+                Enter it here. Free-access codes unlock your plan straight away; money-off codes are
+                applied when you choose a plan above.
+              </p>
+              <div className="flex gap-3">
+                <Input
+                  value={voucher}
+                  onChange={(e) => setVoucher(e.target.value.toUpperCase())}
+                  placeholder="FOUNDER50"
+                  className="h-12 rounded-full bg-white/5 border-white/20 text-white placeholder:text-white/30"
+                />
+                <Button
+                  onClick={applyVoucher}
+                  disabled={checkingVoucher || voucher.trim().length < 3}
+                  className="h-12 rounded-full px-6 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                >
+                  {checkingVoucher ? 'Checking…' : 'Apply'}
+                </Button>
+              </div>
+              {voucherNote && <p className="text-sm text-white/70">{voucherNote}</p>}
+            </div>
+          </section>
+
+
 
           {/* FAQ or extra info */}
           <section className="max-w-2xl mx-auto text-center mt-20">

@@ -3797,6 +3797,54 @@ export type Database = {
           },
         ]
       }
+      subscribers: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          email: string
+          id: string
+          plan: string | null
+          source: string
+          status: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscribed: boolean
+          updated_at: string
+          user_id: string
+          voucher_code_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          email: string
+          id?: string
+          plan?: string | null
+          source?: string
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscribed?: boolean
+          updated_at?: string
+          user_id: string
+          voucher_code_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          email?: string
+          id?: string
+          plan?: string | null
+          source?: string
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscribed?: boolean
+          updated_at?: string
+          user_id?: string
+          voucher_code_id?: string | null
+        }
+        Relationships: []
+      }
       suggested_keywords: {
         Row: {
           added_at: string | null
@@ -5124,6 +5172,101 @@ export type Database = {
             columns: ["slide_id"]
             isOneToOne: false
             referencedRelation: "slides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voucher_codes: {
+        Row: {
+          amount_off_cents: number | null
+          code: string
+          created_at: string
+          created_by: string | null
+          duration_months: number | null
+          expires_at: string | null
+          free_months: number | null
+          id: string
+          is_active: boolean
+          kind: string
+          max_redemptions: number | null
+          notes: string | null
+          percent_off: number | null
+          plan: string | null
+          redeemed_count: number
+          stripe_coupon_id: string | null
+          stripe_promotion_code_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_off_cents?: number | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          duration_months?: number | null
+          expires_at?: string | null
+          free_months?: number | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          max_redemptions?: number | null
+          notes?: string | null
+          percent_off?: number | null
+          plan?: string | null
+          redeemed_count?: number
+          stripe_coupon_id?: string | null
+          stripe_promotion_code_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_off_cents?: number | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          duration_months?: number | null
+          expires_at?: string | null
+          free_months?: number | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          max_redemptions?: number | null
+          notes?: string | null
+          percent_off?: number | null
+          plan?: string | null
+          redeemed_count?: number
+          stripe_coupon_id?: string | null
+          stripe_promotion_code_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      voucher_redemptions: {
+        Row: {
+          email: string | null
+          id: string
+          redeemed_at: string
+          user_id: string
+          voucher_code_id: string
+        }
+        Insert: {
+          email?: string | null
+          id?: string
+          redeemed_at?: string
+          user_id: string
+          voucher_code_id: string
+        }
+        Update: {
+          email?: string | null
+          id?: string
+          redeemed_at?: string
+          user_id?: string
+          voucher_code_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_redemptions_voucher_code_id_fkey"
+            columns: ["voucher_code_id"]
+            isOneToOne: false
+            referencedRelation: "voucher_codes"
             referencedColumns: ["id"]
           },
         ]
