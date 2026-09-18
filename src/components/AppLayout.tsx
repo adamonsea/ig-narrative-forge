@@ -1,7 +1,9 @@
 import { ReactNode } from "react";
 import { useLocation, Link } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,6 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useAuth } from "@/hooks/useAuth";
 import { useTopics } from "@/hooks/useTopics";
 
 interface AppLayoutProps {
