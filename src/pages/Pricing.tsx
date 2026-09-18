@@ -87,12 +87,68 @@ const Pricing = () => {
 
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
-  
+  const [voucher, setVoucher] = useState('');
+  const [voucherNote, setVoucherNote] = useState<string | null>(null);
+  const [checkingVoucher, setCheckingVoucher] = useState(false);
+  const [startingPlan, setStartingPlan] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   usePageFavicon();
 
   const openWaitlist = (planName: string) => {
     setSelectedPlan(planName);
     setWaitlistOpen(true);
+  };
+
+  const subscribe = async (tier: PricingTier) => {
+    if (!user) {
+      navigate('/auth?redirect=/pricing');
+      return;
+    }
+    setStartingPlan(tier.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { plan: tier.id, voucherCode: voucher.trim() || undefined },
+      });
+      if (error || data?.error || !data?.url) {
+        toast({
+          title: data?.error || 'Could not start checkout. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      window.location.href = data.url as string;
+    } finally {
+      setStartingPlan(null);
+    }
+  };
+
+  const applyVoucher = async () => {
+    if (!user) {
+      navigate('/auth?redirect=/pricing');
+      return;
+    }
+    setCheckingVoucher(true);
+    setVoucherNote(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('redeem-voucher', {
+        body: { code: voucher.trim() },
+      });
+      if (error || data?.error) {
+        setVoucherNote(data?.error || 'Could not check that code right now.');
+        return;
+      }
+      setVoucherNote(data.message);
+      if (data.applied) {
+        toast({ title: data.message });
+        setTimeout(() => navigate('/dashboard'), 1200);
+      }
+    } finally {
+      setCheckingVoucher(false);
+    }
   };
 
   return (
