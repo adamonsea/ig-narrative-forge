@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Check } from 'lucide-react';
 import { WaitlistModal } from '@/components/WaitlistModal';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PricingTier {
+  id: string;
   name: string;
   price: string;
   credits: string;
@@ -18,6 +23,7 @@ interface PricingTier {
 
 const tiers: PricingTier[] = [
   {
+    id: 'starter',
     name: 'Starter',
     price: '$19',
     credits: '500 AI credits/mo',
