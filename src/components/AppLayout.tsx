@@ -21,6 +21,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
+  const { signOut } = useAuth();
   const { data: topics } = useTopics();
   
   const getBreadcrumbs = () => {
