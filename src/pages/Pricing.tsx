@@ -288,6 +288,35 @@ const Pricing = () => {
             </div>
           </section>
 
+          {/* Voucher code */}
+          <section className="max-w-xl mx-auto mt-16">
+            <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-3">
+              <h3 className="text-lg font-semibold text-white">Have a code?</h3>
+              <p className="text-white/60 text-sm">
+                Enter it here. Free-access codes unlock your plan straight away; money-off codes are
+                applied when you choose a plan above.
+              </p>
+              <div className="flex gap-3">
+                <Input
+                  value={voucher}
+                  onChange={(e) => setVoucher(e.target.value.toUpperCase())}
+                  placeholder="FOUNDER50"
+                  className="h-12 rounded-full bg-white/5 border-white/20 text-white placeholder:text-white/30"
+                />
+                <Button
+                  onClick={applyVoucher}
+                  disabled={checkingVoucher || voucher.trim().length < 3}
+                  className="h-12 rounded-full px-6 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                >
+                  {checkingVoucher ? 'Checking…' : 'Apply'}
+                </Button>
+              </div>
+              {voucherNote && <p className="text-sm text-white/70">{voucherNote}</p>}
+            </div>
+          </section>
+
+
+
           {/* FAQ or extra info */}
           <section className="max-w-2xl mx-auto text-center mt-20">
             <p className="text-white/50">
