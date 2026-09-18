@@ -207,6 +207,14 @@ steps, actions and suggestions may be empty arrays and nudge may be null. Give 1
             destination: String(a?.destination ?? ''),
           })).filter((a: any) => a.label && a.destination)
         : [],
+      nudge:
+        parsed.nudge && parsed.nudge.title && parsed.nudge.body
+          ? {
+              title: String(parsed.nudge.title).slice(0, 60),
+              body: String(parsed.nudge.body).slice(0, 200),
+              destination: String(parsed.nudge.destination ?? ''),
+            }
+          : null,
       suggestions: Array.isArray(parsed.suggestions)
         ? parsed.suggestions.slice(0, 3).map((s: any) => String(s).slice(0, 90))
         : [],
