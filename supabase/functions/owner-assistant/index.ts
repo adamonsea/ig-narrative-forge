@@ -112,6 +112,20 @@ Deno.serve(async (req) => {
       ].filter(Boolean),
     };
 
+    // Things this feed has available but has never switched on or filled in.
+    const notYetUsed = [
+      !topic?.email_subscriptions_enabled && { name: 'Reader email edition', what: 'Send published stories to readers by email.', destination: 'distribution' },
+      !topic?.rss_enabled && { name: 'RSS feed', what: 'Let readers and other apps follow the feed automatically.', destination: 'distribution' },
+      !topic?.public_widget_builder_enabled && { name: 'Website widget', what: 'Put a live strip of your stories on any website.', destination: 'distribution' },
+      !(topic?.audio_briefings_daily_enabled || topic?.audio_briefings_weekly_enabled) && { name: 'Audio briefings', what: 'A spoken version of the feed for listeners.', destination: 'distribution' },
+      !topic?.mcp_enabled && { name: 'ChatGPT and Claude access', what: 'Readers can ask an AI assistant about your feed.', destination: 'ai-assistants' },
+      !(topic?.landmarks || []).length && { name: 'Picture references', what: 'Add local places so illustrations look like the real thing.', destination: 'picture-references' },
+      !(topic?.negative_keywords || []).length && { name: 'Exclusions', what: 'Words that keep unwanted stories out of arrivals.', destination: 'exclusions' },
+      !topic?.auto_simplify_enabled && { name: 'Automatic publishing', what: 'Let Curatr publish clear-cut stories without you.', destination: 'automation' },
+      !topic?.drip_feed_enabled && { name: 'Publishing pace', what: 'Space published stories out through the day.', destination: 'automation' },
+      published.count && published.count > 20 ? { name: 'Reviews', what: 'Build a public visual look-back over a few months.', destination: 'reviews' } : null,
+    ].filter(Boolean);
+
     const system = `You are the in-app helper for Curatr, a tool people use to run their own curated news feed.
 You are talking to the owner of the feed "${topic?.name}". You help them run it — you do not write stories.
 
