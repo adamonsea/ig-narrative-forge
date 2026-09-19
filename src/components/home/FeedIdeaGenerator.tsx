@@ -114,7 +114,7 @@ export const FeedIdeaGenerator = () => {
                   <p className="pt-2 text-sm font-light leading-relaxed text-white/60">{bp.purpose}</p>
 
                   {(bp.sample_story_hooks || []).length > 0 && (
-                    <div className="pt-4">
+                    <div className="flex-1 pt-4">
                       <button
                         type="button"
                         onClick={() => toggle(i)}
