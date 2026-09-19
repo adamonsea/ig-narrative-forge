@@ -18,6 +18,7 @@ import { FeedSafetyDialog } from "@/components/topics/FeedSafetyDialog";
 import { FeedBackupsDialog } from "@/components/topics/FeedBackupsDialog";
 import { StatusPill, PageState } from "@/components/ui/editorial";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { readPendingBlueprint, clearPendingBlueprint, type PendingBlueprint } from "@/lib/feedBlueprint";
 
 interface Topic {
   id: string;
@@ -56,6 +57,7 @@ export const TopicManager = () => {
   const [safetyTarget, setSafetyTarget] = useState<{ id: string; name: string } | null>(null);
   const [backupsTarget, setBackupsTarget] = useState<{ id: string; name: string } | null>(null);
   const [unpublishTarget, setUnpublishTarget] = useState<Topic | null>(null);
+  const [pendingBlueprint, setPendingBlueprint] = useState<PendingBlueprint | null>(null);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -64,6 +66,16 @@ export const TopicManager = () => {
     if (user) {
       loadTopics();
     }
+  }, [user]);
+
+  // A feed blueprint chosen on the homepage opens the wizard pre-filled.
+  useEffect(() => {
+    if (!user) return;
+    const pending = readPendingBlueprint();
+    if (!pending) return;
+    setPendingBlueprint(pending);
+    setShowCreateDialog(true);
+    clearPendingBlueprint();
   }, [user]);
 
   const loadTopics = async () => {
@@ -220,8 +232,13 @@ export const TopicManager = () => {
 
       <CreateTopicDialog
         open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
+        onOpenChange={(next) => {
+          setShowCreateDialog(next);
+          if (!next) setPendingBlueprint(null);
+        }}
         onTopicCreated={handleTopicCreated}
+        initialName={pendingBlueprint?.blueprint.feed_title}
+        initialKeywords={pendingBlueprint?.blueprint.keywords}
       />
 
       {topics.length === 0 ? (

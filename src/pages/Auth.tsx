@@ -136,7 +136,11 @@ const Auth = () => {
           description: "Successfully signed in.",
         });
         // Force a page refresh to ensure clean auth state
-        window.location.href = '/';
+        const requested = new URLSearchParams(window.location.search).get('redirect');
+        const safeRedirect = requested && requested.startsWith('/') && !requested.startsWith('//')
+          ? requested
+          : '/';
+        window.location.href = safeRedirect;
       }
     } catch (error: any) {
       const msg = typeof error?.message === 'string' ? error.message : 'Unknown error';

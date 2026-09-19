@@ -1319,6 +1319,45 @@ export type Database = {
           },
         ]
       }
+      feed_leads: {
+        Row: {
+          blueprint: Json | null
+          created_at: string
+          email: string | null
+          id: string
+          input_type: string
+          input_value: string
+          nudge_sent_at: string | null
+          topic_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          blueprint?: Json | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          input_type?: string
+          input_value: string
+          nudge_sent_at?: string | null
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          blueprint?: Json | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          input_type?: string
+          input_value?: string
+          nudge_sent_at?: string | null
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       feed_visits: {
         Row: {
           created_at: string

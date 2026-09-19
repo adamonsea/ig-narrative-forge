@@ -598,3 +598,12 @@ verify_jwt = true
 
 [functions.admin-vouchers]
 verify_jwt = true
+
+# ========================================
+# HOMEPAGE FEED IDEA GENERATOR
+# ========================================
+[functions.feed-ideas]
+verify_jwt = false
+
+[functions.feed-lead-nudge]
+verify_jwt = false
