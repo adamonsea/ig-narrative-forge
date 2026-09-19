@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import presenterThumb from '@/assets/presenter-thumb.png.asset.json';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -173,52 +172,30 @@ const Index = () => {
               <motion.p variants={reveal} className="text-xl md:text-2xl text-white/60 font-light max-w-2xl mx-auto leading-relaxed">
                 Aggregate content from any source, transform it into beautiful stories, and deliver via newsletters, social carousels, or your own branded feed.
               </motion.p>
-              <motion.div variants={reveal} className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <motion.div {...hoverLift}>
-                  <Button
-                    onClick={() => setExplainerOpen(true)}
-                    size="lg"
-                    className="rounded-full pl-2 pr-7 h-14 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
-                  >
-                    <span className="relative mr-3 inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-[hsl(214,50%,9%)]/20">
-                      <img
-                        src={presenterThumb.url}
-                        alt=""
-                        aria-hidden="true"
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                      />
-                      <span className="absolute inset-0 flex items-center justify-center bg-[hsl(214,50%,9%)]/35">
-                        <Play className="h-4 w-4 fill-white text-white" aria-hidden="true" />
-                      </span>
-                    </span>
-                    Introducing Curatr
-                  </Button>
-                </motion.div>
-                <motion.div {...hoverLift}>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="lg"
-                    className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white"
-                  >
-                    <Link to="/feed/eastbourne">See a feed</Link>
-                  </Button>
-                </motion.div>
-                <motion.div {...hoverLift}>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="lg"
-                    className="rounded-full px-8 h-12 text-base border-2 border-white/25 bg-transparent text-white hover:bg-white/10"
-                  >
-                    <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
-                  </Button>
-                </motion.div>
+              <motion.div variants={reveal}>
+                <FeedIdeaGenerator />
               </motion.div>
 
-              <motion.div variants={reveal} className="pt-6">
-                <FeedIdeaGenerator />
+              <motion.div
+                variants={reveal}
+                className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2 text-sm"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExplainerOpen(true)}
+                  className="inline-flex items-center gap-2 text-white/55 transition-colors hover:text-white"
+                >
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/30">
+                    <Play className="h-2.5 w-2.5 fill-current text-current" aria-hidden="true" />
+                  </span>
+                  Watch the 60-second film
+                </button>
+                <Link
+                  to="/feed/eastbourne"
+                  className="text-white/55 underline-offset-4 transition-colors hover:text-white hover:underline"
+                >
+                  See a live feed
+                </Link>
               </motion.div>
             </motion.div>
           </section>
