@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import presenterThumb from '@/assets/presenter-thumb.png.asset.json';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
