@@ -35,6 +35,10 @@ interface CreateTopicDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTopicCreated: (topicSlug: string) => void;
+  /** Pre-fills the feed name (e.g. a blueprint chosen on the homepage). */
+  initialName?: string;
+  /** Pre-fills the keywords used if auto-generation fails. */
+  initialKeywords?: string[];
 }
 
 const EXAMPLE_NAMES = [
