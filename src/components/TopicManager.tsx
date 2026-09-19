@@ -232,8 +232,13 @@ export const TopicManager = () => {
 
       <CreateTopicDialog
         open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
+        onOpenChange={(next) => {
+          setShowCreateDialog(next);
+          if (!next) setPendingBlueprint(null);
+        }}
         onTopicCreated={handleTopicCreated}
+        initialName={pendingBlueprint?.blueprint.feed_title}
+        initialKeywords={pendingBlueprint?.blueprint.keywords}
       />
 
       {topics.length === 0 ? (

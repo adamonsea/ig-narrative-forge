@@ -15,6 +15,7 @@ import { Play } from 'lucide-react';
 import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoops';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { FeedIdeaGenerator } from '@/components/home/FeedIdeaGenerator';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -214,6 +215,10 @@ const Index = () => {
                     <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
                   </Button>
                 </motion.div>
+              </motion.div>
+
+              <motion.div variants={reveal} className="pt-6">
+                <FeedIdeaGenerator />
               </motion.div>
             </motion.div>
           </section>
