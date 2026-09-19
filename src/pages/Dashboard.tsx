@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { Spinner } from '@/components/ui/spinner';
 import { TopicManager } from "@/components/TopicManager";
 import { AppLayout } from "@/components/AppLayout";
+import { PlanStatus } from "@/components/billing/PlanStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
