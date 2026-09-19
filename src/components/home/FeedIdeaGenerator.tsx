@@ -112,13 +112,32 @@ export const FeedIdeaGenerator = () => {
                   </span>
                   <h3 className="pt-2 font-display text-2xl text-white">{bp.feed_title}</h3>
                   <p className="pt-2 text-sm font-light leading-relaxed text-white/60">{bp.purpose}</p>
-                  <ul className="flex-1 space-y-2 pt-5">
-                    {(bp.sample_story_hooks || []).slice(0, 3).map((hook, h) => (
-                      <li key={h} className="border-l border-white/15 pl-3 text-sm text-white/75">
-                        {hook}
-                      </li>
-                    ))}
-                  </ul>
+
+                  {(bp.sample_story_hooks || []).length > 0 && (
+                    <div className="pt-4">
+                      <button
+                        type="button"
+                        onClick={() => toggle(i)}
+                        aria-expanded={expanded.has(i)}
+                        className="flex items-center gap-1.5 text-xs text-white/50 transition-colors hover:text-white/80"
+                      >
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 transition-transform ${expanded.has(i) ? 'rotate-180' : ''}`}
+                        />
+                        Example stories
+                      </button>
+                      {expanded.has(i) && (
+                        <ul className="flex-1 space-y-2 pt-3">
+                          {(bp.sample_story_hooks || []).slice(0, 3).map((hook, h) => (
+                            <li key={h} className="border-l border-white/15 pl-3 text-sm text-white/75">
+                              {hook}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
                   <Button
                     onClick={() => build(bp)}
                     className="mt-6 w-full rounded-full bg-white text-[hsl(214,50%,9%)] hover:bg-white/90"
