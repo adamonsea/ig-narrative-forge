@@ -72,14 +72,10 @@ export const FeedIdeaGenerator = () => {
           disabled={loading || input.trim().length < 2}
           className="h-14 shrink-0 rounded-full bg-[hsl(155,100%,67%)] px-7 text-base text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
         >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {loading ? 'Thinking…' : 'Show me feed ideas'}
         </Button>
       </form>
-
-      <p className="pt-3 text-center text-sm text-white/40">
-        Free, no sign-up to see your ideas. Try “acme-coffee.com” or “sustainable packaging”.
-      </p>
 
       {error && <p className="pt-4 text-center text-sm text-[hsl(0,80%,75%)]">{error}</p>}
 
