@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +19,15 @@ export const FeedIdeaGenerator = () => {
   const [blueprints, setBlueprints] = useState<FeedBlueprint[]>([]);
   const [chosen, setChosen] = useState<FeedBlueprint | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggle = (i: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
 
   const generate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,14 +81,10 @@ export const FeedIdeaGenerator = () => {
           disabled={loading || input.trim().length < 2}
           className="h-14 shrink-0 rounded-full bg-[hsl(155,100%,67%)] px-7 text-base text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
         >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {loading ? 'Thinking…' : 'Show me feed ideas'}
         </Button>
       </form>
-
-      <p className="pt-3 text-center text-sm text-white/40">
-        Free, no sign-up to see your ideas. Try “acme-coffee.com” or “sustainable packaging”.
-      </p>
 
       {error && <p className="pt-4 text-center text-sm text-[hsl(0,80%,75%)]">{error}</p>}
 
@@ -107,13 +112,32 @@ export const FeedIdeaGenerator = () => {
                   </span>
                   <h3 className="pt-2 font-display text-2xl text-white">{bp.feed_title}</h3>
                   <p className="pt-2 text-sm font-light leading-relaxed text-white/60">{bp.purpose}</p>
-                  <ul className="flex-1 space-y-2 pt-5">
-                    {(bp.sample_story_hooks || []).slice(0, 3).map((hook, h) => (
-                      <li key={h} className="border-l border-white/15 pl-3 text-sm text-white/75">
-                        {hook}
-                      </li>
-                    ))}
-                  </ul>
+
+                  {(bp.sample_story_hooks || []).length > 0 && (
+                    <div className="flex-1 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => toggle(i)}
+                        aria-expanded={expanded.has(i)}
+                        className="flex items-center gap-1.5 text-xs text-white/50 transition-colors hover:text-white/80"
+                      >
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 transition-transform ${expanded.has(i) ? 'rotate-180' : ''}`}
+                        />
+                        Example stories
+                      </button>
+                      {expanded.has(i) && (
+                        <ul className="flex-1 space-y-2 pt-3">
+                          {(bp.sample_story_hooks || []).slice(0, 3).map((hook, h) => (
+                            <li key={h} className="border-l border-white/15 pl-3 text-sm text-white/75">
+                              {hook}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
                   <Button
                     onClick={() => build(bp)}
                     className="mt-6 w-full rounded-full bg-white text-[hsl(214,50%,9%)] hover:bg-white/90"
