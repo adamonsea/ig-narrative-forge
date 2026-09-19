@@ -68,7 +68,7 @@ const DISCOVER_MESSAGES = [
   "Ranking the most reliable sources…",
 ];
 
-export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: CreateTopicDialogProps) => {
+export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialName, initialKeywords }: CreateTopicDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -490,6 +490,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setAutoTopicType('keyword');
     setAutoRegion("");
   };
+
+  // Pre-fill from a homepage blueprint the first time the wizard opens.
+  useEffect(() => {
+    if (!open) return;
+    if (initialName && !topicName) setTopicName(initialName.slice(0, MAX_NAME_LENGTH));
+    if (initialKeywords?.length && autoKeywords.length === 0) setAutoKeywords(initialKeywords);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialName]);
 
   const handleClose = () => {
     resetForm();
