@@ -19,6 +19,15 @@ export const FeedIdeaGenerator = () => {
   const [blueprints, setBlueprints] = useState<FeedBlueprint[]>([]);
   const [chosen, setChosen] = useState<FeedBlueprint | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggle = (i: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
 
   const generate = async (e: React.FormEvent) => {
     e.preventDefault();
