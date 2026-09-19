@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { Spinner } from '@/components/ui/spinner';
 import { TopicManager } from "@/components/TopicManager";
 import { AppLayout } from "@/components/AppLayout";
+import { PlanStatus } from "@/components/billing/PlanStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
@@ -50,10 +51,14 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h1 className="display-heading text-4xl">
               Your feeds
             </h1>
+          </div>
+
+          <div className="mb-8">
+            <PlanStatus />
           </div>
 
           <TopicManager />
