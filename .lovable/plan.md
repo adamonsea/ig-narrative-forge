@@ -113,6 +113,35 @@ Use this core language:
 
 Remove conflicting references to Starter/Team allowances, unlimited claims, “unused credits don’t roll over” language, and any suggestion that payment is required before creating or curating. Keep the copy brief and contextual rather than repeating pricing throughout the product.
 
+### Low-cognitive-load rules
+
+- One decision per prompt, one primary button, and no feature lists inside interruption dialogs.
+- Lead with the outcome (“Publish your feed”), then the brief requirement; put prices and allowance detail on the next screen.
+- Use the same terms everywhere: **Free**, **Pro**, **credits**, **publish**, and **manage plan**. Avoid “premium”, “wallet”, “entitlement”, “allocation” and provider language in customer-facing copy.
+- Never show a credit message for an action that does not consume credits.
+- Show numbers only when they help the immediate decision: action cost, available balance, price and renewal date.
+- Use inline status for confirmation or delay; reserve dialogs for a decision the owner must make.
+- Keep errors specific and recoverable: say what remains safe, whether money was taken, and the single next action.
+- Maintain one central copy map for all payment and credit states so wording cannot drift between screens.
+
+## Complete lifecycle rules
+
+Define one server-side state model and an explicit customer experience for every state before UI work begins:
+
+- **Anonymous → account created → email unverified → verified free user**: preserve the drafted feed and grant the welcome allowance only after verification.
+- **Free → checkout started → abandoned/cancelled**: preserve work and return without nagging or changing access.
+- **Free → payment processing → active Pro**: pending state is non-destructive; activation and credits happen once after server verification.
+- **Active → renewal succeeds**: retain access and grant the new period allowance once.
+- **Active → payment fails / past due**: use a short grace period, clearly request payment repair, then make the feed non-distributable without deleting content.
+- **Active → cancels**: keep Pro until the paid-through date, then return to private sandbox; keep all feeds and creative assets.
+- **Upgrade/downgrade from a legacy plan**: preserve the more favourable paid-through access and prevent duplicate allowances during the transition.
+- **Top-up succeeds / is refunded / is disputed**: add once; reverse only unspent purchased value, flag a deficit for review rather than corrupting the ledger.
+- **Voucher applied / expires / is revoked**: define access end, credit behaviour and interaction with an existing paid plan without shortening paid access.
+- **Account deletion, ownership transfer and member removal**: settle access at the feed-owner level, preserve required financial records, and prevent former members using owner benefits.
+- **Feed already public when Pro ends**: stop new distribution jobs and show a neutral unavailable/private state; do not expose drafts or abruptly delete the public record.
+- **Queued automation crosses a plan or balance boundary**: re-check access and reserve credits when the job actually starts, not when it was scheduled.
+- **Provider or network failure**: retry idempotently, expire stuck reservations, and give the owner a manual refresh path.
+
 ## Technical implementation
 
 - Update the shared plan catalogue, pricing page and Stripe test products/prices for the single Pro subscription and top-up product.
@@ -126,6 +155,9 @@ Remove conflicting references to Starter/Team allowances, unlimited claims, “u
 - Add structured monitoring for checkout verification, grant failures, stuck credit reservations, negative balances and unusual account creation; alert the product owner without exposing customer or payment data.
 - Add a versioned entitlement/price configuration so existing purchases remain explainable when prices or allowances change.
 - Define cancellation, refund, chargeback and grace-period behaviour before launch. Cancellation keeps access until period end; refunded or disputed top-ups cannot silently leave spendable value.
+- Decide the authoritative Stripe synchronisation method during implementation. If reliable renewal, failed-payment, refund and dispute events cannot be covered promptly by verified reconciliation, add a signed, idempotent webhook specifically for those lifecycle events and test replay/out-of-order delivery.
+- Scope Pro to the feed owner/workspace, not merely the current browser user, so collaborators cannot accidentally bypass or duplicate billing.
+- Keep financial records needed for reconciliation while honouring deletion and privacy obligations for non-financial personal data.
 
 ## Verification
 
@@ -145,6 +177,22 @@ Test in Stripe test mode before any live switch:
 12. Delayed verification, abandoned checkout, offline return, refunds, disputes and provider outages fail safely.
 13. Keyboard, screen-reader and mobile journeys can understand and complete every prompt and checkout return.
 14. Cost simulations meet the agreed margin before any allowance is advertised.
+15. Failed renewal, grace expiry, voucher overlap, legacy-plan migration, ownership transfer, account deletion and a public feed losing Pro all produce the defined safe state.
+16. Event replay, out-of-order updates and two-device checkout returns cannot regress a newer subscription state.
+17. No customer-facing state uses more than one primary action or exposes internal billing terminology.
+
+## Launch confidence gate
+
+Do not call the system launch-ready until all of these are true:
+
+- A written state-transition table covers every lifecycle above, with expected access, balance, message and recovery action.
+- Automated tests cover money and credit invariants; test-mode browser journeys cover the visible paths on phone and desktop.
+- Stripe totals, Curatr subscriptions and the credit ledger reconcile for every test customer with no unexplained difference.
+- Monitoring can identify and recover stuck payments, grants and reservations without editing balances by hand.
+- The product owner can inspect a customer’s plan and ledger safely, but cannot silently impersonate them or mutate ledger history.
+- Accessibility checks pass for focus, keyboard, screen reader announcements, contrast and reduced motion.
+- A rollback procedure preserves paid access and balances if the new catalogue or triggers must be disabled.
+- The final copy inventory has one approved string per state and no obsolete plan language remains in pages, emails, dialogs or edge-function responses.
 
 ## Delivery order
 
