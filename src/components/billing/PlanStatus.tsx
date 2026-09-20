@@ -78,6 +78,9 @@ export const PlanStatus = () => {
 
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">{credits?.credits_balance ?? 0} credits</span>
+        <Button size="sm" variant="ghost" asChild>
+          <Link to="/pricing">Add credits</Link>
+        </Button>
         {subscribed && source === 'stripe' ? (
           <Button size="sm" variant="outline" onClick={openPortal} disabled={opening}>
             {opening ? 'Opening…' : 'Manage or cancel'}

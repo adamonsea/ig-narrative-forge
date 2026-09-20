@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
 import { OwnerAssistant } from "@/components/assistant/OwnerAssistant";
+import { ProGateDialog } from "@/components/billing/ProGateDialog";
 
 
 interface TopicDashboardStats {
@@ -146,6 +147,7 @@ const TopicDashboard = () => {
   });
   const [autoSuggestSources, setAutoSuggestSources] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [proGateOpen, setProGateOpen] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const { toast } = useToast();
@@ -560,11 +562,17 @@ const TopicDashboard = () => {
   const confirmPublishToggle = async (newState: boolean) => {
     if (!topic) return;
     try {
-      const { error } = await supabase
-        .from('topics')
-        .update({ is_public: newState, is_active: newState })
-        .eq('id', topic.id);
+      const { data, error } = await supabase.rpc('set_topic_distribution' as any, {
+        p_topic_id: topic.id,
+        p_field: 'is_public',
+        p_enabled: newState,
+      });
       if (error) throw error;
+      if ((data as any)?.error === 'pro_required') {
+        setProGateOpen(true);
+        return;
+      }
+      if (!(data as any)?.success) throw new Error((data as any)?.error || 'Not saved');
       setTopic(prev => prev ? { ...prev, is_public: newState, is_active: newState } : null);
       toast({ title: "Success", description: `Feed ${newState ? 'published' : 'unpublished'}` });
     } catch (error) {
@@ -575,11 +583,16 @@ const TopicDashboard = () => {
 
   // Inline toggle helper for distribution channels
   const handleChannelToggle = async (field: string, checked: boolean, label: string) => {
-    const { error } = await supabase
-      .from('topics')
-      .update({ [field]: checked } as any)
-      .eq('id', topic!.id);
-    if (!error) {
+    const distributionFields = new Set(['email_subscriptions_enabled', 'rss_enabled', 'public_widget_builder_enabled', 'mcp_enabled']);
+    const response = distributionFields.has(field)
+      ? await supabase.rpc('set_topic_distribution' as any, { p_topic_id: topic!.id, p_field: field, p_enabled: checked })
+      : await supabase.from('topics').update({ [field]: checked } as any).eq('id', topic!.id);
+    const result = response.data as any;
+    if (result?.error === 'pro_required') {
+      setProGateOpen(true);
+      return;
+    }
+    if (!response.error && (result?.success !== false)) {
       setTopic((current) => current ? { ...current, [field]: checked } : current);
     } else {
       toast({ title: 'Not saved', description: `${label} could not be updated.`, variant: 'destructive' });
@@ -800,6 +813,7 @@ const TopicDashboard = () => {
         {isOwner && (
           <OwnerAssistant topicId={topic.id} topicSlug={topic.slug} topicName={topic.name} />
         )}
+        <ProGateDialog open={proGateOpen} onOpenChange={setProGateOpen} returnTo={`/dashboard/topic/${topic.slug}`} />
       </div>
     </AppLayout>
   );
