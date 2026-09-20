@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { PictureReferences } from "@/components/topics/PictureReferences";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { CoverageTerms } from "@/components/topics/CoverageTerms";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
