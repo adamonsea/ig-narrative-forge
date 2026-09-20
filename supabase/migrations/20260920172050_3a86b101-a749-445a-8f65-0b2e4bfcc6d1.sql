@@ -1,0 +1,12 @@
+REVOKE EXECUTE ON FUNCTION public.has_pro_access(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.grant_user_credits(uuid, integer, text, text, text, timestamptz, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.reserve_user_credits(uuid, integer, text, text, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.settle_credit_reservation(uuid, text) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.release_credit_reservation(uuid, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.set_topic_distribution(uuid, text, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.has_pro_access(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.grant_user_credits(uuid, integer, text, text, text, timestamptz, jsonb) TO service_role;
+GRANT EXECUTE ON FUNCTION public.reserve_user_credits(uuid, integer, text, text, uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.settle_credit_reservation(uuid, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.release_credit_reservation(uuid, text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.set_topic_distribution(uuid, text, boolean) TO authenticated;
