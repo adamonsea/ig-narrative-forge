@@ -221,6 +221,14 @@ export const FeedSetupGuide = ({
                 photos={(topic as any).landmark_reference_images || {}}
                 setupState={(topic as any).landmark_setup_state || {}}
                 illustrationStyle={topic.illustration_style}
+                onIllustrationStyleChange={async (style) => {
+                  onTopicChange({ illustration_style: style } as never);
+                  const { error } = await supabase
+                    .from('topics')
+                    .update({ illustration_style: style, updated_at: new Date().toISOString() } as never)
+                    .eq('id', topic.id);
+                  if (error) toast({ title: 'Could not save the picture style', description: error.message, variant: 'destructive' });
+                }}
                 onChange={(patch) => onTopicChange(patch as never)}
               />
             )}

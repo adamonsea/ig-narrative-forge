@@ -385,11 +385,18 @@ export function EditorialControlCenter({
                     setupState={topic.landmark_setup_state || {}}
                     illustrationStyle={topic.illustration_style}
                     onIllustrationStyleChange={async (style) => {
+                      const previous = topic.illustration_style;
                       onTopicChange({ ...topic, illustration_style: style });
-                      await supabase
+                      const { error } = await supabase
                         .from('topics')
                         .update({ illustration_style: style, updated_at: new Date().toISOString() } as never)
                         .eq('id', topic.id);
+                      if (error) {
+                        onTopicChange({ ...topic, illustration_style: previous });
+                        toast({ title: 'Could not save the picture style', description: error.message, variant: 'destructive' });
+                        return;
+                      }
+                      toast({ title: 'Picture style saved' });
                       onUpdate?.();
                     }}
                     onChange={(patch) => onTopicChange({ ...topic, ...patch })}
