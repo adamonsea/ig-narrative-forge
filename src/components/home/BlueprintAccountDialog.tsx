@@ -78,30 +78,37 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="gap-0 border-border bg-card p-0 shadow-2xl sm:max-w-md sm:rounded-lg">
         {checkEmail ? (
-          <div className="space-y-4 py-2 text-center">
-            <MailCheck className="mx-auto h-10 w-10 text-primary" />
-            <DialogTitle className="text-xl">Check your email</DialogTitle>
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-5 px-6 py-10 text-center sm:px-10">
+            <div className="font-logo text-xl text-foreground" aria-label="Curatr">
+              Curatr<span className="text-muted-foreground">.pro</span>
+            </div>
+            <MailCheck className="mx-auto h-9 w-9 text-primary" />
+            <DialogTitle className="text-2xl font-medium">Check your email</DialogTitle>
+            <p className="text-base leading-relaxed text-muted-foreground">
               We've sent a confirmation link to <strong>{email}</strong>. Open it and your feed
               <strong> {blueprint?.feed_title}</strong> will be waiting, ready to build.
             </p>
-            <Button className="w-full" onClick={() => onOpenChange(false)}>Got it</Button>
+            <Button className="h-12 w-full text-base" onClick={() => onOpenChange(false)}>Got it</Button>
           </div>
         ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>Save your feed</DialogTitle>
-              <DialogDescription>
+          <div className="px-6 pb-7 pt-8 sm:px-10 sm:pb-9 sm:pt-10">
+            <div className="mb-8 font-logo text-xl text-foreground" aria-label="Curatr">
+              Curatr<span className="text-muted-foreground">.pro</span>
+            </div>
+
+            <DialogHeader className="space-y-2 text-left">
+              <DialogTitle className="text-2xl font-medium leading-tight">Save your feed</DialogTitle>
+              <DialogDescription className="text-base leading-relaxed">
                 {blueprint
-                  ? `We'll set up "${blueprint.feed_title}" in your own private workspace. No card needed.`
-                  : 'Create your workspace to start building.'}
+                  ? `Create an account to build “${blueprint.feed_title}”.`
+                  : 'Create an account to start building.'}
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+              <div className="space-y-2.5">
                 <Label htmlFor="bp-email">Email</Label>
                 <Input
                   id="bp-email"
@@ -110,10 +117,11 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@company.com"
+                  className="h-12"
                   required
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <Label htmlFor="bp-password">Password</Label>
                 <Input
                   id="bp-password"
@@ -122,6 +130,7 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'}
+                  className="h-12"
                   minLength={6}
                   required
                 />
@@ -129,23 +138,24 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="h-12 w-full text-base" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === 'signup' ? 'Create workspace & build feed' : 'Sign in & build feed'}
+                {mode === 'signup' ? 'Create account' : 'Sign in'}
               </Button>
 
-              <button
+              <Button
                 type="button"
-                className="w-full text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+                variant="link"
+                className="h-auto w-full p-0 text-base font-normal text-muted-foreground"
                 onClick={() => {
                   setError(null);
                   setMode(mode === 'signup' ? 'signin' : 'signup');
                 }}
               >
-                {mode === 'signup' ? 'I already have an account' : 'I need an account'}
-              </button>
+                {mode === 'signup' ? 'Already have an account? Sign in' : 'New to Curatr? Create an account'}
+              </Button>
             </form>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
