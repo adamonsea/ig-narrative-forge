@@ -7,6 +7,7 @@ export interface SubscriptionState {
   plan: string | null;
   source: 'stripe' | 'voucher' | null;
   currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
 }
 
 const EMPTY: SubscriptionState = {
@@ -14,6 +15,7 @@ const EMPTY: SubscriptionState = {
   plan: null,
   source: null,
   currentPeriodEnd: null,
+  cancelAtPeriodEnd: false,
 };
 
 export const useSubscription = () => {
@@ -32,7 +34,6 @@ export const useSubscription = () => {
         body: sessionId ? { sessionId } : {},
       });
       if (error || !data || data.error) {
-        setState(EMPTY);
         return;
       }
       setState({
@@ -40,6 +41,7 @@ export const useSubscription = () => {
         plan: data.plan ?? null,
         source: data.source ?? null,
         currentPeriodEnd: data.current_period_end ?? null,
+        cancelAtPeriodEnd: !!data.cancel_at_period_end,
       });
     } finally {
       setLoading(false);

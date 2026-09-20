@@ -37,10 +37,10 @@ Feed ordering
       late-but-great story that would otherwise sit at its original date
 
 Membership, premium triggers and credits
-- [ ] Audit real provider costs and define one credit scale
-- [ ] Build an idempotent credit ledger and server-side Pro access rules
-- [ ] Replace public tiers with Free sandbox + one Pro membership + top-ups
-- [ ] Gate distribution consistently and preserve interrupted actions
-- [ ] Add Cartoon, Aged editorial photo, Anime and Illustrated icon styles
-- [ ] Unify low-cognitive-load billing and credit messaging
+- [x] Audit real provider costs and define one credit scale
+- [x] Build an idempotent credit ledger and server-side Pro access rules
+- [x] Replace public tiers with Free sandbox + one Pro membership + top-ups
+- [x] Gate distribution consistently and preserve interrupted actions
+- [x] Add Cartoon, Aged editorial photo, Anime and Illustrated icon styles
+- [x] Unify low-cognitive-load billing and credit messaging
 - [ ] Verify checkout, renewal, cancellation, vouchers, failures and mobile access

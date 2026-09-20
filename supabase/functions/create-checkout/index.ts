@@ -54,6 +54,12 @@ Deno.serve(async (req) => {
       const found = await stripe.customers.list({ email: user.email, limit: 1 });
       customerId = found.data[0]?.id;
     }
+    if (!isTopUp && customerId) {
+      const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 10 });
+      if (subscriptions.data.some((item) => item.status === 'active' || item.status === 'trialing')) {
+        return json({ error: 'You already have Pro. Manage it from your dashboard.' }, 409);
+      }
+    }
 
     // Discount vouchers are applied through their Stripe promotion code.
     let discounts: { promotion_code: string }[] | undefined;
