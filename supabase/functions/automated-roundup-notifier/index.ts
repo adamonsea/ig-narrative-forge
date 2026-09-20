@@ -51,7 +51,6 @@ serve(async (req) => {
 
       // === PUSH NOTIFICATIONS ===
       try {
-        if (!topic.email_subscriptions_enabled) throw new Error('Email disabled');
         const pushBody: any = {
           topicId: topic.id,
           notificationType: notification_type
@@ -90,6 +89,7 @@ serve(async (req) => {
 
       // === EMAIL NEWSLETTERS ===
       try {
+        if (!topic.email_subscriptions_enabled) throw new Error('Email disabled');
         const emailBody: any = {
           topicId: topic.id,
           notificationType: notification_type
