@@ -122,9 +122,7 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
     ? photographicModels
     : illustrativeModels;
 
-  const styleLabel = illustrationStyle === ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC
-    ? 'Photographic'
-    : 'Illustrative';
+  const styleLabel = ILLUSTRATION_STYLE_LABELS[illustrationStyle] ?? 'Illustrative';
 
   if (isGenerating) {
     return (
