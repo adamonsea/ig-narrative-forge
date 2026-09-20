@@ -15,7 +15,7 @@ export const WELCOME_CREDITS = 20;
 export const TOP_UP_CREDITS = 500;
 
 export const IMAGE_CREDIT_COSTS = {
-  'gpt-image-2-low': 1,
+  'gpt-image-2-low': 2,
   'gpt-image-2-medium': 5,
-  'gpt-image-2-high': 17,
+  'gpt-image-2-high': 10,
 } as const;
