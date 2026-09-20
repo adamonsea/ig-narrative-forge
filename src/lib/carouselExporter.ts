@@ -149,7 +149,7 @@ export const downloadBlob = (blob: Blob, filename: string): void => {
  * adds a ready-to-paste caption, and bundles everything into one ZIP.
  */
 export const exportCarouselSlides = async (
-  renderSlide: (slideIndex: number, aspect: 'square' | 'story') => HTMLElement | null,
+  renderSlide: (slideIndex: number, aspect: 'square' | 'story') => HTMLElement | null | Promise<HTMLElement | null>,
   totalSlides: number,
   storyTitle: string,
   onProgress?: ProgressCallback,
