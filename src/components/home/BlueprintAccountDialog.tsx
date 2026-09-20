@@ -129,9 +129,9 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
               <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40" aria-label="Curatr">
                 Curatr.pro
               </div>
-              <h2 className="font-display mt-6 text-4xl italic tracking-tight text-white">
+              <DialogTitle className="font-display mt-6 text-4xl italic tracking-tight text-white">
                 Save your feed
-              </h2>
+              </DialogTitle>
               <DialogDescription className="mt-3 text-sm leading-relaxed text-[hsl(214,20%,70%)]">
                 {blueprint
                   ? `Create an account to build “${blueprint.feed_title}”.`
