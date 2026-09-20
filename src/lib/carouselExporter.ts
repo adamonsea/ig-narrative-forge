@@ -145,21 +145,28 @@ export const downloadBlob = (blob: Blob, filename: string): void => {
 };
 
 /**
- * Main export function - captures all slides and bundles them
+ * Main export function - captures every slide in both social formats,
+ * adds a ready-to-paste caption, and bundles everything into one ZIP.
  */
 export const exportCarouselSlides = async (
-  renderSlide: (slideIndex: number) => HTMLElement | null,
+  renderSlide: (slideIndex: number, aspect: 'square' | 'story') => HTMLElement | null | Promise<HTMLElement | null>,
   totalSlides: number,
   storyTitle: string,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  caption?: string
 ): Promise<void> => {
   const images: { blob: Blob; filename: string }[] = [];
   const safeTitle = sanitizeFilename(storyTitle);
-  
+  const formats: { aspect: 'square' | 'story'; width: number; height: number; folder: string }[] = [
+    { aspect: 'square', width: 1080, height: 1080, folder: 'square-1080x1080' },
+    { aspect: 'story', width: 1080, height: 1920, folder: 'story-1080x1920' },
+  ];
+  const totalCaptures = totalSlides * formats.length;
+
   try {
     onProgress?.({
       current: 0,
-      total: totalSlides,
+      total: totalCaptures,
       status: 'preparing',
       message: 'Preparing slides for export...'
     });
@@ -167,64 +174,80 @@ export const exportCarouselSlides = async (
     // Wait for fonts before starting
     await waitForFonts();
 
-    // Capture each slide
-    for (let i = 0; i < totalSlides; i++) {
-      onProgress?.({
-        current: i + 1,
-        total: totalSlides,
-        status: 'capturing',
-        message: `Capturing slide ${i + 1} of ${totalSlides}...`
-      });
+    let captured = 0;
 
-      const element = renderSlide(i);
-      if (!element) {
-        throw new Error(`Failed to render slide ${i + 1}`);
+    for (const format of formats) {
+      for (let i = 0; i < totalSlides; i++) {
+        captured += 1;
+        onProgress?.({
+          current: captured,
+          total: totalCaptures,
+          status: 'capturing',
+          message: `Capturing slide ${i + 1} of ${totalSlides} (${format.aspect})...`
+        });
+
+        const element = await renderSlide(i, format.aspect);
+        if (!element) {
+          throw new Error(`Failed to render slide ${i + 1}`);
+        }
+
+        // Let React commit and the browser paint before capturing
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        await new Promise(resolve => setTimeout(resolve, 80));
+        await waitForImages(element);
+
+        const blob = await captureElementAsImage(element, {
+          width: format.width,
+          height: format.height,
+          scale: 2,
+          backgroundColor: '#ffffff'
+        });
+
+        images.push({
+          blob,
+          filename: `${format.folder}/${safeTitle}-slide-${String(i + 1).padStart(2, '0')}.png`
+        });
       }
-
-      // Small delay to ensure render is complete
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      const blob = await captureElementAsImage(element, {
-        width: 1080,
-        height: 1080,
-        scale: 2,
-        backgroundColor: '#ffffff'
-      });
-
-      images.push({
-        blob,
-        filename: `${safeTitle}-slide-${String(i + 1).padStart(2, '0')}.png`
-      });
     }
 
     onProgress?.({
-      current: totalSlides,
-      total: totalSlides,
+      current: totalCaptures,
+      total: totalCaptures,
       status: 'bundling',
       message: 'Creating ZIP file...'
     });
 
-    // Bundle into ZIP
-    const zipBlob = await bundleImagesAsZip(images, `${safeTitle}-carousel.zip`);
+    // Bundle into ZIP (with caption if provided)
+    const zip = new JSZip();
+    images.forEach(({ blob, filename }) => zip.file(filename, blob));
+    if (caption) {
+      zip.file('caption.txt', caption);
+    }
+    const zipBlob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
 
     // Download
-    downloadBlob(zipBlob, `${safeTitle}-carousel.zip`);
+    downloadBlob(zipBlob, `${safeTitle}-social-pack.zip`);
 
     onProgress?.({
-      current: totalSlides,
-      total: totalSlides,
+      current: totalCaptures,
+      total: totalCaptures,
       status: 'complete',
-      message: `Successfully exported ${totalSlides} slides!`
+      message: `Exported ${totalSlides} slides in 2 formats.`
     });
 
   } catch (error) {
     console.error('Carousel export failed:', error);
     onProgress?.({
       current: 0,
-      total: totalSlides,
+      total: totalCaptures,
       status: 'error',
       message: error instanceof Error ? error.message : 'Export failed'
     });
     throw error;
   }
 };
+

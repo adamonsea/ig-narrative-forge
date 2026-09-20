@@ -782,7 +782,12 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                                 } : undefined
                               },
                               ExportableSlideRenderer,
-                              'Local News'
+                              topicInfo?.name || 'Your feed',
+                              {
+                                storyUrl: topicInfo?.slug
+                                  ? `${window.location.origin}/feed/${topicInfo.slug}/story/${story.id}`
+                                  : null
+                              }
                             )}
                           />
                           {/* Reel teaser export */}
