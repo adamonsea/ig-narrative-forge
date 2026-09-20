@@ -1067,7 +1067,10 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       // House style references: attached only for GPT Image 2 and later, via the
       // image-edits route. Fail-open — if nothing loads we use plain generation,
       // exactly as before.
+      // Only the default house look uses the reference covers — otherwise they
+      // force every style back to the same risograph treatment.
       const styleReferences = openaiModelName.startsWith('gpt-image-2')
+        && illustrationStyle === 'editorial_illustrative'
         ? await loadStyleReferences()
         : [];
       if (styleReferences.length > 0) {
