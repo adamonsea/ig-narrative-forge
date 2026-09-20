@@ -6602,6 +6602,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      redeem_free_access_voucher: {
+        Args: { p_code: string; p_email: string; p_user_id: string }
+        Returns: Json
+      }
       release_credit_reservation: {
         Args: {
           p_idempotency_key: string
