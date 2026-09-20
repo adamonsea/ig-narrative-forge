@@ -689,17 +689,36 @@ serve(async (req) => {
     ).catch(() => [] as string[])
 
     // Build appropriate prompt based on illustration style, passing region and location hint for place accuracy
-    let illustrationPrompt = illustrationStyle === 'editorial_photographic'
-      ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
-      : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
-
-    const styleDirections: Partial<Record<IllustrationStyle, string>> = {
-      cartoon: 'Render as an original editorial cartoon: expressive, clear shapes, restrained detail, no copied characters or artist style.',
-      bw_editorial_photo: 'Render as an aged black-and-white editorial photograph: authentic newsprint grain, natural lighting, documentary composition, no text.',
-      anime: 'Render as an original editorial anime scene: cinematic composition and expressive movement, without copying any named artist, studio, or character.',
-      illustrated_icon: 'Render as a bold minimal illustrated icon: one clear visual idea, simple geometry, flat colour, generous negative space, no text.',
+    // The four newer styles get their own complete prompt: appending a sentence to the
+    // house (risograph) prompt produced near-identical covers.
+    const placeLine = locationDetails ? ` Location: ${locationDetails}.` : (topicRegion ? ` Set in ${topicRegion}.` : '')
+    const customStylePrompts: Partial<Record<IllustrationStyle, string>> = {
+      cartoon:
+        `Original editorial cartoon illustrating: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `Hand-drawn comic linework with confident ink outlines, exaggerated but warm character expressions, ` +
+        `bright flat colour fills, simple staging, generous negative space, 3:2 landscape. ` +
+        `No text, letters, numbers or captions. No photographic realism, no 3D rendering, no copied characters or named artist styles.`,
+      bw_editorial_photo:
+        `Aged black-and-white editorial news photograph of: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `Authentic mid-century press photography: silver-gelatin tonal range, visible film grain, slight print wear, ` +
+        `natural available light, candid documentary framing, 35mm perspective, 3:2 landscape. ` +
+        `Strictly monochrome — no colour anywhere. No text, watermarks or borders. No illustration, no CGI.`,
+      anime:
+        `Original editorial anime scene depicting: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `Modern cel-shaded anime aesthetic: clean linework, expressive faces, saturated skies, painterly backgrounds, ` +
+        `cinematic wide framing, 3:2 landscape. ` +
+        `No text or subtitles. Do not copy any named studio, franchise or existing character. No photographic realism.`,
+      illustrated_icon:
+        `Bold minimal spot illustration for: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `One single clear visual idea, thick uniform strokes, simple geometric shapes, two or three flat colours ` +
+        `(${primaryColor} as the accent) on a plain light background, large amounts of empty space, centred, 3:2 landscape. ` +
+        `No text, no shading, no gradients, no scenery clutter, no photographic detail.`,
     }
-    if (styleDirections[illustrationStyle]) illustrationPrompt += ` ${styleDirections[illustrationStyle]}`
+
+    let illustrationPrompt = customStylePrompts[illustrationStyle]
+      ?? (illustrationStyle === 'editorial_photographic'
+        ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
+        : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails))
 
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
