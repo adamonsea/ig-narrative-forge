@@ -34,8 +34,8 @@ const QUALITY_CONFIGS: Record<AnimationQuality, QualityConfig> = {
     modelVersion: 'febae7d9656309cf8c5df4842b27ae4768c0e47a0e1ce443a5ae81f896956134',
     modelSlug: 'wan-video/wan-2.2-i2v-fast',
     resolution: '480p',
-    creditCost: 1,
-    estimatedApiCost: '$0.05',
+    creditCost: 8,
+    estimatedApiCost: '$0.08',
   },
 };
 
