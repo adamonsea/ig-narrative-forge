@@ -1,0 +1,1 @@
+ALTER FUNCTION public.set_topic_distribution(uuid, text, boolean) SECURITY INVOKER;
