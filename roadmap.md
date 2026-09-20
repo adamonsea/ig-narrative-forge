@@ -35,3 +35,12 @@ Feed ordering
       (anything older than 3 days no longer jumps to the top)
 - [ ] Pin a story to the top of the feed — lets an owner deliberately surface a
       late-but-great story that would otherwise sit at its original date
+
+Membership, premium triggers and credits
+- [ ] Audit real provider costs and define one credit scale
+- [ ] Build an idempotent credit ledger and server-side Pro access rules
+- [ ] Replace public tiers with Free sandbox + one Pro membership + top-ups
+- [ ] Gate distribution consistently and preserve interrupted actions
+- [ ] Add Cartoon, Aged editorial photo, Anime and Illustrated icon styles
+- [ ] Unify low-cognitive-load billing and credit messaging
+- [ ] Verify checkout, renewal, cancellation, vouchers, failures and mobile access
