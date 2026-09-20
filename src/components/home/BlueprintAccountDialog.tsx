@@ -197,6 +197,10 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
                   {mode === 'signup' ? 'Sign in' : 'Create an account'}
                 </span>
               </button>
+
+              <p className="pt-1 text-center text-sm md:text-xs text-white/40">
+                Free to create and curate — you only pay when you publish.
+              </p>
             </form>
           </div>
         )}
