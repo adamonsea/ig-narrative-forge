@@ -40,7 +40,6 @@ function generateKey(): string {
 }
 
 export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, access, onChange }: Props) => {
-  const [entitled, setEntitled] = useState<boolean | null>(null);
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -49,21 +48,6 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
   const [saveError, setSaveError] = useState(false);
 
   const endpoint = useMemo(() => `${MCP_BASE}/${topicSlug}`, [topicSlug]);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { if (active) setEntitled(false); return; }
-      const { data } = await supabase
-        .from("mcp_entitlements")
-        .select("user_id")
-        .eq("user_id", auth.user.id)
-        .maybeSingle();
-      if (active) setEntitled(!!data);
-    })();
-    return () => { active = false; };
-  }, []);
 
   const loadKeys = useCallback(async () => {
     const { data } = await supabase
@@ -76,7 +60,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
   }, [topicId]);
 
   useEffect(() => {
-    if (!entitled || !enabled) return;
+    if (!enabled) return;
     loadKeys();
     const since = new Date(Date.now() - 7 * 86400000).toISOString();
     supabase
@@ -86,13 +70,22 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
       .eq("region", topicSlug)
       .gte("created_at", since)
       .then(({ count }) => setUsageCount(count ?? 0));
-  }, [entitled, enabled, loadKeys, topicSlug]);
+  }, [enabled, loadKeys, topicSlug]);
 
   const persist = async (patch: { mcp_enabled?: boolean; mcp_access?: "open" | "key" }) => {
     onChange(patch);
     setSaveError(false);
-    const { error } = await supabase.from("topics").update(patch as never).eq("id", topicId);
-    if (error) setSaveError(true);
+    if (typeof patch.mcp_enabled === 'boolean') {
+      const { data, error } = await supabase.rpc('set_topic_distribution' as never, {
+        p_topic_id: topicId,
+        p_field: 'mcp_enabled',
+        p_enabled: patch.mcp_enabled,
+      } as never);
+      if (error || (data as any)?.success === false) setSaveError(true);
+    } else {
+      const { error } = await supabase.from("topics").update(patch as never).eq("id", topicId);
+      if (error) setSaveError(true);
+    }
   };
 
   const createKey = async () => {
@@ -122,8 +115,6 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
     setTimeout(() => setCopied((c) => (c === tag ? null : c)), 1800);
   };
 
-  if (entitled === null || entitled === false) return null;
-
   return (
     <div className="space-y-5 py-7">
       <div className="flex items-start justify-between gap-4">
@@ -132,7 +123,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
           <div>
             <div className="flex items-center gap-2">
               <Label className="text-sm font-medium">AI assistants</Label>
-              <Badge variant="secondary" className="text-[10px]">Add-on</Badge>
+              <Badge variant="secondary" className="text-[10px]">Pro</Badge>
             </div>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
               Connect {topicName} to ChatGPT or Claude, so readers can ask questions and get answers straight from your published stories — never anyone else's.

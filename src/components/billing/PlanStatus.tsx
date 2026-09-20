@@ -4,26 +4,27 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
-
-const PLAN_LABELS: Record<string, string> = {
-  starter: 'Starter',
-  pro: 'Pro',
-  team: 'Team',
-};
+import { useCredits } from '@/hooks/useCredits';
 
 export const PlanStatus = () => {
   const { subscribed, plan, source, currentPeriodEnd, loading, refresh } = useSubscription();
   const [params, setParams] = useSearchParams();
   const [opening, setOpening] = useState(false);
   const { toast } = useToast();
+  const { credits, refreshCredits } = useCredits();
 
   // Coming back from Stripe Checkout: confirm and re-check the plan.
   useEffect(() => {
     if (params.get('checkout') === 'success') {
-      toast({ title: 'Payment received — thank you! Your plan is being confirmed.' });
+      const sessionId = params.get('session_id');
+      toast({ title: 'Payment received — confirming your access.' });
       params.delete('checkout');
+      params.delete('session_id');
       setParams(params, { replace: true });
-      const timer = setTimeout(() => refresh(), 1500);
+      const timer = setTimeout(async () => {
+        await refresh(sessionId);
+        await refreshCredits();
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [params, setParams, refresh, toast]);
@@ -45,7 +46,7 @@ export const PlanStatus = () => {
     }
   };
 
-  const planLabel = plan ? PLAN_LABELS[plan] ?? plan : null;
+  const planLabel = plan ? 'Pro' : null;
   const renews = currentPeriodEnd
     ? new Date(currentPeriodEnd).toLocaleDateString(undefined, {
         day: 'numeric',
@@ -69,13 +70,17 @@ export const PlanStatus = () => {
           </>
         ) : (
           <>
-            <span className="font-medium">Free plan</span>
-            <span className="text-muted-foreground"> · publishing and distribution need a paid plan</span>
+             <span className="font-medium">Free</span>
+             <span className="text-muted-foreground"> · your feeds stay private until you publish</span>
           </>
         )}
       </div>
 
       <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">{credits?.credits_balance ?? 0} credits</span>
+        <Button size="sm" variant="ghost" asChild>
+          <Link to="/pricing">Add credits</Link>
+        </Button>
         {subscribed && source === 'stripe' ? (
           <Button size="sm" variant="outline" onClick={openPortal} disabled={opening}>
             {opening ? 'Opening…' : 'Manage or cancel'}

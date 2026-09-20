@@ -3,7 +3,7 @@
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getUser } from '../_shared/auth.ts';
-import { planByPriceId } from '../_shared/plans.ts';
+import { MONTHLY_PRO_CREDITS, TOP_UP_CREDITS, TOP_UP_PRICE_ID, WELCOME_CREDITS, planByPriceId } from '../_shared/plans.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +28,17 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       { auth: { persistSession: false } },
     );
+
+    const { sessionId } = await req.json().catch(() => ({}));
+    const welcome = await service.rpc('grant_user_credits', {
+      p_user_id: user.id,
+      p_amount: WELCOME_CREDITS,
+      p_grant_type: 'welcome',
+      p_source_key: 'welcome:v1',
+      p_description: 'Welcome credits',
+      p_metadata: { version: 1 },
+    });
+    if (welcome.error) console.error('Welcome credit grant failed', welcome.error);
 
     const { data: row } = await service
       .from('subscribers')
@@ -54,6 +65,25 @@ Deno.serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    if (typeof sessionId === 'string' && sessionId.startsWith('cs_')) {
+      const checkout = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['line_items'] });
+      if (checkout.metadata?.user_id !== user.id) return json({ error: 'Checkout does not belong to this account.' }, 403);
+      if (checkout.mode === 'payment' && checkout.payment_status === 'paid') {
+        const purchasedTopUp = checkout.line_items?.data.some((item) => item.price?.id === TOP_UP_PRICE_ID);
+        if (purchasedTopUp) {
+          const grant = await service.rpc('grant_user_credits', {
+            p_user_id: user.id,
+            p_amount: TOP_UP_CREDITS,
+            p_grant_type: 'top_up',
+            p_source_key: `checkout:${checkout.id}`,
+            p_description: `${TOP_UP_CREDITS} credit top-up`,
+            p_metadata: { checkout_session_id: checkout.id },
+          });
+          if (grant.error || !grant.data?.success) throw grant.error || new Error(grant.data?.error || 'Credit grant failed');
+        }
+      }
+    }
+
     let customerId = row?.stripe_customer_id as string | undefined;
     if (!customerId) {
       const found = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -69,16 +99,28 @@ Deno.serve(async (req) => {
     if (customerId) {
       const subs = await stripe.subscriptions.list({
         customer: customerId,
-        status: 'active',
-        limit: 1,
+        status: 'all',
+        limit: 10,
       });
-      const sub = subs.data[0];
+      const sub = subs.data.find((candidate) => candidate.status === 'active' || candidate.status === 'trialing');
       if (sub) {
         subscribed = true;
         status = sub.status;
         subscriptionId = sub.id;
         periodEnd = new Date(sub.current_period_end * 1000).toISOString();
         plan = planByPriceId(sub.items.data[0]?.price?.id)?.id ?? null;
+        if (plan) {
+          const grant = await service.rpc('grant_user_credits', {
+            p_user_id: user.id,
+            p_amount: MONTHLY_PRO_CREDITS,
+            p_grant_type: 'subscription',
+            p_source_key: `subscription:${sub.id}:${sub.current_period_start}`,
+            p_description: 'Pro creative credits',
+            p_expires_at: periodEnd,
+            p_metadata: { subscription_id: sub.id, period_start: sub.current_period_start, period_end: sub.current_period_end },
+          });
+          if (grant.error || !grant.data?.success) console.error('Subscription credit grant failed', grant.error || grant.data);
+        }
       }
     }
 

@@ -768,15 +768,59 @@ export type Database = {
           },
         ]
       }
+      credit_grants: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          grant_type: string
+          id: string
+          metadata: Json
+          original_amount: number
+          remaining_amount: number
+          source_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          grant_type: string
+          id?: string
+          metadata?: Json
+          original_amount: number
+          remaining_amount: number
+          source_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          grant_type?: string
+          id?: string
+          metadata?: Json
+          original_amount?: number
+          remaining_amount?: number
+          source_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           created_at: string
           credits_amount: number
           credits_balance_after: number
           description: string | null
+          grant_allocations: Json
           id: string
+          idempotency_key: string | null
           metadata: Json | null
           related_story_id: string | null
+          released_at: string | null
+          settled_at: string | null
+          status: string
           transaction_type: string
           user_id: string
         }
@@ -785,9 +829,14 @@ export type Database = {
           credits_amount: number
           credits_balance_after: number
           description?: string | null
+          grant_allocations?: Json
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           related_story_id?: string | null
+          released_at?: string | null
+          settled_at?: string | null
+          status?: string
           transaction_type: string
           user_id: string
         }
@@ -796,9 +845,14 @@ export type Database = {
           credits_amount?: number
           credits_balance_after?: number
           description?: string | null
+          grant_allocations?: Json
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           related_story_id?: string | null
+          released_at?: string | null
+          settled_at?: string | null
+          status?: string
           transaction_type?: string
           user_id?: string
         }
@@ -6435,6 +6489,19 @@ export type Database = {
           visits_today: number
         }[]
       }
+      grant_user_credits: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_expires_at?: string
+          p_grant_type: string
+          p_metadata?: Json
+          p_source_key: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      has_pro_access: { Args: { p_user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -6535,6 +6602,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      release_credit_reservation: {
+        Args: {
+          p_idempotency_key: string
+          p_reason?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       remove_source_from_topic: {
         Args: { p_source_id: string; p_topic_id: string }
         Returns: boolean
@@ -6542,6 +6617,16 @@ export type Database = {
       rescore_articles_for_topic: {
         Args: { p_topic_id: string }
         Returns: undefined
+      }
+      reserve_user_credits: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_idempotency_key: string
+          p_story_id?: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       reset_stalled_processing: { Args: never; Returns: undefined }
       reset_stalled_stories: { Args: never; Returns: number }
@@ -6556,6 +6641,14 @@ export type Database = {
           deleted_count: number
           message: string
         }[]
+      }
+      set_topic_distribution: {
+        Args: { p_enabled: boolean; p_field: string; p_topic_id: string }
+        Returns: Json
+      }
+      settle_credit_reservation: {
+        Args: { p_idempotency_key: string; p_user_id: string }
+        Returns: Json
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
@@ -6626,6 +6719,10 @@ export type Database = {
       illustration_style_enum:
         | "editorial_illustrative"
         | "editorial_photographic"
+        | "cartoon"
+        | "bw_editorial_photo"
+        | "anime"
+        | "illustrated_icon"
       mp_detection_confidence: "high" | "medium" | "low"
       tone_type:
         | "formal"
@@ -6765,6 +6862,10 @@ export const Constants = {
       illustration_style_enum: [
         "editorial_illustrative",
         "editorial_photographic",
+        "cartoon",
+        "bw_editorial_photo",
+        "anime",
+        "illustrated_icon",
       ],
       mp_detection_confidence: ["high", "medium", "low"],
       tone_type: [
