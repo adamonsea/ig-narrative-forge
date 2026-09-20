@@ -2,7 +2,7 @@
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getUser } from '../_shared/auth.ts';
-import { planById, priceIdFor, type BillingInterval } from '../_shared/plans.ts';
+import { planById, priceIdFor, TOP_UP_CREDITS, TOP_UP_PRICE_ID, type BillingInterval } from '../_shared/plans.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,10 +22,11 @@ Deno.serve(async (req) => {
     const user = await getUser(req);
     if (!user?.email) return json({ error: 'Unauthorized' }, 401);
 
-    const { plan: planId, voucherCode, returnUrl, interval } = await req.json().catch(() => ({}));
+    const { plan: planId, voucherCode, returnUrl, interval, kind } = await req.json().catch(() => ({}));
     const billingInterval: BillingInterval = interval === 'year' ? 'year' : 'month';
-    const plan = planById(planId);
-    if (!plan) return json({ error: 'Unknown plan' }, 400);
+    const isTopUp = kind === 'top_up';
+    const plan = isTopUp ? null : planById(planId);
+    if (!isTopUp && !plan) return json({ error: 'Unknown plan' }, 400);
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
       apiVersion: '2023-10-16',
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
         voucher.stripe_promotion_code_id &&
         (!voucher.expires_at || new Date(voucher.expires_at) > new Date()) &&
         (voucher.max_redemptions === null || voucher.redeemed_count < voucher.max_redemptions) &&
-        (!voucher.plan || voucher.plan === plan.id);
+        (!voucher.plan || voucher.plan === plan?.id);
       if (!usable) return json({ error: 'That code cannot be used on this plan.' }, 400);
       discounts = [{ promotion_code: voucher!.stripe_promotion_code_id as string }];
     }
@@ -75,13 +76,14 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
-      line_items: [{ price: priceIdFor(plan, billingInterval), quantity: 1 }],
-      mode: 'subscription',
+      line_items: [{ price: isTopUp ? TOP_UP_PRICE_ID : priceIdFor(plan!, billingInterval), quantity: 1 }],
+      mode: isTopUp ? 'payment' : 'subscription',
       allow_promotion_codes: discounts ? undefined : true,
       discounts,
-      success_url: `${origin}/dashboard?checkout=success`,
+      success_url: `${origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing?checkout=cancelled`,
-      metadata: { user_id: user.id, plan: plan.id, interval: billingInterval, voucher_code: code || '' },
+      metadata: { user_id: user.id, kind: isTopUp ? 'top_up' : 'subscription', plan: plan?.id || '', interval: billingInterval, credits: isTopUp ? String(TOP_UP_CREDITS) : '', voucher_code: code || '' },
+      subscription_data: isTopUp ? undefined : { metadata: { user_id: user.id, plan: plan?.id || 'pro', interval: billingInterval } },
     });
 
     return json({ url: session.url });

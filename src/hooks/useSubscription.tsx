@@ -21,14 +21,16 @@ export const useSubscription = () => {
   const [state, setState] = useState<SubscriptionState>(EMPTY);
   const [loading, setLoading] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (sessionId?: string | null) => {
     if (!user) {
       setState(EMPTY);
       return;
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('check-subscription');
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        body: sessionId ? { sessionId } : {},
+      });
       if (error || !data || data.error) {
         setState(EMPTY);
         return;
