@@ -186,10 +186,15 @@ export const exportCarouselSlides = async (
           message: `Capturing slide ${i + 1} of ${totalSlides} (${format.aspect})...`
         });
 
-        const element = renderSlide(i, format.aspect);
+        const element = await renderSlide(i, format.aspect);
         if (!element) {
           throw new Error(`Failed to render slide ${i + 1}`);
         }
+
+        // Let React commit and the browser paint before capturing
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        await new Promise(resolve => setTimeout(resolve, 80));
+        await waitForImages(element);
 
         const blob = await captureElementAsImage(element, {
           width: format.width,
