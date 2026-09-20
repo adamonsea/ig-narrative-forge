@@ -36,6 +36,10 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       { auth: { persistSession: false } },
     );
+    if (isTopUp) {
+      const { data: hasPro, error: accessError } = await service.rpc('has_pro_access', { p_user_id: user.id });
+      if (accessError || !hasPro) return json({ error: 'Pro is required before you can add credits.' }, 403);
+    }
 
     // Reuse an existing Stripe customer where we can.
     let customerId: string | undefined;

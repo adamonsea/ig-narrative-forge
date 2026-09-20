@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
       if (checkout.mode === 'payment' && checkout.payment_status === 'paid') {
         const purchasedTopUp = checkout.line_items?.data.some((item) => item.price?.id === TOP_UP_PRICE_ID);
         if (purchasedTopUp) {
+          const grantMonth = new Date().toISOString().slice(0, 7);
           const grant = await service.rpc('grant_user_credits', {
             p_user_id: user.id,
             p_amount: TOP_UP_CREDITS,
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
             p_user_id: user.id,
             p_amount: MONTHLY_PRO_CREDITS,
             p_grant_type: 'subscription',
-            p_source_key: `subscription:${sub.id}:${sub.current_period_start}`,
+            p_source_key: `subscription:${sub.id}:${grantMonth}`,
             p_description: 'Pro creative credits',
             p_expires_at: periodEnd,
             p_metadata: { subscription_id: sub.id, period_start: sub.current_period_start, period_end: sub.current_period_end },

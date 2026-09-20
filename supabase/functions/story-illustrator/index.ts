@@ -1016,6 +1016,15 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
           console.log(`🕒 Queued batch illustration for story ${storyId} (batch ${batchJson.id})`)
 
+          if (reservedUserId && reservationKey) {
+            const { data: settlement, error: settlementError } = await supabase.rpc('settle_credit_reservation', {
+              p_user_id: reservedUserId,
+              p_idempotency_key: reservationKey,
+            })
+            if (settlementError || !settlement?.success) throw settlementError || new Error('Could not settle batch credit reservation')
+            reservationSettled = true
+          }
+
           return new Response(
             JSON.stringify({
               success: true,

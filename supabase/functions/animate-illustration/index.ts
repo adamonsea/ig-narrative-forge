@@ -163,10 +163,7 @@ serve(async (req) => {
 
     if (storyError) {
       console.error('❌ Story fetch error:', storyError);
-      return new Response(
-        JSON.stringify({ error: 'Story not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Story not found');
     }
 
     // Fetch first 3 slides for AI context (if using AI prompts)
@@ -245,10 +242,7 @@ serve(async (req) => {
     if (!replicateResponse.ok) {
       const errorText = await replicateResponse.text();
       console.error('❌ Replicate API error:', errorText);
-      return new Response(
-        JSON.stringify({ error: 'Replicate API request failed', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Replicate API request failed');
     }
 
     const predictionData = await replicateResponse.json();
@@ -349,7 +343,7 @@ serve(async (req) => {
     // Get updated credits balance
     const { data: updatedCredits } = await supabase
       .from('user_credits')
-      .select('current_balance')
+      .select('credits_balance')
       .eq('user_id', user.id)
       .single();
 
@@ -363,7 +357,7 @@ serve(async (req) => {
         quality: quality,
         resolution: qualityConfig.resolution,
         credits_used: isSuperAdmin ? 0 : qualityConfig.creditCost,
-        new_balance: updatedCredits?.current_balance || 0
+        new_balance: updatedCredits?.credits_balance || 0
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
