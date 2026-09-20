@@ -178,7 +178,7 @@ const Index = () => {
 
               <motion.div
                 variants={reveal}
-                className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2 text-sm"
+                className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2 text-base md:text-sm"
               >
                 <button
                   type="button"
@@ -303,7 +303,7 @@ const Index = () => {
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
                   <FeatureLoop name={f.loop} />
                   <h4 className="text-xl font-display italic mb-4 text-white">{f.title}</h4>
-                  <p className="text-sm text-white/70 leading-relaxed">{f.body}</p>
+                  <p className="text-base md:text-sm text-white/70 leading-relaxed">{f.body}</p>
                 </motion.div>
               ))}
             </div>
@@ -416,21 +416,21 @@ const Index = () => {
             <div className="grid md:grid-cols-3 gap-12">
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Local news feeds</h3>
-                <p className="text-white/70 text-sm font-light leading-relaxed">
+                <p className="text-white/70 text-base md:text-sm font-light leading-relaxed">
                   Aggregate hyperlocal news from multiple sources. Perfect for town-focused digests, community newsletters, or regional news apps.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl border border-[hsl(270,100%,68%)]/20">
                 <h3 className="text-2xl font-display text-white mb-3">Industry newsletters</h3>
-                <p className="text-white/70 text-sm font-light leading-relaxed">
+                <p className="text-white/70 text-base md:text-sm font-light leading-relaxed">
                   Curate the best content from your industry. Build authority and grow a subscriber base with zero content creation overhead.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
-                <p className="text-white/70 text-sm font-light leading-relaxed">
+                <p className="text-white/70 text-base md:text-sm font-light leading-relaxed">
                   Create engaging feeds for any interest—sports, tech, culture, or hobbies. Gamification keeps readers coming back.
                 </p>
               </motion.div>

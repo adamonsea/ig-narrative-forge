@@ -86,7 +86,7 @@ export const FeedIdeaGenerator = () => {
         </Button>
       </form>
 
-      {error && <p className="pt-4 text-center text-sm text-[hsl(0,80%,75%)]">{error}</p>}
+      {error && <p className="pt-4 text-center text-base md:text-sm text-[hsl(0,80%,75%)]">{error}</p>}
 
       <AnimatePresence>
         {blueprints.length > 0 && (
@@ -97,7 +97,7 @@ export const FeedIdeaGenerator = () => {
             transition={{ duration: 0.5 }}
             className="pt-10"
           >
-            {summary && <p className="pb-6 text-center text-white/60">{summary}</p>}
+            {summary && <p className="pb-6 text-center text-lg md:text-base text-white/60">{summary}</p>}
             <div className="grid gap-5 text-left md:grid-cols-3">
               {blueprints.map((bp, i) => (
                 <motion.div
@@ -111,7 +111,7 @@ export const FeedIdeaGenerator = () => {
                     {bp.audience_type}
                   </span>
                   <h3 className="pt-2 font-display text-2xl text-white">{bp.feed_title}</h3>
-                  <p className="pt-2 text-sm font-light leading-relaxed text-white/60">{bp.purpose}</p>
+                  <p className="pt-2 text-base md:text-sm font-light leading-relaxed text-white/60">{bp.purpose}</p>
 
                   {(bp.sample_story_hooks || []).length > 0 && (
                     <div className="flex-1 pt-4">
@@ -119,7 +119,7 @@ export const FeedIdeaGenerator = () => {
                         type="button"
                         onClick={() => toggle(i)}
                         aria-expanded={expanded.has(i)}
-                        className="flex items-center gap-1.5 text-xs text-white/50 transition-colors hover:text-white/80"
+                        className="flex items-center gap-1.5 text-sm md:text-xs text-white/50 transition-colors hover:text-white/80"
                       >
                         <ChevronDown
                           className={`h-3.5 w-3.5 transition-transform ${expanded.has(i) ? 'rotate-180' : ''}`}
@@ -129,7 +129,7 @@ export const FeedIdeaGenerator = () => {
                       {expanded.has(i) && (
                         <ul className="flex-1 space-y-2 pt-3">
                           {(bp.sample_story_hooks || []).slice(0, 3).map((hook, h) => (
-                            <li key={h} className="border-l border-white/15 pl-3 text-sm text-white/75">
+                            <li key={h} className="border-l border-white/15 pl-3 text-base md:text-sm text-white/75">
                               {hook}
                             </li>
                           ))}
