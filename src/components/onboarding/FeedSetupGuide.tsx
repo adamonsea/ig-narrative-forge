@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { PictureReferences } from "@/components/topics/PictureReferences";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { CoverageTerms } from "@/components/topics/CoverageTerms";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
@@ -221,6 +223,14 @@ export const FeedSetupGuide = ({
                 photos={(topic as any).landmark_reference_images || {}}
                 setupState={(topic as any).landmark_setup_state || {}}
                 illustrationStyle={topic.illustration_style}
+                onIllustrationStyleChange={async (style) => {
+                  onTopicChange({ illustration_style: style } as never);
+                  const { error } = await supabase
+                    .from('topics')
+                    .update({ illustration_style: style, updated_at: new Date().toISOString() } as never)
+                    .eq('id', topic.id);
+                  if (error) toast({ title: 'Could not save the picture style', description: error.message, variant: 'destructive' });
+                }}
                 onChange={(patch) => onTopicChange(patch as never)}
               />
             )}
