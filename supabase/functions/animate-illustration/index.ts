@@ -82,6 +82,13 @@ serve(async (req) => {
   try {
     console.log('🎬 Animate illustration request started');
 
+    // Validate the caller before parsing or performing any paid work.
+    const user = await getUser(req);
+    if (!user) {
+      console.warn('🚫 Unauthorized animate request (missing or invalid token)');
+      return unauthorized(corsHeaders);
+    }
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -114,12 +121,6 @@ serve(async (req) => {
 
     console.log(`📖 Story ID: ${storyId}, Quality: ${quality} (${qualityConfig.resolution}), Image: ${staticImageUrl}`);
 
-    // Validate the caller in-code (verify_jwt = false at the gateway)
-    const user = await getUser(req);
-    if (!user) {
-      console.warn('🚫 Unauthorized animate request (missing or invalid token)');
-      return unauthorized(corsHeaders);
-    }
     console.log(`👤 Authenticated user: ${user.id}`);
 
     // Check if user is superadmin (bypass credit check)

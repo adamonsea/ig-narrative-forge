@@ -125,6 +125,15 @@ serve(async (req) => {
   let reservationKey: string | null = null
   let reservationSettled = false
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authorization header required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse and validate request body
     const body = await req.json();
     const validated = requestSchema.safeParse(body);
@@ -144,16 +153,6 @@ serve(async (req) => {
     
     // Debug logging for lifecycle tracking
     console.log(`📊 Story Illustrator invoked - storyId: ${storyId}, model: ${model}, isAutomated: ${isAutomated}`);
-
-    // Get authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('Missing Authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // User-authenticated client for auth checks
     const supabaseAuth = createClient(
