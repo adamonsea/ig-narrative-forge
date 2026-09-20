@@ -26,6 +26,7 @@ interface Props {
   enabled: boolean;
   access: "open" | "key";
   onChange: (patch: { mcp_enabled?: boolean; mcp_access?: "open" | "key" }) => void;
+  onEnabledChange?: (enabled: boolean) => void;
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -39,7 +40,7 @@ function generateKey(): string {
   return `curatr_${body}`;
 }
 
-export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, access, onChange }: Props) => {
+export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, access, onChange, onEnabledChange }: Props) => {
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -76,6 +77,10 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
     onChange(patch);
     setSaveError(false);
     if (typeof patch.mcp_enabled === 'boolean') {
+      if (onEnabledChange) {
+        onEnabledChange(patch.mcp_enabled);
+        return;
+      }
       const { data, error } = await supabase.rpc('set_topic_distribution' as never, {
         p_topic_id: topicId,
         p_field: 'mcp_enabled',

@@ -433,6 +433,7 @@ export function EditorialControlCenter({
                     enabled={topic.mcp_enabled || false}
                     access={topic.mcp_access === "open" ? "open" : "key"}
                     onChange={(patch) => onTopicChange({ ...topic, ...patch })}
+                    onEnabledChange={(checked) => onChannelToggle("mcp_enabled", checked, "AI assistants")}
                   />
                 </div>
                 <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
