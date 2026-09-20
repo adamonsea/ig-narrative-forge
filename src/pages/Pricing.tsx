@@ -1,377 +1,117 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check } from 'lucide-react';
-import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { supabase } from '@/integrations/supabase/client';
+import { PRO_MONTHLY_CREDITS, TOP_UP_CREDITS } from '@/lib/billing';
 
-interface PricingTier {
-  id: string;
-  name: string;
-  price: number;
-  credits: string;
-  description: string;
-  features: string[];
-  highlight?: boolean;
-  accentColor: string;
-}
-
-const tiers: PricingTier[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: 19,
-    credits: '500 AI credits/mo',
-    description: 'Perfect for individual creators getting started',
-    accentColor: 'hsl(155,100%,67%)',
-    features: [
-      'Up to 3 feeds',
-      'AI content simplification',
-      'Basic analytics',
-      'Source management',
-      'Email support',
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: 49,
-    credits: '2,000 AI credits/mo',
-    description: 'For serious curators building engaged audiences',
-    accentColor: 'hsl(270,100%,68%)',
-    highlight: true,
-    features: [
-      'Unlimited feeds',
-      'AI illustrations & visuals',
-      'Play Mode gamification',
-      'Quiz card generation',
-      'Community insights',
-      'Advanced analytics',
-      'Priority support',
-    ],
-  },
-  {
-    id: 'team',
-    name: 'Team',
-    price: 149,
-    credits: '10,000 AI credits/mo',
-    description: 'For organizations with multiple editorial teams',
-    accentColor: 'hsl(155,100%,67%)',
-    features: [
-      'Everything in Pro',
-      'Team collaboration',
-      'Multiple workspaces',
-      'Custom branding',
-      'API access',
-      'Dedicated account manager',
-      'SLA guarantee',
-    ],
-  },
+const features = [
+  'Publish public feeds',
+  'RSS, email, widgets and AI assistant access',
+  'All image styles and creative tools',
+  `${PRO_MONTHLY_CREDITS} creative credits each month`,
 ];
 
-const Pricing = () => {
-  // Features advertised in tiers that are not yet built — labelled honestly as "Planned".
-  const PLANNED_FEATURES = new Set<string>([
-    'API access',
-    'Team collaboration',
-    'Multiple workspaces',
-    'Custom branding',
-    'Dedicated account manager',
-    'SLA guarantee',
-  ]);
-
+export default function Pricing() {
+  const [interval, setInterval] = useState<'month' | 'year'>('month');
   const [voucher, setVoucher] = useState('');
   const [voucherNote, setVoucherNote] = useState<string | null>(null);
-  const [checkingVoucher, setCheckingVoucher] = useState(false);
-  const [startingPlan, setStartingPlan] = useState<string | null>(null);
-  const [interval, setInterval] = useState<'month' | 'year'>('month');
-
+  const [busy, setBusy] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
-
   usePageFavicon();
 
-
-  const subscribe = async (tier: PricingTier) => {
+  const checkout = async (kind: 'subscription' | 'top_up') => {
     if (!user) {
-      toast({ title: 'Please sign in first — then pick your plan.' });
-      navigate('/auth?redirect=/pricing');
+      const destination = `/pricing${searchParams.toString() ? `?${searchParams}` : ''}`;
+      navigate(`/auth?redirect=${encodeURIComponent(destination)}`);
       return;
     }
-    setStartingPlan(tier.id);
+    setBusy(kind);
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          plan: tier.id,
-          interval,
-          voucherCode: voucher.trim() || undefined,
-          returnUrl: window.location.origin,
-        },
+        body: { kind, plan: 'pro', interval, voucherCode: kind === 'subscription' ? voucher.trim() || undefined : undefined, returnUrl: window.location.origin },
       });
-      let message: string | null = data?.error ?? null;
-      if (error && !message) {
-        try {
-          message = (await (error as any).context?.json())?.error ?? null;
-        } catch {
-          message = null;
-        }
-      }
-      if (message || !data?.url) {
-        toast({
-          title: message || 'Could not start checkout. Please try again.',
-          variant: 'destructive',
-        });
+      if (error || !data?.url) {
+        toast({ title: data?.error || 'Could not open checkout.', variant: 'destructive' });
         return;
       }
-      window.location.href = data.url as string;
+      window.location.href = data.url;
     } finally {
-      setStartingPlan(null);
+      setBusy(null);
     }
   };
 
   const applyVoucher = async () => {
-    if (!user) {
-      navigate('/auth?redirect=/pricing');
-      return;
-    }
-    setCheckingVoucher(true);
-    setVoucherNote(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('redeem-voucher', {
-        body: { code: voucher.trim() },
-      });
-      if (error || data?.error) {
-        setVoucherNote(data?.error || 'Could not check that code right now.');
-        return;
-      }
-      setVoucherNote(data.message);
-      if (data.applied) {
-        toast({ title: data.message });
-        setTimeout(() => navigate('/dashboard'), 1200);
-      }
-    } finally {
-      setCheckingVoucher(false);
-    }
+    if (!user) return navigate('/auth?redirect=/pricing');
+    setBusy('voucher');
+    const { data, error } = await supabase.functions.invoke('redeem-voucher', { body: { code: voucher.trim() } });
+    setBusy(null);
+    if (error || data?.error) return setVoucherNote(data?.error || 'That code could not be checked.');
+    setVoucherNote(data.message);
+    if (data.applied) setTimeout(() => navigate(searchParams.get('returnTo') || '/dashboard'), 800);
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(214,50%,9%)]">
+    <div className="min-h-screen bg-[hsl(214,50%,9%)] text-white">
       <Helmet>
         <title>Pricing — Curatr</title>
-        <meta name="description" content="Curatr pricing plans for curators building niche feeds — Starter, Pro, and team tiers with AI credits and analytics." />
+        <meta name="description" content="Create and curate for free. Publish with Curatr Pro for $19 a month." />
         <link rel="canonical" href="https://curatr.pro/pricing" />
-        <meta property="og:title" content="Pricing — Curatr" />
-        <meta property="og:description" content="Plans for curators building niche feeds, with AI credits, analytics, and source management." />
-        <meta property="og:url" content="https://curatr.pro/pricing" />
-        <meta property="og:type" content="website" />
       </Helmet>
-      {/* Background gradients */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[hsl(270,80%,25%)] rounded-full blur-[150px] opacity-20" />
-        <div className="absolute bottom-1/4 left-1/3 w-[500px] h-[500px] bg-[hsl(270,100%,68%)] rounded-full blur-[180px] opacity-10" />
-        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-[hsl(155,100%,67%)] rounded-full blur-[160px] opacity-5" />
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 right-0 h-[620px] w-[620px] rounded-full bg-violet-700/20 blur-[150px]" />
+        <div className="absolute bottom-0 left-1/4 h-[440px] w-[440px] rounded-full bg-emerald-300/10 blur-[150px]" />
       </div>
+      <header className="relative container mx-auto flex max-w-6xl items-center justify-between px-6 py-8">
+        <Link to="/" className="font-logo text-3xl font-semibold">Curatr<span className="text-xl opacity-70">.pro</span></Link>
+        <Button asChild variant="ghost" className="rounded-full border border-white/15 text-white hover:bg-white/10"><Link to={user ? '/dashboard' : '/auth'}>{user ? 'Your feeds' : 'Sign in'}</Link></Button>
+      </header>
+      <main className="relative container mx-auto max-w-5xl px-6 pb-24 pt-10">
+        <section className="mx-auto max-w-2xl text-center">
+          <p className="mb-4 text-sm font-medium text-emerald-300">Free to create and curate.</p>
+          <h1 className="font-display text-5xl tracking-tight md:text-6xl">Pay when you publish.</h1>
+          <p className="mx-auto mt-5 max-w-xl text-lg text-white/65">One plan. Every distribution channel. Creative credits included.</p>
+        </section>
 
-      <div className="relative z-10">
-        {/* Header */}
-        <header className="container mx-auto px-6 py-8">
-          <nav className="flex justify-between items-center max-w-7xl mx-auto">
-            <Link to="/" className="text-3xl font-logo font-semibold tracking-tight text-white">
-              Curatr<span className="text-xl opacity-70">.pro</span>
-            </Link>
-            <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30">
-              <Link to="/auth">Sign in</Link>
-            </Button>
-          </nav>
-        </header>
+        <section className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-8">
+            <p className="text-sm text-white/55">Free</p>
+            <div className="mt-3 text-4xl font-semibold">$0</div>
+            <p className="mt-4 text-white/60">Build your feeds privately. Try premium images with welcome credits.</p>
+            <Button asChild variant="outline" className="mt-8 w-full rounded-full border-white/20 bg-transparent text-white hover:bg-white/10"><Link to={user ? '/dashboard' : '/auth'}>Start creating</Link></Button>
+          </div>
 
-        <main className="container mx-auto px-6 pb-24">
-          {/* Hero */}
-          <section className="max-w-4xl mx-auto text-center py-16 space-y-6">
-            <h1 className="text-5xl md:text-6xl font-display font-normal tracking-tight text-white">
-              Simple, transparent pricing
-            </h1>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
-              Choose the plan that fits your needs. All plans include AI-powered curation tools with flexible credit allocation.
-            </p>
-            <div className="inline-block bg-[hsl(270,100%,68%)]/10 border border-[hsl(270,100%,68%)]/30 rounded-full px-5 py-2">
-              <p className="text-sm text-white/70">
-                Cancel any time. Features marked “Planned” are still being built.
-              </p>
+          <div className="rounded-3xl border border-emerald-300/45 bg-white/[0.06] p-8 shadow-2xl shadow-violet-950/30">
+            <div className="flex items-center justify-between"><p className="text-sm text-emerald-300">Pro</p><span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs text-emerald-200">Cancel any time</span></div>
+            <div className="mt-3 flex items-baseline gap-2"><span className="text-4xl font-semibold">${interval === 'year' ? '190' : '19'}</span><span className="text-white/50">/{interval === 'year' ? 'year' : 'month'}</span></div>
+            <div className="mt-5 inline-flex rounded-full border border-white/15 bg-black/15 p-1 text-sm">
+              <button onClick={() => setInterval('month')} className={`rounded-full px-4 py-2 ${interval === 'month' ? 'bg-white text-slate-950' : 'text-white/60'}`}>Monthly</button>
+              <button onClick={() => setInterval('year')} className={`rounded-full px-4 py-2 ${interval === 'year' ? 'bg-white text-slate-950' : 'text-white/60'}`}>Yearly · 2 months free</button>
             </div>
-          </section>
+            <ul className="mt-7 space-y-3">{features.map((item) => <li key={item} className="flex gap-3 text-sm text-white/75"><Check className="h-5 w-5 shrink-0 text-emerald-300" />{item}</li>)}</ul>
+            <Button onClick={() => checkout('subscription')} disabled={busy !== null} className="mt-8 w-full rounded-full bg-emerald-300 text-slate-950 hover:bg-emerald-200">{busy === 'subscription' ? 'Opening checkout…' : 'Unlock with Pro'}</Button>
+          </div>
+        </section>
 
-          {/* Credit explainer */}
-          <section className="max-w-3xl mx-auto mb-16">
-            <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-[hsl(270,100%,68%)]/20">
-              <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">How AI credits work</h3>
-                  <p className="text-white/60 text-sm leading-relaxed">
-                    Credits power AI features like content simplification, illustration generation, quiz creation, and sentiment analysis. 
-                    Usage varies by feature—simple summaries use fewer credits, while image generation uses more. 
-                    Unused credits don't roll over, but you can always add more.
-                  </p>
-              </div>
-            </div>
-          </section>
+        {user && <section className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:flex md:items-center md:justify-between">
+          <div><h2 className="font-medium">Need more creative credits?</h2><p className="mt-1 text-sm text-white/55">Add {TOP_UP_CREDITS} credits for $10. Top-ups do not expire.</p></div>
+          <Button onClick={() => checkout('top_up')} disabled={busy !== null} variant="outline" className="mt-4 rounded-full border-white/20 bg-transparent text-white hover:bg-white/10 md:mt-0">{busy === 'top_up' ? 'Opening…' : 'Add credits'}</Button>
+        </section>}
 
-          {/* Billing interval toggle */}
-          <section className="max-w-6xl mx-auto mb-10 flex justify-center">
-            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/15">
-              <button
-                type="button"
-                onClick={() => setInterval('month')}
-                aria-pressed={interval === 'month'}
-                className={`px-5 h-10 rounded-full text-sm font-medium transition-colors ${
-                  interval === 'month' ? 'bg-white text-[hsl(214,50%,9%)]' : 'text-white/70 hover:text-white'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setInterval('year')}
-                aria-pressed={interval === 'year'}
-                className={`px-5 h-10 rounded-full text-sm font-medium transition-colors ${
-                  interval === 'year' ? 'bg-white text-[hsl(214,50%,9%)]' : 'text-white/70 hover:text-white'
-                }`}
-              >
-                Yearly
-                <span className="ml-2 text-xs text-[hsl(155,100%,45%)]">2 months free</span>
-              </button>
-            </div>
-          </section>
-
-          {/* Pricing cards */}
-          <section className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-3 gap-8">
-              {tiers.map((tier) => (
-                <div
-                  key={tier.name}
-                  className={`relative rounded-3xl p-8 ${
-                    tier.highlight
-                      ? 'bg-[hsl(214,50%,14%)] border-2 border-[hsl(270,100%,68%)]/50'
-                      : 'bg-[hsl(214,50%,12%)] border border-white/10'
-                  }`}
-                >
-                  {tier.highlight && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-[hsl(270,100%,68%)] rounded-full text-sm font-medium text-white">
-                      Most popular
-                    </div>
-                  )}
-                  
-                  <div className="space-y-6">
-                    <h3 className="text-2xl font-semibold text-white">{tier.name}</h3>
-
-                    {/* Price */}
-                    <div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-white">
-                          ${interval === 'year' ? tier.price * 10 : tier.price}
-                        </span>
-                        <span className="text-white/50">{interval === 'year' ? '/year' : '/month'}</span>
-                      </div>
-                      {interval === 'year' && (
-                        <div className="text-xs text-white/50 mt-1">
-                          ${tier.price}/month billed monthly — save ${tier.price * 2} a year
-                        </div>
-                      )}
-                      <div className="text-sm mt-1" style={{ color: tier.accentColor }}>
-                        {tier.credits}
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-white/60 text-sm">{tier.description}</p>
-
-                    {/* CTA Button */}
-                    <Button
-                      onClick={() => subscribe(tier)}
-                      disabled={startingPlan === tier.id}
-                      className={`w-full h-12 rounded-full font-medium ${
-                        tier.highlight
-                          ? 'bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white'
-                          : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                      }`}
-                    >
-                      {startingPlan === tier.id ? 'Opening checkout…' : `Choose ${tier.name}`}
-                    </Button>
-
-                    {/* Features */}
-                    <ul className="space-y-3 pt-4 border-t border-white/10">
-                      {tier.features.map((feature) => {
-                        const isPlanned = PLANNED_FEATURES.has(feature);
-                        return (
-                          <li key={feature} className="flex items-start gap-3">
-                            <Check 
-                              className="h-5 w-5 shrink-0 mt-0.5" 
-                              style={{ color: isPlanned ? 'hsl(0,0%,60%)' : tier.accentColor }}
-                            />
-                            <span className="text-white/70 text-sm">
-                              {feature}
-                              {isPlanned && (
-                                <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white/40 border border-white/20 rounded px-1.5 py-0.5 align-middle">
-                                  Planned
-                                </span>
-                              )}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Voucher code */}
-          <section className="max-w-xl mx-auto mt-16">
-            <div className="bg-[hsl(214,50%,12%)] rounded-2xl p-6 border border-white/10 space-y-3">
-              <h3 className="text-lg font-semibold text-white">Have a code?</h3>
-              <p className="text-white/60 text-sm">
-                Enter it here. Free-access codes unlock your plan straight away; money-off codes are
-                applied when you choose a plan above.
-              </p>
-              <div className="flex gap-3">
-                <Input
-                  value={voucher}
-                  onChange={(e) => setVoucher(e.target.value.toUpperCase())}
-                  placeholder="FOUNDER50"
-                  className="h-12 rounded-full bg-white/5 border-white/20 text-white placeholder:text-white/30"
-                />
-                <Button
-                  onClick={applyVoucher}
-                  disabled={checkingVoucher || voucher.trim().length < 3}
-                  className="h-12 rounded-full px-6 bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                >
-                  {checkingVoucher ? 'Checking…' : 'Apply'}
-                </Button>
-              </div>
-              {voucherNote && <p className="text-sm text-white/70">{voucherNote}</p>}
-            </div>
-          </section>
-
-
-
-          {/* FAQ or extra info */}
-          <section className="max-w-2xl mx-auto text-center mt-20">
-            <p className="text-white/50">
-              Need a custom plan or bespoke data pipelines?{' '}
-              <a href="mailto:hello@curatr.pro" className="text-[hsl(270,100%,68%)] hover:underline">
-                Talk to us
-              </a>
-            </p>
-          </section>
-        </main>
-      </div>
+        <section className="mx-auto mt-12 max-w-xl text-center">
+          <p className="text-sm text-white/55">Have a code?</p>
+          <div className="mt-3 flex gap-2"><Input value={voucher} onChange={(event) => setVoucher(event.target.value.toUpperCase())} placeholder="Enter code" className="rounded-full border-white/15 bg-white/5 text-white" /><Button onClick={applyVoucher} disabled={busy !== null || voucher.trim().length < 3} variant="outline" className="rounded-full border-white/20 bg-transparent text-white hover:bg-white/10">Apply</Button></div>
+          {voucherNote && <p className="mt-2 text-sm text-white/65">{voucherNote}</p>}
+        </section>
+      </main>
     </div>
   );
-};
-
-export default Pricing;
+}

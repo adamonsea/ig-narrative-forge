@@ -80,75 +80,6 @@ export const useCredits = () => {
     }
   };
 
-  const addCredits = async (amount: number, description?: string) => {
-    if (!user) return false;
-
-    try {
-      const { data, error } = await supabase.rpc('add_user_credits', {
-        p_user_id: user.id,
-        p_credits_amount: amount,
-        p_transaction_type: 'purchase',
-        p_description: description || 'Credits purchased'
-      });
-
-      if (error) {
-        console.error('Error adding credits:', error);
-        toast.error('Failed to add credits');
-        return false;
-      }
-
-      const result = data as { success: boolean; error?: string; new_balance?: number };
-      if (result.success) {
-        toast.success(`Added ${amount} credits successfully`);
-        await fetchCredits();
-        await fetchTransactions();
-        return true;
-      } else {
-        toast.error(result.error || 'Failed to add credits');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error adding credits:', error);
-      toast.error('Failed to add credits');
-      return false;
-    }
-  };
-
-  const deductCredits = async (amount: number, description?: string, storyId?: string) => {
-    if (!user) return false;
-
-    try {
-      const { data, error } = await supabase.rpc('deduct_user_credits', {
-        p_user_id: user.id,
-        p_credits_amount: amount,
-        p_description: description || 'Credits used',
-        p_story_id: storyId
-      });
-
-      if (error) {
-        console.error('Error deducting credits:', error);
-        return false;
-      }
-
-      const result = data as { success: boolean; error?: string; current_balance?: number; new_balance?: number };
-      if (result.success) {
-        await fetchCredits();
-        await fetchTransactions();
-        return true;
-      } else {
-        if (result.error === 'Insufficient credits') {
-          toast.error(`Insufficient credits. You need ${amount} credits but only have ${result.current_balance}.`);
-        } else {
-          toast.error(result.error || 'Failed to deduct credits');
-        }
-        return false;
-      }
-    } catch (error) {
-      console.error('Error deducting credits:', error);
-      return false;
-    }
-  };
-
   useEffect(() => {
     fetchCredits();
     fetchTransactions();
@@ -158,8 +89,6 @@ export const useCredits = () => {
     credits,
     transactions,
     loading,
-    addCredits,
-    deductCredits,
     refreshCredits: fetchCredits,
     refreshTransactions: fetchTransactions
   };
