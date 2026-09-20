@@ -26,7 +26,7 @@ const QUALITY_CONFIGS: Record<AnimationQuality, QualityConfig> = {
     modelVersion: '9c49fe41d6b2a0e62199dc96bee4a9dd3565a4c563f9b80998358f14322c34f6',
     modelSlug: 'wan-video/wan-2.2-i2v-a14b',
     resolution: '720p',
-    creditCost: 2,
+    creditCost: 50,
     estimatedApiCost: '$1.00',
   },
   fast: {
@@ -34,8 +34,8 @@ const QUALITY_CONFIGS: Record<AnimationQuality, QualityConfig> = {
     modelVersion: 'febae7d9656309cf8c5df4842b27ae4768c0e47a0e1ce443a5ae81f896956134',
     modelSlug: 'wan-video/wan-2.2-i2v-fast',
     resolution: '480p',
-    creditCost: 1,
-    estimatedApiCost: '$0.05',
+    creditCost: 8,
+    estimatedApiCost: '$0.08',
   },
 };
 

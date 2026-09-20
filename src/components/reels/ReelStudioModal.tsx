@@ -15,6 +15,7 @@ import { StoryReelPreview } from './StoryReelPreview';
 import { buildReelContent } from './storyReelContent';
 import { recordReel, exportReelSlides } from './recordReel';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ReelStudioStory {
   id: string;
@@ -62,10 +63,33 @@ export const ReelStudioModal = ({
   const handleRender = async () => {
     if (rendering) return;
     setRendering(true);
+    const idempotencyKey = `story_reel:${story.id}:${Date.now()}`;
+    let reserved = false;
     try {
+      const { data: charge, error: chargeError } = await supabase.functions.invoke(
+        'charge-studio-action',
+        { body: { action: 'story_reel', storyId: story.id, phase: 'reserve', idempotencyKey } }
+      );
+      if (chargeError || !charge?.success) {
+        throw new Error(charge?.error || 'Not enough credits to render this reel.');
+      }
+      reserved = (charge?.credits_used ?? 0) > 0;
+
       await recordReel(content);
+
+      if (reserved) {
+        await supabase.functions.invoke('charge-studio-action', {
+          body: { action: 'story_reel', storyId: story.id, phase: 'settle', idempotencyKey },
+        });
+        reserved = false;
+      }
       toast({ title: 'Reel downloaded', description: 'Your teaser video has been saved.' });
     } catch (err) {
+      if (reserved) {
+        await supabase.functions.invoke('charge-studio-action', {
+          body: { action: 'story_reel', storyId: story.id, phase: 'release', idempotencyKey },
+        });
+      }
       console.error('Reel render failed:', err);
       toast({
         title: 'Render failed',

@@ -1,7 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 
-/** Legacy display-only reel cost. Charging must happen on the server. */
-export const CREDIT_COSTS = { STORY_REEL: 4 } as const;
+import { REEL_CREDIT_COST } from '@/lib/billing';
+
+/** Display-only mirror of the server rate card. Charging happens server-side. */
+export const CREDIT_COSTS = { STORY_REEL: REEL_CREDIT_COST } as const;
 
 export class CreditService {
   static async getUserCredits(userId: string) {

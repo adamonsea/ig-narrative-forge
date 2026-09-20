@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles } from 'lucide-react';
+import { ANIMATION_CREDIT_COSTS } from '@/lib/billing';
 
 export type AnimationQuality = 'standard' | 'fast';
 
@@ -35,7 +36,8 @@ interface AnimationInstructionsModalProps {
   isAdmin: boolean;
 }
 
-const ANIMATION_CREDITS = 2; // Comparable to low-tier image generation
+// Animation always runs on the fast (480p) tier from this dialog.
+const ANIMATION_CREDITS = ANIMATION_CREDIT_COSTS.fast;
 
 export function AnimationInstructionsModal({
   isOpen,
