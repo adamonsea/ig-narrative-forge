@@ -43,4 +43,4 @@ Membership, premium triggers and credits
 - [x] Gate distribution consistently and preserve interrupted actions
 - [x] Add Cartoon, Aged editorial photo, Anime and Illustrated icon styles
 - [x] Unify low-cognitive-load billing and credit messaging
-- [ ] Verify checkout, renewal, cancellation, vouchers, failures and mobile access
+- [x] Verify checkout, renewal, cancellation, vouchers, failures and mobile access
