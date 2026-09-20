@@ -224,21 +224,21 @@ serve(async (req) => {
       'gpt-image-2-high': {
         provider: 'openai',
         quality: 'high',
-        credits: 10,
+        credits: 17,
         cost: 0.165,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-2-medium': {
         provider: 'openai',
         quality: 'medium',
-        credits: 5,
+        credits: 4,
         cost: 0.041,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-2-low': {
         provider: 'openai',
         quality: 'low',
-        credits: 2,
+        credits: 1,
         cost: 0.006,
         stylePrefix: 'cinematic and editorial style, '
       },
