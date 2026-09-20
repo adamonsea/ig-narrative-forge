@@ -57,6 +57,9 @@ interface StoryWithCaption {
   caption: string | null;
 }
 
+/** Unified rate card: 30 credits per audio briefing (~50% margin). */
+const AUDIO_BRIEFING_CREDITS = 30;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -81,6 +84,10 @@ serve(async (req) => {
   }
   
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  let creditsReserved = false;
+  let creditOwnerId: string | null = null;
+  let creditKey: string | null = null;
 
   try {
     const body = await req.json();
@@ -193,6 +200,29 @@ serve(async (req) => {
       ? script.substring(0, maxChars - 50) + "... That's your briefing. Have a great day!"
       : script;
 
+    // Reserve credits from the feed owner (rate card: 30 credits per briefing)
+    const reservationKey = `audio_briefing:${roundupId}:${style}`;
+    creditOwnerId = topic.created_by;
+    creditKey = reservationKey;
+    const { data: reservation, error: reservationError } = await supabase.rpc('reserve_user_credits', {
+      p_user_id: topic.created_by,
+      p_amount: AUDIO_BRIEFING_CREDITS,
+      p_idempotency_key: reservationKey,
+      p_description: `Audio briefing (${style}) for ${topic.name}`,
+      p_story_id: null,
+    });
+    if (reservationError || !reservation?.success) {
+      console.error('❌ Credit reservation failed:', reservationError?.message || reservation?.error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: reservation?.error || 'Not enough credits for an audio briefing.',
+      }), {
+        status: 402,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    creditsReserved = true;
+
     // Call ElevenLabs TTS API
     console.log(`🔊 Calling ElevenLabs TTS API (${trimmedScript.length} chars)...`);
     const ttsResponse = await fetch(
@@ -278,6 +308,15 @@ serve(async (req) => {
       },
     }).then(() => {}).catch(console.warn);
 
+    const { data: settlement, error: settlementError } = await supabase.rpc('settle_credit_reservation', {
+      p_user_id: topic.created_by,
+      p_idempotency_key: reservationKey,
+    });
+    if (settlementError || !settlement?.success) {
+      console.error('⚠️ Credit settlement failed:', settlementError?.message || settlement?.error);
+    }
+    creditsReserved = false;
+
     console.log(`✅ Audio briefing (${style}) complete: ${roundupId}`);
 
     return new Response(JSON.stringify({
@@ -292,6 +331,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Audio briefing generation error:', error);
+
+    if (creditsReserved && creditOwnerId && creditKey) {
+      await supabase.rpc('release_credit_reservation', {
+        p_user_id: creditOwnerId,
+        p_idempotency_key: creditKey,
+      });
+    }
     
     return new Response(JSON.stringify({
       success: false,
