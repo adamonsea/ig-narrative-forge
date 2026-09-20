@@ -5,7 +5,7 @@ import { Resend } from 'npm:resend@4.0.0';
 import { renderAsync } from 'npm:@react-email/components@0.0.22';
 import { DailyRoundupEmail } from './_templates/daily-roundup.tsx';
 import { WeeklyRoundupEmail } from './_templates/weekly-roundup.tsx';
-import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden } from '../_shared/auth.ts';
+import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProAccess } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -132,12 +132,18 @@ serve(async (req) => {
     // Get topic details
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, slug, branding_config, events_enabled')
+      .select('id, name, slug, branding_config, events_enabled, created_by, email_subscriptions_enabled')
       .eq('id', topicId)
       .single();
 
     if (topicError || !topic) {
       throw new Error(`Topic not found: ${topicError?.message}`);
+    }
+    if (!topic.email_subscriptions_enabled || !(await hasProAccess(supabase, topic.created_by))) {
+      return new Response(JSON.stringify({ success: false, error: 'Pro access is required to send this newsletter.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Use optimized email variant or fallback

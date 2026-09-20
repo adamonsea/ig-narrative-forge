@@ -55,7 +55,7 @@ export const VoucherCodesPanel = () => {
 
   const [code, setCode] = useState('');
   const [kind, setKind] = useState<'free_access' | 'discount'>('free_access');
-  const [plan, setPlan] = useState('pro');
+  const plan = 'pro';
   const [freeMonths, setFreeMonths] = useState('3');
   const [percentOff, setPercentOff] = useState('50');
   const [amountOff, setAmountOff] = useState('');

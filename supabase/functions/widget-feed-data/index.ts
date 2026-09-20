@@ -82,7 +82,7 @@ serve(async (req) => {
       // - exact name match (case-insensitive)
       const { data: topic, error: topicError } = await supabase
         .from('topics')
-        .select('id, name, slug, region, branding_config')
+        .select('id, name, slug, region, branding_config, created_by, public_widget_builder_enabled')
         .eq('is_public', true)
         .eq('is_archived', false)
         .or(`slug.eq.${feedSlug},region.ilike.${feedSlug},name.ilike.${feedSlug}`)
@@ -97,6 +97,10 @@ serve(async (req) => {
           JSON.stringify({ error: 'Feed not found', feed: feedSlug }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+      const { data: hasPro } = await supabase.rpc('has_pro_access', { p_user_id: topic.created_by });
+      if (!topic.public_widget_builder_enabled || !hasPro) {
+        return new Response(JSON.stringify({ error: 'Widget not available', feed: feedSlug }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       // Source discovery mode: list publications recently seen in this feed

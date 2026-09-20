@@ -258,12 +258,14 @@ Deno.serve(async (req) => {
 
     const { data: topic } = await supabase
       .from("topics")
-      .select("id, name, slug, description, mcp_enabled, mcp_access, is_active, is_public")
+      .select("id, name, slug, description, mcp_enabled, mcp_access, is_active, is_public, created_by")
       .eq("slug", slug)
       .eq("is_active", true)
       .maybeSingle();
 
     if (!topic || !topic.mcp_enabled) return json({ error: "This feed is not available to AI assistants" }, 404);
+    const { data: hasPro } = await supabase.rpc('has_pro_access', { p_user_id: topic.created_by });
+    if (!hasPro) return json({ error: 'This feed is not available to AI assistants' }, 404);
 
     if (topic.mcp_access === "key") {
       const auth = req.headers.get("authorization") || "";

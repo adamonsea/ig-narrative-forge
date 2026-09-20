@@ -64,43 +64,21 @@ Deno.serve(async (req) => {
     }
 
     // Free access: grant the plan straight away.
-    const plan = planById(voucher.plan) ?? planById('pro')!;
-    const months = voucher.free_months && voucher.free_months > 0 ? voucher.free_months : 1;
-    const end = new Date();
-    end.setMonth(end.getMonth() + months);
-
-    const { error: redeemError } = await service.from('voucher_redemptions').insert({
-      voucher_code_id: voucher.id,
-      user_id: user.id,
-      email: user.email,
+    const plan = planById(voucher.plan) ?? planById('pro');
+    if (!plan) return invalid;
+    const { data: redemption, error: redeemError } = await service.rpc('redeem_free_access_voucher', {
+      p_user_id: user.id,
+      p_email: user.email,
+      p_code: code,
     });
-    if (redeemError) return json({ error: 'You have already used that code.' }, 400);
-
-    await service.from('subscribers').upsert(
-      {
-        user_id: user.id,
-        email: user.email,
-        subscribed: true,
-        plan: plan.id,
-        status: 'voucher',
-        source: 'voucher',
-        voucher_code_id: voucher.id,
-        current_period_end: end.toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    );
-
-    await service
-      .from('voucher_codes')
-      .update({ redeemed_count: (voucher.redeemed_count ?? 0) + 1 })
-      .eq('id', voucher.id);
+    if (redeemError || !redemption?.success) return json({ error: redemption?.error || 'That code could not be applied.' }, 400);
+    const months = redemption.months;
 
     return json({
       applied: true,
       kind: 'free_access',
       plan: plan.id,
-      current_period_end: end.toISOString(),
+      current_period_end: redemption.current_period_end,
       message: `${plan.name} unlocked for ${months} month${months === 1 ? '' : 's'}.`,
     });
   } catch (e) {
