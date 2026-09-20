@@ -132,10 +132,11 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
               <DialogTitle className="font-display mt-6 text-4xl italic tracking-tight text-white">
                 Save your feed
               </DialogTitle>
-              <DialogDescription className="mt-3 text-sm leading-relaxed text-[hsl(214,20%,70%)]">
-                {blueprint
-                  ? `Create an account to build “${blueprint.feed_title}”.`
-                  : 'Create an account to start building.'}
+              {blueprint && (
+                <p className="mt-3 text-base font-medium text-white">“{blueprint.feed_title}”</p>
+              )}
+              <DialogDescription className="mt-2 text-sm text-[hsl(214,20%,70%)]">
+                Free to create and curate.
               </DialogDescription>
             </div>
 
@@ -198,9 +199,6 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
                 </span>
               </button>
 
-              <p className="pt-1 text-center text-sm md:text-xs text-white/40">
-                Free to create and curate — you only pay when you publish.
-              </p>
             </form>
           </div>
         )}
