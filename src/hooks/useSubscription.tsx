@@ -48,6 +48,13 @@ export const useSubscription = () => {
 
   useEffect(() => {
     refresh();
+    const interval = window.setInterval(() => refresh(), 60_000);
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [refresh]);
 
   return { ...state, loading, refresh };

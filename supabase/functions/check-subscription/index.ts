@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
         periodEnd = new Date(sub.current_period_end * 1000).toISOString();
         plan = planByPriceId(sub.items.data[0]?.price?.id)?.id ?? null;
         if (plan) {
+          const grantMonth = new Date().toISOString().slice(0, 7);
           const grant = await service.rpc('grant_user_credits', {
             p_user_id: user.id,
             p_amount: MONTHLY_PRO_CREDITS,

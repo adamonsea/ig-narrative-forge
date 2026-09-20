@@ -410,7 +410,7 @@ export function EditorialControlCenter({
 
             {section === "distribution" && (
               <div className="divide-y divide-border border-y border-border">
-                <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} disabled />
+                <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
                 <ChannelRow icon={Mail} label="Email" description={`${stats.email_subscribers_total || 0} subscribers`} checked={topic.email_subscriptions_enabled || false} onCheckedChange={(checked) => onChannelToggle("email_subscriptions_enabled", checked, "Email subscriptions")} />
                 {topic.email_subscriptions_enabled && <div className="py-6"><NewsletterSignupsManager topicId={topic.id} /></div>}
                 <ChannelRow icon={Rss} label="RSS" description="A live feed for reader apps" checked={topic.rss_enabled || false} onCheckedChange={(checked) => onChannelToggle("rss_enabled", checked, "RSS feed")} />

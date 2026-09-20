@@ -24,7 +24,7 @@ serve(async (req) => {
     // Get all active topics
     const { data: topics, error: topicsError } = await supabase
       .from('topics')
-      .select('id, name, slug')
+      .select('id, name, slug, created_by, email_subscriptions_enabled')
       .eq('is_active', true);
 
     if (topicsError || !topics) {
@@ -41,9 +41,17 @@ serve(async (req) => {
         push: { success: false },
         email: { success: false }
       };
+      const { data: hasPro } = await supabase.rpc('has_pro_access', { p_user_id: topic.created_by });
+      if (!hasPro) {
+        topicResults.email.error = 'Pro inactive';
+        topicResults.push.error = 'Pro inactive';
+        results.push(topicResults);
+        continue;
+      }
 
       // === PUSH NOTIFICATIONS ===
       try {
+        if (!topic.email_subscriptions_enabled) throw new Error('Email disabled');
         const pushBody: any = {
           topicId: topic.id,
           notificationType: notification_type
