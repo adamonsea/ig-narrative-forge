@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronDown, ImageIcon, Loader2, Sparkles } from 'lucide-react';
-import { ILLUSTRATION_STYLES, type IllustrationStyle } from '@/lib/constants/illustrationStyles';
+import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from '@/lib/constants/illustrationStyles';
 import { IMAGE_CREDIT_COSTS } from '@/lib/billing';
 
 // ============================================================
