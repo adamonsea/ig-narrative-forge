@@ -86,6 +86,10 @@ export const FeedIdeaGenerator = () => {
         </Button>
       </form>
 
+      <p className="pt-3 text-center text-sm md:text-xs text-white/40">
+        Free to create and curate — you only pay when you publish.
+      </p>
+
       {error && <p className="pt-4 text-center text-base md:text-sm text-[hsl(0,80%,75%)]">{error}</p>}
 
       <AnimatePresence>
