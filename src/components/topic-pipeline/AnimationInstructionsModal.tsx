@@ -35,7 +35,10 @@ interface AnimationInstructionsModalProps {
   isAdmin: boolean;
 }
 
-const ANIMATION_CREDITS = 2; // Comparable to low-tier image generation
+import { ANIMATION_CREDIT_COSTS } from '@/lib/billing';
+
+// Animation always runs on the fast (480p) tier from this dialog.
+const ANIMATION_CREDITS = ANIMATION_CREDIT_COSTS.fast;
 
 export function AnimationInstructionsModal({
   isOpen,
