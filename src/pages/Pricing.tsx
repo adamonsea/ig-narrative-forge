@@ -370,12 +370,6 @@ const Pricing = () => {
           </section>
         </main>
       </div>
-
-      <WaitlistModal 
-        open={waitlistOpen} 
-        onOpenChange={setWaitlistOpen}
-        planName={selectedPlan}
-      />
     </div>
   );
 };
