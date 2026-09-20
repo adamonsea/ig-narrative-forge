@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check } from 'lucide-react';
-import { WaitlistModal } from '@/components/WaitlistModal';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,8 +84,6 @@ const Pricing = () => {
     'SLA guarantee',
   ]);
 
-  const [waitlistOpen, setWaitlistOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string>('');
   const [voucher, setVoucher] = useState('');
   const [voucherNote, setVoucherNote] = useState<string | null>(null);
   const [checkingVoucher, setCheckingVoucher] = useState(false);
@@ -99,10 +96,6 @@ const Pricing = () => {
 
   usePageFavicon();
 
-  const openWaitlist = (planName: string) => {
-    setSelectedPlan(planName);
-    setWaitlistOpen(true);
-  };
 
   const subscribe = async (tier: PricingTier) => {
     if (!user) {
@@ -369,23 +362,14 @@ const Pricing = () => {
           {/* FAQ or extra info */}
           <section className="max-w-2xl mx-auto text-center mt-20">
             <p className="text-white/50">
-              Need a custom plan for your organization?{' '}
-              <button 
-                onClick={() => openWaitlist('Enterprise')}
-                className="text-[hsl(270,100%,68%)] hover:underline"
-              >
-                Contact us
-              </button>
+              Need a custom plan or bespoke data pipelines?{' '}
+              <a href="mailto:hello@curatr.pro" className="text-[hsl(270,100%,68%)] hover:underline">
+                Talk to us
+              </a>
             </p>
           </section>
         </main>
       </div>
-
-      <WaitlistModal 
-        open={waitlistOpen} 
-        onOpenChange={setWaitlistOpen}
-        planName={selectedPlan}
-      />
     </div>
   );
 };

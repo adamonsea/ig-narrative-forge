@@ -6,37 +6,37 @@ import { clearSupabaseAuthStorage } from '@/lib/authStorage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
+import { Loader2, MailCheck } from 'lucide-react';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 
+// Homepage ink palette: deep navy canvas, violet glow, mint pill action.
+const INK = 'hsl(214, 50%, 9%)';
+const VIOLET = 'hsl(270, 100%, 68%)';
+const MINT = 'hsl(155, 100%, 67%)';
+
+const safeRedirect = () => {
+  const requested = new URLSearchParams(window.location.search).get('redirect');
+  return requested && requested.startsWith('/') && !requested.startsWith('//') ? requested : '/dashboard';
+};
+
 const Auth = () => {
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [waitlistEmail, setWaitlistEmail] = useState('');
-  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [checkEmail, setCheckEmail] = useState(false);
 
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  // Set Curatr favicon for auth page
   usePageFavicon();
 
   useEffect(() => {
-    // Check if user is already logged in
     const checkUser = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-
-        if (data.session) {
-          navigate('/');
-        }
+        if (data.session) navigate('/dashboard');
       } catch (err) {
-        // If refresh token is corrupted or the auth endpoint is unreachable,
-        // avoid breaking the auth page; user can still sign in.
         try {
           (supabase.auth as any).stopAutoRefresh?.();
         } catch {
@@ -46,203 +46,149 @@ const Auth = () => {
         console.warn('[Auth] getSession failed on /auth', err);
       }
     };
-
     checkUser();
   }, [navigate]);
 
-  const handleWaitlistSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!waitlistEmail) return;
-    
-    setWaitlistLoading(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('waitlist-signup', {
-        body: { email: waitlistEmail }
-      });
-
-      if (error) {
-        console.error('Waitlist signup error:', error);
-        toast({
-          title: "Waitlist signup failed",
-          description: error.message || "Failed to join waitlist",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Welcome to the waitlist!",
-          description: "We'll notify you when Curatr is ready for you.",
-        });
-        setWaitlistEmail('');
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Waitlist signup failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setWaitlistLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`
+      if (mode === 'signup') {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        });
+        if (signUpError) throw signUpError;
+        if (!data.session) {
+          setCheckEmail(true);
+          return;
         }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Account created!",
-        description: "Please check your email for verification link.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Sign up failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        console.log('Sign in successful, redirecting...');
-        toast({
-          title: "Welcome back!",
-          description: "Successfully signed in.",
-        });
-        // Force a page refresh to ensure clean auth state
-        const requested = new URLSearchParams(window.location.search).get('redirect');
-        const safeRedirect = requested && requested.startsWith('/') && !requested.startsWith('//')
-          ? requested
-          : '/';
-        window.location.href = safeRedirect;
+        window.location.href = safeRedirect();
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        window.location.href = safeRedirect();
       }
-    } catch (error: any) {
-      const msg = typeof error?.message === 'string' ? error.message : 'Unknown error';
-      
-      toast({
-        title: "Sign in failed",
-        description: msg,
-        variant: "destructive",
-      });
+    } catch (err: any) {
+      const message = typeof err?.message === 'string' ? err.message : 'Something went wrong.';
+      setError(
+        /already registered/i.test(message)
+          ? 'You already have an account — switch to sign in below.'
+          : message,
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  const inputClasses =
+    'h-14 rounded-full border-white/10 bg-white/[0.04] px-6 text-base text-white placeholder:text-white/30 focus-visible:ring-1 focus-visible:ring-[hsl(270,100%,68%)] focus-visible:border-[hsl(270,100%,68%)]';
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden p-4" style={{ backgroundColor: INK }}>
       <Helmet>
-        <title>Sign In | Curatr</title>
-        <meta name="description" content="Sign in to Curatr to access your personalized editorial dashboard and curated feeds." />
+        <title>{mode === 'signup' ? 'Create your workspace | Curatr' : 'Sign in | Curatr'}</title>
+        <meta name="description" content="Create a Curatr workspace or sign in to build and curate your own niche news feeds." />
         <link rel="canonical" href={`${typeof window !== 'undefined' ? window.location.origin : ''}/auth`} />
       </Helmet>
 
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <img 
-              src="/curatr-icon.png" 
-              alt="Curatr" 
-              className="h-8 w-8"
-            />
-            <div className="text-3xl font-logo font-semibold tracking-tight text-foreground">
-              Curatr<span className="text-xl font-logo font-light tracking-tight opacity-70">.pro</span>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full opacity-10 blur-[120px]"
+        style={{ backgroundColor: VIOLET }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-40 -left-40 h-96 w-96 rounded-full opacity-5 blur-[140px]"
+        style={{ backgroundColor: MINT }}
+      />
+
+      <main className="relative z-10 w-full max-w-md">
+        {checkEmail ? (
+          <div className="space-y-5 px-4 py-12 text-center">
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Curatr.pro</div>
+            <MailCheck className="mx-auto h-9 w-9" style={{ color: MINT }} />
+            <h1 className="font-display text-3xl italic tracking-tight text-white">Check your email</h1>
+            <p className="text-base leading-relaxed text-[hsl(214,20%,70%)]">
+              We've sent a confirmation link to <strong className="text-white">{email}</strong>. Open it and your
+              workspace will be ready.
+            </p>
+          </div>
+        ) : (
+          <div className="px-4 pb-10 pt-6">
+            <div className="mb-10 text-center">
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Curatr.pro</div>
+              <h1 className="font-display mt-6 text-4xl italic tracking-tight text-white">
+                {mode === 'signup' ? 'Create your workspace' : 'Welcome back'}
+              </h1>
+              <p className="mt-3 text-sm text-[hsl(214,20%,70%)]">Free to create and curate.</p>
             </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="auth-email" className="ml-4 text-xs font-medium uppercase tracking-wider text-white/40">
+                  Email
+                </Label>
+                <Input
+                  id="auth-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className={inputClasses}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="auth-password" className="ml-4 text-xs font-medium uppercase tracking-wider text-white/40">
+                  Password
+                </Label>
+                <Input
+                  id="auth-password"
+                  type="password"
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'}
+                  className={inputClasses}
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              {error && <p className="text-sm text-red-300">{error}</p>}
+
+              <Button
+                type="submit"
+                className="h-14 w-full rounded-full text-base font-bold transition-transform active:scale-[0.98]"
+                style={{ backgroundColor: MINT, color: INK }}
+                disabled={loading}
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" style={{ color: INK }} />}
+                {mode === 'signup' ? 'Create account' : 'Sign in'}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setMode(mode === 'signup' ? 'signin' : 'signup');
+                }}
+                className="mx-auto block text-sm text-[hsl(214,20%,70%)] transition-colors hover:text-white"
+              >
+                {mode === 'signup' ? 'Already have an account? ' : 'New to Curatr? '}
+                <span className="font-medium text-white underline decoration-white/20 underline-offset-4 hover:decoration-[hsl(155,100%,67%)]">
+                  {mode === 'signup' ? 'Sign in' : 'Create an account'}
+                </span>
+              </button>
+            </form>
           </div>
-          <div className="text-xs text-muted-foreground font-medium tracking-wider uppercase">
-            Beta
-          </div>
-          <CardDescription className="text-base">
-            Currently invite-only. Join our waitlist below.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="waitlist">Join Waitlist</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="waitlist">
-              <form onSubmit={handleWaitlistSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="waitlist-email">Email</Label>
-                  <Input
-                    id="waitlist-email"
-                    type="email"
-                    value={waitlistEmail}
-                    onChange={(e) => setWaitlistEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={waitlistLoading}>
-                  {waitlistLoading ? 'Joining waitlist...' : 'Join Waitlist'}
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  Be the first to know when Curatr opens up
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+        )}
+      </main>
     </div>
   );
 };

@@ -183,7 +183,7 @@ const Features = () => {
           </h2>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg">
-              <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
+              <Link to={user ? '/dashboard' : '/auth'}>Start free</Link>
             </Button>
             <Button asChild size="lg" variant="secondary">
               <Link to="/feed/eastbourne">See a feed</Link>

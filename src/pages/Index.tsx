@@ -389,7 +389,7 @@ const Index = () => {
                 asChild
                 className="rounded-full bg-[hsl(155,100%,67%)] px-6 text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
               >
-                <Link to={user ? '/dashboard' : '/auth'}>Start curating free</Link>
+                <Link to={user ? '/dashboard' : '/auth'}>Start free</Link>
               </Button>
             }
           />
@@ -474,7 +474,7 @@ const Index = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <motion.div {...hoverLift}>
                   <Button asChild size="lg" className="rounded-full px-8 h-12 bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
-                    <Link to={user ? '/dashboard' : '/auth'}>Get started free</Link>
+                    <Link to={user ? '/dashboard' : '/auth'}>Start free</Link>
                   </Button>
                 </motion.div>
                 <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-12 text-white hover:bg-white/10">
