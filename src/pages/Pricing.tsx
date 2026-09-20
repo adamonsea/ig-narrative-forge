@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { supabase } from '@/integrations/supabase/client';
 import { PRO_MONTHLY_CREDITS, TOP_UP_CREDITS } from '@/lib/billing';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const features = [
   'Publish public feeds',
@@ -23,6 +24,7 @@ export default function Pricing() {
   const [voucherNote, setVoucherNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const { user } = useAuth();
+  const { subscribed } = useSubscription();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -101,7 +103,7 @@ export default function Pricing() {
           </div>
         </section>
 
-        {user && <section className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:flex md:items-center md:justify-between">
+        {user && subscribed && <section className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:flex md:items-center md:justify-between">
           <div><h2 className="font-medium">Need more creative credits?</h2><p className="mt-1 text-sm text-white/55">Add {TOP_UP_CREDITS} credits for $10. Top-ups do not expire.</p></div>
           <Button onClick={() => checkout('top_up')} disabled={busy !== null} variant="outline" className="mt-4 rounded-full border-white/20 bg-transparent text-white hover:bg-white/10 md:mt-0">{busy === 'top_up' ? 'Opening…' : 'Add credits'}</Button>
         </section>}

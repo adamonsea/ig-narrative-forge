@@ -33,7 +33,7 @@ serve(async (req: Request) => {
     // Fetch topic with RSS enabled check
     const { data: topic, error: topicError } = await supabase
       .from("topics")
-      .select("id, name, slug, description, rss_enabled, branding_config")
+      .select("id, name, slug, description, rss_enabled, branding_config, created_by")
       .eq("slug", slug)
       .eq("is_active", true)
       .single();
@@ -54,6 +54,8 @@ serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "text/plain" } 
       });
     }
+    const { data: hasPro } = await supabase.rpc('has_pro_access', { p_user_id: topic.created_by });
+    if (!hasPro) return new Response('RSS feed not available for this topic', { status: 403, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
 
     // Fetch last 20 published stories via topic_articles join
     const { data: stories, error: storiesError } = await supabase

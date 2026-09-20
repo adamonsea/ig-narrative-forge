@@ -32,6 +32,9 @@ interface Topic {
   id: string;
   name: string;
   slug: string;
+  created_by: string;
+  audio_briefings_daily_enabled: boolean;
+  audio_briefings_weekly_enabled: boolean;
 }
 
 interface Roundup {
@@ -97,7 +100,7 @@ serve(async (req) => {
     // Fetch roundup with topic info
     const { data: roundup, error: roundupError } = await supabase
       .from('topic_roundups')
-      .select('*, topics!inner(id, name, slug)')
+      .select('*, topics!inner(id, name, slug, created_by, audio_briefings_daily_enabled, audio_briefings_weekly_enabled)')
       .eq('id', roundupId)
       .single();
 
@@ -106,6 +109,16 @@ serve(async (req) => {
     }
 
     const topic = roundup.topics as unknown as Topic;
+    const audioEnabled = roundup.roundup_type === 'daily'
+      ? topic.audio_briefings_daily_enabled
+      : topic.audio_briefings_weekly_enabled;
+    const { data: hasPro } = await supabase.rpc('has_pro_access', { p_user_id: topic.created_by });
+    if (!audioEnabled || !hasPro) {
+      return new Response(JSON.stringify({ success: false, error: 'Audio briefing is not available.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Check if audio already exists (skip if not forcing regeneration)
     if (roundup.audio_url && !forceRegenerate) {

@@ -43,6 +43,17 @@ export async function userOwnsTopic(service: any, userId: string, topicId: strin
   return await isAdmin(service, userId);
 }
 
+/** Authoritative server-side Pro check. Includes active vouchers and product-owner access. */
+export async function hasProAccess(service: any, userId: string | null | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const { data, error } = await service.rpc('has_pro_access', { p_user_id: userId });
+  if (error) {
+    console.error('Pro access check failed:', error.message);
+    return false;
+  }
+  return data === true;
+}
+
 /** Resolve the owning topic_id for a story via its article chain. */
 export async function topicIdForStory(service: any, storyId: string): Promise<string | null> {
   const { data: story } = await service

@@ -55,7 +55,7 @@ export const VoucherCodesPanel = () => {
 
   const [code, setCode] = useState('');
   const [kind, setKind] = useState<'free_access' | 'discount'>('free_access');
-  const [plan, setPlan] = useState('pro');
+  const plan = 'pro';
   const [freeMonths, setFreeMonths] = useState('3');
   const [percentOff, setPercentOff] = useState('50');
   const [amountOff, setAmountOff] = useState('');
@@ -166,16 +166,7 @@ export const VoucherCodesPanel = () => {
 
           <div className="space-y-2">
             <Label>Plan</Label>
-            <Select value={plan} onValueChange={setPlan}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="starter">Starter</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
-                <SelectItem value="team">Team</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex h-10 items-center rounded-md border border-input bg-muted/30 px-3 text-sm">Pro</div>
           </div>
 
           {kind === 'free_access' ? (

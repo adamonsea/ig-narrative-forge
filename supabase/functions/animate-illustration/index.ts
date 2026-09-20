@@ -76,6 +76,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let reservedUserId: string | null = null;
+  let reservationKey: string | null = null;
+  let reservationSettled = false;
   try {
     console.log('🎬 Animate illustration request started');
 
@@ -128,24 +131,27 @@ serve(async (req) => {
 
     const isSuperAdmin = userRole?.role === 'superadmin';
 
-    // Deduct credits if not superadmin
+    // Reserve credits if not superadmin. Failed renders release the reservation.
     if (!isSuperAdmin) {
-      const { data: creditResult, error: creditError } = await supabase.rpc('deduct_user_credits', {
+      reservationKey = `animation:${storyId}:${crypto.randomUUID()}`;
+      reservedUserId = user.id;
+      const { data: creditResult, error: creditError } = await supabase.rpc('reserve_user_credits', {
         p_user_id: user.id,
         p_amount: qualityConfig.creditCost,
+        p_idempotency_key: reservationKey,
         p_description: `Animate story illustration (Wan 2.2 i2v ${qualityConfig.resolution})`,
         p_story_id: storyId
       });
 
-      if (creditError) {
+      if (creditError || !creditResult?.success) {
         console.error('❌ Credit deduction error:', creditError);
         return new Response(
-          JSON.stringify({ error: 'Failed to deduct credits', details: creditError.message }),
+          JSON.stringify({ error: creditResult?.error || 'Could not reserve credits', details: creditError?.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log('✅ Credits deducted:', qualityConfig.creditCost);
+      console.log('✅ Credits reserved:', qualityConfig.creditCost);
     }
 
     // Fetch story to get title and tone for content-aware motion prompt
@@ -157,10 +163,7 @@ serve(async (req) => {
 
     if (storyError) {
       console.error('❌ Story fetch error:', storyError);
-      return new Response(
-        JSON.stringify({ error: 'Story not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Story not found');
     }
 
     // Fetch first 3 slides for AI context (if using AI prompts)
@@ -239,10 +242,7 @@ serve(async (req) => {
     if (!replicateResponse.ok) {
       const errorText = await replicateResponse.text();
       console.error('❌ Replicate API error:', errorText);
-      return new Response(
-        JSON.stringify({ error: 'Replicate API request failed', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Replicate API request failed');
     }
 
     const predictionData = await replicateResponse.json();
@@ -331,10 +331,19 @@ serve(async (req) => {
       throw new Error('Failed to update story: ' + updateError.message);
     }
 
+    if (reservedUserId && reservationKey) {
+      const { data: settlement, error: settlementError } = await supabase.rpc('settle_credit_reservation', {
+        p_user_id: reservedUserId,
+        p_idempotency_key: reservationKey,
+      });
+      if (settlementError || !settlement?.success) throw settlementError || new Error('Could not settle credit reservation');
+      reservationSettled = true;
+    }
+
     // Get updated credits balance
     const { data: updatedCredits } = await supabase
       .from('user_credits')
-      .select('current_balance')
+      .select('credits_balance')
       .eq('user_id', user.id)
       .single();
 
@@ -348,13 +357,22 @@ serve(async (req) => {
         quality: quality,
         resolution: qualityConfig.resolution,
         credits_used: isSuperAdmin ? 0 : qualityConfig.creditCost,
-        new_balance: updatedCredits?.current_balance || 0
+        new_balance: updatedCredits?.credits_balance || 0
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('❌ Error:', error);
+    if (reservedUserId && reservationKey && !reservationSettled) {
+      const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+      const { error: releaseError } = await supabase.rpc('release_credit_reservation', {
+        p_user_id: reservedUserId,
+        p_idempotency_key: reservationKey,
+        p_reason: 'Animation did not complete',
+      });
+      if (releaseError) console.error('Failed to release credit reservation:', releaseError);
+    }
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Unknown error occurred'

@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCredits } from '@/hooks/useCredits';
 
 export const PlanStatus = () => {
-  const { subscribed, plan, source, currentPeriodEnd, loading, refresh } = useSubscription();
+  const { subscribed, plan, source, currentPeriodEnd, cancelAtPeriodEnd, loading, refresh } = useSubscription();
   const [params, setParams] = useSearchParams();
   const [opening, setOpening] = useState(false);
   const { toast } = useToast();
@@ -65,7 +65,7 @@ export const PlanStatus = () => {
             <span className="font-medium">{planLabel ?? 'Active'} plan</span>
             <span className="text-muted-foreground">
               {source === 'voucher' ? ' · free access code' : ''}
-              {renews ? ` · ${source === 'voucher' ? 'ends' : 'renews'} ${renews}` : ''}
+               {renews ? ` · ${source === 'voucher' || cancelAtPeriodEnd ? 'ends' : 'renews'} ${renews}` : ''}
             </span>
           </>
         ) : (

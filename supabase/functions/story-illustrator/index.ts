@@ -95,7 +95,7 @@ const corsHeaders = {
 }
 
 // Valid illustration styles (matches DB enum)
-const VALID_ILLUSTRATION_STYLES = ['editorial_illustrative', 'editorial_photographic'] as const
+const VALID_ILLUSTRATION_STYLES = ['editorial_illustrative', 'editorial_photographic', 'cartoon', 'bw_editorial_photo', 'anime', 'illustrated_icon'] as const
 type IllustrationStyle = typeof VALID_ILLUSTRATION_STYLES[number]
 
 function isValidIllustrationStyle(value: unknown): value is IllustrationStyle {
@@ -121,6 +121,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let reservedUserId: string | null = null
+  let reservationKey: string | null = null
+  let reservationSettled = false
   try {
     // Parse and validate request body
     const body = await req.json();
@@ -222,14 +225,14 @@ serve(async (req) => {
       'gpt-image-2-high': {
         provider: 'openai',
         quality: 'high',
-        credits: 7,
+        credits: 17,
         cost: 0.165,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-2-medium': {
         provider: 'openai',
         quality: 'medium',
-        credits: 3,
+        credits: 5,
         cost: 0.041,
         stylePrefix: 'cinematic and editorial style, '
       },
@@ -601,11 +604,14 @@ serve(async (req) => {
     let fallbackReason = ''
     let fallbackModel = ''
 
-    // Deduct credits based on model - skip for super admin
+    // Reserve credits atomically; settle only after the finished image is saved.
     if (!isSuperAdmin) {
-      const { data: result, error: creditError } = await supabase.rpc('deduct_user_credits', {
+      reservationKey = `image:${storyId}:${crypto.randomUUID()}`
+      reservedUserId = userId
+      const { data: result, error: creditError } = await supabase.rpc('reserve_user_credits', {
         p_user_id: userId,
-        p_credits_amount: modelConfig.credits,
+        p_amount: modelConfig.credits,
+        p_idempotency_key: reservationKey,
         p_description: `Story illustration generation (${model})`,
         p_story_id: storyId
       })
@@ -615,7 +621,7 @@ serve(async (req) => {
       if (creditError || !creditResult?.success) {
         return new Response(
           JSON.stringify({ 
-            error: creditResult?.error || 'Failed to deduct credits',
+            error: creditResult?.error || 'Could not reserve credits',
             credits_required: modelConfig.credits
           }),
           { 
@@ -684,9 +690,17 @@ serve(async (req) => {
     ).catch(() => [] as string[])
 
     // Build appropriate prompt based on illustration style, passing region and location hint for place accuracy
-    const illustrationPrompt = illustrationStyle === 'editorial_photographic'
+    let illustrationPrompt = illustrationStyle === 'editorial_photographic'
       ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
       : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
+
+    const styleDirections: Partial<Record<IllustrationStyle, string>> = {
+      cartoon: 'Render as an original editorial cartoon: expressive, clear shapes, restrained detail, no copied characters or artist style.',
+      bw_editorial_photo: 'Render as an aged black-and-white editorial photograph: authentic newsprint grain, natural lighting, documentary composition, no text.',
+      anime: 'Render as an original editorial anime scene: cinematic composition and expressive movement, without copying any named artist, studio, or character.',
+      illustrated_icon: 'Render as a bold minimal illustrated icon: one clear visual idea, simple geometry, flat colour, generous negative space, no text.',
+    }
+    if (styleDirections[illustrationStyle]) illustrationPrompt += ` ${styleDirections[illustrationStyle]}`
 
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
@@ -1002,6 +1016,15 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
           console.log(`🕒 Queued batch illustration for story ${storyId} (batch ${batchJson.id})`)
 
+          if (reservedUserId && reservationKey) {
+            const { data: settlement, error: settlementError } = await supabase.rpc('settle_credit_reservation', {
+              p_user_id: reservedUserId,
+              p_idempotency_key: reservationKey,
+            })
+            if (settlementError || !settlement?.success) throw settlementError || new Error('Could not settle batch credit reservation')
+            reservationSettled = true
+          }
+
           return new Response(
             JSON.stringify({
               success: true,
@@ -1116,17 +1139,6 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         if (errorJson?.error?.code === 'moderation_blocked') {
           console.warn('⚠️ OpenAI moderation blocked prompt - this appears to be a false positive');
           console.warn('📝 Blocked prompt preview:', illustrationPrompt.substring(0, 300));
-          
-          // Refund OpenAI credits before falling back
-          if (!isSuperAdmin && creditResult) {
-            console.log('💰 Refunding credits due to moderation block...');
-            await supabase.rpc('add_user_credits', {
-              p_user_id: userId,
-              p_credits_amount: modelConfig.credits,
-              p_description: `Refund: OpenAI moderation false positive (${model})`,
-              p_story_id: storyId
-            });
-          }
           
           // Automatically fall back to Replicate FLUX (Gemini removed from codebase)
           console.log('🔄 Automatically falling back to Replicate FLUX image generation...');
@@ -1507,6 +1519,16 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       throw new Error(`Update error: ${updateError.message}`)
     }
 
+    if (reservedUserId && reservationKey) {
+      const { data: settlement, error: settlementError } = await supabase.rpc('settle_credit_reservation', {
+        p_user_id: reservedUserId,
+        p_idempotency_key: reservationKey,
+      })
+      if (settlementError || !settlement?.success) throw settlementError || new Error('Could not settle credit reservation')
+      reservationSettled = true
+      creditResult = settlement
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -1526,6 +1548,15 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
   } catch (error) {
     console.error('Story illustrator error:', error)
+    if (reservedUserId && reservationKey && !reservationSettled) {
+      const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+      const { error: releaseError } = await supabase.rpc('release_credit_reservation', {
+        p_user_id: reservedUserId,
+        p_idempotency_key: reservationKey,
+        p_reason: 'Image generation did not complete',
+      })
+      if (releaseError) console.error('Failed to release credit reservation:', releaseError)
+    }
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { 

@@ -53,6 +53,17 @@ Deno.serve(async (req) => {
       row.current_period_end &&
       new Date(row.current_period_end) > new Date()
     ) {
+      const grantMonth = new Date().toISOString().slice(0, 7);
+      const voucherGrant = await service.rpc('grant_user_credits', {
+        p_user_id: user.id,
+        p_amount: MONTHLY_PRO_CREDITS,
+        p_grant_type: 'subscription',
+        p_source_key: `voucher:${row.voucher_code_id || 'access'}:${grantMonth}`,
+        p_description: 'Pro creative credits',
+        p_expires_at: row.current_period_end,
+        p_metadata: { source: 'voucher', voucher_code_id: row.voucher_code_id },
+      });
+      if (voucherGrant.error || !voucherGrant.data?.success) console.error('Voucher credit grant failed', voucherGrant.error || voucherGrant.data);
       return json({
         subscribed: true,
         plan: row.plan,
@@ -71,6 +82,7 @@ Deno.serve(async (req) => {
       if (checkout.mode === 'payment' && checkout.payment_status === 'paid') {
         const purchasedTopUp = checkout.line_items?.data.some((item) => item.price?.id === TOP_UP_PRICE_ID);
         if (purchasedTopUp) {
+          const grantMonth = new Date().toISOString().slice(0, 7);
           const grant = await service.rpc('grant_user_credits', {
             p_user_id: user.id,
             p_amount: TOP_UP_CREDITS,
@@ -90,11 +102,29 @@ Deno.serve(async (req) => {
       customerId = found.data[0]?.id;
     }
 
+    // Recover paid top-ups even if the customer closed Checkout before returning.
+    if (customerId) {
+      const completed = await stripe.checkout.sessions.list({ customer: customerId, limit: 100 });
+      for (const checkout of completed.data) {
+        if (checkout.mode !== 'payment' || checkout.payment_status !== 'paid' || checkout.metadata?.user_id !== user.id || checkout.metadata?.kind !== 'top_up') continue;
+        const grant = await service.rpc('grant_user_credits', {
+          p_user_id: user.id,
+          p_amount: TOP_UP_CREDITS,
+          p_grant_type: 'top_up',
+          p_source_key: `checkout:${checkout.id}`,
+          p_description: `${TOP_UP_CREDITS} credit top-up`,
+          p_metadata: { checkout_session_id: checkout.id },
+        });
+        if (grant.error || !grant.data?.success) console.error('Top-up reconciliation failed', grant.error || grant.data);
+      }
+    }
+
     let subscribed = false;
     let plan: string | null = null;
     let status: string | null = null;
     let periodEnd: string | null = null;
     let subscriptionId: string | null = null;
+    let cancelAtPeriodEnd = false;
 
     if (customerId) {
       const subs = await stripe.subscriptions.list({
@@ -107,14 +137,16 @@ Deno.serve(async (req) => {
         subscribed = true;
         status = sub.status;
         subscriptionId = sub.id;
+        cancelAtPeriodEnd = sub.cancel_at_period_end;
         periodEnd = new Date(sub.current_period_end * 1000).toISOString();
         plan = planByPriceId(sub.items.data[0]?.price?.id)?.id ?? null;
         if (plan) {
+          const grantMonth = new Date().toISOString().slice(0, 7);
           const grant = await service.rpc('grant_user_credits', {
             p_user_id: user.id,
             p_amount: MONTHLY_PRO_CREDITS,
             p_grant_type: 'subscription',
-            p_source_key: `subscription:${sub.id}:${sub.current_period_start}`,
+            p_source_key: `subscription:${sub.id}:${grantMonth}`,
             p_description: 'Pro creative credits',
             p_expires_at: periodEnd,
             p_metadata: { subscription_id: sub.id, period_start: sub.current_period_start, period_end: sub.current_period_end },
@@ -140,7 +172,7 @@ Deno.serve(async (req) => {
       { onConflict: 'user_id' },
     );
 
-    return json({ subscribed, plan, source: 'stripe', current_period_end: periodEnd });
+    return json({ subscribed, plan, status, source: 'stripe', current_period_end: periodEnd, cancel_at_period_end: cancelAtPeriodEnd });
   } catch (e) {
     console.error('check-subscription failed', e);
     return json({ error: 'Could not check your plan right now.' }, 500);
