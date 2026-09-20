@@ -23,38 +23,39 @@ export interface ImageModel {
 }
 
 // Illustrative models (editorial cartoon style) - GPT Image 2
+// Cheapest first: most covers only need the quick tier.
 export const illustrativeModels: ImageModel[] = [
+  {
+    id: 'gpt-image-2-low',
+    name: 'Quick',
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'],
+    provider: 'openai',
+    description: 'Fast generation, good quality (GPT-Image-2)'
+  },
+  {
+    id: 'gpt-image-2-medium',
+    name: 'Creative',
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-medium'],
+    provider: 'openai',
+    description: 'Balanced quality and cost (GPT-Image-2)'
+  },
   {
     id: 'gpt-image-2-high',
     name: 'Best',
     credits: IMAGE_CREDIT_COSTS['gpt-image-2-high'],
     provider: 'openai',
     description: 'Highest quality editorial illustrations (GPT-Image-2)'
-  },
-  {
-    id: 'gpt-image-2-medium',
-    name: 'Creative',
-    credits: IMAGE_CREDIT_COSTS['gpt-image-2-medium'],
-    provider: 'openai',
-    description: 'Balanced quality and cost (GPT-Image-2)'
-  },
-  {
-    id: 'gpt-image-2-low',
-    name: 'Quick',
-    credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'],
-    provider: 'openai',
-    description: 'Fast generation, good quality (GPT-Image-2)'
   }
 ];
 
 // Photographic models (documentary/photojournalism style) - GPT Image 2
 export const photographicModels: ImageModel[] = [
   {
-    id: 'gpt-image-2-high',
-    name: 'Best',
-    credits: IMAGE_CREDIT_COSTS['gpt-image-2-high'],
+    id: 'gpt-image-2-low',
+    name: 'Quick',
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'],
     provider: 'openai',
-    description: 'Highest quality photorealistic images (GPT-Image-2)'
+    description: 'Fast generation, good quality (GPT-Image-2)'
   },
   {
     id: 'gpt-image-2-medium',
@@ -64,11 +65,11 @@ export const photographicModels: ImageModel[] = [
     description: 'Balanced quality and cost (GPT-Image-2)'
   },
   {
-    id: 'gpt-image-2-low',
-    name: 'Quick',
-    credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'],
+    id: 'gpt-image-2-high',
+    name: 'Best',
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-high'],
     provider: 'openai',
-    description: 'Fast generation, good quality (GPT-Image-2)'
+    description: 'Highest quality photorealistic images (GPT-Image-2)'
   }
 ];
 
