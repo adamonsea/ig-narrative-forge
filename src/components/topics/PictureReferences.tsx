@@ -456,6 +456,18 @@ export function PictureReferences({
               <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC}>
                 {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC]}
               </SelectItem>
+              <SelectItem value={ILLUSTRATION_STYLES.CARTOON}>
+                {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.CARTOON]}
+              </SelectItem>
+              <SelectItem value={ILLUSTRATION_STYLES.BW_EDITORIAL_PHOTO}>
+                {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.BW_EDITORIAL_PHOTO]}
+              </SelectItem>
+              <SelectItem value={ILLUSTRATION_STYLES.ANIME}>
+                {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.ANIME]}
+              </SelectItem>
+              <SelectItem value={ILLUSTRATION_STYLES.ILLUSTRATED_ICON}>
+                {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.ILLUSTRATED_ICON]}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronDown, ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from '@/lib/constants/illustrationStyles';
+import { IMAGE_CREDIT_COSTS } from '@/lib/billing';
 
 // ============================================================
 // FEATURE FLAG: MidJourney Experimental Mode
@@ -25,22 +26,22 @@ export interface ImageModel {
 export const illustrativeModels: ImageModel[] = [
   {
     id: 'gpt-image-2-high',
-    name: 'Premium',
-    credits: 7,
+    name: 'Best',
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-high'],
     provider: 'openai',
     description: 'Highest quality editorial illustrations (GPT-Image-2)'
   },
   {
     id: 'gpt-image-2-medium',
     name: 'Creative',
-    credits: 3,
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-medium'],
     provider: 'openai',
     description: 'Balanced quality and cost (GPT-Image-2)'
   },
   {
     id: 'gpt-image-2-low',
     name: 'Quick',
-    credits: 1,
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'],
     provider: 'openai',
     description: 'Fast generation, good quality (GPT-Image-2)'
   }
@@ -50,22 +51,22 @@ export const illustrativeModels: ImageModel[] = [
 export const photographicModels: ImageModel[] = [
   {
     id: 'gpt-image-2-high',
-    name: 'Premium',
-    credits: 7,
+    name: 'Best',
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-high'],
     provider: 'openai',
     description: 'Highest quality photorealistic images (GPT-Image-2)'
   },
   {
     id: 'gpt-image-2-medium',
     name: 'Creative',
-    credits: 3,
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-medium'],
     provider: 'openai',
     description: 'Balanced quality and cost (GPT-Image-2)'
   },
   {
     id: 'gpt-image-2-low',
     name: 'Quick',
-    credits: 1,
+    credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'],
     provider: 'openai',
     description: 'Fast generation, good quality (GPT-Image-2)'
   }
