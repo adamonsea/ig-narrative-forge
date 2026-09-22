@@ -593,7 +593,9 @@ const TopicDashboard = () => {
       return;
     }
     if (!response.error && (result?.success !== false)) {
-      setTopic((current) => current ? { ...current, [field]: checked } : current);
+      setTopic((current) => current
+        ? { ...current, [field]: checked, ...(field === 'is_public' ? { is_active: checked } : {}) }
+        : current);
     } else {
       toast({ title: 'Not saved', description: `${label} could not be updated.`, variant: 'destructive' });
     }
