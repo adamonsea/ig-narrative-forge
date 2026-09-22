@@ -62,6 +62,11 @@ const Auth = () => {
           options: { emailRedirectTo: `${window.location.origin}/dashboard` },
         });
         if (signUpError) throw signUpError;
+        if (data.user && (data.user.identities?.length ?? 0) === 0) {
+          setMode('signin');
+          setError('You already have an account with this email — sign in below.');
+          return;
+        }
         if (!data.session) {
           setCheckEmail(true);
           return;
