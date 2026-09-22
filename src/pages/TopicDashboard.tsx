@@ -583,7 +583,7 @@ const TopicDashboard = () => {
 
   // Inline toggle helper for distribution channels
   const handleChannelToggle = async (field: string, checked: boolean, label: string) => {
-    const distributionFields = new Set(['email_subscriptions_enabled', 'rss_enabled', 'public_widget_builder_enabled', 'mcp_enabled', 'audio_briefings_daily_enabled', 'audio_briefings_weekly_enabled']);
+    const distributionFields = new Set(['is_public', 'email_subscriptions_enabled', 'rss_enabled', 'public_widget_builder_enabled', 'mcp_enabled', 'audio_briefings_daily_enabled', 'audio_briefings_weekly_enabled']);
     const response = distributionFields.has(field)
       ? await supabase.rpc('set_topic_distribution' as any, { p_topic_id: topic!.id, p_field: field, p_enabled: checked })
       : await supabase.from('topics').update({ [field]: checked } as any).eq('id', topic!.id);
@@ -593,7 +593,9 @@ const TopicDashboard = () => {
       return;
     }
     if (!response.error && (result?.success !== false)) {
-      setTopic((current) => current ? { ...current, [field]: checked } : current);
+      setTopic((current) => current
+        ? { ...current, [field]: checked, ...(field === 'is_public' ? { is_active: checked } : {}) }
+        : current);
     } else {
       toast({ title: 'Not saved', description: `${label} could not be updated.`, variant: 'destructive' });
     }
