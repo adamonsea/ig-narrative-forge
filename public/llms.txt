@@ -23,6 +23,13 @@ Each feed also exposes:
 - `/feed/{slug}/about` — feed description, sources, and editorial approach
 - `/feed/{slug}/story/{id}` — individual story carousel with attribution
 
+## MCP (AI assistant access)
+
+- [MCP documentation](/mcp): Curatr feeds are available as MCP (Model Context Protocol) servers. ChatGPT, Claude and other MCP-compatible assistants can list latest stories, search, read full stories and generate briefings, always with source attribution.
+- Endpoint format: `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/mcp-feed/<feed-slug>` (MCP Streamable HTTP, JSON-RPC over POST).
+- Tools: `list_latest_stories`, `search_stories`, `get_story`, `feed_briefing` — read-only, published stories only, every story includes publication name, original article URL and an image URL with its source.
+- Feeds are open or bearer-key protected, at the feed owner's choice.
+
 ## Optional
 
 - [Terms](/terms): Terms of service.
