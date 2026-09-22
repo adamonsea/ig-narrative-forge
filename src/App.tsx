@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import LocalNewsFeedsGuide from "./pages/guides/LocalNewsFeeds";
 import Features from "./pages/Features";
+import Mcp from "./pages/Mcp";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
