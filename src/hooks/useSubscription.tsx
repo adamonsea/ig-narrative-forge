@@ -28,6 +28,12 @@ export const useSubscription = () => {
       setState(EMPTY);
       return;
     }
+    // Only ask the server while we hold a live token — otherwise it answers 401.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session?.access_token) {
+      setState(EMPTY);
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('check-subscription', {
