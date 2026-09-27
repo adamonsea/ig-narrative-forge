@@ -180,8 +180,32 @@ serve(async (req) => {
           continue;
         }
       }
-      
+
+      // DUPLICATE CHECK: hold near-identical retellings of an event already live
+      if (topicId) {
+        const recentTitles = recentTitlesByTopic.get(topicId) || [];
+        let match: { title: string; score: number } | null = null;
+        for (const title of recentTitles) {
+          const { score } = storySimilarity(story.title, title);
+          if (score >= PUBLISH_DUPLICATE_THRESHOLD && (!match || score > match.score)) {
+            match = { title, score };
+          }
+        }
+        if (match) {
+          duplicateHeldStories.push({ id: story.id, title: story.title, matched: match.title, score: match.score });
+          console.log(`🚫 Holding possible duplicate "${story.title}" ≈ "${match.title}" (${match.score.toFixed(2)})`);
+          continue;
+        }
+        // Guard against twins inside this same batch
+        recentTitles.push(story.title);
+        recentTitlesByTopic.set(topicId, recentTitles);
+      }
+
       storiesToPublish.push(story.id);
+    }
+
+    if (duplicateHeldStories.length > 0) {
+      console.warn(`🚫 Held ${duplicateHeldStories.length} possible duplicates for review`);
     }
 
     if (futureStories.length > 0) {
