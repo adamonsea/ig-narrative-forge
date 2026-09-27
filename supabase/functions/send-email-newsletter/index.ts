@@ -6,6 +6,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22';
 import { DailyRoundupEmail } from './_templates/daily-roundup.tsx';
 import { WeeklyRoundupEmail } from './_templates/weekly-roundup.tsx';
 import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProAccess } from '../_shared/auth.ts';
+import { dedupeByEvent, EMAIL_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
