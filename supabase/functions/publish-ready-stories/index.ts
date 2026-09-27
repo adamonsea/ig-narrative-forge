@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { storySimilarity, PUBLISH_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,10 +67,40 @@ serve(async (req) => {
       );
     }
 
+    // Build a map of recently published headlines per topic so near-identical
+    // reruns of the same event never auto-publish. Genuinely fresh angles keep
+    // distinct headlines and stay well below the threshold.
+    const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    const { data: recentPublished } = await supabase
+      .from('stories')
+      .select('title, topic_article_id')
+      .eq('status', 'published')
+      .gte('created_at', since)
+      .not('topic_article_id', 'is', null);
+
+    const recentTaIds = Array.from(
+      new Set((recentPublished || []).map((s) => s.topic_article_id).filter(Boolean))
+    ) as string[];
+
+    const { data: recentTas } = recentTaIds.length
+      ? await supabase.from('topic_articles').select('id, topic_id').in('id', recentTaIds)
+      : { data: [] };
+
+    const taTopicMap = new Map((recentTas || []).map((ta) => [ta.id, ta.topic_id]));
+    const recentTitlesByTopic = new Map<string, string[]>();
+    (recentPublished || []).forEach((s) => {
+      const tid = s.topic_article_id ? taTopicMap.get(s.topic_article_id) : null;
+      if (!tid) return;
+      const list = recentTitlesByTopic.get(tid) || [];
+      list.push(s.title);
+      recentTitlesByTopic.set(tid, list);
+    });
+
     // Check publication dates and drip feed status for each story
     const storiesToPublish: string[] = [];
     const futureStories: Array<{id: string; title: string; date: string; reason: string}> = [];
     const dripQueuedStories: Array<{id: string; title: string; scheduled_at: string | null; reason: string}> = [];
+    const duplicateHeldStories: Array<{id: string; title: string; matched: string; score: number}> = [];
 
     for (const story of readyStories) {
       // Get the topic ID for this story
@@ -150,8 +181,32 @@ serve(async (req) => {
           continue;
         }
       }
-      
+
+      // DUPLICATE CHECK: hold near-identical retellings of an event already live
+      if (topicId) {
+        const recentTitles = recentTitlesByTopic.get(topicId) || [];
+        let match: { title: string; score: number } | null = null;
+        for (const title of recentTitles) {
+          const { score } = storySimilarity(story.title, title);
+          if (score >= PUBLISH_DUPLICATE_THRESHOLD && (!match || score > match.score)) {
+            match = { title, score };
+          }
+        }
+        if (match) {
+          duplicateHeldStories.push({ id: story.id, title: story.title, matched: match.title, score: match.score });
+          console.log(`🚫 Holding possible duplicate "${story.title}" ≈ "${match.title}" (${match.score.toFixed(2)})`);
+          continue;
+        }
+        // Guard against twins inside this same batch
+        recentTitles.push(story.title);
+        recentTitlesByTopic.set(topicId, recentTitles);
+      }
+
       storiesToPublish.push(story.id);
+    }
+
+    if (duplicateHeldStories.length > 0) {
+      console.warn(`🚫 Held ${duplicateHeldStories.length} possible duplicates for review`);
     }
 
     if (futureStories.length > 0) {
@@ -208,6 +263,8 @@ serve(async (req) => {
         future_skipped_count: futureStories.length,
         published_stories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || [],
         drip_queued: dripQueuedStories,
+        duplicate_held_count: duplicateHeldStories.length,
+        duplicate_held: duplicateHeldStories,
         timestamp: new Date().toISOString()
       },
       function_name: 'publish-ready-stories'
@@ -216,10 +273,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Published ${updatedCount} ready stories${futureStories.length > 0 ? `, skipped ${futureStories.length} future-dated stories` : ''}${dripQueuedStories.length > 0 ? `, ${dripQueuedStories.length} in drip queue` : ''}`,
+        message: `Published ${updatedCount} ready stories${futureStories.length > 0 ? `, skipped ${futureStories.length} future-dated stories` : ''}${dripQueuedStories.length > 0 ? `, ${dripQueuedStories.length} in drip queue` : ''}${duplicateHeldStories.length > 0 ? `, ${duplicateHeldStories.length} held as possible duplicates` : ''}`,
         updatedStories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || [],
         skippedStories: futureStories.length > 0 ? futureStories : undefined,
-        dripQueuedStories: dripQueuedStories.length > 0 ? dripQueuedStories : undefined
+        dripQueuedStories: dripQueuedStories.length > 0 ? dripQueuedStories : undefined,
+        duplicateHeldStories: duplicateHeldStories.length > 0 ? duplicateHeldStories : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
