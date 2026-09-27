@@ -340,8 +340,7 @@ serve(async (req) => {
       const sourceName = ta?.source?.source_name || ta?.shared_content?.source_domain || topic.name;
       
       // Use slide 1 headline instead of original article title
-      const slide1 = (story.slides || []).find((s: { slide_number: number }) => s.slide_number === 1);
-      const headline = slide1?.content || story.title;
+      const headline = story.headline;
 
       return {
         id: story.id,
