@@ -239,19 +239,33 @@ serve(async (req) => {
 
     const taMap = new Map((topicArticles || []).map((ta) => [ta.id, ta]));
 
+    // Headline as it will appear in the email (slide 1 wording wins)
+    const withHeadline = <T extends { title: string; slides?: { content: string; slide_number: number }[] }>(story: T) => {
+      const slide1 = (story.slides || []).find((s) => s.slide_number === 1);
+      return { ...story, headline: slide1?.content || story.title };
+    };
+
     // Filter stories to only those belonging to this topic
-    const topicStories = (storiesData || [])
+    const topicCandidates = (storiesData || [])
       .filter((story) => {
         if (!story.topic_article_id) return false;
         const ta = taMap.get(story.topic_article_id);
         return ta?.topic_id === topicId;
       })
-      .slice(0, storyLimit);
+      .map(withHeadline);
 
-    console.log(`📰 Found ${topicStories.length} published stories for ${topic.name} newsletter`);
+    // Strict newsletter dedupe: one event gets one slot, best-ranked wins.
+    const { kept: dedupedToday, dropped: droppedToday } = dedupeByEvent(topicCandidates);
+    droppedToday.forEach((d) =>
+      console.log(`🚫 Duplicate held back: "${d.candidate.headline}" ≈ "${d.matched}" (${d.score.toFixed(2)})`)
+    );
+
+    const topicStories = dedupedToday.slice(0, storyLimit);
+
+    console.log(`📰 Found ${topicStories.length} published stories for ${topic.name} newsletter (${droppedToday.length} duplicates removed)`);
 
     // Check if we need fallback stories for daily emails (slow news day)
-    let fallbackStories: typeof storiesData = [];
+    let fallbackStories: typeof topicStories = [];
     let isSlowNewsDay = false;
     
     if (notificationType === 'daily' && topicStories.length < minStoriesForFullEmail) {
@@ -295,12 +309,22 @@ serve(async (req) => {
         // Add to taMap
         (weeklyTopicArticles || []).forEach((ta) => taMap.set(ta.id, ta));
 
-        // Filter to this topic
-        fallbackStories = weeklyStoriesData.filter((story) => {
-          if (!story.topic_article_id) return false;
-          const ta = taMap.get(story.topic_article_id);
-          return ta?.topic_id === topicId;
-        }).slice(0, storyLimit - topicStories.length);
+        // Filter to this topic, then dedupe against today's picks and each other
+        const weeklyCandidates = weeklyStoriesData
+          .filter((story) => {
+            if (!story.topic_article_id) return false;
+            const ta = taMap.get(story.topic_article_id);
+            return ta?.topic_id === topicId;
+          })
+          .map(withHeadline);
+
+        const { kept: dedupedWeekly } = dedupeByEvent(
+          weeklyCandidates,
+          EMAIL_DUPLICATE_THRESHOLD,
+          topicStories
+        );
+
+        fallbackStories = dedupedWeekly.slice(0, storyLimit - topicStories.length);
         
         console.log(`📚 Found ${fallbackStories.length} fallback stories from the week`);
       }
