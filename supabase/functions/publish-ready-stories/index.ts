@@ -263,6 +263,8 @@ serve(async (req) => {
         future_skipped_count: futureStories.length,
         published_stories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || [],
         drip_queued: dripQueuedStories,
+        duplicate_held_count: duplicateHeldStories.length,
+        duplicate_held: duplicateHeldStories,
         timestamp: new Date().toISOString()
       },
       function_name: 'publish-ready-stories'
@@ -271,10 +273,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Published ${updatedCount} ready stories${futureStories.length > 0 ? `, skipped ${futureStories.length} future-dated stories` : ''}${dripQueuedStories.length > 0 ? `, ${dripQueuedStories.length} in drip queue` : ''}`,
+        message: `Published ${updatedCount} ready stories${futureStories.length > 0 ? `, skipped ${futureStories.length} future-dated stories` : ''}${dripQueuedStories.length > 0 ? `, ${dripQueuedStories.length} in drip queue` : ''}${duplicateHeldStories.length > 0 ? `, ${duplicateHeldStories.length} held as possible duplicates` : ''}`,
         updatedStories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || [],
         skippedStories: futureStories.length > 0 ? futureStories : undefined,
-        dripQueuedStories: dripQueuedStories.length > 0 ? dripQueuedStories : undefined
+        dripQueuedStories: dripQueuedStories.length > 0 ? dripQueuedStories : undefined,
+        duplicateHeldStories: duplicateHeldStories.length > 0 ? duplicateHeldStories : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
