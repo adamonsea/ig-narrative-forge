@@ -66,10 +66,40 @@ serve(async (req) => {
       );
     }
 
+    // Build a map of recently published headlines per topic so near-identical
+    // reruns of the same event never auto-publish. Genuinely fresh angles keep
+    // distinct headlines and stay well below the threshold.
+    const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    const { data: recentPublished } = await supabase
+      .from('stories')
+      .select('title, topic_article_id')
+      .eq('status', 'published')
+      .gte('created_at', since)
+      .not('topic_article_id', 'is', null);
+
+    const recentTaIds = Array.from(
+      new Set((recentPublished || []).map((s) => s.topic_article_id).filter(Boolean))
+    ) as string[];
+
+    const { data: recentTas } = recentTaIds.length
+      ? await supabase.from('topic_articles').select('id, topic_id').in('id', recentTaIds)
+      : { data: [] };
+
+    const taTopicMap = new Map((recentTas || []).map((ta) => [ta.id, ta.topic_id]));
+    const recentTitlesByTopic = new Map<string, string[]>();
+    (recentPublished || []).forEach((s) => {
+      const tid = s.topic_article_id ? taTopicMap.get(s.topic_article_id) : null;
+      if (!tid) return;
+      const list = recentTitlesByTopic.get(tid) || [];
+      list.push(s.title);
+      recentTitlesByTopic.set(tid, list);
+    });
+
     // Check publication dates and drip feed status for each story
     const storiesToPublish: string[] = [];
     const futureStories: Array<{id: string; title: string; date: string; reason: string}> = [];
     const dripQueuedStories: Array<{id: string; title: string; scheduled_at: string | null; reason: string}> = [];
+    const duplicateHeldStories: Array<{id: string; title: string; matched: string; score: number}> = [];
 
     for (const story of readyStories) {
       // Get the topic ID for this story
