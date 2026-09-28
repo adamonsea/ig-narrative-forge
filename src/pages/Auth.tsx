@@ -128,7 +128,9 @@ const Auth = () => {
       <main className="relative z-10 w-full max-w-md">
         {checkEmail ? (
           <div className="space-y-5 px-4 py-12 text-center">
-            <CuratrLogo className="justify-center text-xl text-white" />
+            <Link to="/" aria-label="Curatr home" className="flex justify-center transition-opacity hover:opacity-80">
+              <CuratrLogo className="justify-center text-xl text-white" iconClassName="text-[#AD5CFF]" />
+            </Link>
             <MailCheck className="mx-auto h-9 w-9" style={{ color: MINT }} />
             <h1 className="font-display text-3xl italic tracking-tight text-white">Check your email</h1>
             <p className="text-base leading-relaxed text-[hsl(214,20%,70%)]">
