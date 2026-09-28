@@ -50,6 +50,7 @@ canvas{position:absolute;inset:0;width:1280px;height:720px;display:block;backgro
 const Q=new URLSearchParams(location.search);
 if(Q.get('clean')) document.documentElement.classList.add('clean');
 const FREEZE=Q.has('t')?parseFloat(Q.get('t')):null;
+const CAPTURE=Q.has('capture');
 const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- brand ---------- */
@@ -443,7 +444,7 @@ function tick(now){
   t=Math.min(t,T.end);
   if(soundOn&&AC&&FREEZE===null){for(const s of SOUNDS){if(s.t>lastT&&s.t<=t&&t-s.t<.12)SFX[s.n](AC.currentTime+.005,s)}}
   lastT=t;frame(t);
-  requestAnimationFrame(tick);
+  if(!CAPTURE)requestAnimationFrame(tick);
 }
 const btnS=document.getElementById('snd'),btnR=document.getElementById('rep');
 btnS.onclick=()=>{if(!AC)initAudio();AC.resume();soundOn=!soundOn;btnS.setAttribute('aria-pressed',soundOn);btnS.textContent=soundOn?'Sound on':'Sound';if(soundOn)replay()};
