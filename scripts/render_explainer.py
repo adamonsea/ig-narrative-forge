@@ -4,7 +4,7 @@
 Plays the chrome-free /explainer-export stage in headless Chromium, captures
 every composited frame via CDP screencast (PNG, lossless), resamples to a
 constant frame rate, then composites the presenter clips back in as a circular
-bubble carrying the narration audio.
+bubble and mixes their narration with a continuous, speech-ducked music bed.
 
 Usage:
     python3 scripts/render_explainer.py [--fps 30] [--res 1080|1440|2160] [--out PATH]
@@ -149,12 +149,15 @@ def compose(track):
     M = round(48 * args.scale)
     R = S / 2
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    ff(["-i", str(stage), "-i", str(track), "-filter_complex",
+    bed = Path("public/audio/explainer-bed.mp3")
+    ff(["-i", str(stage), "-i", str(track), "-stream_loop", "-1", "-i", str(bed), "-filter_complex",
         f"[1:v]scale={S}:{S}:force_original_aspect_ratio=increase,crop={S}:{S},format=rgba,"
         f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
         f"a='if(gt(pow(X-{R},2)+pow(Y-{R},2),pow({R},2)),0,255)'[bub];"
-        f"[0:v][bub]overlay=W-w-{M}:H-h-{M}:shortest=0[v]",
-        "-map", "[v]", "-map", "1:a?", "-c:v", "libx264", "-crf", "16", "-preset", "medium",
+         f"[0:v][bub]overlay=W-w-{M}:H-h-{M}:shortest=0[v];"
+         f"[2:a]volume=0.34[bed];[bed][1:a]sidechaincompress=threshold=0.018:ratio=8:attack=18:release=650[ducked];"
+         f"[1:a][ducked]amix=inputs=2:duration=first:normalize=0[a]",
+        "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-crf", "16", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(OUT)])
 
 

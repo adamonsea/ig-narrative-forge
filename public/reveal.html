@@ -51,6 +51,8 @@ const Q=new URLSearchParams(location.search);
 if(Q.get('clean')) document.documentElement.classList.add('clean');
 const FREEZE=Q.has('t')?parseFloat(Q.get('t')):null;
 const CAPTURE=Q.has('capture');
+const MODE=Q.get('mode')==='sting'?'sting':'full';
+const START_AT=MODE==='sting'?9.2:0;
 const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- brand ---------- */
@@ -439,8 +441,8 @@ function drawWord(t){
 }
 
 /* ---------- playback ---------- */
-let start=performance.now(),lastT=-1;
-function replay(){start=performance.now();lastT=-1}
+let start=performance.now()-START_AT*1000,lastT=START_AT-.001;
+function replay(){start=performance.now()-START_AT*1000;lastT=START_AT-.001}
 function tick(now){
   let t=FREEZE!==null?FREEZE:(now-start)/1000;
   if(REDUCED&&FREEZE===null)t=T.end;

@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import type { SceneProps } from './scenes';
 import {
+  SceneIdentIntro,
+  SceneIdentOutro,
   SceneProblem,
   SceneSubject,
   SceneSources,
@@ -19,10 +21,19 @@ export interface SceneDef {
   caption: string;
   /** Optional presenter clip for this beat; falls back to AVATAR_CLIPS by id. */
   avatarClip?: string;
+  /** Ident scenes use exact timing; narrated scenes receive the default tail pad. */
+  tailPad?: number;
   Component: ComponentType<SceneProps>;
 }
 
 export const TIMELINE: SceneDef[] = [
+  {
+    id: 'ident-intro',
+    duration: 5000,
+    tailPad: 0,
+    caption: '',
+    Component: SceneIdentIntro,
+  },
   {
     id: 'problem',
     duration: 6900,
@@ -74,6 +85,13 @@ export const TIMELINE: SceneDef[] = [
     caption: 'Run one feed, or run ten. Curatr does the trawling — you keep the voice.',
     Component: SceneClose,
   },
+  {
+    id: 'ident-outro',
+    duration: 14200,
+    tailPad: 0,
+    caption: '',
+    Component: SceneIdentOutro,
+  },
 ];
 
 /**
@@ -84,6 +102,6 @@ export const TIMELINE: SceneDef[] = [
 export const TAIL_PAD_MS = 600;
 
 /** Beat length including the tail pad — use this everywhere for timing. */
-export const sceneDuration = (scene: SceneDef) => scene.duration + TAIL_PAD_MS;
+export const sceneDuration = (scene: SceneDef) => scene.duration + (scene.tailPad ?? TAIL_PAD_MS);
 
 export const TOTAL_MS = TIMELINE.reduce((sum, s) => sum + sceneDuration(s), 0);

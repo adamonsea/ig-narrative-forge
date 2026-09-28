@@ -44,3 +44,8 @@ Membership, premium triggers and credits
 - [x] Add Cartoon, Aged editorial photo, Anime and Illustrated icon styles
 - [x] Unify low-cognitive-load billing and credit messaging
 - [x] Verify checkout, renewal, cancellation, vouchers, failures and mobile access
+
+Explainer film identity and sound
+- [x] Add a shortened identity sting before narration
+- [x] Add the complete identity reveal after narration
+- [x] Keep one continuous upbeat analogue bed and duck it under presenter speech
