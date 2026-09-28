@@ -178,7 +178,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
 
   return (
     <div className="relative flex h-full w-full flex-col bg-[hsl(214,50%,7%)] text-white">
-      {!renderMode && <audio ref={bedRef} src="/audio/explainer-bed.mp3" preload="auto" aria-hidden="true" />}
+      {!renderMode && <audio ref={(el) => { if (el && !bedRef.current) el.volume = 0.4; bedRef.current = el; }} src="/audio/explainer-bed.mp3" preload="auto" aria-hidden="true" />}
       {/* Stage */}
       <div className="relative flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
