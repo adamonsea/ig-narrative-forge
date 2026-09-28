@@ -9,13 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Work+Sans:wght@500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --violet:#380A78; --lime:#B0F63C; --page:#22054A; --chip:rgba(255,255,255,.08);
+  --violet:#0B1522; --lime:#57FFB9; --page:#0B1522; --chip:rgba(255,255,255,.08);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
-@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --page:#D9D0EA; --chip:rgba(56,10,120,.10); } }
-:root[data-theme="dark"]{ --page:#22054A; }
+:root[data-theme="dark"]{ --page:#0B1522; }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 html,body{height:100%;margin:0}
@@ -23,10 +22,10 @@ body{background:var(--page);overflow:hidden;font-family:"Work Sans",system-ui,sa
 #fit{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
 canvas{position:absolute;inset:0;width:1280px;height:720px;display:block;background:var(--violet)}
 #ui{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;z-index:2}
-#ui button{font:500 13px/1 "Work Sans",system-ui,sans-serif;color:#F4F0FF;background:rgba(56,10,120,.72);border:1px solid rgba(244,240,255,.22);border-radius:999px;padding:9px 14px;cursor:pointer;backdrop-filter:blur(6px)}
-#ui button:hover{border-color:rgba(176,246,60,.7)}
+#ui button{font:500 13px/1 "Work Sans",system-ui,sans-serif;color:#FFFFFF;background:rgba(64,13,115,.72);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:9px 14px;cursor:pointer;backdrop-filter:blur(6px)}
+#ui button:hover{border-color:rgba(87,255,185,.7)}
 #ui button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
-#ui button[aria-pressed="true"]{color:#1d0542;background:var(--lime);border-color:var(--lime)}
+#ui button[aria-pressed="true"]{color:#0B1522;background:var(--lime);border-color:var(--lime)}
 .clean #ui{display:none}
 </style>
 </head>
@@ -54,7 +53,7 @@ const FREEZE=Q.has('t')?parseFloat(Q.get('t')):null;
 const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- brand ---------- */
-const BG='#380A78', LIME=[176,246,60], PAPER='#F4F0FF';
+const BG='#0B1522', LIME=[87,255,185], PAPER='#FFFFFF';
 const WORD='Curatr', FONT_FAM='"Playfair Display", Georgia, serif', FONT_W=600;
 
 /* ---------- field ---------- */
@@ -114,7 +113,7 @@ function drawShape(ctx,s,b,fill,wF){
 }
 
 /* ---------- tiles ---------- */
-const PAL=[[157,123,232,.5],[157,123,232,.5],[190,168,255,.72],[126,92,214,.62],[226,216,255,.82]];
+const PAL=[[173,92,255,.46],[173,92,255,.46],[138,73,204,.7],[64,13,115,.78],[218,183,255,.8]];
 const tile=[]; for(let i=0;i<N;i++){
   const lime=rnd()<.085;
   tile.push({shape:pick(SHAPES),col:lime?[...LIME,.95]:pick(PAL),ev:[],exit:1e9,hero:-1});
@@ -334,7 +333,7 @@ const rgba=(c,a=1)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${(c[3]??1)*a})`;
 let VIG=null;
 function vignette(){
   const g=ctx.createRadialGradient(VW/2,VH/2,VH*.25,VW/2,VH/2,VW*.72);
-  g.addColorStop(0,'rgba(20,2,48,0)');g.addColorStop(1,'rgba(20,2,48,.55)');return g;
+  g.addColorStop(0,'rgba(11,21,34,0)');g.addColorStop(1,'rgba(3,8,16,.62)');return g;
 }
 
 function frame(t){
@@ -385,7 +384,7 @@ function frame(t){
     const b=lerp(B,MW,mv),x=lerp(h.x0,MCX,mv),y=lerp(h.y0,FINAL[i].y,mv);
     const cc=[lerp(h.col[0],LIME[0],tint),lerp(h.col[1],LIME[1],tint),lerp(h.col[2],LIME[2],tint),lerp(h.col[3],1,tint)];
     ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(Math.max(sx,.001),sy);
-    if(glow>0){ctx.shadowColor=`rgba(176,246,60,${.55*glow})`;ctx.shadowBlur=14*glow*K}
+    if(glow>0){ctx.shadowColor=`rgba(87,255,185,${.55*glow})`;ctx.shadowBlur=14*glow*K}
     drawShape(ctx,shape,b,rgba(cc),shape==='bar'?1-.5*colE:1);
     ctx.restore();
   });
@@ -407,17 +406,22 @@ function drawWord(t){
     const sc=1+.07*(1-out3(p));
     ctx.save();ctx.translate(x,y);ctx.rotate(j.r*k);ctx.scale(sc,sc);
     const a=lerp(j.a,1,al[i]);
-    if(p<1){ctx.fillStyle=`rgba(244,240,255,${.28*(1-p)})`;ctx.fillText(ch,1.4,.8);ctx.shadowColor=`rgba(244,240,255,${.5*(1-p)})`;ctx.shadowBlur=10*(1-p)*K}
-    ctx.fillStyle=`rgba(244,240,255,${a*Math.min(1,(t-ts)/.035)})`;ctx.fillText(ch,0,0);
+    if(p<1){ctx.fillStyle=`rgba(255,255,255,${.28*(1-p)})`;ctx.fillText(ch,1.4,.8);ctx.shadowColor=`rgba(255,255,255,${.5*(1-p)})`;ctx.shadowBlur=10*(1-p)*K}
+    ctx.fillStyle=`rgba(255,255,255,${a*Math.min(1,(t-ts)/.035)})`;ctx.fillText(ch,0,0);
     ctx.restore();
   });
-  /* the small .pro, fading in once the word has settled */
+  /* Homepage wordmark lock-up: mint stop, smaller white pro at 70%. */
   const pa=io3(clamp((t-T.align-WORD.length*.045)/.5));
   if(pa>0){
     ctx.save();
-    ctx.font=`500 ${Math.round(LAY.fs*.4)}px "Work Sans",system-ui,sans-serif`;
-    ctx.fillStyle=`rgba(176,246,60,${pa*.95})`;
-    ctx.fillText('.pro',LAY.left+LAY.ww+LAY.fs*.08,LAY.base);
+    const suffixSize=Math.round(LAY.fs*.64);
+    const suffixX=LAY.left+LAY.ww+LAY.fs*.025;
+    ctx.font=`${FONT_W} ${suffixSize}px ${FONT_FAM}`;
+    ctx.fillStyle=`rgba(87,255,185,${pa})`;
+    ctx.fillText('.',suffixX,LAY.base);
+    const dotWidth=ctx.measureText('.').width;
+    ctx.fillStyle=`rgba(255,255,255,${pa*.7})`;
+    ctx.fillText('pro',suffixX+dotWidth,LAY.base);
     ctx.restore();
   }
 
@@ -427,7 +431,7 @@ function drawWord(t){
   let ca=0,x;
   if(t<T.cr){x=typed<WORD.length?LAY.xs[typed]:LAY.left+LAY.ww+LAY.fs*.04;ca=clamp((t-T.type0+.25)/.2)*(t<T.type0?(Math.sin(t*14)>0?1:.25):1)}
   else{const p=clamp((t-T.cr)/.3);x=lerp(LAY.left+LAY.ww+LAY.fs*.04,LAY.left,in2(p)*(2-p));ca=1-clamp((t-T.cr-.22)/.3)}
-  if(ca>0){ctx.fillStyle=`rgba(176,246,60,${ca})`;ctx.fillRect(x,cyy,cw,ch)}
+  if(ca>0){ctx.fillStyle=`rgba(87,255,185,${ca})`;ctx.fillRect(x,cyy,cw,ch)}
 }
 
 /* ---------- playback ---------- */
