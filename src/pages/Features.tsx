@@ -7,6 +7,7 @@ import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { useAuth } from '@/hooks/useAuth';
 import { FeatureLoop } from '@/components/home/FeatureLoops';
 import { FeatureAnimation } from '@/components/features/FeatureAnimations';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 import {
   HEADLINE_FEATURES,
   DEPTH_FEATURES,
@@ -49,9 +50,7 @@ const Features = () => {
 
       <header className="border-b border-white/10">
         <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
-          <Link to="/" className="font-logo text-xl text-white">
-            Curatr
-          </Link>
+          <Link to="/" aria-label="Curatr home"><CuratrLogo className="text-xl text-white" /></Link>
           <div className="flex items-center gap-6 text-sm">
             <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
               Discover

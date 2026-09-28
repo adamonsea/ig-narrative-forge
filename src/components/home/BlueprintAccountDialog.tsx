@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, MailCheck } from 'lucide-react';
 import { savePendingBlueprint, type FeedBlueprint } from '@/lib/feedBlueprint';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
 interface Props {
   open: boolean;
@@ -123,9 +124,7 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
 
         {checkEmail ? (
           <div className="relative z-10 space-y-5 px-8 py-12 text-center sm:px-12">
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40" aria-label="Curatr">
-              Curatr.pro
-            </div>
+            <CuratrLogo className="justify-center text-xl text-white" />
             <MailCheck className="mx-auto h-9 w-9" style={{ color: MINT }} />
             <DialogTitle className="font-display text-3xl italic tracking-tight text-white">
               Check your email
@@ -145,9 +144,7 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
         ) : (
           <div className="relative z-10 px-8 pb-10 pt-12 sm:px-12">
             <div className="mb-10 text-center">
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40" aria-label="Curatr">
-                Curatr.pro
-              </div>
+              <CuratrLogo className="justify-center text-xl text-white" />
               <DialogTitle className="font-display mt-6 text-4xl italic tracking-tight text-white">
                 Save your feed
               </DialogTitle>

@@ -521,13 +521,13 @@ export const SceneClose = ({ reduced, cue }: SceneProps) => {
           ))}
         </div>
         <motion.div
-          className="text-center font-logo text-[calc(var(--u)*9)] leading-none tracking-tight text-white"
+          className="inline-flex items-baseline text-center font-logo text-[calc(var(--u)*9)] font-medium leading-none text-white"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: reduced ? 0.1 : 0.9 }}
         >
           Curatr<span style={{ color: ACCENT }}>.</span>
-          <span className="text-[calc(var(--u)*5)] opacity-70">pro</span>
+          <span className="text-[0.48em]">pro</span>
         </motion.div>
       </div>
     </Stage>

@@ -151,9 +151,9 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <h2 className="font-logo text-[clamp(2rem,7vw,4.5rem)] leading-none tracking-tight">
+              <h2 className="font-logo text-[clamp(2rem,7vw,4.5rem)] font-medium leading-none">
                 Curatr<span style={{ color: ACCENT }}>.</span>
-                <span className="text-2xl opacity-70">pro</span>
+                <span className="text-[0.48em]">pro</span>
               </h2>
               <p className="max-w-[42ch] text-[clamp(0.95rem,2.6vw,1.4rem)] text-white/70">
                 A live feed on any subject or place — trawled, written, illustrated and published for you.

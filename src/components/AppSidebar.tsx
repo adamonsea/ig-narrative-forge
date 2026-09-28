@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { useTopics } from "@/hooks/useTopics";
+import { CuratrLogo } from "@/components/brand/CuratrLogo";
 
 const navigationItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
@@ -43,16 +44,7 @@ export function AppSidebar() {
       <SidebarContent>
         {/* Brand Section */}
         <div className="flex items-center gap-2 px-3 py-4">
-          <img 
-            src="/curatr-icon.png" 
-            alt="Curatr" 
-            className="h-8 w-8 shrink-0"
-          />
-          {open && (
-            <span className="text-lg font-logo font-semibold tracking-tight text-sidebar-foreground">
-              Curatr
-            </span>
-          )}
+          <CuratrLogo iconOnly={!open} className={open ? "text-lg text-sidebar-foreground" : "text-[1.65rem]"} />
         </div>
 
         {/* Navigation */}

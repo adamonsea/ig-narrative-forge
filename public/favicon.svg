@@ -1,6 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" preserveAspectRatio="xMidYMid meet">
-  <rect width="64" height="64" rx="14" ry="14" fill="#380A78"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central"
-        font-family="Playfair Display, Georgia, 'Times New Roman', serif"
-        font-size="46" font-weight="600" fill="#B0F63C">C</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="13" fill="#0B1522"/>
+  <g fill="#57FFB9" transform="translate(20 11)">
+    <path d="M0 12A12 12 0 0 1 24 12H0Z"/>
+    <path d="M0 15H12V27H0Z"/>
+    <path d="M0 30H24A12 12 0 0 1 0 30Z"/>
+  </g>
 </svg>

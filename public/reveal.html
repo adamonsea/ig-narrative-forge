@@ -76,7 +76,7 @@ const T={
   turn:[7.2,8.85], collapse:[9.3,9.62], pan:[9.95,10.75],
   type0:10.85, bell:0, cr:0, align:0, end:14.2
 };
-const ZF=2.8;
+const ZF=3.1;
 
 /* ---------- utils ---------- */
 let seed=20260928;
@@ -259,16 +259,20 @@ const LAY={ready:false};
 const STRIKES=[0,.16,.29,.47,.6,.78];
 function layoutWord(ctx){
   const markH=(3*MR+2*MG)*ZF, markW=MW*ZF;
-  const fs=Math.round(markH*.56/.5);                // x-height ≈ 56% of mark height
+  const fs=Math.round(markH*.82);
   ctx.font=`${FONT_W} ${fs}px ${FONT_FAM}`;
   const xh=ctx.measureText('x').actualBoundingBoxAscent||fs*.5;
-  const gap=fs*.24, ww=ctx.measureText(WORD).width;
-  const L=markW+gap+ww, markX=VW/2-L/2+markW/2;
+  const suffixSize=Math.round(fs*.48);
+  ctx.font=`${FONT_W} ${suffixSize}px ${FONT_FAM}`;
+  const suffixW=ctx.measureText('.pro').width;
+  ctx.font=`${FONT_W} ${fs}px ${FONT_FAM}`;
+  const gap=fs*.34, ww=ctx.measureText(WORD).width;
+  const L=markW+gap+ww+suffixW, markX=VW/2-L/2+markW/2;
   PANX=(VW/2-markX)/ZF;
   const left=markX+markW/2+gap, base=VH/2+xh/2;
   const xs=[...WORD].map((_,i)=>left+ctx.measureText(WORD.slice(0,i)).width);
   const J=[...WORD].map(()=>({x:(rnd()-.5)*2.2,y:(rnd()-.5)*5,r:(rnd()-.5)*.035,a:.82+rnd()*.18}));
-  Object.assign(LAY,{ready:true,fs,xh,left,base,xs,J,ww,markH});
+  Object.assign(LAY,{ready:true,fs,suffixSize,xh,left,base,xs,J,ww,markH});
   const last=T.type0+STRIKES[STRIKES.length-1];
   T.bell=last+.2; T.cr=last+.26; T.align=last+.62;
 }
@@ -411,17 +415,16 @@ function drawWord(t){
     ctx.fillStyle=`rgba(255,255,255,${a*Math.min(1,(t-ts)/.035)})`;ctx.fillText(ch,0,0);
     ctx.restore();
   });
-  /* Homepage wordmark lock-up: mint stop, smaller white pro at 70%. */
+  /* Complete lock-up: mint stop, white pro at the guide's half-height scale. */
   const pa=io3(clamp((t-T.align-WORD.length*.045)/.5));
   if(pa>0){
     ctx.save();
-    const suffixSize=Math.round(LAY.fs*.64);
     const suffixX=LAY.left+LAY.ww+LAY.fs*.025;
-    ctx.font=`${FONT_W} ${suffixSize}px ${FONT_FAM}`;
+    ctx.font=`${FONT_W} ${LAY.suffixSize}px ${FONT_FAM}`;
     ctx.fillStyle=`rgba(87,255,185,${pa})`;
     ctx.fillText('.',suffixX,LAY.base);
     const dotWidth=ctx.measureText('.').width;
-    ctx.fillStyle=`rgba(255,255,255,${pa*.7})`;
+    ctx.fillStyle=`rgba(255,255,255,${pa})`;
     ctx.fillText('pro',suffixX+dotWidth,LAY.base);
     ctx.restore();
   }
