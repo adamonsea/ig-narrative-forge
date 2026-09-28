@@ -100,7 +100,55 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
     else v.pause();
   }, [playing, index]);
 
+  // ---- Continuous sound bed (Option 3: adaptive arc) ----
+  // One <audio> element for the whole film so scene changes never interrupt it.
+  // Ducks under the presenter's voice so the two never compete.
+  const bedRef = useRef<HTMLAudioElement | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const filmPosMs = useMemo(
+    () => TIMELINE.slice(0, index).reduce((s, x) => s + sceneDuration(x), 0) + elapsed,
+    [index, elapsed],
+  );
+  const filmPosRef = useRef(0);
+  filmPosRef.current = filmPosMs;
+
+  useEffect(() => { setSpeaking(false); }, [scene.id]);
+
+  // Play/pause with the film; resync position after skips.
+  useEffect(() => {
+    const bed = bedRef.current;
+    if (!bed || renderMode) return;
+    if (playing && !finished) {
+      const target = filmPosRef.current / 1000;
+      if (Math.abs(bed.currentTime - target) > 1.5) bed.currentTime = target;
+      void bed.play().catch(() => undefined);
+    } else if (!finished) {
+      bed.pause();
+    }
+  }, [playing, finished, index, renderMode]);
+
+  // Smooth volume: full between lines, ducked under speech, fade out at the end.
+  useEffect(() => {
+    const bed = bedRef.current;
+    if (!bed) return;
+    const target = muted ? 0 : finished ? 0 : speaking ? 0.12 : 0.4;
+    const id = window.setInterval(() => {
+      const diff = target - bed.volume;
+      if (Math.abs(diff) < 0.01) {
+        bed.volume = target;
+        if (finished && target === 0) bed.pause();
+        window.clearInterval(id);
+        return;
+      }
+      // Duck quickly (~250ms), recover gently (~800ms).
+      bed.volume = Math.min(1, Math.max(0, bed.volume + diff * (diff < 0 ? 0.35 : 0.12)));
+    }, 40);
+    return () => window.clearInterval(id);
+  }, [speaking, muted, finished]);
+
   const replay = () => {
+    if (bedRef.current) bedRef.current.currentTime = 0;
+
     finishedRef.current = false;
     setFinished(false);
     setIndex(0);
