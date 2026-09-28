@@ -3336,6 +3336,8 @@ export type Database = {
           cover_illustration_url: string | null
           created_at: string
           drip_queued_at: string | null
+          duplicate_of_story_id: string | null
+          duplicate_similarity: number | null
           id: string
           illustration_generated_at: string | null
           illustration_regen_count: number
@@ -3376,6 +3378,8 @@ export type Database = {
           cover_illustration_url?: string | null
           created_at?: string
           drip_queued_at?: string | null
+          duplicate_of_story_id?: string | null
+          duplicate_similarity?: number | null
           id?: string
           illustration_generated_at?: string | null
           illustration_regen_count?: number
@@ -3416,6 +3420,8 @@ export type Database = {
           cover_illustration_url?: string | null
           created_at?: string
           drip_queued_at?: string | null
+          duplicate_of_story_id?: string | null
+          duplicate_similarity?: number | null
           id?: string
           illustration_generated_at?: string | null
           illustration_regen_count?: number
@@ -3450,6 +3456,13 @@ export type Database = {
             columns: ["article_id"]
             isOneToOne: true
             referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stories_duplicate_of_story_id_fkey"
+            columns: ["duplicate_of_story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
             referencedColumns: ["id"]
           },
           {
