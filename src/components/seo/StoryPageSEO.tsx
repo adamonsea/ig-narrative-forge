@@ -117,7 +117,7 @@ export const StoryPageSEO = ({
       "name": siteName,
       "logo": {
         "@type": "ImageObject",
-        "url": topicLogoUrl || "https://curatr.pro/placeholder.svg"
+        "url": topicLogoUrl || "https://curatr.pro/curatr-icon.png"
       }
     },
     "articleBody": articleBody,
