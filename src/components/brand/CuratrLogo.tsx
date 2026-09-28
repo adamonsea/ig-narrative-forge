@@ -3,9 +3,10 @@ import { cn } from '@/lib/utils';
 
 type CuratrLogoProps = ComponentPropsWithoutRef<'span'> & {
   iconOnly?: boolean;
+  iconClassName?: string;
 };
 
-export function CuratrLogo({ className, iconOnly = false, ...props }: CuratrLogoProps) {
+export function CuratrLogo({ className, iconOnly = false, iconClassName, ...props }: CuratrLogoProps) {
   return (
     <span
       className={cn('inline-flex items-center font-logo font-medium leading-none', className)}
@@ -15,7 +16,7 @@ export function CuratrLogo({ className, iconOnly = false, ...props }: CuratrLogo
       <svg
         aria-hidden="true"
         viewBox="0 0 100 168"
-        className={cn('h-[1.25em] w-auto shrink-0 text-[#57FFB9]', !iconOnly && 'mr-[0.38em]')}
+        className={cn('h-[1.25em] w-auto shrink-0 text-[#57FFB9]', !iconOnly && 'mr-[0.38em]', iconClassName)}
       >
         <path d="M0 50A50 50 0 0 1 100 50H0Z" fill="currentColor" />
         <path d="M0 60H50V108H0Z" fill="currentColor" />
