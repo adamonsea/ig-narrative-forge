@@ -15,7 +15,7 @@ export function CuratrLogo({ className, iconOnly = false, ...props }: CuratrLogo
       <svg
         aria-hidden="true"
         viewBox="0 0 100 168"
-        className={cn('h-[1.25em] w-auto shrink-0 text-pop', !iconOnly && 'mr-[0.38em]')}
+        className={cn('h-[1.25em] w-auto shrink-0 text-[#57FFB9]', !iconOnly && 'mr-[0.38em]')}
       >
         <path d="M0 50A50 50 0 0 1 100 50H0Z" fill="currentColor" />
         <path d="M0 60H50V108H0Z" fill="currentColor" />
@@ -24,7 +24,7 @@ export function CuratrLogo({ className, iconOnly = false, ...props }: CuratrLogo
       {!iconOnly && (
         <span aria-hidden="true" className="inline-flex items-baseline">
           <span>Curatr</span>
-          <span className="text-pop">.</span>
+          <span className="text-[#57FFB9]">.</span>
           <span className="text-[0.48em]">pro</span>
         </span>
       )}
