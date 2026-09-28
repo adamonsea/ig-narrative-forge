@@ -141,7 +141,9 @@ const Auth = () => {
         ) : (
           <div className="px-4 pb-10 pt-6">
             <div className="mb-10 text-center">
-              <CuratrLogo className="justify-center text-xl text-white" />
+              <Link to="/" aria-label="Curatr home" className="flex justify-center transition-opacity hover:opacity-80">
+                <CuratrLogo className="justify-center text-xl text-white" iconClassName="text-[#AD5CFF]" />
+              </Link>
               <h1 className="font-display mt-6 text-4xl italic tracking-tight text-white">
                 {mode === 'signup' ? 'Create your workspace' : 'Welcome back'}
               </h1>
