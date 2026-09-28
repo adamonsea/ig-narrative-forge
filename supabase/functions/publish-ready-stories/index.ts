@@ -87,12 +87,12 @@ serve(async (req) => {
       : { data: [] };
 
     const taTopicMap = new Map((recentTas || []).map((ta) => [ta.id, ta.topic_id]));
-    const recentTitlesByTopic = new Map<string, string[]>();
+    const recentTitlesByTopic = new Map<string, Array<{ id: string | null; title: string }>>();
     (recentPublished || []).forEach((s) => {
       const tid = s.topic_article_id ? taTopicMap.get(s.topic_article_id) : null;
       if (!tid) return;
       const list = recentTitlesByTopic.get(tid) || [];
-      list.push(s.title);
+      list.push({ id: s.id, title: s.title });
       recentTitlesByTopic.set(tid, list);
     });
 
@@ -182,23 +182,38 @@ serve(async (req) => {
         }
       }
 
-      // DUPLICATE CHECK: hold near-identical retellings of an event already live
-      if (topicId) {
+      // DUPLICATE CHECK: hold near-identical retellings of an event already live.
+      // Stories already reviewed once (duplicate_of_story_id set) skip this check.
+      if (topicId && !story.duplicate_of_story_id) {
         const recentTitles = recentTitlesByTopic.get(topicId) || [];
-        let match: { title: string; score: number } | null = null;
-        for (const title of recentTitles) {
-          const { score } = storySimilarity(story.title, title);
+        let match: { id: string | null; title: string; score: number } | null = null;
+        for (const recent of recentTitles) {
+          const { score } = storySimilarity(story.title, recent.title);
           if (score >= PUBLISH_DUPLICATE_THRESHOLD && (!match || score > match.score)) {
-            match = { title, score };
+            match = { id: recent.id, title: recent.title, score };
           }
         }
         if (match) {
+          // Move the story back to drafts and record what it matched, so the
+          // owner can review it in the pipeline instead of it being silently
+          // re-held on every run.
+          const { error: holdError } = await supabase
+            .from('stories')
+            .update({
+              status: 'draft',
+              duplicate_of_story_id: match.id,
+              duplicate_similarity: match.score
+            })
+            .eq('id', story.id);
+          if (holdError) {
+            console.error(`Failed to mark held duplicate ${story.id}:`, holdError);
+          }
           duplicateHeldStories.push({ id: story.id, title: story.title, matched: match.title, score: match.score });
-          console.log(`🚫 Holding possible duplicate "${story.title}" ≈ "${match.title}" (${match.score.toFixed(2)})`);
+          console.log(`🚫 Holding possible duplicate "${story.title}" ≈ "${match.title}" (${match.score.toFixed(2)}) — moved to drafts for review`);
           continue;
         }
         // Guard against twins inside this same batch
-        recentTitles.push(story.title);
+        recentTitles.push({ id: story.id, title: story.title });
         recentTitlesByTopic.set(topicId, recentTitles);
       }
 

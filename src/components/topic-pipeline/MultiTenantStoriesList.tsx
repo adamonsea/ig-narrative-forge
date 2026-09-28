@@ -448,6 +448,14 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                   
                   <div className="flex items-center gap-2 sm:gap-4 text-muted-foreground flex-wrap">
                     {getStatusBadge(story.status)}
+                    {story.duplicate_of_story_id && (
+                      <Badge
+                        className="bg-amber-100 text-amber-800 border-amber-300 text-xs"
+                        title={`Held as a possible duplicate (${Math.round((story.duplicate_similarity || 0) * 100)}% similar to a published story). Review and publish to keep it, or delete it.`}
+                      >
+                        Possible duplicate
+                      </Badge>
+                    )}
                     {isStuck(story) && (
                       <Badge variant="destructive" className="text-xs">Stuck</Badge>
                     )}

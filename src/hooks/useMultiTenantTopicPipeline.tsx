@@ -88,6 +88,8 @@ export interface MultiTenantStory {
   is_teaser?: boolean;
   is_parliamentary?: boolean;
   scheduled_publish_at?: string | null;
+  duplicate_of_story_id?: string | null;
+  duplicate_similarity?: number | null;
 }
 
 export interface MultiTenantStats {
