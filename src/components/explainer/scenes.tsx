@@ -51,7 +51,12 @@ const isPortrait = () =>
   typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
 
 export const useUnit = () => {
-  const read = () => Math.max(window.innerWidth, window.innerHeight) * 0.0085;
+  // Landscape screens are height-bound: cap by height so wide desktops never
+  // push scene content off the top/bottom of the stage or under the caption.
+  const read = () => {
+    const w = window.innerWidth, h = window.innerHeight;
+    return h > w ? h * 0.0085 : Math.min(w * 0.0085, h * 0.0115);
+  };
   const [u, setU] = useState(() => (typeof window === 'undefined' ? 10 : read()));
   useEffect(() => {
     const on = () => setU(read());
