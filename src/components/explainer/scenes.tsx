@@ -8,6 +8,25 @@ export interface SceneProps {
   tap: (ms: number) => void;
 }
 
+const IdentFrame = ({ mode, reduced }: { mode: 'sting' | 'full'; reduced: boolean }) => {
+  const query = new URLSearchParams({ clean: '1', mode });
+  if (reduced) query.set('t', '14.2');
+
+  return (
+    <iframe
+      title={mode === 'sting' ? 'Curatr opening ident' : 'Curatr closing ident'}
+      src={`/reveal.html?${query.toString()}`}
+      className="absolute inset-0 h-full w-full border-0"
+      tabIndex={-1}
+      aria-hidden="true"
+    />
+  );
+};
+
+export const SceneIdentIntro = ({ reduced }: SceneProps) => <IdentFrame mode="sting" reduced={reduced} />;
+
+export const SceneIdentOutro = ({ reduced }: SceneProps) => <IdentFrame mode="full" reduced={reduced} />;
+
 const ACCENT = 'hsl(155,100%,67%)';
 const VIOLET = 'hsl(270,100%,68%)';
 const PAPER = '#fafaf8';

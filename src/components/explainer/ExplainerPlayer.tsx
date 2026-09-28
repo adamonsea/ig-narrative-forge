@@ -100,7 +100,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
     else v.pause();
   }, [playing, index]);
 
-  // ---- Continuous sound bed (Option 3: adaptive arc) ----
+  // ---- Continuous upbeat analogue sound bed ----
   // One <audio> element for the whole film so scene changes never interrupt it.
   // Ducks under the presenter's voice so the two never compete.
   const bedRef = useRef<HTMLAudioElement | null>(null);
@@ -131,7 +131,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
   useEffect(() => {
     const bed = bedRef.current;
     if (!bed) return;
-    const target = muted ? 0 : finished ? 0 : speaking ? 0.12 : 0.4;
+    const target = muted ? 0 : finished ? 0 : speaking ? 0.11 : 0.34;
     const id = window.setInterval(() => {
       const diff = target - bed.volume;
       if (Math.abs(diff) < 0.01) {
@@ -256,7 +256,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
       {/* Caption */}
       <div className="px-[max(1rem,4vw)] pb-2">
         <AnimatePresence mode="wait">
-          {!finished && (
+          {!finished && scene.caption && (
             <motion.p
               key={`cap-${scene.id}`}
               initial={{ opacity: 0, y: 8 }}
