@@ -15,6 +15,7 @@ import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoop
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { FeedIdeaGenerator } from '@/components/home/FeedIdeaGenerator';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -82,9 +83,7 @@ const Index = () => {
       <div className="relative z-10">
         <header className="container mx-auto px-6 py-8">
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
-            <div className="text-3xl font-logo font-semibold tracking-tight text-white">
-              Curatr<span className="text-[hsl(155,100%,67%)]">.</span><span className="text-xl opacity-70">pro</span>
-            </div>
+            <CuratrLogo className="text-3xl text-white" />
             <div className="hidden md:flex items-center gap-4">
               <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
                 Discover

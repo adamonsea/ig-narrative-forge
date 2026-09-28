@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { Check } from 'lucide-react';
 import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
 const FN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/waitlist-questionnaire`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -320,14 +321,7 @@ export default function WaitlistWelcome() {
   }
 
   const Brand = ({ className = '' }: { className?: string }) => (
-    <span className={`inline-flex items-baseline ${className}`}>
-      <span className="font-logo font-semibold tracking-tight text-foreground text-2xl sm:text-3xl">
-        Curatr
-      </span>
-      <span className="font-logo font-light tracking-tight text-[hsl(155,100%,67%)] text-lg sm:text-xl">
-        .pro
-      </span>
-    </span>
+    <CuratrLogo className={`text-2xl text-foreground sm:text-3xl ${className}`} />
   );
 
   if (state === 'invalid') {

@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Globe, MapPin, ArrowRight } from 'lucide-react';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
 const Discover = () => {
   const { data: topics, isLoading } = useQuery({
@@ -27,9 +28,7 @@ const Discover = () => {
 
       <header className="border-b border-border">
         <div className="container mx-auto px-6 py-6 flex justify-between items-center">
-          <Link to="/" className="text-2xl font-logo font-semibold tracking-tight text-foreground">
-            Curatr<span className="text-lg opacity-60">.pro</span>
-          </Link>
+          <Link to="/" aria-label="Curatr home"><CuratrLogo className="text-2xl text-foreground" /></Link>
           <div className="flex items-center gap-4">
             <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Pricing

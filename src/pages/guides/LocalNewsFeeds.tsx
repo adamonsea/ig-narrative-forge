@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 import {
   Newspaper,
   Rss,
@@ -172,11 +173,8 @@ export default function LocalNewsFeedsGuide() {
         {/* Header */}
         <header className="container mx-auto px-6 py-8">
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
-            <Link
-              to="/"
-              className="text-3xl font-logo font-semibold tracking-tight text-white"
-            >
-              Curatr<span className="text-xl opacity-70">.pro</span>
+            <Link to="/" aria-label="Curatr home">
+              <CuratrLogo className="text-3xl text-white" />
             </Link>
             <Button
               asChild

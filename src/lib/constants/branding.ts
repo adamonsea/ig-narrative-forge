@@ -26,7 +26,7 @@ export const BRAND = {
   organizationName: 'Curatr',
   
   // Logo URL
-  logoUrl: 'https://curatr.pro/placeholder.svg',
+  logoUrl: 'https://curatr.pro/curatr-icon.png',
   
   // Social handles
   social: {

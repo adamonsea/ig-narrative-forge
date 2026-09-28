@@ -6,7 +6,7 @@ import { useEffect } from 'react';
  */
 export const usePageFavicon = (iconUrl?: string | null) => {
   useEffect(() => {
-    const faviconPath = iconUrl || '/curatr-icon.png';
+    const faviconPath = iconUrl || '/favicon.svg';
     
     try {
       // Update standard favicon

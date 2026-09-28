@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, MailCheck } from 'lucide-react';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
 // Homepage ink palette: deep navy canvas, violet glow, mint pill action.
 const INK = 'hsl(214, 50%, 9%)';
@@ -127,7 +128,7 @@ const Auth = () => {
       <main className="relative z-10 w-full max-w-md">
         {checkEmail ? (
           <div className="space-y-5 px-4 py-12 text-center">
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Curatr.pro</div>
+            <CuratrLogo className="justify-center text-xl text-white" />
             <MailCheck className="mx-auto h-9 w-9" style={{ color: MINT }} />
             <h1 className="font-display text-3xl italic tracking-tight text-white">Check your email</h1>
             <p className="text-base leading-relaxed text-[hsl(214,20%,70%)]">
@@ -138,7 +139,7 @@ const Auth = () => {
         ) : (
           <div className="px-4 pb-10 pt-6">
             <div className="mb-10 text-center">
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Curatr.pro</div>
+              <CuratrLogo className="justify-center text-xl text-white" />
               <h1 className="font-display mt-6 text-4xl italic tracking-tight text-white">
                 {mode === 'signup' ? 'Create your workspace' : 'Welcome back'}
               </h1>

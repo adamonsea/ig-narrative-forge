@@ -10,6 +10,7 @@ import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { supabase } from '@/integrations/supabase/client';
 import { PRO_MONTHLY_CREDITS, TOP_UP_CREDITS } from '@/lib/billing';
 import { useSubscription } from '@/hooks/useSubscription';
+import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
 const features = [
   'Publish public feeds',
@@ -73,7 +74,7 @@ export default function Pricing() {
         <div className="absolute bottom-0 left-1/4 h-[440px] w-[440px] rounded-full bg-emerald-300/10 blur-[150px]" />
       </div>
       <header className="relative container mx-auto flex max-w-6xl items-center justify-between px-6 py-8">
-        <Link to="/" className="font-logo text-3xl font-semibold">Curatr<span className="text-xl opacity-70">.pro</span></Link>
+        <Link to="/" aria-label="Curatr home"><CuratrLogo className="text-3xl text-white" /></Link>
         <Button asChild variant="ghost" className="rounded-full border border-white/15 text-white hover:bg-white/10"><Link to={user ? '/dashboard' : '/auth'}>{user ? 'Your feeds' : 'Sign in'}</Link></Button>
       </header>
       <main className="relative container mx-auto max-w-5xl px-6 pb-24 pt-10">
