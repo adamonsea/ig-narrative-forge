@@ -44,7 +44,9 @@ export function AppSidebar() {
       <SidebarContent>
         {/* Brand Section */}
         <div className="flex items-center gap-2 px-3 py-4">
-          <CuratrLogo iconOnly={!open} className={open ? "text-lg text-sidebar-foreground" : "text-[1.65rem]"} />
+          <Link to="/" aria-label="Curatr home" className="rounded-md transition-opacity hover:opacity-80">
+            <CuratrLogo iconOnly={!open} className={open ? "text-lg text-sidebar-foreground" : "text-[1.65rem]"} />
+          </Link>
         </div>
 
         {/* Navigation */}

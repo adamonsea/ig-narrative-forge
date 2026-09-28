@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { clearSupabaseAuthStorage } from '@/lib/authStorage';
@@ -128,7 +128,9 @@ const Auth = () => {
       <main className="relative z-10 w-full max-w-md">
         {checkEmail ? (
           <div className="space-y-5 px-4 py-12 text-center">
-            <CuratrLogo className="justify-center text-xl text-white" />
+            <Link to="/" aria-label="Curatr home" className="flex justify-center transition-opacity hover:opacity-80">
+              <CuratrLogo className="justify-center text-xl text-white" iconClassName="text-[#AD5CFF]" />
+            </Link>
             <MailCheck className="mx-auto h-9 w-9" style={{ color: MINT }} />
             <h1 className="font-display text-3xl italic tracking-tight text-white">Check your email</h1>
             <p className="text-base leading-relaxed text-[hsl(214,20%,70%)]">
@@ -139,7 +141,9 @@ const Auth = () => {
         ) : (
           <div className="px-4 pb-10 pt-6">
             <div className="mb-10 text-center">
-              <CuratrLogo className="justify-center text-xl text-white" />
+              <Link to="/" aria-label="Curatr home" className="flex justify-center transition-opacity hover:opacity-80">
+                <CuratrLogo className="justify-center text-xl text-white" iconClassName="text-[#AD5CFF]" />
+              </Link>
               <h1 className="font-display mt-6 text-4xl italic tracking-tight text-white">
                 {mode === 'signup' ? 'Create your workspace' : 'Welcome back'}
               </h1>
