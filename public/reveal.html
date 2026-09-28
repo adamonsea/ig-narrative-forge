@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Curatr — mark reveal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Work+Sans:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --violet:#380A78; --lime:#B0F63C; --page:#22054A; --chip:rgba(255,255,255,.08);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --page:#D9D0EA; --chip:rgba(56,10,120,.10); } }
+:root[data-theme="dark"]{ --page:#22054A; }
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--page);overflow:hidden;font-family:"Work Sans",system-ui,sans-serif}
+#fit{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
+canvas{position:absolute;inset:0;width:1280px;height:720px;display:block;background:var(--violet)}
+#ui{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;z-index:2}
+#ui button{font:500 13px/1 "Work Sans",system-ui,sans-serif;color:#F4F0FF;background:rgba(56,10,120,.72);border:1px solid rgba(244,240,255,.22);border-radius:999px;padding:9px 14px;cursor:pointer;backdrop-filter:blur(6px)}
+#ui button:hover{border-color:rgba(176,246,60,.7)}
+#ui button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+#ui button[aria-pressed="true"]{color:#1d0542;background:var(--lime);border-color:var(--lime)}
+.clean #ui{display:none}
+</style>
+</head>
+<body>
+<div id="fit"><canvas id="c" aria-label="Curatr mark reveal animation"></canvas></div>
+<div id="ui">
+  <button id="snd" aria-pressed="false">Sound</button>
+  <button id="rep">Replay</button>
+</div>
+<script>
+(()=>{
+/* ================================================================
+   CURATR — mark reveal
+   A sea of small shapes sorting itself: rows click along, columns
+   shuffle, blocks turn as sets, tiles flip and spin. Twice the whole
+   field moves as one. Then it thins in towards three tiles, which
+   settle into the stacked C: rising sun, half-width square, setting
+   sun. The wordmark is then typed, and quietly squared up.
+   Space replays · ?clean=1 hides buttons · ?t=9 freezes a frame
+   ================================================================ */
+
+const Q=new URLSearchParams(location.search);
+if(Q.get('clean')) document.documentElement.classList.add('clean');
+const FREEZE=Q.has('t')?parseFloat(Q.get('t')):null;
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- brand ---------- */
+const BG='#380A78', LIME=[176,246,60], PAPER='#F4F0FF';
+const WORD='Curatr', FONT_FAM='"Playfair Display", Georgia, serif', FONT_W=600;
+
+/* ---------- field ---------- */
+const VW=1280, VH=720, S=40;               // cell size (world units = px at zoom 1)
+const COLS=34, ROWS=20, OX=-40, OY=-40;    // one hidden cell of margin each side
+const N=COLS*ROWS, B=26;                   // tile box
+const idx=(c,r)=>r*COLS+c;
+const cx=c=>OX+c*S+S/2, cy=r=>OY+r*S+S/2;
+
+/* ---------- mark geometry (world) ---------- */
+const HC=16, HR=10;                        // hero column, middle hero row
+const MW=36, MR=MW/2, MG=3.2;              // width, half-height, gap
+const MCX=cx(HC), MCY=cy(HR);
+
+/* ---------- timeline (s) ---------- */
+const T={
+  waveAt:2.25, waveQuiet:[2.0,3.45], unison:4.0, unisonQuiet:[3.85,4.65],
+  lock:5.45, zoom:[5.6,9.25], exit:[6.0,8.35], move:[7.0,9.05], tint:[7.5,8.9],
+  turn:[7.2,8.85], collapse:[9.3,9.62], pan:[9.95,10.75],
+  type0:10.85, bell:0, cr:0, align:0, end:14.2
+};
+const ZF=2.8;
+
+/* ---------- utils ---------- */
+let seed=20260928;
+const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const pick=a=>a[Math.floor(rnd()*a.length)];
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const io3=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+const out3=p=>1-Math.pow(1-p,3);
+const in2=p=>p*p;
+const ioBack=p=>{const c=1.25*1.525;return p<.5?(Math.pow(2*p,2)*((c+1)*2*p-c))/2:(Math.pow(2*p-2,2)*((c+1)*(p*2-2)+c)+2)/2};
+const outBack=p=>{const c=1.6;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2)};
+const win=(t,[a,b])=>clamp((t-a)/(b-a));
+
+/* ---------- shapes ---------- */
+const SHAPES=['half','half','half','quarter','quarter','circ','sq','tri','star','ring','plus'];
+function path(ctx,s,b,wF=1){
+  ctx.beginPath();
+  switch(s){
+    case 'sq':  ctx.rect(-b*.42,-b*.42,b*.84,b*.84); break;
+    case 'circ':ctx.arc(0,0,b*.45,0,Math.PI*2); break;
+    case 'ring':ctx.arc(0,0,b*.37,0,Math.PI*2); break;
+    case 'half':ctx.moveTo(-b/2,b/4);ctx.arc(0,b/4,b/2,Math.PI,Math.PI*2);ctx.closePath(); break;
+    case 'quarter':ctx.moveTo(-b/2,b/2);ctx.arc(-b/2,b/2,b,-Math.PI/2,0);ctx.closePath(); break;
+    case 'tri': ctx.moveTo(0,-b*.46);ctx.lineTo(b*.5,b*.4);ctx.lineTo(-b*.5,b*.4);ctx.closePath(); break;
+    case 'star':{for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,r=k%2?b*.22:b*.52;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}ctx.closePath();break}
+    case 'plus':{const w=b*.28,h=b*.44;ctx.rect(-w/2,-h,w,h*2);ctx.rect(-h,-w/2,h*2,w);break}
+    case 'bar': ctx.rect(-b/2,-b/4,b*wF,b/2); break;
+  }
+}
+function drawShape(ctx,s,b,fill,wF){
+  path(ctx,s,b,wF);
+  if(s==='ring'){ctx.lineWidth=b*.15;ctx.strokeStyle=fill;ctx.stroke()}
+  else{ctx.fillStyle=fill;ctx.fill(s==='plus'?'nonzero':undefined)}
+}
+
+/* ---------- tiles ---------- */
+const PAL=[[157,123,232,.5],[157,123,232,.5],[190,168,255,.72],[126,92,214,.62],[226,216,255,.82]];
+const tile=[]; for(let i=0;i<N;i++){
+  const lime=rnd()<.085;
+  tile.push({shape:pick(SHAPES),col:lime?[...LIME,.95]:pick(PAL),ev:[],exit:1e9,hero:-1});
+}
+const initPos=[...Array(N).keys()];
+
+/* ---------- grid events: rows, columns, blocks ---------- */
+const G=[]; const busy=new Float32Array(N);
+const inQuiet=t=>(t>T.waveQuiet[0]-.45&&t<T.waveQuiet[1])||(t>T.unisonQuiet[0]-.45&&t<T.unisonQuiet[1]);
+const heroCells=[idx(HC,HR-1),idx(HC,HR),idx(HC,HR+1)];
+function tryAdd(ev,cells){
+  if(ev.t0+ev.d>T.lock-.05&&cells.some(i=>heroCells.includes(i)))return false;
+  if(!cells.every(i=>busy[i]<=ev.t0))return false;
+  cells.forEach(i=>busy[i]=ev.t0+ev.d+.06); G.push(ev); return true;
+}
+for(let t=.45;t<6.9;t+=.055){
+  if(inQuiet(t))continue;
+  const k=rnd();
+  if(k<.2){const r=1+Math.floor(rnd()*(ROWS-2));const cells=[];for(let c=0;c<COLS;c++)cells.push(idx(c,r));
+    tryAdd({k:'row',t0:t,d:.44,r,dir:rnd()<.5?1:-1},cells);}
+  else if(k<.4){const c=1+Math.floor(rnd()*(COLS-2));const cells=[];for(let r=0;r<ROWS;r++)cells.push(idx(c,r));
+    tryAdd({k:'col',t0:t,d:.44,c,dir:rnd()<.5?1:-1},cells);}
+  else if(k<.78){const n=rnd()<.72?2:3;const c=1+Math.floor(rnd()*(COLS-n-1)),r=1+Math.floor(rnd()*(ROWS-n-1));
+    const cells=[];for(let j=0;j<n;j++)for(let i=0;i<n;i++)cells.push(idx(c+i,r+j));
+    tryAdd({k:'blk',t0:t,d:n===2?.52:.62,c,r,n,cw:rnd()<.5?1:-1},cells);}
+}
+G.sort((a,b)=>a.t0-b.t0);
+
+function gridAt(t){
+  const pos=initPos.slice(), rotAcc=new Float32Array(N), off=new Map();
+  for(const e of G){
+    if(t<=e.t0)break;
+    const p=(t-e.t0)/e.d, done=p>=1, q=ioBack(clamp(p));
+    if(e.k==='row'){
+      const row=[];for(let c=0;c<COLS;c++)row.push(pos[idx(c,e.r)]);
+      if(done){for(let c=0;c<COLS;c++)pos[idx(c,e.r)]=row[(c-e.dir+COLS)%COLS]}
+      else row.forEach(id=>off.set(id,{dx:e.dir*S*q,dy:0,dr:0}));
+    }else if(e.k==='col'){
+      const col=[];for(let r=0;r<ROWS;r++)col.push(pos[idx(e.c,r)]);
+      if(done){for(let r=0;r<ROWS;r++)pos[idx(e.c,r)]=col[(r-e.dir+ROWS)%ROWS]}
+      else col.forEach(id=>off.set(id,{dx:0,dy:e.dir*S*q,dr:0}));
+    }else{
+      const n=e.n,m=(n-1)/2,blk=[];
+      for(let j=0;j<n;j++)for(let i=0;i<n;i++)blk.push([i,j,pos[idx(e.c+i,e.r+j)]]);
+      if(done){for(const[i,j,id]of blk){const ni=e.cw>0?n-1-j:j,nj=e.cw>0?i:n-1-i;pos[idx(e.c+ni,e.r+nj)]=id;rotAcc[id]+=e.cw*Math.PI/2}}
+      else{const a=e.cw*Math.PI/2*q,ca=Math.cos(a),sa=Math.sin(a);
+        for(const[i,j,id]of blk){const vx=(i-m)*S,vy=(j-m)*S;off.set(id,{dx:vx*ca-vy*sa-vx,dy:vx*sa+vy*ca-vy,dr:a})}}
+    }
+  }
+  return{pos,rotAcc,off};
+}
+const cellOf=pos=>{const w=new Int32Array(N);pos.forEach((id,i)=>w[id]=i);return w};
+
+/* ---------- per-tile life: flips, turns, spins ---------- */
+const quietTile=t=>(t>T.waveQuiet[0]-.4&&t<T.waveQuiet[1])||(t>T.unisonQuiet[0]-.5&&t<T.unisonQuiet[1]);
+for(const tl of tile){
+  let t=.25+rnd()*2.4;
+  while(t<7.6){
+    if(!quietTile(t)){
+      const k=rnd();
+      if(k<.58)tl.ev.push({k:'flip',t0:t,d:.34,shape:pick(SHAPES),ax:rnd()<.7});
+      else if(k<.9)tl.ev.push({k:'rot',t0:t,d:.4,ang:(rnd()<.5?1:-1)*Math.PI/2});
+      else tl.ev.push({k:'rot',t0:t,d:.75,ang:(rnd()<.5?1:-1)*Math.PI*2});
+    }
+    t+=1.3+rnd()*3;
+  }
+}
+function tileRotBefore(tl,t){let r=0;for(const e of tl.ev)if(e.k==='rot'&&e.t0+e.d<=t)r+=e.ang;return r}
+
+/* unison 1 — a wave turns the whole field into rising suns */
+{
+  const g=gridAt(T.waveAt), where=cellOf(g.pos);
+  const ox=OX, oy=OY+ROWS*S;
+  tile.forEach((tl,id)=>{
+    const ci=where[id],c=ci%COLS,r=Math.floor(ci/COLS);
+    const d=Math.hypot(cx(c)-ox,cy(r)-oy), tw=T.waveAt+d*.00062;
+    tl.ev.push({k:'flip',t0:tw,d:.36,shape:'half',ax:true});
+    const tot=g.rotAcc[id]+tileRotBefore(tl,tw);
+    const tgt=Math.round(tot/(Math.PI*2))*Math.PI*2;
+    if(Math.abs(tgt-tot)>.01)tl.ev.push({k:'rot',t0:tw,d:.5,ang:tgt-tot});
+  });
+}
+/* unison 2 — everything turns a quarter, rippling left to right */
+{
+  const where=cellOf(gridAt(T.unison).pos);
+  tile.forEach((tl,id)=>{const c=where[id]%COLS;tl.ev.push({k:'rot',t0:T.unison+c*.016,d:.5,ang:Math.PI/2})});
+}
+
+/* ---------- heroes ---------- */
+const lockGrid=gridAt(T.lock), lockCell=cellOf(lockGrid.pos);
+const HERO=[lockGrid.pos[heroCells[0]],lockGrid.pos[heroCells[1]],lockGrid.pos[heroCells[2]]];
+const FINAL=[{shape:'half',rot:0,y:MCY-(MR+MG)},{shape:'bar',rot:0,y:MCY},{shape:'half',rot:Math.PI,y:MCY+MR+MG}];
+const HFLIPS=[[5.72,6.28,6.9,7.56,8.28],[5.88,6.46,7.1,7.8,8.58],[5.8,6.38,7.0,7.7,8.88]];
+const HERO_SNAP=[];
+HERO.forEach((id,h)=>{
+  const tl=tile[id]; tl.hero=h;
+  tl.ev=tl.ev.filter(e=>e.t0+e.d<=T.lock-.02);
+  const rot0=lockGrid.rotAcc[id]+tileRotBefore(tl,T.lock);
+  let prev=tl.shape; for(const e of tl.ev)if(e.k==='flip')prev=e.shape;
+  const seq=HFLIPS[h].map((t,i,a)=>{
+    if(i===a.length-1)return{t0:t,d:.44,shape:FINAL[h].shape};
+    let s;do{s=pick(['half','quarter','circ','sq','tri','star','ring','plus'])}while(s===prev||s===FINAL[h].shape&&i>a.length-3);prev=s;
+    return{t0:t,d:.3+i*.02,shape:s};
+  });
+  const period=Math.PI*2;               // the square is left-anchored, so it must land upright
+  const tgt=FINAL[h].rot+Math.round((rot0-FINAL[h].rot)/period)*period;
+  let startShape=tl.shape;for(const e of tl.ev)if(e.k==='flip')startShape=e.shape;
+  HERO_SNAP[h]={id,rot0,tgt,seq,startShape,col:tl.col,x0:cx(HC),y0:cy(HR-1+h)};
+});
+
+/* ---------- exits ---------- */
+{
+  let dmax=0;const ds=[];
+  tile.forEach((tl,id)=>{const ci=lockCell[id],d=Math.hypot(cx(ci%COLS)-MCX,cy(Math.floor(ci/COLS))-MCY);ds[id]=d;dmax=Math.max(dmax,d)});
+  tile.forEach((tl,id)=>{if(tl.hero<0)tl.exit=lerp(T.exit[0],T.exit[1],1-ds[id]/dmax)+(rnd()-.5)*.28});
+}
+
+function look(tl,t){
+  let shape=tl.shape,sx=1,sy=1,rot=0;
+  for(const e of tl.ev){
+    if(t<=e.t0)continue;
+    const p=clamp((t-e.t0)/e.d);
+    if(e.k==='flip'){if(p>=.5)shape=e.shape;if(p<1){const c=Math.abs(Math.cos(Math.PI*p));if(e.ax)sx=Math.min(sx,c);else sy=Math.min(sy,c)}}
+    else rot+=e.ang*(e.d>.6?io3(p):ioBack(p));
+  }
+  return{shape,sx,sy,rot};
+}
+
+/* ---------- camera ---------- */
+let PANX=0; // world units, set once the wordmark is measured
+function cam(t){
+  const zp=io3(win(t,T.zoom));
+  const drift=1+.035*clamp(t/T.zoom[0]);
+  const z=lerp(drift,ZF,zp);
+  let x=lerp(VW/2,MCX,zp), y=lerp(VH/2,MCY,zp);
+  x+=PANX*io3(win(t,T.pan));
+  return{z,x,y};
+}
+
+/* ---------- wordmark layout (measured) ---------- */
+const LAY={ready:false};
+const STRIKES=[0,.16,.29,.47,.6,.78];
+function layoutWord(ctx){
+  const markH=(3*MR+2*MG)*ZF, markW=MW*ZF;
+  const fs=Math.round(markH*.56/.5);                // x-height ≈ 56% of mark height
+  ctx.font=`${FONT_W} ${fs}px ${FONT_FAM}`;
+  const xh=ctx.measureText('x').actualBoundingBoxAscent||fs*.5;
+  const gap=fs*.24, ww=ctx.measureText(WORD).width;
+  const L=markW+gap+ww, markX=VW/2-L/2+markW/2;
+  PANX=(VW/2-markX)/ZF;
+  const left=markX+markW/2+gap, base=VH/2+xh/2;
+  const xs=[...WORD].map((_,i)=>left+ctx.measureText(WORD.slice(0,i)).width);
+  const J=[...WORD].map(()=>({x:(rnd()-.5)*2.2,y:(rnd()-.5)*5,r:(rnd()-.5)*.035,a:.82+rnd()*.18}));
+  Object.assign(LAY,{ready:true,fs,xh,left,base,xs,J,ww,markH});
+  const last=T.type0+STRIKES[STRIKES.length-1];
+  T.bell=last+.2; T.cr=last+.26; T.align=last+.62;
+}
+
+/* ---------- sound ---------- */
+let AC=null,MASTER=null,NOISE=null,soundOn=false;
+function initAudio(){
+  AC=new(window.AudioContext||window.webkitAudioContext)();
+  const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;
+  MASTER=AC.createGain();MASTER.gain.value=.9;MASTER.connect(comp).connect(AC.destination);
+  NOISE=AC.createBuffer(1,AC.sampleRate*1.5,AC.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+}
+function env(g,at,peak,att,dec){g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(peak,at+att);g.gain.exponentialRampToValueAtTime(.0001,at+att+dec)}
+function noise(at,{f=3000,q=1.2,g=.05,att=.001,dec=.02,type='bandpass',f1=null,pan=0}={}){
+  const s=AC.createBufferSource();s.buffer=NOISE;const fl=AC.createBiquadFilter();fl.type=type;fl.frequency.setValueAtTime(f,at);fl.Q.value=q;
+  if(f1)fl.frequency.exponentialRampToValueAtTime(f1,at+att+dec);
+  const gn=AC.createGain();env(gn,at,g,att,dec);const p=AC.createStereoPanner?AC.createStereoPanner():null;
+  s.connect(fl).connect(gn);if(p){p.pan.value=pan;gn.connect(p).connect(MASTER)}else gn.connect(MASTER);
+  s.start(at,Math.random()*.8);s.stop(at+att+dec+.05);
+}
+function tone(at,f,{g=.1,att=.004,dec=.3,type='sine',f1=null,pan=0}={}){
+  const o=AC.createOscillator();o.type=type;o.frequency.setValueAtTime(f,at);if(f1)o.frequency.exponentialRampToValueAtTime(f1,at+att+dec);
+  const gn=AC.createGain();env(gn,at,g,att,dec);const p=AC.createStereoPanner?AC.createStereoPanner():null;
+  o.connect(gn);if(p){p.pan.value=pan;gn.connect(p).connect(MASTER)}else gn.connect(MASTER);o.start(at);o.stop(at+att+dec+.05);
+}
+const SFX={
+  click:(a,e)=>noise(a,{f:2400+e.v*1800,q:2.5,g:.035,dec:.018,pan:e.pan}),
+  clickLo:(a,e)=>{noise(a,{f:1500,q:2,g:.04,dec:.03,pan:e.pan});tone(a,220,{g:.025,dec:.05,pan:e.pan})},
+  shimmer:(a)=>{[1047,1319,1568,2093,1760,2637].forEach((f,i)=>tone(a+i*.13,f,{g:.028,att:.02,dec:.5}));noise(a,{f:5000,q:.7,g:.03,att:.4,dec:.8,type:'highpass'})},
+  turn:(a)=>{tone(a,98,{g:.2,att:.02,dec:.45,f1:70});noise(a,{f:600,f1:1800,q:.8,g:.05,att:.25,dec:.35})},
+  whoosh:(a)=>{noise(a,{f:280,f1:2600,q:.9,g:.09,att:3.1,dec:.5});tone(a+2.6,55,{g:.12,att:.9,dec:1.4})},
+  hflip:(a,e)=>noise(a,{f:3200,q:3,g:.05,dec:.02,pan:e.pan||0}),
+  land:(a,e)=>{tone(a,e.f,{g:.13,dec:.5,type:'triangle'});tone(a,e.f*2,{g:.03,dec:.25});noise(a,{f:4000,q:2,g:.05,dec:.015})},
+  thunk:(a)=>{tone(a,150,{g:.32,dec:.2,f1:55});noise(a,{f:900,q:1.4,g:.08,dec:.05})},
+  key:(a,e)=>{noise(a,{f:2600+e.v*500,q:1.6,g:.22,dec:.03});noise(a+.012,{f:800,q:1,g:.08,dec:.05});tone(a,120+e.v*20,{g:.12,dec:.06,f1:70})},
+  bell:(a)=>{tone(a,2093,{g:.16,dec:1.6});tone(a,4186,{g:.04,dec:.9});tone(a,2637,{g:.035,dec:1.1})},
+  carriage:(a)=>{noise(a,{f:1400,f1:500,q:1.2,g:.1,att:.02,dec:.26});for(let i=0;i<6;i++)noise(a+i*.035,{f:3000,q:3,g:.04,dec:.012})},
+  settle:(a)=>{tone(a,784,{g:.05,dec:.6});tone(a+.06,1175,{g:.035,dec:.7})}
+};
+let SOUNDS=[];
+function buildSounds(){
+  SOUNDS=[];
+  for(const e of G){if(e.t0+e.d<6.9)SOUNDS.push({t:e.t0+e.d*.92,n:e.k==='blk'?'clickLo':'click',v:rnd(),pan:e.k==='col'?(e.c/COLS*2-1)*.7:(rnd()-.5)*.6})}
+  SOUNDS.push({t:T.waveAt,n:'shimmer'},{t:T.unison+.1,n:'turn'},{t:T.zoom[0],n:'whoosh'});
+  HERO_SNAP.forEach((h,i)=>h.seq.forEach((f,j)=>{const last=j===h.seq.length-1;SOUNDS.push(last?{t:f.t0+f.d/2,n:'land',f:[523.25,659.25,783.99][i]}:{t:f.t0+f.d/2,n:'hflip',pan:(i-1)*.3})}));
+  SOUNDS.push({t:T.collapse[1]-.02,n:'thunk'});
+  STRIKES.forEach((s,i)=>SOUNDS.push({t:T.type0+s,n:'key',v:rnd()}));
+  SOUNDS.push({t:T.bell,n:'bell'},{t:T.cr,n:'carriage'},{t:T.align+.3,n:'settle'});
+  SOUNDS.sort((a,b)=>a.t-b.t);
+}
+
+/* ---------- render ---------- */
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),fit=document.getElementById('fit');
+let K=1,FS=1;
+function resize(){
+  const s=Math.min(innerWidth/VW,innerHeight/VH);FS=s;
+  fit.style.transform=`translate(${(innerWidth-VW*s)/2}px,${(innerHeight-VH*s)/2}px) scale(${s})`;
+  K=Math.min(3,(devicePixelRatio||1)*s);cv.width=Math.round(VW*K);cv.height=Math.round(VH*K);
+}
+addEventListener('resize',resize);resize();
+
+const rgba=(c,a=1)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${(c[3]??1)*a})`;
+let VIG=null;
+function vignette(){
+  const g=ctx.createRadialGradient(VW/2,VH/2,VH*.25,VW/2,VH/2,VW*.72);
+  g.addColorStop(0,'rgba(20,2,48,0)');g.addColorStop(1,'rgba(20,2,48,.55)');return g;
+}
+
+function frame(t){
+  ctx.setTransform(K,0,0,K,0,0);
+  ctx.fillStyle=BG;ctx.fillRect(0,0,VW,VH);
+  const c=cam(t);
+  ctx.setTransform(K*c.z,0,0,K*c.z,K*(VW/2-c.x*c.z),K*(VH/2-c.y*c.z));
+  const halfW=VW/2/c.z+S,halfH=VH/2/c.z+S;
+
+  /* the sea */
+  if(t<T.exit[1]+.6){
+    const g=gridAt(Math.min(t,7)); // grid is still after 6.9
+    for(let i=0;i<N;i++){
+      const id=g.pos[i],tl=tile[id];if(tl.hero>=0)continue;
+      let ex=1,push=0;
+      if(t>tl.exit){const p=(t-tl.exit)/.42;if(p>=1)continue;ex=1-in2(p);push=out3(p)*9}
+      const o=g.off.get(id);
+      let x=cx(i%COLS)+(o?o.dx:0),y=cy(Math.floor(i/COLS))+(o?o.dy:0);
+      if(push){const dx=x-MCX,dy=y-MCY,l=Math.hypot(dx,dy)||1;x+=dx/l*push;y+=dy/l*push}
+      if(Math.abs(x-c.x)>halfW||Math.abs(y-c.y)>halfH)continue;
+      const lk=look(tl,t);
+      ctx.save();ctx.translate(x,y);ctx.rotate(g.rotAcc[id]+lk.rot+(o?o.dr:0));
+      const sx=lk.sx*ex,sy=lk.sy*(ex<1?Math.max(ex,.2):1);
+      ctx.scale(Math.max(sx,.001),Math.max(sy,.001));
+      drawShape(ctx,lk.shape,B,rgba(tl.col,ex<1?.4+.6*ex:1));
+      ctx.restore();
+    }
+  }
+
+  /* vignette sits under the mark, so the mark stays flat colour */
+  ctx.setTransform(K,0,0,K,0,0);
+  ctx.fillStyle=VIG||(VIG=vignette());ctx.fillRect(0,0,VW,VH);
+  ctx.setTransform(K*c.z,0,0,K*c.z,K*(VW/2-c.x*c.z),K*(VH/2-c.y*c.z));
+
+  /* the three */
+  const mv=io3(win(t,T.move)),tint=io3(win(t,T.tint)),turn=io3(win(t,T.turn));
+  const col=win(t,T.collapse),colE=col<1?ioBack(col):1;
+  const glow=t>T.collapse[1]?Math.sin(clamp((t-T.collapse[1])/.9)*Math.PI):0;
+  HERO_SNAP.forEach((h,i)=>{
+    const tl=tile[h.id];let shape,sx=1,sy=1,rot;
+    if(t<T.lock){const g=gridAt(t),lk=look(tl,t),o=g.off.get(h.id),ci=g.pos.indexOf(h.id);
+      const x=cx(ci%COLS)+(o?o.dx:0),y=cy(Math.floor(ci/COLS))+(o?o.dy:0);
+      ctx.save();ctx.translate(x,y);ctx.rotate(g.rotAcc[h.id]+lk.rot+(o?o.dr:0));ctx.scale(Math.max(lk.sx,.001),Math.max(lk.sy,.001));
+      drawShape(ctx,lk.shape,B,rgba(tl.col));ctx.restore();return;}
+    shape=h.startShape;
+    for(const f of h.seq){if(t<=f.t0)break;const p=clamp((t-f.t0)/f.d);if(p>=.5)shape=f.shape;if(p<1)sx=Math.min(sx,Math.abs(Math.cos(Math.PI*p)))}
+    rot=lerp(h.rot0,h.tgt,turn);
+    const b=lerp(B,MW,mv),x=lerp(h.x0,MCX,mv),y=lerp(h.y0,FINAL[i].y,mv);
+    const cc=[lerp(h.col[0],LIME[0],tint),lerp(h.col[1],LIME[1],tint),lerp(h.col[2],LIME[2],tint),lerp(h.col[3],1,tint)];
+    ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(Math.max(sx,.001),sy);
+    if(glow>0){ctx.shadowColor=`rgba(176,246,60,${.55*glow})`;ctx.shadowBlur=14*glow*K}
+    drawShape(ctx,shape,b,rgba(cc),shape==='bar'?1-.5*colE:1);
+    ctx.restore();
+  });
+
+  ctx.setTransform(K,0,0,K,0,0);
+
+  /* the wordmark, typed */
+  if(LAY.ready&&t>=T.type0-.05) drawWord(t);
+}
+
+function drawWord(t){
+  ctx.font=`${FONT_W} ${LAY.fs}px ${FONT_FAM}`;ctx.textBaseline='alphabetic';
+  const al=[...WORD].map((_,i)=>io3(clamp((t-T.align-i*.045)/.45)));
+  let caretX=null;
+  [...WORD].forEach((ch,i)=>{
+    const ts=T.type0+STRIKES[i];if(t<ts)return;
+    const p=clamp((t-ts)/.22),j=LAY.J[i],k=1-al[i];
+    const x=LAY.xs[i]+j.x*k, y=LAY.base+j.y*k+(1-outBack(clamp((t-ts)/.12)))*-4;
+    const sc=1+.07*(1-out3(p));
+    ctx.save();ctx.translate(x,y);ctx.rotate(j.r*k);ctx.scale(sc,sc);
+    const a=lerp(j.a,1,al[i]);
+    if(p<1){ctx.fillStyle=`rgba(244,240,255,${.28*(1-p)})`;ctx.fillText(ch,1.4,.8);ctx.shadowColor=`rgba(244,240,255,${.5*(1-p)})`;ctx.shadowBlur=10*(1-p)*K}
+    ctx.fillStyle=`rgba(244,240,255,${a*Math.min(1,(t-ts)/.035)})`;ctx.fillText(ch,0,0);
+    ctx.restore();
+  });
+  /* the small .pro, fading in once the word has settled */
+  const pa=io3(clamp((t-T.align-WORD.length*.045)/.5));
+  if(pa>0){
+    ctx.save();
+    ctx.font=`500 ${Math.round(LAY.fs*.4)}px "Work Sans",system-ui,sans-serif`;
+    ctx.fillStyle=`rgba(176,246,60,${pa*.95})`;
+    ctx.fillText('.pro',LAY.left+LAY.ww+LAY.fs*.08,LAY.base);
+    ctx.restore();
+  }
+
+  /* caret: rides ahead of the type, then the carriage returns */
+  const typed=STRIKES.filter(s=>t>=T.type0+s).length;
+  const cw=LAY.fs*.42,cyy=LAY.base+LAY.fs*.13,ch=Math.max(2,LAY.fs*.028);
+  let ca=0,x;
+  if(t<T.cr){x=typed<WORD.length?LAY.xs[typed]:LAY.left+LAY.ww+LAY.fs*.04;ca=clamp((t-T.type0+.25)/.2)*(t<T.type0?(Math.sin(t*14)>0?1:.25):1)}
+  else{const p=clamp((t-T.cr)/.3);x=lerp(LAY.left+LAY.ww+LAY.fs*.04,LAY.left,in2(p)*(2-p));ca=1-clamp((t-T.cr-.22)/.3)}
+  if(ca>0){ctx.fillStyle=`rgba(176,246,60,${ca})`;ctx.fillRect(x,cyy,cw,ch)}
+}
+
+/* ---------- playback ---------- */
+let start=performance.now(),lastT=-1;
+function replay(){start=performance.now();lastT=-1}
+function tick(now){
+  let t=FREEZE!==null?FREEZE:(now-start)/1000;
+  if(REDUCED&&FREEZE===null)t=T.end;
+  t=Math.min(t,T.end);
+  if(soundOn&&AC&&FREEZE===null){for(const s of SOUNDS){if(s.t>lastT&&s.t<=t&&t-s.t<.12)SFX[s.n](AC.currentTime+.005,s)}}
+  lastT=t;frame(t);
+  requestAnimationFrame(tick);
+}
+const btnS=document.getElementById('snd'),btnR=document.getElementById('rep');
+btnS.onclick=()=>{if(!AC)initAudio();AC.resume();soundOn=!soundOn;btnS.setAttribute('aria-pressed',soundOn);btnS.textContent=soundOn?'Sound on':'Sound';if(soundOn)replay()};
+btnR.onclick=replay;
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();replay()}});
+
+const go=()=>{layoutWord(ctx);buildSounds();replay();requestAnimationFrame(tick)};
+(document.fonts&&document.fonts.load?Promise.race([document.fonts.load(`${FONT_W} 120px "Playfair Display"`),new Promise(r=>setTimeout(r,1500))]):Promise.resolve()).then(go,go);
+window.__curatr={T,frame};
+})();
+</script>
+</body>
+</html>
