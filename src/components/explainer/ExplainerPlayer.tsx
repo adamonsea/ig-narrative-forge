@@ -178,6 +178,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
 
   return (
     <div className="relative flex h-full w-full flex-col bg-[hsl(214,50%,7%)] text-white">
+      {!renderMode && <audio ref={bedRef} src="/audio/explainer-bed.mp3" preload="auto" aria-hidden="true" />}
       {/* Stage */}
       <div className="relative flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
@@ -226,8 +227,10 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
             muted={muted}
             playsInline
             aria-hidden="true"
-            onPlaying={() => setClipRolling(true)}
+            onPlaying={() => { setClipRolling(true); setSpeaking(true); }}
+            onPause={() => setSpeaking(false)}
             onEnded={() => {
+              setSpeaking(false);
               if (!playing) return;
               // Let the last syllable land before the crossfade.
               if (tailTimer.current) window.clearTimeout(tailTimer.current);
