@@ -182,8 +182,9 @@ serve(async (req) => {
         }
       }
 
-      // DUPLICATE CHECK: hold near-identical retellings of an event already live
-      if (topicId) {
+      // DUPLICATE CHECK: hold near-identical retellings of an event already live.
+      // Stories already reviewed once (duplicate_of_story_id set) skip this check.
+      if (topicId && !story.duplicate_of_story_id) {
         const recentTitles = recentTitlesByTopic.get(topicId) || [];
         let match: { id: string | null; title: string; score: number } | null = null;
         for (const recent of recentTitles) {
