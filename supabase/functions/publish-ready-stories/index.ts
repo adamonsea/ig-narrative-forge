@@ -87,12 +87,12 @@ serve(async (req) => {
       : { data: [] };
 
     const taTopicMap = new Map((recentTas || []).map((ta) => [ta.id, ta.topic_id]));
-    const recentTitlesByTopic = new Map<string, string[]>();
+    const recentTitlesByTopic = new Map<string, Array<{ id: string | null; title: string }>>();
     (recentPublished || []).forEach((s) => {
       const tid = s.topic_article_id ? taTopicMap.get(s.topic_article_id) : null;
       if (!tid) return;
       const list = recentTitlesByTopic.get(tid) || [];
-      list.push(s.title);
+      list.push({ id: s.id, title: s.title });
       recentTitlesByTopic.set(tid, list);
     });
 
