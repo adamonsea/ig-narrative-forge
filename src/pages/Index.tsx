@@ -148,10 +148,10 @@ const Index = () => {
 
         <main className="container mx-auto px-6">
           {/* Hero Section */}
-          <section className="max-w-5xl mx-auto text-center py-24 relative">
+          <section className="max-w-5xl mx-auto text-center py-14 md:py-24 relative">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[hsl(270,100%,68%)]/10 blur-[120px] rounded-full -z-10" />
             <motion.div initial="hidden" animate="show" variants={container} className="space-y-8">
-              <motion.h1 variants={maskWordContainer} className="text-6xl md:text-8xl font-display font-normal tracking-tight leading-[1.05] text-white">
+              <motion.h1 variants={maskWordContainer} className="text-4xl sm:text-6xl md:text-8xl font-display font-normal tracking-tight leading-[1.08] text-white">
                 {['Your', 'niche', 'news', 'feed,'].map((word, i) => (
                   <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] px-[0.12em] -mx-[0.12em] mr-[0.13em]">
                     <motion.span variants={maskWord} className="inline-block">
@@ -168,7 +168,7 @@ const Index = () => {
                   </span>
                 ))}
               </motion.h1>
-              <motion.p variants={reveal} className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
+              <motion.p variants={reveal} className="text-lg md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
                 Turn the news you follow into a trusted publication for your community, clients, or team.
               </motion.p>
               <motion.div variants={reveal}>
