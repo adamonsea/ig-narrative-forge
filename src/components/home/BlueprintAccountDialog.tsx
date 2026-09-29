@@ -60,7 +60,7 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
         if (signUpError) throw signUpError;
         if (data.user && (data.user.identities?.length ?? 0) === 0) {
           setMode('signin');
-          setError('You already have an account with this email — sign in below.');
+          setError('You already have an account with this email. Sign in below.');
           return;
         }
         await recordLead(data.user?.id);
@@ -79,7 +79,7 @@ export const BlueprintAccountDialog = ({ open, onOpenChange, blueprint, input }:
       const message = typeof err?.message === 'string' ? err.message : 'Something went wrong.';
       setError(
         /already registered/i.test(message)
-          ? 'You already have an account — switch to "I already have an account" below.'
+          ? 'You already have an account. Switch to "I already have an account" below.'
           : message,
       );
     } finally {

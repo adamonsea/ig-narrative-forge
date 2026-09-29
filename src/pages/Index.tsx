@@ -66,10 +66,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-[hsl(214,50%,9%)]">
       <Helmet>
-        <title>Curatr — AI-Powered News Feed Curation</title>
+        <title>Curatr: AI-Powered News Feed Curation</title>
         <meta name="description" content="Build and publish your own niche news feeds. Curatr uses AI to gather, rewrite, and curate stories with strong source attribution." />
         <link rel="canonical" href="https://curatr.pro/" />
-        <meta property="og:title" content="Curatr — AI-Powered News Feed Curation" />
+        <meta property="og:title" content="Curatr: AI-Powered News Feed Curation" />
         <meta property="og:description" content="Build and publish your own niche news feeds with AI-assisted curation and strong source attribution." />
         <meta property="og:url" content="https://curatr.pro/" />
       </Helmet>
@@ -169,7 +169,7 @@ const Index = () => {
                 ))}
               </motion.h1>
               <motion.p variants={reveal} className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
-                Turn the news you follow into a trusted publication for your community, clients, or team — in minutes, without writing from scratch.
+                Turn the news you follow into a trusted publication for your community, clients, or team. In minutes, without writing from scratch.
               </motion.p>
               <motion.div variants={reveal}>
                 <FeedIdeaGenerator />
@@ -228,7 +228,7 @@ const Index = () => {
                 <span className="block font-display text-5xl text-white/25">03</span>
                 <h3 className="text-2xl font-display text-white">Deliver where people actually read</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Your own branded feed, a newsletter in their inbox, or ready-to-post carousels for Instagram and LinkedIn — all from the same story.
+                  Your own branded feed, a newsletter in their inbox, or ready-to-post carousels for Instagram and LinkedIn, all from the same story.
                 </p>
               </motion.div>
             </div>
@@ -249,16 +249,16 @@ const Index = () => {
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
               />
               <p className="text-xl md:text-2xl text-white/85 max-w-xl leading-relaxed">
-                Curate once, then reach people wherever they already are — inbox, social, or their favourite AI assistant.
+                Curate once, then reach people wherever they already are: inbox, social, or their favourite AI assistant.
               </p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/10">
               {[
                 { label: 'Channel 01', title: 'Email newsletters', body: 'Automated daily or weekly digests sent directly to subscribers. Beautiful templates, zero manual work.' },
-                { label: 'Channel 02', title: 'Social carousels', body: 'Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post in seconds — driving traffic back to your feed.' },
+                { label: 'Channel 02', title: 'Social carousels', body: 'Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post in seconds, driving traffic back to your feed.' },
                 { label: 'Channel 03', title: 'Mobile-first feed', body: 'Your own branded news feed with swipe navigation, reader ratings, and instant story sharing.' },
-                { label: 'Channel 04', title: 'ChatGPT & Claude', body: 'Publish your feed as an AI connector. Assistants can browse, search and summarise your stories—with sources credited and linked.' },
+                { label: 'Channel 04', title: 'ChatGPT & Claude', body: 'Publish your feed as an AI connector. Assistants can browse, search and summarise your stories, with sources credited and linked.' },
               ].map((c) => (
                 <motion.div
                   key={c.title}
@@ -288,7 +288,7 @@ const Index = () => {
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
               />
               <p className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
-                Make following the news enjoyable — thoughtful tools that turn passive readers into a community.
+                Make following the news enjoyable: thoughtful tools that turn passive readers into a community.
               </p>
             </motion.div>
 
@@ -331,21 +331,21 @@ const Index = () => {
                 />
                 <div className="space-y-8">
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(155,100%,67%)] mb-2">01 — Nothing publishes without you</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(155,100%,67%)] mb-2">01. Nothing publishes without you</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
                       Every story waits in your approval queue. Accept it, edit it, or reject.
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(270,100%,68%)] mb-2">02 — Credit where it's due</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(270,100%,68%)] mb-2">02. Credit where it's due</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
                       Every story links back to the original publication.
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-2">03 — See what's working</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-2">03. See what's working</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
-                      Visits, newsletter opens, your best stories and strongest sources — all in one clear dashboard.
+                      Visits, newsletter opens, your best stories and strongest sources, all in one clear dashboard.
                     </p>
                   </div>
                 </div>
@@ -430,7 +430,7 @@ const Index = () => {
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Sport, tech, culture, hobbies—whatever your people care about. Quizzes keep them coming back.
+                  Sport, tech, culture, hobbies: whatever your people care about. Quizzes keep them coming back.
                 </p>
               </motion.div>
             </div>
@@ -451,7 +451,7 @@ const Index = () => {
               </span>
               <p className="text-[hsl(155,100%,67%)] text-sm leading-relaxed font-medium">
                 We're building toward native one-click publishing to social platforms (today: carousel export),
-                subscriptions &amp; monetization, team workspaces, and an API. These are in development — not yet available.
+                subscriptions &amp; monetization, team workspaces, and an API. These are in development, not yet available.
               </p>
             </motion.div>
 
