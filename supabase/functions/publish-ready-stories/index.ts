@@ -46,7 +46,9 @@ serve(async (req) => {
         title,
         article_id,
         topic_article_id,
-        scheduled_publish_at
+        scheduled_publish_at,
+        duplicate_of_story_id,
+        duplicate_similarity
       `)
       .eq('status', 'ready');
 
