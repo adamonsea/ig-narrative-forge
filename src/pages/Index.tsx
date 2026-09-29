@@ -416,21 +416,21 @@ const Index = () => {
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Local news feeds</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Bring together everything happening in your town from every local source. Ideal for community digests, neighbourhood newsletters, or regional news services.
+                  Bring together everything happening in your town from every local source.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl border border-[hsl(270,100%,68%)]/20">
                 <h3 className="text-2xl font-display text-white mb-3">Industry newsletters</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Become the person your industry reads. Hand-pick the stories that matter and grow a subscriber base — without writing a word from scratch.
+                  Become the person your industry reads. Hand-pick the stories that matter and grow a subscriber base.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Sport, tech, culture, hobbies — whatever your people care about. Quizzes and playful features keep them coming back daily.
+                  Sport, tech, culture, hobbies—whatever your people care about. Quizzes keep them coming back.
                 </p>
               </motion.div>
             </div>
