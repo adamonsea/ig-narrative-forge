@@ -326,7 +326,7 @@ const Index = () => {
               <motion.div variants={reveal} className="space-y-12">
                 <MaskRevealHeading
                   as="h2"
-                  segments={[{ text: "You're always in the" }, { text: "editor's chair", italic: true }]}
+                  segments={[{ text: "Always in the" }, { text: "editor's chair", italic: true }]}
                   className="text-5xl md:text-6xl font-display tracking-tight text-white leading-[1.1]"
                 />
                 <div className="space-y-8">
