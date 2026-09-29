@@ -326,26 +326,26 @@ const Index = () => {
               <motion.div variants={reveal} className="space-y-12">
                 <MaskRevealHeading
                   as="h2"
-                  segments={[{ text: 'You stay in' }, { text: 'control', italic: true }]}
+                  segments={[{ text: "You're always in the" }, { text: "editor's chair", italic: true }]}
                   className="text-5xl md:text-6xl font-display tracking-tight text-white leading-[1.1]"
                 />
                 <div className="space-y-8">
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-tighter text-[hsl(155,100%,67%)] mb-2">01 — Editorial pipeline</h3>
-                    <p className="text-white/60 font-light leading-relaxed">
-                      Every story passes through your approval queue. Accept, reject, or edit before publishing.
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(155,100%,67%)] mb-2">01 — Nothing publishes without you</h3>
+                    <p className="text-lg text-white/85 leading-relaxed">
+                      Every story waits in your approval queue. Accept it, edit it, or reject it — your feed only carries what you'd stand behind.
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-tighter text-[hsl(270,100%,68%)] mb-2">02 — Source attribution</h3>
-                    <p className="text-white/60 font-light leading-relaxed">
-                      Every story links back to the original source. Build trust with readers and publishers alike.
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(270,100%,68%)] mb-2">02 — Credit where it's due</h3>
+                    <p className="text-lg text-white/85 leading-relaxed">
+                      Every story links back to the original publication. Your readers trust you, and the sources you rely on get the traffic they deserve.
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-tighter text-white mb-2">03 — Analytics dashboard</h3>
-                    <p className="text-white/60 font-light leading-relaxed">
-                      Track feed visits, newsletter opens, top stories, and source performance in real-time.
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-2">03 — See what's working</h3>
+                    <p className="text-lg text-white/85 leading-relaxed">
+                      Visits, newsletter opens, your best stories and strongest sources — all in one clear dashboard, updated as it happens.
                     </p>
                   </div>
                 </div>
@@ -407,30 +407,30 @@ const Index = () => {
                 segments={[{ text: 'Built for' }, { text: 'curators', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
               />
-              <p className="text-xl text-white/70 max-w-2xl mx-auto">
-                Whether you're building a local news service, industry newsletter, or community hub.
+              <p className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
+                Whether you're serving a town, an industry, or a community of enthusiasts — Curatr fits the way you work.
               </p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-12">
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Local news feeds</h3>
-                <p className="text-white/70 text-base md:text-sm font-light leading-relaxed">
-                  Aggregate hyperlocal news from multiple sources. Perfect for town-focused digests, community newsletters, or regional news apps.
+                <p className="text-lg text-white/85 leading-relaxed">
+                  Bring together everything happening in your town from every local source. Ideal for community digests, neighbourhood newsletters, or regional news services.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl border border-[hsl(270,100%,68%)]/20">
                 <h3 className="text-2xl font-display text-white mb-3">Industry newsletters</h3>
-                <p className="text-white/70 text-base md:text-sm font-light leading-relaxed">
-                  Curate the best content from your industry. Build authority and grow a subscriber base with zero content creation overhead.
+                <p className="text-lg text-white/85 leading-relaxed">
+                  Become the person your industry reads. Hand-pick the stories that matter and grow a subscriber base — without writing a word from scratch.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
-                <p className="text-white/70 text-base md:text-sm font-light leading-relaxed">
-                  Create engaging feeds for any interest—sports, tech, culture, or hobbies. Gamification keeps readers coming back.
+                <p className="text-lg text-white/85 leading-relaxed">
+                  Sport, tech, culture, hobbies — whatever your people care about. Quizzes and playful features keep them coming back daily.
                 </p>
               </motion.div>
             </div>
@@ -467,8 +467,8 @@ const Index = () => {
                 segments={[{ text: 'Start building your' }, { text: 'feed today', italic: true }]}
                 className="text-4xl md:text-5xl font-display text-white mb-4 leading-[1.1]"
               />
-              <p className="text-white/70 mb-8 max-w-lg mx-auto font-light">
-                Free to start. Connect your sources, curate content, and launch your first newsletter in minutes.
+              <p className="text-lg text-white/85 mb-8 max-w-lg mx-auto leading-relaxed">
+                Free to create and curate. Connect your sources, approve your first stories, and publish today.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <motion.div {...hoverLift}>
