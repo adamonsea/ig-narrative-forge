@@ -115,7 +115,7 @@ export const FeedIdeaGenerator = () => {
                     {bp.audience_type}
                   </span>
                   <h3 className="pt-2 font-display text-2xl text-white">{bp.feed_title}</h3>
-                  <p className="pt-2 text-base md:text-sm font-light leading-relaxed text-white/60">{bp.purpose}</p>
+                  <p className="pt-2 text-base leading-relaxed text-white/80">{bp.purpose}</p>
 
                   {(bp.sample_story_hooks || []).length > 0 && (
                     <div className="flex-1 pt-4">
