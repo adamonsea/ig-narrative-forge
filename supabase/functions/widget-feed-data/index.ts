@@ -287,7 +287,7 @@ serve(async (req) => {
             url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
             published_at: story.created_at,
             age_minutes: storyAgeMinutes,
-            source_name: story.publication_name || fallbackSourceName,
+            source_name: displayNameFor(story.publication_name || fallbackSourceName),
             source_url: sourceUrl,
             image_url: imageUrl,
           };
