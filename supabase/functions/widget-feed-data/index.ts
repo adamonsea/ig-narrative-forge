@@ -302,7 +302,7 @@ serve(async (req) => {
       const norm = (s: string | null) => (s || '').trim().toLowerCase();
       let working = allFormatted;
       if (allowedSources.length > 0) {
-        const filtered = allFormatted.filter(s => allowedSources.includes(norm(s.source_name)));
+        const filtered = allFormatted.filter(s => allowedSources.includes(norm(s.source_key)));
         if (filtered.length > 0) working = filtered;
       }
 
@@ -311,8 +311,8 @@ serve(async (req) => {
       if (featuredSources.length > 0) {
         const featured = working
           .filter(s =>
-            featuredSources.includes(norm(s.source_name)) &&
-            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutesFor(norm(s.source_name)))
+            featuredSources.includes(norm(s.source_key)) &&
+            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutesFor(norm(s.source_key)))
           )
           .slice(0, MAX_FEATURED)
           .map(s => ({ ...s, featured: true }));
