@@ -67,28 +67,37 @@ export const FeedIdeaGenerator = () => {
 
   return (
     <div className="mx-auto w-full max-w-4xl pt-6">
-      <form onSubmit={generate} className="mx-auto flex w-full max-w-2xl flex-col gap-3 sm:flex-row">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Your website, or a subject you care about"
-          aria-label="Your website, or a subject you care about"
-          className="h-14 rounded-full border-white/20 bg-white/5 px-6 text-base text-white placeholder:text-white/40 focus-visible:ring-[hsl(155,100%,67%)]"
+      <form onSubmit={generate} className="group relative mx-auto w-full max-w-3xl">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-r from-[hsl(270,100%,68%)]/30 to-[hsl(155,100%,67%)]/30 opacity-50 blur-xl transition-opacity duration-500 group-focus-within:opacity-100"
         />
-        <Button
-          type="submit"
-          size="lg"
-          disabled={loading || input.trim().length < 2}
-          className="h-14 shrink-0 rounded-full bg-[hsl(155,100%,67%)] px-7 text-base text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
-        >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {loading ? 'Thinking…' : 'Show me feed ideas'}
-        </Button>
+        <div className="relative flex flex-col items-center gap-2 rounded-full border border-white/10 bg-white/5 p-2 shadow-2xl backdrop-blur-md transition-all duration-300 focus-within:border-white/25 focus-within:bg-white/10 sm:flex-row">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Your website, or a subject you care about"
+            aria-label="Your website, or a subject you care about"
+            className="h-14 min-w-0 flex-1 rounded-full border-none bg-transparent px-6 font-light text-xl text-white shadow-none placeholder:text-white/60 focus-visible:border-none focus-visible:outline-none md:text-xl"
+          />
+          <Button
+            type="submit"
+            disabled={loading || input.trim().length < 2}
+            className="h-14 w-full shrink-0 rounded-full bg-[hsl(155,100%,67%)] px-8 text-lg font-bold text-[hsl(214,50%,9%)] shadow-lg transition-all hover:bg-[hsl(155,100%,60%)] hover:shadow-[0_0_28px_rgba(87,255,185,0.3)] active:scale-95 sm:w-auto"
+          >
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {loading ? 'Thinking…' : 'Show me feed ideas'}
+          </Button>
+        </div>
       </form>
 
-      <p className="pt-3 text-center text-sm md:text-xs text-white/40">
-        Free to create and curate.
-      </p>
+      <div className="flex items-center justify-center gap-3 pt-6">
+        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[hsl(155,100%,67%)]" />
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80 md:text-base">
+          Free to create and curate
+        </p>
+        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[hsl(155,100%,67%)]" />
+      </div>
 
       {error && <p className="pt-4 text-center text-base md:text-sm text-[hsl(0,80%,75%)]">{error}</p>}
 

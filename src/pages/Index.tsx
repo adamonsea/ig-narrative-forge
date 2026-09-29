@@ -10,7 +10,7 @@ import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
-import { Play } from 'lucide-react';
+import { Play, ArrowRight } from 'lucide-react';
 import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoops';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -177,23 +177,32 @@ const Index = () => {
 
               <motion.div
                 variants={reveal}
-                className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2 text-base md:text-sm"
+                className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 pt-4"
               >
                 <button
                   type="button"
                   onClick={() => setExplainerOpen(true)}
-                  className="inline-flex items-center gap-2 text-white/55 transition-colors hover:text-white"
+                  className="group flex items-center gap-3 text-white/70 transition-all hover:text-white"
                 >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/30">
-                    <Play className="h-2.5 w-2.5 fill-current text-current" aria-hidden="true" />
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all group-hover:border-[hsl(155,100%,67%)] group-hover:bg-[hsl(155,100%,67%)]/10">
+                    <Play
+                      className="ml-0.5 h-4 w-4 fill-current text-white transition-colors group-hover:text-[hsl(155,100%,67%)]"
+                      aria-hidden="true"
+                    />
                   </span>
-                  Watch the 60-second film
+                  <span className="text-base font-medium">Watch the 60-second film</span>
                 </button>
                 <Link
                   to="/feed/eastbourne"
-                  className="text-white/55 underline-offset-4 transition-colors hover:text-white hover:underline"
+                  className="group flex items-center gap-3 text-white/70 transition-all hover:text-white"
                 >
-                  See a live feed
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all group-hover:border-[hsl(270,100%,68%)] group-hover:bg-[hsl(270,100%,68%)]/10">
+                    <ArrowRight
+                      className="h-4 w-4 text-white transition-colors group-hover:text-[hsl(270,100%,68%)]"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span className="text-base font-medium">See a live feed</span>
                 </Link>
               </motion.div>
             </motion.div>
