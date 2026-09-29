@@ -249,7 +249,7 @@ const Index = () => {
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
               />
               <p className="text-xl md:text-2xl text-white/85 max-w-xl leading-relaxed">
-                Curate once, then reach people wherever they already are: inbox, social, or their favourite AI assistant.
+                Curate once, then reach people wherever they already are: inbox, social, or their AI assistant.
               </p>
             </motion.div>
 
