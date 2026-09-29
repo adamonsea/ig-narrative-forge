@@ -168,8 +168,8 @@ const Index = () => {
                   </span>
                 ))}
               </motion.h1>
-              <motion.p variants={reveal} className="text-xl md:text-2xl text-white/60 font-light max-w-2xl mx-auto leading-relaxed">
-                Aggregate content from any source, transform it into beautiful stories, and deliver via newsletters, social carousels, or your own branded feed.
+              <motion.p variants={reveal} className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
+                Turn the news you follow into a trusted publication for your community, clients, or team — in minutes, without writing from scratch.
               </motion.p>
               <motion.div variants={reveal}>
                 <FeedIdeaGenerator />
@@ -210,25 +210,25 @@ const Index = () => {
             <div className="grid md:grid-cols-3 gap-16 pt-16">
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-[hsl(155,100%,67%)] opacity-60">01</span>
-                <h3 className="text-2xl font-display text-white">Aggregate anything</h3>
-                <p className="text-white/70 leading-relaxed font-light">
-                  Connect RSS feeds, news sites, blogs, or any web source. AI monitors and pulls relevant content 24/7, so you never miss a story.
+                <h3 className="text-2xl font-display text-white">Gather from anywhere</h3>
+                <p className="text-lg text-white/85 leading-relaxed">
+                  Point Curatr at the sites, blogs and feeds you already read. It keeps watch around the clock, so you never miss a story that matters to your readers.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-[hsl(270,100%,68%)] opacity-60">02</span>
-                <h3 className="text-2xl font-display text-white">AI-powered summaries</h3>
-                <p className="text-white/70 leading-relaxed font-light">
-                  Transform dry articles into engaging stories with your tone and style. Full attribution to original sources always preserved.
+                <h3 className="text-2xl font-display text-white">Explain it in your voice</h3>
+                <p className="text-lg text-white/85 leading-relaxed">
+                  Dry articles become clear, engaging stories written the way you'd write them. Every piece links back to the original source, always.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-white/25">03</span>
-                <h3 className="text-2xl font-display text-white">Multi-channel delivery</h3>
-                <p className="text-white/70 leading-relaxed font-light">
-                  Publish to your branded web feed, send automated newsletters, or export carousels for Instagram, LinkedIn, and more.
+                <h3 className="text-2xl font-display text-white">Deliver where people actually read</h3>
+                <p className="text-lg text-white/85 leading-relaxed">
+                  Your own branded feed, a newsletter in their inbox, or ready-to-post carousels for Instagram and LinkedIn — all from the same story.
                 </p>
               </motion.div>
             </div>
@@ -248,8 +248,8 @@ const Index = () => {
                 segments={[{ text: 'Reach your audience' }, { text: 'everywhere', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
               />
-              <p className="text-xl text-white/70 max-w-xl">
-                One curation workflow, multiple distribution channels. Grow your audience on the platforms they use.
+              <p className="text-xl md:text-2xl text-white/85 max-w-xl leading-relaxed">
+                Curate once, then reach people wherever they already are — inbox, social, or their favourite AI assistant.
               </p>
             </motion.div>
 
@@ -267,7 +267,7 @@ const Index = () => {
                 >
                   <h4 className="text-[hsl(270,100%,68%)] font-semibold uppercase tracking-widest text-xs mb-6">{c.label}</h4>
                   <h3 className="text-3xl font-display mb-4 text-white group-hover:text-[hsl(155,100%,67%)] transition-colors">{c.title}</h3>
-                  <p className="text-white/70 font-light leading-relaxed">{c.body}</p>
+                  <p className="text-lg text-white/85 leading-relaxed">{c.body}</p>
                 </motion.div>
               ))}
             </div>
@@ -287,8 +287,8 @@ const Index = () => {
                 segments={[{ text: 'AI tools that drive' }, { text: 'engagement', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
               />
-              <p className="text-xl text-white/70 max-w-2xl mx-auto">
-                Go beyond curation with intelligent features that transform passive readers into active communities.
+              <p className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
+                Make following the news enjoyable — thoughtful tools that turn passive readers into a community that keeps coming back.
               </p>
             </motion.div>
 
@@ -302,7 +302,7 @@ const Index = () => {
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
                   <FeatureLoop name={f.loop} />
                   <h4 className="text-xl font-display italic mb-4 text-white">{f.title}</h4>
-                  <p className="text-base md:text-sm text-white/70 leading-relaxed">{f.body}</p>
+                  <p className="text-lg text-white/85 leading-relaxed">{f.body}</p>
                 </motion.div>
               ))}
             </div>
