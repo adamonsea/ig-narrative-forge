@@ -78,7 +78,7 @@ export const FeedIdeaGenerator = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Your website, or a subject you care about"
             aria-label="Your website, or a subject you care about"
-            className="h-14 min-w-0 flex-1 rounded-full border-none bg-transparent px-6 font-light text-xl text-white shadow-none placeholder:text-white/45 focus-visible:border-none focus-visible:outline-none md:text-xl"
+            className="h-14 min-w-0 flex-1 rounded-full border-none bg-transparent px-6 font-light text-xl text-white shadow-none placeholder:text-white/60 focus-visible:border-none focus-visible:outline-none md:text-xl"
           />
           <Button
             type="submit"
