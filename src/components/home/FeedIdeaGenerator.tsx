@@ -78,12 +78,12 @@ export const FeedIdeaGenerator = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Your website, or a subject you care about"
             aria-label="Your website, or a subject you care about"
-            className="h-14 min-w-0 flex-1 rounded-full border-none bg-transparent px-6 font-light text-xl text-white shadow-none placeholder:text-white/60 focus-visible:border-none focus-visible:outline-none md:text-xl"
+            className="h-14 min-w-0 w-full flex-1 rounded-full border-none bg-transparent px-6 font-light text-base text-white shadow-none placeholder:text-white/60 focus-visible:border-none focus-visible:outline-none md:text-xl"
           />
           <Button
             type="submit"
             disabled={loading || input.trim().length < 2}
-            className="h-14 w-full shrink-0 rounded-full bg-[hsl(155,100%,67%)] px-8 text-lg font-bold text-[hsl(214,50%,9%)] shadow-lg transition-all hover:bg-[hsl(155,100%,60%)] hover:shadow-[0_0_28px_rgba(87,255,185,0.3)] active:scale-95 sm:w-auto"
+            className="h-12 w-full shrink-0 rounded-full bg-[hsl(155,100%,67%)] px-8 text-base font-bold text-[hsl(214,50%,9%)] shadow-lg transition-all hover:bg-[hsl(155,100%,60%)] hover:shadow-[0_0_28px_rgba(87,255,185,0.3)] active:scale-95 sm:h-14 sm:w-auto md:text-lg"
           >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {loading ? 'Thinking…' : 'Show me feed ideas'}
@@ -93,7 +93,7 @@ export const FeedIdeaGenerator = () => {
 
       <div className="flex items-center justify-center gap-3 pt-6">
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[hsl(155,100%,67%)]" />
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80 md:text-base">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/80 md:text-base md:tracking-[0.2em]">
           Free to create and curate
         </p>
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[hsl(155,100%,67%)]" />
