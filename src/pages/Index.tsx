@@ -333,19 +333,19 @@ const Index = () => {
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(155,100%,67%)] mb-2">01 — Nothing publishes without you</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
-                      Every story waits in your approval queue. Accept it, edit it, or reject it — your feed only carries what you'd stand behind.
+                      Every story waits in your approval queue. Accept it, edit it, or reject.
                     </p>
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(270,100%,68%)] mb-2">02 — Credit where it's due</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
-                      Every story links back to the original publication. Your readers trust you, and the sources you rely on get the traffic they deserve.
+                      Every story links back to the original publication.
                     </p>
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-2">03 — See what's working</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
-                      Visits, newsletter opens, your best stories and strongest sources — all in one clear dashboard, updated as it happens.
+                      Visits, newsletter opens, your best stories and strongest sources — all in one clear dashboard.
                     </p>
                   </div>
                 </div>
