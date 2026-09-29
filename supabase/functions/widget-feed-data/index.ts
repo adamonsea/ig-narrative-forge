@@ -24,23 +24,46 @@ serve(async (req) => {
     const maxStories = Math.min(Math.max(parseInt(url.searchParams.get('max') || '5'), 1), 10);
     const mode = url.searchParams.get('mode');
 
+    // Source aliases: remap legacy/mistaken source names to the canonical
+    // publication so existing embeds self-correct without onsite code changes.
+    const SOURCE_ALIASES: Record<string, string> = {
+      'eastbourne.news': 'eastbournereporter.co.uk',
+    };
+    const applyAlias = (name: string) => SOURCE_ALIASES[name] || name;
+
+    // Human-readable display titles for known publication domains.
+    const SOURCE_DISPLAY_NAMES: Record<string, string> = {
+      'eastbournereporter.co.uk': 'Eastbourne Reporter',
+      'theargus.co.uk': 'The Argus',
+      'sussexexpress.co.uk': 'Sussex Express',
+      'eastbourne.news': 'Eastbourne Reporter',
+    };
+    const displayNameFor = (name: string | null): string | null => {
+      if (!name) return name;
+      const key = name.trim().toLowerCase();
+      return SOURCE_DISPLAY_NAMES[key] || name;
+    };
+
     // Optional per-embed source controls (comma separated publication names)
     const parseNameList = (raw: string | null): string[] => {
       if (!raw) return [];
       return raw
         .slice(0, 600)
         .split(',')
-        .map(n => n.trim().toLowerCase())
+        .map(n => applyAlias(n.trim().toLowerCase()))
         .filter(n => n.length > 0 && n.length <= 80)
         .slice(0, 25);
     };
     const allowedSources = parseNameList(url.searchParams.get('sources'));
     const featuredSources = parseNameList(url.searchParams.get('featured'));
     const MAX_FEATURED = 3;
-    // How long each featured source keeps its featured slot (1-5 days, default 2).
+    // How long each featured source keeps its featured slot (default 2 days).
     // Accepts a single value applied to all, or a comma list aligned with `featured`.
+    // Floor of 3 days so low-frequency featured sources (e.g. The Argus) don't
+    // age out of the strip when there's simply no fresher story from them.
+    const FEATURED_DAYS_FLOOR = 3;
     const rawFeaturedDays = (url.searchParams.get('featuredDays') || '').slice(0, 120);
-    const clampDays = (n: number) => (Number.isFinite(n) ? Math.min(5, Math.max(1, Math.round(n))) : 2);
+    const clampDays = (n: number) => (Number.isFinite(n) ? Math.min(5, Math.max(FEATURED_DAYS_FLOOR, Math.round(n))) : FEATURED_DAYS_FLOOR);
     const featuredDaysParts = rawFeaturedDays
       .split(',')
       .map(v => clampDays(parseInt(v.trim(), 10)));
@@ -48,11 +71,11 @@ serve(async (req) => {
     featuredSources.forEach((name, i) => {
       const days = featuredDaysParts.length === 1
         ? featuredDaysParts[0]
-        : (featuredDaysParts[i] ?? 2);
+        : (featuredDaysParts[i] ?? FEATURED_DAYS_FLOOR);
       featuredDaysBySource.set(name, days);
     });
     const featuredMaxAgeMinutesFor = (name: string) =>
-      (featuredDaysBySource.get(name) ?? 2) * 24 * 60;
+      (featuredDaysBySource.get(name) ?? FEATURED_DAYS_FLOOR) * 24 * 60;
 
     if (!feedSlug) {
       return new Response(
