@@ -199,13 +199,12 @@ serve(async (req) => {
       const now = new Date();
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
-      // Parallel fetch: stories for widget + weekly stats
-      const [storiesResult, weeklyStatsResult] = await Promise.all([
-        supabase
-        .from('stories')
-        .select(`
-          id, 
-          title, 
+      // Parallel fetch: stories for widget + weekly stats (+ featured candidates)
+      // Featured sources are often lower-volume, so their stories can fall outside
+      // the "newest N" window — fetch them separately so the featured strip works.
+      const storySelect = `
+          id,
+          title,
           created_at,
           published_at,
           publication_name,
@@ -214,14 +213,19 @@ serve(async (req) => {
           articles(source_url, image_url),
           topic_articles!inner(topic_id),
           slides(content, slide_number)
-        `)
+        `;
+      const featuredWindowStart = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+      const [storiesResult, weeklyStatsResult, featuredResult] = await Promise.all([
+        supabase
+        .from('stories')
+        .select(storySelect)
           .eq('topic_articles.topic_id', topic.id)
           .eq('is_published', true)
           .eq('status', 'published')
           .order('created_at', { ascending: false })
           .abortSignal(storiesController.signal)
           .limit(fetchLimit),
-        
+
         // Rolling 7-day count + newest story timestamp (filtered by topic)
         supabase
           .from('stories')
@@ -231,7 +235,21 @@ serve(async (req) => {
           .eq('status', 'published')
           .gte('created_at', sevenDaysAgo.toISOString())
           .order('created_at', { ascending: false })
-          .limit(1)
+          .limit(1),
+
+        featuredSources.length > 0
+          ? supabase
+            .from('stories')
+            .select(storySelect)
+            .eq('topic_articles.topic_id', topic.id)
+            .eq('is_published', true)
+            .eq('status', 'published')
+            .in('publication_name', featuredSources)
+            .gte('created_at', featuredWindowStart.toISOString())
+            .order('created_at', { ascending: false })
+            .abortSignal(storiesController.signal)
+            .limit(MAX_FEATURED * 3)
+          : Promise.resolve({ data: [], error: null } as any)
       ]);
 
       clearTimeout(storiesTimeoutId);
@@ -245,6 +263,13 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Merge featured candidates into the story pool (dedupe by id)
+      const seenIds = new Set((stories || []).map((s: any) => s.id));
+      const mergedStories = [
+        ...(stories || []),
+        ...((featuredResult?.data || []).filter((s: any) => !seenIds.has(s.id))),
+      ];
 
       // Extract weekly stats (graceful fallback if query fails)
       const storiesThisWeek = weeklyStatsResult.count || 0;
