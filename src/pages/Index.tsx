@@ -10,7 +10,7 @@ import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { MaskRevealHeading } from '@/components/MaskRevealHeading';
-import { Play } from 'lucide-react';
+import { Play, ArrowRight } from 'lucide-react';
 import { FeatureLoop, type FeatureLoopName } from '@/components/home/FeatureLoops';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
