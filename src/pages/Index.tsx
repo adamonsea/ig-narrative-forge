@@ -169,7 +169,7 @@ const Index = () => {
                 ))}
               </motion.h1>
               <motion.p variants={reveal} className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
-                Turn the news you follow into a trusted publication for your community, clients, or team. In minutes, without writing from scratch.
+                Turn the news you follow into a trusted publication for your community, clients, or team.
               </motion.p>
               <motion.div variants={reveal}>
                 <FeedIdeaGenerator />
