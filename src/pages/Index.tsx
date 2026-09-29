@@ -220,7 +220,7 @@ const Index = () => {
                 <span className="block font-display text-5xl text-[hsl(270,100%,68%)] opacity-60">02</span>
                 <h3 className="text-2xl font-display text-white">Explain it in your voice</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Dry articles become clear, engaging stories written the way you'd write them. Every piece links back to the original source, always.
+                  Dry articles become clear, engaging stories written the way you'd write them. Every piece links back to the original source.
                 </p>
               </motion.div>
 
