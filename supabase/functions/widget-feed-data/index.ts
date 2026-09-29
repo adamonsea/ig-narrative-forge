@@ -24,23 +24,46 @@ serve(async (req) => {
     const maxStories = Math.min(Math.max(parseInt(url.searchParams.get('max') || '5'), 1), 10);
     const mode = url.searchParams.get('mode');
 
+    // Source aliases: remap legacy/mistaken source names to the canonical
+    // publication so existing embeds self-correct without onsite code changes.
+    const SOURCE_ALIASES: Record<string, string> = {
+      'eastbourne.news': 'eastbournereporter.co.uk',
+    };
+    const applyAlias = (name: string) => SOURCE_ALIASES[name] || name;
+
+    // Human-readable display titles for known publication domains.
+    const SOURCE_DISPLAY_NAMES: Record<string, string> = {
+      'eastbournereporter.co.uk': 'Eastbourne Reporter',
+      'theargus.co.uk': 'The Argus',
+      'sussexexpress.co.uk': 'Sussex Express',
+      'eastbourne.news': 'Eastbourne News',
+    };
+    const displayNameFor = (name: string | null): string | null => {
+      if (!name) return name;
+      const key = name.trim().toLowerCase();
+      return SOURCE_DISPLAY_NAMES[key] || name;
+    };
+
     // Optional per-embed source controls (comma separated publication names)
     const parseNameList = (raw: string | null): string[] => {
       if (!raw) return [];
       return raw
         .slice(0, 600)
         .split(',')
-        .map(n => n.trim().toLowerCase())
+        .map(n => applyAlias(n.trim().toLowerCase()))
         .filter(n => n.length > 0 && n.length <= 80)
         .slice(0, 25);
     };
     const allowedSources = parseNameList(url.searchParams.get('sources'));
     const featuredSources = parseNameList(url.searchParams.get('featured'));
     const MAX_FEATURED = 3;
-    // How long each featured source keeps its featured slot (1-5 days, default 2).
+    // How long each featured source keeps its featured slot (default 2 days).
     // Accepts a single value applied to all, or a comma list aligned with `featured`.
+    // Floor of 3 days so low-frequency featured sources (e.g. The Argus) don't
+    // age out of the strip when there's simply no fresher story from them.
+    const FEATURED_DAYS_FLOOR = 3;
     const rawFeaturedDays = (url.searchParams.get('featuredDays') || '').slice(0, 120);
-    const clampDays = (n: number) => (Number.isFinite(n) ? Math.min(5, Math.max(1, Math.round(n))) : 2);
+    const clampDays = (n: number) => (Number.isFinite(n) ? Math.min(5, Math.max(FEATURED_DAYS_FLOOR, Math.round(n))) : FEATURED_DAYS_FLOOR);
     const featuredDaysParts = rawFeaturedDays
       .split(',')
       .map(v => clampDays(parseInt(v.trim(), 10)));
@@ -48,11 +71,11 @@ serve(async (req) => {
     featuredSources.forEach((name, i) => {
       const days = featuredDaysParts.length === 1
         ? featuredDaysParts[0]
-        : (featuredDaysParts[i] ?? 2);
+        : (featuredDaysParts[i] ?? FEATURED_DAYS_FLOOR);
       featuredDaysBySource.set(name, days);
     });
     const featuredMaxAgeMinutesFor = (name: string) =>
-      (featuredDaysBySource.get(name) ?? 2) * 24 * 60;
+      (featuredDaysBySource.get(name) ?? FEATURED_DAYS_FLOOR) * 24 * 60;
 
     if (!feedSlug) {
       return new Response(
@@ -176,13 +199,12 @@ serve(async (req) => {
       const now = new Date();
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
-      // Parallel fetch: stories for widget + weekly stats
-      const [storiesResult, weeklyStatsResult] = await Promise.all([
-        supabase
-        .from('stories')
-        .select(`
-          id, 
-          title, 
+      // Parallel fetch: stories for widget + weekly stats (+ featured candidates)
+      // Featured sources are often lower-volume, so their stories can fall outside
+      // the "newest N" window — fetch them separately so the featured strip works.
+      const storySelect = `
+          id,
+          title,
           created_at,
           published_at,
           publication_name,
@@ -191,14 +213,19 @@ serve(async (req) => {
           articles(source_url, image_url),
           topic_articles!inner(topic_id),
           slides(content, slide_number)
-        `)
+        `;
+      const featuredWindowStart = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+      const [storiesResult, weeklyStatsResult, featuredResult] = await Promise.all([
+        supabase
+        .from('stories')
+        .select(storySelect)
           .eq('topic_articles.topic_id', topic.id)
           .eq('is_published', true)
           .eq('status', 'published')
           .order('created_at', { ascending: false })
           .abortSignal(storiesController.signal)
           .limit(fetchLimit),
-        
+
         // Rolling 7-day count + newest story timestamp (filtered by topic)
         supabase
           .from('stories')
@@ -208,7 +235,21 @@ serve(async (req) => {
           .eq('status', 'published')
           .gte('created_at', sevenDaysAgo.toISOString())
           .order('created_at', { ascending: false })
-          .limit(1)
+          .limit(1),
+
+        featuredSources.length > 0
+          ? supabase
+            .from('stories')
+            .select(storySelect)
+            .eq('topic_articles.topic_id', topic.id)
+            .eq('is_published', true)
+            .eq('status', 'published')
+            .in('publication_name', featuredSources)
+            .gte('created_at', featuredWindowStart.toISOString())
+            .order('created_at', { ascending: false })
+            .abortSignal(storiesController.signal)
+            .limit(MAX_FEATURED * 3)
+          : Promise.resolve({ data: [], error: null } as any)
       ]);
 
       clearTimeout(storiesTimeoutId);
@@ -223,6 +264,13 @@ serve(async (req) => {
         );
       }
 
+      // Merge featured candidates into the story pool (dedupe by id)
+      const seenIds = new Set((stories || []).map((s: any) => s.id));
+      const mergedStories = [
+        ...(stories || []),
+        ...((featuredResult?.data || []).filter((s: any) => !seenIds.has(s.id))),
+      ];
+
       // Extract weekly stats (graceful fallback if query fails)
       const storiesThisWeek = weeklyStatsResult.count || 0;
       const newestStoryTime = weeklyStatsResult.data?.[0]?.created_at;
@@ -232,7 +280,7 @@ serve(async (req) => {
 
       // Build story URLs with source attribution and images - filter to only stories with images
       const baseUrl = `https://curatr.pro`;
-      const allFormatted = (stories || [])
+      const allFormatted = mergedStories
         .map(story => {
           const imageUrl = story.cover_illustration_url || story.articles?.image_url || null;
           
@@ -258,13 +306,17 @@ serve(async (req) => {
           const publishedTime = story.published_at || story.created_at;
           const storyAgeMinutes = Math.floor((Date.now() - new Date(publishedTime).getTime()) / 60000);
 
+          const rawSourceName = story.publication_name || fallbackSourceName;
           return {
             id: story.id,
             title: headline,
             url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
             published_at: story.created_at,
             age_minutes: storyAgeMinutes,
-            source_name: story.publication_name || fallbackSourceName,
+            // source_key: canonical domain used for featured/sources matching
+            // source_name: human-readable title shown in the badge
+            source_key: rawSourceName ? applyAlias(rawSourceName.trim().toLowerCase()) : null,
+            source_name: displayNameFor(rawSourceName),
             source_url: sourceUrl,
             image_url: imageUrl,
           };
@@ -275,7 +327,7 @@ serve(async (req) => {
       const norm = (s: string | null) => (s || '').trim().toLowerCase();
       let working = allFormatted;
       if (allowedSources.length > 0) {
-        const filtered = allFormatted.filter(s => allowedSources.includes(norm(s.source_name)));
+        const filtered = allFormatted.filter(s => allowedSources.includes(norm(s.source_key)));
         if (filtered.length > 0) working = filtered;
       }
 
@@ -284,8 +336,8 @@ serve(async (req) => {
       if (featuredSources.length > 0) {
         const featured = working
           .filter(s =>
-            featuredSources.includes(norm(s.source_name)) &&
-            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutesFor(norm(s.source_name)))
+            featuredSources.includes(norm(s.source_key)) &&
+            (typeof s.age_minutes !== 'number' || s.age_minutes <= featuredMaxAgeMinutesFor(norm(s.source_key)))
           )
           .slice(0, MAX_FEATURED)
           .map(s => ({ ...s, featured: true }));
