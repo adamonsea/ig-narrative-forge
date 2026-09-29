@@ -36,7 +36,7 @@ serve(async (req) => {
       'eastbournereporter.co.uk': 'Eastbourne Reporter',
       'theargus.co.uk': 'The Argus',
       'sussexexpress.co.uk': 'Sussex Express',
-      'eastbourne.news': 'Eastbourne Reporter',
+      'eastbourne.news': 'Eastbourne News',
     };
     const displayNameFor = (name: string | null): string | null => {
       if (!name) return name;
