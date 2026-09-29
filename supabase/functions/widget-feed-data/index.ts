@@ -281,13 +281,17 @@ serve(async (req) => {
           const publishedTime = story.published_at || story.created_at;
           const storyAgeMinutes = Math.floor((Date.now() - new Date(publishedTime).getTime()) / 60000);
 
+          const rawSourceName = story.publication_name || fallbackSourceName;
           return {
             id: story.id,
             title: headline,
             url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
             published_at: story.created_at,
             age_minutes: storyAgeMinutes,
-            source_name: displayNameFor(story.publication_name || fallbackSourceName),
+            // source_key: canonical domain used for featured/sources matching
+            // source_name: human-readable title shown in the badge
+            source_key: rawSourceName ? applyAlias(rawSourceName.trim().toLowerCase()) : null,
+            source_name: displayNameFor(rawSourceName),
             source_url: sourceUrl,
             image_url: imageUrl,
           };
