@@ -280,7 +280,7 @@ serve(async (req) => {
 
       // Build story URLs with source attribution and images - filter to only stories with images
       const baseUrl = `https://curatr.pro`;
-      const allFormatted = (stories || [])
+      const allFormatted = mergedStories
         .map(story => {
           const imageUrl = story.cover_illustration_url || story.articles?.image_url || null;
           
