@@ -67,7 +67,7 @@ export const FeedIdeaGenerator = () => {
 
   return (
     <div className="mx-auto w-full max-w-4xl pt-6">
-      <form onSubmit={generate} className="group relative mx-auto w-full max-w-2xl">
+      <form onSubmit={generate} className="group relative mx-auto w-full max-w-3xl">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-r from-[hsl(270,100%,68%)]/30 to-[hsl(155,100%,67%)]/30 opacity-50 blur-xl transition-opacity duration-500 group-focus-within:opacity-100"
