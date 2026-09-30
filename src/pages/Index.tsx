@@ -235,7 +235,7 @@ const Index = () => {
 
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-white/25">03</span>
-                <h3 className="text-2xl md:text-3xl font-display italic text-white">Deliverd in any channel</h3>
+                <h3 className="text-2xl md:text-3xl font-display italic text-white">Delivered in any channel</h3>
               </motion.div>
             </div>
           </motion.section>
