@@ -311,9 +311,18 @@ const Index = () => {
             </div>
 
             <motion.div variants={reveal} className="mt-12 text-center">
-              <Button asChild variant="secondary" size="lg">
-                <Link to="/features">Explore every feature</Link>
-              </Button>
+              <Link
+                to="/features"
+                className="group relative inline-flex items-center justify-center rounded-full px-8 py-4 transition-all duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(270,100%,68%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(214,50%,9%)] sm:px-12 sm:py-5"
+              >
+                <span className="absolute inset-0 rounded-full border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-500 group-hover:border-[hsl(155,100%,67%)]/50 group-hover:bg-white/10 group-hover:shadow-[0_0_30px_hsl(155,100%,67%/0.15)]" />
+                <span className="absolute inset-0 rounded-full bg-gradient-to-r from-[hsl(270,100%,68%)] to-[hsl(155,100%,67%)] opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-20" />
+                <span className="relative flex items-center gap-3 text-base font-medium tracking-tight text-white sm:text-lg">
+                  Explore every feature
+                  <ArrowRight className="h-5 w-5 text-[hsl(155,100%,67%)] transition-transform duration-500 group-hover:translate-x-1.5" />
+                </span>
+                <span className="absolute bottom-0 left-1/2 h-px w-0 -translate-x-1/2 bg-gradient-to-r from-transparent via-[hsl(270,100%,68%)] to-transparent transition-all duration-700 group-hover:w-3/4" />
+              </Link>
             </motion.div>
           </motion.section>
 
