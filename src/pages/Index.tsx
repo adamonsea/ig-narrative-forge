@@ -227,7 +227,7 @@ const Index = () => {
 
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-[hsl(270,100%,68%)] opacity-60">02</span>
-                <h3 className="text-2xl font-display text-white">Summaries in your voice</h3>
+                <h3 className="text-2xl md:text-3xl font-display italic text-white">Summaries in your voice</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
                   Dry articles rewritten in a consistent style and always linked to the original source.
                 </p>
