@@ -8,11 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { savePendingBlueprint, type FeedBlueprint } from '@/lib/feedBlueprint';
 import { BlueprintAccountDialog } from './BlueprintAccountDialog';
-import { useIsMobile } from '@/hooks/use-mobile';
-
 export const FeedIdeaGenerator = () => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
