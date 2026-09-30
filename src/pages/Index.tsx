@@ -257,9 +257,6 @@ const Index = () => {
                 segments={[{ text: 'Reach your audience' }, { text: 'everywhere', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
               />
-              <p className="text-xl md:text-2xl text-white/85 max-w-xl leading-relaxed">
-                Curate once. Reach people wherever they already are.
-              </p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/10">
