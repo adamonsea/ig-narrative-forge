@@ -295,11 +295,10 @@ const Index = () => {
               />
             </motion.div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
                 { title: 'AI illustrations', loop: 'illustrations' as FeatureLoopName, body: 'Unique editorial artwork for every story. No stock photos.' },
                 { title: 'Play Mode', loop: 'play' as FeatureLoopName, body: 'Readers swipe through stories and rate them.' },
-                { title: 'Quiz cards', loop: 'quiz' as FeatureLoopName, body: 'Quizzes generated automatically from your stories.' },
                 { title: 'Sentiment tracking', loop: 'sentiment' as FeatureLoopName, body: 'See what your community cares about, before it trends.' },
               ].map((f) => (
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
