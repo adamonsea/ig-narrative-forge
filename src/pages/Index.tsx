@@ -303,10 +303,10 @@ const Index = () => {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { title: 'AI illustrations', loop: 'illustrations' as FeatureLoopName, body: 'Generate unique editorial artwork for every story. No stock photos, no copyright concerns.' },
-                { title: 'Play Mode', loop: 'play' as FeatureLoopName, body: 'Readers swipe through stories, rating content with hot-or-not mechanics that build habits.' },
-                { title: 'Quiz cards', loop: 'quiz' as FeatureLoopName, body: 'Auto-generate knowledge quizzes from your content. Test and engage readers with gamification.' },
-                { title: 'Sentiment tracking', loop: 'sentiment' as FeatureLoopName, body: 'Monitor what topics resonate with your community. See trends emerge before they go mainstream.' },
+                { title: 'AI illustrations', loop: 'illustrations' as FeatureLoopName, body: 'Unique editorial artwork for every story. No stock photos.' },
+                { title: 'Play Mode', loop: 'play' as FeatureLoopName, body: 'Readers swipe through stories and rate them.' },
+                { title: 'Quiz cards', loop: 'quiz' as FeatureLoopName, body: 'Quizzes generated automatically from your stories.' },
+                { title: 'Sentiment tracking', loop: 'sentiment' as FeatureLoopName, body: 'See what your community cares about, before it trends.' },
               ].map((f) => (
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
                   <FeatureLoop name={f.loop} />
@@ -354,7 +354,7 @@ const Index = () => {
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-2">03. See what's working</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
-                      Visits, newsletter opens, your best stories and strongest sources, all in one clear dashboard.
+                      Visits, newsletter opens, your best stories and strongest sources in one dashboard.
                     </p>
                   </div>
                 </div>
@@ -425,21 +425,21 @@ const Index = () => {
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Local news feeds</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Bring together everything happening in your town from every local source.
+                  Everything happening in your town, from every local source.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl border border-[hsl(270,100%,68%)]/20">
                 <h3 className="text-2xl font-display text-white mb-3">Industry newsletters</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Become the person your industry reads. Hand-pick the stories that matter and grow a subscriber base.
+                  Become the person your industry reads, and grow a subscriber base.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
                 <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Sport, tech, culture, hobbies: whatever your people care about. Quizzes keep them coming back.
+                  Sport, tech, culture, hobbies: whatever your people care about.
                 </p>
               </motion.div>
             </div>
@@ -459,8 +459,7 @@ const Index = () => {
                 On the roadmap
               </span>
               <p className="text-[hsl(155,100%,67%)] text-sm leading-relaxed font-medium">
-                We're building toward native one-click publishing to social platforms (today: carousel export),
-                subscriptions &amp; monetization, team workspaces, and an API. These are in development, not yet available.
+                Coming next: one-click social publishing, subscriptions, team workspaces, and an API. In development, not yet available.
               </p>
             </motion.div>
 
@@ -477,7 +476,7 @@ const Index = () => {
                 className="text-4xl md:text-5xl font-display text-white mb-4 leading-[1.1]"
               />
               <p className="text-lg text-white/85 mb-8 max-w-lg mx-auto leading-relaxed">
-                Free to create and curate. Connect your sources, approve your first stories, and publish today.
+                Free to create and curate. Connect your sources and publish today.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <motion.div {...hoverLift}>
