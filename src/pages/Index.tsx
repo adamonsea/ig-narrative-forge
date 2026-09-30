@@ -341,7 +341,7 @@ const Index = () => {
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(155,100%,67%)] mb-2">01. Nothing publishes without you</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
-                      Every story waits in your approval queue. Accept it, edit it, or reject.
+                      Every story waits in your approval queue.
                     </p>
                   </div>
                   <div>
@@ -353,7 +353,7 @@ const Index = () => {
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-2">03. See what's working</h3>
                     <p className="text-lg text-white/85 leading-relaxed">
-                      Visits, newsletter opens, your best stories and strongest sources in one dashboard.
+                      Everything in one dashboard.
                     </p>
                   </div>
                 </div>
