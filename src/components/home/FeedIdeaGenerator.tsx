@@ -97,7 +97,7 @@ export const FeedIdeaGenerator = () => {
       <div className="flex items-center justify-center gap-3 pt-6">
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[hsl(155,100%,67%)]" />
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/80 md:text-base md:tracking-[0.2em]">
-          Free to create and curate
+          Free to create
         </p>
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[hsl(155,100%,67%)]" />
       </div>
