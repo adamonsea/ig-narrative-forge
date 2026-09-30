@@ -471,7 +471,7 @@ const Index = () => {
             >
               <MaskRevealHeading
                 as="h2"
-                segments={[{ text: 'Start building your' }, { text: 'feed today', italic: true }]}
+                segments={[{ text: 'Start your feed for free' }, { text: 'today', italic: true }]}
                 className="text-4xl md:text-5xl font-display text-white mb-4 leading-[1.1]"
               />
               <p className="text-lg text-white/85 mb-8 max-w-lg mx-auto leading-relaxed">
