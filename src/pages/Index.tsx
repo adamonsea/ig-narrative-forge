@@ -291,11 +291,8 @@ const Index = () => {
               <MaskRevealHeading
                 as="h2"
                 segments={[{ text: 'AI tools that build' }, { text: 'engagement & community', italic: true }]}
-                className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
+                className="text-4xl md:text-5xl font-display tracking-tight text-white leading-[1.1] flex flex-wrap justify-center"
               />
-              <p className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
-                Make following the news enjoyable with thoughtful tools that turn readers into an active community.
-              </p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -307,7 +304,7 @@ const Index = () => {
               ].map((f) => (
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
                   <FeatureLoop name={f.loop} />
-                  <h4 className="text-xl font-display italic mb-4 text-white">{f.title}</h4>
+                  <h4 className="text-2xl md:text-3xl font-display italic mb-4 text-white">{f.title}</h4>
                   <p className="text-lg text-white/85 leading-relaxed">{f.body}</p>
                 </motion.div>
               ))}
