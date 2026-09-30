@@ -419,9 +419,6 @@ const Index = () => {
                 segments={[{ text: 'Built for' }, { text: 'curators', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
               />
-              <p className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
-                Whether you're serving a town, an industry, or a community of enthusiasts.
-              </p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-12">
@@ -450,21 +447,6 @@ const Index = () => {
 
           {/* CTA Section */}
           <section className="max-w-3xl mx-auto py-24 text-center">
-            {/* Roadmap */}
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={viewport}
-              variants={reveal}
-              className="bg-[hsl(155,100%,67%)]/5 border border-[hsl(155,100%,67%)]/20 rounded-2xl p-6 mb-12 text-left flex flex-col md:flex-row md:items-center gap-6"
-            >
-              <span className="px-3 py-1 bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] text-[10px] font-bold uppercase tracking-wider rounded self-start">
-                On the roadmap
-              </span>
-              <p className="text-[hsl(155,100%,67%)] text-sm leading-relaxed font-medium">
-                Coming next: one-click social publishing, subscriptions, team workspaces, and an API. In development, not yet available.
-              </p>
-            </motion.div>
 
             <motion.div
               initial="hidden"
