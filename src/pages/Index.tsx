@@ -423,21 +423,21 @@ const Index = () => {
 
             <div className="grid md:grid-cols-3 gap-12">
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
-                <h3 className="text-2xl font-display text-white mb-3">Local news feeds</h3>
+                <h3 className="text-2xl md:text-3xl font-display italic text-white mb-3">Local news feeds</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
                   Everything happening in your town, from every local source.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl border border-[hsl(270,100%,68%)]/20">
-                <h3 className="text-2xl font-display text-white mb-3">Industry newsletters</h3>
+                <h3 className="text-2xl md:text-3xl font-display italic text-white mb-3">Industry newsletters</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
                   Become the person your industry reads, and grow a subscriber base.
                 </p>
               </motion.div>
 
               <motion.div variants={reveal} className="p-10 bg-[hsl(214,50%,12%)] rounded-xl">
-                <h3 className="text-2xl font-display text-white mb-3">Niche communities</h3>
+                <h3 className="text-2xl md:text-3xl font-display italic text-white mb-3">Niche communities</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
                   Sport, tech, culture, hobbies: whatever your people care about.
                 </p>
