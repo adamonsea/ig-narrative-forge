@@ -146,11 +146,11 @@ const Index = () => {
           </nav>
         </header>
 
-        <main className="container mx-auto px-6">
+        <main className="container mx-auto px-4 sm:px-6">
           {/* Hero Section */}
-          <section className="max-w-5xl mx-auto text-center py-14 md:py-24 relative">
+          <section className="relative mx-auto flex min-h-[calc(100svh-88px)] max-w-5xl items-center justify-center py-8 text-center md:min-h-[calc(100svh-104px)] md:py-10">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[hsl(270,100%,68%)]/10 blur-[120px] rounded-full -z-10" />
-            <motion.div initial="hidden" animate="show" variants={container} className="space-y-8">
+            <motion.div initial="hidden" animate="show" variants={container} className="w-full space-y-6 md:space-y-8">
               <motion.h1 variants={maskWordContainer} className="text-4xl sm:text-6xl md:text-8xl font-display font-normal tracking-tight leading-[1.08] text-white">
                 {['Your', 'niche', 'news', 'feed,'].map((word, i) => (
                   <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] px-[0.12em] -mx-[0.12em] mr-[0.13em]">
@@ -177,7 +177,7 @@ const Index = () => {
 
               <motion.div
                 variants={reveal}
-                className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 pt-4"
+                className="flex flex-col items-center justify-center gap-4 pt-1 sm:flex-row sm:gap-x-10 md:pt-4"
               >
                 <button
                   type="button"
