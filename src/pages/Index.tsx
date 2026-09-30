@@ -508,7 +508,7 @@ const Index = () => {
               . All rights reserved.
             </p>
             <p>
-              A{' '}
+              An{' '}
               <a 
                 href="https://adammd.me" 
                 target="_blank" 
