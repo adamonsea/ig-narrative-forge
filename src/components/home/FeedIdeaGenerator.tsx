@@ -8,9 +8,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { savePendingBlueprint, type FeedBlueprint } from '@/lib/feedBlueprint';
 import { BlueprintAccountDialog } from './BlueprintAccountDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const FeedIdeaGenerator = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,23 +72,24 @@ export const FeedIdeaGenerator = () => {
       <form onSubmit={generate} className="group relative mx-auto w-full max-w-3xl">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-r from-[hsl(270,100%,68%)]/30 to-[hsl(155,100%,67%)]/30 opacity-50 blur-xl transition-opacity duration-500 group-focus-within:opacity-100"
+          className="pointer-events-none absolute -inset-1 hidden rounded-full bg-gradient-to-r from-[hsl(270,100%,68%)]/30 to-[hsl(155,100%,67%)]/30 opacity-50 blur-xl transition-opacity duration-500 group-focus-within:opacity-100 sm:block"
         />
-        <div className="relative flex flex-col items-center gap-2 rounded-full border border-white/10 bg-white/5 p-2 shadow-2xl backdrop-blur-md transition-all duration-300 focus-within:border-white/25 focus-within:bg-white/10 sm:flex-row">
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 sm:rounded-full sm:border sm:border-white/10 sm:bg-white/5 sm:p-2 sm:shadow-2xl sm:backdrop-blur-md sm:transition-all sm:duration-300 sm:focus-within:border-white/25 sm:focus-within:bg-white/10">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Your website, or a subject you care about"
+            placeholder={isMobile ? 'Your website or a topic' : 'Your website, or a subject you care about'}
             aria-label="Your website, or a subject you care about"
-            className="h-14 min-w-0 w-full flex-1 rounded-full border-none bg-transparent px-6 font-light text-base text-white shadow-none placeholder:text-white/60 focus-visible:border-none focus-visible:outline-none md:text-xl"
+            className="h-14 w-full min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/10 px-5 text-center text-lg text-white shadow-[0_0_30px_-8px_rgba(173,92,255,0.5)] placeholder:text-white/70 focus-visible:border-[hsl(155,100%,67%)]/60 focus-visible:ring-0 focus-visible:ring-offset-0 sm:rounded-full sm:border-none sm:bg-transparent sm:px-6 sm:text-left sm:font-light sm:shadow-none md:text-xl"
           />
           <Button
             type="submit"
             disabled={loading || input.trim().length < 2}
-            className="h-12 w-full shrink-0 rounded-full bg-[hsl(155,100%,67%)] px-8 text-base font-bold text-[hsl(214,50%,9%)] shadow-lg transition-all hover:bg-[hsl(155,100%,60%)] hover:shadow-[0_0_28px_rgba(87,255,185,0.3)] active:scale-95 sm:h-14 sm:w-auto md:text-lg"
+            className="h-14 w-full shrink-0 rounded-2xl bg-[hsl(155,100%,67%)] px-8 text-lg font-bold text-[hsl(214,50%,9%)] shadow-lg transition-all hover:bg-[hsl(155,100%,60%)] hover:shadow-[0_0_28px_rgba(87,255,185,0.3)] active:scale-95 disabled:opacity-100 sm:w-auto sm:rounded-full sm:disabled:opacity-60"
           >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {loading ? 'Thinking…' : 'Show me feed ideas'}
+            {!loading ? <ArrowRight className="ml-2 h-5 w-5 sm:hidden" /> : null}
           </Button>
         </div>
       </form>
