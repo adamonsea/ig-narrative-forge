@@ -236,9 +236,6 @@ const Index = () => {
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-white/25">03</span>
                 <h3 className="text-2xl font-display text-white">Deliverd in any channel</h3>
-                <p className="text-lg text-white/85 leading-relaxed">
-                  Curated stories become your feed, your newsletter, and your social posts.
-                </p>
               </motion.div>
             </div>
           </motion.section>
