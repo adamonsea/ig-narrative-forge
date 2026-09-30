@@ -315,7 +315,7 @@ const Index = () => {
                 to="/features"
                 className="group relative inline-flex items-center justify-center rounded-full px-8 py-4 transition-all duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(270,100%,68%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(214,50%,9%)] sm:px-12 sm:py-5"
               >
-                <span className="absolute inset-0 rounded-full border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-500 group-hover:border-[hsl(155,100%,67%)]/50 group-hover:bg-white/10 group-hover:shadow-[0_0_30px_hsl(155,100%,67%/0.15)]" />
+                <span className="absolute inset-0 rounded-full border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-500 group-hover:border-[hsl(155,100%,67%)]/50 group-hover:bg-white/10 group-hover:shadow-[0_0_30px_0_hsl(155_100%_67%_/_15%)]" />
                 <span className="absolute inset-0 rounded-full bg-gradient-to-r from-[hsl(270,100%,68%)] to-[hsl(155,100%,67%)] opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-20" />
                 <span className="relative flex items-center gap-3 text-base font-medium tracking-tight text-white sm:text-lg">
                   Explore every feature
