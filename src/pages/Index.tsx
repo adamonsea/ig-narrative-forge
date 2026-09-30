@@ -219,7 +219,7 @@ const Index = () => {
             <div className="grid md:grid-cols-3 gap-16 pt-16">
               <motion.div variants={reveal} className="space-y-4">
                 <span className="block font-display text-5xl text-[hsl(155,100%,67%)] opacity-60">01</span>
-                <h3 className="text-2xl font-display text-white">Gather from anywhere</h3>
+                <h3 className="text-2xl font-display text-white">Always on gathering</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
                   Point Curatr at the sites, blogs and feeds you already read. It keeps watch, so nothing important slips past.
                 </p>
