@@ -304,7 +304,7 @@ const Index = () => {
               ].map((f) => (
                 <motion.div key={f.title} variants={reveal} className="border-l border-white/10 pl-8 pb-8">
                   <FeatureLoop name={f.loop} />
-                  <h4 className="text-xl font-display italic mb-4 text-white">{f.title}</h4>
+                  <h4 className="text-2xl md:text-3xl font-display italic mb-4 text-white">{f.title}</h4>
                   <p className="text-lg text-white/85 leading-relaxed">{f.body}</p>
                 </motion.div>
               ))}
