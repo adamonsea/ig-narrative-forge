@@ -221,7 +221,7 @@ const Index = () => {
                 <span className="block font-display text-5xl text-[hsl(155,100%,67%)] opacity-60">01</span>
                 <h3 className="text-2xl font-display text-white">Gather from anywhere</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Point Curatr at the sites, blogs and feeds you already read. It keeps watch around the clock, so you never miss a story that matters to your readers.
+                  Point Curatr at the sites, blogs and feeds you already read. It keeps watch, so nothing important slips past.
                 </p>
               </motion.div>
 
@@ -229,7 +229,7 @@ const Index = () => {
                 <span className="block font-display text-5xl text-[hsl(270,100%,68%)] opacity-60">02</span>
                 <h3 className="text-2xl font-display text-white">Explain it in your voice</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Dry articles become clear, engaging stories written the way you'd write them. Every piece links back to the original source.
+                  Dry articles rewritten the way you'd write them, always linked to the original source.
                 </p>
               </motion.div>
 
@@ -237,7 +237,7 @@ const Index = () => {
                 <span className="block font-display text-5xl text-white/25">03</span>
                 <h3 className="text-2xl font-display text-white">Deliver where people actually read</h3>
                 <p className="text-lg text-white/85 leading-relaxed">
-                  Your own branded feed, a newsletter in their inbox, or ready-to-post carousels for Instagram and LinkedIn, all from the same story.
+                  One story becomes your feed, your newsletter, and your social posts.
                 </p>
               </motion.div>
             </div>
@@ -258,16 +258,16 @@ const Index = () => {
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
               />
               <p className="text-xl md:text-2xl text-white/85 max-w-xl leading-relaxed">
-                Curate once, then reach people wherever they already are: inbox, social, or their AI assistant.
+                Curate once. Reach people wherever they already are.
               </p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/10">
               {[
-                { label: 'Channel 01', title: 'Email newsletters', body: 'Automated daily or weekly digests sent directly to subscribers. Beautiful templates, zero work.' },
-                { label: 'Channel 02', title: 'Social carousels', body: 'Export stories as ready-to-post image carousels for Instagram, LinkedIn, or X. Download, then post, driving traffic back to your feed.' },
-                { label: 'Channel 03', title: 'Mobile-first feed', body: 'Your own branded news feed with swipe navigation, reader ratings, and instant story sharing.' },
-                { label: 'Channel 04', title: 'ChatGPT & Claude', body: 'Publish your feed as an AI connector. Assistants can browse, search and summarise your stories, with sources credited and linked.' },
+                { label: 'Channel 01', title: 'Email newsletters', body: 'Daily or weekly digests, sent automatically.' },
+                { label: 'Channel 02', title: 'Social carousels', body: 'Ready-to-post slides for Instagram, LinkedIn, and X.' },
+                { label: 'Channel 03', title: 'Mobile-first feed', body: 'Your own branded feed, built for swiping.' },
+                { label: 'Channel 04', title: 'ChatGPT & Claude', body: 'Your feed as an AI connector, with sources credited and linked.' },
               ].map((c) => (
                 <motion.div
                   key={c.title}
