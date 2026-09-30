@@ -8,11 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { savePendingBlueprint, type FeedBlueprint } from '@/lib/feedBlueprint';
 import { BlueprintAccountDialog } from './BlueprintAccountDialog';
-import { useIsMobile } from '@/hooks/use-mobile';
-
 export const FeedIdeaGenerator = () => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -78,8 +75,8 @@ export const FeedIdeaGenerator = () => {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isMobile ? 'Your website or a topic' : 'Your website, or a subject you care about'}
-            aria-label="Your website, or a subject you care about"
+            placeholder="Your niche or topic"
+            aria-label="Your niche or topic"
             className="h-14 w-full min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/10 px-5 text-center text-lg text-white shadow-[0_0_30px_-8px_rgba(173,92,255,0.5)] placeholder:text-white/70 focus-visible:border-[hsl(155,100%,67%)]/60 focus-visible:ring-0 focus-visible:ring-offset-0 sm:rounded-full sm:border-none sm:bg-transparent sm:px-6 sm:text-left sm:font-light sm:shadow-none md:text-xl"
           />
           <Button
