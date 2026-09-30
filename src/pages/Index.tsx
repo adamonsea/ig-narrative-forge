@@ -291,11 +291,8 @@ const Index = () => {
               <MaskRevealHeading
                 as="h2"
                 segments={[{ text: 'AI tools that build' }, { text: 'engagement & community', italic: true }]}
-                className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1] flex flex-wrap justify-center"
+                className="text-4xl md:text-5xl font-display tracking-tight text-white leading-[1.1] flex flex-wrap justify-center"
               />
-              <p className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-relaxed">
-                Make following the news enjoyable with thoughtful tools that turn readers into an active community.
-              </p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
