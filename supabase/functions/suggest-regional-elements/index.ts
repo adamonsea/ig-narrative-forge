@@ -156,7 +156,8 @@ Return the sentence only, with no quotes and no preamble.`;
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-4o-mini',
+              model: 'gpt-5.4-mini',
+              reasoning_effort: 'none',
               messages: [
                 { role: 'system', content: 'You are a precise architectural describer. Reply with one plain sentence.' },
                 {
@@ -170,7 +171,6 @@ Return the sentence only, with no quotes and no preamble.`;
                   ],
                 },
               ],
-              temperature: 0.2,
             }),
           });
           const visionData = await visionRes.json();

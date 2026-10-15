@@ -118,7 +118,8 @@ export async function extractLocationDetails(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4-mini',
+        reasoning_effort: 'none',
         messages: [{
           role: 'user',
           content: `Identify any SPECIFIC LOCATION, BUILDING, or LANDMARK mentioned in this story.
@@ -148,7 +149,7 @@ If NO specific location, building, or landmark is mentioned, return exactly: nul
 Story text:
 ${storyText.slice(0, 2000)}`
         }],
-        max_tokens: 100,
+        max_completion_tokens: 100,
         temperature: 0.3,
       }),
     });
@@ -211,13 +212,13 @@ export async function analyzeStoryTone(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4-mini',
+        reasoning_effort: 'none',
         messages: [{
           role: 'user',
           content: `Analyze the emotional tone of this news story in 3-5 words (e.g., "serious and somber", "uplifting and hopeful", "tense and urgent"):\n\n${storyText.slice(0, 1000)}`
         }],
-        max_tokens: 20,
-        temperature: 0.3,
+        max_completion_tokens: 20,
       }),
     });
 
@@ -268,7 +269,8 @@ Example: "Councillor Sarah Thompson, 50s, standing in front of the Art Deco faca
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4-mini',
+        reasoning_effort: 'none',
         messages: [{
           role: 'user',
           content: `Extract the main visual subject from this story in 20-35 words for image generation.
@@ -293,8 +295,7 @@ Example outputs:
 ${titleContext}Story text:
 ${storyText.slice(0, 2000)}`
         }],
-        max_tokens: 80,
-        temperature: 0.3,
+        max_completion_tokens: 80,
       }),
     });
 

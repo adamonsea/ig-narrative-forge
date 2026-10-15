@@ -645,12 +645,12 @@ OUTPUT FORMAT (JSON):
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: 'gpt-5.4-mini',
+            reasoning_effort: 'none',
             messages: chatMessages,
-            temperature: 0.85,
             frequency_penalty: 0.4,
             presence_penalty: 0.3,
-            max_tokens: maxTokens,
+            max_completion_tokens: maxTokens,
             response_format: { type: 'json_object' },
           }),
         });
@@ -732,7 +732,7 @@ OUTPUT FORMAT (JSON):
       let parsedSlides: any[] = [];
       const attempts: Array<[string, () => Promise<string>]> = [
         ['deepseek-v4-flash', () => callDeepSeek('deepseek-v4-flash', 'slide-generation')],
-        ['openai-gpt-4o-mini', callOpenAI],
+        ['openai-gpt-5.4-mini', callOpenAI],
       ];
       let lastError: unknown = null;
       for (const [label, run] of attempts) {

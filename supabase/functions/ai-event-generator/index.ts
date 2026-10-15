@@ -161,7 +161,8 @@ Create a perfect mix for ${regionText} - make locals excited about both the big 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4-mini',
+        reasoning_effort: 'none',
         messages: [
           {
             role: 'system',
@@ -172,8 +173,7 @@ Create a perfect mix for ${regionText} - make locals excited about both the big 
             content: prompt
           }
         ],
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_completion_tokens: 2000,
       }),
     });
 

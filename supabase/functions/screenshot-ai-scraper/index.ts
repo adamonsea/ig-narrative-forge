@@ -629,7 +629,8 @@ Return as JSON array:
 Extract only actual news articles, not navigation or ads. If no clear articles are visible, return empty array [].`;
 
     const requestBody = {
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.4-mini',
+      reasoning_effort: 'none',
       messages: [
         {
           role: 'user',
@@ -642,8 +643,7 @@ Extract only actual news articles, not navigation or ads. If no clear articles a
           ]
         }
       ],
-      max_tokens: 2000,
-      temperature: 0.1
+      max_completion_tokens: 2000
     };
     
     console.log(`📡 Making request to OpenAI API...`);

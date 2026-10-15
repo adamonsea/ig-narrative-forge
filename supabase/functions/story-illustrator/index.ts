@@ -39,7 +39,8 @@ async function generateAnimationSuggestions(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4-mini',
+        reasoning_effort: 'none',
         messages: [{
           role: 'user',
           content: `Given this editorial illustration subject, suggest exactly 4 subtle animation movements for a 5-second cinemagraph.
@@ -55,8 +56,7 @@ RULES:
 
 Return ONLY a JSON array of 4 strings.`
         }],
-        max_tokens: 80,
-        temperature: 0.7,
+        max_completion_tokens: 80,
       }),
     });
 
