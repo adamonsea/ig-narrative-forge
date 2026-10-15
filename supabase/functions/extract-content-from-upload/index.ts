@@ -70,7 +70,7 @@ async function gatewayVision(body: Record<string, unknown>): Promise<Response> {
 
 async function extractFromImage(fileBuffer: ArrayBuffer, mimeType: string): Promise<string> {
   const response = await gatewayVision({
-    model: 'google/gemini-2.5-flash',
+    model: 'google/gemini-3.8-flash',
     messages: [
       {
         role: 'user',
@@ -113,7 +113,7 @@ async function extractFromPdf(fileBuffer: ArrayBuffer): Promise<string> {
 
   // 2. Vision fallback for scanned PDFs (Gemini accepts PDFs as file blocks)
   const response = await gatewayVision({
-    model: 'google/gemini-2.5-flash',
+    model: 'google/gemini-3.8-flash',
     messages: [
       {
         role: 'user',

@@ -17,16 +17,16 @@ const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 
 // DeepSeek model name -> gateway equivalent.
 const MODEL_MAP: Record<string, string> = {
-  'deepseek-chat': 'google/gemini-2.5-flash',
-  'deepseek-v4-flash': 'google/gemini-2.5-flash',
-  'deepseek-v4-pro': 'google/gemini-2.5-pro',
-  'deepseek-reasoner': 'google/gemini-2.5-pro',
+  'deepseek-chat': 'google/gemini-3.8-flash',
+  'deepseek-v4-flash': 'google/gemini-3.8-flash',
+  'deepseek-v4-pro': 'google/gemini-3.8-flash',
+  'deepseek-reasoner': 'google/gemini-3.8-flash',
 };
 
 export function mapModel(model?: string): string {
-  if (!model) return 'google/gemini-2.5-flash';
+  if (!model) return 'google/gemini-3.8-flash';
   if (model.includes('/')) return model; // already a gateway model id
-  return MODEL_MAP[model] ?? 'google/gemini-2.5-flash';
+  return MODEL_MAP[model] ?? 'google/gemini-3.8-flash';
 }
 
 function gatewayBody(body: Record<string, any>) {

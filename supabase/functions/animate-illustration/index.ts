@@ -408,7 +408,7 @@ async function enhanceVaguePrompt(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-3.8-flash',
         messages: [{
           role: 'user',
           content: `The user wants to animate an image with this instruction: "${vaguePrompt}"
@@ -497,7 +497,7 @@ async function generateAnimationPromptWithAI(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-3.8-flash',
         messages: [{
           role: 'user',
           content: `Generate a SHORT animation prompt (max 18 words) for an image-to-video model.
