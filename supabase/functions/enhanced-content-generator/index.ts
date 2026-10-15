@@ -81,7 +81,7 @@ const HUMAN_VOICE_RULES = `SOUND HUMAN (non-negotiable):
 // On HTTP 400 we escalate to a genuinely different provider (Lovable AI Gateway),
 // not to DeepSeek's "pro" tier — that tier now serves the same V4.1 Flash model,
 // so the retry re-ran the identical model and simply billed us twice.
-const ESCALATION_MODEL = 'google/gemini-2.5-flash';
+const ESCALATION_MODEL = 'google/gemini-3.8-flash';
 
 async function deepseekChatWithFallback(
   apiKey: string,

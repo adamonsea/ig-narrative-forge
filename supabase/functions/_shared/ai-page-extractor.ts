@@ -7,7 +7,7 @@
  */
 
 const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const MODEL = 'google/gemini-3.8-flash';
 const FETCH_TIMEOUT_MS = 10000;
 
 export interface AiExtractedArticle {
