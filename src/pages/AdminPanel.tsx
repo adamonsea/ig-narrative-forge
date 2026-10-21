@@ -15,6 +15,7 @@ import { McpEntitlementsPanel } from '@/components/admin/McpEntitlementsPanel';
 import { SectionLabel } from '@/components/ui/section-label';
 import { Disclosure } from '@/components/ui/editorial';
 import { VoucherCodesPanel } from '@/components/admin/VoucherCodesPanel';
+import { SatiricalBenchPanel } from '@/components/admin/SatiricalBenchPanel';
 
 export default function AdminPanel() {
   const { user, loading, isAdmin, isProductOwner } = useAuth();
