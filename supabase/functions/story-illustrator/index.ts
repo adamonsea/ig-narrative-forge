@@ -95,8 +95,11 @@ const corsHeaders = {
 }
 
 // Valid illustration styles (matches DB enum)
-const VALID_ILLUSTRATION_STYLES = ['editorial_illustrative', 'editorial_photographic', 'cartoon', 'bw_editorial_photo', 'anime', 'illustrated_icon'] as const
+const VALID_ILLUSTRATION_STYLES = ['editorial_illustrative', 'editorial_photographic', 'cartoon', 'bw_editorial_photo', 'anime', 'illustrated_icon', 'satirical'] as const
 type IllustrationStyle = typeof VALID_ILLUSTRATION_STYLES[number]
+
+// Satirical = Sunburst medium ($0.041) + gag writer (~$0.005), x2 margin ≈ 4 credits
+const SATIRICAL_CREDITS = 4
 
 function isValidIllustrationStyle(value: unknown): value is IllustrationStyle {
   return typeof value === 'string' && 
@@ -109,6 +112,7 @@ const requestSchema = z.object({
   model: z.string().max(100).optional().default('gpt-image-2-medium'),
   isAutomated: z.boolean().optional().default(false), // Lifecycle tracking flag
   useBatch: z.boolean().optional().default(false), // Discounted overnight route (backlog only)
+  styleOverride: z.enum(VALID_ILLUSTRATION_STYLES).optional(), // Per-story style choice
 });
 
 // Soft cap on how many times one story's image may be regenerated.
@@ -149,7 +153,8 @@ serve(async (req) => {
       );
     }
 
-    const { storyId, model, isAutomated, useBatch } = validated.data;
+    const { storyId, isAutomated, useBatch, styleOverride } = validated.data;
+    let model = validated.data.model;
     
     // Debug logging for lifecycle tracking
     console.log(`📊 Story Illustrator invoked - storyId: ${storyId}, model: ${model}, isAutomated: ${isAutomated}`);
@@ -348,7 +353,7 @@ serve(async (req) => {
       }
     }
     
-    const modelConfig = modelConfigs[model] || modelConfigs['gpt-image-2-medium']
+    let modelConfig = modelConfigs[model] || modelConfigs['gpt-image-2-medium']
 
     if (!storyId) {
       return new Response(
@@ -504,6 +509,20 @@ serve(async (req) => {
         topicLandmarkPhotos = rawPhotos as Record<string, Array<{ url: string }>>
       }
     }
+
+    // Per-story style choice (Arrivals / regenerate) overrides the feed default
+    if (styleOverride && isValidIllustrationStyle(styleOverride)) {
+      illustrationStyle = styleOverride
+    }
+    // Satire always renders on Sunburst medium, whichever tier was picked
+    let satiricalGag: Record<string, string | null> | null = null
+    let satiricalDeclined = false
+    if (illustrationStyle === 'satirical') {
+      model = 'gpt-image-2.5-sunburst-medium'
+      modelConfig = { ...modelConfigs['gpt-image-2.5-sunburst-medium'], credits: SATIRICAL_CREDITS }
+    }
+
+
 
     // Guard: Photographic style requires feature flag and Replicate API key
     if (illustrationStyle === 'editorial_photographic') {
@@ -715,7 +734,24 @@ serve(async (req) => {
         `No text, no shading, no gradients, no scenery clutter, no photographic detail.`,
     }
 
-    let illustrationPrompt = customStylePrompts[illustrationStyle]
+    // Satirical: an LLM writes the joke first, then the artist draws it.
+    // Tragic stories are declined by the gag writer and fall back to house style.
+    let satiricalPrompt: string | null = null
+    if (illustrationStyle === 'satirical') {
+      const gagText = await generateSatiricalGag((slides || []) as any, OPENAI_API_KEY, story.title)
+      if (gagText) {
+        satiricalPrompt = buildSatiricalPrompt(gagText)
+        const field = (key: string) =>
+          gagText.match(new RegExp(`${key}:\\s*(.+?)(?=\\n[A-Z]+:|$)`, 's'))?.[1]?.trim() || null
+        satiricalGag = { target: field('TARGET'), irony: field('IRONY'), gag: field('GAG'), scene: field('SCENE') || gagText }
+      } else {
+        console.log('Satirical gag declined — falling back to house illustrative style')
+        satiricalDeclined = true
+        illustrationStyle = 'editorial_illustrative'
+      }
+    }
+
+    let illustrationPrompt = satiricalPrompt ?? customStylePrompts[illustrationStyle]
       ?? (illustrationStyle === 'editorial_photographic'
         ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
         : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails))
@@ -1516,6 +1552,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       illustration_generated_at: new Date().toISOString(),
       animated_illustration_url: null,  // Clear animation when new static image is generated
       animation_suggestions: animationSuggestions.length > 0 ? animationSuggestions : null,
+      illustration_gag: satiricalGag,
     };
 
     // Count replacements of an existing image so the soft cap can be enforced.
@@ -1559,7 +1596,10 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         new_balance: creditResult?.new_balance || null,
         used_fallback: usedFallback,
         fallback_reason: usedFallback ? fallbackReason : undefined,
-        fallback_model: usedFallback ? fallbackModel : undefined
+        fallback_model: usedFallback ? fallbackModel : undefined,
+        style: illustrationStyle,
+        satirical_declined: satiricalDeclined || undefined,
+        gag: satiricalGag || undefined
       }),
       { 
         status: 200, 
