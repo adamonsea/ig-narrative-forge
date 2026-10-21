@@ -66,6 +66,9 @@ export default function AdminPanel() {
           )}
 
           <section className="space-y-4 border-t pt-6">
+            <Disclosure label="Satirical cartoon bench">
+              <SatiricalBenchPanel />
+            </Disclosure>
             <Disclosure label="Experiments">
               <ABTestDashboard />
             </Disclosure>
