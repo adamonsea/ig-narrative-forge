@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronDown, ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from '@/lib/constants/illustrationStyles';
-import { IMAGE_CREDIT_COSTS } from '@/lib/billing';
+import { IMAGE_CREDIT_COSTS, SATIRICAL_IMAGE_CREDIT_COST } from '@/lib/billing';
 
 // ============================================================
 // FEATURE FLAG: MidJourney Experimental Mode
@@ -96,8 +96,18 @@ export const midjourneyModels: ImageModel[] = [
 // Legacy export for backward compatibility
 export const imageModels = illustrativeModels;
 
+// Satirical cartoons always render on Sunburst medium after a joke-writing step
+export const satiricalModel: ImageModel = {
+  id: 'gpt-image-2.5-sunburst-medium',
+  name: 'Satirical cartoon',
+  credits: SATIRICAL_IMAGE_CREDIT_COST,
+  provider: 'openai',
+  description: 'A joke is written first, then drawn as a broadsheet pocket cartoon',
+};
+
 interface ImageModelSelectorProps {
-  onModelSelect: (model: ImageModel) => void;
+  /** style is the per-story choice (defaults to the feed's style) */
+  onModelSelect: (model: ImageModel, style?: IllustrationStyle) => void;
   isGenerating?: boolean;
   hasExistingImage?: boolean;
   disabled?: boolean;
@@ -116,13 +126,17 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
   illustrationStyle = ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE
 }) => {
   const buttonText = hasExistingImage ? 'Regenerate Cover' : 'Generate Cover';
+  const [chosenStyle, setChosenStyle] = React.useState<IllustrationStyle>(illustrationStyle);
+  React.useEffect(() => setChosenStyle(illustrationStyle), [illustrationStyle]);
 
   // Select appropriate model list based on illustration style
-  const availableModels = illustrationStyle === ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC
-    ? photographicModels
-    : illustrativeModels;
+  const availableModels = chosenStyle === ILLUSTRATION_STYLES.SATIRICAL
+    ? [satiricalModel]
+    : chosenStyle === ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC
+      ? photographicModels
+      : illustrativeModels;
 
-  const styleLabel = ILLUSTRATION_STYLE_LABELS[illustrationStyle] ?? 'Illustrative';
+  const styleLabel = ILLUSTRATION_STYLE_LABELS[chosenStyle] ?? 'Illustrative';
 
   if (isGenerating) {
     return (
@@ -161,13 +175,27 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
           className="w-80 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border shadow-lg z-50"
           sideOffset={5}
         >
+          <div className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">Style for this story</div>
+          <div className="flex flex-wrap gap-1 px-3 pb-2 border-b">
+            {(Object.values(ILLUSTRATION_STYLES) as IllustrationStyle[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={chosenStyle === s}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setChosenStyle(s); }}
+                className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${chosenStyle === s ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+              >
+                {ILLUSTRATION_STYLE_LABELS[s].replace(/ \(.*\)$/, '')}{s === illustrationStyle ? ' · feed' : ''}
+              </button>
+            ))}
+          </div>
           <div className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 border-b">
-            OpenAI GPT Image 2 • {styleLabel} Mode
+            {chosenStyle === ILLUSTRATION_STYLES.SATIRICAL ? 'Sunburst medium' : 'OpenAI GPT Image 2'} • {styleLabel}
           </div>
           {availableModels.map((model) => (
             <DropdownMenuItem
               key={model.id}
-              onClick={() => onModelSelect(model)}
+              onClick={() => onModelSelect(model, chosenStyle)}
               className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 flex-col items-start"
             >
               <div className="flex w-full items-center justify-between mb-1">
