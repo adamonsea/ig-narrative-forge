@@ -8,6 +8,8 @@ import {
   extractSubjectMatter,
   buildIllustrativePrompt,
   buildPhotographicPrompt,
+  generateSatiricalGag,
+  buildSatiricalPrompt,
 } from '../_shared/prompt-helpers.ts';
 
 // Image model comparison bench.
@@ -43,7 +45,7 @@ const requestSchema = z.object({
   // Existing pictures (usually Image 1.5 premium covers) handed to the newer
   // models as a house-style reference.
   referenceImageUrls: z.array(z.string().url()).max(3).optional(),
-  promptVariant: z.enum(['current', 'handmade']).optional(),
+  promptVariant: z.enum(['current', 'handmade', 'satirical']).optional(),
 });
 
 // Appended to the prompt when reference pictures are supplied, so the model
