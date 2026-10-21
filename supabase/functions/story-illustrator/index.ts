@@ -7,7 +7,9 @@ import {
   extractLocationDetails,
   matchPlaceName,
   buildIllustrativePrompt, 
-  buildPhotographicPrompt 
+  buildPhotographicPrompt,
+  generateSatiricalGag,
+  buildSatiricalPrompt,
 } from '../_shared/prompt-helpers.ts'
 import { checkAnonymity } from '../_shared/anonymity-guard.ts'
 import {
