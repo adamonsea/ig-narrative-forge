@@ -36,7 +36,8 @@ export class CreditService {
 
   static async generateStoryIllustration(
     storyId: string, 
-    model?: string
+    model?: string,
+    styleOverride?: string
   ): Promise<{
     success: boolean;
     illustration_url?: string;
@@ -46,6 +47,8 @@ export class CreditService {
     used_fallback?: boolean;
     fallback_reason?: string;
     fallback_model?: string;
+    satirical_declined?: boolean;
+    gag?: { gag?: string | null; scene?: string | null } | null;
   }> {
     try {
       const { data, error } = await supabase.functions.invoke('story-illustrator', {
