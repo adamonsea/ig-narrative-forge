@@ -659,11 +659,18 @@ export function buildSatiricalPrompt(
   gag: string,
   publicationName?: string
 ): string {
-  const scene = gag.split('SCENE:')[1]?.trim() || gag;
+  const field = (key: string) =>
+    gag.match(new RegExp(`${key}:\\s*(.+?)(?=\\n[A-Z]+:|$)`, 's'))?.[1]?.trim();
+  const scene = field('SCENE') || gag;
+  const conceit = field('GAG');
+  const target = field('TARGET');
+  const irony = field('IRONY');
 
   return `SATIRICAL EDITORIAL CARTOON for ${publicationName || 'a British news publication'}, in the broadsheet tradition of Private Eye and The Spectator.
 
-THE JOKE (draw exactly this scene — it is the whole point):
+THE CONCEPT (context for the artist — do not write any of this in the image):
+${target ? `Target: ${target}\n` : ''}${irony ? `Irony: ${irony}\n` : ''}${conceit ? `Gag: ${conceit}\n` : ''}
+THE SCENE (draw exactly this — the absurd element must be unmistakable and central):
 ${scene}
 
 STYLE — British satirical ink cartoon:
