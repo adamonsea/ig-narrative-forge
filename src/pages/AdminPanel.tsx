@@ -15,6 +15,7 @@ import { McpEntitlementsPanel } from '@/components/admin/McpEntitlementsPanel';
 import { SectionLabel } from '@/components/ui/section-label';
 import { Disclosure } from '@/components/ui/editorial';
 import { VoucherCodesPanel } from '@/components/admin/VoucherCodesPanel';
+import { SatiricalBenchPanel } from '@/components/admin/SatiricalBenchPanel';
 
 export default function AdminPanel() {
   const { user, loading, isAdmin, isProductOwner } = useAuth();
@@ -65,6 +66,9 @@ export default function AdminPanel() {
           )}
 
           <section className="space-y-4 border-t pt-6">
+            <Disclosure label="Satirical cartoon bench">
+              <SatiricalBenchPanel />
+            </Disclosure>
             <Disclosure label="Experiments">
               <ABTestDashboard />
             </Disclosure>

@@ -574,3 +574,101 @@ ${mentionsLocalPlace ? `✓ Architecture and setting authentic to ${region}` : '
 
 CRITICAL: Must look like it was captured by a master photojournalist seeking the decisive dramatic moment—cinematic composition with documentary authenticity. Gritty realism with visual drama, never losing believability.`;
 }
+
+/**
+ * Stage one of the satirical pipeline: a text model reads the story and
+ * writes the cartoon CONCEPT — the target, the irony, and a single visual
+ * metaphor. Image models cannot invent satire; the joke must be written
+ * before anything is drawn.
+ */
+export async function generateSatiricalGag(
+  slides: SlideContent[],
+  openaiKey: string,
+  storyTitle?: string
+): Promise<string | null> {
+  if (!openaiKey || slides.length === 0) return null;
+
+  try {
+    const storyText = slides.map(s => s.content).join('\n');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-5.4-mini',
+        reasoning_effort: 'none',
+        messages: [{
+          role: 'user',
+          content: `You are a veteran British editorial cartoonist (Private Eye / Spectator / broadsheet tradition) briefing an illustrator.
+
+Read this news story and devise ONE satirical cartoon concept.
+
+RULES:
+- Identify the TARGET: who or what is being mocked (hypocrisy, absurdity, self-interest, spin)
+- Find the IRONY: the gap between what is said and what is meant or done
+- Express it as ONE visual metaphor or absurd scene — no captions, no speech bubbles, the image alone must carry the joke
+- Exaggeration and symbolism are encouraged (tiny figures vs giant objects, animals standing in for institutions, literalised idioms)
+- Keep it affectionate rather than cruel; punch at power, not at victims
+- If the story is tragic or involves death/suffering of identifiable people, return exactly: null
+
+RETURN FORMAT (exactly three lines):
+TARGET: <who/what is mocked>
+IRONY: <the gap being exposed, one sentence>
+SCENE: <the visual metaphor described as a drawable scene, 40-70 words, naming the figures, their exaggerated proportions or expressions, the symbolic props, and the setting>
+
+${storyTitle ? `Story title: ${storyTitle}\n\n` : ''}Story text:
+${storyText.slice(0, 2500)}`
+        }],
+        max_completion_tokens: 220,
+        temperature: 0.8,
+      }),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const result = data.choices?.[0]?.message?.content?.trim();
+    if (!result || result.toLowerCase() === 'null' || !result.includes('SCENE:')) return null;
+    return result;
+  } catch (error) {
+    console.warn('Satirical gag generation failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Stage two: wrap the gag concept in the broadsheet cartoon style brief.
+ * The SCENE line carries the joke; everything else is draughtsmanship.
+ */
+export function buildSatiricalPrompt(
+  gag: string,
+  publicationName?: string
+): string {
+  const scene = gag.split('SCENE:')[1]?.trim() || gag;
+
+  return `SATIRICAL EDITORIAL CARTOON for ${publicationName || 'a British news publication'}, in the broadsheet tradition of Private Eye and The Spectator.
+
+THE JOKE (draw exactly this scene — it is the whole point):
+${scene}
+
+STYLE — British satirical ink cartoon:
+- Pen and ink with loose watercolour wash, on off-white paper
+- Confident, scratchy hand-drawn linework with cross-hatching for shade
+- Exaggerated caricature proportions: big heads, expressive hands, telling body language
+- Muted, slightly dingy palette — tobacco browns, slate greys, washed-out blues, one small spot of stronger colour for emphasis
+- Figures clearly symbolic or archetypal (the official, the developer, the taxpayer), not portraits of real named individuals
+
+COMPOSITION:
+- Single panel, landscape 3:2
+- One clear focal gag readable at thumbnail size
+- Background sketched lightly so the joke dominates
+
+FORBIDDEN:
+❌ Any text, captions, speech bubbles, labels or signage with words
+❌ Photorealism, 3D rendering, smooth digital vector look
+❌ Cute or childish cartoon style
+❌ Gore, cruelty toward victims, or mockery of the powerless
+
+BENCHMARK: A pocket cartoon from a British broadsheet — wry, draughtsmanlike, slightly unkind to the powerful, and funny before you read a word.`;
+}

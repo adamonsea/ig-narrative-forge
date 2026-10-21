@@ -8,6 +8,8 @@ import {
   extractSubjectMatter,
   buildIllustrativePrompt,
   buildPhotographicPrompt,
+  generateSatiricalGag,
+  buildSatiricalPrompt,
 } from '../_shared/prompt-helpers.ts';
 
 // Image model comparison bench.
@@ -43,7 +45,7 @@ const requestSchema = z.object({
   // Existing pictures (usually Image 1.5 premium covers) handed to the newer
   // models as a house-style reference.
   referenceImageUrls: z.array(z.string().url()).max(3).optional(),
-  promptVariant: z.enum(['current', 'handmade']).optional(),
+  promptVariant: z.enum(['current', 'handmade', 'satirical']).optional(),
 });
 
 // Appended to the prompt when reference pictures are supplied, so the model
@@ -214,7 +216,17 @@ Deno.serve(async (req) => {
 
       let prompt = promptOverride;
       const subjectPhotoUrls: string[] = [];
-      if (!prompt) {
+      if (!prompt && promptVariant === 'satirical') {
+        // Two-stage: a text model writes the joke, then we wrap it in the
+        // broadsheet cartoon style brief. No landmark photos — the gag is
+        // symbolic, not architectural.
+        const gag = await generateSatiricalGag(slides || [], OPENAI_API_KEY, (story as any).title);
+        if (!gag) {
+          results.push({ storyId, error: 'Story not suitable for satire (or gag generation failed)' });
+          continue;
+        }
+        prompt = buildSatiricalPrompt(gag, (story as any).title);
+      } else if (!prompt) {
         const [storyTone, locationDetails] = await Promise.all([
           analyzeStoryTone(slides || [], OPENAI_API_KEY),
           extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion, topicLandmarkDescriptions),
@@ -227,7 +239,7 @@ Deno.serve(async (req) => {
         );
         prompt = illustrationStyle === 'editorial_photographic'
           ? buildPhotographicPrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails)
-          : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant);
+          : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant as 'current' | 'handmade');
 
         if (locationDetails && topicLandmarkPhotos) {
           const placeName = locationDetails.split('(')[0].trim() || locationDetails;
