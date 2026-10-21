@@ -302,7 +302,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     }
   };
 
-  const handleGenerateIllustration = async (story: Story, model: ImageModel) => {
+  const handleGenerateIllustration = async (story: Story, model: ImageModel, style?: string) => {
     if (generatingIllustrations.has(story.id)) return;
 
     // Check credits
@@ -318,7 +318,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
 
     try {
-      const result = await CreditService.generateStoryIllustration(story.id, model.id);
+      const result = await CreditService.generateStoryIllustration(story.id, model.id, style);
       
       if (!result.success) {
         toast({
@@ -630,8 +630,8 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-2">
                             <ImageModelSelector
-                              onModelSelect={(model) => {
-                                handleGenerateIllustration(story, model);
+                              onModelSelect={(model, style) => {
+                                handleGenerateIllustration(story, model, style);
                               }}
                               isGenerating={generatingIllustrations.has(story.id)}
                               hasExistingImage={!!story.cover_illustration_url}
@@ -668,7 +668,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                                 </div>
                                 <div className="flex gap-2">
                                   <ImageModelSelector
-                                    onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                                    onModelSelect={(model, style) => handleGenerateIllustration(story, model, style)}
                                     isGenerating={generatingIllustrations.has(story.id)}
                                     hasExistingImage={false}
                                     size="sm"

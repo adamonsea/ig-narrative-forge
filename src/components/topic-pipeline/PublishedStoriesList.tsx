@@ -255,7 +255,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     }
   };
 
-  const handleGenerateIllustration = async (story: PublishedStory, model: ImageModel) => {
+  const handleGenerateIllustration = async (story: PublishedStory, model: ImageModel, style?: string) => {
     if (generatingIllustrations.has(story.id)) return;
     if (!isProductOwner && (!credits || credits.credits_balance < model.credits)) {
       toast({ title: 'Insufficient Credits', description: `You need ${model.credits} credits.`, variant: 'destructive' });
@@ -263,8 +263,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     }
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
     try {
-      const result = await CreditService.generateStoryIllustration(story.id, model.id);
+      const result = await CreditService.generateStoryIllustration(story.id, model.id, style);
       if (result.success) {
+        if (result.satirical_declined) toast({ title: "Standard style used", description: "This story looked too serious for satire, so it got the standard picture style instead.", duration: 8000 });
         if (result.used_fallback) {
           toast({ title: 'Image Generated with Fallback', description: `${result.fallback_reason} (Used: ${result.fallback_model})`, duration: 8000 });
         } else {
@@ -705,7 +706,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 </Button>
 
                 <ImageModelSelector
-                  onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                  onModelSelect={(model, style) => handleGenerateIllustration(story, model, style)}
                   isGenerating={generatingIllustrations.has(story.id)}
                   hasExistingImage={!!story.cover_illustration_url}
                   illustrationStyle={illustrationStyle as any}
