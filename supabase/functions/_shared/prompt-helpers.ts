@@ -621,7 +621,8 @@ BRITISH VISUAL VOCABULARY (use when apt, never as decoration): pompous councillo
 CONSTRAINTS:
 - No captions, speech bubbles or legible words — the drawing alone carries it. At most ONE short sign may appear if it is the punchline, and only if essential; prefer none.
 - Archetypes, not identifiable real people.
-- If the story is tragic or involves death, serious injury, abuse or suffering of identifiable people, return exactly: null
+- Policy rows, crime crackdowns, planning, transport, councils, MPs, culture and business stories are ALL fair game: satirise the institution, the policy or the spin, never victims.
+- Only if the story is centrally about a death, serious injury, abuse or the suffering of identifiable people, return exactly: null
 
 RETURN FORMAT (exactly these four lines, nothing else):
 TARGET: <who/what is mocked>
@@ -642,9 +643,14 @@ ${storyText.slice(0, 3500)}`
     }
     const data = await response.json();
     const raw = data.choices?.[0]?.message?.content?.trim();
-    if (!raw || raw.toLowerCase() === 'null' || !raw.includes('SCENE:')) return null;
-    const result = raw.slice(Math.max(0, raw.lastIndexOf('TARGET:')));
-    return result;
+    if (!raw || !raw.includes('SCENE:')) {
+      console.warn('Satirical gag declined/empty:', {
+        finish: data.choices?.[0]?.finish_reason,
+        raw: (raw || '').slice(0, 300),
+      });
+      return null;
+    }
+    return raw.slice(Math.max(0, raw.lastIndexOf('TARGET:')));
   } catch (error) {
     console.warn('Satirical gag generation failed:', error);
     return null;
