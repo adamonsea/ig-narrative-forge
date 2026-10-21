@@ -51,7 +51,8 @@ export class CreditService {
       const { data, error } = await supabase.functions.invoke('story-illustrator', {
         body: { 
           storyId,
-          model: model || 'gpt-image-2-medium'
+          model: model || 'gpt-image-2-medium',
+          ...(styleOverride ? { styleOverride } : {}),
         }
       });
 
