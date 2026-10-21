@@ -611,12 +611,16 @@ WHAT MAKES IT SATIRE (not illustration):
 PROCESS (think privately, output only the final answer):
 1. Find the real target: the institution, policy, spin or self-interest behind the story. Never the victims or ordinary residents.
 2. Draft THREE candidate conceits, one from each lens:
-   a) BUREAUCRATIC FARCE — process eclipsing purpose (consultations, phases, ribbon-cuttings, task forces, signage, risk assessments).
+   a) BUREAUCRATIC FARCE — process eclipsing purpose (consultations, phases, task forces, signage, risk assessments, forms, queues).
    b) LITERALISED SPIN — take the official phrase or euphemism completely literally ("streamlined", "pause", "investment", "listening exercise", "temporary").
-   c) GRANDIOSE vs PETTY — ceremony, chains of office, plaques and brochures colliding with damp, cone-strewn British reality. Or a time/scale escalation (archaeologists excavating the roadworks; a queue so long it has its own weather).
+   c) GRANDIOSE vs PETTY — glossy promises, brochures, artist's impressions and plaques colliding with damp, cone-strewn British reality. Or a time/scale escalation (archaeologists excavating the roadworks; a queue so long it has its own weather).
 3. Critique each: Is it funny without words? Is the twist visible, not explained? Is it about the story specifically, not generic? Is it punching up? Pick the sharpest. Make it more specific and more absurd, then cut anything that dilutes it.
 
-BRITISH VISUAL VOCABULARY (use when apt, never as decoration): pompous councillor in oversized chain of office, consultant with clipboard and lanyard, hi-vis tabard over a suit, giant ceremonial scissors, brass plaque, traffic cones, Heras fencing, "phase two" hoardings, tea urn in a draughty hall, damp anoraks, umbrellas turned inside out, a sardonic seagull on a bollard, a dog walker oblivious in the background.
+CAST THE RIGHT TARGET: the figure in the scene must be whoever actually holds responsibility in THIS story — the rail operator, developer, water company, police chief, council officers or cabinet, government department, MP, landlord, business owner, quango. Do NOT default to a mayor.
+- Mayors in towns like Eastbourne are ceremonial and hold no executive power. A mayor, chain of office, ribbon-cutting or giant scissors may appear ONLY if the story is literally about a mayor, a civic ceremony or an official opening. Otherwise they are banned — they are a cliché and an inaccurate depiction.
+- Avoid repeating stock set-pieces; find the imagery specific to this story's subject (its trains, pipes, planning drawings, beach huts, hospital corridors, etc.).
+
+BRITISH VISUAL VOCABULARY (use only when apt, never as decoration): consultant with clipboard and lanyard, hi-vis tabard over a suit, executive with a glossy brochure, brass plaque, traffic cones, Heras fencing, "phase two" hoardings, tea urn in a draughty hall, damp anoraks, umbrellas turned inside out, a sardonic seagull on a bollard, a dog walker oblivious in the background.
 
 CONSTRAINTS:
 - No captions, speech bubbles or legible words — the drawing alone carries it. At most ONE short sign may appear if it is the punchline, and only if essential; prefer none.
