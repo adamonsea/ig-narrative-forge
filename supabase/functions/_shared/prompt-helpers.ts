@@ -633,7 +633,7 @@ SCENE: <the drawable scene, 60-100 words: foreground figures and their exact exp
 ${storyTitle ? `Story title: ${storyTitle}\n\n` : ''}Story text:
 ${storyText.slice(0, 3500)}`
         }],
-        max_completion_tokens: 3000,
+        max_completion_tokens: 6000,
       }),
     });
 
