@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
-import { FlaskConical, RefreshCw, ThumbsUp, Minus, ThumbsDown } from 'lucide-react';
+import { FlaskConical, RefreshCw, ThumbsUp, Minus, ThumbsDown, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 // Satirical cartoon bench: picks recent stories, runs the two-stage
 // gag-then-draw pipeline in image-model-bench (promptVariant: 'satirical'),
@@ -55,6 +56,24 @@ export const SatiricalBenchPanel: React.FC = () => {
   const [progress, setProgress] = useState('');
   const [runId, setRunId] = useState<string | null>(null);
   const [results, setResults] = useState<BenchResult[]>([]);
+  const [layout, setLayout] = useState<'large' | 'grid'>('large');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const viewable = results.filter(r => r.success && r.image_url);
+  const expandedResult = viewable.find(r => r.id === expanded) ?? null;
+  const step = (dir: number) => {
+    if (!viewable.length) return;
+    const i = viewable.findIndex(r => r.id === expanded);
+    setExpanded(viewable[(i + dir + viewable.length) % viewable.length].id);
+  };
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') step(1);
+      if (e.key === 'ArrowLeft') step(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -218,11 +237,19 @@ export const SatiricalBenchPanel: React.FC = () => {
 
       {/* Results grid */}
       {results.length > 0 && (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2">
+        <div className="flex justify-end gap-1">
+          <Button size="sm" variant={layout === 'large' ? 'default' : 'ghost'} onClick={() => setLayout('large')}>Large</Button>
+          <Button size="sm" variant={layout === 'grid' ? 'default' : 'ghost'} onClick={() => setLayout('grid')}>Grid</Button>
+        </div>
+      )}
+      {results.length > 0 && (
+        <div className={layout === 'large' ? 'grid lg:grid-cols-2 gap-6 pt-2' : 'grid md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2'}>
           {results.map(r => (
             <div key={r.id} className="rounded-lg border overflow-hidden bg-background">
               {r.success && r.image_url ? (
-                <img src={r.image_url} alt={r.story_title ?? 'Bench result'} className="w-full aspect-[3/2] object-cover" />
+                <button type="button" onClick={() => setExpanded(r.id)} className="block w-full cursor-zoom-in" aria-label="Expand image">
+                  <img src={r.image_url} alt={r.story_title ?? 'Bench result'} className="w-full h-auto" />
+                </button>
               ) : (
                 <div className="w-full aspect-[3/2] flex items-center justify-center text-sm text-destructive p-4 text-center">
                   {r.error ?? 'Failed'}
@@ -239,7 +266,7 @@ export const SatiricalBenchPanel: React.FC = () => {
                 {r.prompt && (
                   <details className="text-xs text-muted-foreground">
                     <summary className="cursor-pointer">Prompt</summary>
-                    <p className="mt-1 whitespace-pre-wrap line-clamp-6">{r.prompt}</p>
+                    <p className="mt-1 whitespace-pre-wrap">{r.prompt}</p>
                   </details>
                 )}
                 <div className="flex gap-1 pt-1">
@@ -273,6 +300,49 @@ export const SatiricalBenchPanel: React.FC = () => {
           ))}
         </div>
       )}
+
+      <Dialog open={expanded !== null} onOpenChange={(o) => !o && setExpanded(null)}>
+        <DialogContent className="max-w-[min(96vw,1700px)] w-full max-h-[94dvh] overflow-y-auto p-4">
+          {expandedResult && (
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-4">
+              <div className="relative">
+                {expandedResult.image_url && (
+                  <img
+                    src={expandedResult.image_url}
+                    alt={expandedResult.story_title ?? 'Bench result'}
+                    className="w-full h-auto max-h-[86dvh] object-contain rounded-md bg-muted"
+                  />
+                )}
+                {viewable.length > 1 && (
+                  <div className="absolute inset-y-0 inset-x-2 flex items-center justify-between pointer-events-none">
+                    <Button size="icon" variant="secondary" className="pointer-events-auto" onClick={() => step(-1)} aria-label="Previous">
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="secondary" className="pointer-events-auto" onClick={() => step(1)} aria-label="Next">
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-3 text-sm">
+                <DialogTitle className="text-base">{expandedResult.story_title}</DialogTitle>
+                <div className="flex flex-wrap gap-1">
+                  <Badge variant="outline">{expandedResult.model}</Badge>
+                  <Badge variant="outline">{expandedResult.quality}</Badge>
+                </div>
+                {expandedResult.prompt && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(expandedResult.prompt ?? '')}>
+                      <Copy className="w-3 h-3 mr-1" /> Copy prompt
+                    </Button>
+                    <p className="whitespace-pre-wrap text-xs text-muted-foreground leading-relaxed">{expandedResult.prompt}</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
