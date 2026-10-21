@@ -465,6 +465,9 @@ export function PictureReferences({
               <SelectItem value={ILLUSTRATION_STYLES.ANIME}>
                 {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.ANIME]}
               </SelectItem>
+              <SelectItem value={ILLUSTRATION_STYLES.SATIRICAL}>
+                {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.SATIRICAL]}
+              </SelectItem>
               <SelectItem value={ILLUSTRATION_STYLES.ILLUSTRATED_ICON}>
                 {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.ILLUSTRATED_ICON]}
               </SelectItem>

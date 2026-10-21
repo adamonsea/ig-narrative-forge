@@ -94,7 +94,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   const endIndex = startIndex + storiesPerPage;
   const currentStories = stories.slice(startIndex, endIndex);
 
-  const handleGenerateIllustration = async (story: MultiTenantStory, model: ImageModel) => {
+  const handleGenerateIllustration = async (story: MultiTenantStory, model: ImageModel, style?: string) => {
     if (generatingIllustrations.has(story.id)) return;
     
     // Check credits (bypass for super admin)
@@ -110,7 +110,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
 
     try {
-      const result = await CreditService.generateStoryIllustration(story.id, model.id);
+      const result = await CreditService.generateStoryIllustration(story.id, model.id, style);
       
       if (!result.success) {
         toast({
@@ -121,6 +121,9 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         return;
       }
 
+      if (result.satirical_declined) {
+        toast({ title: "Standard style used", description: "This story looked too serious for satire, so it got the standard picture style instead.", duration: 8000 });
+      }
       // Warn user if fallback was used
       if (result.used_fallback) {
         toast({
@@ -531,7 +534,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                     {story.status === 'ready' && (
                       <>
                         <ImageModelSelector
-                          onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                          onModelSelect={(model, style) => handleGenerateIllustration(story, model, style)}
                           isGenerating={generatingIllustrations.has(story.id)}
                           hasExistingImage={!!story.cover_illustration_url}
                           illustrationStyle={illustrationStyle as any}
@@ -600,7 +603,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                         </div>
                         <div className="flex gap-2">
                           <ImageModelSelector
-                            onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                            onModelSelect={(model, style) => handleGenerateIllustration(story, model, style)}
                             isGenerating={generatingIllustrations.has(story.id)}
                             hasExistingImage={false}
                             illustrationStyle={illustrationStyle as any}

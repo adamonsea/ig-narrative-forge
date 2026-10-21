@@ -10,6 +10,7 @@ export const ILLUSTRATION_STYLES = {
   BW_EDITORIAL_PHOTO: 'bw_editorial_photo',
   ANIME: 'anime',
   ILLUSTRATED_ICON: 'illustrated_icon',
+  SATIRICAL: 'satirical',
 } as const;
 
 export type IllustrationStyle = typeof ILLUSTRATION_STYLES[keyof typeof ILLUSTRATION_STYLES];
@@ -21,6 +22,7 @@ export const ILLUSTRATION_STYLE_LABELS: Record<IllustrationStyle, string> = {
   [ILLUSTRATION_STYLES.BW_EDITORIAL_PHOTO]: 'Aged editorial photo',
   [ILLUSTRATION_STYLES.ANIME]: 'Anime',
   [ILLUSTRATION_STYLES.ILLUSTRATED_ICON]: 'Illustrated icon',
+  [ILLUSTRATION_STYLES.SATIRICAL]: 'Satirical cartoon',
 };
 
 export const ILLUSTRATION_STYLE_DESCRIPTIONS: Record<IllustrationStyle, string> = {
@@ -36,6 +38,8 @@ export const ILLUSTRATION_STYLE_DESCRIPTIONS: Record<IllustrationStyle, string> 
     'Editorial anime composition without copying characters or studio styles.',
   [ILLUSTRATION_STYLES.ILLUSTRATED_ICON]:
     'A bold, minimal spot illustration for concise stories and utility content.',
+  [ILLUSTRATION_STYLES.SATIRICAL]:
+    'Broadsheet pocket cartoon with a written joke behind it. Serious or tragic stories get the standard style instead.',
 };
 
 /**

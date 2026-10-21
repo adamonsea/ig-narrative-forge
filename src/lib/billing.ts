@@ -21,6 +21,9 @@ export const IMAGE_CREDIT_COSTS = {
   'gpt-image-2-high': 17,
 } as const;
 
+/** Satirical cartoon: joke writer + Sunburst medium, priced at 2x provider cost. */
+export const SATIRICAL_IMAGE_CREDIT_COST = 4;
+
 export const ANIMATION_CREDIT_COSTS = { fast: 8, standard: 50 } as const;
 export const REEL_CREDIT_COST = 5;
 export const AUDIO_BRIEFING_CREDIT_COST = 30;

@@ -3339,6 +3339,7 @@ export type Database = {
           duplicate_of_story_id: string | null
           duplicate_similarity: number | null
           id: string
+          illustration_gag: Json | null
           illustration_generated_at: string | null
           illustration_regen_count: number
           is_auto_animated: boolean | null
@@ -3381,6 +3382,7 @@ export type Database = {
           duplicate_of_story_id?: string | null
           duplicate_similarity?: number | null
           id?: string
+          illustration_gag?: Json | null
           illustration_generated_at?: string | null
           illustration_regen_count?: number
           is_auto_animated?: boolean | null
@@ -3423,6 +3425,7 @@ export type Database = {
           duplicate_of_story_id?: string | null
           duplicate_similarity?: number | null
           id?: string
+          illustration_gag?: Json | null
           illustration_generated_at?: string | null
           illustration_regen_count?: number
           is_auto_animated?: boolean | null
@@ -6740,6 +6743,7 @@ export type Database = {
         | "bw_editorial_photo"
         | "anime"
         | "illustrated_icon"
+        | "satirical"
       mp_detection_confidence: "high" | "medium" | "low"
       tone_type:
         | "formal"
@@ -6883,6 +6887,7 @@ export const Constants = {
         "bw_editorial_photo",
         "anime",
         "illustrated_icon",
+        "satirical",
       ],
       mp_detection_confidence: ["high", "medium", "low"],
       tone_type: [
