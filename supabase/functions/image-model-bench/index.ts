@@ -216,7 +216,17 @@ Deno.serve(async (req) => {
 
       let prompt = promptOverride;
       const subjectPhotoUrls: string[] = [];
-      if (!prompt) {
+      if (!prompt && promptVariant === 'satirical') {
+        // Two-stage: a text model writes the joke, then we wrap it in the
+        // broadsheet cartoon style brief. No landmark photos — the gag is
+        // symbolic, not architectural.
+        const gag = await generateSatiricalGag(slides || [], OPENAI_API_KEY, (story as any).title);
+        if (!gag) {
+          results.push({ storyId, error: 'Story not suitable for satire (or gag generation failed)' });
+          continue;
+        }
+        prompt = buildSatiricalPrompt(gag, (story as any).title);
+      } else if (!prompt) {
         const [storyTone, locationDetails] = await Promise.all([
           analyzeStoryTone(slides || [], OPENAI_API_KEY),
           extractLocationDetails(slides || [], OPENAI_API_KEY, topicLandmarks, topicRegion, topicLandmarkDescriptions),
