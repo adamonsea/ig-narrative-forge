@@ -598,38 +598,52 @@ export async function generateSatiricalGag(
       },
       body: JSON.stringify({
         model: 'gpt-5.4-mini',
-        reasoning_effort: 'none',
+        reasoning_effort: 'medium',
         messages: [{
           role: 'user',
-          content: `You are a veteran British editorial cartoonist (Private Eye / Spectator / broadsheet tradition) briefing an illustrator.
+          content: `You are a veteran British editorial cartoonist — the tradition of Private Eye, The Spectator, Matt in the Telegraph, Peter Brookes and Steve Bell. You are writing the concept for a single-panel pocket cartoon. The illustrator will draw exactly what you write, so the JOKE lives entirely in your concept.
 
-Read this news story and devise ONE satirical cartoon concept.
+WHAT MAKES IT SATIRE (not illustration):
+- A literal depiction of the story is a FAILURE. "Commuters waiting on a platform looking annoyed" is not a cartoon. It is a photo caption.
+- Satire exposes a gap: between official language and reality, between pomp and pettiness, between promise and delivery, between who pays and who benefits.
+- The image must contain a CONCEIT — an absurd twist, inversion, escalation or literalised phrase — that a reader "gets" in two seconds, with a small wry exhale.
 
-RULES:
-- Identify the TARGET: who or what is being mocked (hypocrisy, absurdity, self-interest, spin)
-- Find the IRONY: the gap between what is said and what is meant or done
-- Express it as ONE visual metaphor or absurd scene — no captions, no speech bubbles, the image alone must carry the joke
-- Exaggeration and symbolism are encouraged (tiny figures vs giant objects, animals standing in for institutions, literalised idioms)
-- Keep it affectionate rather than cruel; punch at power, not at victims
-- If the story is tragic or involves death/suffering of identifiable people, return exactly: null
+PROCESS (think privately, output only the final answer):
+1. Find the real target: the institution, policy, spin or self-interest behind the story. Never the victims or ordinary residents.
+2. Draft THREE candidate conceits, one from each lens:
+   a) BUREAUCRATIC FARCE — process eclipsing purpose (consultations, phases, ribbon-cuttings, task forces, signage, risk assessments).
+   b) LITERALISED SPIN — take the official phrase or euphemism completely literally ("streamlined", "pause", "investment", "listening exercise", "temporary").
+   c) GRANDIOSE vs PETTY — ceremony, chains of office, plaques and brochures colliding with damp, cone-strewn British reality. Or a time/scale escalation (archaeologists excavating the roadworks; a queue so long it has its own weather).
+3. Critique each: Is it funny without words? Is the twist visible, not explained? Is it about the story specifically, not generic? Is it punching up? Pick the sharpest. Make it more specific and more absurd, then cut anything that dilutes it.
 
-RETURN FORMAT (exactly three lines):
+BRITISH VISUAL VOCABULARY (use when apt, never as decoration): pompous councillor in oversized chain of office, consultant with clipboard and lanyard, hi-vis tabard over a suit, giant ceremonial scissors, brass plaque, traffic cones, Heras fencing, "phase two" hoardings, tea urn in a draughty hall, damp anoraks, umbrellas turned inside out, a sardonic seagull on a bollard, a dog walker oblivious in the background.
+
+CONSTRAINTS:
+- No captions, speech bubbles or legible words — the drawing alone carries it. At most ONE short sign may appear if it is the punchline, and only if essential; prefer none.
+- Archetypes, not identifiable real people.
+- If the story is tragic or involves death, serious injury, abuse or suffering of identifiable people, return exactly: null
+
+RETURN FORMAT (exactly these four lines, nothing else):
 TARGET: <who/what is mocked>
 IRONY: <the gap being exposed, one sentence>
-SCENE: <the visual metaphor described as a drawable scene, 40-70 words, naming the figures, their exaggerated proportions or expressions, the symbolic props, and the setting>
+GAG: <the conceit in one punchy sentence, as an editor would pitch it>
+SCENE: <the drawable scene, 60-100 words: foreground figures and their exact expressions and poses, the single absurd element that delivers the joke, key props, setting, and where the eye lands first>
 
 ${storyTitle ? `Story title: ${storyTitle}\n\n` : ''}Story text:
-${storyText.slice(0, 2500)}`
+${storyText.slice(0, 3500)}`
         }],
-        max_completion_tokens: 220,
-        temperature: 0.8,
+        max_completion_tokens: 3000,
       }),
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn('Satirical gag request failed:', response.status, await response.text());
+      return null;
+    }
     const data = await response.json();
-    const result = data.choices?.[0]?.message?.content?.trim();
-    if (!result || result.toLowerCase() === 'null' || !result.includes('SCENE:')) return null;
+    const raw = data.choices?.[0]?.message?.content?.trim();
+    if (!raw || raw.toLowerCase() === 'null' || !raw.includes('SCENE:')) return null;
+    const result = raw.slice(Math.max(0, raw.lastIndexOf('TARGET:')));
     return result;
   } catch (error) {
     console.warn('Satirical gag generation failed:', error);
