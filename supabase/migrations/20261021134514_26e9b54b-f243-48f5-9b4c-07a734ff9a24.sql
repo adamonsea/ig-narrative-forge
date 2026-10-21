@@ -1,0 +1,1 @@
+ALTER TYPE public.illustration_style_enum ADD VALUE IF NOT EXISTS 'satirical';

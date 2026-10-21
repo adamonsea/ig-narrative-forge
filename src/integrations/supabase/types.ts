@@ -6743,6 +6743,7 @@ export type Database = {
         | "bw_editorial_photo"
         | "anime"
         | "illustrated_icon"
+        | "satirical"
       mp_detection_confidence: "high" | "medium" | "low"
       tone_type:
         | "formal"
@@ -6886,6 +6887,7 @@ export const Constants = {
         "bw_editorial_photo",
         "anime",
         "illustrated_icon",
+        "satirical",
       ],
       mp_detection_confidence: ["high", "medium", "low"],
       tone_type: [
