@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
         );
         prompt = illustrationStyle === 'editorial_photographic'
           ? buildPhotographicPrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails)
-          : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant);
+          : buildIllustrativePrompt(storyTone, subjectMatter, (story as any).title, primaryColor, topicRegion, locationDetails, promptVariant as 'current' | 'handmade');
 
         if (locationDetails && topicLandmarkPhotos) {
           const placeName = locationDetails.split('(')[0].trim() || locationDetails;
