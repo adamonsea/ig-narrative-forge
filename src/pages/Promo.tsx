@@ -496,13 +496,19 @@ function caption(g: Ctx, t: number) {
   g.globalAlpha = easeIO(alpha);
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  let size = 86;
-  g.font = `800 ${size}px "Barlow Condensed", "Arial Narrow", sans-serif`;
-  let lines = wrapText(g, l.text.toUpperCase(), 940);
-  while (lines.length > 2 && size > 64) {
-    size -= 4;
-    g.font = `800 ${size}px "Barlow Condensed", "Arial Narrow", sans-serif`;
-    lines = wrapText(g, l.text.toUpperCase(), 940);
+  const txt = l.text.toUpperCase();
+  let size = 90;
+  const setF = () => (g.font = `800 ${size}px "Barlow Condensed", "Arial Narrow", sans-serif`);
+  setF();
+  while (g.measureText(txt).width > 980 && size > 72) {
+    size -= 2;
+    setF();
+  }
+  let lines = [txt];
+  if (g.measureText(txt).width > 980) {
+    size = 86;
+    setF();
+    lines = wrapText(g, txt, 940);
   }
   const lh = size * 1.0;
   const y0 = 1185 - ((lines.length - 1) * lh) / 2 + (1 - alpha) * 10;
@@ -656,77 +662,6 @@ function render(g: Ctx, a: Assets, t: number) {
     }
   }
 
-  // ===== 9-19: printed cards in a row, tick + crumple =====
-  if (t >= 9.3 && t < 21.2) {
-    for (let i = 0; i < 4; i++) {
-      const pt = PRINT_T[i];
-      const e = prog(t, pt, pt + 0.9);
-      if (e <= 0) continue;
-      // emerge from the press slot, then settle into the row
-      const sx = 540 + 90;
-      const sy = 323;
-      let x = lerp(sx, rowX(i), easeIO(e));
-      let y = lerp(sy, ROW_Y, easeIO(e));
-      let sc = lerp(0.35, 1, easeOut(e));
-      let rot = lerp(0.1, (i - 1.5) * 0.02, easeIO(e));
-      let alpha = 1;
-      // 19-21: kept cards fly to the phone
-      if (t >= 19.2) {
-        const k = KEEP.indexOf(i);
-        if (k < 0) continue;
-        const f = seg(t, 19.4 + k * 0.15, 20.6 + k * 0.15);
-        x = lerp(x, 540 + k * 360, f);
-        y = lerp(y, 520, f);
-        sc = lerp(1, 1.4, f);
-        rot = lerp(rot, 0, f);
-        if (k > 0) alpha = 1 - seg(t, 20.2 + k * 0.15, 20.7 + k * 0.15);
-        if (t > 20.8 + k * 0.15) continue;
-      }
-      g.save();
-      g.globalAlpha = alpha;
-      g.translate(x, y);
-      if (i === 2 && t >= 17.0) {
-        // crumple and drop away
-        const c = prog(t, 17.0, 17.6);
-        const fall = prog(t, 17.5, 18.6);
-        g.translate(fall * 60, fall * fall * 900);
-        g.rotate(c * 0.6 + fall * 2);
-        if (c < 0.5) {
-          g.scale(1 - c * 0.6, 1 - c * 0.8);
-          card(g, a, arts[i % arts.length], 1);
-        } else {
-          const r = lerp(110, 70, (c - 0.5) * 2);
-          g.fillStyle = TEAL;
-          ball(g, r, 6);
-          g.fill();
-          g.fillStyle = PAPER;
-          ball(g, r, 0);
-          g.fill();
-          g.strokeStyle = INK;
-          g.lineWidth = 5;
-          g.stroke();
-          g.lineWidth = 3;
-          for (let j = 0; j < 5; j++) {
-            const an = j * 1.3;
-            g.beginPath();
-            g.moveTo(Math.cos(an) * r * 0.2, Math.sin(an) * r * 0.2);
-            g.lineTo(Math.cos(an + 0.5) * r * 0.75, Math.sin(an + 0.5) * r * 0.75);
-            g.stroke();
-          }
-        }
-      } else {
-        g.rotate(rot);
-        g.scale(sc, sc);
-        card(g, a, arts[i % arts.length], prog(t, pt + 0.75, pt + 1.05));
-        if (i === 0 && t < 19.4) {
-          g.translate(0, -30);
-          tick(g, prog(t, 15.85, 16.1), reg(t, 16.0));
-        }
-      }
-      g.restore();
-    }
-  }
-
   // ===== 19.6-25: phone carousel, then envelope =====
   if (t >= 19.4 && t < 25.6) {
     const ph = seg(t, 19.4, 20.2) * (1 - seg(t, 23.4, 24.0));
@@ -834,6 +769,77 @@ function render(g: Ctx, a: Assets, t: number) {
         g.beginPath();
         g.arc(0, -eh / 2 + eh * 0.55, 22 * clamp((t - 24.6) * 6), 0, Math.PI * 2);
         g.fill();
+      }
+      g.restore();
+    }
+  }
+
+  // ===== 9-19: printed cards in a row, tick + crumple =====
+  if (t >= 9.3 && t < 21.2) {
+    for (let i = 0; i < 4; i++) {
+      const pt = PRINT_T[i];
+      const e = prog(t, pt, pt + 0.9);
+      if (e <= 0) continue;
+      // emerge from the press slot, then settle into the row
+      const sx = 540 + 90;
+      const sy = 323;
+      let x = lerp(sx, rowX(i), easeIO(e));
+      let y = lerp(sy, ROW_Y, easeIO(e));
+      let sc = lerp(0.35, 1, easeOut(e));
+      let rot = lerp(0.1, (i - 1.5) * 0.02, easeIO(e));
+      let alpha = 1;
+      // 19-21: kept cards fly to the phone
+      if (t >= 19.2) {
+        const k = KEEP.indexOf(i);
+        if (k < 0) continue;
+        const f = seg(t, 19.4 + k * 0.15, 20.6 + k * 0.15);
+        x = lerp(x, 540 + k * 360, f);
+        y = lerp(y, 520, f);
+        sc = lerp(1, 1.4, f);
+        rot = lerp(rot, 0, f);
+        if (k > 0) alpha = 1 - seg(t, 20.2 + k * 0.15, 20.7 + k * 0.15);
+        if (t > 20.8 + k * 0.15) continue;
+      }
+      g.save();
+      g.globalAlpha = alpha;
+      g.translate(x, y);
+      if (i === 2 && t >= 17.0) {
+        // crumple and drop away
+        const c = prog(t, 17.0, 17.6);
+        const fall = prog(t, 17.5, 18.6);
+        g.translate(fall * 60, fall * fall * 900);
+        g.rotate(c * 0.6 + fall * 2);
+        if (c < 0.5) {
+          g.scale(1 - c * 0.6, 1 - c * 0.8);
+          card(g, a, arts[i % arts.length], 1);
+        } else {
+          const r = lerp(110, 70, (c - 0.5) * 2);
+          g.fillStyle = TEAL;
+          ball(g, r, 6);
+          g.fill();
+          g.fillStyle = PAPER;
+          ball(g, r, 0);
+          g.fill();
+          g.strokeStyle = INK;
+          g.lineWidth = 5;
+          g.stroke();
+          g.lineWidth = 3;
+          for (let j = 0; j < 5; j++) {
+            const an = j * 1.3;
+            g.beginPath();
+            g.moveTo(Math.cos(an) * r * 0.2, Math.sin(an) * r * 0.2);
+            g.lineTo(Math.cos(an + 0.5) * r * 0.75, Math.sin(an + 0.5) * r * 0.75);
+            g.stroke();
+          }
+        }
+      } else {
+        g.rotate(rot);
+        g.scale(sc, sc);
+        card(g, a, arts[i % arts.length], prog(t, pt + 0.75, pt + 1.05));
+        if (i === 0 && t < 19.4) {
+          g.translate(0, -30);
+          tick(g, prog(t, 15.85, 16.1), reg(t, 16.0));
+        }
       }
       g.restore();
     }
