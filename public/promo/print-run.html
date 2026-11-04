@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Curatr – From everywhere to everyone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F4E6C8;--teal:#3A9A86;--ink:#17190F}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#E9DCBC;color:var(--ink)}
+#wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:18px}
+#holder{position:relative;overflow:hidden;border-radius:10px;box-shadow:0 20px 60px rgba(23,25,15,.25)}
+#frame{position:relative;width:1080px;height:1350px;transform-origin:top left}
+#stage{position:absolute;inset:0;background:var(--paper);overflow:hidden}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity}
+#grain{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.5;
+ background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .3  0 0 0 0 .2  0 0 0 .5 0'/></filter><rect width='420' height='420' filter='url(%23n)'/></svg>")}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 42%,rgba(0,0,0,0) 58%,rgba(60,45,20,.16) 100%)}
+.card{width:380px;height:296px;background:var(--paper);border:3px solid var(--ink);border-radius:16px;padding:11px;box-shadow:7px 8px 0 rgba(58,154,134,.9)}
+.card img{width:100%;height:100%;object-fit:cover;display:block;border-radius:8px}
+.clip{position:absolute;left:-30px;top:-34px;width:120px;height:96px;pointer-events:none}
+#line{position:absolute;left:80px;right:80px;top:1070px;height:230px;display:flex;align-items:center;justify-content:center;text-align:center;
+ font-family:'Instrument Serif',Georgia,serif;font-size:96px;line-height:1.02;letter-spacing:-.5px;color:var(--ink);text-wrap:balance}
+#line .in{display:block;width:100%}
+#line .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding:.04em .08em .2em;margin:-.04em -.02em -.2em}
+#line .w>span{display:inline-block}
+#line em{font-style:italic;color:var(--teal)}
+#mark{position:absolute;left:0;right:0;top:470px;display:flex;justify-content:center;align-items:center;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:150px;line-height:1;color:var(--ink)}
+#controls{display:flex;gap:14px;align-items:center;font:600 18px system-ui,sans-serif}
+#controls button{font:600 18px system-ui,sans-serif;padding:12px 20px;border-radius:999px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);cursor:pointer}
+#controls button.on{background:var(--ink);color:var(--paper)}
+#scrub{width:320px;accent-color:#3A9A86}#time{min-width:70px;font-variant-numeric:tabular-nums}
+body.render #controls{display:none}body.render #wrap{padding:0}body.render #holder{border-radius:0;box-shadow:none}
+</style></head>
+<body>
+<div id="wrap">
+<div id="holder"><div id="frame"><div id="stage">
+ <svg width="0" height="0" style="position:absolute">
+  <defs>
+   <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="4" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+   </filter>
+   <filter id="brush" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="3" seed="2" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+   </filter>
+   <pattern id="dotsT" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="4.5" cy="4.5" r="2.3" fill="#3A9A86"/></pattern>
+   <pattern id="dotsK" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="4" cy="4" r="1.7" fill="#17190F"/></pattern>
+  </defs>
+ </svg>
+ <div id="sources"></div>
+ <div id="cards"></div>
+ <div id="ticks"></div>
+ <div id="press" class="abs" style="width:1080px;height:1350px"></div>
+ <div id="phone" class="abs" style="width:380px;height:740px"></div>
+ <div id="env" class="abs" style="width:360px;height:240px"></div>
+ <div id="mark" style="opacity:0"></div>
+ <div id="line"></div>
+ <div id="vignette"></div><div id="grain"></div>
+</div></div></div>
+<div id="controls"><button id="play">Pause</button><input id="scrub" type="range" min="0" max="35" step="0.01" value="0"><span id="time">0.0s</span><button id="sound">Play with sound</button></div>
+</div>
+<script>
+const IMGS={"cliffs": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-378f294e-8560-4a05-8161-992e6d7865f2-1793794275822.webp", "football": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-08361577-6237-43e0-bf47-59bee1412855-1793788280669.webp", "fishing": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-47ef8ad8-55f2-4516-abc0-5687f098ab23-1793794330892.webp", "violin": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-a19123ce-4f52-4660-b3dc-0c00726a49d6-1793781068006.webp", "chef": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-6f7f0f4d-0a4d-4692-947e-3b1060dd532d-1793729070097.webp", "coffee": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-e57bf8aa-7f95-428a-9648-162172c7ac08-1793770269554.webp", "pub": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-864d8d5e-62a9-4fc9-afb9-8d1c2cb360ee-1793728998667.webp", "town": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-ce2e7a93-d9db-48b9-bea2-197e504fa186-1793723655357.webp"}, TH={"cliffs": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-378f294e-8560-4a05-8161-992e6d7865f2-1793794275822.webp", "football": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-08361577-6237-43e0-bf47-59bee1412855-1793788280669.webp", "fishing": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-47ef8ad8-55f2-4516-abc0-5687f098ab23-1793794330892.webp", "violin": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-a19123ce-4f52-4660-b3dc-0c00726a49d6-1793781068006.webp", "chef": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-6f7f0f4d-0a4d-4692-947e-3b1060dd532d-1793729070097.webp", "coffee": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-e57bf8aa-7f95-428a-9648-162172c7ac08-1793770269554.webp", "pub": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-864d8d5e-62a9-4fc9-afb9-8d1c2cb360ee-1793728998667.webp", "town": "https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/visuals/story-ce2e7a93-d9db-48b9-bea2-197e504fa186-1793723655357.webp"}, D=35;
+const $=id=>document.getElementById(id);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)), p=(t,a,b)=>clamp((t-a)/(b-a));
+const ob2=x=>{const c1=1.4,c3=c1+1;return x<=0?0:1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const io=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, oc=x=>1-Math.pow(1-x,3), os=x=>1-Math.pow(1-x,5), ib=x=>x*x*x;
+const lerp=(a,b,x)=>a+(b-a)*x;
+const tf=(el,x,y,s=1,r=0,o=1)=>{el.style.transform=`translate(${x}px,${y}px) rotate(${r}deg) scale(${s})`;el.style.opacity=o;};
+const PAPER='#F4E6C8',TEAL='#3A9A86',INK='#17190F';
+
+/* ---------- sources: print-made scraps (newspapers, council notices, event posters, local sites) ---------- */
+function newspaper(img,w=300,h=220){return `<svg width="${w+12}" height="${h+12}" viewBox="0 0 ${w+12} ${h+12}" style="overflow:visible"><g filter="url(#rough)">
+ <rect x="10" y="10" width="${w}" height="${h}" rx="6" fill="${TEAL}" opacity=".85"/>
+ <rect width="${w}" height="${h}" rx="6" fill="${PAPER}" stroke="${INK}" stroke-width="4"/>
+ <rect x="18" y="16" width="${w-36}" height="26" rx="3" fill="${INK}"/>
+ <rect x="18" y="50" width="${w-36}" height="3" fill="${INK}"/>
+ <image href="${TH[img]}" x="18" y="62" width="${w*0.52}" height="${w*0.39}" preserveAspectRatio="xMidYMid slice"/>
+ <rect x="18" y="62" width="${w*0.52}" height="${w*0.39}" fill="none" stroke="${INK}" stroke-width="3"/>
+ <g fill="${INK}" opacity=".7">${[0,1,2,3,4].map(i=>`<rect x="${w*0.6}" y="${64+i*20}" width="${w*0.33-(i%2)*18}" height="9" rx="3"/>`).join('')}
+ <rect x="18" y="${h-30}" width="${w-36}" height="9" rx="3"/><rect x="18" y="${h-15}" width="${w-90}" height="7" rx="3" opacity=".6"/></g></g></svg>`;}
+function notice(img,w=230,h=280){return `<svg width="${w+12}" height="${h+12}" viewBox="0 0 ${w+12} ${h+12}" style="overflow:visible"><g filter="url(#rough)">
+ <rect x="10" y="10" width="${w}" height="${h}" rx="4" fill="${INK}" opacity=".85"/>
+ <rect width="${w}" height="${h}" rx="4" fill="${PAPER}" stroke="${INK}" stroke-width="4"/>
+ <path d="M${w/2-26},26 h52 v34 q0,26 -26,36 q-26,-10 -26,-36 z" fill="${TEAL}" stroke="${INK}" stroke-width="4"/>
+ <path d="M${w/2-26},44 h52" stroke="${INK}" stroke-width="4"/>
+ <g fill="${INK}" opacity=".75"><rect x="26" y="116" width="${w-52}" height="14" rx="4"/><rect x="40" y="140" width="${w-80}" height="10" rx="3" opacity=".7"/></g>
+ <g fill="${INK}" opacity=".45">${[0,1,2,3,4].map(i=>`<rect x="26" y="${170+i*18}" width="${w-52-(i%3)*24}" height="8" rx="3"/>`).join('')}</g>
+ <circle cx="${w/2}" cy="10" r="10" fill="${TEAL}" stroke="${INK}" stroke-width="3"/></g></svg>`;}
+function poster(img,w=230,h=320){return `<svg width="${w+12}" height="${h+12}" viewBox="0 0 ${w+12} ${h+12}" style="overflow:visible"><g filter="url(#rough)">
+ <rect x="10" y="10" width="${w}" height="${h}" rx="4" fill="${TEAL}" opacity=".85"/>
+ <rect width="${w}" height="${h}" rx="4" fill="${INK}"/>
+ <image href="${TH[img]}" x="14" y="14" width="${w-28}" height="${h*0.55}" preserveAspectRatio="xMidYMid slice"/>
+ <rect x="14" y="${h*0.62}" width="${w-28}" height="30" rx="3" fill="${PAPER}"/>
+ <rect x="14" y="${h*0.62+42}" width="${w*0.6}" height="16" rx="3" fill="${TEAL}"/>
+ <g fill="${PAPER}" opacity=".6"><rect x="14" y="${h-44}" width="${w-60}" height="9" rx="3"/><rect x="14" y="${h-28}" width="${w-100}" height="9" rx="3"/></g></g></svg>`;}
+function site(img,w=320,h=236){return `<svg width="${w+12}" height="${h+12}" viewBox="0 0 ${w+12} ${h+12}" style="overflow:visible"><g filter="url(#rough)">
+ <rect x="10" y="10" width="${w}" height="${h}" rx="14" fill="${TEAL}" opacity=".85"/>
+ <rect width="${w}" height="${h}" rx="14" fill="${PAPER}" stroke="${INK}" stroke-width="4"/>
+ <path d="M0,40 h${w}" stroke="${INK}" stroke-width="4"/><rect x="0" y="0" width="${w}" height="40" rx="14" fill="url(#dotsK)" opacity=".35"/>
+ <circle cx="22" cy="20" r="7" fill="${INK}"/><circle cx="44" cy="20" r="7" fill="${TEAL}"/><circle cx="66" cy="20" r="7" fill="none" stroke="${INK}" stroke-width="3"/>
+ <rect x="90" y="12" width="${w-110}" height="16" rx="8" fill="none" stroke="${INK}" stroke-width="3"/>
+ <image href="${TH[img]}" x="18" y="54" width="${w-36}" height="${h*0.5}" preserveAspectRatio="xMidYMid slice"/>
+ <g fill="${INK}" opacity=".7"><rect x="18" y="${h*0.5+66}" width="${w-60}" height="12" rx="4"/><rect x="18" y="${h*0.5+86}" width="${w-120}" height="9" rx="3" opacity=".6"/></g></g></svg>`;}
+const SRC=[ // fn, img, land x,y, rot, drop t
+ [newspaper,'cliffs',120,190,-6,0.2],[site,'football',610,170,5,0.55],[notice,null,740,500,7,0.9],
+ [poster,'violin',140,520,-6,1.25],[newspaper,'chef',430,470,3,1.6]
+];
+const srcEls=SRC.map(s=>{const d=document.createElement('div');d.className='abs';d.style.transformOrigin='50% 50%';d.innerHTML=s[0](s[1]||'town');$('sources').appendChild(d);return d;});
+
+/* ---------- newspaper press (side view: two cylinders, ink rollers, paper web) ---------- */
+const NIP=[540,780], R=118;
+$('press').innerHTML=`<svg width="1080" height="1350" viewBox="0 0 1080 1350" style="overflow:visible"><g filter="url(#rough)">
+ <circle cx="${NIP[0]+8}" cy="${NIP[1]-R+8}" r="${R}" fill="${INK}" opacity=".85"/>
+ <circle cx="${NIP[0]}" cy="${NIP[1]-R}" r="${R}" fill="${TEAL}" stroke="${INK}" stroke-width="6"/>
+ <circle cx="${NIP[0]}" cy="${NIP[1]-R}" r="${R-26}" fill="url(#dotsK)" opacity=".18"/>
+ <g class="spin" data-d="1" data-c="${NIP[0]},${NIP[1]-R}">${[0,120,240].map(a=>`<line x1="${NIP[0]}" y1="${NIP[1]-R}" x2="${NIP[0]+Math.sin(a*Math.PI/180)*(R-30)}" y2="${NIP[1]-R-Math.cos(a*Math.PI/180)*(R-30)}" stroke="${PAPER}" stroke-width="10" stroke-linecap="round"/>`).join('')}</g>
+ <circle cx="${NIP[0]}" cy="${NIP[1]-R}" r="18" fill="${PAPER}" stroke="${INK}" stroke-width="5"/>
+ <circle cx="${NIP[0]+8}" cy="${NIP[1]+R+8}" r="${R}" fill="${TEAL}" opacity=".9"/>
+ <circle cx="${NIP[0]}" cy="${NIP[1]+R}" r="${R}" fill="${INK}"/>
+ <g class="spin" data-d="-1" data-c="${NIP[0]},${NIP[1]+R}">${[0,120,240].map(a=>`<line x1="${NIP[0]}" y1="${NIP[1]+R}" x2="${NIP[0]+Math.sin(a*Math.PI/180)*(R-30)}" y2="${NIP[1]+R-Math.cos(a*Math.PI/180)*(R-30)}" stroke="${PAPER}" stroke-width="10" stroke-linecap="round" opacity=".85"/>`).join('')}</g>
+ <circle cx="${NIP[0]}" cy="${NIP[1]+R}" r="18" fill="${PAPER}" stroke="${INK}" stroke-width="5"/>
+</g>
+<g id="sheets">${[0,1,2,3,4,5,6,7].map(i=>`<rect id="sh${i}" x="-110" y="-5" width="220" height="10" rx="5" fill="${PAPER}" stroke="${INK}" stroke-width="3" opacity="0"/>`).join('')}</g>
+</svg>`;
+const spinEls=[...document.querySelectorAll('#press .spin')];
+
+/* ---------- cards ---------- */
+function mkCard(img){const d=document.createElement('div');d.className='abs card';d.style.transformOrigin='50% 50%';
+ d.innerHTML=`<img src="${IMGS[img]}"><svg width="44" height="96" viewBox="0 0 44 96" style="position:absolute;left:34px;top:-30px;overflow:visible"><path d="M10,84 L10,16 Q10,4 22,4 Q34,4 34,16 L34,74 Q34,86 22,86 Q14,86 14,74 L14,26" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round" filter="url(#brush)"/></svg>`;
+ $('cards').appendChild(d);return d;}
+const cards=['cliffs','football','violin','chef'].map(mkCard);
+const autoCards=['town','coffee','fishing','pub'].map(mkCard);
+
+/* ---------- hand-drawn ticks ---------- */
+function tick(){const d=document.createElement('div');d.className='abs';d.style.transformOrigin='55px 55px';d.innerHTML=`<svg width="110" height="110" viewBox="0 0 110 110" style="overflow:visible"><g filter="url(#rough)"><circle cx="59" cy="59" r="50" fill="${INK}"/><circle cx="55" cy="55" r="50" fill="${TEAL}" stroke="${INK}" stroke-width="5"/></g><path class="tk" d="M30,58 C38,64 44,72 49,80 C58,62 70,46 84,34" fill="none" stroke="${PAPER}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" filter="url(#brush)" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>`;$('ticks').appendChild(d);return d;}
+const ticks=[tick(),tick()];
+
+/* ---------- phone + envelope (linocut style) ---------- */
+$('phone').innerHTML=`<div style="position:absolute;inset:0"><svg width="380" height="740" viewBox="0 0 380 740" style="position:absolute;overflow:visible"><g filter="url(#rough)"><rect x="10" y="12" width="380" height="740" rx="58" fill="${TEAL}"/><rect width="380" height="740" rx="58" fill="${INK}"/></g></svg>
+ <div style="position:absolute;left:22px;top:58px;right:22px;bottom:58px;background:${PAPER};border-radius:14px;overflow:hidden">
+  <div id="strip" style="position:absolute;left:0;top:24px;height:250px;display:flex;gap:18px;padding-left:18px"></div>
+  <div style="position:absolute;left:20px;right:20px;top:300px">
+   <div style="height:24px;background:${INK};width:86%;margin-bottom:14px;border-radius:5px"></div><div style="height:24px;background:${INK};width:60%;margin-bottom:30px;border-radius:5px"></div>
+   ${[100,92,96,70,88].map(w=>`<div style="height:12px;background:${INK};opacity:.32;width:${w}%;margin-bottom:12px;border-radius:4px"></div>`).join('')}
+  </div>
+  <div id="navDots" style="position:absolute;left:0;right:0;bottom:22px;display:flex;justify-content:center;gap:12px"></div>
+ </div></div>`;
+['cliffs','football','chef'].forEach(n=>{const d=document.createElement('div');d.style.cssText=`flex:0 0 300px;height:250px;border:3px solid ${INK};border-radius:12px;padding:6px;background:${PAPER}`;d.innerHTML=`<img src="${IMGS[n]}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:7px">`;$('strip').appendChild(d);});
+const navDots=[0,1,2].map(()=>{const d=document.createElement('div');d.style.cssText=`width:14px;height:14px;border-radius:50%;border:2px solid ${INK}`;$('navDots').appendChild(d);return d;});
+$('env').innerHTML=`<svg width="360" height="240" viewBox="0 0 360 240" style="position:absolute;overflow:visible"><g filter="url(#rough)"><rect x="10" y="10" width="360" height="240" rx="12" fill="${TEAL}"/><rect width="360" height="240" rx="12" fill="${PAPER}" stroke="${INK}" stroke-width="5"/></g></svg>
+ <div id="envCard" class="abs" style="left:70px;top:0px;width:220px;height:160px;background:${PAPER};border:3px solid ${INK};border-radius:10px;padding:7px"><img src="${IMGS.football}" style="width:100%;height:100%;object-fit:cover;border-radius:6px"></div>
+ <svg width="360" height="240" viewBox="0 0 360 240" style="position:absolute;overflow:visible"><g filter="url(#rough)"><rect x="3" y="60" width="354" height="177" rx="10" fill="${PAPER}" stroke="${INK}" stroke-width="5"/><path d="M3,237 L180,140 L357,237" fill="none" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g></svg>
+ <svg id="flap" width="360" height="240" viewBox="0 0 360 240" style="position:absolute;overflow:visible;transform-origin:180px 4px"><g filter="url(#rough)"><path d="M4,4 L180,150 L356,4 Z" fill="${INK}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g></svg>`;
+
+/* ---------- end mark ---------- */
+$('mark').innerHTML=`<svg viewBox="0 0 100 168" style="height:1.25em;margin-right:.36em;overflow:visible"><g filter="url(#rough)"><path d="M0 50A50 50 0 0 1 100 50H0Z" fill="${TEAL}"/><path d="M0 60H50V108H0Z" fill="${TEAL}"/><path d="M0 118H100A50 50 0 0 1 0 118Z" fill="${TEAL}"/></g></svg><span style="display:inline-flex;align-items:baseline"><span>Curatr</span><span style="color:${TEAL}">.</span><span style="font-size:.48em">pro</span></span>`;
+
+/* ---------- lines (one at a time, site-style word reveal) ---------- */
+const LINES=[
+ [0.5,4.8,'Local news is all over the','place.'],
+ [6.3,11.9,'Curatr gathers it','together.'],
+ [12.7,17.0,'You decide what makes the','cut.'],
+ [17.6,23.3,'Then off it goes to your','readers.'],
+ [23.9,29.3,'The newsroom that runs','itself.'],
+ [30.0,32.9,'From everywhere to','everyone.']
+];
+let curLine=-1,wordEls=[];
+function setLine(i){const L0=$('line');L0.innerHTML='';wordEls=[];if(i<0)return;const ln=document.createElement('div');ln.className='in';L0.appendChild(ln);
+ const words=LINES[i][2].split(' ').map(w=>[w,false]).concat([[LINES[i][3],true]]);
+ words.forEach(([w,it],k)=>{const o=document.createElement('span');o.className='w';const s=document.createElement(it?'em':'span');s.textContent=w;o.appendChild(s);ln.appendChild(o);if(k<words.length-1)ln.appendChild(document.createTextNode(' '));wordEls.push(s);});}
+
+/* ---------- night/day ---------- */
+function mixC(a,b,k){const h=x=>[1,3,5].map(i=>parseInt(x.substr(i,2),16));const A=h(a),B=h(b);return 'rgb('+A.map((v,i)=>Math.round(lerp(v,B[i],k))).join(',')+')';}
+
+const passes=[6.8,8.0,9.2,10.4], autoPasses=[24.6,25.7,26.8,27.9];
+/* ---------- render ---------- */
+function render(t){
+ // night cycle 24.6-25.6 dark, 27.6-28.6 light
+ const night=io(p(t,24.4,25.4))*(1-io(p(t,27.6,28.6)));
+ $('stage').style.background=mixC('#F4E6C8','#1D2219',night);
+ $('line').style.color=mixC('#17190F','#F4E6C8',night);
+ $('grain').style.opacity=lerp(.5,.25,night);
+
+ // press: two rollers, paper edge-on
+ const PIN=oc(p(t,4.4,5.2)), POUT=io(p(t,12.2,12.9));
+ let PY=lerp(800,0,PIN)+POUT*800, PO=t>=4.4&&t<13?1:0;
+ if(t>=23.5&&t<29.6){PY=lerp(800,0,oc(p(t,23.5,24.3)))+io(p(t,29.0,29.6))*800;PO=1;}
+ const press=$('press');press.style.transform=`translate(0px,${PY}px)`;press.style.opacity=PO;
+ const running=(t>5.6&&t<11.8)||(t>24.0&&t<28.9);
+ spinEls.forEach(g=>{const [cx,cy]=g.dataset.c.split(',');g.setAttribute('transform',`rotate(${(+g.dataset.d)*(running?t*160:0)} ${cx} ${cy})`);});
+ // sheet path: in from the left, through the nip, out and curving up
+ const EX=[790,600];
+ const sheetAt=k=>{if(k<0.55){const u=k/0.55;return [lerp(70,NIP[0],u),NIP[1],0];}
+  const u=(k-0.55)/0.45, P0=[NIP[0],NIP[1]],P1=[740,NIP[1]],P2=EX;
+  const x=(1-u)*(1-u)*P0[0]+2*(1-u)*u*P1[0]+u*u*P2[0], y=(1-u)*(1-u)*P0[1]+2*(1-u)*u*P1[1]+u*u*P2[1];
+  const dx=2*(1-u)*(P1[0]-P0[0])+2*u*(P2[0]-P1[0]), dy=2*(1-u)*(P1[1]-P0[1])+2*u*(P2[1]-P1[1]);
+  return [x,y,Math.atan2(dy,dx)*180/Math.PI];};
+ [...passes,...autoPasses].forEach((pt,i)=>{const el=$('sh'+i);const k=p(t,pt-0.75,pt+0.45);
+  if(k>0&&k<1){const [x,y,a]=sheetAt(io(k));el.setAttribute('transform',`translate(${x},${y}) rotate(${a})`);el.setAttribute('opacity',1);} else el.setAttribute('opacity',0);});
+ const inX=70, webY=NIP[1]+PY;
+
+ // sources fall, land, then feed into the left of the press
+ SRC.forEach((s,i)=>{const el=srcEls[i];const [,,x,y,r,d0]=s;
+  const f=os(p(t,d0,d0+0.9));let X=x,Y=lerp(-420,y,f),R=lerp(r+20,r,f),S=1,O=t>=d0?1:0;
+  const g0=5.0+i*0.3, g=io(p(t,g0,g0+0.9));
+  X=lerp(X,inX-120,g);Y=lerp(Y,webY-120,g);R=lerp(R,0,g);S=lerp(S,0.2,g);O*=1-p(t,g0+0.7,g0+0.9);
+  tf(el,X,Y,S,R,O);
+ });
+ const stX=EX[0]-190, stY=EX[1]+PY-148;
+
+ // cards: out of the press -> grid -> row (decide) -> left column -> into the phone
+ const CS=0.8, CW=380*CS, CH=296*CS;
+ const G=[[90,60,-3],[640,75,3],[80,320,2],[690,330,-3]];
+ const R3=[[60,330,-2],[388,310,1],[716,340,3]];
+ const L2=[[70,170,-2],[70,500,2]];
+ const PH={x:600,y:250,s:0.85};
+ cards.forEach((c,i)=>{const t0=passes[i]+0.45;
+  const e=oc(p(t,t0,t0+0.9));
+  let X=lerp(stX,G[i][0],e),Y=lerp(stY,G[i][1],e),S=lerp(0.3,CS,e),R=lerp(0,G[i][2],e),O=t>=t0?1:0;
+  const r=io(p(t,12.4,13.2));
+  if(i<3){X=lerp(X,R3[i][0],r);Y=lerp(Y,R3[i][1],r);R=lerp(R,R3[i][2],r);} else O*=1-p(t,12.4,12.9);
+  if(i===2){const cr=p(t,15.0,15.6),fall=ib(p(t,15.5,16.3));
+   S*=lerp(1,0.6,io(cr));R+=cr*24+fall*50;Y+=fall*1100;
+   c.style.borderRadius=`${16+cr*60}px ${16+cr*30}px ${16+cr*70}px ${16+cr*40}px`;c.style.filter=cr>0?`brightness(${1-cr*.12})`:'';}
+  if(i<2){const m=io(p(t,16.9,17.6));X=lerp(X,L2[i][0],m);Y=lerp(Y,L2[i][1],m);S=lerp(S,0.72,m);R=lerp(R,L2[i][2],m);
+   const f=io(p(t,18.6+i*0.6,19.2+i*0.6));X=lerp(X,PH.x+20,f);Y=lerp(Y,PH.y+40,f);S=lerp(S,0.42,f);R=lerp(R,0,f);O*=1-p(t,19.05+i*0.6,19.25+i*0.6);}
+  tf(c,X,Y,S,R,O);{const fl=oc(p(t,t0,t0+0.45));if(fl<1)c.style.transform+=` scaleY(${Math.max(.04,fl)})`;}
+  c._x=X;c._y=Y;c._s=S;c._r=R;c._o=O;
+ });
+ // tick badges ride on the approved cards' top-right corner
+ ticks.forEach((tk,i)=>{const t0=13.5+i*0.7;const d=io(p(t,t0,t0+0.5));const c=cards[i];
+  tk.querySelector('.tk').style.strokeDashoffset=1-d;
+  const pop=t>=t0?ob2(p(t,t0,t0+0.3)):0;
+  const cx=c._x+190+(380*c._s)/2-30, cy=c._y+148-(296*c._s)/2-40;
+  tf(tk,cx-55,cy-55,pop*(c._s/CS),0,(t>=t0?1:0)*c._o);
+ });
+
+ // phone (right) then envelope
+ const pin=oc(p(t,17.4,18.3)), pl=io(p(t,21.4,22.1)), pout=io(p(t,23.2,23.8));
+ tf($('phone'),lerp(PH.x,110,pl)-pout*800,lerp(1500,PH.y,pin),PH.s,lerp(6,0,pin),t>=17.3&&t<24?1:0);
+ $('phone').style.transformOrigin='0 0';
+ const sw=io(p(t,20.1,20.6))+io(p(t,20.9,21.4));
+ $('strip').style.transform=`translateX(${-sw*318}px)`;navDots.forEach((d,k)=>d.style.background=Math.round(sw)===k?TEAL:'transparent');
+ $('strip').style.opacity=t<19.1?0:1;
+ const ein=oc(p(t,21.6,22.2)), eout=ib(p(t,22.95,23.6));
+ tf($('env'),lerp(1200,600,ein)+eout*200,470-eout*900,1,-3-eout*10,t>=21.5&&t<23.7?1:0);
+ const ec=io(p(t,22.0,22.5));$('envCard').style.transform=`translateY(${lerp(-380,64,ec)}px)`;$('envCard').style.opacity=ec>0?1:0;
+ $('flap').style.transform=`scaleY(${lerp(-1,1,io(p(t,22.55,22.85)))})`;
+
+ // auto cards printed through the night, stacking up
+ autoCards.forEach((c,i)=>{const t0=autoPasses[i]+0.45;const e=oc(p(t,t0,t0+0.8));
+  const tx=270+i*34, ty=70+i*36;
+  tf(c,lerp(stX,tx,e),lerp(stY,ty,e),lerp(.3,.95,e),lerp(0,(i%2?3:-3),e),(t>=t0&&t<29.5)?1-p(t,29.0,29.5):0);{const fl=oc(p(t,t0,t0+0.45));if(fl<1)c.style.transform+=` scaleY(${Math.max(.04,fl)})`;}
+ });
+
+ // end mark
+ const m=os(p(t,33.0,33.9));const mk=$('mark');mk.style.opacity=m;mk.style.transform=`translateY(${(1-m)*30}px)`;
+
+ // text line with word reveal
+ let li=-1;LINES.forEach((L,i)=>{if(t>=L[0]&&t<L[1])li=i;});
+ if(li!==curLine){setLine(li);curLine=li;}
+ const ln=$('line');
+ if(li===5){ln.style.top='560px';ln.style.fontSize='112px';}else{ln.style.top='1070px';ln.style.fontSize='96px';}
+ if(li>=0){const L=LINES[li];ln.style.opacity=1-p(t,L[1]-0.45,L[1]);
+  wordEls.forEach((w,k)=>{const e=os(p(t,L[0]+k*0.08,L[0]+k*0.08+0.8));w.style.transform=`translateY(${(1-e)*110}%)`;});}
+}
+
+/* ---------- sound + haptics ---------- */
+const EVENTS=[];
+SRC.forEach(s=>EVENTS.push([s[5]+0.75,'paper']));EVENTS.push([5.0,'clunk']);
+[5.9,6.2,6.5,6.8,7.1].forEach(x=>EVENTS.push([x,'paper']));
+passes.forEach(pt=>EVENTS.push([pt-0.3,'roll'],[pt+0.45,'thup']));
+EVENTS.push([13.5,'scribble'],[14.2,'scribble'],[15.0,'crumple'],[19.7,'click'],[20.7,'click'],[22.2,'slip'],[22.75,'thup'],[23.0,'whoosh']);
+autoPasses.forEach(pt=>EVENTS.push([pt-0.3,'roll'],[pt+0.45,'thup']));
+EVENTS.push([30.0,'soft'],[33.1,'bell']);
+EVENTS.sort((a,b)=>a[0]-b[0]);
+const HAPTIC={clunk:[35],paper:[8],shuffle:[12,30,12],roll:[6],thup:[22],scribble:[10,20,10],crumple:[15,20,15],click:[10],slip:[8],whoosh:[12],soft:[10],bell:[90]};
+let AC=null,soundOn=false,noiseBuf=null;
+function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();const n=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noiseBuf=n;}return AC;}
+function noise(dur,f,q,g,type='bandpass',sweep){const c=ac();const s=c.createBufferSource();s.buffer=noiseBuf;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;if(sweep)fl.frequency.exponentialRampToValueAtTime(sweep,c.currentTime+dur);const gn=c.createGain();gn.gain.setValueAtTime(0.0001,c.currentTime);gn.gain.exponentialRampToValueAtTime(g,c.currentTime+Math.min(.03,dur/4));gn.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);s.connect(fl).connect(gn).connect(c.destination);s.start();s.stop(c.currentTime+dur);}
+function tone(f,dur,g,type='sine',f2){const c=ac();const o=c.createOscillator();o.type=type;o.frequency.setValueAtTime(f,c.currentTime);if(f2)o.frequency.exponentialRampToValueAtTime(f2,c.currentTime+dur);const gn=c.createGain();gn.gain.setValueAtTime(g,c.currentTime);gn.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);o.connect(gn).connect(c.destination);o.start();o.stop(c.currentTime+dur);}
+const SFX={
+ paper:()=>noise(.2,1800,.7,.16,'bandpass',700),
+ shuffle:()=>{for(let i=0;i<4;i++)setTimeout(()=>noise(.12,1500+i*300,.8,.12),i*70);},
+ roll:()=>noise(.9,500,.6,.14,'lowpass',1400),
+ thup:()=>{tone(140,.14,.35,'sine',65);noise(.07,1200,1,.12);},
+ scribble:()=>{for(let i=0;i<5;i++)setTimeout(()=>noise(.06,3200,3,.1),i*60);},
+ crumple:()=>{for(let i=0;i<6;i++)setTimeout(()=>noise(.07,2200+Math.random()*2000,2,.18),i*45);},
+ click:()=>tone(1500,.05,.15,'triangle'),
+ slip:()=>noise(.3,1200,.6,.14,'bandpass',2400),
+ whoosh:()=>noise(.5,400,.5,.2,'bandpass',3000),
+ soft:()=>tone(660,.6,.08,'sine'),
+ clunk:()=>{tone(90,.3,.4,'sine',45);noise(.1,500,1,.2,'lowpass');},
+ bell:()=>{tone(880,1.8,.16);tone(1320,1.4,.07);tone(1760,.9,.04);}
+};
+function fire(k){if(soundOn&&SFX[k])try{SFX[k]()}catch(e){} if(navigator.vibrate&&HAPTIC[k])try{navigator.vibrate(HAPTIC[k])}catch(e){}}
+// MUSIC SLOT: put a music file URL here to play it under the sound effects.
+const MUSIC_URL='';let music=null;if(MUSIC_URL){music=new Audio(MUSIC_URL);music.loop=true;music.volume=.6;}
+
+/* ---------- playback ---------- */
+const RENDER=new URLSearchParams(location.search).has('render');if(RENDER)document.body.classList.add('render');
+let t=0,playing=!RENDER,last=performance.now(),prevT=0;
+function fit(){if(RENDER)return;const s=Math.min(1,Math.min(window.innerWidth-36,(window.innerHeight-110)*0.8)/1080);$('frame').style.transform=`scale(${s})`;$('holder').style.width=1080*s+'px';$('holder').style.height=1350*s+'px';}
+addEventListener('resize',fit);fit();
+function loop(now){const dt=(now-last)/1000;last=now;if(playing){t+=dt;if(t>=D){t=0;prevT=0;if(music)music.currentTime=0;}EVENTS.forEach(e=>{if(e[0]>prevT&&e[0]<=t)fire(e[1]);});prevT=t;}
+ render(t);$('scrub').value=t;$('time').textContent=t.toFixed(1)+'s';requestAnimationFrame(loop);}
+if(!RENDER)requestAnimationFrame(loop);
+window.renderAt=x=>render(x);window.EVENTS=EVENTS;
+$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'Pause':'Play';if(music)(playing&&soundOn)?music.play():music.pause();};
+$('scrub').oninput=e=>{t=+e.target.value;prevT=t;render(t);};
+$('sound').onclick=()=>{soundOn=!soundOn;$('sound').classList.toggle('on',soundOn);$('sound').textContent=soundOn?'Sound on':'Play with sound';if(soundOn){ac().resume();t=0;prevT=0;playing=true;$('play').textContent='Pause';if(music){music.currentTime=0;music.play();}}else if(music)music.pause();};
+render(0);
+</script></body></html>
