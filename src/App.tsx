@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import LocalNewsFeedsGuide from "./pages/guides/LocalNewsFeeds";
 import Features from "./pages/Features";
 import Mcp from "./pages/Mcp";
+import Promo from "./pages/Promo";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
@@ -91,6 +92,7 @@ const App = () => {
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/features" element={<Features />} />
                 <Route path="/mcp" element={<Mcp />} />
+                <Route path="/promo" element={<Promo />} />
                 <Route path="/discover" element={<Discover />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
