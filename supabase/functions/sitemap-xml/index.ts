@@ -24,6 +24,7 @@ serve(async (req) => {
       .select('slug, name, updated_at')
       .eq('is_active', true)
       .eq('is_public', true)
+      .eq('is_archived', false)
       .not('slug', 'is', null);
 
     if (topicsError) {
@@ -67,7 +68,6 @@ serve(async (req) => {
     }
 
     const baseUrl = 'https://curatr.pro';
-    const currentDate = new Date().toISOString();
 
     // Generate sitemap XML
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -76,42 +76,33 @@ serve(async (req) => {
         xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-  
-  <!-- Homepage -->
   <url>
     <loc>${baseUrl}</loc>
-    <lastmod>${currentDate}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   ${topics?.map(topic => `
-  <!-- ${topic.name} Feed -->
   <url>
     <loc>${baseUrl}/feed/${topic.slug}</loc>
-    <lastmod>${topic.updated_at || currentDate}</lastmod>
+    ${topic.updated_at ? `<lastmod>${topic.updated_at}</lastmod>` : ''}
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
-  
-  <!-- ${topic.name} Archive Page -->
   <url>
     <loc>${baseUrl}/feed/${topic.slug}/archive</loc>
-    <lastmod>${topic.updated_at || currentDate}</lastmod>
+    ${topic.updated_at ? `<lastmod>${topic.updated_at}</lastmod>` : ''}
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>
-  
-  <!-- ${topic.name} Briefings Archive -->
   <url>
     <loc>${baseUrl}/feed/${topic.slug}/briefings</loc>
-    <lastmod>${topic.updated_at || currentDate}</lastmod>
+    ${topic.updated_at ? `<lastmod>${topic.updated_at}</lastmod>` : ''}
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>`).join('')}
 
   ${dailyBriefings?.map(briefing => `
-  <!-- Daily Briefing: ${briefing.topics.slug} -->
   <url>
     <loc>${baseUrl}/feed/${briefing.topics.slug}/daily/${briefing.period_start}</loc>
     <lastmod>${briefing.updated_at || briefing.period_start}</lastmod>
@@ -120,7 +111,6 @@ serve(async (req) => {
   </url>`).join('') || ''}
 
   ${weeklyBriefings?.map(briefing => `
-  <!-- Weekly Briefing: ${briefing.topics.slug} -->
   <url>
     <loc>${baseUrl}/feed/${briefing.topics.slug}/weekly/${briefing.period_start}</loc>
     <lastmod>${briefing.updated_at || briefing.period_start}</lastmod>
@@ -129,10 +119,9 @@ serve(async (req) => {
   </url>`).join('') || ''}
 
   ${stories?.map(story => `
-  <!-- Story: ${story.title} -->
   <url>
     <loc>${baseUrl}/feed/${story.topic_slug}/story/${story.story_id}</loc>
-    <lastmod>${story.updated_at || currentDate}</lastmod>
+    ${story.updated_at ? `<lastmod>${story.updated_at}</lastmod>` : ''}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`).join('') || ''}
