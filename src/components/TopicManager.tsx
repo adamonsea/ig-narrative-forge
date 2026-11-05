@@ -361,7 +361,7 @@ export const TopicManager = () => {
                       </div>
                     </div>
 
-                    <FeedStatsBody stats={cardStats.get(topic.id)} topicSlug={topic.slug} />
+                    <FeedStatsBody stats={cardStats.get(topic.id)} topicSlug={topic.slug} topicId={topic.id} feedName={topic.name} />
                   </CardContent>
                 </Link>
               </Card>

@@ -485,3 +485,8 @@ All colors MUST be HSL.
   0%, 60% { box-shadow: 0 0 0 3px hsl(var(--primary) / 0.45); background-color: hsl(var(--primary) / 0.06); }
   100% { box-shadow: 0 0 0 3px hsl(var(--primary) / 0); background-color: transparent; }
 }
+
+@keyframes sparkle {
+  0% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(-14px); opacity: 0; }
+}
