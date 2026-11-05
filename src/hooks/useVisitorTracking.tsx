@@ -1,32 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
-// Generate a visitor ID based on browser fingerprint and IP approximation
-const generateVisitorId = (): string => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  ctx!.textBaseline = 'top';
-  ctx!.font = '14px Arial';
-  ctx!.fillText('Visitor tracking', 2, 2);
-  
-  const fingerprint = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + 'x' + screen.height,
-    new Date().getTimezoneOffset(),
-    canvas.toDataURL()
-  ].join('|');
-  
-  // Simple hash function
-  let hash = 0;
-  for (let i = 0; i < fingerprint.length; i++) {
-    const char = fingerprint.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  
-  return 'visitor_' + Math.abs(hash).toString(36);
-};
+import { getVisitorId, isLikelyBot } from '@/lib/visitorIdentity';
 
 export const useVisitorTracking = (topicId: string | undefined, pageType: string = 'feed') => {
   const [visitorId, setVisitorId] = useState<string>('');
@@ -35,7 +9,8 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
 
   useEffect(() => {
     // Generate visitor ID once on mount
-    const id = generateVisitorId();
+    if (isLikelyBot()) return;
+    const id = getVisitorId('visitor');
     setVisitorId(id);
   }, []);
 
