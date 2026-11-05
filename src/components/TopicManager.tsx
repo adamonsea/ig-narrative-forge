@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FeedSafetyDialog } from "@/components/topics/FeedSafetyDialog";
 import { FeedBackupsDialog } from "@/components/topics/FeedBackupsDialog";
-import { StatusPill, PageState } from "@/components/ui/editorial";
+import { PageState } from "@/components/ui/editorial";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { FeedStatsBody, FeedStatus, type FeedCardStats } from "@/components/dashboard/FeedStatsCard";
 import { readPendingBlueprint, clearPendingBlueprint, type PendingBlueprint } from "@/lib/feedBlueprint";
