@@ -251,7 +251,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             </ul>
           </PopoverContent>
         </Popover>
-        {" · "}{n(stats.published_total).toLocaleString("en-GB")} published
+        {" · "}{publishedShown.toLocaleString("en-GB")} published{isMonth ? " this month" : ""}
         </span>
       </p>
     </div>
