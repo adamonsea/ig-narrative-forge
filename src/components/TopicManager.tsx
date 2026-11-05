@@ -18,7 +18,7 @@ import { FeedSafetyDialog } from "@/components/topics/FeedSafetyDialog";
 import { FeedBackupsDialog } from "@/components/topics/FeedBackupsDialog";
 import { StatusPill, PageState } from "@/components/ui/editorial";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { FeedStatsBody, ReadingNow, type FeedCardStats } from "@/components/dashboard/FeedStatsCard";
+import { FeedStatsBody, FeedStatus, type FeedCardStats } from "@/components/dashboard/FeedStatsCard";
 import { readPendingBlueprint, clearPendingBlueprint, type PendingBlueprint } from "@/lib/feedBlueprint";
 import { getOptimizedIconUrl } from "@/lib/brandingImageUtils";
 
@@ -267,7 +267,7 @@ export const TopicManager = () => {
             return (
               <Card key={topic.id} className="relative overflow-hidden group hover:shadow-md transition-shadow duration-200 bg-card border-border">
                 <Link
-                  to={`/dashboard/topic/${topic.slug}`}
+                  to={`/dashboard/topic/${topic.slug}?tab=stats`}
                   className="block"
                   onClick={(e) => {
                     const target = e.target as HTMLElement;
@@ -279,7 +279,7 @@ export const TopicManager = () => {
                   <CardContent className="p-4 md:p-6 space-y-4">
                     {/* Identity row: name, state, actions */}
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         {feedIcon ? (
                           <img
                             src={feedIcon}
@@ -292,13 +292,12 @@ export const TopicManager = () => {
                           </span>
                         )}
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2.5 flex-wrap">
+                          <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
                             <h3 className="text-lg md:text-xl font-semibold tracking-tight group-hover:text-purple-dark transition-colors truncate">
                               {topic.name}
                             </h3>
-                            <StatusPill live={topic.is_public} onToggle={() => handlePublishToggle(topic)} />
+                            <FeedStatus live={topic.is_public} readingNow={Number(cardStats.get(topic.id)?.reading_now) || 0} onToggle={() => handlePublishToggle(topic)} />
                           </div>
-                          <div className="mt-1"><ReadingNow count={Number(cardStats.get(topic.id)?.reading_now) || 0} /></div>
                         </div>
                       </div>
 
