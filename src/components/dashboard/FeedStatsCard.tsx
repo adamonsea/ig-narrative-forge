@@ -234,7 +234,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
 
       {/* Line 4: muted meta */}
       <p className="text-sm text-muted-foreground tabular-nums">
-        <span className="whitespace-nowrap">{n(stats.readers_week).toLocaleString("en-GB")} readers ·</span> {" "}
+        <span className="whitespace-nowrap">{readersShown.toLocaleString("en-GB")} readers ·</span> {" "}
         <span className="whitespace-nowrap">
         <Popover>
           <PopoverTrigger asChild>
