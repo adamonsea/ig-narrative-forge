@@ -158,7 +158,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
   const runNudge = (e: React.MouseEvent, k: Nudge["kind"]) => {
     stop(e);
     if (!topicSlug) return;
-    if (k === "share_story" && stats.top_story_id) shareOrCopy(`${origin}/feed/${topicSlug}/story/${stats.top_story_id}`, stats.top_story_title || feedName);
+    if (k === "share_story" && (nudge?.storyId || stats.top_story_id)) shareOrCopy(`${origin}/feed/${topicSlug}/story/${nudge?.storyId || stats.top_story_id}`, nudge?.storyTitle || stats.top_story_title || feedName);
     else if (k === "share_feed") shareOrCopy(`${origin}/feed/${topicSlug}`, feedName);
     else if (k === "embed") navigate(`/feed/${topicSlug}/widget`);
     else if (k === "subscribe_prompt") navigate(`/dashboard/topic/${topicSlug}?tab=settings`);
