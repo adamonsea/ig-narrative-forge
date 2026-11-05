@@ -293,7 +293,7 @@ export const TopicManager = () => {
                         )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
-                            <h3 className="text-lg md:text-xl font-semibold tracking-tight group-hover:text-purple-dark transition-colors truncate">
+                            <h3 className="text-lg md:text-xl font-semibold tracking-tight group-hover:text-purple-dark transition-colors break-words">
                               {topic.name}
                             </h3>
                             <FeedStatus live={topic.is_public} readingNow={Number(cardStats.get(topic.id)?.reading_now) || 0} onToggle={() => handlePublishToggle(topic)} />

@@ -169,11 +169,13 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
           {readsWeek > 0 ? `${readsWeek} ${readsWeek === 1 ? "story read" : "stories read"} in your first week so far` : "Collecting your first week of readers"}
         </p>
       ) : (
-        <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-2">
-          <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
+        <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-1">
+          <span className="inline-flex items-end gap-2">
+            <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
+            {daily.length > 0 && <Sparkline values={daily} />}
+          </span>
           <span className="text-sm md:text-base text-muted-foreground">stories read this week</span>
           {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
-          {daily.length > 0 && <span className="self-end"><Sparkline values={daily} /></span>}
         </div>
       )}
 
