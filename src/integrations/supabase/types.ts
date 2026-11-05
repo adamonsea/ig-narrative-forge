@@ -1416,6 +1416,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_internal: boolean
           page_type: string | null
           referrer: string | null
           topic_id: string
@@ -1427,6 +1428,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_internal?: boolean
           page_type?: string | null
           referrer?: string | null
           topic_id: string
@@ -1438,6 +1440,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_internal?: boolean
           page_type?: string | null
           referrer?: string | null
           topic_id?: string
@@ -3673,6 +3676,7 @@ export type Database = {
           created_at: string
           id: string
           impression_date: string
+          is_internal: boolean
           story_id: string
           topic_id: string
           visitor_id: string
@@ -3681,6 +3685,7 @@ export type Database = {
           created_at?: string
           id?: string
           impression_date?: string
+          is_internal?: boolean
           story_id: string
           topic_id: string
           visitor_id: string
@@ -3689,6 +3694,7 @@ export type Database = {
           created_at?: string
           id?: string
           impression_date?: string
+          is_internal?: boolean
           story_id?: string
           topic_id?: string
           visitor_id?: string
@@ -3722,6 +3728,7 @@ export type Database = {
           created_at: string
           id: string
           interaction_type: string
+          is_internal: boolean
           referrer: string | null
           share_platform: string | null
           slide_index: number | null
@@ -3734,6 +3741,7 @@ export type Database = {
           created_at?: string
           id?: string
           interaction_type: string
+          is_internal?: boolean
           referrer?: string | null
           share_platform?: string | null
           slide_index?: number | null
@@ -3746,6 +3754,7 @@ export type Database = {
           created_at?: string
           id?: string
           interaction_type?: string
+          is_internal?: boolean
           referrer?: string | null
           share_platform?: string | null
           slide_index?: number | null
@@ -3804,6 +3813,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_internal: boolean
           is_reaction: boolean | null
           story_id: string
           swipe_type: string
@@ -3814,6 +3824,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_internal?: boolean
           is_reaction?: boolean | null
           story_id: string
           swipe_type: string
@@ -3824,6 +3835,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_internal?: boolean
           is_reaction?: boolean | null
           story_id?: string
           swipe_type?: string
@@ -6033,18 +6045,32 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: {
           arrivals_count: number
+          best_day_date: string
+          best_day_reads: number
+          best_prior_day: number
           email_subscribers: number
           first_read_date: string
-          insight_text: string
-          insight_type: string
           installs_total: number
+          loyal_reader_days: number
+          median_story_reads: number
+          new_country: string
+          new_country_readers: number
+          new_referrer: string
+          new_referrer_readers: number
+          published_total: number
           published_week: number
           push_subscribers: number
+          readers_prev_week: number
+          readers_today: number
+          readers_week: number
           reading_now: number
           reads_daily: number[]
           reads_prev_week: number
+          reads_total: number
           reads_week: number
           registrants_total: number
+          return_rate_prev: number
+          return_rate_week: number
           sources_count: number
           subscribers_total: number
           subscribers_week: number
@@ -6052,7 +6078,10 @@ export type Database = {
           top_story_image: string
           top_story_reads: number
           top_story_title: string
+          top_weekday: number
+          top_weekday_share: number
           topic_id: string
+          weekly_reads: number[]
         }[]
       }
       get_discover_feeds: {
