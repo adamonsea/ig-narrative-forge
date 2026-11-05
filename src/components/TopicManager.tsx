@@ -20,6 +20,7 @@ import { StatusPill, PageState } from "@/components/ui/editorial";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { FeedStatsBody, ReadingNow, type FeedCardStats } from "@/components/dashboard/FeedStatsCard";
 import { readPendingBlueprint, clearPendingBlueprint, type PendingBlueprint } from "@/lib/feedBlueprint";
+import { getOptimizedIconUrl } from "@/lib/brandingImageUtils";
 
 interface Topic {
   id: string;
@@ -261,6 +262,7 @@ export const TopicManager = () => {
       ) : (
         <div className="grid gap-5">
           {topics.map((topic) => {
+            const feedIcon = getOptimizedIconUrl(topic.branding_config, 'favicon');
 
             return (
               <Card key={topic.id} className="relative overflow-hidden group hover:shadow-md transition-shadow duration-200 bg-card border-border">
@@ -278,11 +280,17 @@ export const TopicManager = () => {
                     {/* Identity row: name, state, actions */}
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 min-w-0">
-                        <img
-                          src="/favicon.svg"
-                          alt="Curatr"
-                          className="w-10 h-10 rounded-lg flex-shrink-0"
-                        />
+                        {feedIcon ? (
+                          <img
+                            src={feedIcon}
+                            alt={`${topic.name} favicon`}
+                            className="w-10 h-10 rounded-lg flex-shrink-0 object-contain"
+                          />
+                        ) : (
+                          <span aria-hidden="true" className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center bg-muted text-muted-foreground font-semibold">
+                            {topic.name.charAt(0)}
+                          </span>
+                        )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2.5 flex-wrap">
                             <h3 className="text-lg md:text-xl font-semibold tracking-tight group-hover:text-purple-dark transition-colors truncate">
