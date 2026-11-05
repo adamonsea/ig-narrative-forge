@@ -56,7 +56,16 @@ export interface FeedCardStats {
   top_stop_seen?: number | null;
   median_stop_rate?: number | null;
   stop_qualifying_stories?: number | null;
+  reads_month?: number | null;
+  readers_month?: number | null;
+  published_month?: number | null;
+  reads_daily_month?: number[] | null;
 }
+
+export type CardPeriod = "week" | "month";
+const PERIOD_KEY = "curatr:card-period";
+export const getCardPeriod = (): CardPeriod =>
+  (typeof localStorage !== "undefined" && localStorage.getItem(PERIOD_KEY) === "month" ? "month" : "week");
 
 const toHighlightStats = (s: FeedCardStats): HighlightStats => ({
   reads_week: n(s.reads_week), reads_prev_week: n(s.reads_prev_week),
