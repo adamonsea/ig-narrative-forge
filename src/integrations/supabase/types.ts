@@ -3089,6 +3089,7 @@ export type Database = {
           country_code: string | null
           created_at: string | null
           id: string
+          is_internal: boolean
           page_path: string
           page_type: string
           referrer: string | null
@@ -3101,6 +3102,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string | null
           id?: string
+          is_internal?: boolean
           page_path: string
           page_type: string
           referrer?: string | null
@@ -3113,6 +3115,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string | null
           id?: string
+          is_internal?: boolean
           page_path?: string
           page_type?: string
           referrer?: string | null
@@ -5690,6 +5693,100 @@ export type Database = {
       }
     }
     Functions: {
+      _impl_ab_test_stats: {
+        Args: { p_days?: number; p_test_name: string }
+        Returns: {
+          clicks: number
+          ctr: number
+          impressions: number
+          unique_visitors: number
+          variant: string
+        }[]
+      }
+      _impl_source_health_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          articles_last_7_days: number
+          consecutive_failures: number
+          last_success_at: string
+          source_id: string
+          source_name: string
+          success_rate: number
+        }[]
+      }
+      _impl_topic_engagement_averages: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          avg_carousel_swipes: number
+          avg_final_slides_seen: number
+          avg_stories_engaged: number
+          play_mode_visitors_week: number
+          total_completed: number
+          total_source_clicks: number
+          total_stories_engaged: number
+          total_visitors: number
+        }[]
+      }
+      _impl_topic_install_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          installs_this_week: number
+          installs_total: number
+        }[]
+      }
+      _impl_topic_interaction_stats: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          articles_swiped: number
+          share_clicks: number
+          total_swipes: number
+        }[]
+      }
+      _impl_topic_registrant_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          registrants_this_week: number
+          registrants_total: number
+        }[]
+      }
+      _impl_topic_source_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          canonical_domain: string
+          feed_url: string
+          is_active: boolean
+          is_gathering: boolean
+          last_story_date: string
+          source_id: string
+          source_name: string
+          stories_published_7d: number
+          stories_published_total: number
+        }[]
+      }
+      _impl_user_dashboard_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          articles_disliked: number
+          articles_in_arrivals: number
+          articles_liked: number
+          avg_carousel_swipes: number
+          avg_final_slides_seen: number
+          avg_stories_engaged: number
+          installs_this_week: number
+          installs_total: number
+          play_mode_visits_week: number
+          quiz_responses_count: number
+          registrants_this_week: number
+          registrants_total: number
+          share_clicks: number
+          source_clicks: number
+          stories_published_week: number
+          topic_id: string
+          visits_last_week: number
+          visits_this_week: number
+          visits_today: number
+        }[]
+      }
       add_source_to_topic: {
         Args: {
           p_source_config?: Json
@@ -5745,6 +5842,8 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: boolean
       }
+      can_view_topic_stats: { Args: { p_topic_id: string }; Returns: boolean }
+      can_view_user_stats: { Args: { p_user_id: string }; Returns: boolean }
       check_newsletter_signup_rate_limit: {
         Args: { p_email_hash: string; p_ip_hash?: string }
         Returns: boolean
@@ -5764,6 +5863,10 @@ export type Database = {
         Returns: Json
       }
       cleanup_stuck_scrape_jobs: { Args: never; Returns: number }
+      count_topic_visitors: {
+        Args: { p_from: string; p_to?: string; p_topic_id: string }
+        Returns: number
+      }
       create_story_from_multi_tenant: {
         Args: {
           p_shared_content_id: string
