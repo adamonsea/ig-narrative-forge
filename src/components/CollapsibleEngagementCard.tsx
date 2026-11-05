@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, BarChart3, Gamepad2, Heart, ThumbsDown, User
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { EngagementFunnel } from '@/components/EngagementFunnel';
+import { EyeCatchingHeadlines } from '@/components/EyeCatchingHeadlines';
 import { engagementColors } from '@/lib/designTokens';
 
 interface CollapsibleEngagementCardProps {
@@ -235,6 +236,10 @@ export const CollapsibleEngagementCard = ({
               {/* Engagement Funnel */}
               <div className="pt-3 border-t border-border/20">
                 <EngagementFunnel topicId={topicId} />
+              </div>
+
+              <div className="pt-3 border-t border-border/20">
+                <EyeCatchingHeadlines topicId={topicId} />
               </div>
             </div>
           </CollapsibleContent>

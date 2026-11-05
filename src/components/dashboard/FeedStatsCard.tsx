@@ -53,6 +53,12 @@ export interface FeedCardStats {
   top_search_story_id?: string | null;
   top_search_story_title?: string | null;
   top_search_story_clicks?: number | null;
+  top_stop_story_id?: string | null;
+  top_stop_story_title?: string | null;
+  top_stop_rate?: number | null;
+  top_stop_seen?: number | null;
+  median_stop_rate?: number | null;
+  stop_qualifying_stories?: number | null;
 }
 
 const toHighlightStats = (s: FeedCardStats): HighlightStats => ({
@@ -74,6 +80,10 @@ const toHighlightStats = (s: FeedCardStats): HighlightStats => ({
   search_weeks: n(s.search_weeks), search_best_prior_week: n(s.search_best_prior_week),
   top_search_story_id: s.top_search_story_id ?? null, top_search_story_title: s.top_search_story_title ?? null,
   top_search_story_clicks: n(s.top_search_story_clicks),
+  top_stop_story_id: s.top_stop_story_id ?? null, top_stop_story_title: s.top_stop_story_title ?? null,
+  top_stop_rate: s.top_stop_rate == null ? null : Number(s.top_stop_rate), top_stop_seen: n(s.top_stop_seen),
+  median_stop_rate: s.median_stop_rate == null ? null : Number(s.median_stop_rate),
+  stop_qualifying_stories: n(s.stop_qualifying_stories),
 });
 
 const stop = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); };

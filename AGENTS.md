@@ -7,3 +7,5 @@
 - Every SECURITY DEFINER stats function must start with `can_view_topic_stats` / `can_view_user_stats` and return nothing otherwise; this keeps tenants from reading each other's analytics.
 - The /dashboard feed card reads all its figures from the single `get_dashboard_feed_cards` call; one guarded query keeps the card fast and tenant-safe.
 - Feed-card highlights and nudges are picked by pure rules in `src/lib/feedHighlights.ts` from the single card call (no AI); keeps every positive true and testable.
+- Every reader tracker (and GA) must pass `canTrackReader()` in `src/lib/visitorIdentity.ts` (not a bot, not "Essential only"); one gate keeps consent consistent.
+- Headline stop data is written only via the `record_story_views` batch RPC (insert or upgrade seen→paused, today only), from an IntersectionObserver-only tracker that sends on pagehide/hide; keeps the feed fast and rows tamper-safe.

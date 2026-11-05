@@ -37,12 +37,20 @@ export interface HighlightStats {
   top_search_story_id?: string | null;
   top_search_story_title?: string | null;
   top_search_story_clicks?: number;
+  // Headline stop rate (7 days, stories with 20+ external seen readers)
+  top_stop_story_id?: string | null;
+  top_stop_story_title?: string | null;
+  top_stop_rate?: number | null;
+  top_stop_seen?: number;
+  median_stop_rate?: number | null;
+  stop_qualifying_stories?: number;
 }
 
 export type HighlightKind =
   | "milestone" | "best_week" | "story_took_off" | "streak" | "best_day" | "reads_up" | "readers_up"
   | "new_referrer" | "new_subscribers" | "returning_up" | "new_country"
   | "search_up" | "top_search_story" | "best_search_week" | "fallback_search_total"
+  | "eye_catching"
   | "fallback_reads_total" | "fallback_subscribers" | "fallback_loyal" | "fallback_published";
 
 export interface Highlight { kind: HighlightKind; text: string; score: number; milestoneKey?: string }
@@ -154,6 +162,13 @@ export function candidates(s: HighlightStats, feedName: string, today = new Date
   if (s.top_search_story_id && s.top_search_story_title && (s.top_search_story_clicks ?? 0) >= 5) {
     out.push({ kind: "top_search_story", score: 50, text: `"${s.top_search_story_title}" was your top search story` });
   }
+  // 15. Eye-catching headline: 20+ seen, 25%+ stop rate, 1.5x the feed's typical, 3+ stories to compare
+  const rate = s.top_stop_rate ?? 0, med = s.median_stop_rate ?? 0;
+  if (s.top_stop_story_id && s.top_stop_story_title && (s.top_stop_seen ?? 0) >= 20 && rate >= 0.25
+      && (s.stop_qualifying_stories ?? 0) >= 3 && med > 0 && rate >= med * 1.5) {
+    out.push({ kind: "eye_catching", score: 58,
+      text: `"${s.top_stop_story_title}" stopped ${Math.round(rate * 100)}% of scrollers — your most eye-catching headline` });
+  }
   return out;
 }
 
@@ -172,7 +187,7 @@ export function fallback(s: HighlightStats, feedName: string): Highlight | null 
 
 const ORDER: HighlightKind[] = ["milestone", "best_week", "story_took_off", "streak", "best_day", "reads_up",
   "readers_up", "new_referrer", "new_subscribers", "returning_up", "new_country",
-  "best_search_week", "search_up", "top_search_story"];
+  "best_search_week", "search_up", "top_search_story", "eye_catching"];
 
 export function pickHighlight(s: HighlightStats, feedName: string, today = new Date()): Highlight | null {
   const list = candidates(s, feedName, today)
@@ -183,6 +198,9 @@ export function pickHighlight(s: HighlightStats, feedName: string, today = new D
 export function pickNudge(h: Highlight | null, s: HighlightStats): Nudge {
   const lowSubs = s.readers_week >= 50 && s.subscribers_week < s.readers_week * 0.05;
   if (h && (h.kind === "story_took_off" || h.kind === "best_day") && s.top_story_id) return { kind: "share_story", text: "Share it" };
+  if (h?.kind === "eye_catching" && s.top_stop_story_id) {
+    return { kind: "share_story", text: "Share it", storyId: s.top_stop_story_id, storyTitle: s.top_stop_story_title ?? undefined };
+  }
   if (h?.kind === "top_search_story" && s.top_search_story_id) {
     return { kind: "share_story", text: "Share it", storyId: s.top_search_story_id, storyTitle: s.top_search_story_title ?? undefined };
   }

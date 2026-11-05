@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { getVisitorId, getCachedCountry, isLikelyBot } from '@/lib/visitorIdentity';
+import { getVisitorId, getCachedCountry, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
 
 interface PageClassification {
   pageType: string;
@@ -83,7 +83,7 @@ export const useSiteVisitorTracking = () => {
     const trackKey = `${pagePath}:${today}`;
     
     // Skip if already tracked this path today
-    if (isLikelyBot()) return;
+    if (!canTrackReader()) return;
     if (hasTracked.current.has(trackKey)) return;
     hasTracked.current.add(trackKey);
 

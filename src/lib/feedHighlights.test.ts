@@ -80,3 +80,22 @@ describe("google search highlights", () => {
     expect(pickHighlight(s({ search_impressions_total: 600, reads_total: 200 }), "X", TODAY)?.kind).toBe("fallback_reads_total");
   });
 });
+
+describe("eye-catching headline", () => {
+  const eye = { top_stop_story_id: "st1", top_stop_story_title: "Pier reopens", top_stop_rate: 0.48, top_stop_seen: 30,
+    median_stop_rate: 0.2, stop_qualifying_stories: 5 };
+  test("20+ seen, 25%+ and 1.5x typical is cheered with a share nudge", () => {
+    const st = s(eye);
+    const h = pickHighlight(st, "X", TODAY);
+    expect(h?.text).toBe("\"Pier reopens\" stopped 48% of scrollers — your most eye-catching headline");
+    expect(pickNudge(h, st)).toMatchObject({ kind: "share_story", storyId: "st1" });
+  });
+  test("too few readers who saw it shows nothing", () => {
+    expect(pickHighlight(s({ ...eye, top_stop_seen: 19 }), "X", TODAY)).toBeNull();
+  });
+  test("not clearly above the feed's typical rate shows nothing", () => {
+    expect(pickHighlight(s({ ...eye, median_stop_rate: 0.35 }), "X", TODAY)).toBeNull();
+    expect(pickHighlight(s({ ...eye, stop_qualifying_stories: 2 }), "X", TODAY)).toBeNull();
+    expect(pickHighlight(s({ ...eye, top_stop_rate: 0.24, median_stop_rate: 0.1 }), "X", TODAY)).toBeNull();
+  });
+});

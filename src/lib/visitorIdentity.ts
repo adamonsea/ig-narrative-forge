@@ -36,3 +36,15 @@ export const getCachedCountry = (): string | null => {
   }
   return cc;
 };
+
+/** False only when the reader chose "Essential only" on the cookie banner. No answer = not opted out. */
+export const hasAnalyticsConsent = (): boolean => {
+  try {
+    const raw = localStorage.getItem('cookie_consent');
+    if (!raw) return true;
+    return JSON.parse(raw)?.analytics !== false;
+  } catch { return true; }
+};
+
+/** Single gate for every reader tracker: not a bot and not opted out. */
+export const canTrackReader = (): boolean => !isLikelyBot() && hasAnalyticsConsent();
