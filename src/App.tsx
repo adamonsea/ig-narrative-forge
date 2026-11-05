@@ -104,6 +104,7 @@ const App = () => {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/waitlist/welcome" element={<WaitlistWelcome />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/__card-preview" element={<CardPreview />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
                 <Route path="/dashboard/widgets" element={<WidgetsPage />} />
                 <Route path="/dashboard/widgets/test" element={<WidgetTestPage />} />

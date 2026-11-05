@@ -51,6 +51,7 @@ const mostRead: FeedCardStats = {
   ...base,
   reads_week: 37,
   reads_prev_week: 30,
+  weekly_reads: [22, 28, 31, 38, 37],
   top_story_reads: 40,
   median_story_reads: 5,
   subscribers_week: 2,
@@ -59,6 +60,7 @@ const mostRead: FeedCardStats = {
 // Quiet week: nothing earned, so the cumulative line shows instead.
 const cumulative: FeedCardStats = {
   ...base,
+  weekly_reads: [22, 28, 31, 38, 37],
   subscribers_total: 9,
   subscribers_week: 0,
   email_subscribers: 8,
@@ -77,6 +79,9 @@ const cumulative: FeedCardStats = {
 const firstWeek: FeedCardStats = {
   ...base,
   first_read_date: "2026-11-03",
+  reads_week: 12,
+  reads_prev_week: 0,
+  reads_daily: [3, 4, 5],
   reads_total: 12,
   published_total: 4,
   subscribers_total: 0,
