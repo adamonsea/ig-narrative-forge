@@ -23,6 +23,7 @@
     <script>
       (function(){
         var ua=navigator.userAgent||'';
+        try{var cc=JSON.parse(localStorage.getItem('cookie_consent')||'null');if(cc&&cc.analytics===false)return;}catch(e){}
         if(navigator.webdriver||/bot|crawl|spider|slurp|headless|lighthouse|preview|facebookexternalhit|python|curl|wget|puppeteer|playwright/i.test(ua))return;
         window.dataLayer=window.dataLayer||[];
         window.gtag=function(){dataLayer.push(arguments);};

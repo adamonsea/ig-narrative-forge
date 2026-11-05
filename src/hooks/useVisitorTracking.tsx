@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getVisitorId, isLikelyBot } from '@/lib/visitorIdentity';
+import { getVisitorId, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
 
 export const useVisitorTracking = (topicId: string | undefined, pageType: string = 'feed') => {
   const [visitorId, setVisitorId] = useState<string>('');
@@ -9,7 +9,7 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
 
   useEffect(() => {
     // Generate visitor ID once on mount
-    if (isLikelyBot()) return;
+    if (!canTrackReader()) return;
     const id = getVisitorId('visitor');
     setVisitorId(id);
   }, []);
