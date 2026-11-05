@@ -278,13 +278,11 @@ export const TopicManager = () => {
                     {/* Identity row: name, state, actions */}
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 min-w-0">
-                        {topic.branding_config?.logo_url && (
-                          <img
-                            src={topic.branding_config.logo_url}
-                            alt={`${topic.name} logo`}
-                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                          />
-                        )}
+                        <img
+                          src="/favicon.svg"
+                          alt="Curatr"
+                          className="w-10 h-10 rounded-lg flex-shrink-0"
+                        />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2.5 flex-wrap">
                             <h3 className="text-lg md:text-xl font-semibold tracking-tight group-hover:text-purple-dark transition-colors truncate">
