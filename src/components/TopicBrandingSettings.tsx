@@ -31,6 +31,15 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string>(topic.branding_config?.icon_url || '');
   const [illustrationColor, setIllustrationColor] = useState(topic.illustration_primary_color || '#3b82f6');
+  const cfg = (topic.branding_config ?? {}) as Record<string, unknown>;
+  const [colorMode, setColorMode] = useState<'single' | 'cycle' | 'random'>(
+    (cfg.illustration_color_mode as 'single' | 'cycle' | 'random') || 'single'
+  );
+  const [palette, setPalette] = useState<string[]>(
+    Array.isArray(cfg.illustration_color_palette) ? (cfg.illustration_color_palette as string[]) : []
+  );
+  const togglePalette = (c: string) =>
+    setPalette((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -225,6 +234,8 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
         icon_url: iconUrl,
         subheader: subheader.trim() || undefined,
         show_topic_name: !logoUrl,
+        illustration_color_mode: colorMode,
+        illustration_color_palette: palette,
         updated_at: new Date().toISOString()
       };
 
@@ -389,34 +400,82 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
           {/* Illustration Color Personalization */}
           <div>
             <Label htmlFor="illustrationColor" className="text-base font-medium">
-              Illustration Primary Color
+              Illustration colour
             </Label>
             <p className="text-sm text-muted-foreground mb-3">
-              Customize the primary color palette for story illustrations and visual elements
+              Choose one colour, a set that rotates, or let each picture pick its own.
             </p>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Input
-                  id="illustrationColor"
-                  type="color"
-                  value={illustrationColor}
-                  onChange={(e) => setIllustrationColor(e.target.value)}
-                  className="h-12 w-24 cursor-pointer"
-                />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">
-                  {illustrationColor.toUpperCase()}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  This color will be used in editorial illustrations across all stories in this topic
-                </p>
-              </div>
+            <div className="mb-4 inline-flex rounded-lg border border-border p-1" role="radiogroup" aria-label="Colour mode">
+              {([
+                ['single', 'One colour'],
+                ['cycle', 'Cycle colours'],
+                ['random', 'Random'],
+              ] as const).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="radio"
+                  aria-checked={colorMode === m}
+                  onClick={() => setColorMode(m)}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${colorMode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            
-            {/* Color Preview Swatches */}
+
+            {colorMode === 'random' && (
+              <p className="text-sm text-muted-foreground">
+                Every new picture gets a fresh colour picked at random, so the feed never repeats itself.
+              </p>
+            )}
+
+            {colorMode === 'single' && (
+            <div className="flex items-center gap-4">
+              <Input
+                id="illustrationColor"
+                type="color"
+                value={illustrationColor}
+                onChange={(e) => setIllustrationColor(e.target.value)}
+                className="h-12 w-24 cursor-pointer"
+              />
+              <p className="text-sm font-medium text-foreground">{illustrationColor.toUpperCase()}</p>
+            </div>
+            )}
+
+            {colorMode === 'cycle' && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Pick two or more colours. New pictures take them in turn.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {palette.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => togglePalette(c)}
+                      title="Remove"
+                      aria-label={`Remove ${c}`}
+                      className="w-10 h-10 rounded-md border-2 border-primary"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <label className="w-10 h-10 rounded-md border-2 border-dashed border-border flex items-center justify-center text-muted-foreground cursor-pointer relative" title="Add a colour">
+                    +
+                    <input
+                      type="color"
+                      aria-label="Add a colour"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={(e) => { const v = e.target.value; setPalette((p) => (p.includes(v) ? p : [...p, v])); }}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {colorMode !== 'random' && (
             <div className="mt-4 flex flex-wrap gap-2">
-              <p className="text-xs text-muted-foreground w-full mb-1">Quick Presets:</p>
+              <p className="text-xs text-muted-foreground w-full mb-1">Quick presets{colorMode === 'cycle' ? ' (tap to add or remove)' : ''}:</p>
               {[
                 { name: 'Blue', value: '#3b82f6' },
                 { name: 'Green', value: '#22c55e' },
@@ -426,23 +485,25 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                 { name: 'Pink', value: '#ec4899' },
                 { name: 'Teal', value: '#14b8a6' },
                 { name: 'Amber', value: '#f59e0b' }
-              ].map((preset) => (
+              ].map((preset) => {
+                const active = colorMode === 'cycle' ? palette.includes(preset.value) : illustrationColor === preset.value;
+                return (
                 <button
                   key={preset.name}
-                  onClick={() => setIllustrationColor(preset.value)}
-                  className="group relative"
+                  type="button"
+                  onClick={() => colorMode === 'cycle' ? togglePalette(preset.value) : setIllustrationColor(preset.value)}
                   title={preset.name}
+                  aria-pressed={active}
                 >
                   <div
-                    className="w-10 h-10 rounded-md border-2 border-border hover:border-primary transition-colors cursor-pointer"
+                    className={`w-10 h-10 rounded-md border-2 transition-colors ${active ? 'border-primary' : 'border-border hover:border-primary'}`}
                     style={{ backgroundColor: preset.value }}
                   />
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    {preset.name}
-                  </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
+            )}
           </div>
 
           {/* Preview */}

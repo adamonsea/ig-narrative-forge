@@ -485,6 +485,8 @@ serve(async (req) => {
         primaryColor = topicData.illustration_primary_color
         console.log(`Using topic primary color: ${primaryColor}`)
       }
+      primaryColor = await pickIllustrationColor(supabase, topicId, primaryColor)
+      console.log(`Illustration colour for this story: ${primaryColor}`)
       
       // Capture region for place-accurate image prompts
       if (topicData?.region) {
