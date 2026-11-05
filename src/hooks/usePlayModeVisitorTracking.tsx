@@ -1,3 +1,4 @@
+import { canTrackReader } from '@/lib/visitorIdentity';
 import { getVisitorId } from '@/lib/visitorIdentity';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +21,7 @@ export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
     }
 
     const trackVisit = async () => {
+    if (!canTrackReader()) return;
       try {
         const userAgent = navigator.userAgent;
         const referrer = document.referrer;
