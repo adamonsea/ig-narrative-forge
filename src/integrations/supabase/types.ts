@@ -6957,6 +6957,10 @@ export type Database = {
         Args: { p_required_role?: string; p_topic_id: string }
         Returns: boolean
       }
+      verify_search_sync_secret: {
+        Args: { p_secret: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "superadmin"
