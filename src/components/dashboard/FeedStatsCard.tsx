@@ -198,6 +198,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
       {/* Line 4: muted meta */}
       <p className="text-sm text-muted-foreground tabular-nums">
         <span className="whitespace-nowrap">{n(stats.readers_week).toLocaleString("en-GB")} readers ·</span> {" "}
+        <span className="whitespace-nowrap">
         <Popover>
           <PopoverTrigger asChild>
             <button type="button" onClick={stop} className="rounded hover:text-foreground transition-colors">
@@ -213,7 +214,8 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             </ul>
           </PopoverContent>
         </Popover>
-        <span className="whitespace-nowrap">{" · "}{n(stats.published_total).toLocaleString("en-GB")} published</span>
+        {" · "}{n(stats.published_total).toLocaleString("en-GB")} published
+        </span>
       </p>
     </div>
   );
