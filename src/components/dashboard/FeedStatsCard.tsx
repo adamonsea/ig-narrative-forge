@@ -44,6 +44,15 @@ export interface FeedCardStats {
   new_country_readers: number | null;
   top_weekday: number | null;
   top_weekday_share: number | null;
+  search_impressions_week?: number | null;
+  search_clicks_week?: number | null;
+  search_impressions_prev?: number | null;
+  search_impressions_total?: number | null;
+  search_weeks?: number | null;
+  search_best_prior_week?: number | null;
+  top_search_story_id?: string | null;
+  top_search_story_title?: string | null;
+  top_search_story_clicks?: number | null;
 }
 
 const toHighlightStats = (s: FeedCardStats): HighlightStats => ({
@@ -60,6 +69,11 @@ const toHighlightStats = (s: FeedCardStats): HighlightStats => ({
   reads_total: n(s.reads_total), published_total: n(s.published_total),
   top_weekday: s.top_weekday == null ? null : Number(s.top_weekday),
   top_weekday_share: s.top_weekday_share == null ? null : Number(s.top_weekday_share),
+  search_impressions_week: n(s.search_impressions_week), search_clicks_week: n(s.search_clicks_week),
+  search_impressions_prev: n(s.search_impressions_prev), search_impressions_total: n(s.search_impressions_total),
+  search_weeks: n(s.search_weeks), search_best_prior_week: n(s.search_best_prior_week),
+  top_search_story_id: s.top_search_story_id ?? null, top_search_story_title: s.top_search_story_title ?? null,
+  top_search_story_clicks: n(s.top_search_story_clicks),
 });
 
 const stop = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); };
@@ -194,6 +208,12 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
       {readersWeek > 0 && (
         <p className="text-base text-muted-foreground tabular-nums -mt-1">
           Readers: {readersToday > 0 && <>{readersToday} today · </>}{readersWeek} this week
+        </p>
+      )}
+
+      {n(stats.search_impressions_week) >= 10 && (
+        <p className="text-base text-muted-foreground tabular-nums -mt-2">
+          Google: {n(stats.search_impressions_week).toLocaleString("en-GB")} views · {n(stats.search_clicks_week).toLocaleString("en-GB")} {n(stats.search_clicks_week) === 1 ? "click" : "clicks"} this week
         </p>
       )}
 
