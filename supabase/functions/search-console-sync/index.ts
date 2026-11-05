@@ -36,9 +36,16 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-  const auth = req.headers.get("Authorization")?.replace("Bearer ", "") ?? req.headers.get("apikey") ?? "";
-  if (auth !== serviceKey && auth !== anonKey) return json({ error: "Unauthorized" }, 401);
+  // Only the service role or the daily job (holding the vault-stored sync key) may run this.
+  const bearer = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
+  const syncKey = req.headers.get("x-sync-secret") ?? "";
+  let allowed = !!serviceKey && bearer === serviceKey;
+  if (!allowed && syncKey) {
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
+    const { data } = await admin.rpc("verify_search_sync_secret", { p_secret: syncKey });
+    allowed = data === true;
+  }
+  if (!allowed) return json({ error: "Unauthorized" }, 401);
 
   const raw = Deno.env.get("GSC_SERVICE_ACCOUNT_JSON");
   if (!raw) return json({ skipped: "GSC_SERVICE_ACCOUNT_JSON not set" });
