@@ -27,6 +27,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   let observer: IntersectionObserver | null = null;
   let midFlushed = false;
   const started = performance.now();
+  (window as any).__stopDbg = { stories, get obs() { return !!observer; }, pending };
 
   const close = (e: Entry, now: number) => {
     if (e.since == null) return;
