@@ -119,7 +119,7 @@ export function FeedStatus({ live, readingNow, onToggle }: { live: boolean; read
       aria-label={live ? "Feed is live. Click to take offline." : "Feed is a draft. Click to publish."}
       className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
       <span className={`h-2 w-2 rounded-full ${live ? "bg-pop" : "bg-muted-foreground/50"}`} aria-hidden="true" />
-      <span className="tabular-nums">{live ? "Live" : "Draft"}{live && readingNow > 0 && <> · {readingNow} reading now</>}</span>
+      <span className="tabular-nums whitespace-nowrap">{live ? "Live" : "Draft"}{live && readingNow > 0 && <> · {readingNow} reading now</>}</span>
     </button>
   );
 }
@@ -127,11 +127,11 @@ export function FeedStatus({ live, readingNow, onToggle }: { live: boolean; read
 function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(1, ...values);
   return (
-    <div className="flex items-end gap-[3px] h-6" aria-hidden="true">
+    <div className="flex items-end gap-[2px] h-6" aria-hidden="true">
       {values.map((v, i) => (
         <span
           key={i}
-          className={`w-1.5 rounded-sm ${i === values.length - 1 ? "bg-primary/50" : "bg-muted-foreground/25"}`}
+          className={`w-1 rounded-sm ${i === values.length - 1 ? "bg-primary/50" : "bg-muted-foreground/25"}`}
           style={{ height: `${Math.max(10, (v / max) * 100)}%` }}
         />
       ))}
@@ -169,11 +169,15 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
           {readsWeek > 0 ? `${readsWeek} ${readsWeek === 1 ? "story read" : "stories read"} in your first week so far` : "Collecting your first week of readers"}
         </p>
       ) : (
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-          <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
-          <span className="text-base text-muted-foreground">stories read this week</span>
-          {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
-          {daily.length > 0 && <span className="self-end"><Sparkline values={daily} /></span>}
+        <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-1">
+          <span className="inline-flex items-end gap-1.5">
+            <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
+            {daily.length > 0 && <Sparkline values={daily} />}
+          </span>
+          <span className="inline-flex items-baseline gap-x-2">
+            <span className="text-sm md:text-base text-muted-foreground">stories read this week</span>
+            {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
+          </span>
         </div>
       )}
 
@@ -185,7 +189,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
           {isMostRead && stats.top_story_image && (
             <img src={stats.top_story_image} alt="" loading="lazy" className="w-6 h-6 rounded object-cover flex-shrink-0" />
           )}
-          <span className="truncate">
+          <span className="min-w-0 line-clamp-2">
             {isMostRead ? <>Most read: {stats.top_story_title} · {n(stats.top_story_reads).toLocaleString("en-GB")} reads</> : highlight.text}
           </span>
         </p>
@@ -193,7 +197,8 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
 
       {/* Line 4: muted meta */}
       <p className="text-sm text-muted-foreground tabular-nums">
-        {n(stats.readers_week).toLocaleString("en-GB")} readers · {" "}
+        <span className="whitespace-nowrap">{n(stats.readers_week).toLocaleString("en-GB")} readers ·</span> {" "}
+        <span className="whitespace-nowrap">
         <Popover>
           <PopoverTrigger asChild>
             <button type="button" onClick={stop} className="rounded hover:text-foreground transition-colors">
@@ -210,6 +215,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
           </PopoverContent>
         </Popover>
         {" · "}{n(stats.published_total).toLocaleString("en-GB")} published
+        </span>
       </p>
     </div>
   );
