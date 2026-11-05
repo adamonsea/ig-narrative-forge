@@ -48,16 +48,13 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
       try {
         await supabase
           .from('feed_visits')
-          .upsert({
+          .insert({
             topic_id: topicId,
             visitor_id: visitorId,
             user_agent: userAgent,
             referrer: referrer || null,
             visit_date: new Date().toISOString().split('T')[0],
             page_type: pageType
-          }, {
-            onConflict: 'topic_id,visitor_id,visit_date,page_type',
-            ignoreDuplicates: true
           });
       } catch (error) {
         console.debug('Visitor tracking failed:', error);
