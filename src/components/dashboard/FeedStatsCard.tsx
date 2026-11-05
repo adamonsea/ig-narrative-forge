@@ -169,9 +169,9 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
           {readsWeek > 0 ? `${readsWeek} ${readsWeek === 1 ? "story read" : "stories read"} in your first week so far` : "Collecting your first week of readers"}
         </p>
       ) : (
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+        <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-2">
           <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
-          <span className="text-base text-muted-foreground">stories read this week</span>
+          <span className="text-sm md:text-base text-muted-foreground">stories read this week</span>
           {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
           {daily.length > 0 && <span className="self-end"><Sparkline values={daily} /></span>}
         </div>
@@ -185,7 +185,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
           {isMostRead && stats.top_story_image && (
             <img src={stats.top_story_image} alt="" loading="lazy" className="w-6 h-6 rounded object-cover flex-shrink-0" />
           )}
-          <span className="truncate">
+          <span className="min-w-0 line-clamp-2">
             {isMostRead ? <>Most read: {stats.top_story_title} · {n(stats.top_story_reads).toLocaleString("en-GB")} reads</> : highlight.text}
           </span>
         </p>
