@@ -6121,14 +6121,18 @@ export type Database = {
           new_country_readers: number
           new_referrer: string
           new_referrer_readers: number
+          published_month: number
           published_total: number
           published_week: number
           push_subscribers: number
+          readers_month: number
           readers_prev_week: number
           readers_today: number
           readers_week: number
           reading_now: number
           reads_daily: number[]
+          reads_daily_month: number[]
+          reads_month: number
           reads_prev_week: number
           reads_total: number
           reads_week: number

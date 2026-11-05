@@ -56,7 +56,16 @@ export interface FeedCardStats {
   top_stop_seen?: number | null;
   median_stop_rate?: number | null;
   stop_qualifying_stories?: number | null;
+  reads_month?: number | null;
+  readers_month?: number | null;
+  published_month?: number | null;
+  reads_daily_month?: number[] | null;
 }
+
+export type CardPeriod = "week" | "month";
+const PERIOD_KEY = "curatr:card-period";
+export const getCardPeriod = (): CardPeriod =>
+  (typeof localStorage !== "undefined" && localStorage.getItem(PERIOD_KEY) === "month" ? "month" : "week");
 
 const toHighlightStats = (s: FeedCardStats): HighlightStats => ({
   reads_week: n(s.reads_week), reads_prev_week: n(s.reads_prev_week),
@@ -152,17 +161,45 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
     localStorage.setItem(k, "1");
     if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setCelebrate(true);
   }, [highlight?.milestoneKey, topicId]);
+  const [period, setPeriod] = useState<CardPeriod>(getCardPeriod);
+  const choosePeriod = (p: CardPeriod) => (e: React.SyntheticEvent) => {
+    stop(e);
+    setPeriod(p);
+    try { localStorage.setItem(PERIOD_KEY, p); } catch { /* private mode */ }
+  };
   if (!stats) {
     return <div className="h-24 rounded-lg bg-muted/50 animate-pulse" />;
   }
+  const isMonth = period === "month";
   const readsWeek = n(stats.reads_week);
-  const rise = visibleRise(weekChange(readsWeek, n(stats.reads_prev_week)));
+  const readsMonth = n(stats.reads_month);
+  const readsShown = isMonth ? readsMonth : readsWeek;
+  const rise = isMonth ? null : visibleRise(weekChange(readsWeek, n(stats.reads_prev_week)));
   const collecting = daysOfData(stats.first_read_date) < 7;
-  const daily = (stats.reads_daily || []).map(n);
+  const daily = (isMonth ? (stats.reads_daily_month || []) : (stats.reads_daily || [])).map(n);
+  const readersShown = isMonth ? n(stats.readers_month) : n(stats.readers_week);
+  const publishedShown = isMonth ? n(stats.published_month) : n(stats.published_total);
   const isMostRead = highlight?.kind === "story_took_off";
 
   return (
     <div className="space-y-3">
+      {/* Period toggle: 7 days / 30 days */}
+      <div className="flex justify-end -mb-1" role="group" aria-label="Stats period">
+        {(["week", "month"] as const).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={choosePeriod(p)}
+            aria-pressed={period === p}
+            className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+              period === p ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {p === "week" ? "7 days" : "30 days"}
+          </button>
+        ))}
+      </div>
+
       {/* Line 2: hero */}
       {collecting ? (
         <p className="text-base text-foreground">
@@ -171,11 +208,11 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
       ) : (
         <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-1">
           <span className="inline-flex items-end gap-1.5">
-            <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
+            <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsShown.toLocaleString("en-GB")}</span>
             {daily.length > 0 && <Sparkline values={daily} />}
           </span>
           <span className="inline-flex items-baseline gap-x-2">
-            <span className="text-sm md:text-base text-muted-foreground">stories read this week</span>
+            <span className="text-sm md:text-base text-muted-foreground">stories read this {isMonth ? "month" : "week"}</span>
             {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
           </span>
         </div>
@@ -197,7 +234,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
 
       {/* Line 4: muted meta */}
       <p className="text-sm text-muted-foreground tabular-nums">
-        <span className="whitespace-nowrap">{n(stats.readers_week).toLocaleString("en-GB")} readers ·</span> {" "}
+        <span className="whitespace-nowrap">{readersShown.toLocaleString("en-GB")} readers ·</span> {" "}
         <span className="whitespace-nowrap">
         <Popover>
           <PopoverTrigger asChild>
@@ -214,7 +251,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             </ul>
           </PopoverContent>
         </Popover>
-        {" · "}{n(stats.published_total).toLocaleString("en-GB")} published
+        {" · "}{publishedShown.toLocaleString("en-GB")} published{isMonth ? " this month" : ""}
         </span>
       </p>
     </div>
