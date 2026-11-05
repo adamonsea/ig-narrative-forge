@@ -19,15 +19,23 @@
     <meta name="referrer" content="no-referrer-when-downgrade" />
     <meta name="google-site-verification" content="Qxn4bzEaXDMhbYHpvCF2-OU1IyWkz-kV_gEHf7vHZ5M" />
     
-    <!-- Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C9VCW1ZPGR"></script>
+    <!-- Google Analytics 4 — skipped for bots/headless browsers; loaded only once the page is actually seen -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-C9VCW1ZPGR');
+      (function(){
+        var ua=navigator.userAgent||'';
+        if(navigator.webdriver||/bot|crawl|spider|slurp|headless|lighthouse|preview|facebookexternalhit|python|curl|wget|puppeteer|playwright/i.test(ua))return;
+        window.dataLayer=window.dataLayer||[];
+        window.gtag=function(){dataLayer.push(arguments);};
+        var loaded=false;
+        function load(){
+          if(loaded||document.visibilityState!=='visible')return;loaded=true;
+          var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-C9VCW1ZPGR';document.head.appendChild(s);
+          gtag('js',new Date());gtag('config','G-C9VCW1ZPGR');
+        }
+        setTimeout(load,1500);
+        document.addEventListener('visibilitychange',function(){setTimeout(load,1500);});
+      })();
     </script>
-    
     <!-- PWA Configuration - Dynamic manifest loaded per topic -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

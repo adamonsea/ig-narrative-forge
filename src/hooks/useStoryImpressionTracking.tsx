@@ -1,31 +1,8 @@
+import { getVisitorId } from '@/lib/visitorIdentity';
 import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate a visitor ID based on browser fingerprint
-const generateVisitorId = (): string => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  ctx!.textBaseline = 'top';
-  ctx!.font = '14px Arial';
-  ctx!.fillText('Visitor tracking', 2, 2);
-  
-  const fingerprint = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + 'x' + screen.height,
-    new Date().getTimezoneOffset(),
-    canvas.toDataURL()
-  ].join('|');
-  
-  let hash = 0;
-  for (let i = 0; i < fingerprint.length; i++) {
-    const char = fingerprint.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  
-  return 'visitor_' + Math.abs(hash).toString(36);
-};
+const generateVisitorId = (): string => getVisitorId('visitor');
 
 /**
  * Hook to track story impressions when users scroll past stories in the feed

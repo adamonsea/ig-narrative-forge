@@ -1,64 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-
-// Generate a visitor ID based on browser fingerprint
-const generateVisitorId = (): string => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  ctx!.textBaseline = 'top';
-  ctx!.font = '14px Arial';
-  ctx!.fillText('Site visitor tracking', 2, 2);
-  
-  const fingerprint = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + 'x' + screen.height,
-    new Date().getTimezoneOffset(),
-    canvas.toDataURL()
-  ].join('|');
-  
-  // Simple hash function
-  let hash = 0;
-  for (let i = 0; i < fingerprint.length; i++) {
-    const char = fingerprint.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  
-  return 'sv_' + Math.abs(hash).toString(36);
-};
-
-// Cache country code to avoid repeated API calls
-let cachedCountryCode: string | null = null;
-
-/**
- * Fetch visitor's country code using free IP geolocation API
- * Uses ipapi.co which provides 1000 free requests/day
- */
-const getCountryCode = async (): Promise<string | null> => {
-  if (cachedCountryCode) return cachedCountryCode;
-  
-  try {
-    const response = await fetch('https://ipapi.co/country/', {
-      signal: AbortSignal.timeout(3000) // 3 second timeout
-    });
-    
-    if (response.ok) {
-      const countryCode = await response.text();
-      // Validate it's a 2-letter code
-      if (/^[A-Z]{2}$/.test(countryCode.trim())) {
-        cachedCountryCode = countryCode.trim();
-        return cachedCountryCode;
-      }
-    }
-  } catch (error) {
-    // Silently fail - geolocation is optional
-    console.debug('Country detection failed:', error);
-  }
-  
-  return null;
-};
+import { getVisitorId, getCachedCountry, isLikelyBot } from '@/lib/visitorIdentity';
 
 interface PageClassification {
   pageType: string;
@@ -132,7 +75,7 @@ const topicIdCache = new Map<string, string>();
 export const useSiteVisitorTracking = () => {
   const location = useLocation();
   const hasTracked = useRef<Set<string>>(new Set());
-  const visitorId = useRef<string>(generateVisitorId());
+  const visitorId = useRef<string>(getVisitorId('sv'));
 
   useEffect(() => {
     const pagePath = location.pathname;
@@ -140,6 +83,7 @@ export const useSiteVisitorTracking = () => {
     const trackKey = `${pagePath}:${today}`;
     
     // Skip if already tracked this path today
+    if (isLikelyBot()) return;
     if (hasTracked.current.has(trackKey)) return;
     hasTracked.current.add(trackKey);
 
@@ -148,10 +92,8 @@ export const useSiteVisitorTracking = () => {
         const { pageType, topicSlug } = classifyPage(pagePath);
         
         // Fetch country code and topic ID in parallel
-        const [countryCode, topicId] = await Promise.all([
-          getCountryCode(),
-          resolveTopicId(topicSlug)
-        ]);
+        const countryCode = getCachedCountry();
+        const topicId = await resolveTopicId(topicSlug);
 
         // Insert the visit record
         await supabase
