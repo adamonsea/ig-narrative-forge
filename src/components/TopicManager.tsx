@@ -18,6 +18,7 @@ import { FeedSafetyDialog } from "@/components/topics/FeedSafetyDialog";
 import { FeedBackupsDialog } from "@/components/topics/FeedBackupsDialog";
 import { StatusPill, PageState } from "@/components/ui/editorial";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { FeedStatsBody, ReadingNow, type FeedCardStats } from "@/components/dashboard/FeedStatsCard";
 import { readPendingBlueprint, clearPendingBlueprint, type PendingBlueprint } from "@/lib/feedBlueprint";
 
 interface Topic {
@@ -57,6 +58,7 @@ export const TopicManager = () => {
   const [safetyTarget, setSafetyTarget] = useState<{ id: string; name: string } | null>(null);
   const [backupsTarget, setBackupsTarget] = useState<{ id: string; name: string } | null>(null);
   const [unpublishTarget, setUnpublishTarget] = useState<Topic | null>(null);
+  const [cardStats, setCardStats] = useState<Map<string, FeedCardStats>>(new Map());
   const [pendingBlueprint, setPendingBlueprint] = useState<PendingBlueprint | null>(null);
 
   const { toast } = useToast();
@@ -150,6 +152,10 @@ export const TopicManager = () => {
       });
 
       setTopics(topicsWithStats);
+      (supabase.rpc as any)('get_dashboard_feed_cards', { p_user_id: user?.id }).then(({ data, error }: any) => {
+        if (error) { console.error('Feed card stats failed:', error); return; }
+        setCardStats(new Map((data || []).map((r: FeedCardStats) => [r.topic_id, r])));
+      });
     } catch (error) {
       console.error('Error loading topics:', error);
       toast({
@@ -255,10 +261,6 @@ export const TopicManager = () => {
       ) : (
         <div className="grid gap-5">
           {topics.map((topic) => {
-            const wowChange = getWowChange(topic.visits_this_week || 0, topic.visits_last_week || 0);
-            const audience = getAudienceBreakdown(topic);
-            const trafficAlert = wowChange < -50;
-            const arrivalsAttention = (topic.articles_in_arrivals || 0) > 20;
 
             return (
               <Card key={topic.id} className="relative overflow-hidden group hover:shadow-md transition-shadow duration-200 bg-card border-border">
@@ -290,9 +292,7 @@ export const TopicManager = () => {
                             </h3>
                             <StatusPill live={topic.is_public} onToggle={() => handlePublishToggle(topic)} />
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
-                            {topic.articles_in_arrivals || 0} in arrivals · {topic.stories_published_this_week || 0} published this week · {topic._count?.sources || 0} sources
-                          </p>
+                          <div className="mt-1"><ReadingNow count={Number(cardStats.get(topic.id)?.reading_now) || 0} /></div>
                         </div>
                       </div>
 
@@ -361,35 +361,7 @@ export const TopicManager = () => {
                       </div>
                     </div>
 
-                    {/* Attention states first, one primary audience signal otherwise */}
-                    {trafficAlert ? (
-                      <div className="flex items-center gap-2 text-sm text-destructive">
-                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                        <span>
-                          Visitors down {Math.abs(wowChange)}% this week ({topic.visits_this_week || 0} vs {topic.visits_last_week || 0} last week)
-                        </span>
-                      </div>
-                    ) : arrivalsAttention ? (
-                      <div className="flex items-center gap-2 text-sm text-foreground">
-                        <TrendingUp className="w-4 h-4 text-purple-bright flex-shrink-0" />
-                        <span className="tabular-nums">
-                          {topic.articles_in_arrivals} stories waiting in Arrivals
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-baseline gap-3 text-sm">
-                        <span className="text-2xl font-semibold tabular-nums">{audience.total}</span>
-                        <span className="text-muted-foreground truncate">
-                          {audience.label === 'No subscribers yet' ? 'No subscribers yet' : `subscribers · ${audience.label}`}
-                        </span>
-                        {topic.visits_this_week ? (
-                          <span className="text-xs text-muted-foreground ml-auto tabular-nums">
-                            {topic.visits_this_week} visitors this week
-                            {wowChange > 0 && <span className="text-pop ml-1">+{wowChange}%</span>}
-                          </span>
-                        ) : null}
-                      </div>
-                    )}
+                    <FeedStatsBody stats={cardStats.get(topic.id)} topicSlug={topic.slug} />
                   </CardContent>
                 </Link>
               </Card>
