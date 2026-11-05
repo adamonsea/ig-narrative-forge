@@ -63,7 +63,7 @@ Disallow: /health
 
 # Sitemap location
 Sitemap: https://curatr.pro/sitemap.xml
-Sitemap: https://curatr.pro/sitemap-dynamic.xml
+Sitemap: https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/sitemap-xml
 
 # SEO page renderer for AI/search crawlers
 # Story pages at /feed/*/story/* are server-rendered for bots via seo-page edge function

@@ -9,21 +9,7 @@ const VISITOR_ID_KEY = 'curatr_visitor_id';
  * Get or create a persistent visitor ID.
  * Falls back to a session-based ID if localStorage is unavailable.
  */
-export const getVisitorId = (): string => {
-  const fallback = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+import { getVisitorId as getSharedVisitorId } from './visitorIdentity';
 
-  try {
-    let visitorId = localStorage.getItem(VISITOR_ID_KEY);
-    if (!visitorId) {
-      const uuid = globalThis.crypto && 'randomUUID' in globalThis.crypto
-        ? globalThis.crypto.randomUUID()
-        : fallback();
-      visitorId = uuid;
-      localStorage.setItem(VISITOR_ID_KEY, visitorId);
-    }
-    return visitorId;
-  } catch {
-    // localStorage can be blocked (e.g. private mode). Still return a stable-ish id.
-    return fallback();
-  }
-};
+// One browser code for every tracker, so readers match across tables.
+export const getVisitorId = (): string => getSharedVisitorId('visitor');
