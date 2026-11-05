@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { createHeadlineStopTracker, type HeadlineStopTracker } from "@/lib/headlineStopTracker";
 
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 import { useStoryImpressionTracking } from "@/hooks/useStoryImpressionTracking";
@@ -321,6 +322,14 @@ const TopicFeed = () => {
   
   // Track story impressions when stories are viewed
   const { trackImpression } = useStoryImpressionTracking(topic?.id);
+  const stopTrackerRef = useRef<HeadlineStopTracker | null>(null);
+  const isOwnFeed = !!user && !!topic && (topic as any).created_by === user.id;
+  useEffect(() => {
+    if (!topic?.id) return;
+    const t = createHeadlineStopTracker(topic.id, { skip: isOwnFeed });
+    stopTrackerRef.current = t;
+    return () => { t.destroy(); stopTrackerRef.current = null; };
+  }, [topic?.id, isOwnFeed]);
 
   // Detect first scroll and show pulse animation on play mode icon
   useEffect(() => {
@@ -617,6 +626,7 @@ const TopicFeed = () => {
               if (index === lastDisplayableStoryIndex) {
                 lastStoryElementRef(node);
               }
+              if (node) stopTrackerRef.current?.observe(node, story.id);
               if (node && sharedStoryObserverRef.current) {
                 storyObserverMapRef.current.set(node, story.id);
                 sharedStoryObserverRef.current.observe(node);

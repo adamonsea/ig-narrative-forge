@@ -9,7 +9,7 @@ const STOP_MS = 1500;
 const CAP_MS = 30000;
 const MID_FLUSH_MS = 3 * 60 * 1000;
 
-type Entry = { paused: boolean; dwell: number; since: number | null; sent: string };
+type Entry = { paused: boolean; dwell: number; since: number | null; sent: string; inView: boolean };
 
 export interface HeadlineStopTracker { observe: (el: Element, storyId: string) => void; destroy: () => void }
 
@@ -65,7 +65,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
       stories.forEach((e) => close(e, now));
       flush();
     }
-    // Timings restart on the next intersection change after the tab returns.
+    else stories.forEach((e) => { if (e.inView && e.since == null) e.since = now; });
   };
   const onPageHide = () => flush();
 
@@ -77,9 +77,11 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
       let e = stories.get(id);
       const isIn = en.isIntersecting && en.intersectionRatio >= SEEN_RATIO;
       if (isIn) {
-        if (!e) { e = { paused: false, dwell: 0, since: null, sent: '' }; stories.set(id, e); }
+        if (!e) { e = { paused: false, dwell: 0, since: null, sent: '', inView: false }; stories.set(id, e); }
+        e.inView = true;
         if (visible && e.since == null) e.since = now;
       } else if (e) {
+        e.inView = false;
         close(e, now);
       }
     }
