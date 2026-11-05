@@ -27,7 +27,6 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   let observer: IntersectionObserver | null = null;
   let midFlushed = false;
   const started = performance.now();
-  (window as any).__stopDbg = { stories, get obs() { return !!observer; }, pending };
 
   const close = (e: Entry, now: number) => {
     if (e.since == null) return;
@@ -71,13 +70,14 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   const onPageHide = () => flush();
 
   const onIntersect = (entries: IntersectionObserverEntry[]) => {
-    (window as any).__stopHits = ((window as any).__stopHits || 0) + entries.length; (window as any).__stopLast = entries.map(e => [e.intersectionRatio.toFixed(2), !!ids.get(e.target), document.visibilityState]);
     const now = performance.now();
     const visible = document.visibilityState === 'visible';
     for (const en of entries) {
       const id = ids.get(en.target); if (!id) continue;
       let e = stories.get(id);
-      const isIn = en.isIntersecting && en.intersectionRatio >= SEEN_RATIO;
+      // Tall cards: also count as in view when they fill 60%+ of the screen (values come with the entry, no layout reads).
+      const rootH = en.rootBounds?.height ?? 0;
+      const isIn = en.isIntersecting && (en.intersectionRatio >= SEEN_RATIO || (rootH > 0 && en.intersectionRect.height >= rootH * SEEN_RATIO));
       if (isIn) {
         if (!e) { e = { paused: false, dwell: 0, since: null, sent: '', inView: false }; stories.set(id, e); }
         e.inView = true;
@@ -91,7 +91,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   };
 
   const start = () => {
-    observer = new IntersectionObserver(onIntersect, { threshold: [0, SEEN_RATIO] });
+    observer = new IntersectionObserver(onIntersect, { threshold: [0, 0.3, 0.45, SEEN_RATIO, 0.75, 0.9] });
     pending.splice(0).forEach(([el, id]) => { ids.set(el, id); observer!.observe(el); });
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onPageHide);
