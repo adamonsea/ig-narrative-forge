@@ -6029,6 +6029,32 @@ export type Database = {
           story_count: number
         }[]
       }
+      get_dashboard_feed_cards: {
+        Args: { p_user_id: string }
+        Returns: {
+          arrivals_count: number
+          email_subscribers: number
+          first_read_date: string
+          insight_text: string
+          insight_type: string
+          installs_total: number
+          published_week: number
+          push_subscribers: number
+          reading_now: number
+          reads_daily: number[]
+          reads_prev_week: number
+          reads_week: number
+          registrants_total: number
+          sources_count: number
+          subscribers_total: number
+          subscribers_week: number
+          top_story_id: string
+          top_story_image: string
+          top_story_reads: number
+          top_story_title: string
+          topic_id: string
+        }[]
+      }
       get_discover_feeds: {
         Args: never
         Returns: {
