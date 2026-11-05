@@ -174,8 +174,10 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
             {daily.length > 0 && <Sparkline values={daily} />}
           </span>
-          <span className="text-sm md:text-base text-muted-foreground">stories read this week</span>
-          {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
+          <span className="inline-flex items-baseline gap-x-2">
+            <span className="text-sm md:text-base text-muted-foreground">stories read this week</span>
+            {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
+          </span>
         </div>
       )}
 
