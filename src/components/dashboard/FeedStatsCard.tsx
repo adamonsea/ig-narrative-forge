@@ -178,7 +178,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
   const collecting = daysOfData(stats.first_read_date) < 7;
   const daily = (isMonth ? (stats.reads_daily_month || []) : (stats.reads_daily || [])).map(n);
   const readersShown = isMonth ? n(stats.readers_month) : n(stats.readers_week);
-  const publishedShown = isMonth ? n(stats.published_month) : n(stats.published_total);
+  const publishedShown = isMonth ? n(stats.published_month) : n(stats.published_week);
   const isMostRead = highlight?.kind === "story_took_off";
 
   return (
