@@ -127,11 +127,11 @@ export function FeedStatus({ live, readingNow, onToggle }: { live: boolean; read
 function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(1, ...values);
   return (
-    <div className="flex items-end gap-[3px] h-6" aria-hidden="true">
+    <div className="flex items-end gap-[2px] h-6" aria-hidden="true">
       {values.map((v, i) => (
         <span
           key={i}
-          className={`w-1.5 rounded-sm ${i === values.length - 1 ? "bg-primary/50" : "bg-muted-foreground/25"}`}
+          className={`w-1 rounded-sm ${i === values.length - 1 ? "bg-primary/50" : "bg-muted-foreground/25"}`}
           style={{ height: `${Math.max(10, (v / max) * 100)}%` }}
         />
       ))}
@@ -170,7 +170,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
         </p>
       ) : (
         <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-1">
-          <span className="inline-flex items-end gap-2">
+          <span className="inline-flex items-end gap-1.5">
             <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
             {daily.length > 0 && <Sparkline values={daily} />}
           </span>
