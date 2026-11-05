@@ -403,7 +403,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
               Illustration colour
             </Label>
             <p className="text-sm text-muted-foreground mb-3">
-              Customize the primary color palette for story illustrations and visual elements
+              Choose one colour, a set that rotates, or let each picture pick its own.
             </p>
             <div className="mb-4 inline-flex rounded-lg border border-border p-1" role="radiogroup" aria-label="Colour mode">
               {([
