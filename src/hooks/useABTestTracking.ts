@@ -1,3 +1,4 @@
+import { canTrackReader } from '@/lib/visitorIdentity';
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getVariant, isTestActive } from '@/lib/abTesting';
@@ -27,7 +28,7 @@ export function useABTestTracking({
 
   // Track an event (non-blocking)
   const trackEvent = useCallback(async (eventType: 'impression' | 'click') => {
-    if (!isActive || !visitorId) return;
+    if (!isActive || !visitorId || !canTrackReader()) return;
 
     try {
       await supabase.from('ab_test_events').insert({
