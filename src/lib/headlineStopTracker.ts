@@ -95,7 +95,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
     window.addEventListener('pagehide', onPageHide);
   };
   const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, o?: { timeout: number }) => number);
-  if (ric) ric(start, { timeout: 3000 }); else setTimeout(start, 1200);
+  if (ric) ric.call(window, start, { timeout: 3000 }); else setTimeout(start, 1200);
 
   return {
     observe(el, storyId) {
