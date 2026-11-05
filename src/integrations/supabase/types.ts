@@ -3734,6 +3734,8 @@ export type Database = {
           id: string
           impression_date: string
           is_internal: boolean
+          max_dwell_ms: number
+          paused: boolean
           story_id: string
           topic_id: string
           visitor_id: string
@@ -3743,6 +3745,8 @@ export type Database = {
           id?: string
           impression_date?: string
           is_internal?: boolean
+          max_dwell_ms?: number
+          paused?: boolean
           story_id: string
           topic_id: string
           visitor_id: string
@@ -3752,6 +3756,8 @@ export type Database = {
           id?: string
           impression_date?: string
           is_internal?: boolean
+          max_dwell_ms?: number
+          paused?: boolean
           story_id?: string
           topic_id?: string
           visitor_id?: string
@@ -6109,6 +6115,7 @@ export type Database = {
           first_read_date: string
           installs_total: number
           loyal_reader_days: number
+          median_stop_rate: number
           median_story_reads: number
           new_country: string
           new_country_readers: number
@@ -6135,12 +6142,17 @@ export type Database = {
           search_impressions_week: number
           search_weeks: number
           sources_count: number
+          stop_qualifying_stories: number
           subscribers_total: number
           subscribers_week: number
           top_query: string
           top_search_story_clicks: number
           top_search_story_id: string
           top_search_story_title: string
+          top_stop_rate: number
+          top_stop_seen: number
+          top_stop_story_id: string
+          top_stop_story_title: string
           top_story_id: string
           top_story_image: string
           top_story_reads: number
@@ -6541,6 +6553,15 @@ export type Database = {
           title: string
         }[]
       }
+      get_topic_eye_catching: {
+        Args: { p_topic_id: string }
+        Returns: {
+          seen: number
+          stop_rate: number
+          story_id: string
+          title: string
+        }[]
+      }
       get_topic_filter_options: {
         Args: { p_topic_slug: string }
         Returns: {
@@ -6842,6 +6863,10 @@ export type Database = {
           p_visitor_id: string
         }
         Returns: undefined
+      }
+      record_story_views: {
+        Args: { p_items: Json; p_topic_id: string; p_visitor_id: string }
+        Returns: number
       }
       redeem_free_access_voucher: {
         Args: { p_code: string; p_email: string; p_user_id: string }
