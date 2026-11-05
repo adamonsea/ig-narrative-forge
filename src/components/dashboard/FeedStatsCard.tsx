@@ -1,9 +1,6 @@
-import { useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { pickHighlight, pickNudge, type HighlightStats, type Nudge } from "@/lib/feedHighlights";
+import { pickHighlight, type HighlightStats } from "@/lib/feedHighlights";
 
 export interface FeedCardStats {
   topic_id: string;
@@ -88,14 +85,6 @@ const toHighlightStats = (s: FeedCardStats): HighlightStats => ({
 
 const stop = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); };
 
-async function shareOrCopy(url: string, title: string) {
-  try {
-    if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { await navigator.share({ title, url }); return; }
-    await navigator.clipboard.writeText(url);
-    toast.success("Link copied");
-  } catch { /* user cancelled */ }
-}
-
 function Sparkle() {
   return (
     <span aria-hidden="true" className="pointer-events-none absolute -left-1 -top-1 h-6 w-6 motion-reduce:hidden">
@@ -123,42 +112,39 @@ export const weekChange = (thisWeek: number, lastWeek: number): number | null =>
   return Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
 };
 
-export function ReadingNow({ count }: { count: number }) {
-  if (!count) return null;
+/** One status signal: "● Live · N reading now" (count dropped when 0) or "● Draft". */
+export function FeedStatus({ live, readingNow, onToggle }: { live: boolean; readingNow: number; onToggle?: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full rounded-full bg-pop opacity-60 motion-safe:animate-ping" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-pop" />
-      </span>
-      <span className="tabular-nums">{count} reading now</span>
-    </span>
+    <button type="button" onClick={(e) => { stop(e); onToggle?.(); }}
+      aria-label={live ? "Feed is live. Click to take offline." : "Feed is a draft. Click to publish."}
+      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <span className={`h-2 w-2 rounded-full ${live ? "bg-pop" : "bg-muted-foreground/50"}`} aria-hidden="true" />
+      <span className="tabular-nums">{live ? "Live" : "Draft"}{live && readingNow > 0 && <> · {readingNow} reading now</>}</span>
+    </button>
   );
 }
 
 function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(1, ...values);
   return (
-    <div className="flex items-end gap-[3px] h-7" aria-hidden="true">
+    <div className="flex items-end gap-[3px] h-6" aria-hidden="true">
       {values.map((v, i) => (
         <span
           key={i}
-          className={`w-1.5 rounded-sm ${i === values.length - 1 ? "bg-primary" : "bg-primary/35"}`}
-          style={{ height: `${Math.max(8, (v / max) * 100)}%` }}
+          className={`w-1.5 rounded-sm ${i === values.length - 1 ? "bg-primary/50" : "bg-muted-foreground/25"}`}
+          style={{ height: `${Math.max(10, (v / max) * 100)}%` }}
         />
       ))}
     </div>
   );
 }
 
+/** Week-on-week change is only shown when it's a clear rise (10%+). */
+export const visibleRise = (change: number | null): number | null => (change !== null && change >= 10 ? change : null);
+
 export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed" }: { stats: FeedCardStats | undefined; topicSlug?: string; topicId?: string; feedName?: string }) {
-  const navigate = useNavigate();
   const highlight = useMemo(() => (stats ? pickHighlight(toHighlightStats(stats), feedName) : null), [stats, feedName]);
-  const nudge = useMemo(() => (stats ? pickNudge(highlight, toHighlightStats(stats)) : null), [stats, highlight]);
-  const dismissKey = nudge && topicId ? `curatr:nudge-dismissed:${topicId}:${nudge.kind}` : null;
-  const [dismissed, setDismissed] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
-  useEffect(() => { setDismissed(!!dismissKey && localStorage.getItem(dismissKey) === "1"); }, [dismissKey]);
   useEffect(() => {
     if (!highlight?.milestoneKey || !topicId) return;
     const k = `curatr:milestone-seen:${topicId}:${highlight.milestoneKey}`;
@@ -167,97 +153,51 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
     if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setCelebrate(true);
   }, [highlight?.milestoneKey, topicId]);
   if (!stats) {
-    return <div className="h-16 rounded-lg bg-muted/50 animate-pulse" />;
+    return <div className="h-24 rounded-lg bg-muted/50 animate-pulse" />;
   }
   const readsWeek = n(stats.reads_week);
-  const change = weekChange(readsWeek, n(stats.reads_prev_week));
+  const rise = visibleRise(weekChange(readsWeek, n(stats.reads_prev_week)));
   const collecting = daysOfData(stats.first_read_date) < 7;
   const daily = (stats.reads_daily || []).map(n);
-
-  const arrivals = n(stats.arrivals_count);
-  const readersToday = n(stats.readers_today);
-  const readersWeek = n(stats.readers_week);
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://curatr.pro";
-
-  const runNudge = (e: React.MouseEvent, k: Nudge["kind"]) => {
-    stop(e);
-    if (!topicSlug) return;
-    if (k === "share_story" && (nudge?.storyId || stats.top_story_id)) shareOrCopy(`${origin}/feed/${topicSlug}/story/${nudge?.storyId || stats.top_story_id}`, nudge?.storyTitle || stats.top_story_title || feedName);
-    else if (k === "share_feed") shareOrCopy(`${origin}/feed/${topicSlug}`, feedName);
-    else if (k === "embed") navigate(`/feed/${topicSlug}/widget`);
-    else if (k === "subscribe_prompt") navigate(`/dashboard/topic/${topicSlug}?tab=settings`);
-  };
+  const isMostRead = highlight?.kind === "story_took_off";
 
   return (
-    <div className="space-y-4">
-      {/* Hero */}
+    <div className="space-y-3">
+      {/* Line 2: hero */}
       {collecting ? (
-        <div>
-          <p className="text-lg font-medium">Collecting your first week of readers</p>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {readsWeek > 0 ? `${readsWeek} ${readsWeek === 1 ? "story read" : "stories read"} so far` : "Reads will appear here as people open your stories."}
-          </p>
-        </div>
+        <p className="text-base text-foreground">
+          {readsWeek > 0 ? `${readsWeek} ${readsWeek === 1 ? "story read" : "stories read"} in your first week so far` : "Collecting your first week of readers"}
+        </p>
       ) : (
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl md:text-5xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek}</span>
-            <span className="text-base text-muted-foreground">stories read this week</span>
-          </div>
-          <div className="flex items-end gap-3">
-            {change !== null && (
-              <span className={`text-sm font-medium tabular-nums ${change >= 0 ? "text-pop" : "text-muted-foreground"}`}>
-                {change >= 0 ? "▲" : "▼"} {Math.abs(change)}%
-              </span>
-            )}
-            {daily.length > 0 && <Sparkline values={daily} />}
-          </div>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+          <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsWeek.toLocaleString("en-GB")}</span>
+          <span className="text-base text-muted-foreground">stories read this week</span>
+          {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
+          {daily.length > 0 && <span className="self-end"><Sparkline values={daily} /></span>}
         </div>
       )}
 
-      {readersWeek > 0 && (
-        <p className="text-base text-muted-foreground tabular-nums -mt-1">
-          Readers: {readersToday > 0 && <>{readersToday} today · </>}{readersWeek} this week
-        </p>
-      )}
-
-      {n(stats.search_impressions_week) >= 10 && (
-        <p className="text-base text-muted-foreground tabular-nums -mt-2">
-          Google: {n(stats.search_impressions_week).toLocaleString("en-GB")} views · {n(stats.search_clicks_week).toLocaleString("en-GB")} {n(stats.search_clicks_week) === 1 ? "click" : "clicks"} this week
-        </p>
-      )}
-
-      {/* Most read */}
-      {stats.top_story_id && n(stats.top_story_reads) > 0 && topicSlug && (
-        <button
-          type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/feed/${topicSlug}/story/${stats.top_story_id}`); }}
-          className="w-full text-left flex items-center gap-3 rounded-lg border border-border p-2 pr-3 hover:bg-muted/50 transition-colors"
-        >
-          {stats.top_story_image ? (
-            <img src={stats.top_story_image} alt="" loading="lazy" className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-12 h-12 rounded-md bg-muted flex-shrink-0" />
+      {/* Line 3: one highlight */}
+      {highlight && (
+        <p className="relative flex items-center gap-2 text-base text-foreground min-w-0">
+          {celebrate && <Sparkle />}
+          <span aria-hidden="true" className="text-pop text-sm flex-shrink-0">✦</span>
+          {isMostRead && stats.top_story_image && (
+            <img src={stats.top_story_image} alt="" loading="lazy" className="w-6 h-6 rounded object-cover flex-shrink-0" />
           )}
-          <div className="min-w-0 flex-1">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Most read</p>
-            <p className="text-sm md:text-base font-medium line-clamp-2">{stats.top_story_title}</p>
-          </div>
-          <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">{n(stats.top_story_reads)} reads</span>
-        </button>
+          <span className="truncate">
+            {isMostRead ? <>Most read: {stats.top_story_title} · {n(stats.top_story_reads).toLocaleString("en-GB")} reads</> : highlight.text}
+          </span>
+        </p>
       )}
 
-      {/* Muted line */}
-      <p className="text-sm text-muted-foreground tabular-nums leading-relaxed">
-        {arrivals > 0 && <>{arrivals} in arrivals · </>}
+      {/* Line 4: muted meta */}
+      <p className="text-sm text-muted-foreground tabular-nums">
+        {n(stats.readers_week).toLocaleString("en-GB")} readers · {" "}
         <Popover>
           <PopoverTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className="underline decoration-dotted underline-offset-4 hover:text-foreground"
-            >
-              {n(stats.subscribers_total)} subscribers
+            <button type="button" onClick={stop} className="rounded hover:text-foreground transition-colors">
+              {n(stats.subscribers_total).toLocaleString("en-GB")} subscribers
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto text-sm" onClick={(e) => e.stopPropagation()}>
@@ -269,35 +209,8 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             </ul>
           </PopoverContent>
         </Popover>
-        {n(stats.subscribers_week) > 0 && <> (+{n(stats.subscribers_week)} this week)</>}
-        {" · "}{n(stats.published_week)} published · {n(stats.sources_count)} sources
+        {" · "}{n(stats.published_total).toLocaleString("en-GB")} published
       </p>
-
-      {/* Highlight + nudge */}
-      {highlight && (
-        <p className="relative inline-flex items-start gap-2 text-base font-medium text-foreground">
-          {celebrate && <Sparkle />}
-          <Sparkles className="w-4 h-4 mt-1 text-pop flex-shrink-0" aria-hidden="true" />
-          <span>{highlight.text}</span>
-        </p>
-      )}
-      {nudge && !dismissed && topicSlug && (
-        <div className="flex items-center justify-between gap-3 -mt-2 pl-6">
-          {nudge.kind === "weekday" ? (
-            <span className="text-sm text-muted-foreground">{nudge.text}</span>
-          ) : (
-            <button type="button" onClick={(e) => runNudge(e, nudge.kind)}
-              className="text-sm font-medium text-primary hover:underline underline-offset-4">
-              {nudge.text} →
-            </button>
-          )}
-          <button type="button" aria-label="Dismiss suggestion"
-            onClick={(e) => { stop(e); if (dismissKey) localStorage.setItem(dismissKey, "1"); setDismissed(true); }}
-            className="p-1 rounded text-muted-foreground hover:text-foreground">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }
