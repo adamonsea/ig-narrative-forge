@@ -1,3 +1,4 @@
+// @ts-nocheck -- run with: bun test ./src/components/dashboard/FeedStatsCard.test.ts
 import { describe, expect, test } from "bun:test";
 import { visibleRise, weekChange } from "./FeedStatsCard";
 
