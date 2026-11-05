@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sparkles } from "lucide-react";
 
@@ -71,6 +71,7 @@ function Sparkline({ values }: { values: number[] }) {
 }
 
 export function FeedStatsBody({ stats, topicSlug }: { stats: FeedCardStats | undefined; topicSlug?: string }) {
+  const navigate = useNavigate();
   if (!stats) {
     return <div className="h-16 rounded-lg bg-muted/50 animate-pulse" />;
   }
@@ -79,7 +80,6 @@ export function FeedStatsBody({ stats, topicSlug }: { stats: FeedCardStats | und
   const collecting = daysOfData(stats.first_read_date) < 7;
   const daily = (stats.reads_daily || []).map(n);
 
-  const meta: string[] = [];
   const arrivals = n(stats.arrivals_count);
 
   return (
@@ -111,11 +111,10 @@ export function FeedStatsBody({ stats, topicSlug }: { stats: FeedCardStats | und
 
       {/* Most read */}
       {stats.top_story_id && n(stats.top_story_reads) > 0 && topicSlug && (
-        <Link
-          to={`/feed/${topicSlug}/story/${stats.top_story_id}`}
-          role="button"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-3 rounded-lg border border-border p-2 pr-3 hover:bg-muted/50 transition-colors"
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/feed/${topicSlug}/story/${stats.top_story_id}`); }}
+          className="w-full text-left flex items-center gap-3 rounded-lg border border-border p-2 pr-3 hover:bg-muted/50 transition-colors"
         >
           {stats.top_story_image ? (
             <img src={stats.top_story_image} alt="" loading="lazy" className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
@@ -127,7 +126,7 @@ export function FeedStatsBody({ stats, topicSlug }: { stats: FeedCardStats | und
             <p className="text-sm md:text-base font-medium line-clamp-2">{stats.top_story_title}</p>
           </div>
           <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">{n(stats.top_story_reads)} reads</span>
-        </Link>
+        </button>
       )}
 
       {/* Muted line */}
@@ -154,7 +153,6 @@ export function FeedStatsBody({ stats, topicSlug }: { stats: FeedCardStats | und
         </Popover>
         {n(stats.subscribers_week) > 0 && <> (+{n(stats.subscribers_week)} this week)</>}
         {" · "}{n(stats.published_week)} published · {n(stats.sources_count)} sources
-        {meta.join("")}
       </p>
 
       {/* Insight */}

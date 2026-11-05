@@ -261,10 +261,6 @@ export const TopicManager = () => {
       ) : (
         <div className="grid gap-5">
           {topics.map((topic) => {
-            const wowChange = getWowChange(topic.visits_this_week || 0, topic.visits_last_week || 0);
-            const audience = getAudienceBreakdown(topic);
-            const trafficAlert = wowChange < -50;
-            const arrivalsAttention = (topic.articles_in_arrivals || 0) > 20;
 
             return (
               <Card key={topic.id} className="relative overflow-hidden group hover:shadow-md transition-shadow duration-200 bg-card border-border">
