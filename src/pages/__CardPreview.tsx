@@ -107,7 +107,7 @@ function PreviewCard({ stats, name }: { stats: FeedCardStats; name: string }) {
               </span>
               <div className="min-w-0">
                 <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
-                  <h3 className="text-lg md:text-xl font-semibold tracking-tight truncate">{name}</h3>
+                  <h3 className="text-lg md:text-xl font-semibold tracking-tight break-words">{name}</h3>
                   <FeedStatus live readingNow={stats.reading_now} />
                 </div>
               </div>
