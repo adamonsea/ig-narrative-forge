@@ -119,7 +119,7 @@ export function FeedStatus({ live, readingNow, onToggle }: { live: boolean; read
       aria-label={live ? "Feed is live. Click to take offline." : "Feed is a draft. Click to publish."}
       className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
       <span className={`h-2 w-2 rounded-full ${live ? "bg-pop" : "bg-muted-foreground/50"}`} aria-hidden="true" />
-      <span className="tabular-nums">{live ? "Live" : "Draft"}{live && readingNow > 0 && <> · {readingNow} reading now</>}</span>
+      <span className="tabular-nums whitespace-nowrap">{live ? "Live" : "Draft"}{live && readingNow > 0 && <> · {readingNow} reading now</>}</span>
     </button>
   );
 }
@@ -197,7 +197,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
 
       {/* Line 4: muted meta */}
       <p className="text-sm text-muted-foreground tabular-nums">
-        {n(stats.readers_week).toLocaleString("en-GB")} readers · {" "}
+        <span className="whitespace-nowrap">{n(stats.readers_week).toLocaleString("en-GB")} readers ·</span> {" "}
         <Popover>
           <PopoverTrigger asChild>
             <button type="button" onClick={stop} className="rounded hover:text-foreground transition-colors">
@@ -213,7 +213,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             </ul>
           </PopoverContent>
         </Popover>
-        {" · "}{n(stats.published_total).toLocaleString("en-GB")} published
+        <span className="whitespace-nowrap">{" · "}{n(stats.published_total).toLocaleString("en-GB")} published</span>
       </p>
     </div>
   );
