@@ -607,3 +607,6 @@ verify_jwt = false
 
 [functions.feed-lead-nudge]
 verify_jwt = false
+
+[functions.search-console-sync]
+verify_jwt = false
