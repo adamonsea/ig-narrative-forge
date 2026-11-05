@@ -71,6 +71,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   const onPageHide = () => flush();
 
   const onIntersect = (entries: IntersectionObserverEntry[]) => {
+    (window as any).__stopHits = ((window as any).__stopHits || 0) + entries.length; (window as any).__stopLast = entries.map(e => [e.intersectionRatio.toFixed(2), !!ids.get(e.target), document.visibilityState]);
     const now = performance.now();
     const visible = document.visibilityState === 'visible';
     for (const en of entries) {
