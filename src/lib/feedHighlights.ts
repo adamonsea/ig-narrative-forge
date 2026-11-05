@@ -27,17 +27,28 @@ export interface HighlightStats {
   published_total: number;
   top_weekday: number | null;
   top_weekday_share: number | null;
+  // Google Search (final days only; optional until data arrives)
+  search_impressions_week?: number;
+  search_clicks_week?: number;
+  search_impressions_prev?: number;
+  search_impressions_total?: number;
+  search_weeks?: number;
+  search_best_prior_week?: number;
+  top_search_story_id?: string | null;
+  top_search_story_title?: string | null;
+  top_search_story_clicks?: number;
 }
 
 export type HighlightKind =
   | "milestone" | "best_week" | "story_took_off" | "streak" | "best_day" | "reads_up" | "readers_up"
   | "new_referrer" | "new_subscribers" | "returning_up" | "new_country"
+  | "search_up" | "top_search_story" | "best_search_week" | "fallback_search_total"
   | "fallback_reads_total" | "fallback_subscribers" | "fallback_loyal" | "fallback_published";
 
 export interface Highlight { kind: HighlightKind; text: string; score: number; milestoneKey?: string }
 
 export type NudgeKind = "share_story" | "embed" | "subscribe_prompt" | "weekday" | "share_feed";
-export interface Nudge { kind: NudgeKind; text: string }
+export interface Nudge { kind: NudgeKind; text: string; storyId?: string; storyTitle?: string }
 
 const MILESTONES = [1000, 500, 250, 100, 50];
 const READ_MILESTONES = [10000, 1000];
@@ -129,6 +140,20 @@ export function candidates(s: HighlightStats, feedName: string, today = new Date
   if (s.new_country && s.new_country_readers >= 2) {
     out.push({ kind: "new_country", score: 35, text: `First readers from ${countryName(s.new_country)}` });
   }
+  // 12-14. Google Search (never on a search drop)
+  const sw = s.search_impressions_week ?? 0, sp = s.search_impressions_prev ?? 0;
+  const searchDown = sp > 0 && sw < sp;
+  if (!searchDown) {
+    if ((s.search_weeks ?? 0) >= 4 && sw >= 200 && sw > (s.search_best_prior_week ?? 0)) {
+      out.push({ kind: "best_search_week", score: 65, text: `Best week in Google yet: seen ${fmt(sw)} times` });
+    }
+    if (sp >= 100 && pct(sw, sp) >= 25) {
+      out.push({ kind: "search_up", score: 55, text: `Your feed appeared in Google ${fmt(sw)} times this week` });
+    }
+  }
+  if (s.top_search_story_id && s.top_search_story_title && (s.top_search_story_clicks ?? 0) >= 5) {
+    out.push({ kind: "top_search_story", score: 50, text: `"${s.top_search_story_title}" was your top search story` });
+  }
   return out;
 }
 
@@ -138,6 +163,7 @@ export function fallback(s: HighlightStats, feedName: string): Highlight | null 
     return { kind: "fallback_reads_total", score: 10, text: `${fmt(s.reads_total)} stories read since launch`,
       milestoneKey: rm ? `reads-${rm}` : undefined };
   }
+  if ((s.search_impressions_total ?? 0) >= 500) return { kind: "fallback_search_total", score: 9.5, text: `Seen in Google ${fmt(s.search_impressions_total!)} times since tracking began` };
   if (s.subscribers_total >= 10) return { kind: "fallback_subscribers", score: 9, text: `${fmt(s.subscribers_total)} people chose to follow ${feedName}` };
   if (s.loyal_reader_days >= 5) return { kind: "fallback_loyal", score: 8, text: `Your most loyal reader has come back on ${s.loyal_reader_days} days` };
   if (s.published_total >= 10) return { kind: "fallback_published", score: 7, text: `${fmt(s.published_total)} stories published to date` };
@@ -145,7 +171,8 @@ export function fallback(s: HighlightStats, feedName: string): Highlight | null 
 }
 
 const ORDER: HighlightKind[] = ["milestone", "best_week", "story_took_off", "streak", "best_day", "reads_up",
-  "readers_up", "new_referrer", "new_subscribers", "returning_up", "new_country"];
+  "readers_up", "new_referrer", "new_subscribers", "returning_up", "new_country",
+  "best_search_week", "search_up", "top_search_story"];
 
 export function pickHighlight(s: HighlightStats, feedName: string, today = new Date()): Highlight | null {
   const list = candidates(s, feedName, today)
@@ -156,6 +183,9 @@ export function pickHighlight(s: HighlightStats, feedName: string, today = new D
 export function pickNudge(h: Highlight | null, s: HighlightStats): Nudge {
   const lowSubs = s.readers_week >= 50 && s.subscribers_week < s.readers_week * 0.05;
   if (h && (h.kind === "story_took_off" || h.kind === "best_day") && s.top_story_id) return { kind: "share_story", text: "Share it" };
+  if (h?.kind === "top_search_story" && s.top_search_story_id) {
+    return { kind: "share_story", text: "Share it", storyId: s.top_search_story_id, storyTitle: s.top_search_story_title ?? undefined };
+  }
   if (h?.kind === "new_referrer") return { kind: "embed", text: "Ask them to embed your feed" };
   if (lowSubs) return { kind: "subscribe_prompt", text: "Readers like what they see — add a subscribe nudge" };
   if (h && (h.kind === "new_subscribers" || h.kind === "milestone")) return { kind: "subscribe_prompt", text: "Turn on the subscribe prompt" };

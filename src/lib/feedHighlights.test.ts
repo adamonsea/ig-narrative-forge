@@ -52,3 +52,31 @@ describe("nudge mapping", () => {
     expect(pickNudge(null, base).kind).toBe("share_feed");
   });
 });
+
+describe("google search highlights", () => {
+  test("search up needs 100+ views last week and a 25%+ rise", () => {
+    expect(pickHighlight(s({ search_impressions_week: 1240, search_impressions_prev: 900 }), "X", TODAY)?.text)
+      .toBe("Your feed appeared in Google 1,240 times this week");
+    expect(pickHighlight(s({ search_impressions_week: 160, search_impressions_prev: 80 }), "X", TODAY)).toBeNull();
+    expect(pickHighlight(s({ search_impressions_week: 110, search_impressions_prev: 100 }), "X", TODAY)).toBeNull();
+  });
+  test("a search drop is never cheered", () => {
+    const h = pickHighlight(s({ search_impressions_week: 300, search_impressions_prev: 500, search_weeks: 6, search_best_prior_week: 100 }), "X", TODAY);
+    expect(h).toBeNull();
+  });
+  test("top search story needs 5+ clicks and nudges sharing that story", () => {
+    const st = s({ top_search_story_id: "abc", top_search_story_title: "Pier reopens", top_search_story_clicks: 5 });
+    const h = pickHighlight(st, "X", TODAY);
+    expect(h?.text).toBe("\"Pier reopens\" was your top search story");
+    expect(pickNudge(h, st)).toMatchObject({ kind: "share_story", storyId: "abc" });
+    expect(pickHighlight(s({ ...st, top_search_story_clicks: 4 }), "X", TODAY)).toBeNull();
+  });
+  test("best search week needs 4+ weeks and 200+ views", () => {
+    expect(pickHighlight(s({ search_impressions_week: 250, search_impressions_prev: 240, search_weeks: 4, search_best_prior_week: 240 }), "X", TODAY)?.kind).toBe("best_search_week");
+    expect(pickHighlight(s({ search_impressions_week: 250, search_impressions_prev: 240, search_weeks: 3, search_best_prior_week: 240 }), "X", TODAY)).toBeNull();
+  });
+  test("search total sits in the fallback ladder after reads", () => {
+    expect(pickHighlight(s({ search_impressions_total: 600, subscribers_total: 50 }), "X", TODAY)?.kind).toBe("fallback_search_total");
+    expect(pickHighlight(s({ search_impressions_total: 600, reads_total: 200 }), "X", TODAY)?.kind).toBe("fallback_reads_total");
+  });
+});

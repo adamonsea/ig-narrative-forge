@@ -2715,6 +2715,63 @@ export type Database = {
           },
         ]
       }
+      search_daily: {
+        Row: {
+          avg_position: number | null
+          clicks: number
+          created_at: string
+          day: string
+          id: string
+          impressions: number
+          page_path: string
+          story_id: string | null
+          top_query: string | null
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          avg_position?: number | null
+          clicks?: number
+          created_at?: string
+          day: string
+          id?: string
+          impressions?: number
+          page_path: string
+          story_id?: string | null
+          top_query?: string | null
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          avg_position?: number | null
+          clicks?: number
+          created_at?: string
+          day?: string
+          id?: string
+          impressions?: number
+          page_path?: string
+          story_id?: string | null
+          top_query?: string | null
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_daily_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "search_daily_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_queries: {
         Row: {
           created_at: string
@@ -6071,9 +6128,19 @@ export type Database = {
           registrants_total: number
           return_rate_prev: number
           return_rate_week: number
+          search_best_prior_week: number
+          search_clicks_week: number
+          search_impressions_prev: number
+          search_impressions_total: number
+          search_impressions_week: number
+          search_weeks: number
           sources_count: number
           subscribers_total: number
           subscribers_week: number
+          top_query: string
+          top_search_story_clicks: number
+          top_search_story_id: string
+          top_search_story_title: string
           top_story_id: string
           top_story_image: string
           top_story_reads: number
