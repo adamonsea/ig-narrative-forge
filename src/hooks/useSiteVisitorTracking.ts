@@ -98,7 +98,7 @@ export const useSiteVisitorTracking = () => {
         // Insert the visit record
         await supabase
           .from('site_visits')
-          .upsert({
+          .insert({
             visitor_id: visitorId.current,
             page_path: pagePath,
             page_type: pageType,
@@ -107,9 +107,6 @@ export const useSiteVisitorTracking = () => {
             referrer: document.referrer || null,
             visit_date: today,
             country_code: countryCode
-          }, {
-            onConflict: 'visitor_id,page_path,visit_date',
-            ignoreDuplicates: true
           });
       } catch (error) {
         console.debug('Site visit tracking failed:', error);

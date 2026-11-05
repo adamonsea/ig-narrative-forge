@@ -24,14 +24,11 @@ export const useStoryImpressionTracking = (topicId: string | undefined) => {
         // Use direct insert with upsert to handle deduplication
         await supabase
           .from('story_impressions' as any)
-          .upsert({
+          .insert({
             topic_id: topicId,
             story_id: storyId,
             visitor_id: visitorId.current,
             impression_date: new Date().toISOString().split('T')[0]
-          }, {
-            onConflict: 'topic_id,story_id,visitor_id,impression_date',
-            ignoreDuplicates: true
           });
       } catch (error) {
         console.debug('Story impression tracking failed:', error);
