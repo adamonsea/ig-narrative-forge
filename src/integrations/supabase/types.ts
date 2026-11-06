@@ -6632,6 +6632,7 @@ export type Database = {
           quiz_responses_count: number
         }[]
       }
+      get_topic_readership: { Args: { p_topic_id: string }; Returns: Json }
       get_topic_registrant_stats: {
         Args: { p_topic_id: string }
         Returns: {
