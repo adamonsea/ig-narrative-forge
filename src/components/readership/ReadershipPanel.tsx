@@ -33,7 +33,7 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
   return (
     <div className="max-w-2xl space-y-12 py-6">
       <div>
-        <p className="font-display text-7xl md:text-8xl leading-none tabular-nums tracking-tight">
+        <p className="display-heading text-7xl md:text-8xl leading-none tabular-nums tracking-tight">
           {reads.toLocaleString()}
         </p>
         <p className="mt-3 text-lg text-muted-foreground">
