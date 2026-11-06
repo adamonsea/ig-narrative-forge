@@ -331,9 +331,37 @@ serve(async (req) => {
         if (filtered.length > 0) working = filtered;
       }
 
+      // Social proof (curator/internal views excluded). Fails open to the old widget.
+      let proof: any = null;
+      try {
+        const { data } = await supabase.rpc('get_widget_social_proof', {
+          p_topic_id: topic.id,
+          p_story_ids: working.map(s => s.id),
+        });
+        proof = data;
+      } catch (e) {
+        console.warn('social proof unavailable', e);
+      }
+      const storyReads: Record<string, number> = proof?.story_reads || {};
+      const MOST_READ_MIN_READS = 5;   // each story needs 5+ reads in 7 days
+      const MOST_READ_MIN_STORIES = 2; // and at least 2 stories must qualify
+      const READERS_MIN = 250;
+      const mostRead = working
+        .filter(s => (storyReads[s.id] || 0) >= MOST_READ_MIN_READS)
+        .sort((a, b) => (storyReads[b.id] || 0) - (storyReads[a.id] || 0))
+        .slice(0, MAX_FEATURED);
+      const readersAll = Number(proof?.readers_all_time || 0);
+      feedData.readers_rounded = readersAll >= READERS_MIN ? Math.floor(readersAll / 50) * 50 : null;
+
       // Featured strip: up to 3 newest stories from nominated sources, then the rest newest-first
       let formattedStories: any[];
-      if (featuredSources.length > 0) {
+      if (mostRead.length >= MOST_READ_MIN_STORIES) {
+        const ids = new Set(mostRead.map(s => s.id));
+        formattedStories = [
+          ...mostRead.map(s => ({ ...s, featured: true, most_read: true })),
+          ...working.filter(s => !ids.has(s.id)),
+        ].slice(0, maxStories);
+      } else if (featuredSources.length > 0) {
         const featured = working
           .filter(s =>
             featuredSources.includes(norm(s.source_key)) &&
@@ -351,6 +379,10 @@ serve(async (req) => {
       // Add weekly stats to feed data
       feedData.stories_this_week = storiesThisWeek;
       feedData.newest_story_age_minutes = newestStoryAgeMinutes;
+      const trendingId = proof?.trending_story_id;
+      if (trendingId) {
+        formattedStories = formattedStories.map(s => s.id === trendingId ? { ...s, trending: true } : s);
+      }
 
       console.log(`✅ Returning ${formattedStories.length} stories for widget (${storiesThisWeek} in 7 days, v3)`);
 

@@ -270,9 +270,11 @@
       `;
     }
 
-    const label = frequency === 'weekly'
-      ? 'Subscribe to the weekly briefing'
-      : 'Subscribe to daily email highlights';
+    const label = feed.readers_rounded >= 250
+      ? `Read by ${Number(feed.readers_rounded).toLocaleString('en-GB')}+ local people. Get the highlights ${frequency === 'weekly' ? 'weekly' : 'daily'}.`
+      : frequency === 'weekly'
+        ? 'Subscribe to the weekly briefing'
+        : 'Subscribe to daily email highlights';
 
     return `
       <div class="widget-subscribe">
@@ -406,7 +408,7 @@
             <span class="${bulletClass}" style="${bulletStyle}"></span>
             <div class="story-content">
               <span class="story-title">${escapeHTML(story.title)}</span>
-              ${sourceHTML}
+              ${story.trending ? '<span class="story-trending">Trending</span>' : ''}${sourceHTML}
             </div>
           </a>
         `;
@@ -430,6 +432,7 @@
           <a href="${featured.url}" target="_blank" rel="noopener" class="featured-story" data-story-id="${featured.id || ''}">
             ${featuredImageHTML}
             <h3 class="featured-title">${escapeHTML(featured.title)}</h3>
+            ${featured.trending ? '<span class="story-trending">Trending</span>' : ''}
             ${featuredSourceHTML}
           </a>
           <div class="stories-list">
@@ -468,7 +471,7 @@
         : `background: ${accent}`;
 
       let labelHTML = '';
-      if (showSectionLabels && index === 0) labelHTML = '<div class="section-label">Featured</div>';
+      if (showSectionLabels && index === 0) labelHTML = `<div class="section-label">${stories[0].most_read ? 'Most read' : 'Featured'}</div>`;
       if (showSectionLabels && index === leadingFeatured) labelHTML = '<div class="section-label">Latest</div>';
       
       return `
@@ -477,7 +480,7 @@
           <span class="${bulletClass}" style="${bulletStyle}"></span>
           <div class="story-content">
             <span class="story-title">${escapeHTML(story.title)}</span>
-            ${sourceHTML}
+            ${story.trending ? '<span class="story-trending">Trending</span>' : ''}${sourceHTML}
           </div>
         </a>
       `;
@@ -591,6 +594,14 @@
         gap: 8px;
       }
 
+      .story-trending {
+        display: inline-block;
+        margin-right: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: ${accent};
+      }
       .section-label {
         font-size: 11px;
         font-weight: 600;

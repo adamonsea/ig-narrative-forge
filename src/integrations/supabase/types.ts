@@ -6834,6 +6834,10 @@ export type Database = {
           visits_today: number
         }[]
       }
+      get_widget_social_proof: {
+        Args: { p_story_ids?: string[]; p_topic_id: string }
+        Returns: Json
+      }
       grant_user_credits: {
         Args: {
           p_amount: number
