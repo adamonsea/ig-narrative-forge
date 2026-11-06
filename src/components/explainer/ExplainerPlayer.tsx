@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TIMELINE, TOTAL_MS, sceneDuration } from './timeline';
 import { haptic, playCue, type CueName } from './sfx';
 import { clipForScene } from './avatar';
+import soundtrack from '@/assets/percussion-club.mp3.asset.json';
 
 const ACCENT = 'hsl(155,100%,67%)';
 const TICK = 50;
@@ -119,7 +120,8 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
     const bed = bedRef.current;
     if (!bed || renderMode) return;
     if (playing && !finished) {
-      const target = filmPosRef.current / 1000;
+      const position = filmPosRef.current / 1000;
+      const target = Number.isFinite(bed.duration) && bed.duration > 0 ? position % bed.duration : position;
       if (Math.abs(bed.currentTime - target) > 1.5) bed.currentTime = target;
       void bed.play().catch(() => undefined);
     } else if (!finished) {
@@ -178,7 +180,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
 
   return (
     <div className="relative flex h-full w-full flex-col bg-[hsl(214,50%,7%)] text-white">
-      {!renderMode && <audio ref={(el) => { if (el && !bedRef.current) el.volume = 0.4; bedRef.current = el; }} src="/audio/explainer-bed.mp3" preload="auto" aria-hidden="true" />}
+      {!renderMode && <audio ref={(el) => { if (el && !bedRef.current) el.volume = 0.4; bedRef.current = el; }} src={soundtrack.url} loop preload="auto" aria-hidden="true" />}
       {/* Stage */}
       <div className="relative flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
