@@ -11,3 +11,4 @@
 - Reaction identities must preserve an existing `curatr_visitor_id` verbatim; stored anonymous reactions use exact ID matching, while new readers use the shared visitor identity.
 - Headline stop data is written only via the `record_story_views` batch RPC (insert or upgrade seen→paused, today only), from an IntersectionObserver-only tracker that sends on pagehide/hide; keeps the feed fast and rows tamper-safe.
 - Never create test accounts or trigger auth emails to made-up or non-existent addresses (e.g. tenant-test-b@curatr.pro); it caused a Supabase bounce-rate warning on 5 Nov 2026. Test tenant isolation via SQL with simulated JWT claims, or ask the owner for a real test inbox.
+- Tenant Readership figures come only from the guarded `get_topic_readership` (same reads definition as the dashboard card); the Desk shows no stats, and the funnel/stop rates appear only above `MEANINGFUL_READERS` weekly readers.
