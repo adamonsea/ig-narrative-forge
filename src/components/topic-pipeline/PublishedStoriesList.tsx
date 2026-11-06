@@ -644,6 +644,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
               </div>
 
               {/* Content row: thumbnail + title */}
