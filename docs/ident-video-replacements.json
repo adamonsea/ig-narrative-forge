@@ -1,0 +1,31 @@
+{
+  "source": "public/reveal.html",
+  "captureUrl": "/reveal.html?clean=1&capture=1",
+  "width": 1280,
+  "height": 720,
+  "fps": 25,
+  "frames": 452,
+  "durationSeconds": 18.08,
+  "startSeconds": 0,
+  "mode": "full",
+  "audio": false,
+  "frameTime": "Math.min(frameIndex / 25, 14.2)",
+  "replacements": [
+    {
+      "original": "curatr-mark-reveal.mp4",
+      "replacement": "curatr-mark-reveal-quartered.mp4",
+      "assetPointer": "src/assets/curatr-mark-reveal-quartered.mp4.asset.json"
+    },
+    {
+      "original": "curatr-mark-reveal-v2.mp4",
+      "replacement": "curatr-mark-reveal-v2-quartered.mp4",
+      "assetPointer": "src/assets/curatr-mark-reveal-v2-quartered.mp4.asset.json"
+    },
+    {
+      "original": "curatr-mark-reveal-v3.mp4",
+      "replacement": "curatr-mark-reveal-v3-quartered.mp4",
+      "assetPointer": "src/assets/curatr-mark-reveal-v3-quartered.mp4.asset.json"
+    }
+  ],
+  "referenceAudit": "No original ident video filenames or asset pointers were referenced by app code. Homepage ident scenes already use public/reveal.html. Original Files retained as earlier revisions."
+}
