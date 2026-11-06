@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+// @ts-nocheck -- run with: bun test ./src/lib/pulse.test.ts
+import { describe, it, expect } from "bun:test";
 import { pickMilestone } from "./pulse";
 
 const base = { readers_all_time: 0, reads_today: 0, best_other_day_30: 0, dismissed: [] as string[] };
