@@ -314,6 +314,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   const visibleStories = stories.filter(s => ['draft', 'ready', 'published'].includes(s.status));
+  const visibleIdsKey = visibleStories.map(s => s.id).join(',');
+  const setPulseIds = pulseCtx?.setStoryIds;
+  useEffect(() => {
+    setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
+  }, [visibleIdsKey, setPulseIds]);
 
   return (
     <div className="space-y-4">
