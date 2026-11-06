@@ -16,6 +16,8 @@ import { SectionLabel } from '@/components/ui/section-label';
 import { Disclosure } from '@/components/ui/editorial';
 import { VoucherCodesPanel } from '@/components/admin/VoucherCodesPanel';
 import { SatiricalBenchPanel } from '@/components/admin/SatiricalBenchPanel';
+import { SiteStatsPanel } from '@/components/admin/SiteStatsPanel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminPanel() {
   const { user, loading, isAdmin, isProductOwner } = useAuth();
@@ -38,6 +40,15 @@ export default function AdminPanel() {
         <div className="container mx-auto py-8 space-y-8">
           <h1 className="display-heading text-3xl text-foreground">Admin</h1>
 
+          <Tabs defaultValue="operations">
+            <TabsList>
+              <TabsTrigger value="operations">Operations</TabsTrigger>
+              <TabsTrigger value="site-stats">Site stats</TabsTrigger>
+            </TabsList>
+            <TabsContent value="site-stats" className="pt-6">
+              <SiteStatsPanel />
+            </TabsContent>
+            <TabsContent value="operations" className="space-y-8 pt-6">
           <section>
             <SectionLabel>Operations</SectionLabel>
             <div className="space-y-6">
@@ -76,6 +87,8 @@ export default function AdminPanel() {
               <WaitlistPanel />
             </Disclosure>
           </section>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </AppLayout>

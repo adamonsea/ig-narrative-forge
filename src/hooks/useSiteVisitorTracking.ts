@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { applyExcludeLink, isExcludedBrowser } from '@/lib/filmPlays';
 import { getVisitorId, getCachedCountry, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
 
 interface PageClassification {
@@ -83,7 +84,8 @@ export const useSiteVisitorTracking = () => {
     const trackKey = `${pagePath}:${today}`;
     
     // Skip if already tracked this path today
-    if (!canTrackReader()) return;
+    applyExcludeLink();
+    if (!canTrackReader() || isExcludedBrowser()) return;
     if (hasTracked.current.has(trackKey)) return;
     hasTracked.current.add(trackKey);
 
