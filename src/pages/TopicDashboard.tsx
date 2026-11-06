@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { ReadershipPanel } from "@/components/readership/ReadershipPanel";
+import { TopicPulseProvider } from "@/hooks/useTopicPulse";
+import { ReadingNow, MilestoneNote, DeskLookTracker } from "@/components/pulse/PulseBits";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -634,6 +636,8 @@ const TopicDashboard = () => {
 
   return (
     <AppLayout>
+      <TopicPulseProvider topicId={topic.id}>
+      <DeskLookTracker active={activeTab === "feed"} />
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-6">
 
@@ -651,11 +655,14 @@ const TopicDashboard = () => {
                 />
               </span>
             </div>
+            <div className="flex items-center gap-3">
+            <ReadingNow />
             <Button variant="ghost" size="icon" asChild>
               <Link to={`/feed/${topic.slug}`} target="_blank">
                 <ExternalLink className="w-4 h-4" />
               </Link>
             </Button>
+            </div>
           </div>
 
           {isNewFeed && !setupDismissed && (
@@ -717,11 +724,11 @@ const TopicDashboard = () => {
               <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Pipeline
               </TabsTrigger>
+              <TabsTrigger value="stats" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
+                Readership
+              </TabsTrigger>
               <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Editorial control
-              </TabsTrigger>
-              <TabsTrigger value="stats" className="ml-auto rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
-                Readership
               </TabsTrigger>
               <TabsTrigger value="reviews" className=" rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
                 Reviews
@@ -745,6 +752,7 @@ const TopicDashboard = () => {
 
             {/* ===== FEED TAB ===== */}
             <TabsContent value="feed" className="space-y-6">
+              <MilestoneNote />
               {showGatheringProgress && (
                 <GatheringProgressIndicator 
                   topicId={topic.id}
@@ -826,6 +834,7 @@ const TopicDashboard = () => {
         )}
         <ProGateDialog open={proGateOpen} onOpenChange={setProGateOpen} returnTo={`/dashboard/topic/${topic.slug}`} />
       </div>
+      </TopicPulseProvider>
     </AppLayout>
   );
 };

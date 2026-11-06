@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import { useTopicPulse } from "@/hooks/useTopicPulse";
 import { pickMilestone } from "@/lib/pulse";
@@ -40,4 +41,22 @@ export function MilestoneNote() {
       </button>
     </div>
   );
+}
+
+/** Saves "last looked" against the account when the curator leaves the Desk. */
+export function DeskLookTracker({ active }: { active: boolean }) {
+  const ctx = useTopicPulse();
+  const mark = ctx?.markDeskLooked;
+  useEffect(() => {
+    if (!active || !mark) return;
+    const onHide = () => document.visibilityState === "hidden" && mark();
+    window.addEventListener("pagehide", mark);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", mark);
+      document.removeEventListener("visibilitychange", onHide);
+      mark(); // leaving the Desk (tab switch or navigating away)
+    };
+  }, [active, mark]);
+  return null;
 }
