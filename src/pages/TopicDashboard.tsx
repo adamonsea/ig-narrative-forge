@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { EngagementFunnel } from "@/components/EngagementFunnel";
-import { EyeCatchingHeadlines } from "@/components/EyeCatchingHeadlines";
+import { ReadershipPanel } from "@/components/readership/ReadershipPanel";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -722,7 +721,7 @@ const TopicDashboard = () => {
                 Editorial control
               </TabsTrigger>
               <TabsTrigger value="stats" className="ml-auto rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
-                Stats
+                Readership
               </TabsTrigger>
               <TabsTrigger value="reviews" className=" rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
                 Reviews
@@ -731,8 +730,7 @@ const TopicDashboard = () => {
 
             {/* ===== STATS TAB ===== */}
             <TabsContent value="stats" className="space-y-8">
-              <EngagementFunnel topicId={topic.id} />
-              <EyeCatchingHeadlines topicId={topic.id} topicSlug={topic.slug} />
+              <ReadershipPanel topicId={topic.id} topicSlug={topic.slug} />
             </TabsContent>
 
             {/* ===== REVIEWS TAB ===== */}
