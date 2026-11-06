@@ -73,6 +73,7 @@ export default {
 					foreground: 'hsl(var(--pop-foreground))'
 				},
 				mint: {
+					DEFAULT: 'hsl(var(--mint))',
 					soft: 'hsl(var(--mint-soft))'
 				},
 				purple: {

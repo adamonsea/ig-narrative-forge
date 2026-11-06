@@ -274,6 +274,7 @@ All colors MUST be HSL.
     --pop: 155 85% 38%;
     --pop-foreground: 214 50% 9%;
     --mint-soft: 155 70% 93%;
+    --mint: 155 100% 67%;
 
     /* Violet — selection, navigation, creative moments */
     --purple-bright: 270 65% 58%;
@@ -490,3 +491,8 @@ All colors MUST be HSL.
   0% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0); opacity: 1; }
   100% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(-14px); opacity: 0; }
 }
+
+@keyframes bar-rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes read-ring { 0%,100% { box-shadow: 0 0 0 2px hsl(var(--mint)); } 50% { box-shadow: 0 0 0 4px hsl(var(--mint) / 0.45); } }
+.reading-ring { animation: read-ring 2.4s ease-in-out infinite; box-shadow: 0 0 0 2px hsl(var(--mint)); }
+@media (prefers-reduced-motion: reduce) { .reading-ring { animation: none; } }
