@@ -1,0 +1,1 @@
+ALTER FUNCTION public.get_topic_pulse(uuid, uuid[]) VOLATILE;

@@ -100,6 +100,8 @@ interface PublishedStoriesListProps {
   hasMorePublished?: boolean;
   loadingMorePublished?: boolean;
   onLoadMorePublished?: () => void;
+  storyReads?: Record<string, number>;
+  risingStoryId?: string | null;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -117,7 +119,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   totalPublishedCount = null,
   hasMorePublished = false,
   loadingMorePublished = false,
-  onLoadMorePublished
+  onLoadMorePublished,
+  storyReads,
+  risingStoryId = null
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -552,6 +556,15 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   <span>{formatDistanceToNow(new Date(story.created_at), { addSuffix: true })}</span>
                 </div>
 
+                <div className="flex items-center gap-2">
+                {risingStoryId === story.id && (
+                  <span className="text-sm text-primary">↑ Rising</span>
+                )}
+                {isLive && (storyReads?.[story.id] ?? 0) > 0 && (
+                  <span className="text-sm text-muted-foreground tabular-nums" title="Reads in the last 7 days">
+                    {storyReads![story.id]} {storyReads![story.id] === 1 ? 'read' : 'reads'}
+                  </span>
+                )}
                 {/* Overflow menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -631,6 +644,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
               </div>
 
               {/* Content row: thumbnail + title */}

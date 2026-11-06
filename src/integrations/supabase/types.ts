@@ -866,6 +866,48 @@ export type Database = {
           },
         ]
       }
+      curator_topic_state: {
+        Row: {
+          created_at: string
+          desk_last_looked_at: string | null
+          dismissed_milestones: string[]
+          topic_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          desk_last_looked_at?: string | null
+          dismissed_milestones?: string[]
+          topic_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          desk_last_looked_at?: string | null
+          dismissed_milestones?: string[]
+          topic_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curator_topic_state_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curator_topic_state_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_content_availability: {
         Row: {
           articles_scraped_count: number | null
@@ -6017,6 +6059,10 @@ export type Database = {
               similarity_score: number
             }[]
           }
+      dismiss_topic_milestone: {
+        Args: { p_key: string; p_topic_id: string }
+        Returns: undefined
+      }
       emergency_manual_scrape: { Args: { p_topic_id?: string }; Returns: Json }
       find_duplicate_articles: {
         Args: { p_article_id: string; p_similarity_threshold?: number }
@@ -6625,6 +6671,10 @@ export type Database = {
           readers_today: number
         }[]
       }
+      get_topic_pulse: {
+        Args: { p_story_ids?: string[]; p_topic_id: string }
+        Returns: Json
+      }
       get_topic_quiz_stats: {
         Args: { p_days?: number; p_topic_id: string }
         Returns: {
@@ -6841,6 +6891,7 @@ export type Database = {
         }
         Returns: string
       }
+      mark_desk_looked: { Args: { p_topic_id: string }; Returns: undefined }
       migrate_articles_to_multi_tenant: {
         Args: { p_limit?: number }
         Returns: Json

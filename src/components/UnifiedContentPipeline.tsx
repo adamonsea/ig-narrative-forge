@@ -14,6 +14,7 @@ import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArti
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
+import { useTopicPulse } from "@/hooks/useTopicPulse";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
 
 interface Topic {
@@ -111,6 +112,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
   const multiTenantActions = useMultiTenantActions();
+  const pulseCtx = useTopicPulse();
+  const pulse = pulseCtx?.pulse;
   const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -311,6 +314,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   const visibleStories = stories.filter(s => ['draft', 'ready', 'published'].includes(s.status));
+  const visibleIdsKey = visibleStories.map(s => s.id).join(',');
+  const setPulseIds = pulseCtx?.setStoryIds;
+  useEffect(() => {
+    setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
+  }, [visibleIdsKey, setPulseIds]);
 
   return (
     <div className="space-y-4">
@@ -364,6 +372,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
             <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
           </div>
+          {(pulse?.new_arrivals ?? 0) > 0 && (
+            <p className="text-sm text-muted-foreground">{pulse!.new_arrivals} new since you last looked</p>
+          )}
           {totalArticles === 0 ? (
             <NextGatherPanel topicId={selectedTopicId} />
           ) : (
@@ -465,6 +476,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               loading={loading}
               topicSlug={topicSlug}
               topicId={selectedTopicId}
+              storyReads={pulse?.story_reads}
+              risingStoryId={pulse?.rising_story_id ?? null}
               totalPublishedCount={totalPublishedCount}
               hasMorePublished={hasMorePublished}
               loadingMorePublished={loadingMorePublished}
