@@ -8,5 +8,6 @@
 - The /dashboard feed card reads all its figures from the single `get_dashboard_feed_cards` call; one guarded query keeps the card fast and tenant-safe.
 - Feed-card highlights and nudges are picked by pure rules in `src/lib/feedHighlights.ts` from the single card call (no AI); keeps every positive true and testable.
 - Every reader tracker (and GA) must pass `canTrackReader()` in `src/lib/visitorIdentity.ts` (not a bot, not "Essential only"); one gate keeps consent consistent.
+- Reaction identities must preserve an existing `curatr_visitor_id` verbatim; stored anonymous reactions use exact ID matching, while new readers use the shared visitor identity.
 - Headline stop data is written only via the `record_story_views` batch RPC (insert or upgrade seen→paused, today only), from an IntersectionObserver-only tracker that sends on pagehide/hide; keeps the feed fast and rows tamper-safe.
 - Never create test accounts or trigger auth emails to made-up or non-existent addresses (e.g. tenant-test-b@curatr.pro); it caused a Supabase bounce-rate warning on 5 Nov 2026. Test tenant isolation via SQL with simulated JWT claims, or ask the owner for a real test inbox.
