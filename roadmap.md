@@ -1,5 +1,10 @@
 # Roadmap — scraping overhaul
 
+Saved ident video replacement (6 November 2026)
+- [ ] Measure original formats and start points; deterministically render the new reveal.
+- [ ] Upload three new assets and replace all existing references.
+- [ ] Verify matching media properties and quartered marks at each ending; do not publish.
+
 Logo replacement (6 November 2026)
 - [x] Replace supplied ident, shared logo and promo end mark exactly.
 - [x] Render matching favicon sizes and maskable app icon from SVG.
