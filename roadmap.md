@@ -1,5 +1,11 @@
 # Roadmap — scraping overhaul
 
+Logo replacement (6 November 2026)
+- [ ] Replace supplied ident, shared logo and promo end mark exactly.
+- [ ] Render matching favicon sizes and maskable app icon from SVG.
+- [ ] Audit other code marks, raster images and videos; update social preview only if needed.
+- [ ] Verify logo rendering and report changed and untouched assets without publishing.
+
 Safety rule (non-negotiable): every change is additive and fail-open. If a new
 discovery method, AI fallback or logging step errors, the existing scraping path
 runs exactly as it does today. No existing function is deleted until a grep of
