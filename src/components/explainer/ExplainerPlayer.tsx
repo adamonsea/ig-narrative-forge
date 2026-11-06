@@ -105,6 +105,10 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
   // One <audio> element for the whole film so scene changes never interrupt it.
   // Ducks under the presenter's voice so the two never compete.
   const bedRef = useRef<HTMLAudioElement | null>(null);
+  const attachBed = useCallback((el: HTMLAudioElement | null) => {
+    if (el && !bedRef.current) el.volume = 0.34;
+    bedRef.current = el;
+  }, []);
   const [speaking, setSpeaking] = useState(false);
   const filmPosMs = useMemo(
     () => TIMELINE.slice(0, index).reduce((s, x) => s + sceneDuration(x), 0) + elapsed,
@@ -180,7 +184,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
 
   return (
     <div className="relative flex h-full w-full flex-col bg-[hsl(214,50%,7%)] text-white">
-      {!renderMode && <audio ref={(el) => { if (el && !bedRef.current) el.volume = 0.4; bedRef.current = el; }} src={soundtrack.url} loop preload="auto" aria-hidden="true" />}
+      {!renderMode && <audio ref={attachBed} src={soundtrack.url} loop preload="auto" aria-hidden="true" />}
       {/* Stage */}
       <div className="relative flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
