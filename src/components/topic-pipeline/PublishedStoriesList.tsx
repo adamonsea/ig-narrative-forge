@@ -102,6 +102,7 @@ interface PublishedStoriesListProps {
   onLoadMorePublished?: () => void;
   storyReads?: Record<string, number>;
   risingStoryId?: string | null;
+  readingNowIds?: string[];
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -121,7 +122,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   loadingMorePublished = false,
   onLoadMorePublished,
   storyReads,
-  risingStoryId = null
+  risingStoryId = null,
+  readingNowIds = []
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -558,10 +560,10 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
                 <div className="flex items-center gap-2">
                 {risingStoryId === story.id && (
-                  <span className="text-sm text-primary">↑ Rising</span>
+                  <span className="text-sm font-medium text-pop">↑ Rising</span>
                 )}
                 {isLive && (storyReads?.[story.id] ?? 0) > 0 && (
-                  <span className="text-sm text-muted-foreground tabular-nums" title="Reads in the last 7 days">
+                  <span className="text-lg font-bold text-foreground tabular-nums" title="Reads in the last 7 days">
                     {storyReads![story.id]} {storyReads![story.id] === 1 ? 'read' : 'reads'}
                   </span>
                 )}
@@ -657,7 +659,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                     height={80}
                     loading="lazy"
                     decoding="async"
-                    className="w-20 h-20 object-cover rounded-md shrink-0"
+                    className={`w-20 h-20 object-cover rounded-md shrink-0 ${readingNowIds.includes(story.id) ? 'reading-ring' : ''}`}
+                    title={readingNowIds.includes(story.id) ? 'Being read now' : undefined}
                   />
                 )}
                 <div className="flex-1 min-w-0">

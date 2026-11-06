@@ -478,6 +478,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               topicId={selectedTopicId}
               storyReads={pulse?.story_reads}
               risingStoryId={pulse?.rising_story_id ?? null}
+              readingNowIds={pulse?.reading_now_story_ids}
               totalPublishedCount={totalPublishedCount}
               hasMorePublished={hasMorePublished}
               loadingMorePublished={loadingMorePublished}

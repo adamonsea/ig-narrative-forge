@@ -6,6 +6,7 @@ export interface TopicPulse extends PulseFigures {
   reading_now: number;
   story_reads: Record<string, number>;
   rising_story_id: string | null;
+  reading_now_story_ids?: string[];
   new_arrivals: number;
 }
 
