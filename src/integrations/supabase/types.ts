@@ -1451,6 +1451,33 @@ export type Database = {
         }
         Relationships: []
       }
+      film_plays: {
+        Row: {
+          created_at: string
+          id: string
+          milestone: string
+          play_date: string
+          referrer_host: string | null
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          milestone: string
+          play_date?: string
+          referrer_host?: string | null
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          milestone?: string
+          play_date?: string
+          referrer_host?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       illustration_batch_jobs: {
         Row: {
           attempts: number
@@ -6293,6 +6320,7 @@ export type Database = {
           topic_type: string
         }[]
       }
+      get_site_stats: { Args: { _days?: number }; Returns: Json }
       get_site_visitor_stats: {
         Args: { p_user_id: string }
         Returns: {
