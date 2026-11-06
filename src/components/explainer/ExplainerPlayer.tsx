@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TIMELINE, TOTAL_MS, sceneDuration } from './timeline';
 import { haptic, playCue, type CueName } from './sfx';
 import { clipForScene } from './avatar';
+import { recordFilmMilestone } from '@/lib/filmPlays';
 import soundtrack from '@/assets/percussion-club.mp3.asset.json';
 
 const ACCENT = 'hsl(155,100%,67%)';
@@ -118,6 +119,11 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
   filmPosRef.current = filmPosMs;
 
   useEffect(() => { setSpeaking(false); }, [scene.id]);
+
+  // Homepage film play counting (started / halfway / finished).
+  useEffect(() => { if (!renderMode) void recordFilmMilestone('started'); }, [renderMode]);
+  useEffect(() => { if (!renderMode && filmPosMs >= 30000) void recordFilmMilestone('halfway'); }, [renderMode, filmPosMs]);
+  useEffect(() => { if (!renderMode && finished) void recordFilmMilestone('finished'); }, [renderMode, finished]);
 
   // Play/pause with the film; resync position after skips.
   useEffect(() => {
