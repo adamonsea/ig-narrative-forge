@@ -8,3 +8,10 @@ export function readershipChange(thisWeek: number, lastWeek: number) {
   if (percent === 0) return null;
   return { direction: thisWeek > lastWeek ? ("up" as const) : ("down" as const), percent };
 }
+
+/** Bar heights (0–100) for the 7-day chart; days with reads always show a sliver. */
+export function barHeights(daily: number[]) {
+  const max = Math.max(0, ...daily);
+  if (max === 0) return daily.map(() => 0);
+  return daily.map((n) => (n <= 0 ? 0 : Math.max(4, Math.round((n / max) * 100))));
+}
