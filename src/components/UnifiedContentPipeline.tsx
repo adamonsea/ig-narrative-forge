@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LiveInsightStrip } from "@/components/topics/insight/LiveInsightStrip";
 import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
@@ -332,12 +331,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           </Button>
         </div>
       )}
-      {/* Live insight over the working columns */}
-      <LiveInsightStrip
-        topicId={selectedTopicId}
-        liveCount={totalPublishedCount || visibleStories.length}
-        arrivalsCount={totalArticles}
-      />
 
       {/* Mobile switch between the two columns */}
       <div className="md:hidden flex items-center gap-2" role="tablist" aria-label="Pipeline view">
@@ -366,7 +359,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         >
           <div className="flex items-center gap-2 pb-2 border-b">
             <h3 className="section-label text-foreground">Arrivals</h3>
-            <span className="text-xs text-muted-foreground tabular-nums">{totalArticles}</span>
+            {totalArticles > 0 && (
+              <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-medium text-background tabular-nums">{totalArticles}</span>
+            )}
             <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
           </div>
           {totalArticles === 0 ? (
