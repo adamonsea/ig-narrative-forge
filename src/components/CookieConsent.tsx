@@ -62,34 +62,22 @@ export const CookieConsent = ({ variant = 'feed' }: CookieConsentProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-50"
+            className="fixed bottom-3 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-50"
           >
-            <div className="bg-card border border-border rounded-xl shadow-lg p-4">
-              <div className="flex items-start gap-3">
-                <Cookie className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground">
-                    We use cookies to improve your experience.{' '}
-                    <Link to="/cookies" className="text-primary hover:underline">
-                      Learn more
-                    </Link>
-                  </p>
-                  <div className="flex gap-2 mt-3">
-                    <Button onClick={handleAccept} size="sm" className="flex-1">
-                      Accept
-                    </Button>
-                    <Button onClick={handleReject} variant="outline" size="sm" className="flex-1">
-                      Essential only
-                    </Button>
-                  </div>
-                </div>
-                <button 
-                  onClick={handleReject}
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label="Dismiss"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+            <div className="bg-card border border-border rounded-xl shadow-md px-3 py-2.5 flex items-center gap-3">
+              <p className="flex-1 min-w-0 text-sm text-foreground">
+                Cookies help us count readers.{' '}
+                <Link to="/cookies" className="text-muted-foreground underline underline-offset-2 hover:text-foreground">
+                  Learn more
+                </Link>
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <Button onClick={handleReject} variant="outline" size="sm">
+                  Essential only
+                </Button>
+                <Button onClick={handleAccept} size="sm">
+                  Accept
+                </Button>
               </div>
             </div>
           </motion.div>

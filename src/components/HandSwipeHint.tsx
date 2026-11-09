@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { READER_ONBOARDING_EXTRAS } from '@/lib/featureFlags';
+
+const MAX_HINT_VISITS = READER_ONBOARDING_EXTRAS ? 3 : 1;
+const HINT_DELAY_MS = READER_ONBOARDING_EXTRAS ? 500 : 1000;
 
 interface HandSwipeHintProps {
   topicSlug: string;
@@ -33,17 +37,17 @@ export const HandSwipeHint = ({ topicSlug, forceShow = false, onComplete }: Hand
     const storageKey = `feed_swipe_hint_count_${topicSlug}`;
     const visitCount = parseInt(localStorage.getItem(storageKey) || '0', 10);
 
-    if (visitCount < 3) {
+    if (visitCount < MAX_HINT_VISITS) {
       // Show hint after a brief delay
       const showTimer = setTimeout(() => {
         setIsVisible(true);
-      }, 500);
+      }, HINT_DELAY_MS);
 
       // Auto-dismiss after 3 seconds and increment counter
       const hideTimer = setTimeout(() => {
         setIsVisible(false);
         localStorage.setItem(storageKey, String(visitCount + 1));
-      }, 3500);
+      }, HINT_DELAY_MS + 3000);
 
       return () => {
         clearTimeout(showTimer);
@@ -99,12 +103,12 @@ export const HandSwipeHint = ({ topicSlug, forceShow = false, onComplete }: Hand
             </div>
 
             {/* Instruction Text */}
-            <div className="flex items-center gap-2 bg-primary/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
+            {READER_ONBOARDING_EXTRAS && <div className="flex items-center gap-2 bg-primary/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
               <span className="text-primary-foreground font-semibold text-sm">
                 Swipe for more
               </span>
               <ArrowRight className="w-4 h-4 text-primary-foreground" />
-            </div>
+            </div>}
           </div>
         </motion.div>
       )}
