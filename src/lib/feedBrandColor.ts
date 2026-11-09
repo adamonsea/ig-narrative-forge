@@ -129,3 +129,68 @@ export function feedBrandPalette(input: string | null | undefined): FeedBrandPal
 
   return { light, dark };
 }
+
+/**
+ * Colours for a feed-branded surface that must stand apart from the story
+ * cards (e.g. the in-feed sign-up card): a soft tint of the feed colour in
+ * light mode, a deeper tint in dark mode. Every text/button pairing is
+ * checked against the tinted surface, not the plain card.
+ */
+export interface BrandSurfaceTone {
+  surface: RGB;
+  border: RGB;
+  /** Body text on the surface — ≥ 4.5:1 */
+  text: RGB;
+  /** Secondary text on the surface — ≥ 4.5:1 */
+  muted: RGB;
+  /** Accent text (feed name) on the surface — ≥ 4.5:1 */
+  accent: RGB;
+  /** Button fill — ≥ 3:1 against the surface so the button shape is visible */
+  fill: RGB;
+  /** Button label — ≥ 4.5:1 on the fill */
+  onFill: RGB;
+  /** Email field background */
+  field: RGB;
+}
+
+export interface BrandSurfacePalette {
+  light: BrandSurfaceTone;
+  dark: BrandSurfaceTone;
+}
+
+/** Minimum separation between the tinted surface and the plain story card. */
+export const SURFACE_MIN_LIGHT = 1.12;
+export const SURFACE_MIN_DARK = 1.15;
+
+function tintUntil(card: RGB, tint: RGB, start: number, max: number, min: number): RGB {
+  let out = mix(card, tint, start);
+  for (let t = start; t <= max + 1e-4 && contrast(out, card) < min; t += 0.02) out = mix(card, tint, t);
+  return out;
+}
+
+function surfaceTone(base: RGB, mode: 'light' | 'dark'): BrandSurfaceTone {
+  const light = mode === 'light';
+  const card = light ? FEED_CARD_LIGHT : FEED_CARD_DARK;
+  const ink = light ? FEED_TEXT_DARK : FEED_TEXT_LIGHT;
+  // A feed colour too close to the card can't tint it visibly: tint with ink instead.
+  const tintSource = contrast(base, card) < 1.3 ? ink : base;
+  const surface = light
+    ? tintUntil(card, tintSource, 0.1, 0.4, SURFACE_MIN_LIGHT)
+    : tintUntil(card, tintSource, 0.14, 0.45, SURFACE_MIN_DARK);
+
+  const text = adjustUntil(ink, surface, 7, light ? [0, 0, 0] : [255, 255, 255]);
+  const muted = adjustUntil(mix(text, surface, 0.22), surface, 4.5, text);
+  const accent = adjustUntil(base, surface, 4.5, ink);
+  // Too pale (light) or too dark (dark) to show as a button on the tint:
+  // use the feed's ink colour for the button instead of a muddy shade.
+  const shape = contrast(base, surface) >= 3 ? base : ink;
+  const { fill, onFill } = buttonTone(shape, mode);
+  const border = mix(surface, accent, light ? 0.35 : 0.45);
+  const field = light ? [255, 255, 255] as RGB : mix(surface, [0, 0, 0], 0.25);
+  return { surface, border, text, muted, accent, fill, onFill, field };
+}
+
+export function feedBrandSurface(input: string | null | undefined): BrandSurfacePalette {
+  const base = parseColor(input) ?? FALLBACK;
+  return { light: surfaceTone(base, 'light'), dark: surfaceTone(base, 'dark') };
+}
