@@ -3805,6 +3805,7 @@ export type Database = {
           is_internal: boolean
           max_dwell_ms: number
           paused: boolean
+          position: number | null
           story_id: string
           topic_id: string
           visitor_id: string
@@ -3816,6 +3817,7 @@ export type Database = {
           is_internal?: boolean
           max_dwell_ms?: number
           paused?: boolean
+          position?: number | null
           story_id: string
           topic_id: string
           visitor_id: string
@@ -3827,6 +3829,7 @@ export type Database = {
           is_internal?: boolean
           max_dwell_ms?: number
           paused?: boolean
+          position?: number | null
           story_id?: string
           topic_id?: string
           visitor_id?: string
@@ -6631,15 +6634,6 @@ export type Database = {
           title: string
         }[]
       }
-      get_topic_eye_catching: {
-        Args: { p_topic_id: string }
-        Returns: {
-          seen: number
-          stop_rate: number
-          story_id: string
-          title: string
-        }[]
-      }
       get_topic_filter_options: {
         Args: { p_topic_slug: string }
         Returns: {
@@ -7011,6 +7005,17 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       snapshot_sentiment_keywords: { Args: never; Returns: undefined }
+      story_stop_scores: {
+        Args: { p_since: string; p_topic_id: string }
+        Returns: {
+          expected_rate: number
+          qualifies: boolean
+          score: number
+          seen: number
+          stop_rate: number
+          story_id: string
+        }[]
+      }
       test_rss_import: { Args: { p_source_name?: string }; Returns: Json }
       test_search_functionality: {
         Args: { p_search_term?: string }
