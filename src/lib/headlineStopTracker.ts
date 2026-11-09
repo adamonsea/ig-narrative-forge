@@ -7,7 +7,7 @@
 import { canTrackReader, getVisitorId } from './visitorIdentity';
 
 const SEEN_RATIO = 0.6;
-const STOP_MS = 1500;
+const STOP_MS = 3000; // a "stop" = 3s+ continuous dwell (matches story_stop_scores)
 const CAP_MS = 30000;
 const MID_FLUSH_MS = 3 * 60 * 1000;
 
