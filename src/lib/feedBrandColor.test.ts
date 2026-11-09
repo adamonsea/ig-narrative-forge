@@ -50,3 +50,23 @@ describe('feed-branded button contrast', () => {
     expect(parseColor('0 0% 100%')).toEqual([255, 255, 255]);
   });
 });
+
+import { feedBrandSurface, SURFACE_MIN_LIGHT, SURFACE_MIN_DARK } from './feedBrandColor';
+
+describe('sign-up card surface stands apart from story cards and stays readable', () => {
+  for (const sample of SAMPLES) {
+    for (const mode of ['light', 'dark'] as const) {
+      it(`${sample} ${mode}`, () => {
+        const t = feedBrandSurface(sample)[mode];
+        const card = mode === 'light' ? FEED_CARD_LIGHT : FEED_CARD_DARK;
+        expect(contrast(t.surface, card)).toBeGreaterThanOrEqual(mode === 'light' ? SURFACE_MIN_LIGHT : SURFACE_MIN_DARK);
+        expect(contrast(t.text, t.surface)).toBeGreaterThanOrEqual(7);
+        expect(contrast(t.muted, t.surface)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(t.accent, t.surface)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(t.onFill, t.fill)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(t.fill, t.surface)).toBeGreaterThanOrEqual(3);
+        expect(contrast(t.text, t.field)).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+  }
+});
