@@ -153,3 +153,22 @@ describe('shared slide size', () => {
     expect(r.overflow).toEqual([1]);
   });
 });
+
+describe('older credit tidy-up never deletes real text', () => {
+  const { stripGeneratedSourceAttribution } = require('./stripSourceAttribution');
+  test('credit followed by a sentence keeps the sentence', () => {
+    expect(stripGeneratedSourceAttribution('Source: Sussex Police via SussexExpress. Officers want to trace the driver.'))
+      .toBe('Source: Sussex Police via SussexExpress. Officers want to trace the driver.');
+  });
+  test('pipe-separated and standalone credits still go', () => {
+    expect(stripGeneratedSourceAttribution('Source: bbc.co.uk | The pier reopens.')).toBe('The pier reopens.');
+    expect(stripGeneratedSourceAttribution('The pier reopens.\nVia: sussexexpress.co.uk')).toBe('The pier reopens.');
+  });
+  test('full pipeline: appeal share ask survives a leading credit', () => {
+    const out = prepareStorySlides(
+      [{ content: 'Headline' }, { content: 'Source: Sussex Police via SussexExpress. Share this appeal to help trace Arthur.' }],
+      stripGeneratedSourceAttribution
+    );
+    expect(out.slides[1].content).toBe('Share this appeal to help trace Arthur.');
+  });
+});
