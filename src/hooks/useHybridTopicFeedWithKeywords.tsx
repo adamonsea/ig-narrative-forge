@@ -5,6 +5,7 @@ import { getContextAwareTimeout, isInAppBrowser, isGmailWebView } from '@/lib/de
 import { getCachedFeed, setCachedFeed, removeStoryFromCachedFeed, upsertStoryInCachedFeed } from '@/lib/feedCache';
 import { prefetchBriefings } from '@/lib/briefingsCache';
 import { getDisplayDate } from '@/lib/displayDate';
+import { FEED_FILTERS_ENABLED } from '@/lib/featureFlags';
 
 // Optimization #3: Strip production console.log - noop in prod, real log in dev
 const devLog = import.meta.env.DEV
@@ -1319,6 +1320,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [formatSourceName]);
 
   const loadFilterStoryIndex = useCallback(async (topicData: Topic | null, forceReload: boolean = false) => {
+    if (!FEED_FILTERS_ENABLED) return;
     if (!topicData?.id) return;
     
     // Skip if already loading, unless force reload requested
@@ -1544,6 +1546,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [extractDomain, slug]);
 
   const ensureFilterStoryIndexLoaded = useCallback(() => {
+    if (!FEED_FILTERS_ENABLED) return;
     if (!topic || filterIndexLoadingRef.current) return;
 
     if (filterStoryIndex.length === 0) {
@@ -1909,6 +1912,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   // Prefetch server filter results in background (for "More like this" optimization)
   const prefetchForFilter = useCallback(async (keywords: string[], sources: string[]) => {
+    if (!FEED_FILTERS_ENABLED) return;
     if (!topic) return;
     
     const key = [...keywords].sort().join(',') + '|' + [...sources].sort().join(',');
@@ -2683,6 +2687,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     availableSources.some(s => s.count > 0);
 
   const filterOptionsReady = 
+    !FEED_FILTERS_ENABLED ||
     filterIndexTimedOut ||
     hasNoFilterTermsConfigured ||
     hasUsableFilters;

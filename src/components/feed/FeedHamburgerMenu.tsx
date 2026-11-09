@@ -8,6 +8,7 @@ interface FeedHamburgerMenuProps {
   aboutPageEnabled?: boolean;
   latestDaily?: string;
   latestWeekly?: string;
+  showFilters?: boolean;
   hasActiveFilters?: boolean;
   onOpenFilters: () => void;
   onClearFilters?: () => void;
@@ -21,6 +22,7 @@ export const FeedHamburgerMenu = ({
   aboutPageEnabled = false,
   latestDaily,
   latestWeekly,
+  showFilters = true,
   hasActiveFilters = false,
   onOpenFilters,
   onClearFilters,
@@ -33,7 +35,7 @@ export const FeedHamburgerMenu = ({
   const canFilter = !loading && contentLength > 0 && filterOptionsReady;
 
   const menuItems = [
-    {
+    ...(showFilters ? [{
       icon: Filter,
       label: 'Curate',
       action: 'button' as const,
@@ -43,8 +45,8 @@ export const FeedHamburgerMenu = ({
       },
       disabled: !canFilter,
       badge: hasActiveFilters,
-    },
-    ...(hasActiveFilters && onClearFilters ? [{
+    }] : []),
+    ...(showFilters && hasActiveFilters && onClearFilters ? [{
       icon: X,
       label: 'Clear filters',
       action: 'button' as const,

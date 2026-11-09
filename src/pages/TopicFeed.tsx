@@ -61,6 +61,7 @@ import {
 } from "@/lib/feedCardPositions";
 import { buildShareUrl } from "@/lib/urlUtils";
 import { isInAppBrowser } from "@/lib/deviceUtils";
+import { FEED_FILTERS_ENABLED } from "@/lib/featureFlags";
 
 // Helper functions using centralized position system
 const shouldShowSentiment = (idx: number) => shouldShowCard('sentiment', idx);
@@ -644,8 +645,8 @@ const TopicFeed = () => {
               topicSlug={slug}
               onStorySwipe={handleStorySwipe}
               onStoryScrolledPast={handleStoryScrolledPast}
-              onMoreLikeThis={handleMoreLikeThis}
-              onPrefetchFilter={handlePrefetchFilter}
+              onMoreLikeThis={FEED_FILTERS_ENABLED ? handleMoreLikeThis : undefined}
+              onPrefetchFilter={FEED_FILTERS_ENABLED ? handlePrefetchFilter : undefined}
               prefetchedReactionCounts={reactionCountsMap.get(story.id)}
               onReactionCountsChange={updateReactionCounts}
             />
@@ -934,7 +935,7 @@ const TopicFeed = () => {
               {/* Background refresh is invisible - no indicator shown */}
               </div>
               {/* Clear filters button in sticky header */}
-              {hasActiveFilters && (
+              {FEED_FILTERS_ENABLED && hasActiveFilters && (
                 <button
                   onClick={clearAllFilters}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
@@ -967,6 +968,7 @@ const TopicFeed = () => {
                   aboutPageEnabled={(topic.branding_config as any)?.about_page_enabled}
                   latestDaily={latestDaily}
                   latestWeekly={latestWeekly}
+                  showFilters={FEED_FILTERS_ENABLED}
                   hasActiveFilters={hasActiveFilters}
                   onOpenFilters={() => setIsModalOpen(true)}
                   onClearFilters={clearAllFilters}
@@ -1129,7 +1131,7 @@ const TopicFeed = () => {
       <main className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
 
         {/* Active filters banner with clear button */}
-        {hasActiveFilters && (
+        {FEED_FILTERS_ENABLED && hasActiveFilters && (
           <div className="mb-6">
             <div className="flex flex-wrap items-center justify-center gap-2">
               {selectedKeywords.map((keyword) => (
@@ -1208,7 +1210,7 @@ const TopicFeed = () => {
         )}
 
         {/* Filter Modal */}
-        <FilterModal
+        {FEED_FILTERS_ENABLED && <FilterModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           availableKeywords={availableKeywords}
@@ -1224,7 +1226,7 @@ const TopicFeed = () => {
           selectedSources={selectedSources}
           onSourceToggle={toggleSource}
           onClearAll={clearAllFilters}
-        />
+        />}
 
         {/* Donation Modal */}
         {topic && topic.donation_enabled && (
