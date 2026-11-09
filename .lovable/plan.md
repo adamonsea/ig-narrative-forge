@@ -38,15 +38,17 @@
 - "Read more on / Read more about"
 - "Have you … ?" (a question sentence only)
 
-A sentence is **never** removed if it contains a number, phone number, "101", "999", "quote", "serial", "contact", "call", "report it", a web address or an email address. This keeps real police and missing-person appeals. A matching sentence that ends with practical detail, such as "Share this appeal … to help trace Arthur", is still removed, but the appeal details in the next sentence stay.
+A sentence is **never** removed if:
+- it contains a number, phone number, "quote", "serial", "contact", "call", "report it", a web address or an email address; or
+- the sentence **or anywhere else on the last slide** mentions any of: appeal, missing, trace, find, witness, sighting, police, officers, 101, 999. Share requests in police, public-safety and missing-person appeals always stay, because sharing those genuinely helps.
 
 **Before and after on 10 real Eastbourne last slides** (removed text in brackets):
 1. "…access from Chichester to the chalk ridge. [Have you walked the new stretch yet? Share your thoughts with other walkers.]"
 2. "…once collection boxes for paper poppies are tallied. [Read more on community efforts across East Sussex or share this story with neighbours.]"
 3. "Whether the kiosk becomes a coffee hatch or snack bar rests with the winning bidder. [Discuss with others what kind of takeaway should open next to the pier.]"
-4. "Callers must quote serial 1467 of 04/11 when speaking to officers. [Share this report with local contacts to assist the search.]" The first sentence stays because it has a number and "quote".
-5. "[Share this appeal with friends and neighbours across Brighton and Sussex to help trace Arthur.] Anyone with fresh sightings is urged to contact emergency services immediately." The second sentence stays because it has "contact".
-6. "Reports can be submitted online or by calling 101, quoting serial 466 of 05/11. [Share this report to help reach local drivers.]"
+4. "Callers must quote serial 1467 of 04/11 when speaking to officers. Share this report with local contacts to assist the search." Unchanged: this is a police appeal.
+5. "Share this appeal with friends and neighbours across Brighton and Sussex to help trace Arthur. Anyone with fresh sightings is urged to contact emergency services immediately." Unchanged: this is a missing-person appeal.
+6. "Reports can be submitted online or by calling 101, quoting serial 466 of 05/11. Share this report to help reach local drivers." Unchanged: this is a police appeal (101, serial).
 7. "…before the curtain rises in Eastbourne." Starts with "Explore the schedule with friends or discuss…", so it is removed: "Box office bookings are now open for the production ahead of opening night. [Explore the schedule…]"
 8. "Today the reserve forms part of the King's Series of National Nature Reserves declared earlier this year. [Explore further to see how traditional grazing methods are restoring sensitive Sussex landscapes.]"
 9. "…leaves Eastbourne 3.5 points clear of Falaise at the top of the East Division." Unchanged, because there's no prompt.
@@ -54,7 +56,7 @@ A sentence is **never** removed if it contains a number, phone number, "101", "9
 
 **Known miss, left alone on purpose:** a prompt woven into a real sentence, e.g. "Check national vehicle regulations carefully before buying transport gifts this winter, and discuss the rules with friends." It doesn't start with a trigger word, so it stays. Cutting part of a sentence risks garbling real reporting. New stories won't have this problem.
 
-**New stories:** remove the "CTAs should be…" line and the "discuss this story" wording from the writing instructions. Add: "End the final slide on a fact from the story. No calls to action, questions to the reader, or invitations to share, discuss or read more." The existing "never name the publication or author" rule stays.
+**New stories:** remove the "CTAs should be…" line and the "discuss this story" wording from the writing instructions. Add: "End the final slide on a fact from the story. No calls to action, questions to the reader, or invitations to share, discuss or read more. The only exception: for a police, public-safety or missing-person appeal, the final slide may ask readers to share the appeal." The existing "never name the publication or author" rule stays.
 
 ## 3. Other places that show stories
 - **Social pack export** (`CarouselSlideRenderer` and `useCarouselExport`) has its own copy of the last-slide logic and adds "Reported by {publication}". It gets the same prompt removal and "By {reporter}" byline. The source credit stays in the image and caption, because a shared image needs it.
@@ -64,6 +66,7 @@ A sentence is **never** removed if it contains a number, phone number, "101", "9
 
 ## Checks
 - Unit tests: the 10 examples above, plus protected sentences (numbers, 101, contact, quote, web address), "By By" tidying, the username case and an empty author.
+- I'll show you the removal report and the screenshots before anything else.
 - A database-only report across all published Eastbourne stories, listing every sentence that would be removed, so you can scan it before I switch anything on. Nothing is written.
 - Screenshots at 375px and 412px, in light and dark mode, of a short, a typical and the longest story (slide 2 and the last slide). Plus a rotation check, and a swipe recording to confirm the text size doesn't jump. The test browser uses a `zztest_` visitor and I'll clean up only that visitor.
 - Nothing is published.
