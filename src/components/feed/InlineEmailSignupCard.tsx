@@ -137,7 +137,7 @@ export const InlineEmailSignupCard = ({
             Never miss another story from{' '}
             <em className={`italic ${accentText}`}>{topicName}</em>
           </h3>
-          <p className="text-[17px] sm:text-lg leading-relaxed opacity-85">
+          <p className="text-[17px] sm:text-lg leading-relaxed opacity-90">
             The best of {topicName}, in brief. Straight to your inbox.
           </p>
         </div>
@@ -154,7 +154,7 @@ export const InlineEmailSignupCard = ({
                 onClick={() => setFrequency(opt)}
                 className={`h-10 px-4 rounded-full text-[15px] font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--brand-text)] dark:focus-visible:ring-[color:var(--brand-text-dark)] ${
                   active
-                    ? 'border-[color:var(--brand-text)] dark:border-[color:var(--brand-text-dark)] bg-[color:var(--brand-fill)]/10 dark:bg-[color:var(--brand-fill-dark)]/15'
+                    ? 'border-[color:var(--brand-text)] dark:border-[color:var(--brand-text-dark)] bg-[color-mix(in_srgb,var(--brand-fill)_12%,transparent)] dark:bg-[color-mix(in_srgb,var(--brand-fill-dark)_18%,transparent)]'
                     : 'border-border bg-transparent opacity-80 hover:opacity-100'
                 }`}
               >
