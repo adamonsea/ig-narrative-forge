@@ -100,7 +100,10 @@ interface FilterStoryIndexEntry {
   keywordMatches: string[];
 }
 
-const STORIES_PER_PAGE = 20; // Increased to load more stories per page
+const STORIES_PER_PAGE = 20; // Both feed RPCs page by STORY (not row): limit 20, sorted by display date + id
+// Each next page starts this many stories before what's already loaded; de-dup by id absorbs the overlap,
+// so a story removed mid-scroll can't cause a gap.
+const PAGE_OVERLAP = 2;
 const DEBOUNCE_DELAY_MS = 300; // Debounce to prevent rapid server calls and race conditions
 
 // Feed content interface - stories only (parliamentary content moved to insight cards)
@@ -133,6 +136,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  // Stories the server has handed us so far for the current list (drives the next page's offset)
+  const serverLoadedRef = useRef(0);
+  const pageOffset = (pageNum: number) => (pageNum === 0 ? 0 : Math.max(0, serverLoadedRef.current - PAGE_OVERLAP));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [autoRetryCount, setAutoRetryCount] = useState(0);
@@ -359,7 +365,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       try {
-        const from = pageNum * STORIES_PER_PAGE;
+        const from = pageOffset(pageNum);
         console.log('🛟 Fallback: Loading stories via get_public_topic_feed', {
           topicSlug,
           pageNum,
@@ -589,6 +595,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
         }
 
+        serverLoadedRef.current = from + deduplicatedStories.length;
         setHasMore(deduplicatedStories.length === STORIES_PER_PAGE);
         return { success: true, orderedContent, transformedStories };
       } catch (error) {
@@ -620,8 +627,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // Use a larger raw rows limit - increase when filters active to improve matching
       // Increased multipliers to reduce offset pagination issues at scale
-      const rawLimit = (keywords || sources) ? STORIES_PER_PAGE * 20 : STORIES_PER_PAGE * 10;
-      const from = pageNum * rawLimit;
+      const rawLimit = STORIES_PER_PAGE; // stories, not rows
+      const from = pageOffset(pageNum);
       
       console.log('🔍 Phase 2: Loading stories with filters', { 
         topicId: topicData.id, 
@@ -895,6 +902,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       
       const uniqueStories = Array.from(storyMap.values());
       const pageUniqueStories = uniqueStories;
+      serverLoadedRef.current = from + pageUniqueStories.length;
 
       // PARALLELIZED: Fetch popularity and parliamentary metadata concurrently
       const storyIdsForPopularity = Array.from(storyMap.keys());
@@ -1913,7 +1921,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     const controller = new AbortController();
     prefetchRpcRef.current = { key, data: null, abortController: controller };
     
-    const rawLimit = keywords.length > 0 || sources.length > 0 ? STORIES_PER_PAGE * 20 : STORIES_PER_PAGE * 10;
+    const rawLimit = STORIES_PER_PAGE; // same first page as loadStories (stories, not rows)
     
     console.log('🔮 Prefetching filter results for:', { keywords, sources, key });
     
