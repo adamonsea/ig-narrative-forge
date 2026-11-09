@@ -76,7 +76,8 @@ export const useCarouselExport = () => {
       ...story,
       slides: prepareStorySlides(
         [...story.slides].sort((a: any, b: any) => (a.slide_number ?? 0) - (b.slide_number ?? 0)),
-        stripGeneratedSourceAttribution
+        stripGeneratedSourceAttribution,
+        { sourceDomain: (story as any).article?.source_url }
       ).slides,
     };
 

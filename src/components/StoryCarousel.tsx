@@ -282,8 +282,10 @@ export default function StoryCarousel({
   const validSlides = useMemo(() => {
     const raw = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
     const ordered = [...raw].sort((a, b) => a.slide_number - b.slide_number);
-    return prepareStorySlides(ordered, stripGeneratedSourceAttribution).slides;
-  }, [story.slides]);
+    return prepareStorySlides(ordered, stripGeneratedSourceAttribution, {
+      sourceDomain: story.article?.source_url,
+    }).slides;
+  }, [story.slides, story.article?.source_url]);
   const safeSlideIndex = Math.max(0, Math.min(currentSlideIndex, validSlides.length - 1));
   const currentSlide = validSlides[safeSlideIndex];
   const isFirstSlide = safeSlideIndex === 0;
