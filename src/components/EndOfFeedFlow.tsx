@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { NotificationPreferencesModal } from './NotificationPreferencesModal';
 import { IOSInstallModal } from './IOSInstallModal';
 import { Mail, Sparkles, Plus, ArrowRight, Bell } from 'lucide-react';
+import { READER_ONBOARDING_EXTRAS } from '@/lib/featureFlags';
 
 interface EndOfFeedFlowProps {
   topicName: string;
@@ -54,7 +55,7 @@ export const EndOfFeedFlow = ({ topicName, topicId, topicSlug, topicIcon }: EndO
       }
     };
 
-    if (topicId) {
+    if (topicId && READER_ONBOARDING_EXTRAS) {
       fetchStats();
     }
   }, [topicId]);
@@ -131,6 +132,44 @@ export const EndOfFeedFlow = ({ topicName, topicId, topicSlug, topicIcon }: EndO
   const openNotificationModal = () => {
     setShowNotificationModal(true);
   };
+
+  if (!READER_ONBOARDING_EXTRAS) {
+    const canInstall = typeof window !== 'undefined' &&
+      (/iPhone|iPad|iPod/.test(navigator.userAgent) || !!(window as any).deferredPrompt);
+    return (
+      <>
+        <div className="py-10 text-center space-y-4">
+          <p className="text-lg text-foreground">That's everything for now. Get the next ones by email.</p>
+          <Button onClick={openNotificationModal} size="lg" className="gap-2">
+            <Mail className="w-4 h-4" />
+            Get updates
+          </Button>
+          {canInstall && (
+            <div>
+              <button
+                onClick={handleAddToHomeScreen}
+                className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                Add {topicName} to your home screen
+              </button>
+            </div>
+          )}
+        </div>
+        <NotificationPreferencesModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          topicName={topicName}
+          topicId={topicId}
+          isFirstTimePrompt={true}
+        />
+        <IOSInstallModal
+          isOpen={showIOSModal}
+          onClose={() => setShowIOSModal(false)}
+          topicName={topicName}
+        />
+      </>
+    );
+  }
 
   if (step === 'intro') {
     return (
