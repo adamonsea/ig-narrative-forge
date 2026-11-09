@@ -181,7 +181,9 @@ function surfaceTone(base: RGB, mode: 'light' | 'dark'): BrandSurfaceTone {
   const text = adjustUntil(ink, surface, 7, light ? [0, 0, 0] : [255, 255, 255]);
   const muted = adjustUntil(mix(text, surface, 0.22), surface, 4.5, text);
   const accent = adjustUntil(base, surface, 4.5, ink);
-  const shape = adjustUntil(base, surface, 3, light ? FEED_TEXT_DARK : [255, 255, 255]);
+  // Too pale (light) or too dark (dark) to show as a button on the tint:
+  // use the feed's ink colour for the button instead of a muddy shade.
+  const shape = contrast(base, surface) >= 3 ? base : ink;
   const { fill, onFill } = buttonTone(shape, mode);
   const border = mix(surface, accent, light ? 0.35 : 0.45);
   const field = light ? [255, 255, 255] as RGB : mix(surface, [0, 0, 0], 0.25);
