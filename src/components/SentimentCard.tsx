@@ -97,7 +97,8 @@ export const SentimentCard = ({
     const currentCount = getMentionCount();
     // Estimate previous week count based on sentiment confidence change
     // In a real implementation, this would query historical sentiment cards
-    const previousCount = Math.max(0, Math.round(currentCount * 0.7)); // Placeholder
+    // No real history is stored, so never show an invented previous-week figure
+    const previousCount = 0;
     const change = currentCount - previousCount;
     const isIncrease = change > 0;
     
@@ -106,7 +107,7 @@ export const SentimentCard = ({
       previousCount,
       change: Math.abs(change),
       isIncrease,
-      hasHistory: previousCount > 0
+      hasHistory: false
     };
   };
 
@@ -271,7 +272,7 @@ export const SentimentCard = ({
                   {trendData.currentCount}
                 </div>
                 <div className="text-sm">
-                  First analysis
+                  Mentions this week
                 </div>
               </div>
             )}

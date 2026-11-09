@@ -474,13 +474,13 @@ const TopicFeed = () => {
   const { votes: parliamentaryVotes, hasData: hasParliamentaryData } = useParliamentaryInsightCards(
     storiesLoading ? undefined : topic?.id,
     topic?.topic_type,
-    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled
+    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled && topicMetadata.parliamentaryCardsEnabled
   );
   
   const { votes: parliamentaryDigestVotes, hasData: hasParliamentaryDigest } = useParliamentaryDigestCards(
     storiesLoading ? undefined : topic?.id,
     topic?.topic_type,
-    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled
+    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled && topicMetadata.parliamentaryCardsEnabled
   );
   
 
@@ -741,7 +741,7 @@ const TopicFeed = () => {
       }
 
       // Events accordion
-      if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled) {
+      if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled && topicMetadata?.eventsCardsEnabled) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
             <EventsAccordion topicId={topic.id} isOwner={false} />
@@ -772,7 +772,7 @@ const TopicFeed = () => {
       }
 
       // Parliamentary insight cards
-      if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0) {
+      if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0 && topicMetadata?.parliamentaryCardsEnabled) {
         items.push(
           <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
             <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
@@ -783,7 +783,7 @@ const TopicFeed = () => {
       }
 
       // Parliamentary weekly digest
-      if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0) {
+      if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0 && topicMetadata?.parliamentaryCardsEnabled) {
         items.push(
           <div key={`parliamentary-digest-${storyIndex}`} className="w-full max-w-2xl">
             <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>

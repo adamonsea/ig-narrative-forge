@@ -59,6 +59,13 @@ export const useSentimentCards = (topicId?: string) => {
         return;
       }
 
+      // Curator's sentiment switches are the source of truth for the public feed
+      const { data: enabled } = await supabase.rpc('get_feed_sentiment_cards_enabled' as any, { _topic_id: topicId });
+      if (enabled !== true) {
+        setSentimentCards([]);
+        return;
+      }
+
       const query = supabase
         .from('sentiment_cards')
         .select('*')

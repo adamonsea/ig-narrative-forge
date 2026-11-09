@@ -4570,8 +4570,10 @@ export type Database = {
       topic_insight_settings: {
         Row: {
           created_at: string | null
+          events_cards_enabled: boolean
           id: string
           is_premium_tier: boolean | null
+          parliamentary_cards_enabled: boolean
           play_mode_enabled: boolean | null
           quiz_cards_enabled: boolean | null
           sift_enabled: boolean | null
@@ -4583,8 +4585,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          events_cards_enabled?: boolean
           id?: string
           is_premium_tier?: boolean | null
+          parliamentary_cards_enabled?: boolean
           play_mode_enabled?: boolean | null
           quiz_cards_enabled?: boolean | null
           sift_enabled?: boolean | null
@@ -4596,8 +4600,10 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          events_cards_enabled?: boolean
           id?: string
           is_premium_tier?: boolean | null
+          parliamentary_cards_enabled?: boolean
           play_mode_enabled?: boolean | null
           quiz_cards_enabled?: boolean | null
           sift_enabled?: boolean | null
@@ -6254,6 +6260,10 @@ export type Database = {
           slug: string
           topic_type: string
         }[]
+      }
+      get_feed_sentiment_cards_enabled: {
+        Args: { _topic_id: string }
+        Returns: boolean
       }
       get_legacy_articles_awaiting_simplification: {
         Args: { p_topic_id: string }

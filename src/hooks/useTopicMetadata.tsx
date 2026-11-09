@@ -8,6 +8,8 @@ interface TopicMetadata {
   quizCardsEnabled: boolean;
   siftEnabled: boolean;
   this_time_last_month_enabled: boolean;
+  parliamentaryCardsEnabled: boolean;
+  eventsCardsEnabled: boolean;
   latestDailyRoundup: string | null;
   latestWeeklyRoundup: string | null;
   emailSubscriptionsEnabled: boolean;
@@ -93,7 +95,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
           
           const { data, error } = await supabase
             .from('topic_insight_settings')
-            .select('play_mode_enabled, quiz_cards_enabled, sift_enabled, this_time_last_month_enabled')
+            .select('play_mode_enabled, quiz_cards_enabled, sift_enabled, this_time_last_month_enabled, parliamentary_cards_enabled, events_cards_enabled')
             .eq('topic_id', topicId)
             .maybeSingle();
 
@@ -119,7 +121,9 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
             playModeEnabled: data.play_mode_enabled !== false,
             quizCardsEnabled: data.quiz_cards_enabled ?? false,
             siftEnabled: data.sift_enabled ?? false,
-            thisTimeLastMonthEnabled: data.this_time_last_month_enabled ?? false
+            thisTimeLastMonthEnabled: data.this_time_last_month_enabled ?? false,
+            parliamentaryCardsEnabled: (data as any).parliamentary_cards_enabled ?? false,
+            eventsCardsEnabled: (data as any).events_cards_enabled ?? false,
           };
         },
         enabled: !!topicId,
@@ -200,6 +204,8 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
       quizCardsEnabled: insightSettingsResult.data?.quizCardsEnabled ?? false,
       siftEnabled: insightSettingsResult.data?.siftEnabled ?? false,
       this_time_last_month_enabled: insightSettingsResult.data?.thisTimeLastMonthEnabled ?? false,
+      parliamentaryCardsEnabled: (insightSettingsResult.data as any)?.parliamentaryCardsEnabled ?? false,
+      eventsCardsEnabled: (insightSettingsResult.data as any)?.eventsCardsEnabled ?? false,
       latestDailyRoundup: roundupsResult.data?.daily ?? null,
       latestWeeklyRoundup: roundupsResult.data?.weekly ?? null,
       emailSubscriptionsEnabled: (emailSubsResult.data as boolean) ?? false,
