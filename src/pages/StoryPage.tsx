@@ -98,8 +98,7 @@ const StoryPage = () => {
         setTopic({
           ...(topicData as any),
           topic_type: topicData.topic_type as 'regional' | 'keyword',
-          branding_config: topicData.branding_config as Topic['branding_config'],
-          illustration_primary_color: (topicData as any).illustration_primary_color
+          branding_config: topicData.branding_config as Topic['branding_config']
         });
 
         // Parse the JSONB result
