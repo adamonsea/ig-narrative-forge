@@ -51,6 +51,10 @@ describe('reader prompts removed from real Eastbourne last slides', () => {
     const t = 'Tickets go on sale on Friday. Share this with friends at eastbourne.gov.uk.';
     expect(strip(t)).toBe(t);
   });
+  test('web addresses are not split apart', () => {
+    expect(strip('Tickets from £27 at eastbournetheatres.co.uk. Share this with friends who need a prescription of laughter!'))
+      .toBe('Tickets from £27 at eastbournetheatres.co.uk.');
+  });
   test('a single sentence is never removed', () => {
     expect(strip('Share this story with neighbours.')).toBe('Share this story with neighbours.');
   });

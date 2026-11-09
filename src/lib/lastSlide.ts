@@ -26,7 +26,9 @@ const APPEAL_PROTECT =
   /\b(?:appeal(?:s|ing)?|missing|trace|find|witness(?:es)?|sightings?|police|officers?|101|999)\b/i;
 
 const splitSentences = (text: string): string[] =>
-  (text.match(/[^.!?]+(?:[.!?]+["'’”)]*|$)/g) || []).map((s) => s.trim()).filter(Boolean);
+  // A sentence ends at . ! ? (plus closing quotes) followed by whitespace or the end,
+  // so "eastbournetheatres.co.uk" or "£2.50" are never split.
+  text.split(/(?<=[.!?]["'’”)]*)\s+/).map((s) => s.trim()).filter(Boolean);
 
 const isReaderPrompt = (sentence: string, slideText: string): boolean => {
   const s = sentence.trim();
