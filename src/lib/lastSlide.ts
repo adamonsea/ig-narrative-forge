@@ -40,7 +40,10 @@ const isReaderPrompt = (sentence: string, slideText: string): boolean => {
   const s = sentence.trim();
   if (!(PROMPT_OPENERS.test(s) || QUESTION_OPENER.test(s))) return false;
   if (DETAIL_PROTECT.test(s)) return false;
-  if (APPEAL_PROTECT.test(slideText)) return false;
+  // Appeals: a share ask is kept when appeal wording appears anywhere in the
+  // context; any other prompt is kept only if it names the appeal itself.
+  if (APPEAL_PROTECT.test(s)) return false;
+  if (/^share\b/i.test(s) && APPEAL_PROTECT.test(slideText)) return false;
   return true;
 };
 
