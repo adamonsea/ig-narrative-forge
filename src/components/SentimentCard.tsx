@@ -272,7 +272,7 @@ export const SentimentCard = ({
                   {trendData.currentCount}
                 </div>
                 <div className="text-sm">
-                  First analysis
+                  Mentions this week
                 </div>
               </div>
             )}

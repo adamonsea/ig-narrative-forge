@@ -272,6 +272,24 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             />
           </div>
 
+          {/* Feed-only switches: data collection and the weekly email are unaffected */}
+          {([
+            ['parliamentary_cards_enabled', 'Parliament cards', 'MP vote cards and the weekly parliament digest in your public feed'],
+            ['events_cards_enabled', 'Events card', 'Upcoming local events list in your public feed'],
+          ] as const).map(([key, label, desc]) => (
+            <div key={key} className="flex items-center justify-between p-4 rounded-lg border">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor={key} className="font-medium">{label}</Label>
+                <p className="text-sm text-muted-foreground">{desc}</p>
+              </div>
+              <Switch
+                id={key}
+                checked={!!(settings as any)[key]}
+                onCheckedChange={(checked) => updateSettings.mutate({ [key]: checked })}
+              />
+            </div>
+          ))}
+
           {/* Sift Mode - Premium Feature */}
           <div className="flex items-center justify-between p-4 rounded-lg border">
             <div className="flex-1 space-y-1">
