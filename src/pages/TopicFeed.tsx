@@ -911,7 +911,7 @@ const TopicFeed = () => {
           welcomeCardAboutLink: (topic.branding_config as any)?.welcome_card_about_link,
           aboutPageEnabled: (topic.branding_config as any)?.about_page_enabled,
         }}
-      />
+      />}
 
       {isScrolled && topic && (
         <div className="fixed top-0 left-0 right-0 z-50 feed-header backdrop-blur-sm border-b border-border">
