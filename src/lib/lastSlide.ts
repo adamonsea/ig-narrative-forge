@@ -9,8 +9,9 @@
  *  - then only the last two remaining sentences are prompt candidates;
  *  - the sentence must START with a known prompt opener;
  *  - it is kept if it carries practical detail (numbers, contact, links);
- *  - it is kept if the slide is a police / public-safety / missing-person
- *    appeal — sharing those genuinely helps.
+ *  - it is kept if the slide (or, via prepareStorySlides, anywhere in the
+ *    story) reads as a police / public-safety / missing-person appeal —
+ *    sharing those genuinely helps.
  */
 
 const PROMPT_OPENERS =
@@ -49,7 +50,7 @@ export interface PromptStripResult {
 }
 
 /** Remove "Source:" credits and AI-written reader prompts from the last slide. */
-export const stripReaderPrompts = (content: string): PromptStripResult => {
+export const stripReaderPrompts = (content: string, appealContext: string = content): PromptStripResult => {
   if (!content || /<[a-z]/i.test(content)) return { text: content, removed: [] };
   const removed: string[] = [];
   const sentences = splitSentences(content).filter((s) => {
@@ -58,7 +59,7 @@ export const stripReaderPrompts = (content: string): PromptStripResult => {
   });
   const start = Math.max(0, sentences.length - 2); // last two remaining sentences only
   const kept = sentences.filter((s, i) => {
-    if (i >= start && isReaderPrompt(s, content)) {
+    if (i >= start && isReaderPrompt(s, appealContext)) {
       removed.push(s);
       return false;
     }
@@ -88,12 +89,15 @@ export function prepareStorySlides<T extends PreparedSlide>(
 ): { slides: T[]; dropped: number; removed: string[] } {
   const out = [...slides];
   const removedAll: string[] = [];
+  // Appeal wording anywhere in the story protects share asks, so dropping an
+  // empty closer can never strip an appeal from the slide before it.
+  const appealContext = slides.map((sl) => sl.content || '').join(' ');
   let dropped = 0;
   while (out.length > 1) {
     const last = out[out.length - 1];
     const original = last.content || '';
     const pre = preClean(original);
-    const { text, removed } = stripReaderPrompts(pre);
+    const { text, removed } = stripReaderPrompts(pre, appealContext);
     removedAll.push(...removed);
     if (isEmptySlideText(text)) {
       out.pop();
