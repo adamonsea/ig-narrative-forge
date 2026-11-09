@@ -75,3 +75,4 @@ Public feed sign-up card (9 November 2026)
 - [x] Bring back Daily / Weekly / Both (Both = two rows, as before)
 - [ ] Both sends one confirmation email instead of two — needs Adam's go-ahead (changes the sign-up and confirm services)
 - [x] Tinted, contrast-checked card surface so it stands apart from stories
+- [x] Body slides 2+ in Lexend 300, tighter tracking and line height, shared with the fit-to-card measurer
