@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ import { format } from 'date-fns';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
-import { buildBylineLine, buildShareCta } from '@/lib/storyAttribution';
+import { stripReaderPrompts, buildReporterByline } from '@/lib/lastSlide';
+import { useStoryFontSize } from '@/lib/slideTextFit';
+import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
@@ -108,6 +110,8 @@ interface StoryCarouselProps {
   onStoryScrolledPast?: () => void; // Callback when story scrolls out of view
   topicName?: string; // Topic name for branded WhatsApp share
   topicSlug?: string; // Topic slug for branded WhatsApp share
+  /** Feed accent colour for the last-slide "Read the full story" pill */
+  brandColor?: string | null;
   onMoreLikeThis?: (story: Story) => void;
   onPrefetchFilter?: (story: Story) => void;
   /** Pre-fetched reaction counts from batch hook */
@@ -425,80 +429,12 @@ export default function StoryCarousel({
 
   // Remove auto-fit scaling logic
 
-  // Parse content for last slide styling and ensure source attribution
-  const parseContentForLastSlide = (content: string, links: any[] = []) => {
-    if (!isLastSlide) return { mainContent: content, ctaContent: null, sourceUrl: null, contentWithLinks: renderContentWithLinks(content, links) };
-    
-    // Look for CTA patterns (removed "Comment, like, share.")
-    const ctaPatterns = [
-      /Like, share\./i,
-      /Summarised by/i,
-      /Support local journalism/i
-    ];
-    
-    let splitIndex = -1;
-    for (const pattern of ctaPatterns) {
-      const match = content.search(pattern);
-      if (match !== -1) {
-        splitIndex = match;
-        break;
-      }
-    }
-    
-    let mainContent = content;
-    let ctaContent = null;
-    
-    if (splitIndex !== -1) {
-      mainContent = content.substring(0, splitIndex).trim();
-      ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
-    }
-
-    // Discard any AI-written source credit — real attribution comes from source_url
-    mainContent = stripGeneratedSourceAttribution(mainContent);
-    
-    // Safe URL parsing with try/catch for source attribution
-    let sourceDomain = 'source';
-    let validSourceUrl = null;
-    
-    try {
-      if (story.article?.source_url && story.article.source_url !== '#') {
-        const url = new URL(story.article.source_url);
-        sourceDomain = url.hostname.replace('www.', '');
-        validSourceUrl = story.article.source_url;
-      }
-    } catch (error) {
-      console.warn('Invalid source URL:', story.article?.source_url);
-    }
-    
-    // Format original article date if available
-    const originalDateText = story.article?.published_at ? 
-      ` (Originally published ${format(new Date(story.article.published_at), 'MMM d, yyyy')})` : 
-      '';
-    
-    const sourceLinkHtml = validSourceUrl
-      ? `<a href="${validSourceUrl}" target="_blank" rel="noopener noreferrer" class="underline text-primary hover:text-primary/80">Read the full story at ${sourceDomain}${originalDateText}</a>`
-      : `Read the full story at ${sourceDomain}${originalDateText}`;
-
-    // Rebuild credit from the story's own database fields so it can never
-    // contradict the article we link to, then add the share prompt.
-    const bylineLine = buildBylineLine(
-      story.author,
-      story.publication_name,
-      story.article?.source_url
-    );
-    const shareLine = buildShareCta(topicName);
-
-    const finalCtaContent = [ctaContent, bylineLine, shareLine, sourceLinkHtml]
-      .filter(Boolean)
-      .map((line) => `<p class="mb-2 last:mb-0">${line}</p>`)
-      .join('');
-    
-    return {
-      mainContent,
-      ctaContent: finalCtaContent,
-      sourceUrl: validSourceUrl,
-      contentWithLinks: renderContentWithLinks(mainContent, links)
-    };
+  // Last slide: story text with AI reader prompts removed (stored copy untouched);
+  // the byline and the bright "Read the full story" pill are rendered separately.
+  const parseContentForLastSlide = (content: string, links: any[] = [], isLast = false) => {
+    if (!isLast) return { mainContent: content, contentWithLinks: renderContentWithLinks(content, links) };
+    const mainContent = stripReaderPrompts(stripGeneratedSourceAttribution(content)).text;
+    return { mainContent, contentWithLinks: renderContentWithLinks(mainContent, links) };
   };
 
   const renderContentWithLinks = (content: string, links: any[] = []) => {
