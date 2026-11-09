@@ -539,15 +539,15 @@ export default function StoryCarousel({
     const length = content.length;
     if (isTitle) {
       // Increased by one size point for better readability
-      if (length < 50) return "text-4xl md:text-5xl lg:text-6xl";
-      if (length < 100) return "text-3xl md:text-4xl lg:text-5xl";
-      return "text-2xl md:text-3xl lg:text-4xl";
+      if (length < 50) return "text-[2.5rem] md:text-6xl";
+      if (length < 80) return "text-4xl md:text-5xl";
+      return "text-[2rem] md:text-4xl";
     } else {
       // Increased by one size point for better readability and card fill
-      if (length < 80) return isLaterSlide ? "text-4xl md:text-5xl lg:text-6xl" : "text-2xl md:text-3xl lg:text-4xl";
-      if (length < 150) return isLaterSlide ? "text-3xl md:text-4xl lg:text-5xl" : "text-xl md:text-2xl lg:text-3xl";
-      if (length < 250) return isLaterSlide ? "text-2xl md:text-3xl lg:text-4xl" : "text-lg md:text-xl lg:text-2xl";
-      return isLaterSlide ? "text-xl md:text-2xl lg:text-3xl" : "text-base md:text-lg lg:text-xl";
+      if (length < 80) return isLaterSlide ? "text-4xl md:text-5xl" : "text-2xl md:text-3xl lg:text-4xl";
+      if (length < 150) return isLaterSlide ? "text-3xl md:text-4xl" : "text-xl md:text-2xl lg:text-3xl";
+      if (length < 250) return isLaterSlide ? "text-[1.625rem] md:text-3xl" : "text-lg md:text-xl lg:text-2xl";
+      return isLaterSlide ? "text-2xl md:text-[1.75rem]" : "text-base md:text-lg lg:text-xl";
     }
   };
 
@@ -627,9 +627,9 @@ export default function StoryCarousel({
             </div>
             
             {/* Content below image */}
-            <div className="flex-1 flex items-center justify-center p-6 pb-14 md:p-8 md:pb-16">
-              <div className="w-full max-w-lg mx-auto text-center flex flex-col h-full justify-center">
-                <div className={`leading-relaxed ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-balance`}>
+            <div className="flex-1 flex items-center justify-center px-5 pt-6 pb-14 md:px-8 md:pt-8 md:pb-16">
+              <div className="w-full max-w-xl mx-auto text-left flex flex-col h-full justify-center">
+                <div className={`leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty`}>
                   <div dangerouslySetInnerHTML={createSafeHTML(
                     sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
                     true
@@ -641,12 +641,12 @@ export default function StoryCarousel({
           </div>
         ) : (
           // Slides without image - use grid for perfect centering and fit-to-height on last slide
-          <div className="h-full flex items-center justify-center p-6 pb-14 md:p-8 md:pb-16 overflow-hidden">
-            <div className="w-full max-w-lg mx-auto text-center">
-                 <div className={`leading-relaxed ${
+          <div className="h-full flex items-center justify-center px-5 pt-6 pb-14 md:px-8 md:pt-8 md:pb-16 overflow-hidden">
+            <div className="w-full max-w-xl mx-auto text-left">
+                 <div className={`${
                   index === 0 
-                  ? `${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-balance` 
-                  : `${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
+                  ? `leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty` 
+                  : `leading-[1.35] ${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-pretty`
                 }`}>
                   {/* Main story content with links */}
                   <div dangerouslySetInnerHTML={createSafeHTML(
@@ -658,7 +658,7 @@ export default function StoryCarousel({
                   {isLast && ctaContent && (
                     <div className="mt-4 pt-4 border-t border-muted">
                       <div 
-                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-pretty"
                         dangerouslySetInnerHTML={createSafeHTML(
                           sanitizeContentWithLinks(ctaContent),
                           true
