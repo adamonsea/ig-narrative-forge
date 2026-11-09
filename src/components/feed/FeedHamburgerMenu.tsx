@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Menu, X, HelpCircle, Filter, Calendar, CalendarDays, Archive } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FEED_FILTERS_ENABLED } from '@/lib/featureFlags';
 
 interface FeedHamburgerMenuProps {
   slug: string;
@@ -22,7 +23,7 @@ export const FeedHamburgerMenu = ({
   aboutPageEnabled = false,
   latestDaily,
   latestWeekly,
-  showFilters = true,
+  showFilters = FEED_FILTERS_ENABLED,
   hasActiveFilters = false,
   onOpenFilters,
   onClearFilters,
