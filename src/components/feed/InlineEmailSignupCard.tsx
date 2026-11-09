@@ -4,7 +4,7 @@ import { Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { saveSubscriptionStatus } from '@/hooks/useNotificationSubscriptions';
 import { useToast } from '@/hooks/use-toast';
-import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
+import { feedBrandSurface, toCss } from '@/lib/feedBrandColor';
 
 interface InlineEmailSignupCardProps {
   topicId: string;
@@ -16,12 +16,20 @@ interface InlineEmailSignupCardProps {
   brandColor?: string | null;
 }
 
-type FrequencyOption = 'daily' | 'weekly';
+type FrequencyOption = 'daily' | 'weekly' | 'both';
+
+const FREQUENCY_LABEL: Record<FrequencyOption, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  both: 'Both',
+};
 
 /**
- * In-feed email sign-up card. Styled as part of the feed it sits in: same card
- * surface as stories, the feed's own icon and colour (contrast-corrected).
- * Uses the existing secure-newsletter-signup flow unchanged.
+ * In-feed email sign-up card. Styled as part of the feed it sits in: a soft
+ * tint of the feed's own colour (so it stands apart from story cards), the
+ * feed's icon, and contrast-checked text and button colours.
+ * Uses the existing secure-newsletter-signup flow unchanged; "Both" makes one
+ * call per briefing, exactly as the earlier card did.
  */
 export const InlineEmailSignupCard = ({
   topicId,
@@ -42,15 +50,21 @@ export const InlineEmailSignupCard = ({
   const [logoFailed, setLogoFailed] = useState(false);
 
   const brandVars = useMemo(() => {
-    const p = feedBrandPalette(brandColor);
-    return {
-      '--brand-fill': toCss(p.light.fill),
-      '--brand-on-fill': toCss(p.light.onFill),
-      '--brand-text': toCss(p.light.text),
-      '--brand-fill-dark': toCss(p.dark.fill),
-      '--brand-on-fill-dark': toCss(p.dark.onFill),
-      '--brand-text-dark': toCss(p.dark.text),
-    } as CSSProperties;
+    const p = feedBrandSurface(brandColor);
+    const vars: Record<string, string> = {};
+    (['light', 'dark'] as const).forEach((mode) => {
+      const suffix = mode === 'dark' ? '-dark' : '';
+      const t = p[mode];
+      vars[`--su-bg${suffix}`] = toCss(t.surface);
+      vars[`--su-border${suffix}`] = toCss(t.border);
+      vars[`--su-text${suffix}`] = toCss(t.text);
+      vars[`--su-muted${suffix}`] = toCss(t.muted);
+      vars[`--brand-text${suffix}`] = toCss(t.accent);
+      vars[`--brand-fill${suffix}`] = toCss(t.fill);
+      vars[`--brand-on-fill${suffix}`] = toCss(t.onFill);
+      vars[`--su-field${suffix}`] = toCss(t.field);
+    });
+    return vars as CSSProperties;
   }, [brandColor]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -64,21 +78,42 @@ export const InlineEmailSignupCard = ({
     }
 
     setIsSubmitting(true);
+    const types: ('daily' | 'weekly')[] =
+      frequency === 'both' ? ['daily', 'weekly'] : [frequency];
+    const done: ('daily' | 'weekly')[] = [];
     try {
-      const { error } = await supabase.functions.invoke('secure-newsletter-signup', {
-        body: { email: email.trim(), topicId, notificationType: frequency },
-      });
-      if (error) throw error;
+      // One call per briefing, in order (keeps rate limiting predictable).
+      for (const type of types) {
+        const { error } = await supabase.functions.invoke('secure-newsletter-signup', {
+          body: { email: email.trim(), topicId, notificationType: type },
+        });
+        if (error) throw error;
+        done.push(type);
+      }
 
       localStorage.setItem(storageKey, 'true');
-      saveSubscriptionStatus(topicId, frequency, true);
+      done.forEach((t) => saveSubscriptionStatus(topicId, t, true));
       setIsSubscribed(true);
 
       toast({
         title: 'Check your inbox',
-        description: `Confirm your email to start getting the ${frequency} ${topicName} briefing.`,
+        description:
+          frequency === 'both'
+            ? `Confirm your email to start getting the daily and weekly ${topicName} briefings.`
+            : `Confirm your email to start getting the ${frequency} ${topicName} briefing.`,
       });
     } catch (err) {
+      if (done.length > 0) {
+        // The first briefing went through; keep that and say so plainly.
+        localStorage.setItem(storageKey, 'true');
+        done.forEach((t) => saveSubscriptionStatus(topicId, t, true));
+        setIsSubscribed(true);
+        toast({
+          title: 'Check your inbox',
+          description: `You’re signed up for the ${done[0]} briefing. The other one didn’t go through — try again later.`,
+        });
+        return;
+      }
       console.error('Email signup error:', err);
       toast({ title: 'Something went wrong', description: 'Please try again in a moment.' });
     } finally {
@@ -87,7 +122,9 @@ export const InlineEmailSignupCard = ({
   }, [email, isSubmitting, topicId, frequency, storageKey, toast, topicName]);
 
   const cardClass =
-    'feed-card w-full rounded-xl border border-border/60 shadow-lg overflow-hidden';
+    'w-full rounded-xl border shadow-lg overflow-hidden bg-[color:var(--su-bg)] text-[color:var(--su-text)] border-[color:var(--su-border)] dark:bg-[color:var(--su-bg-dark)] dark:text-[color:var(--su-text-dark)] dark:border-[color:var(--su-border-dark)]';
+  const mutedText =
+    'text-[color:var(--su-muted)] dark:text-[color:var(--su-muted-dark)]';
   const accentText =
     'text-[color:var(--brand-text)] dark:text-[color:var(--brand-text-dark)]';
 
@@ -126,7 +163,7 @@ export const InlineEmailSignupCard = ({
               {initial}
             </span>
           )}
-          <span className="text-[15px] font-medium opacity-80">Free briefing</span>
+          <span className={`text-[15px] font-medium ${mutedText}`}>Free briefing</span>
         </div>
 
         <div className="space-y-2">
@@ -137,13 +174,13 @@ export const InlineEmailSignupCard = ({
             Never miss another story from{' '}
             <em className={`italic ${accentText}`}>{topicName}</em>
           </h3>
-          <p className="text-[17px] sm:text-lg leading-relaxed opacity-90">
+          <p className="text-[17px] sm:text-lg leading-relaxed">
             The best of {topicName}, in brief. Straight to your inbox.
           </p>
         </div>
 
         <div role="radiogroup" aria-label="How often" className="flex gap-2">
-          {(['daily', 'weekly'] as const).map((opt) => {
+          {(['daily', 'weekly', 'both'] as const).map((opt) => {
             const active = frequency === opt;
             return (
               <button
@@ -154,11 +191,11 @@ export const InlineEmailSignupCard = ({
                 onClick={() => setFrequency(opt)}
                 className={`h-10 px-4 rounded-full text-[15px] font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--brand-text)] dark:focus-visible:ring-[color:var(--brand-text-dark)] ${
                   active
-                    ? 'border-[color:var(--brand-text)] dark:border-[color:var(--brand-text-dark)] bg-[color-mix(in_srgb,var(--brand-fill)_12%,transparent)] dark:bg-[color-mix(in_srgb,var(--brand-fill-dark)_18%,transparent)]'
-                    : 'border-border bg-transparent opacity-80 hover:opacity-100'
+                    ? 'border-2 border-[color:var(--brand-text)] dark:border-[color:var(--brand-text-dark)] bg-[color:var(--su-field)] dark:bg-[color:var(--su-field-dark)]'
+                    : 'border-[color:var(--su-border)] dark:border-[color:var(--su-border-dark)] bg-transparent'
                 }`}
               >
-                {opt === 'daily' ? 'Daily' : 'Weekly'}
+                {FREQUENCY_LABEL[opt]}
               </button>
             );
           })}
@@ -176,7 +213,7 @@ export const InlineEmailSignupCard = ({
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isSubmitting}
-            className="h-12 w-full min-h-12 sm:flex-1 rounded-lg border border-border bg-background/60 px-4 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-text)] dark:focus-visible:ring-[color:var(--brand-text-dark)] disabled:opacity-60"
+            className="h-12 w-full min-h-12 sm:flex-1 rounded-lg border px-4 text-base border-[color:var(--su-border)] bg-[color:var(--su-field)] text-[color:var(--su-text)] placeholder:text-[color:var(--su-muted)] dark:border-[color:var(--su-border-dark)] dark:bg-[color:var(--su-field-dark)] dark:text-[color:var(--su-text-dark)] dark:placeholder:text-[color:var(--su-muted-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-text)] dark:focus-visible:ring-[color:var(--brand-text-dark)] disabled:opacity-60"
           />
           <button
             type="submit"
@@ -191,7 +228,7 @@ export const InlineEmailSignupCard = ({
           </button>
         </form>
 
-        <p className="text-[15px] leading-snug opacity-80">One-click unsubscribe anytime.</p>
+        <p className={`text-[15px] leading-snug ${mutedText}`}>One-click unsubscribe anytime.</p>
       </div>
     </section>
   );
