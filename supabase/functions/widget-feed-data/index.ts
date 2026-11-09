@@ -342,13 +342,14 @@ serve(async (req) => {
       } catch (e) {
         console.warn('social proof unavailable', e);
       }
-      const storyReads: Record<string, number> = proof?.story_reads || {};
-      const MOST_READ_MIN_READS = 5;   // each story needs 5+ reads in 7 days
-      const MOST_READ_MIN_STORIES = 2; // and at least 2 stories must qualify
+      // "Most read" shelf: ranked by position-corrected headline stop score (story_stop_scores). Only stories
+      // seen by 30+ distinct outside readers get a score; below 2 such stories the Featured strip stays.
+      const stopScores: Record<string, number> = proof?.stop_scores || {};
+      const MOST_READ_MIN_STORIES = 2;
       const READERS_MIN = 250;
       const mostRead = working
-        .filter(s => (storyReads[s.id] || 0) >= MOST_READ_MIN_READS)
-        .sort((a, b) => (storyReads[b.id] || 0) - (storyReads[a.id] || 0))
+        .filter(s => typeof stopScores[s.id] === 'number')
+        .sort((a, b) => stopScores[b.id] - stopScores[a.id])
         .slice(0, MAX_FEATURED);
       const readersAll = Number(proof?.readers_all_time || 0);
       feedData.readers_rounded = readersAll >= READERS_MIN ? Math.floor(readersAll / 50) * 50 : null;

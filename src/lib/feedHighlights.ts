@@ -1,4 +1,5 @@
 /** Rule-based highlight + nudge picker for the dashboard feed card. Every positive must be true. */
+import { STORY_SCORE_FLOOR } from "./readership";
 
 export interface HighlightStats {
   reads_week: number;
