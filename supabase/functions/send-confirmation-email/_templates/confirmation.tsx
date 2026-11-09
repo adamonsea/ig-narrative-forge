@@ -18,7 +18,7 @@ interface ConfirmationEmailProps {
   topicSlug: string;
   topicLogoUrl?: string;
   verificationUrl: string;
-  notificationType: 'daily' | 'weekly';
+  notificationType: 'daily' | 'weekly' | 'both';
   baseUrl: string;
 }
 
@@ -41,7 +41,7 @@ export const ConfirmationEmail = ({
         `}
       </style>
     </Head>
-    <Preview>Confirm your {topicName} {notificationType} briefing subscription</Preview>
+    <Preview>{notificationType === 'both' ? `Confirm your daily and weekly ${topicName} briefings` : `Confirm your ${topicName} ${notificationType} briefing subscription`}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
@@ -50,7 +50,7 @@ export const ConfirmationEmail = ({
           ) : (
             <Heading style={h1}>{topicName}</Heading>
           )}
-          <Text style={subtitle}>{notificationType === 'daily' ? 'Daily' : 'Weekly'} Briefing</Text>
+          <Text style={subtitle}>{notificationType === 'both' ? 'Daily and Weekly Briefings' : notificationType === 'daily' ? 'Daily Briefing' : 'Weekly Briefing'}</Text>
         </Section>
 
         <Hr style={hr} />
@@ -58,7 +58,7 @@ export const ConfirmationEmail = ({
         <Section style={contentSection}>
           <Heading style={h2}>Confirm your subscription</Heading>
           <Text style={paragraph}>
-            Thanks for subscribing to the {topicName} {notificationType} briefing! 
+            Thanks for subscribing to the {topicName} {notificationType === 'both' ? 'daily and weekly briefings' : `${notificationType} briefing`}! 
             Click the button below to confirm your email address.
           </Text>
           
