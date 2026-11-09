@@ -84,7 +84,12 @@ export interface PromptStripResult {
 }
 
 /** Remove "Source:" credits and AI-written reader prompts from the last slide. */
-export const stripReaderPrompts = (content: string, appealContext: string = content): PromptStripResult => {
+export const stripReaderPrompts = (
+  content: string,
+  appealContext: string = content,
+  opts: { closingQuestion?: boolean } = {}
+): PromptStripResult => {
+  const { closingQuestion = true } = opts;
   if (!content || /<[a-z]/i.test(content)) return { text: content, removed: [] };
   const removed: string[] = [];
   const sentences = splitSentences(content).filter((s) => {
@@ -101,7 +106,7 @@ export const stripReaderPrompts = (content: string, appealContext: string = cont
     return true;
   });
   // Finally, a short closing question to the reader (very last sentence only).
-  if (kept.length) {
+  if (closingQuestion && kept.length) {
     const last = kept[kept.length - 1];
     const before = kept.slice(0, -1).join(' ');
     if (isClosingQuestion(last, before, appealContext)) {
@@ -138,7 +143,9 @@ export function prepareStorySlides<T extends PreparedSlide>(
     const last = out[out.length - 1];
     const original = last.content || '';
     const pre = preClean(original);
-    const { text, removed } = stripReaderPrompts(pre);
+    // Closing questions only on the story's real last slide, never on a body
+    // slide that became last because the closing slide was dropped.
+    const { text, removed } = stripReaderPrompts(pre, pre, { closingQuestion: dropped === 0 });
     if (pre !== original) {
       const keptLines = new Set(pre.split('\n').map((l) => l.trim()));
       removedAll.push(
