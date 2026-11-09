@@ -15,3 +15,18 @@ describe("7-day bars", () => {
   it("a day with one read is still visible", () => expect(barHeights([1, 1000])[0]).toBe(4));
   it("no reads means flat bars", () => expect(barHeights([0, 0])).toEqual([0, 0]));
 });
+
+import { dropoffCurve, topStopper, STORY_SCORE_FLOOR } from "./readership";
+describe("scroll drop-off", () => {
+  it("needs 30 reader-days", () => expect(dropoffCurve({ sessions: 29, reached: [29, 10] })).toBeNull());
+  it("shows the share reaching each card and where half have gone", () =>
+    expect(dropoffCurve({ sessions: 40, reached: [40, 30, 18, 8] })).toEqual({ percents: [100, 75, 45, 20], halfGoneBy: 3 }));
+});
+
+describe("top headline stopper", () => {
+  const s = { id: "a", title: "Pier reopens", seen: 30, stop_rate: 0.3, expected_rate: 0.15, score: 1.8 };
+  it("one floor of 30 outside readers", () => expect(STORY_SCORE_FLOOR).toBe(30));
+  it("hidden below 30 readers", () => expect(topStopper({ ...s, seen: 29 })).toBeNull());
+  it("compares with what its feed spot usually gets", () => expect(topStopper(s)?.times).toBe(2));
+  it("hidden when it doesn't beat its spot", () => expect(topStopper({ ...s, stop_rate: 0.15 })).toBeNull());
+});

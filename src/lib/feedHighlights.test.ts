@@ -91,7 +91,7 @@ describe("eye-catching headline", () => {
     expect(pickNudge(h, st)).toMatchObject({ kind: "share_story", storyId: "st1" });
   });
   test("too few readers who saw it shows nothing", () => {
-    expect(pickHighlight(s({ ...eye, top_stop_seen: 19 }), "X", TODAY)).toBeNull();
+    expect(pickHighlight(s({ ...eye, top_stop_seen: 29 }), "X", TODAY)).toBeNull();
   });
   test("not clearly above the feed's typical rate shows nothing", () => {
     expect(pickHighlight(s({ ...eye, median_stop_rate: 0.35 }), "X", TODAY)).toBeNull();

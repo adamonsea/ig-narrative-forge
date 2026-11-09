@@ -323,13 +323,13 @@ const TopicFeed = () => {
   // Track story impressions when stories are viewed
   const { trackImpression } = useStoryImpressionTracking(topic?.id);
   const stopTrackerRef = useRef<HeadlineStopTracker | null>(null);
-  const stopNodesRef = useRef<Map<Element, string>>(new Map());
+  const stopNodesRef = useRef<Map<Element, { id: string; pos: number }>>(new Map());
   const isOwnFeed = !!user && !!topic && (topic as any).created_by === user.id;
   useEffect(() => {
     if (!topic?.id) return;
     const t = createHeadlineStopTracker(topic.id, { skip: isOwnFeed });
     stopTrackerRef.current = t;
-    stopNodesRef.current.forEach((id, el) => { if (el.isConnected) t.observe(el, id); });
+    stopNodesRef.current.forEach(({ id, pos }, el) => { if (el.isConnected) t.observe(el, id, pos); });
     return () => { t.destroy(); stopTrackerRef.current = null; };
   }, [topic?.id, isOwnFeed]);
 
@@ -628,7 +628,7 @@ const TopicFeed = () => {
               if (index === lastDisplayableStoryIndex) {
                 lastStoryElementRef(node);
               }
-              if (node) { stopNodesRef.current.set(node, story.id); stopTrackerRef.current?.observe(node, story.id); }
+              if (node) { stopNodesRef.current.set(node, { id: story.id, pos: storyIndex - 1 }); stopTrackerRef.current?.observe(node, story.id, storyIndex - 1); }
               if (node && sharedStoryObserverRef.current) {
                 storyObserverMapRef.current.set(node, story.id);
                 sharedStoryObserverRef.current.observe(node);

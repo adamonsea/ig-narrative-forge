@@ -41,6 +41,13 @@ Published queue steadiness (plan: .lovable/plan/steady-up-the-published-queue-20
 - [x] Load-error toasts replaced by one quiet inline banner with retry
 - [x] Thumbnails via Supabase image transformation + lazy loading
 
+Headline attention — Phase 1 (9 November 2026)
+- [x] Record each card's feed position with headline views (scroll depth = deepest position reached)
+- [x] One position-corrected story score with a 30 outside-reader floor
+- [x] Readership: scroll drop-off curve + top headline stopper (replaces "Most eye-catching")
+- [x] Widget "Most read" shelf ranked by the same score, Featured below the floor
+- [ ] Phase 2 automatic boost — not to be built until a feed nears 150 weekly readers
+
 Feed ordering
 - [x] Old stories slot into the feed/pipeline at their original publication date
       (anything older than 3 days no longer jumps to the top)
