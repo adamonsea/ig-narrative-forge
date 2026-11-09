@@ -71,7 +71,9 @@ interface Topic {
     subheader?: string;
     show_topic_name?: boolean;
     icon_url?: string;
+    primary_color?: string;
   };
+  illustration_primary_color?: string | null;
   donation_enabled?: boolean;
   donation_config?: {
     button_text: string;
@@ -295,7 +297,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at'),
         supabase
           .from('topics')
-          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled')
+          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color')
           .ilike('slug', slug)
           .eq('is_public', true)
           .single()
@@ -341,7 +343,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         branding_config: brandingConfig as any,
         donation_enabled: donationEnabled,
         donation_config: donationConfig as any,
-        automated_insights_enabled: automatedInsightsEnabled
+        automated_insights_enabled: automatedInsightsEnabled,
+        illustration_primary_color: fullTopicData?.illustration_primary_color ?? null,
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);
