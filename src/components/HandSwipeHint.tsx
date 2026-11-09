@@ -6,6 +6,9 @@ import { READER_ONBOARDING_EXTRAS } from '@/lib/featureFlags';
 const MAX_HINT_VISITS = READER_ONBOARDING_EXTRAS ? 3 : 1;
 const HINT_DELAY_MS = READER_ONBOARDING_EXTRAS ? 500 : 1000;
 
+/** Whether the first-card swipe hint should show on this visit to a feed. */
+export const shouldShowSwipeHint = (previousVisits: number) => previousVisits < MAX_HINT_VISITS;
+
 interface HandSwipeHintProps {
   topicSlug: string;
   forceShow?: boolean;
@@ -37,7 +40,7 @@ export const HandSwipeHint = ({ topicSlug, forceShow = false, onComplete }: Hand
     const storageKey = `feed_swipe_hint_count_${topicSlug}`;
     const visitCount = parseInt(localStorage.getItem(storageKey) || '0', 10);
 
-    if (visitCount < MAX_HINT_VISITS) {
+    if (shouldShowSwipeHint(visitCount)) {
       // Show hint after a brief delay
       const showTimer = setTimeout(() => {
         setIsVisible(true);
