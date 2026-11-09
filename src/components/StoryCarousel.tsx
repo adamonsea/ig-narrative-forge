@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
-import { stripReaderPrompts, buildReporterByline } from '@/lib/lastSlide';
+import { prepareStorySlides, buildReporterByline } from '@/lib/lastSlide';
 import { useStoryFontSize } from '@/lib/slideTextFit';
 import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
@@ -278,7 +278,12 @@ export default function StoryCarousel({
   // Remove fit-to-height scaling functionality
   
   // Defensive checks for slides data
-  const validSlides = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
+  // Reader-facing slides: in order, last slide cleaned (empty closing slides dropped).
+  const validSlides = useMemo(() => {
+    const raw = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
+    const ordered = [...raw].sort((a, b) => a.slide_number - b.slide_number);
+    return prepareStorySlides(ordered, stripGeneratedSourceAttribution).slides;
+  }, [story.slides]);
   const safeSlideIndex = Math.max(0, Math.min(currentSlideIndex, validSlides.length - 1));
   const currentSlide = validSlides[safeSlideIndex];
   const isFirstSlide = safeSlideIndex === 0;
@@ -430,13 +435,12 @@ export default function StoryCarousel({
 
   // Remove auto-fit scaling logic
 
-  // Last slide: story text with AI reader prompts removed (stored copy untouched);
+  // Last slide text is already cleaned by prepareStorySlides (stored copy untouched);
   // the byline and the bright "Read the full story" pill are rendered separately.
-  const parseContentForLastSlide = (content: string, links: any[] = [], isLast = false) => {
-    if (!isLast) return { mainContent: content, contentWithLinks: renderContentWithLinks(content, links) };
-    const mainContent = stripReaderPrompts(stripGeneratedSourceAttribution(content)).text;
-    return { mainContent, contentWithLinks: renderContentWithLinks(mainContent, links) };
-  };
+  const parseContentForLastSlide = (content: string, links: any[] = [], _isLast = false) => ({
+    mainContent: content,
+    contentWithLinks: renderContentWithLinks(content, links),
+  });
 
   const renderContentWithLinks = (content: string, links: any[] = []) => {
     if (!links || links.length === 0) {
@@ -502,7 +506,7 @@ export default function StoryCarousel({
     const isLast = index === sortedSlides.length - 1;
     const { mainContent } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links, isLast);
     const body = createSafeHTML(
-      isLast ? sanitizeContentWithLinks(mainContent) : sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+      sanitizeContentWithLinks(mainContent, slide?.links),
       true
     ).__html as string;
     return isLast ? body + bylineHtml : body;

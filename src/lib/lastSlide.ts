@@ -4,7 +4,9 @@
  * Older stories were written with a reader prompt at the end ("Discuss with
  * others…", "Share this update…"). We remove those at render time, without
  * touching the stored copy, using deliberately narrow rules:
- *  - only the last two sentences of the last slide are candidates;
+ *  - "Source:" / "Sources:" credit sentences are hidden anywhere on the last
+ *    slide (the byline and publisher button carry the credit);
+ *  - then only the last two remaining sentences are prompt candidates;
  *  - the sentence must START with a known prompt opener;
  *  - it is kept if it carries practical detail (numbers, contact, links);
  *  - it is kept if the slide is a police / public-safety / missing-person
@@ -12,7 +14,10 @@
  */
 
 const PROMPT_OPENERS =
-  /^(?:share\s+(?:this|the|details|your)\b|discuss\s+(?:with|the|your)\b|explore\s+(?:further|the)\b|read\s+more\s+(?:on|about)\b)/i;
+  /^(?:share\s+(?:this|the|details|your|with)\b|discuss\s+(?:with|the|your|this)\b|explore\s+(?:further|the|more)\b|read\s+more\b)/i;
+
+/** Model-written credit sentence: must START with "Source:" or "Sources:". */
+const SOURCE_SENTENCE = /^\W{0,3}sources?\s*:/i;
 
 /** "Have you …?" — only when the sentence is a question. */
 const QUESTION_OPENER = /^have\s+you\b.*\?$/i;
@@ -43,13 +48,15 @@ export interface PromptStripResult {
   removed: string[];
 }
 
-/** Remove AI-written reader prompts from the end of the last slide. */
+/** Remove "Source:" credits and AI-written reader prompts from the last slide. */
 export const stripReaderPrompts = (content: string): PromptStripResult => {
   if (!content || /<[a-z]/i.test(content)) return { text: content, removed: [] };
-  const sentences = splitSentences(content);
-  if (sentences.length < 2) return { text: content, removed: [] };
   const removed: string[] = [];
-  const start = Math.max(1, sentences.length - 2); // never remove the opening sentence
+  const sentences = splitSentences(content).filter((s) => {
+    if (SOURCE_SENTENCE.test(s)) { removed.push(s); return false; }
+    return true;
+  });
+  const start = Math.max(0, sentences.length - 2); // last two remaining sentences only
   const kept = sentences.filter((s, i) => {
     if (i >= start && isReaderPrompt(s, content)) {
       removed.push(s);
@@ -59,6 +66,48 @@ export const stripReaderPrompts = (content: string): PromptStripResult => {
   });
   return removed.length ? { text: kept.join(' '), removed } : { text: content, removed };
 };
+
+/** True when nothing readable is left (empty, or punctuation/whitespace only). */
+export const isEmptySlideText = (text: string | null | undefined): boolean =>
+  !(text || '').replace(/<[^>]*>/g, '').replace(/[\s\p{P}\p{S}]/gu, '');
+
+export interface PreparedSlide {
+  content: string;
+  links?: unknown[];
+}
+
+/**
+ * Final reader-facing slide list. Cleans the last slide; if nothing is left,
+ * drops it so the previous slide becomes the last one (and is cleaned in turn).
+ * The headline slide is never dropped, so a story can't end on an empty or
+ * byline-only slide. Input must already be in display order.
+ */
+export function prepareStorySlides<T extends PreparedSlide>(
+  slides: T[],
+  preClean: (text: string) => string = (t) => t
+): { slides: T[]; dropped: number; removed: string[] } {
+  const out = [...slides];
+  const removedAll: string[] = [];
+  let dropped = 0;
+  while (out.length > 1) {
+    const last = out[out.length - 1];
+    const original = last.content || '';
+    const pre = preClean(original);
+    const { text, removed } = stripReaderPrompts(pre);
+    removedAll.push(...removed);
+    if (isEmptySlideText(text)) {
+      out.pop();
+      dropped++;
+      continue;
+    }
+    if (text !== original) {
+      // Stored link offsets no longer line up with the cleaned text.
+      out[out.length - 1] = { ...last, content: text, links: [] };
+    }
+    break;
+  }
+  return { slides: out, dropped, removed: removedAll };
+}
 
 const GENERIC_AUTHORS = new Set([
   'unknown', 'staff', 'staff writer', 'staff reporter', 'reporter', 'newsdesk',
