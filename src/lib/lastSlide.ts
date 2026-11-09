@@ -9,9 +9,8 @@
  *  - then only the last two remaining sentences are prompt candidates;
  *  - the sentence must START with a known prompt opener;
  *  - it is kept if it carries practical detail (numbers, contact, links);
- *  - it is kept if the slide (or, via prepareStorySlides, anywhere in the
- *    story) reads as a police / public-safety / missing-person appeal —
- *    sharing those genuinely helps.
+ *  - it is kept if the slide reads as a police / public-safety /
+ *    missing-person appeal — sharing those genuinely helps.
  */
 
 const PROMPT_OPENERS =
@@ -40,10 +39,7 @@ const isReaderPrompt = (sentence: string, slideText: string): boolean => {
   const s = sentence.trim();
   if (!(PROMPT_OPENERS.test(s) || QUESTION_OPENER.test(s))) return false;
   if (DETAIL_PROTECT.test(s)) return false;
-  // Appeals: a share ask is kept when appeal wording appears anywhere in the
-  // context; any other prompt is kept only if it names the appeal itself.
-  if (APPEAL_PROTECT.test(s)) return false;
-  if (/^share\b/i.test(s) && APPEAL_PROTECT.test(slideText)) return false;
+  if (APPEAL_PROTECT.test(slideText)) return false; // appeal wording anywhere on the slide
   return true;
 };
 
@@ -92,15 +88,12 @@ export function prepareStorySlides<T extends PreparedSlide>(
 ): { slides: T[]; dropped: number; removed: string[] } {
   const out = [...slides];
   const removedAll: string[] = [];
-  // Appeal wording anywhere in the story protects share asks, so dropping an
-  // empty closer can never strip an appeal from the slide before it.
-  const appealContext = slides.map((sl) => sl.content || '').join(' ');
   let dropped = 0;
   while (out.length > 1) {
     const last = out[out.length - 1];
     const original = last.content || '';
     const pre = preClean(original);
-    const { text, removed } = stripReaderPrompts(pre, appealContext);
+    const { text, removed } = stripReaderPrompts(pre);
     removedAll.push(...removed);
     if (isEmptySlideText(text)) {
       out.pop();

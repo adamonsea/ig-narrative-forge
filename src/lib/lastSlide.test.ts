@@ -117,15 +117,14 @@ describe('empty closing slides are dropped', () => {
       expect(last.content.trim().length).toBeGreaterThan(0);
     }
   });
-  test('appeal on an earlier slide protects the share ask on the new last slide', () => {
+  test('appeal wording on the new last slide protects its share ask', () => {
     const out = prepareStorySlides([
       s(1, 'Headline'),
-      s(2, 'Authorities urge witnesses to come forward, quoting serial 640 when calling 101.'),
-      s(3, 'Community responds as safety concerns rise. Share this information to help identify the suspect.'),
-      s(4, 'Source: Eastbourne reporting by Peter Lindsey. Discuss this developing story with others.'),
+      s(2, 'Officers want to trace the driver. Share this appeal with friends.'),
+      s(3, 'Source: Eastbourne reporting by Peter Lindsey. Discuss this developing story with others.'),
     ]);
-    expect(out.slides.length).toBe(3);
-    expect(out.slides[2].content).toContain('Share this information to help identify the suspect.');
+    expect(out.slides.length).toBe(2);
+    expect(out.slides[1].content).toBe('Officers want to trace the driver. Share this appeal with friends.');
   });
   test('cleaned last slide drops stale link offsets; untouched slide keeps them', () => {
     const link = { start: 0, end: 3, url: 'https://x.test', text: 'The' };
