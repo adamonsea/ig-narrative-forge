@@ -1,3 +1,4 @@
+// @ts-nocheck -- run with: bun test ./src/lib/readerOnboarding.test.ts
 import { describe, it, expect } from 'bun:test';
 import { READER_ONBOARDING_EXTRAS } from './featureFlags';
 import { shouldShowSwipeHint } from '@/components/HandSwipeHint';
