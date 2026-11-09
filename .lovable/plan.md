@@ -42,7 +42,7 @@ I'll also fix the fake "last week" bar (show only this week's count) so a curato
 Today new feeds get `automated_insights_enabled = true` and `topic_sentiment_settings.enabled = true`; everything else already defaults off. Change both defaults to off and add the new parliamentary feed switch off by default. Existing feeds other than Eastbourne are not touched.
 
 ### 4. Integrity and checks
-- **Sign-up flow, confirmation email, subscriber counts:** one test signup with `zztest_…@example.invalid`-style address only (never a real-looking email), confirm the row lands with the right topic, then delete only that row. Dashboard subscriber count compared before and after.
+- **Sign-up flow, confirmation email, subscriber counts:** no test signups to any address (made-up ones included). The new card sends exactly the same request as today; I'll check the row shape with an insert inside a transaction that is rolled back (no email sent), and confirm the dashboard subscriber count is unchanged. Adam does one real signup with his own email after publishing.
 - **Weekly email incl. chamber events:** dry-run the weekly email for Eastbourne and confirm the parliament and events sections still populate.
 - **Widget:** unchanged code; check its feed data still returns.
 - **Readership / card positions:** extras removal shifts nothing in story positions (positions count stories only); confirm via the existing tests and a Playwright run with `zztest_` visitor ID.
