@@ -438,7 +438,7 @@ REQUIREMENTS:
 - Make it shareable and engaging for web readers
 - Include alt text for accessibility
 - NEVER name the publication, website, domain or author in any slide. Attribution is added automatically from the real article URL, so writing it yourself risks mis-crediting. Do not write "Source: ...", "Read more at <site>", "By <name>", or any publication name.
-- CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
+- End the final slide on a fact from the story. No calls to action, questions to the reader, or invitations to share, discuss or read more. The only exception: for a police, public-safety or missing-person appeal, the final slide may ask readers to share the appeal.
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
 ${templateGuidance ? `TEMPLATE DIRECTIVES:\n${templateGuidance}` : ''}
@@ -1037,7 +1037,6 @@ Create:
 Make it engaging and shareable for ${publicationName} web readers.
 
 ${HUMAN_VOICE_RULES}
-Use web-appropriate language like "share with friends", "discuss this story", "read more".
 Avoid social media platform-specific terms.
 
 Return in JSON format:

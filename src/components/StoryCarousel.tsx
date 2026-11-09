@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ import { format } from 'date-fns';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
-import { buildBylineLine, buildShareCta } from '@/lib/storyAttribution';
+import { stripReaderPrompts, buildReporterByline } from '@/lib/lastSlide';
+import { useStoryFontSize } from '@/lib/slideTextFit';
+import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
@@ -108,6 +110,8 @@ interface StoryCarouselProps {
   onStoryScrolledPast?: () => void; // Callback when story scrolls out of view
   topicName?: string; // Topic name for branded WhatsApp share
   topicSlug?: string; // Topic slug for branded WhatsApp share
+  /** Feed accent colour for the last-slide "Read the full story" pill */
+  brandColor?: string | null;
   onMoreLikeThis?: (story: Story) => void;
   onPrefetchFilter?: (story: Story) => void;
   /** Pre-fetched reaction counts from batch hook */
@@ -130,6 +134,7 @@ export default function StoryCarousel({
   onStoryScrolledPast, 
   topicName, 
   topicSlug, 
+  brandColor,
   onMoreLikeThis,
   onPrefetchFilter,
   prefetchedReactionCounts,
@@ -425,80 +430,12 @@ export default function StoryCarousel({
 
   // Remove auto-fit scaling logic
 
-  // Parse content for last slide styling and ensure source attribution
-  const parseContentForLastSlide = (content: string, links: any[] = []) => {
-    if (!isLastSlide) return { mainContent: content, ctaContent: null, sourceUrl: null, contentWithLinks: renderContentWithLinks(content, links) };
-    
-    // Look for CTA patterns (removed "Comment, like, share.")
-    const ctaPatterns = [
-      /Like, share\./i,
-      /Summarised by/i,
-      /Support local journalism/i
-    ];
-    
-    let splitIndex = -1;
-    for (const pattern of ctaPatterns) {
-      const match = content.search(pattern);
-      if (match !== -1) {
-        splitIndex = match;
-        break;
-      }
-    }
-    
-    let mainContent = content;
-    let ctaContent = null;
-    
-    if (splitIndex !== -1) {
-      mainContent = content.substring(0, splitIndex).trim();
-      ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
-    }
-
-    // Discard any AI-written source credit — real attribution comes from source_url
-    mainContent = stripGeneratedSourceAttribution(mainContent);
-    
-    // Safe URL parsing with try/catch for source attribution
-    let sourceDomain = 'source';
-    let validSourceUrl = null;
-    
-    try {
-      if (story.article?.source_url && story.article.source_url !== '#') {
-        const url = new URL(story.article.source_url);
-        sourceDomain = url.hostname.replace('www.', '');
-        validSourceUrl = story.article.source_url;
-      }
-    } catch (error) {
-      console.warn('Invalid source URL:', story.article?.source_url);
-    }
-    
-    // Format original article date if available
-    const originalDateText = story.article?.published_at ? 
-      ` (Originally published ${format(new Date(story.article.published_at), 'MMM d, yyyy')})` : 
-      '';
-    
-    const sourceLinkHtml = validSourceUrl
-      ? `<a href="${validSourceUrl}" target="_blank" rel="noopener noreferrer" class="underline text-primary hover:text-primary/80">Read the full story at ${sourceDomain}${originalDateText}</a>`
-      : `Read the full story at ${sourceDomain}${originalDateText}`;
-
-    // Rebuild credit from the story's own database fields so it can never
-    // contradict the article we link to, then add the share prompt.
-    const bylineLine = buildBylineLine(
-      story.author,
-      story.publication_name,
-      story.article?.source_url
-    );
-    const shareLine = buildShareCta(topicName);
-
-    const finalCtaContent = [ctaContent, bylineLine, shareLine, sourceLinkHtml]
-      .filter(Boolean)
-      .map((line) => `<p class="mb-2 last:mb-0">${line}</p>`)
-      .join('');
-    
-    return {
-      mainContent,
-      ctaContent: finalCtaContent,
-      sourceUrl: validSourceUrl,
-      contentWithLinks: renderContentWithLinks(mainContent, links)
-    };
+  // Last slide: story text with AI reader prompts removed (stored copy untouched);
+  // the byline and the bright "Read the full story" pill are rendered separately.
+  const parseContentForLastSlide = (content: string, links: any[] = [], isLast = false) => {
+    if (!isLast) return { mainContent: content, contentWithLinks: renderContentWithLinks(content, links) };
+    const mainContent = stripReaderPrompts(stripGeneratedSourceAttribution(content)).text;
+    return { mainContent, contentWithLinks: renderContentWithLinks(mainContent, links) };
   };
 
   const renderContentWithLinks = (content: string, links: any[] = []) => {
@@ -553,6 +490,24 @@ export default function StoryCarousel({
 
   // Defensive sort: ensure slides are always in correct order
   const sortedSlides = [...validSlides].sort((a, b) => a.slide_number - b.slide_number);
+
+  // Fit-to-card text: one shared size for slides 2+, set by the slide needing most room.
+  const contentAreaRef = useRef<HTMLDivElement>(null);
+  const bylineText = buildReporterByline(story.author);
+  const bylineHtml = bylineText
+    ? `<p class="story-byline" style="margin-top:0.9em;font-size:0.6em;font-weight:500;opacity:0.75">${bylineText.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c])}</p>`
+    : '';
+  const laterSlideHtml = sortedSlides.map((slide, index) => {
+    if (index === 0) return '';
+    const isLast = index === sortedSlides.length - 1;
+    const { mainContent } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links, isLast);
+    const body = createSafeHTML(
+      isLast ? sanitizeContentWithLinks(mainContent) : sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+      true
+    ).__html as string;
+    return isLast ? body + bylineHtml : body;
+  });
+  const fit = useStoryFontSize(story.id, laterSlideHtml.slice(1), contentAreaRef);
   
   // Validation: check if slides are in sequential order
   useEffect(() => {
@@ -579,9 +534,9 @@ export default function StoryCarousel({
   const slideComponents = useMemo(() => sortedSlides.map((slide, index) => {
     
     // Standard slide rendering
-    const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;
+    const overflows = index > 0 && !!fit?.overflow.includes(index - 1);
     
     return (
       <div key={slide.id} className="h-full w-full">
@@ -642,38 +597,27 @@ export default function StoryCarousel({
         ) : (
           // Slides without image - use grid for perfect centering and fit-to-height on last slide
           <div className="h-full flex items-center justify-center px-5 pt-6 pb-14 md:px-8 md:pt-8 md:pb-16 overflow-hidden">
-            <div className="w-full max-w-xl mx-auto text-left">
-                 <div className={`${
-                  index === 0 
-                  ? `leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty` 
-                  : `leading-[1.35] ${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-pretty`
-                }`}>
-                  {/* Main story content with links */}
+            <div className={`w-full max-w-xl mx-auto text-left ${overflows ? 'max-h-full overflow-y-auto [mask-image:linear-gradient(to_bottom,black_85%,transparent)]' : ''}`}>
+              {index === 0 ? (
+                <div className={`leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty`}>
                   <div dangerouslySetInnerHTML={createSafeHTML(
-                    isLast ? sanitizeContentWithLinks(mainContent) : sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+                    sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
                     true
                   )} />
-                      
-                  {/* CTA content with special styling on last slide */}
-                  {isLast && ctaContent && (
-                    <div className="mt-4 pt-4 border-t border-muted">
-                      <div 
-                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-pretty"
-                        dangerouslySetInnerHTML={createSafeHTML(
-                          sanitizeContentWithLinks(ctaContent),
-                          true
-                        )}
-                      />
-                    </div>
-                  )}
-                 </div>
-                 
-             </div>
-           </div>
+                </div>
+              ) : (
+                <div
+                  className="leading-[1.35] font-light text-pretty"
+                  style={{ fontSize: fit ? `${fit.size}px` : undefined, visibility: fit ? 'visible' : 'hidden' }}
+                  dangerouslySetInnerHTML={{ __html: laterSlideHtml[index] }}
+                />
+              )}
+            </div>
+          </div>
         )}
       </div>
     );
-  }), [sortedSlides, story, validSlides.length, isFastConnection]);
+  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001')]);
 
   const slidesForEmbla = slideComponents.length
     ? slideComponents
@@ -733,7 +677,7 @@ export default function StoryCarousel({
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 relative overflow-hidden">
+          <div ref={contentAreaRef} className="flex-1 relative overflow-hidden">
             {/* Hand Swipe Hint - only show on first story */}
             {storyIndex === 0 && topicSlug && <HandSwipeHint topicSlug={topicSlug} />}
             
@@ -789,6 +733,27 @@ export default function StoryCarousel({
                   sourceName = 'source';
                 }
                 
+                if (isLastSlide && sourceUrl && sourceUrl !== '#') {
+                  const palette = feedBrandPalette(brandColor);
+                  return (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (topicId) trackSourceClick(story.id, topicId);
+                        window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+                      }}
+                      style={{
+                        '--pill-bg': toCss(palette.light.fill), '--pill-fg': toCss(palette.light.onFill),
+                        '--pill-bg-dark': toCss(palette.dark.fill), '--pill-fg-dark': toCss(palette.dark.onFill),
+                      } as React.CSSProperties}
+                      className="inline-flex items-center gap-1.5 min-h-9 px-4 py-1.5 text-[13px] sm:text-sm font-semibold whitespace-nowrap rounded-full transition-opacity hover:opacity-90 cursor-pointer bg-[color:var(--pill-bg)] text-[color:var(--pill-fg)] dark:bg-[color:var(--pill-bg-dark)] dark:text-[color:var(--pill-fg-dark)]"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                      Read the full story at {sourceName}
+                    </button>
+                  );
+                }
+
                 return sourceUrl && sourceUrl !== '#' ? (
                   <button
                     onClick={(e) => {
@@ -798,7 +763,7 @@ export default function StoryCarousel({
                       }
                       window.open(sourceUrl, '_blank', 'noopener,noreferrer');
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 text-xs bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
                   >
                     <ExternalLink className="w-3 h-3" />
                     from {sourceName}
