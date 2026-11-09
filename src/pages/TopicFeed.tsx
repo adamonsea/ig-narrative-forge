@@ -1226,7 +1226,7 @@ const TopicFeed = () => {
           selectedSources={selectedSources}
           onSourceToggle={toggleSource}
           onClearAll={clearAllFilters}
-        />
+        />}
 
         {/* Donation Modal */}
         {topic && topic.donation_enabled && (
