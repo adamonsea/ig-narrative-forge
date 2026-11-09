@@ -94,6 +94,9 @@ export function prepareStorySlides<T extends PreparedSlide>(
     const original = last.content || '';
     const pre = preClean(original);
     const { text, removed } = stripReaderPrompts(pre);
+    if (pre !== original) {
+      removedAll.push(original.endsWith(pre) ? original.slice(0, original.length - pre.length).trim() : original);
+    }
     removedAll.push(...removed);
     if (isEmptySlideText(text)) {
       out.pop();

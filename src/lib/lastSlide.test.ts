@@ -172,3 +172,14 @@ describe('older credit tidy-up never deletes real text', () => {
     expect(out.slides[1].content).toBe('Share this appeal to help trace Arthur.');
   });
 });
+
+describe('credit prefix never cuts a sentence in half', () => {
+  const { stripGeneratedSourceAttribution } = require('./stripSourceAttribution');
+  test('dash inside the next sentence is not treated as the credit separator', () => {
+    const out = prepareStorySlides(
+      [{ content: 'H' }, { content: 'The tower is listed. Source: bournefreelive.co.uk. Discuss this story with others—what would you do?' }],
+      stripGeneratedSourceAttribution
+    );
+    expect(out.slides[1].content).toBe('The tower is listed.');
+  });
+});

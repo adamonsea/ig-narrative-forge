@@ -15,7 +15,7 @@ export const stripGeneratedSourceAttribution = (content: string): string => {
   // The colon (or explicit "published by") is required so ordinary prose that
   // merely starts with "Via" or "Source" is never truncated.
   cleaned = cleaned.replace(
-    /^\s*(?:\*\*)?\s*(?:(?:source|via|credit)\s*:|originally (?:from|published by)|read more at)\s*\*{0,2}\s*[^\n|—–]{0,80}?(?:\s*(?:\||—|–)\s*|\n+)/i,
+    /^\s*(?:\*\*)?\s*(?:(?:source|via|credit)\s*:|originally (?:from|published by)|read more at)\s*\*{0,2}\s*(?:[^\n|—–.!?]|[.!?](?=\S)){0,80}?(?:\s*(?:\||—|–)\s*|\n+)/i,
     ''
   );
 
