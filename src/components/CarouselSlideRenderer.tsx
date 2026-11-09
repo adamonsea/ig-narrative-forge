@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { createSafeHTML } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
-import { buildBylineLine, buildShareCta } from '@/lib/storyAttribution';
+import { stripReaderPrompts, buildReporterByline } from '@/lib/lastSlide';
 import { ExternalLink } from 'lucide-react';
 
 interface Slide {
@@ -69,46 +69,12 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
       ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
     }
 
-    // Discard any AI-written source credit — real attribution comes from source_url
-    mainContent = stripGeneratedSourceAttribution(mainContent);
-    
-    // Always add source attribution with original article date on final slide
-    const sourceDomain = story.article.source_url && story.article.source_url !== '#' ? 
-      (() => {
-        try {
-          return new URL(story.article.source_url).hostname.replace('www.', '');
-        } catch (error) {
-          console.warn('Invalid URL in story.article.source_url:', story.article.source_url);
-          return 'source';
-        }
-      })() : 
-      'source';
-    
-    // Format original article date if available
-    const originalDateText = story.article?.published_at ? 
-      ` (Originally published ${format(new Date(story.article.published_at), 'MMM d, yyyy')})` : 
-      '';
-    
-    const sourceAttribution = `Read the full story at ${sourceDomain}${originalDateText}`;
+    // Discard AI-written source credit and reader prompts; keep only a reporter byline.
+    mainContent = stripReaderPrompts(stripGeneratedSourceAttribution(mainContent)).text;
+    const byline = buildReporterByline(story.author);
+    const finalCtaContent = [ctaContent, byline].filter(Boolean).map((l) => `<p class="mb-2 last:mb-0">${l}</p>`).join('') || null;
 
-    // Credit rebuilt from stored story fields — never from model-written copy.
-    const bylineLine = buildBylineLine(
-      story.author,
-      story.publication_name,
-      story.article.source_url
-    );
-    const shareLine = buildShareCta(topicName);
-
-    const finalCtaContent = [ctaContent, bylineLine, shareLine, sourceAttribution]
-      .filter(Boolean)
-      .map((line) => `<p class="mb-2 last:mb-0">${line}</p>`)
-      .join('');
-    
-    return {
-      mainContent,
-      ctaContent: finalCtaContent,
-      sourceUrl: story.article.source_url
-    };
+    return { mainContent, ctaContent: finalCtaContent, sourceUrl: story.article.source_url };
   };
 
   const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide.content);
@@ -208,7 +174,7 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
           {/* Footer with attribution and source link */}
           <div className="p-6 border-t space-y-3">
             <div className="text-center text-lg text-muted-foreground">
-              {story.author ? `Story by ${story.author}` : 'Source: Local News'}
+              {sourceDomain ? `Read the full story at ${sourceDomain}` : 'Source: Local News'}
             </div>
             {sourceDomain && story.article.source_url && story.article.source_url !== '#' && (
               <div className="flex justify-center">

@@ -645,6 +645,7 @@ const TopicFeed = () => {
               storyIndex={index}
               topicName={topic?.name}
               topicSlug={slug}
+              brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               onStorySwipe={handleStorySwipe}
               onStoryScrolledPast={handleStoryScrolledPast}
               onMoreLikeThis={FEED_FILTERS_ENABLED ? handleMoreLikeThis : undefined}
