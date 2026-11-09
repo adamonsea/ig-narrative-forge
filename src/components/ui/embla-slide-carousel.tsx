@@ -40,7 +40,6 @@ export function EmblaSlideCarousel({
   const [selectedIndex, setSelectedIndex] = useState(
     Math.min(Math.max(0, initialIndex), count - 1)
   );
-  const [isSettling, setIsSettling] = useState(false);
   const hasTrackedSwipe = useRef(false);
 
   // Get device-specific settings using centralized helper
@@ -94,23 +93,12 @@ export function EmblaSlideCarousel({
     setSelectedIndex(newIndex);
   }, [emblaApi]);
 
-  // Handle settling state for smooth CSS transition
-  const onSettle = useCallback(() => {
-    setIsSettling(false);
-  }, []);
-
-  const onScroll = useCallback(() => {
-    setIsSettling(true);
-  }, []);
-
   // Setup Embla event listeners
   useEffect(() => {
     if (!emblaApi) return;
 
     emblaApi.on("select", onSelect);
     emblaApi.on("reInit", onSelect);
-    emblaApi.on("settle", onSettle);
-    emblaApi.on("scroll", onScroll);
 
     // Set initial index
     onSelect();
@@ -118,10 +106,8 @@ export function EmblaSlideCarousel({
     return () => {
       emblaApi.off("select", onSelect);
       emblaApi.off("reInit", onSelect);
-      emblaApi.off("settle", onSettle);
-      emblaApi.off("scroll", onScroll);
     };
-  }, [emblaApi, onSelect, onSettle, onScroll]);
+  }, [emblaApi, onSelect]);
 
   // Notify parent of slide changes
   useEffect(() => {
@@ -193,7 +179,7 @@ export function EmblaSlideCarousel({
         <div 
           className={`flex h-full touch-pan-y embla-container-smooth ${
             emblaSettings.useGpuAcceleration ? 'embla-gpu-layer' : ''
-          } ${isSettling ? 'is-settling' : ''}`}
+          }`}
         >
           {slides.map((slide, i) => (
             <div

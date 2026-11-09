@@ -173,7 +173,6 @@ export default function StoryCarousel({
     return !isOlderIOS && isFastConnection && story.animated_illustration_url;
   }, [isIOS, iOSVersion, isFastConnection, story.animated_illustration_url]);
   
-  const [isFirstCard, setIsFirstCard] = useState(false);
   
   // Detect parliamentary stories (legacy — no new ones created)
   const isParliamentaryStory = (story as any).is_parliamentary === true;
@@ -398,21 +397,6 @@ export default function StoryCarousel({
   };
 
 
-  // Determine if this is the first card (for animation)
-  useEffect(() => {
-    const checkIfFirstCard = () => {
-      const cards = document.querySelectorAll('[data-story-card]');
-      const currentCardElement = document.querySelector(`[data-story-card][data-story-id="${story.id}"]`);
-      setIsFirstCard(currentCardElement === cards[0]);
-    };
-    
-    checkIfFirstCard();
-    // Re-check when cards are added/removed
-    const observer = new MutationObserver(checkIfFirstCard);
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    return () => observer.disconnect();
-  }, [story.id]);
 
   // Track when story scrolls out of view after being interacted with
   useEffect(() => {

@@ -99,10 +99,6 @@
   .embla-container-smooth {
     /* Applied during settling phase only */
   }
-  .embla-container-smooth.is-settling {
-    transition: transform 0.1s cubic-bezier(0.25, 0.1, 0.25, 1);
-  }
-
   /* Native scroll-snap enhancement for iOS Safari */
   .embla-native-scroll {
     scroll-snap-type: x mandatory;
