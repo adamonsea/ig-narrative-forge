@@ -58,7 +58,7 @@ export function useStoryFontSize(key: string, blocks: string[], ref: RefObject<H
   const [result, setResult] = useState<FitResult | null>(null);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const blocksKey = blocks.join('\u0001');
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
 
   useLayoutEffect(() => {
     const el = ref.current;

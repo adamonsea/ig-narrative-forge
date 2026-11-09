@@ -746,9 +746,9 @@ export default function StoryCarousel({
                         '--pill-bg': toCss(palette.light.fill), '--pill-fg': toCss(palette.light.onFill),
                         '--pill-bg-dark': toCss(palette.dark.fill), '--pill-fg-dark': toCss(palette.dark.onFill),
                       } as React.CSSProperties}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-full transition-opacity hover:opacity-90 cursor-pointer bg-[color:var(--pill-bg)] text-[color:var(--pill-fg)] dark:bg-[color:var(--pill-bg-dark)] dark:text-[color:var(--pill-fg-dark)]"
+                      className="inline-flex items-center gap-1.5 min-h-9 px-4 py-1.5 text-[13px] sm:text-sm font-semibold whitespace-nowrap rounded-full transition-opacity hover:opacity-90 cursor-pointer bg-[color:var(--pill-bg)] text-[color:var(--pill-fg)] dark:bg-[color:var(--pill-bg-dark)] dark:text-[color:var(--pill-fg-dark)]"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                       Read the full story at {sourceName}
                     </button>
                   );
@@ -763,7 +763,7 @@ export default function StoryCarousel({
                       }
                       window.open(sourceUrl, '_blank', 'noopener,noreferrer');
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 text-xs bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
                   >
                     <ExternalLink className="w-3 h-3" />
                     from {sourceName}

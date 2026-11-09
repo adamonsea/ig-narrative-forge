@@ -1,3 +1,4 @@
+// @ts-nocheck -- run with: bun test ./src/lib/lastSlide.test.ts
 import { describe, expect, test } from 'bun:test';
 import { stripReaderPrompts, cleanAuthor, buildReporterByline } from './lastSlide';
 import { pickSharedSize } from './slideTextFit';
