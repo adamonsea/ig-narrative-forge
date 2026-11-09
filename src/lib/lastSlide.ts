@@ -11,6 +11,11 @@
  *  - it is kept if it carries practical detail (numbers, contact, links);
  *  - it is kept if the slide reads as a police / public-safety /
  *    missing-person appeal — sharing those genuinely helps.
+ *  - "Read the full story/article…" sentences are hidden anywhere on the last
+ *    slide (they repeat the button), with the same detail/appeal protections;
+ *  - a closing question to the reader is hidden only when it is the very last
+ *    sentence, ends with "?", is under 15 words, isn't inside quotation marks,
+ *    and has no detail/appeal protection.
  */
 
 const PROMPT_OPENERS =
@@ -18,6 +23,12 @@ const PROMPT_OPENERS =
 
 /** Model-written credit sentence: must START with "Source:" or "Sources:". */
 const SOURCE_SENTENCE = /^\W{0,3}sources?\s*:/i;
+
+/** "Read the full story/article…" — repeats the bright publisher button. */
+const READ_FULL = /^\W{0,3}read\s+the\s+full\s+(?:story|article)\b/i;
+
+/** Closing reader questions must be shorter than this many words. */
+export const CLOSING_QUESTION_MAX_WORDS = 15;
 
 /** "Have you …?" — only when the sentence is a question. */
 const QUESTION_OPENER = /^have\s+you\b.*\?$/i;
@@ -28,12 +39,36 @@ const DETAIL_PROTECT =
 
 /** Appeal / public-safety context — anywhere on the slide keeps share asks. */
 const APPEAL_PROTECT =
-  /\b(?:appeal(?:s|ing)?|missing|trace|find|witness(?:es)?|sightings?|police|officers?|101|999)\b/i;
+  /\b(?:appeal(?:s|ing)?|missing|trace|find|witness(?:es)?|sightings?|police|officers?|recogni[sz]e[sd]?|101|999)\b/i;
 
 const splitSentences = (text: string): string[] =>
   // A sentence ends at . ! ? (plus closing quotes) followed by whitespace or the end,
   // so "eastbournetheatres.co.uk" or "£2.50" are never split.
   text.split(/(?<=[.!?]["'’”)]*)\s+/).map((s) => s.trim()).filter(Boolean);
+
+const isProtected = (sentence: string, slideText: string): boolean =>
+  DETAIL_PROTECT.test(sentence) || APPEAL_PROTECT.test(slideText);
+
+/** True when `sentence` sits inside, or is itself, a quotation. */
+const isQuoted = (sentence: string, before: string): boolean => {
+  if (/["“”«»]/.test(sentence)) return true;
+  if (/(?:^|[\s(])‘/.test(sentence) || /’\s*$|\?\s*’/.test(sentence)) return true;
+  if (/(?:^|[\s(])'/.test(sentence) || /'\s*$|\?\s*'/.test(sentence)) return true;
+  // An unclosed quote earlier on the slide means we're mid-quotation.
+  const straight = (before.match(/"/g) || []).length;
+  const open = (before.match(/“/g) || []).length;
+  const close = (before.match(/”/g) || []).length;
+  return straight % 2 === 1 || open > close;
+};
+
+const isClosingQuestion = (sentence: string, before: string, slideText: string): boolean => {
+  const s = sentence.trim();
+  if (!/\?$/.test(s)) return false;
+  if (s.split(/\s+/).filter(Boolean).length >= CLOSING_QUESTION_MAX_WORDS) return false;
+  if (isProtected(s, slideText)) return false;
+  if (isQuoted(s, before)) return false;
+  return true;
+};
 
 const isReaderPrompt = (sentence: string, slideText: string): boolean => {
   const s = sentence.trim();
@@ -49,11 +84,17 @@ export interface PromptStripResult {
 }
 
 /** Remove "Source:" credits and AI-written reader prompts from the last slide. */
-export const stripReaderPrompts = (content: string, appealContext: string = content): PromptStripResult => {
+export const stripReaderPrompts = (
+  content: string,
+  appealContext: string = content,
+  opts: { closingQuestion?: boolean } = {}
+): PromptStripResult => {
+  const { closingQuestion = true } = opts;
   if (!content || /<[a-z]/i.test(content)) return { text: content, removed: [] };
   const removed: string[] = [];
   const sentences = splitSentences(content).filter((s) => {
     if (SOURCE_SENTENCE.test(s)) { removed.push(s); return false; }
+    if (READ_FULL.test(s) && !isProtected(s, appealContext)) { removed.push(s); return false; }
     return true;
   });
   const start = Math.max(0, sentences.length - 2); // last two remaining sentences only
@@ -64,6 +105,15 @@ export const stripReaderPrompts = (content: string, appealContext: string = cont
     }
     return true;
   });
+  // Finally, a short closing question to the reader (very last sentence only).
+  if (closingQuestion && kept.length) {
+    const last = kept[kept.length - 1];
+    const before = kept.slice(0, -1).join(' ');
+    if (isClosingQuestion(last, before, appealContext)) {
+      removed.push(last);
+      kept.pop();
+    }
+  }
   return removed.length ? { text: kept.join(' '), removed } : { text: content, removed };
 };
 
@@ -93,7 +143,9 @@ export function prepareStorySlides<T extends PreparedSlide>(
     const last = out[out.length - 1];
     const original = last.content || '';
     const pre = preClean(original);
-    const { text, removed } = stripReaderPrompts(pre);
+    // Closing questions only on the story's real last slide, never on a body
+    // slide that became last because the closing slide was dropped.
+    const { text, removed } = stripReaderPrompts(pre, pre, { closingQuestion: dropped === 0 });
     if (pre !== original) {
       const keptLines = new Set(pre.split('\n').map((l) => l.trim()));
       removedAll.push(

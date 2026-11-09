@@ -183,3 +183,66 @@ describe('credit prefix never cuts a sentence in half', () => {
     expect(out.slides[1].content).toBe('The tower is listed.');
   });
 });
+
+describe('"Read the full story" sentences (repeat the button)', () => {
+  test('hidden on the last slide', () => {
+    expect(strip('The vote passed by a wide margin. Read the full article for more details on the vote and its local implications.'))
+      .toBe('The vote passed by a wide margin.');
+  });
+  test('hidden even when not one of the last two sentences', () => {
+    expect(strip('The fair opens at ten. Read the full story online. Stalls run along the seafront. Entry is free.'))
+      .toBe('The fair opens at ten. Stalls run along the seafront. Entry is free.');
+  });
+  test('kept when it carries a detail (detail protection)', () => {
+    expect(strip('The fair opens soon. Read the full story at sussexexpress.co.uk.'))
+      .toBe('The fair opens soon. Read the full story at sussexexpress.co.uk.');
+  });
+  test('kept on an appeal slide (appeal protection)', () => {
+    const t = 'Police are appealing for witnesses. Read the full story online.';
+    expect(strip(t)).toBe(t);
+  });
+});
+
+describe('closing question to the reader', () => {
+  test('short final question removed', () => {
+    expect(strip('The kiosk sale closes on Friday. What would you like to see there?'))
+      .toBe('The kiosk sale closes on Friday.');
+  });
+  test('kept at 15 words or more', () => {
+    const t = 'The kiosk sale closes soon. What kind of business do you think would work best on the seafront by the pier?';
+    expect(strip(t)).toBe(t);
+  });
+  test('kept when not the very last sentence', () => {
+    const t = 'What would you like to see there? The kiosk sale closes soon.';
+    expect(strip(t)).toBe(t);
+  });
+  test('kept inside quotation marks', () => {
+    expect(strip('She asked: “Where will the children play?”')).toBe('She asked: “Where will the children play?”');
+    expect(strip('Cllr Smith said: "We listened. Who would not want this?"')).toBe('Cllr Smith said: "We listened. Who would not want this?"');
+    expect(strip("He asked: 'Who will pay for it?'")).toBe("He asked: 'Who will pay for it?'");
+  });
+  test('kept with a detail (number)', () => {
+    const t = 'Tickets are on sale now. Will you be there on 12 May?';
+    expect(strip(t)).toBe(t);
+  });
+  test('kept on an appeal slide', () => {
+    const t = 'Officers want to trace the driver. Did you see what happened?';
+    expect(strip(t)).toBe(t);
+  });
+  test('not applied to a body slide that becomes last after the closing slide is dropped', () => {
+    const out = prepareStorySlides([
+      { content: 'Headline' },
+      { content: 'The plan was approved. But will it ever be built?' },
+      { content: 'Share this with friends.' },
+    ]);
+    expect(out.dropped).toBe(1);
+    expect(out.slides[1].content).toBe('The plan was approved. But will it ever be built?');
+  });
+});
+
+describe('appeal protection covers "do you recognise this person" appeals', () => {
+  test('real Eastbourne example kept whole', () => {
+    const t = 'Discuss with others: Do you recognize this man? Share this alert to help keep our local communities safe.';
+    expect(strip(t)).toBe(t);
+  });
+});

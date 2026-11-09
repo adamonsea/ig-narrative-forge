@@ -71,7 +71,7 @@ Explainer film identity and sound
 Public feed sign-up card (9 November 2026)
 - [x] Feed-branded card after stories 3, 13, then every 15
 - [x] Story cards: fit-to-card text, one clean last slide (screenshots shown)
-- [ ] Story cards: hide "Read the full story" sentences and closing reader questions — waiting on Adam's yes/no
+- [x] Story cards: hide "Read the full story" sentences and short closing reader questions (approved 9 Nov)
 - [x] Bring back Daily / Weekly / Both (Both = two rows, as before)
 - [ ] Both sends one confirmation email instead of two — needs Adam's go-ahead (changes the sign-up and confirm services)
 - [x] Tinted, contrast-checked card surface so it stands apart from stories
