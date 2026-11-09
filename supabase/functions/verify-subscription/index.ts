@@ -30,12 +30,12 @@ serve(async (req) => {
 
     console.log(`🔐 Verifying subscription token: ${token.substring(0, 8)}...`);
 
-    // Find the signup with this token
-    const { data: signup, error: findError } = await supabase
+    // Find every signup sharing this token ("Both" = daily + weekly rows; single = one row)
+    const { data: rows, error: findError } = await supabase
       .from('topic_newsletter_signups')
       .select('id, email, topic_id, email_verified, notification_type, topics!inner(name, slug)')
-      .eq('verification_token', token)
-      .single();
+      .eq('verification_token', token);
+    const signup = rows?.[0];
 
     if (findError || !signup) {
       console.error('Token not found:', findError);
@@ -48,8 +48,10 @@ serve(async (req) => {
       });
     }
 
+    const pendingIds = rows!.filter((r: any) => !r.email_verified).map((r: any) => r.id);
+
     // Check if already verified
-    if (signup.email_verified) {
+    if (pendingIds.length === 0) {
       return new Response(JSON.stringify({
         success: true,
         alreadyVerified: true,
@@ -61,7 +63,7 @@ serve(async (req) => {
       });
     }
 
-    // Verify the subscription
+    // Verify the subscription(s)
     const { error: updateError } = await supabase
       .from('topic_newsletter_signups')
       .update({
@@ -69,7 +71,7 @@ serve(async (req) => {
         verified_at: new Date().toISOString(),
         is_active: true
       })
-      .eq('id', signup.id);
+      .in('id', pendingIds);
 
     if (updateError) {
       console.error('Failed to verify:', updateError);
@@ -88,7 +90,8 @@ serve(async (req) => {
           signup_id: signup.id,
           topic_id: signup.topic_id,
           topic_name: (signup as any).topics?.name,
-          notification_type: signup.notification_type
+          notification_type: signup.notification_type,
+          verified_rows: pendingIds.length
         },
         function_name: 'verify-subscription'
       });

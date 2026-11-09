@@ -10,7 +10,7 @@ interface NewsletterSignupRequest {
   email: string;
   name?: string;
   topicId: string;
-  notificationType?: 'daily' | 'weekly';
+  notificationType?: 'daily' | 'weekly' | 'both';
   source?: string;
 }
 
@@ -146,6 +146,16 @@ serve(async (req) => {
       p_email_hash: emailHash,
       p_ip_hash: ipHash
     });
+
+    if (notificationType === 'both') {
+      return await handleBoth(supabase, supabaseUrl, supabaseServiceKey, {
+        email: email.trim().toLowerCase(), name, topic, ipHash, signupSource, sourceDomain,
+      });
+    }
+    if (notificationType !== 'daily' && notificationType !== 'weekly') {
+      return new Response(JSON.stringify({ error: 'Invalid notification type' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     // Check if already subscribed to this notification type
     const { data: existingSignup } = await supabase
@@ -297,7 +307,7 @@ async function sendConfirmationEmail(
     topicSlug: string;
     topicLogoUrl?: string;
     verificationToken: string;
-    notificationType: 'daily' | 'weekly';
+    notificationType: 'daily' | 'weekly' | 'both';
   }
 ) {
   try {
@@ -317,4 +327,61 @@ async function sendConfirmationEmail(
   } catch (error) {
     console.error('Error calling send-confirmation-email:', error);
   }
+}
+
+// "Both": one shared confirmation code across the pending daily/weekly rows, one email.
+// Each row keeps its own unsubscribe_token, so each briefing unsubscribes on its own.
+async function handleBoth(
+  supabase: any, supabaseUrl: string, serviceKey: string,
+  ctx: { email: string; name?: string; topic: any; ipHash: string | null; signupSource: string; sourceDomain: string | null },
+) {
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  const { email, name, topic } = ctx;
+  const { data: existing, error: readErr } = await supabase
+    .from('topic_newsletter_signups')
+    .select('id, notification_type, email_verified')
+    .eq('topic_id', topic.id).eq('email', email)
+    .in('notification_type', ['daily', 'weekly']);
+  if (readErr) { console.error('Both read error:', readErr); return json({ error: 'Failed to subscribe' }, 500); }
+
+  const byType = new Map<string, any>((existing || []).map((r: any) => [r.notification_type, r]));
+  const pendingTypes = (['daily', 'weekly'] as const).filter((t) => !byType.get(t)?.email_verified);
+  if (pendingTypes.length === 0) return json({ message: 'Already subscribed to this briefing', alreadySubscribed: true });
+
+  const token = crypto.randomUUID();
+  const now = new Date().toISOString();
+  let firstId: string | null = null;
+  for (const type of pendingTypes) {
+    const row = byType.get(type);
+    if (row) {
+      const { error } = await supabase.from('topic_newsletter_signups')
+        .update({ verification_token: token, verification_sent_at: now }).eq('id', row.id);
+      if (error) { console.error('Both update error:', error); return json({ error: 'Failed to subscribe' }, 500); }
+      firstId ??= row.id;
+    } else {
+      const { data, error } = await supabase.from('topic_newsletter_signups').insert({
+        topic_id: topic.id, email, first_name: name?.trim() || null, notification_type: type,
+        email_verified: false, is_active: false, verification_token: token, verification_sent_at: now,
+        consent_given_at: now, consent_ip_hash: ctx.ipHash, signup_source: ctx.signupSource, source_domain: ctx.sourceDomain,
+      }).select('id').single();
+      if (error && error.code !== '23505') { console.error('Both insert error:', error); return json({ error: 'Failed to subscribe' }, 500); }
+      firstId ??= data?.id ?? null;
+    }
+  }
+
+  const emailType = pendingTypes.length === 2 ? 'both' : pendingTypes[0];
+  await sendConfirmationEmail(supabaseUrl, serviceKey, {
+    signupId: firstId!, email, topicName: topic.name, topicSlug: topic.slug,
+    topicLogoUrl: topic.branding_config?.logo_url, verificationToken: token, notificationType: emailType,
+  });
+  await supabase.from('system_logs').insert({
+    level: 'info', message: 'Newsletter signup initiated (both) - one confirmation email sent',
+    context: { topic_id: topic.id, pending_types: pendingTypes, email_domain: email.split('@')[1] },
+    function_name: 'secure-newsletter-signup',
+  });
+  return json({
+    success: true, pendingVerification: true, pendingTypes,
+    message: `Please check your email to confirm your ${topic.name} subscription!`,
+  });
 }

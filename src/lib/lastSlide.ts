@@ -46,6 +46,27 @@ const splitSentences = (text: string): string[] =>
   // so "eastbournetheatres.co.uk" or "£2.50" are never split.
   text.split(/(?<=[.!?]["'’”)]*)\s+/).map((s) => s.trim()).filter(Boolean);
 
+/** Registrable-ish host: lowercase, no scheme/www/path. */
+export const normaliseDomain = (value?: string | null): string | null => {
+  const raw = (value || '').trim().toLowerCase();
+  if (!raw) return null;
+  try {
+    const host = new URL(/^https?:\/\//.test(raw) ? raw : `https://${raw}`).hostname;
+    return host.replace(/^www\./, '') || null;
+  } catch { return null; }
+};
+
+const sameSite = (a: string, b: string): boolean =>
+  a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+
+/** "Read the full story at {domain}" where every named domain is this story's own source. */
+const isOwnSourceReadFull = (sentence: string, sourceDomain: string | null): boolean => {
+  if (!sourceDomain) return false;
+  const named = sentence.match(/(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:co\.uk|org\.uk|gov\.uk|com|org|net|uk|news)\b/gi);
+  if (!named || !named.length) return false;
+  return named.every((d) => { const n = normaliseDomain(d); return !!n && sameSite(n, sourceDomain); });
+};
+
 const isProtected = (sentence: string, slideText: string): boolean =>
   DETAIL_PROTECT.test(sentence) || APPEAL_PROTECT.test(slideText);
 
@@ -87,14 +108,18 @@ export interface PromptStripResult {
 export const stripReaderPrompts = (
   content: string,
   appealContext: string = content,
-  opts: { closingQuestion?: boolean } = {}
+  opts: { closingQuestion?: boolean; sourceDomain?: string | null } = {}
 ): PromptStripResult => {
   const { closingQuestion = true } = opts;
+  const sourceDomain = normaliseDomain(opts.sourceDomain);
   if (!content || /<[a-z]/i.test(content)) return { text: content, removed: [] };
   const removed: string[] = [];
   const sentences = splitSentences(content).filter((s) => {
     if (SOURCE_SENTENCE.test(s)) { removed.push(s); return false; }
-    if (READ_FULL.test(s) && !isProtected(s, appealContext)) { removed.push(s); return false; }
+    if (READ_FULL.test(s) && !APPEAL_PROTECT.test(appealContext)
+      && (!DETAIL_PROTECT.test(s) || isOwnSourceReadFull(s, sourceDomain))) {
+      removed.push(s); return false;
+    }
     return true;
   });
   const start = Math.max(0, sentences.length - 2); // last two remaining sentences only
@@ -134,7 +159,8 @@ export interface PreparedSlide {
  */
 export function prepareStorySlides<T extends PreparedSlide>(
   slides: T[],
-  preClean: (text: string) => string = (t) => t
+  preClean: (text: string) => string = (t) => t,
+  opts: { sourceDomain?: string | null } = {}
 ): { slides: T[]; dropped: number; removed: string[] } {
   const out = [...slides];
   const removedAll: string[] = [];
@@ -145,7 +171,7 @@ export function prepareStorySlides<T extends PreparedSlide>(
     const pre = preClean(original);
     // Closing questions only on the story's real last slide, never on a body
     // slide that became last because the closing slide was dropped.
-    const { text, removed } = stripReaderPrompts(pre, pre, { closingQuestion: dropped === 0 });
+    const { text, removed } = stripReaderPrompts(pre, pre, { closingQuestion: dropped === 0, sourceDomain: opts.sourceDomain });
     if (pre !== original) {
       const keptLines = new Set(pre.split('\n').map((l) => l.trim()));
       removedAll.push(

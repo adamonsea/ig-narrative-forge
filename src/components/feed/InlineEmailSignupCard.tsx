@@ -82,14 +82,12 @@ export const InlineEmailSignupCard = ({
       frequency === 'both' ? ['daily', 'weekly'] : [frequency];
     const done: ('daily' | 'weekly')[] = [];
     try {
-      // One call per briefing, in order (keeps rate limiting predictable).
-      for (const type of types) {
-        const { error } = await supabase.functions.invoke('secure-newsletter-signup', {
-          body: { email: email.trim(), topicId, notificationType: type },
-        });
-        if (error) throw error;
-        done.push(type);
-      }
+      // One call; "both" creates both briefings and sends a single confirmation email.
+      const { error } = await supabase.functions.invoke('secure-newsletter-signup', {
+        body: { email: email.trim(), topicId, notificationType: frequency },
+      });
+      if (error) throw error;
+      done.push(...types);
 
       localStorage.setItem(storageKey, 'true');
       done.forEach((t) => saveSubscriptionStatus(topicId, t, true));

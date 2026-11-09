@@ -19,7 +19,7 @@ interface SendConfirmationRequest {
   topicSlug: string;
   topicLogoUrl?: string;
   verificationToken: string;
-  notificationType: 'daily' | 'weekly';
+  notificationType: 'daily' | 'weekly' | 'both';
 }
 
 serve(async (req) => {
@@ -73,7 +73,9 @@ serve(async (req) => {
       })
     );
 
-    const subject = `Confirm your ${topicName} ${notificationType} briefing subscription`;
+    const subject = notificationType === 'both'
+      ? `Confirm your daily and weekly ${topicName} briefings`
+      : `Confirm your ${topicName} ${notificationType} briefing subscription`;
 
     const { data, error: sendError } = await resend.emails.send({
       from: `${topicName} <noreply@curatr.pro>`,
@@ -91,7 +93,7 @@ serve(async (req) => {
     await supabase
       .from('topic_newsletter_signups')
       .update({ verification_sent_at: new Date().toISOString() })
-      .eq('id', signupId);
+      .eq('verification_token', verificationToken);
 
     console.log(`✅ Confirmation email sent to ${email}`);
 
