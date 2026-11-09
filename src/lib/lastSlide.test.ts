@@ -239,3 +239,10 @@ describe('closing question to the reader', () => {
     expect(out.slides[1].content).toBe('The plan was approved. But will it ever be built?');
   });
 });
+
+describe('appeal protection covers "do you recognise this person" appeals', () => {
+  test('real Eastbourne example kept whole', () => {
+    const t = 'Discuss with others: Do you recognize this man? Share this alert to help keep our local communities safe.';
+    expect(strip(t)).toBe(t);
+  });
+});

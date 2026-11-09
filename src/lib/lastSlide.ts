@@ -39,7 +39,7 @@ const DETAIL_PROTECT =
 
 /** Appeal / public-safety context — anywhere on the slide keeps share asks. */
 const APPEAL_PROTECT =
-  /\b(?:appeal(?:s|ing)?|missing|trace|find|witness(?:es)?|sightings?|police|officers?|101|999)\b/i;
+  /\b(?:appeal(?:s|ing)?|missing|trace|find|witness(?:es)?|sightings?|police|officers?|recogni[sz]e[sd]?|101|999)\b/i;
 
 const splitSentences = (text: string): string[] =>
   // A sentence ends at . ! ? (plus closing quotes) followed by whitespace or the end,
