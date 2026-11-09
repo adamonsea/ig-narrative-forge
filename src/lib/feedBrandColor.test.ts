@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// @ts-nocheck -- run with: bun test ./src/lib/feedBrandColor.test.ts
+import { describe, it, expect } from 'bun:test';
 import {
   feedBrandPalette,
   contrast,

@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// @ts-nocheck -- run with: bun test ./src/lib/feedCardPositions.test.ts
+import { describe, it, expect } from 'bun:test';
 import { shouldShowCard, getCardPositions } from './feedCardPositions';
 
 describe('email sign-up card positions', () => {
