@@ -1,6 +1,8 @@
 /**
  * Headline stop-rate tracker. IntersectionObserver only: no scroll listeners, no per-card timers,
  * no layout reads. Results held in memory and sent in one batch on pagehide/hide (+ one mid-session flush).
+ * Each item carries the card's 0-based feed position (first seen); a reader's scroll depth is the deepest
+ * position they reached, so no extra field is needed for the drop-off curve.
  */
 import { canTrackReader, getVisitorId } from './visitorIdentity';
 
@@ -9,9 +11,9 @@ const STOP_MS = 1500;
 const CAP_MS = 30000;
 const MID_FLUSH_MS = 3 * 60 * 1000;
 
-type Entry = { paused: boolean; dwell: number; since: number | null; sent: string; inView: boolean };
+type Entry = { paused: boolean; dwell: number; since: number | null; sent: string; inView: boolean; pos: number | null };
 
-export interface HeadlineStopTracker { observe: (el: Element, storyId: string) => void; destroy: () => void }
+export interface HeadlineStopTracker { observe: (el: Element, storyId: string, position?: number) => void; destroy: () => void }
 
 const noop: HeadlineStopTracker = { observe: () => {}, destroy: () => {} };
 
@@ -23,6 +25,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   const visitorId = getVisitorId('visitor');
   const stories = new Map<string, Entry>();
   const ids = new WeakMap<Element, string>();
+  const positions = new WeakMap<Element, number>();
   const pending: Array<[Element, string]> = [];
   let observer: IntersectionObserver | null = null;
   let midFlushed = false;
@@ -38,14 +41,17 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
 
   const flush = () => {
     const now = performance.now();
-    const items: Array<{ s: string; p: boolean; d: number }> = [];
+    const items: Array<{ s: string; p: boolean; d: number; i?: number }> = [];
     stories.forEach((e, s) => {
       // close open timings so dwell is captured, then reopen if still visible
       const wasOpen = e.since != null;
       close(e, now);
       if (wasOpen && document.visibilityState === 'visible') e.since = now;
       const sig = `${e.paused ? 1 : 0}:${Math.round(e.dwell / 500)}`;
-      if (sig !== e.sent) { items.push({ s, p: e.paused, d: Math.round(e.dwell) }); e.sent = sig; }
+      if (sig !== e.sent) {
+        items.push(e.pos == null ? { s, p: e.paused, d: Math.round(e.dwell) } : { s, p: e.paused, d: Math.round(e.dwell), i: e.pos });
+        e.sent = sig;
+      }
     });
     if (!items.length) return;
     for (let i = 0; i < items.length; i += 100) {
@@ -79,7 +85,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
       const rootH = en.rootBounds?.height ?? 0;
       const isIn = en.isIntersecting && (en.intersectionRatio >= SEEN_RATIO || (rootH > 0 && en.intersectionRect.height >= rootH * SEEN_RATIO));
       if (isIn) {
-        if (!e) { e = { paused: false, dwell: 0, since: null, sent: '', inView: false }; stories.set(id, e); }
+        if (!e) { e = { paused: false, dwell: 0, since: null, sent: '', inView: false, pos: positions.get(en.target) ?? null }; stories.set(id, e); }
         e.inView = true;
         if (visible && e.since == null) e.since = now;
       } else if (e) {
@@ -100,7 +106,8 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   if (ric) ric.call(window, start, { timeout: 3000 }); else setTimeout(start, 1200);
 
   return {
-    observe(el, storyId) {
+    observe(el, storyId, position) {
+      if (typeof position === 'number' && position >= 0 && position < 1000) positions.set(el, Math.floor(position));
       if (observer) { if (ids.get(el) === storyId) return; ids.set(el, storyId); observer.observe(el); }
       else pending.push([el, storyId]);
     },
