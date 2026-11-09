@@ -176,7 +176,7 @@ export const InlineEmailSignupCard = ({
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isSubmitting}
-            className="h-12 w-full flex-1 rounded-lg border border-border bg-background/60 px-4 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-text)] dark:focus-visible:ring-[color:var(--brand-text-dark)] disabled:opacity-60"
+            className="h-12 w-full min-h-12 sm:flex-1 rounded-lg border border-border bg-background/60 px-4 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-text)] dark:focus-visible:ring-[color:var(--brand-text-dark)] disabled:opacity-60"
           />
           <button
             type="submit"
