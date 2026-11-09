@@ -277,6 +277,8 @@ const StoryPage = () => {
           storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
           topicId={topic?.id}
           storyIndex={0}
+          topicName={topic.name}
+          brandColor={(topic.branding_config as any)?.primary_color}
         />
         
         {/* Story Rating Stats - links to Play Mode */}
