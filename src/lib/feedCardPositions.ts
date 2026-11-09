@@ -23,7 +23,16 @@ export interface SingleCardPosition {
   description: string;
 }
 
-export type CardPosition = RepeatingCardPosition | SingleCardPosition;
+/** Fixed leading positions, then a repeating pattern (interval * n + offset). */
+export interface SequenceCardPosition {
+  type: 'sequence';
+  leading: number[];
+  interval: number;
+  offset: number;
+  description: string;
+}
+
+export type CardPosition = RepeatingCardPosition | SingleCardPosition | SequenceCardPosition;
 
 /**
  * Feed card position registry
@@ -103,13 +112,14 @@ export const FEED_CARD_POSITIONS = {
     description: 'Add to home screen prompt'
   } as SingleCardPosition,
 
-  // Email briefing sign-up: positions 9, 29, 49...
+  // Email briefing sign-up: after stories 3, 13, then every 15 (28, 43, 58...)
   emailBriefing: {
-    type: 'repeating',
-    interval: 20,
-    offset: 9,
+    type: 'sequence',
+    leading: [3],
+    interval: 15,
+    offset: 13,
     description: 'Email briefing sign-up prompt'
-  } as RepeatingCardPosition,
+  } as SequenceCardPosition,
 } as const;
 
 /**
@@ -124,6 +134,8 @@ export function shouldShowCard(
   if (config.type === 'single') {
     return storyIndex === config.position;
   }
+
+  if (config.type === 'sequence' && config.leading.includes(storyIndex)) return true;
   
   // For repeating cards, check if index matches the pattern
   // storyIndex = interval * n + offset, where n >= 0
@@ -141,6 +153,11 @@ export function getCardIndex(
   const config = FEED_CARD_POSITIONS[cardType];
   
   if (config.type === 'single') return 0;
+  if (config.type === 'sequence') {
+    const lead = config.leading.indexOf(storyIndex);
+    if (lead >= 0) return lead;
+    return config.leading.length + Math.floor((storyIndex - config.offset) / config.interval);
+  }
   
   return Math.floor((storyIndex - config.offset) / config.interval);
 }
@@ -160,6 +177,10 @@ export function getCardPositions(
       positions.push(config.position);
     }
     return positions;
+  }
+
+  if (config.type === 'sequence') {
+    positions.push(...config.leading.filter((p) => p > 0 && p <= maxPosition));
   }
   
   for (let i = config.offset; i <= maxPosition; i += config.interval) {
