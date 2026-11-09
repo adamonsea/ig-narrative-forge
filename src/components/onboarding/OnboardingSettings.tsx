@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { READER_ONBOARDING_EXTRAS } from '@/lib/featureFlags';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -189,6 +190,9 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
               <p className="text-sm text-muted-foreground">
                 Show a welcome modal to first-time visitors
               </p>
+              {!READER_ONBOARDING_EXTRAS && (
+                <p className="text-xs text-muted-foreground/70 mt-0.5">Paused on public feeds.</p>
+              )}
             </div>
             <Switch
               checked={welcomeEnabled}

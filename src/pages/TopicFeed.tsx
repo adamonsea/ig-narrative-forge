@@ -61,7 +61,7 @@ import {
 } from "@/lib/feedCardPositions";
 import { buildShareUrl } from "@/lib/urlUtils";
 import { isInAppBrowser } from "@/lib/deviceUtils";
-import { FEED_FILTERS_ENABLED } from "@/lib/featureFlags";
+import { FEED_FILTERS_ENABLED, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
 
 // Helper functions using centralized position system
 const shouldShowSentiment = (idx: number) => shouldShowCard('sentiment', idx);
@@ -336,6 +336,7 @@ const TopicFeed = () => {
 
   // Detect first scroll and show pulse animation on play mode icon
   useEffect(() => {
+    if (!READER_ONBOARDING_EXTRAS) return;
     if (!playModeEnabled || !slug) return;
 
     // Check if user has already seen the pulse
@@ -363,6 +364,7 @@ const TopicFeed = () => {
 
   // Check if user already has notifications enabled for this topic
   useEffect(() => {
+    if (!READER_ONBOARDING_EXTRAS) return;
     if (!topic?.id || hasCheckedNotificationStatus) return;
     
     const checkNotificationStatus = async () => {
@@ -653,7 +655,7 @@ const TopicFeed = () => {
           </div>
         );
 
-        if (index === 4) {
+        if (READER_ONBOARDING_EXTRAS && index === 4) {
           items.push(
             <div key="inline-pwa-card" className="w-full max-w-2xl">
               <InlinePWACard
@@ -899,7 +901,7 @@ const TopicFeed = () => {
       />
 
       {/* Onboarding Orchestrator */}
-      <FeedOnboardingOrchestrator
+      {READER_ONBOARDING_EXTRAS && <FeedOnboardingOrchestrator
         topicSlug={slug || ''}
         playModeEnabled={playModeEnabled}
         config={{
@@ -909,7 +911,7 @@ const TopicFeed = () => {
           welcomeCardAboutLink: (topic.branding_config as any)?.welcome_card_about_link,
           aboutPageEnabled: (topic.branding_config as any)?.about_page_enabled,
         }}
-      />
+      />}
 
       {isScrolled && topic && (
         <div className="fixed top-0 left-0 right-0 z-50 feed-header backdrop-blur-sm border-b border-border">
