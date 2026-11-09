@@ -94,12 +94,15 @@ export interface BrandTone {
  * otherwise the feed's dark text colour. If neither reaches AA, darken the
  * fill until white passes.
  */
-export function buttonTone(fill: RGB): { fill: RGB; onFill: RGB } {
+export function buttonTone(fill: RGB, mode: 'light' | 'dark' = 'light'): { fill: RGB; onFill: RGB } {
   const white: RGB = [255, 255, 255];
   if (contrast(white, fill) >= 4.5) return { fill, onFill: white };
   if (contrast(FEED_TEXT_DARK, fill) >= 4.5) return { fill, onFill: FEED_TEXT_DARK };
-  const darker = adjustUntil(fill, white, 4.5, [0, 0, 0]);
-  return { fill: darker, onFill: white };
+  if (mode === 'dark') {
+    // On dark cards, brighten so the dark label passes (keeps the button visible).
+    return { fill: adjustUntil(fill, FEED_TEXT_DARK, 4.5, white), onFill: FEED_TEXT_DARK };
+  }
+  return { fill: adjustUntil(fill, white, 4.5, [0, 0, 0]), onFill: white };
 }
 
 export interface FeedBrandPalette {
@@ -120,7 +123,7 @@ export function feedBrandPalette(input: string | null | undefined): FeedBrandPal
   // the fill until the button shape is visible (3:1 non-text contrast).
   const darkFill = adjustUntil(base, FEED_CARD_DARK, 3, [255, 255, 255]);
   const dark = {
-    ...buttonTone(darkFill),
+    ...buttonTone(darkFill, 'dark'),
     text: adjustUntil(base, FEED_CARD_DARK, 4.5, FEED_TEXT_LIGHT),
   };
 
