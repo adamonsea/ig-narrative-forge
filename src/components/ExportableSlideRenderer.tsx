@@ -74,9 +74,7 @@ export const ExportableSlideRenderer: React.FC<ExportableSlideRendererProps> = (
   const sourceDomain = getSourceDomain(story.article?.source_url);
   const publicationLabel = getPublicationLabel(story.publication_name, story.article?.source_url);
   const bylineText = buildReporterByline(story.author)
-    || publicationLabel
-      ? `Source: ${publicationLabel}`
-      : '';
+    || (publicationLabel ? `Source: ${publicationLabel}` : '');
 
   const textStyles = getTextStyles(currentSlide.content, isFirstSlide);
 
