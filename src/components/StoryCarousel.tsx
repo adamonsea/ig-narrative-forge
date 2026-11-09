@@ -134,6 +134,7 @@ export default function StoryCarousel({
   onStoryScrolledPast, 
   topicName, 
   topicSlug, 
+  brandColor,
   onMoreLikeThis,
   onPrefetchFilter,
   prefetchedReactionCounts,
@@ -489,6 +490,24 @@ export default function StoryCarousel({
 
   // Defensive sort: ensure slides are always in correct order
   const sortedSlides = [...validSlides].sort((a, b) => a.slide_number - b.slide_number);
+
+  // Fit-to-card text: one shared size for slides 2+, set by the slide needing most room.
+  const contentAreaRef = useRef<HTMLDivElement>(null);
+  const bylineText = buildReporterByline(story.author);
+  const bylineHtml = bylineText
+    ? `<p class="story-byline" style="margin-top:0.9em;font-size:0.6em;font-weight:500;opacity:0.75">${bylineText.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c])}</p>`
+    : '';
+  const laterSlideHtml = sortedSlides.map((slide, index) => {
+    if (index === 0) return '';
+    const isLast = index === sortedSlides.length - 1;
+    const { mainContent } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links, isLast);
+    const body = createSafeHTML(
+      isLast ? sanitizeContentWithLinks(mainContent) : sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+      true
+    ).__html as string;
+    return isLast ? body + bylineHtml : body;
+  });
+  const fit = useStoryFontSize(story.id, laterSlideHtml.slice(1), contentAreaRef);
   
   // Validation: check if slides are in sequential order
   useEffect(() => {
@@ -515,9 +534,9 @@ export default function StoryCarousel({
   const slideComponents = useMemo(() => sortedSlides.map((slide, index) => {
     
     // Standard slide rendering
-    const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;
+    const overflows = index > 0 && !!fit?.overflow.includes(index - 1);
     
     return (
       <div key={slide.id} className="h-full w-full">
@@ -578,38 +597,27 @@ export default function StoryCarousel({
         ) : (
           // Slides without image - use grid for perfect centering and fit-to-height on last slide
           <div className="h-full flex items-center justify-center px-5 pt-6 pb-14 md:px-8 md:pt-8 md:pb-16 overflow-hidden">
-            <div className="w-full max-w-xl mx-auto text-left">
-                 <div className={`${
-                  index === 0 
-                  ? `leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty` 
-                  : `leading-[1.35] ${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-pretty`
-                }`}>
-                  {/* Main story content with links */}
+            <div className={`w-full max-w-xl mx-auto text-left ${overflows ? 'max-h-full overflow-y-auto [mask-image:linear-gradient(to_bottom,black_85%,transparent)]' : ''}`}>
+              {index === 0 ? (
+                <div className={`leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty`}>
                   <div dangerouslySetInnerHTML={createSafeHTML(
-                    isLast ? sanitizeContentWithLinks(mainContent) : sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+                    sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
                     true
                   )} />
-                      
-                  {/* CTA content with special styling on last slide */}
-                  {isLast && ctaContent && (
-                    <div className="mt-4 pt-4 border-t border-muted">
-                      <div 
-                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-pretty"
-                        dangerouslySetInnerHTML={createSafeHTML(
-                          sanitizeContentWithLinks(ctaContent),
-                          true
-                        )}
-                      />
-                    </div>
-                  )}
-                 </div>
-                 
-             </div>
-           </div>
+                </div>
+              ) : (
+                <div
+                  className="leading-[1.35] font-light text-pretty"
+                  style={{ fontSize: fit ? `${fit.size}px` : undefined, visibility: fit ? 'visible' : 'hidden' }}
+                  dangerouslySetInnerHTML={{ __html: laterSlideHtml[index] }}
+                />
+              )}
+            </div>
+          </div>
         )}
       </div>
     );
-  }), [sortedSlides, story, validSlides.length, isFastConnection]);
+  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001')]);
 
   const slidesForEmbla = slideComponents.length
     ? slideComponents
@@ -669,7 +677,7 @@ export default function StoryCarousel({
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 relative overflow-hidden">
+          <div ref={contentAreaRef} className="flex-1 relative overflow-hidden">
             {/* Hand Swipe Hint - only show on first story */}
             {storyIndex === 0 && topicSlug && <HandSwipeHint topicSlug={topicSlug} />}
             
@@ -725,6 +733,27 @@ export default function StoryCarousel({
                   sourceName = 'source';
                 }
                 
+                if (isLastSlide && sourceUrl && sourceUrl !== '#') {
+                  const palette = feedBrandPalette(brandColor);
+                  return (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (topicId) trackSourceClick(story.id, topicId);
+                        window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+                      }}
+                      style={{
+                        '--pill-bg': toCss(palette.light.fill), '--pill-fg': toCss(palette.light.onFill),
+                        '--pill-bg-dark': toCss(palette.dark.fill), '--pill-fg-dark': toCss(palette.dark.onFill),
+                      } as React.CSSProperties}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-full transition-opacity hover:opacity-90 cursor-pointer bg-[color:var(--pill-bg)] text-[color:var(--pill-fg)] dark:bg-[color:var(--pill-bg-dark)] dark:text-[color:var(--pill-fg-dark)]"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Read the full story at {sourceName}
+                    </button>
+                  );
+                }
+
                 return sourceUrl && sourceUrl !== '#' ? (
                   <button
                     onClick={(e) => {
