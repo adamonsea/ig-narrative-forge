@@ -1,3 +1,5 @@
+import { prepareStorySlides } from '@/lib/lastSlide';
+import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
 import { useState, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { exportCarouselSlides } from '@/lib/carouselExporter';
@@ -69,6 +71,14 @@ export const useCarouselExport = () => {
     options: ExportOptions = {}
   ) => {
     if (exportState.isExporting) return;
+    // Same reader-facing slides as the feed: last slide cleaned, empty closers dropped.
+    story = {
+      ...story,
+      slides: prepareStorySlides(
+        [...story.slides].sort((a: any, b: any) => (a.slide_number ?? 0) - (b.slide_number ?? 0)),
+        stripGeneratedSourceAttribution
+      ).slides,
+    };
 
     setExportState({
       isExporting: true,

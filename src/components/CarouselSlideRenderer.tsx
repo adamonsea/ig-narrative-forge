@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { createSafeHTML } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
-import { stripReaderPrompts, buildReporterByline } from '@/lib/lastSlide';
+import { buildReporterByline } from '@/lib/lastSlide';
 import { ExternalLink } from 'lucide-react';
 
 interface Slide {
@@ -70,7 +70,7 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
     }
 
     // Discard AI-written source credit and reader prompts; keep only a reporter byline.
-    mainContent = stripReaderPrompts(stripGeneratedSourceAttribution(mainContent)).text;
+    // Slides arrive already cleaned by prepareStorySlides (see useCarouselExport).
     const byline = buildReporterByline(story.author);
     const finalCtaContent = [ctaContent, byline].filter(Boolean).map((l) => `<p class="mb-2 last:mb-0">${l}</p>`).join('') || null;
 

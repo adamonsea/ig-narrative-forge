@@ -1,3 +1,4 @@
+import { buildReporterByline } from '@/lib/lastSlide';
 import React from 'react';
 import { getPublicationLabel, getSourceDomain } from '@/lib/storyAttribution';
 
@@ -72,11 +73,8 @@ export const ExportableSlideRenderer: React.FC<ExportableSlideRendererProps> = (
 
   const sourceDomain = getSourceDomain(story.article?.source_url);
   const publicationLabel = getPublicationLabel(story.publication_name, story.article?.source_url);
-  const bylineText = story.author
-    ? `By ${story.author}`
-    : publicationLabel
-      ? `Source: ${publicationLabel}`
-      : '';
+  const bylineText = buildReporterByline(story.author)
+    || (publicationLabel ? `Source: ${publicationLabel}` : '');
 
   const textStyles = getTextStyles(currentSlide.content, isFirstSlide);
 
