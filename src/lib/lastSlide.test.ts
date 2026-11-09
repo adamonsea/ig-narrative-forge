@@ -249,21 +249,21 @@ describe('appeal protection covers "do you recognise this person" appeals', () =
 
 describe('read the full story at {domain}', () => {
   const run = (t: string, d?: string) => stripReaderPrompts(t, t, { sourceDomain: d }).text;
-  it('hides when domain is the story source', () => {
+  test('hides when domain is the story source', () => {
     expect(run('The pier opens Friday. Read the full story at sussexexpress.co.uk.', 'https://www.sussexexpress.co.uk/news/x'))
       .toBe('The pier opens Friday.');
   });
-  it('keeps when domain is a different site', () => {
+  test('keeps when domain is a different site', () => {
     expect(run('The pier opens Friday. Read the full story at bbc.co.uk.', 'https://www.sussexexpress.co.uk/news/x'))
       .toContain('bbc.co.uk');
   });
-  it('matches www and subdomains', () => {
+  test('matches www and subdomains', () => {
     expect(run('Pier opens. Read the full article at www.news.sussexexpress.co.uk.', 'sussexexpress.co.uk')).toBe('Pier opens.');
   });
-  it('keeps with no known source', () => {
+  test('keeps with no known source', () => {
     expect(run('Pier opens. Read the full story at sussexexpress.co.uk.')).toContain('sussexexpress');
   });
-  it('keeps on appeal slides', () => {
+  test('keeps on appeal slides', () => {
     expect(run('Police appeal for witnesses. Read the full story at sussexexpress.co.uk.', 'sussexexpress.co.uk')).toContain('sussexexpress');
   });
 });
