@@ -10,7 +10,21 @@ export const FIT_MAX_PHONE = 40;
 export const FIT_MAX_DESKTOP = 48;
 export const FIT_MIN = 20;
 export const FIT_STEP = 2;
-export const FIT_LINE_HEIGHT = 1.35;
+export const FIT_LINE_HEIGHT = 1.29;
+export const FIT_LETTER_SPACING = '-0.012em';
+/** Lexend weight for body slides; must be in the font link in index.html. */
+export const FIT_FONT_WEIGHT = 300;
+/**
+ * The one class + style for body text on slides 2+. Used by BOTH the rendered
+ * slide and the off-screen measurer, so the measured size can't drift from
+ * what readers see (drift = wrong size or clipped text).
+ */
+export const FIT_TEXT_CLASS = 'font-lexend text-pretty';
+export const FIT_TEXT_STYLE = {
+  fontWeight: FIT_FONT_WEIGHT,
+  lineHeight: String(FIT_LINE_HEIGHT),
+  letterSpacing: FIT_LETTER_SPACING,
+} as const;
 
 /** Space reserved inside the slide (matches px-5 pt-6 pb-14 / md:px-8 md:pt-8 md:pb-16). */
 export const slidePadding = (width: number) =>
@@ -37,11 +51,11 @@ const getMeasurer = () => {
   if (measurer && document.body.contains(measurer)) return measurer;
   measurer = document.createElement('div');
   measurer.setAttribute('aria-hidden', 'true');
-  measurer.className = 'feed-card font-light text-pretty';
+  measurer.className = `feed-card ${FIT_TEXT_CLASS}`;
   Object.assign(measurer.style, {
     position: 'absolute', left: '-10000px', top: '0', visibility: 'hidden',
-    pointerEvents: 'none', lineHeight: String(FIT_LINE_HEIGHT), padding: '0', border: '0',
-  });
+    pointerEvents: 'none', padding: '0', border: '0',
+  }, { ...FIT_TEXT_STYLE, fontWeight: String(FIT_FONT_WEIGHT) });
   document.body.appendChild(measurer);
   return measurer;
 };
@@ -114,7 +128,11 @@ export function useStoryFontSize(key: string, blocks: string[], ref: RefObject<H
     const fonts = (document as any).fonts;
     if (!box || !blocks.length || !fonts?.ready) return;
     let cancelled = false;
-    fonts.ready.then(() => {
+    // Ask for the exact Lexend weight first so `ready` can't resolve before it loads.
+    const wanted = fonts.load
+      ? fonts.load(`${FIT_FONT_WEIGHT} 20px Lexend`).catch(() => undefined)
+      : Promise.resolve();
+    wanted.then(() => fonts.ready).then(() => {
       if (cancelled) return;
       for (const k of Array.from(cache.keys())) if (k.startsWith(`${key}|`)) cache.delete(k);
       const next = measure(box);

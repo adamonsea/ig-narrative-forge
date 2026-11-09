@@ -12,7 +12,7 @@ import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { stripGeneratedSourceAttribution } from '@/lib/stripSourceAttribution';
 import { prepareStorySlides, buildReporterByline } from '@/lib/lastSlide';
-import { useStoryFontSize } from '@/lib/slideTextFit';
+import { useStoryFontSize, FIT_TEXT_CLASS, FIT_TEXT_STYLE } from '@/lib/slideTextFit';
 import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
@@ -611,8 +611,8 @@ export default function StoryCarousel({
                 </div>
               ) : (
                 <div
-                  className="leading-[1.35] font-light text-pretty"
-                  style={{ fontSize: fit ? `${fit.size}px` : undefined, visibility: fit ? 'visible' : 'hidden' }}
+                  className={FIT_TEXT_CLASS}
+                  style={{ ...FIT_TEXT_STYLE, fontSize: fit ? `${fit.size}px` : undefined, visibility: fit ? 'visible' : 'hidden' }}
                   dangerouslySetInnerHTML={{ __html: laterSlideHtml[index] }}
                 />
               )}
