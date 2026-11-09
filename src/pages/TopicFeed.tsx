@@ -1116,6 +1116,7 @@ const TopicFeed = () => {
                 aboutPageEnabled={(topic.branding_config as any)?.about_page_enabled}
                 latestDaily={latestDaily}
                 latestWeekly={latestWeekly}
+                showFilters={FEED_FILTERS_ENABLED}
                 hasActiveFilters={hasActiveFilters}
                 onOpenFilters={() => setIsModalOpen(true)}
                 onClearFilters={clearAllFilters}
