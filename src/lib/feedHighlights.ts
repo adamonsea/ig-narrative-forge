@@ -37,7 +37,7 @@ export interface HighlightStats {
   top_search_story_id?: string | null;
   top_search_story_title?: string | null;
   top_search_story_clicks?: number;
-  // Headline stop rate (7 days, stories with 20+ external seen readers)
+  // Headline stop rate (7 days, stories with 30+ outside readers; median_stop_rate = what its feed spots usually get)
   top_stop_story_id?: string | null;
   top_stop_story_title?: string | null;
   top_stop_rate?: number | null;
@@ -162,9 +162,10 @@ export function candidates(s: HighlightStats, feedName: string, today = new Date
   if (s.top_search_story_id && s.top_search_story_title && (s.top_search_story_clicks ?? 0) >= 5) {
     out.push({ kind: "top_search_story", score: 50, text: `"${s.top_search_story_title}" was your top search story` });
   }
-  // 15. Eye-catching headline: 20+ seen, 25%+ stop rate, 1.5x the feed's typical, 3+ stories to compare
+  // 15. Eye-catching headline: 30+ outside readers (the one story floor), 25%+ stop rate, 1.5x what its feed
+  //     spots usually get (median_stop_rate = position-expected rate from story_stop_scores), 3+ scored stories
   const rate = s.top_stop_rate ?? 0, med = s.median_stop_rate ?? 0;
-  if (s.top_stop_story_id && s.top_stop_story_title && (s.top_stop_seen ?? 0) >= 20 && rate >= 0.25
+  if (s.top_stop_story_id && s.top_stop_story_title && (s.top_stop_seen ?? 0) >= STORY_SCORE_FLOOR && rate >= 0.25
       && (s.stop_qualifying_stories ?? 0) >= 3 && med > 0 && rate >= med * 1.5) {
     out.push({ kind: "eye_catching", score: 58,
       text: `"${s.top_stop_story_title}" stopped ${Math.round(rate * 100)}% of scrollers — your most eye-catching headline` });

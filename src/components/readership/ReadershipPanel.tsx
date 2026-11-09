@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EngagementFunnel } from "@/components/EngagementFunnel";
-import { EyeCatchingHeadlines } from "@/components/EyeCatchingHeadlines";
-import { readershipChange, barHeights, MEANINGFUL_READERS } from "@/lib/readership";
+import { readershipChange, barHeights, MEANINGFUL_READERS, dropoffCurve, topStopper, type Dropoff, type TopStopper } from "@/lib/readership";
 import { useCountUp } from "@/hooks/useCountUp";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
 
@@ -13,6 +12,8 @@ interface Readership {
   readers_week: number;
   daily?: { day: string; reads: number }[];
   top_stories: TopStory[];
+  dropoff?: Dropoff | null;
+  top_stopper?: TopStopper | null;
 }
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
@@ -56,6 +57,8 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
   const heights = barHeights(daily.map((d) => d.reads));
   const [best, ...rest] = data.top_stories ?? [];
   const storyHref = (id: string) => (topicSlug ? `/feed/${topicSlug}/story/${id}` : undefined);
+  const curve = dropoffCurve(data.dropoff);
+  const stopper = topStopper(data.top_stopper);
 
   return (
     <div className="max-w-4xl space-y-14 py-8">
@@ -120,12 +123,43 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
         </ol>
       )}
 
-      {Number(data.readers_week) >= MEANINGFUL_READERS && (
-        <div className="space-y-14">
-          <EngagementFunnel topicId={topicId} />
-          <EyeCatchingHeadlines topicId={topicId} topicSlug={topicSlug} />
-        </div>
+      {curve && (
+        <section aria-label="How far readers scroll" className="space-y-5">
+          <p className="text-base">
+            {curve.halfGoneBy
+              ? `Half your readers have gone by story ${curve.halfGoneBy}.`
+              : `Most readers reach story ${curve.percents.length}.`}
+          </p>
+          <ol className="flex h-28 items-end gap-1.5" aria-label={curve.percents.map((p, i) => `Story ${i + 1}: ${p}%`).join(", ")}>
+            {curve.percents.map((p, i) => (
+              <li key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                <span className="text-xs tabular-nums text-muted-foreground">{p}%</span>
+                <div
+                  className={`w-full rounded-t-md origin-bottom animate-[bar-rise_0.6s_ease-out_both] motion-reduce:animate-none ${curve.halfGoneBy === i + 1 ? "bg-mint" : "bg-primary/85"}`}
+                  style={{ height: `${Math.max(3, p)}%`, animationDelay: `${i * 40}ms` }}
+                />
+                <span className="text-xs tabular-nums text-muted-foreground">{i + 1}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
+
+      {stopper && (
+        <a href={storyHref(stopper.id)} className="group flex items-center gap-5">
+          <div className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-primary">
+            <Art story={{ id: stopper.id, title: stopper.title, reads: 0, image: stopper.image }} width={240} className="h-full w-full" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-base leading-snug line-clamp-2 group-hover:underline">{stopper.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Stopped {stopper.ratePercent}% of readers scrolling past — {stopper.times}× what its spot usually gets
+            </p>
+          </div>
+        </a>
+      )}
+
+      {Number(data.readers_week) >= MEANINGFUL_READERS && <EngagementFunnel topicId={topicId} />}
     </div>
   );
 };
