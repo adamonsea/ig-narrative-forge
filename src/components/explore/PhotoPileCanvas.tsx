@@ -46,8 +46,8 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
     // Mobile: ~68% of viewport width. Desktop: capped for a denser pile.
     const raw = w < 640 ? w * 0.68 : w < 1024 ? w * 0.4 : w * 0.24;
     const cardWidth = Math.round(Math.max(220, Math.min(raw, 360)));
-    // image (4:3) + headline block
-    const cardHeight = Math.round(cardWidth * 0.75 + cardWidth * 0.42);
+    // image (3:2, matching the covers) + headline block
+    const cardHeight = Math.round(cardWidth / 1.5 + cardWidth * 0.42);
     // Negative padding lets cards overlap the screen edges
     const padding = Math.round(-cardWidth * 0.18);
     return { CARD_WIDTH: cardWidth, CARD_HEIGHT: Math.min(cardHeight, h * 0.72), PADDING: padding };

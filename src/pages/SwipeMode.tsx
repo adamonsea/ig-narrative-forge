@@ -6,8 +6,8 @@ import { useSwipeMode } from '@/hooks/useSwipeMode';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { useTopicFavicon } from '@/hooks/useTopicFavicon';
 import { usePlayModeVisitorTracking } from '@/hooks/usePlayModeVisitorTracking';
-import { optimizeThumbnailUrl, optimizeImageUrl } from '@/lib/imageOptimization';
-import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { PageTurnCard, swipeCoverUrl } from '@/components/swipe-mode/PageTurnCard';
 import { SwipeModeAuth } from '@/components/swipe-mode/SwipeModeAuth';
 import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
 import { SwipeModeHint } from '@/components/swipe-mode/SwipeModeHint';
@@ -274,9 +274,9 @@ export default function SwipeMode() {
                 >
                   {/* Static preview - optimized thumbnail */}
                   {stories[currentIndex + 1].cover_illustration_url && (
-                    <div className="w-full aspect-[4/3] bg-muted overflow-hidden">
+                    <div className="w-full aspect-[3/2] bg-muted overflow-hidden">
                       <img 
-                        src={optimizeThumbnailUrl(stories[currentIndex + 1].cover_illustration_url) || ''}
+                        src={swipeCoverUrl(stories[currentIndex + 1].cover_illustration_url) || ''}
                         alt=""
                         className="w-full h-full object-cover opacity-80"
                         loading="lazy"
@@ -307,7 +307,7 @@ export default function SwipeMode() {
               <link 
                 rel="preload" 
                 as="image" 
-                href={optimizeImageUrl(stories[currentIndex + 1].cover_illustration_url, { width: 400, quality: 75, format: 'webp' }) || ''} 
+                href={swipeCoverUrl(stories[currentIndex + 1].cover_illustration_url) || ''} 
               />
             )}
             
@@ -363,9 +363,9 @@ export default function SwipeMode() {
             <div className="flex-1 overflow-y-auto pb-24">
               {/* Cover Image */}
               {currentStory.cover_illustration_url && (
-                <div className="w-full aspect-[21/9] md:aspect-video overflow-hidden bg-muted">
+                <div className="w-full aspect-[3/2] overflow-hidden bg-muted">
                   <img
-                    src={currentStory.cover_illustration_url}
+                    src={optimizeImageUrl(currentStory.cover_illustration_url, { width: 1280, quality: 80 }) || currentStory.cover_illustration_url}
                     alt={currentStory.title}
                     className="w-full h-full object-cover"
                   />

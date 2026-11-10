@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { optimizeImageUrl, coverPixelWidth } from '@/lib/imageOptimization';
 
 interface Story {
   id: string;
@@ -110,14 +111,16 @@ export function DismissedPile({ stories, onRestore, onRestoreAll }: DismissedPil
                 {stories.map(story => (
                   <motion.button
                     key={story.id}
-                    className="relative aspect-[4/3] rounded-md overflow-hidden group"
+                    className="relative aspect-[3/2] rounded-md overflow-hidden group"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => onRestore(story.id)}
                   >
                     <img
-                      src={story.cover_illustration_url}
+                      src={optimizeImageUrl(story.cover_illustration_url, { width: coverPixelWidth(160, 480), quality: 70 }) || story.cover_illustration_url}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                     

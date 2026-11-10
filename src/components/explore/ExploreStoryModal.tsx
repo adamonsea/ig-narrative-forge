@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createSafeHTML } from '@/lib/sanitizer';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { StoryRatingCard } from '@/components/swipe-mode/StoryRatingCard';
 
 interface Story {
@@ -60,7 +61,7 @@ export function ExploreStoryModal({ story, open, onOpenChange, topicSlug }: Expl
           {story.cover_illustration_url && (
             <div className="w-full aspect-[3/2] overflow-hidden bg-muted">
               <img
-                src={story.cover_illustration_url}
+                src={optimizeImageUrl(story.cover_illustration_url, { width: 1280, quality: 80 }) || story.cover_illustration_url}
                 alt={story.title}
                 className="w-full h-full object-cover"
               />

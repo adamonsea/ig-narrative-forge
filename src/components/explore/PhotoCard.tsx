@@ -1,6 +1,6 @@
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { useState, useRef, useCallback, memo, useEffect } from 'react';
-import { optimizeThumbnailUrl } from '@/lib/imageOptimization';
+import { optimizeImageUrl, coverPixelWidth } from '@/lib/imageOptimization';
 import { triggerHaptic, getDevicePerformanceTier } from '@/lib/deviceUtils';
 
 interface Story {
@@ -96,8 +96,13 @@ const PhotoCardComponent = ({
   const dynamicRotation = showPreview ? 0 : position.rotation;
 
   // Progressive image URLs - tiny blur placeholder, then thumbnail
-  const placeholderUrl = optimizeThumbnailUrl(story.cover_illustration_url)?.replace('width=200', 'width=20')?.replace('height=150', 'height=15') || '';
-  const thumbnailUrl = optimizeThumbnailUrl(story.cover_illustration_url);
+  // Whole 3:2 cover sized to the card on this screen (plus room for the 1.35×
+  // hold preview), and a tiny same-shape copy as the blurred placeholder.
+  const placeholderUrl = optimizeImageUrl(story.cover_illustration_url, { width: 30, quality: 40 }) || '';
+  const thumbnailUrl = optimizeImageUrl(story.cover_illustration_url, {
+    width: coverPixelWidth(cardWidth * 1.2, 960),
+    quality: 70,
+  });
   const entryDelay = isLegacy ? 0 : index * 0.015;
 
   const clearPressTimer = useCallback(() => {
