@@ -363,9 +363,9 @@ export default function SwipeMode() {
             <div className="flex-1 overflow-y-auto pb-24">
               {/* Cover Image */}
               {currentStory.cover_illustration_url && (
-                <div className="w-full aspect-[21/9] md:aspect-video overflow-hidden bg-muted">
+                <div className="w-full aspect-[3/2] overflow-hidden bg-muted">
                   <img
-                    src={currentStory.cover_illustration_url}
+                    src={optimizeImageUrl(currentStory.cover_illustration_url, { width: 1280, quality: 80 }) || currentStory.cover_illustration_url}
                     alt={currentStory.title}
                     className="w-full h-full object-cover"
                   />
