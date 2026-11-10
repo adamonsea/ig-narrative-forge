@@ -4,7 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Heart, ThumbsDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { getAnimationPresets, triggerHaptic } from '@/lib/deviceUtils';
-import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { optimizeImageUrl, coverPixelWidth } from '@/lib/imageOptimization';
+
+/**
+ * Cover URL for the Swipe card. The card sits in a max-w-lg column with 16px
+ * side padding, so it is at most 480 CSS px wide. Shared with the next-card
+ * preview and preload so the browser reuses one download.
+ */
+export const swipeCoverUrl = (url: string | null | undefined): string | null => {
+  const viewport = typeof window !== 'undefined' ? window.innerWidth : 412;
+  const cardCss = Math.min(viewport, 512) - 32;
+  return optimizeImageUrl(url, { width: coverPixelWidth(cardCss), quality: 78, format: 'webp' });
+};
 
 interface Story {
   id: string;
@@ -103,9 +114,9 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
     }
   };
 
-  // Optimized image URL - resize for mobile viewport, WebP, 75% quality
-  const optimizedCoverUrl = useMemo(() => 
-    optimizeImageUrl(story.cover_illustration_url, { width: 400, quality: 75, format: 'webp' }),
+  // Whole 3:2 cover, sized to the card's real width on this screen
+  const optimizedCoverUrl = useMemo(
+    () => swipeCoverUrl(story.cover_illustration_url),
     [story.cover_illustration_url]
   );
 
