@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createSafeHTML } from '@/lib/sanitizer';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { StoryRatingCard } from '@/components/swipe-mode/StoryRatingCard';
 
 interface Story {
