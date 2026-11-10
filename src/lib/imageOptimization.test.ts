@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// @ts-nocheck -- run with: bun test ./src/lib/imageOptimization.test.ts
+import { describe, it, expect } from 'bun:test';
 import { optimizeImageUrl, coverPixelWidth } from './imageOptimization';
 
 const SRC = 'https://x.supabase.co/storage/v1/object/public/visuals/story-a.webp';
