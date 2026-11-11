@@ -16,6 +16,7 @@ import { CuratrLogo } from '@/components/brand/CuratrLogo';
 import { HomeHeroMedia } from '@/components/home/HomeHeroMedia';
 import { NewsroomBand } from '@/components/home/NewsroomBand';
 import type { HomeSceneId } from '@/components/home/HomeSceneLoop';
+import type { SceneContent } from '@/components/explainer/scenes';
 
 /**
  * Audience landing pages (/for/...) for outreach links.
@@ -51,6 +52,8 @@ export interface AudienceConfig {
   hero: { line1: string; line2: string };
   /** Example feed topics typed into the idea box, matched to this audience. */
   ideaHints: readonly string[];
+  /** Wording inside the animations (sources, headlines, channels) for this audience. */
+  sceneContent: SceneContent;
   sections: AudienceSection[];
   close: {
     lead: string;
@@ -70,9 +73,9 @@ const SceneFallback = () => (
   <div className="aspect-video w-full rounded-[2rem] border border-white/10 bg-[hsl(214,50%,7%)]" />
 );
 
-const Scene = ({ id, label }: { id: HomeSceneId; label: string }) => (
+const Scene = ({ id, label, content }: { id: HomeSceneId; label: string; content?: SceneContent }) => (
   <Suspense fallback={<SceneFallback />}>
-    <HomeSceneLoop sceneId={id} label={label} />
+    <HomeSceneLoop sceneId={id} label={label} content={content} />
   </Suspense>
 );
 
@@ -166,7 +169,7 @@ const SplitSection = ({
 }: {
   flip?: boolean;
   copy: AudienceSectionCopy;
-  scene: { id: HomeSceneId; label: string };
+  scene: { id: HomeSceneId; label: string; content?: SceneContent };
 }) => (
   <section className="mx-auto flex min-h-[90svh] max-w-7xl items-center py-20 md:py-28">
     <div className="grid w-full items-center gap-12 md:grid-cols-12 md:gap-16">
@@ -382,7 +385,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
               if (section.kind === 'split') {
                 const flip = splitIndex++ % 2 === 1;
                 return (
-                  <SplitSection key={i} flip={flip} copy={copy} scene={{ id: section.scene, label: section.sceneLabel }} />
+                  <SplitSection key={i} flip={flip} copy={copy} scene={{ id: section.scene, label: section.sceneLabel, content: config.sceneContent }} />
                 );
               }
 
@@ -391,7 +394,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
                   <section key={i} className="mx-auto flex min-h-[90svh] max-w-6xl flex-col justify-center py-20 md:py-28">
                     <SectionCopy center {...copy} />
                     <div className="mx-auto mt-14 w-full max-w-5xl md:mt-20">
-                      <Scene id="publish" label={section.sceneLabel} />
+                      <Scene id="publish" label={section.sceneLabel} content={config.sceneContent} />
                     </div>
                   </section>
                 );

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { CueName } from './sfx';
 
@@ -7,6 +7,27 @@ export interface SceneProps {
   cue: (name: CueName) => void;
   tap: (ms: number) => void;
 }
+
+/**
+ * Optional wording for scenes embedded outside the explainer (e.g. audience
+ * landing pages). Anything left out falls back to the explainer's own copy,
+ * so the film itself is unchanged.
+ */
+export interface SceneContent {
+  /** Five source pills around the article counter. */
+  sources?: readonly string[];
+  /** Three kept stories in the filter scene (otherwise plain bars). */
+  keptHeadlines?: readonly string[];
+  /** Headline typed onto the illustrated story card. */
+  headline?: string;
+  /** Story titles on the editor rows (otherwise plain bars). */
+  editorRows?: { published: string; spiked: string; edited: string };
+  /** Exactly six destination pills, clockwise from the top. */
+  destinations?: readonly string[];
+}
+
+export const SceneContentContext = createContext<SceneContent>({});
+const useSceneContent = () => useContext(SceneContentContext);
 
 const IdentFrame = ({ mode, reduced }: { mode: 'sting' | 'full'; reduced: boolean }) => {
   const query = new URLSearchParams({ clean: '1', mode });
@@ -220,9 +241,10 @@ export const SceneSubject = ({ reduced, cue, tap }: SceneProps) => {
 
 /* ---------------------------------------------------------------- 3. Sources */
 
-const SOURCES = ['News source', 'Influencers', 'PR channel', 'Thought leader', 'Blog'];
+const DEFAULT_SOURCES = ['News source', 'Influencers', 'PR channel', 'Thought leader', 'Blog'];
 
 export const SceneSources = ({ reduced, cue }: SceneProps) => {
+  const SOURCES = useSceneContent().sources ?? DEFAULT_SOURCES;
   const u = useUnit();
   const tall = isPortrait();
   const [count, setCount] = useState(reduced ? 47 : 0);
@@ -317,6 +339,7 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
 const FILTER_SETTLE_S = 3.0;
 
 export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
+  const kept = useSceneContent().keptHeadlines;
   const u = useUnit();
   const boxRef = useRef<HTMLDivElement | null>(null);
   const stackRef = useRef<HTMLDivElement | null>(null);
@@ -384,7 +407,13 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
             >
               <Chunk className="flex items-center gap-[calc(var(--u)*2.5)] px-[calc(var(--u)*3)] py-[calc(var(--u)*2.6)]">
                 <span className="h-[calc(var(--u)*2)] w-[calc(var(--u)*2)] rounded-full" style={{ background: ACCENT }} />
-                <span className="h-[calc(var(--u)*1.4)] flex-1 rounded-full bg-white/35" />
+                {kept?.[i] ? (
+                  <span className="line-clamp-2 min-w-0 flex-1 text-[calc(var(--u)*2.2)] font-medium leading-tight text-white/90">
+                    {kept[i]}
+                  </span>
+                ) : (
+                  <span className="h-[calc(var(--u)*1.4)] flex-1 rounded-full bg-white/35" />
+                )}
               </Chunk>
             </motion.div>
           ))}
@@ -397,9 +426,10 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
 
 /* ---------------------------------------------------------------- 5. Written */
 
-const HEADLINE = 'Seafront plan wins narrow approval';
+const DEFAULT_HEADLINE = 'Seafront plan wins narrow approval';
 
 export const SceneWritten = ({ reduced, cue }: SceneProps) => {
+  const HEADLINE = useSceneContent().headline ?? DEFAULT_HEADLINE;
   const [typed, setTyped] = useState(reduced ? HEADLINE : '');
   useEffect(() => {
     if (reduced) return;
@@ -441,9 +471,10 @@ export const SceneWritten = ({ reduced, cue }: SceneProps) => {
 /* ---------------------------------------------------------------- 6. Publish */
 
 // Listed clockwise from the top so the ring fills in one smooth sweep.
-const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels', 'Claude', 'ChatGPT'];
+const DEFAULT_DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels', 'Claude', 'ChatGPT'];
 
 export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
+  const DESTINATIONS = useSceneContent().destinations ?? DEFAULT_DESTINATIONS;
   const u = useUnit();
   useBeats(
     DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
@@ -550,16 +581,23 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
 /* ---------------------------------------------------------------- 7. Editor */
 
 export const SceneEditor = ({ reduced, cue, tap }: SceneProps) => {
+  const titles = useSceneContent().editorRows;
   const [approved, setApproved] = useState(reduced);
   const [swiped, setSwiped] = useState(reduced);
   useBeats([
     [900, () => { setApproved(true); cue('land'); tap(12); }],
     [2100, () => { setSwiped(true); cue('whoosh'); }],
   ]);
-  const Row = ({ label, children }: { label: string; children?: React.ReactNode }) => (
+  const Title = ({ text }: { text?: string }) =>
+    text ? (
+      <div className="line-clamp-2 text-[calc(var(--u)*2.2)] font-medium leading-tight text-white/90">{text}</div>
+    ) : (
+      <div className="h-[calc(var(--u)*1.8)] w-3/4 rounded-full bg-white/30" />
+    );
+  const Row = ({ label, title, children }: { label: string; title?: string; children?: React.ReactNode }) => (
     <Chunk className="flex items-center gap-[calc(var(--u)*2.5)] p-[calc(var(--u)*2.6)]">
-      <div className="flex-1 space-y-[calc(var(--u)*1.2)]">
-        <div className="h-[calc(var(--u)*1.8)] w-3/4 rounded-full bg-white/30" />
+      <div className="min-w-0 flex-1 space-y-[calc(var(--u)*1.2)]">
+        <Title text={title} />
         <div className="h-[calc(var(--u)*1.2)] w-1/2 rounded-full bg-white/15" />
       </div>
       {children ?? (
@@ -573,8 +611,8 @@ export const SceneEditor = ({ reduced, cue, tap }: SceneProps) => {
     <Stage>
       <div className="mx-auto w-full max-w-[calc(var(--u)*64)] space-y-[calc(var(--u)*2.5)]">
         <Chunk className="flex items-center gap-[calc(var(--u)*2.5)] p-[calc(var(--u)*2.6)]">
-          <div className="flex-1 space-y-[calc(var(--u)*1.2)]">
-            <div className="h-[calc(var(--u)*1.8)] w-3/4 rounded-full bg-white/30" />
+          <div className="min-w-0 flex-1 space-y-[calc(var(--u)*1.2)]">
+            <Title text={titles?.published} />
             <div className="h-[calc(var(--u)*1.2)] w-1/2 rounded-full bg-white/15" />
           </div>
           <motion.span
@@ -593,10 +631,10 @@ export const SceneEditor = ({ reduced, cue, tap }: SceneProps) => {
           animate={swiped ? { x: reduced ? 0 : 600, opacity: 0 } : {}}
           transition={{ duration: 0.45, ease: 'easeIn' }}
         >
-          <Row label="Spike" />
+          <Row label="Spike" title={titles?.spiked} />
         </motion.div>
         <motion.div layout>
-          <Row label="Edit" />
+          <Row label="Edit" title={titles?.edited} />
         </motion.div>
       </div>
     </Stage>

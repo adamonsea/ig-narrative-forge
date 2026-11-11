@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { TIMELINE } from '@/components/explainer/timeline';
-import { useUnit } from '@/components/explainer/scenes';
+import { SceneContentContext, useUnit, type SceneContent } from '@/components/explainer/scenes';
 
 export type HomeSceneId = 'sources' | 'filter' | 'written' | 'editor' | 'publish';
 
@@ -35,6 +35,7 @@ const LANDSCAPE_CONTENT_U: Record<HomeSceneId, { w: number; h: number }> = {
 };
 
 const noop = () => {};
+const EMPTY_CONTENT: SceneContent = {};
 
 const useWindowSize = () => {
   const read = () => ({ w: window.innerWidth, h: window.innerHeight });
@@ -57,6 +58,8 @@ interface HomeSceneLoopProps {
   sceneId: HomeSceneId;
   /** Plain description of the animation for screen readers. */
   label: string;
+  /** Audience-specific wording; the explainer's own copy is used when absent. */
+  content?: SceneContent;
 }
 
 /**
@@ -65,7 +68,7 @@ interface HomeSceneLoopProps {
  * stage scaled down to the frame, mounts only while in view, restarts each
  * time it re-enters view, and loops by remounting after its duration.
  */
-const HomeSceneLoop = ({ sceneId, label }: HomeSceneLoopProps) => {
+const HomeSceneLoop = ({ sceneId, label, content }: HomeSceneLoopProps) => {
   const scene = TIMELINE.find((s) => s.id === sceneId);
   const reduced = !!useReducedMotion();
   const u = useUnit();
@@ -137,7 +140,9 @@ const HomeSceneLoop = ({ sceneId, label }: HomeSceneLoopProps) => {
             transformOrigin: '0 0',
           }}
         >
-          <Scene key={run} reduced={reduced} cue={noop} tap={noop} />
+          <SceneContentContext.Provider value={content ?? EMPTY_CONTENT}>
+            <Scene key={run} reduced={reduced} cue={noop} tap={noop} />
+          </SceneContentContext.Provider>
         </div>
       )}
     </div>
