@@ -76,7 +76,7 @@ export const AGENCIES: AudienceConfig = {
     { kind: 'split', scene: 'editor', sceneLabel: SCENE_LABELS.editor, lead: 'Nothing goes out', emphasis: 'without you.', line: 'Approve, prioritise or spike before anything goes live.' },
     { kind: 'publish', sceneLabel: SCENE_LABELS.publish, lead: 'Feeds, emails,', emphasis: 'widgets, carousels.', line: 'One story, every channel your client cares about - including ChatGPT & Claude.' },
     { kind: 'text', lead: 'Always', emphasis: 'on content.', line: 'A monthly service clients keep, without a writer on it every day.' },
-    { kind: 'text', lead: 'See it', emphasis: 'live.', line: 'This local feed runs on Curatr.', button: EASTBOURNE_BUTTON },
+    { kind: 'text', lead: 'See it', emphasis: 'live.', line: 'This local feed runs entirely on Curatr.', button: EASTBOURNE_BUTTON },
   ],
   close: { lead: 'Got a client', emphasis: 'in mind?', primary: 'talk' },
 };
