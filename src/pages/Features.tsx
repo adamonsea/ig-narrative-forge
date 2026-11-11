@@ -11,7 +11,7 @@ const MINT = 'hsl(155,100%,67%)';
 const VIOLET = 'hsl(270,100%,68%)';
 
 const CHAPTERS: { id: FeatureSceneName; kicker: string; title: string; body: string }[] = [
-  { id: 'gather', kicker: 'Gather', title: 'Selected sources, set and forget', body: 'Journals, regulators, trade press, plus your own content. Curatr watches every source day and night.' },
+  { id: 'gather', kicker: 'Gather', title: 'Select sources, set and forget', body: 'Journals, regulators, trade press, plus your own content. Curatr watches every source day and night.' },
   { id: 'filter', kicker: 'Filter', title: 'Only what belongs', body: 'Your topics and keywords decide what stays and what goes, reducing noise and learning.' },
   { id: 'brief', kicker: 'Brief', title: 'Long reads, made quick', body: 'Each story becomes a few swipeable slides in your tone of voice, credited to the original reporter. Or offer readers audio briefings.' },
   { id: 'illustrate', kicker: 'Illustrate', title: 'Art for every story', body: 'Original artwork or photography aligned to your brand, for the stories you select. Image style library extended frequently.' },
