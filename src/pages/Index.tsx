@@ -398,9 +398,9 @@ const Index = () => {
           <section className="mx-auto flex min-h-[80svh] max-w-5xl flex-col items-center justify-center py-20 text-center md:py-28">
             <SectionCopy
               center
-              lead="It’s"
+              lead="Try it"
               emphasis="live."
-              line="Eastbourne's feed runs on Curatr, including on the Eastbourne Chamber of Commerce website."
+              line="This local news feed runs on Curatr.pro"
             >
               <motion.div {...hoverLift} className="mt-10 inline-block md:mt-12">
                 <Link
