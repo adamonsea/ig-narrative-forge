@@ -17,6 +17,14 @@ const json = (body: unknown, status = 200) =>
 const stripFences = (text: string) =>
   text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
 
+// Keep only the JSON object, in case the model wraps it in stray text.
+const extractJson = (text: string) => {
+  const clean = stripFences(text);
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  return start >= 0 && end > start ? clean.slice(start, end + 1) : clean;
+};
+
 const service = () =>
   createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -125,7 +133,7 @@ Deno.serve(async (req) => {
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
-          max_tokens: 1200,
+          max_tokens: 4000,
           response_format: { type: 'json_object' },
         },
       },
@@ -142,9 +150,14 @@ Deno.serve(async (req) => {
     const raw = payload?.choices?.[0]?.message?.content ?? '';
     let parsed: any;
     try {
-      parsed = JSON.parse(stripFences(raw));
+      parsed = JSON.parse(extractJson(raw));
     } catch {
-      console.error('feed-ideas parse failure', raw.slice(0, 400));
+      console.error(
+        'feed-ideas parse failure',
+        payload?.choices?.[0]?.finish_reason,
+        raw.length,
+        raw.slice(-200),
+      );
       return json({ error: 'We could not generate ideas just now. Please try again.' }, 502);
     }
 
