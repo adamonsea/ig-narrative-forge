@@ -439,7 +439,8 @@ export const SceneWritten = ({ reduced, cue }: SceneProps) => {
 
 /* ---------------------------------------------------------------- 6. Publish */
 
-const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels', 'ChatGPT', 'Claude'];
+// Listed clockwise from the top so the ring fills in one smooth sweep.
+const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels', 'Claude', 'ChatGPT'];
 
 export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
   const u = useUnit();
@@ -447,22 +448,74 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
     DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
   );
   const tall = isPortrait();
-  const dx = (tall ? 11 : 32) * u;
-  const dy = (tall ? 24 : 21) * u;
-  // ChatGPT and Claude sit directly above and below the story card: clear of
-  // the corner pills on desktop, and of the card itself on portrait phones.
-  const mid = (tall ? 13 : 21) * u;
+  // Six pills on a ring around the story card: top, two on each side, bottom.
+  // Landscape is a wide ellipse; portrait phones use a tall hexagon so the
+  // pills stay on screen and clear of the card.
+  const sx = (tall ? 13 : 31) * u;
+  const sy = (tall ? 17.5 : 12) * u;
+  const ty = (tall ? 30 : 24) * u;
   const spots = [
-    { x: -dx, y: -dy },
-    { x: dx, y: -dy },
-    { x: -dx, y: dy },
-    { x: dx, y: dy },
-    { x: 0, y: -mid },
-    { x: 0, y: mid },
+    { x: 0, y: -ty },
+    { x: sx, y: -sy },
+    { x: sx, y: sy },
+    { x: 0, y: ty },
+    { x: -sx, y: sy },
+    { x: -sx, y: -sy },
   ];
+  // Approximate half-sizes (px) so each dotted line runs edge to edge, never
+  // showing through the translucent card or pills.
+  const pillW = Math.min(30 * u, typeof window === 'undefined' ? 30 * u : window.innerWidth * 0.42);
+  const pill = { w: pillW / 2, h: 4.2 * u };
+  const card = { w: 12.4 * u, h: 9 * u };
+  const gap = 1.2 * u;
+  const lines = spots.map(({ x, y }) => {
+    const len = Math.hypot(x, y) || 1;
+    const exit = (b: { w: number; h: number }) =>
+      Math.min(x ? b.w / Math.abs(x) : Infinity, y ? b.h / Math.abs(y) : Infinity);
+    const a = exit(card) + gap / len;
+    const b = 1 - exit(pill) - gap / len;
+    return { x1: x * a, y1: y * a, x2: x * b, y2: y * b };
+  });
+  const dot = 1.6 * u;
+  const box = { w: 60 * u, h: 35 * u };
   return (
     <Stage>
-      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full">
+      <div
+        className={`relative mx-auto w-full max-w-full ${tall ? 'h-[calc(var(--u)*72)]' : 'h-[calc(var(--u)*62)]'}`}
+      >
+        <svg
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          width={box.w * 2}
+          height={box.h * 2}
+          viewBox={`${-box.w} ${-box.h} ${box.w * 2} ${box.h * 2}`}
+          aria-hidden="true"
+        >
+          {lines.map((l, i) => (
+            <motion.line
+              key={DESTINATIONS[i]}
+              x1={l.x1}
+              y1={l.y1}
+              stroke={ACCENT}
+              strokeOpacity={0.7}
+              strokeWidth={0.5 * u}
+              strokeLinecap="round"
+              strokeDasharray={`0 ${dot}`}
+              initial={{ x2: l.x1, y2: l.y1, opacity: 0, strokeDashoffset: 0 }}
+              animate={{
+                x2: l.x2,
+                y2: l.y2,
+                opacity: 1,
+                strokeDashoffset: reduced ? 0 : -dot * 40,
+              }}
+              transition={{
+                x2: { duration: reduced ? 0 : 0.5, delay: reduced ? 0 : 0.8 + i * 0.5, ease: 'easeOut' },
+                y2: { duration: reduced ? 0 : 0.5, delay: reduced ? 0 : 0.8 + i * 0.5, ease: 'easeOut' },
+                opacity: { duration: 0.2, delay: reduced ? 0 : 0.8 + i * 0.5 },
+                strokeDashoffset: { duration: 20, ease: 'linear', repeat: Infinity },
+              }}
+            />
+          ))}
+        </svg>
         <Chunk className="absolute left-1/2 top-1/2 w-[calc(var(--u)*24)] -translate-x-1/2 -translate-y-1/2 space-y-[calc(var(--u)*1.5)] p-[calc(var(--u)*2)]">
           <div
             className="h-[calc(var(--u)*8)] rounded-[calc(var(--u)*1)]"
