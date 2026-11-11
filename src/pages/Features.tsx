@@ -16,7 +16,7 @@ const CHAPTERS: { id: FeatureSceneName; kicker: string; title: string; body: str
   { id: 'brief', kicker: 'Brief', title: 'Long reads, made quick', body: 'Each story becomes a few swipeable slides in your tone of voice, credited to the original reporter. Or offer readers audio briefings.' },
   { id: 'illustrate', kicker: 'Illustrate', title: 'Art for every story', body: 'Original artwork or photography aligned to your brand, for the stories you select. Image style library extended frequently.' },
   { id: 'publish', kicker: 'Publish', title: 'Approve once, appear everywhere', body: 'Your feed, email briefings, website widgets and social reels, all from one tap, maximising reach and efficiency.' },
-  { id: 'grow', kicker: 'Grow', title: 'Readers become subscribers', body: 'A sign-up card sits in the feed. Daily, weekly or both, confirmed with one email.' },
+  { id: 'grow', kicker: 'Grow', title: 'Readers become subscribers', body: 'A sign-up CTAs sit in the feed. Readers become lists and your audience becomes a community' },
   { id: 'readers', kicker: 'Learn', title: 'See what lands', body: 'Reads, the headline that stops the scroll, and where readers drop off.' },
   { id: 'ask', kicker: 'Ask', title: 'Your channel, inside your AI', body: 'Connect ChatGPT or Claude to a channel and ask what’s new. Answers come from your stories, with sources.' },
 ];
