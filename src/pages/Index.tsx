@@ -436,7 +436,7 @@ const Index = () => {
                 <Link to="/pricing">View pricing</Link>
               </Button>
               <Button asChild variant="ghost" size="lg" className="h-14 rounded-full px-10 text-lg text-white hover:bg-white/10">
-                <Link to="/features">Full feature list</Link>
+                <Link to="/features" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })}>Full feature list</Link>
               </Button>
             </div>
           </section>
