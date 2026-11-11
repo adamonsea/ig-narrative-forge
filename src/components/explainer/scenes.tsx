@@ -413,7 +413,7 @@ export const SceneWritten = ({ reduced, cue }: SceneProps) => {
 
 /* ---------------------------------------------------------------- 6. Publish */
 
-const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels'];
+const DESTINATIONS = ['Your feed', 'Newsletter', 'Site widget', 'Social carousels', 'ChatGPT', 'Claude'];
 
 export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
   const u = useUnit();
@@ -421,13 +421,18 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
     DESTINATIONS.map((_, i) => [700 + i * 500, () => { cue('land'); tap(8); }] as [number, () => void]),
   );
   const tall = isPortrait();
-  const dx = (tall ? 11 : 30) * u;
+  const dx = (tall ? 11 : 32) * u;
   const dy = (tall ? 24 : 21) * u;
+  // ChatGPT and Claude sit directly above and below the story card: clear of
+  // the corner pills on desktop, and of the card itself on portrait phones.
+  const mid = (tall ? 13 : 21) * u;
   const spots = [
     { x: -dx, y: -dy },
     { x: dx, y: -dy },
     { x: -dx, y: dy },
     { x: dx, y: dy },
+    { x: 0, y: -mid },
+    { x: 0, y: mid },
   ];
   return (
     <Stage>

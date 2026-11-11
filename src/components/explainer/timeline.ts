@@ -70,7 +70,7 @@ export const TIMELINE: SceneDef[] = [
     id: 'publish',
     duration: 7800,
     caption:
-      'Then it publishes itself. Your own feed, your newsletter, a widget on your site, social carousels.',
+      'Then it publishes itself. Your own feed, your newsletter, a widget on your site, social carousels, ChatGPT and Claude.',
     Component: ScenePublish,
   },
   {
