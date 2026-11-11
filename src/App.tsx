@@ -44,6 +44,9 @@ import ExplainerExport from "./pages/ExplainerExport";
 import Unsubscribe from "./pages/Unsubscribe";
 import WaitlistWelcome from "./pages/WaitlistWelcome";
 import PeriodReview from "./pages/PeriodReview";
+import ForCommunities from "./pages/for/ForCommunities";
+import ForOrganisations from "./pages/for/ForOrganisations";
+import ForAgencies from "./pages/for/ForAgencies";
 
 
 // Redirect component for old feed URLs
@@ -91,6 +94,9 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/features" element={<Features />} />
+                <Route path="/for/communities" element={<ForCommunities />} />
+                <Route path="/for/organisations" element={<ForOrganisations />} />
+                <Route path="/for/agencies" element={<ForAgencies />} />
                 <Route path="/mcp" element={<Mcp />} />
                 <Route path="/promo" element={<Promo />} />
                 <Route path="/discover" element={<Discover />} />
