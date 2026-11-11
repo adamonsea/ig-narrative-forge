@@ -11,11 +11,11 @@ const MINT = 'hsl(155,100%,67%)';
 const VIOLET = 'hsl(270,100%,68%)';
 
 const CHAPTERS: { id: FeatureSceneName; kicker: string; title: string; body: string }[] = [
-  { id: 'gather', kicker: 'Gather', title: 'Every source, watched for you', body: 'Journals, regulators, trade press, plus your own content. Curatr watches every source day and night.' },
-  { id: 'filter', kicker: 'Filter', title: 'Only what belongs', body: 'Your topics and keywords decide what stays. The noise never reaches you.' },
-  { id: 'brief', kicker: 'Brief', title: 'Long reads, made quick', body: 'Each story becomes a few swipeable slides in your voice, credited to the original reporter.' },
-  { id: 'illustrate', kicker: 'Illustrate', title: 'Art for every story', body: 'Original artwork in your colours, for every story. Or a satirical cartoon, when it deserves one.' },
-  { id: 'publish', kicker: 'Publish', title: 'Approve once, appear everywhere', body: 'Your feed, email briefings, website widgets and RSS, all from one tap.' },
+  { id: 'gather', kicker: 'Gather', title: 'Selected sources, set and forget', body: 'Journals, regulators, trade press, plus your own content. Curatr watches every source day and night.' },
+  { id: 'filter', kicker: 'Filter', title: 'Only what belongs', body: 'Your topics and keywords decide what stays and what goes, reducing noise and learning.' },
+  { id: 'brief', kicker: 'Brief', title: 'Long reads, made quick', body: 'Each story becomes a few swipeable slides in your tone of voice, credited to the original reporter. Or offer readers audio briefings.' },
+  { id: 'illustrate', kicker: 'Illustrate', title: 'Art for every story', body: 'Original artwork or photography aligned to your brand, for the stories you select. Image style library extended frequently.' },
+  { id: 'publish', kicker: 'Publish', title: 'Approve once, appear everywhere', body: 'Your feed, email briefings, website widgets and social reels, all from one tap, maximising reach and efficiency.' },
   { id: 'grow', kicker: 'Grow', title: 'Readers become subscribers', body: 'A sign-up card sits in the feed. Daily, weekly or both, confirmed with one email.' },
   { id: 'readers', kicker: 'Learn', title: 'See what lands', body: 'Reads, the headline that stops the scroll, and where readers drop off.' },
   { id: 'ask', kicker: 'Ask', title: 'Your channel, inside your AI', body: 'Connect ChatGPT or Claude to a channel and ask what’s new. Answers come from your stories, with sources.' },
