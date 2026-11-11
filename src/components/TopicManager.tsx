@@ -267,7 +267,7 @@ export const TopicManager = () => {
             return (
               <Card key={topic.id} className="relative overflow-hidden group hover:shadow-md transition-shadow duration-200 bg-card border-border">
                 <Link
-                  to={`/dashboard/topic/${topic.slug}?tab=stats`}
+                  to={`/dashboard/topic/${topic.slug}`}
                   className="block"
                   onClick={(e) => {
                     const target = e.target as HTMLElement;

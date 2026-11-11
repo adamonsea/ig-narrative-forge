@@ -9,7 +9,7 @@ export interface AssistantDestination {
   label: string;
   /** What lives there — used by the assistant to choose the right one. */
   describes: string;
-  tab?: "feed" | "settings" | "reviews";
+  tab?: "feed" | "sources" | "settings" | "reviews";
   section?: "coverage" | "voice" | "automation" | "distribution" | "identity" | "features";
   /** Element id to scroll to and highlight. */
   anchor?: string;
@@ -24,7 +24,7 @@ export interface AssistantDestination {
 export const ASSISTANT_DESTINATIONS: AssistantDestination[] = [
   { id: "pipeline", label: "Open Pipeline", describes: "Arrivals waiting for review and live published stories", tab: "feed" },
   { id: "add-story", label: "Add a story by hand", describes: "Paste or upload a story yourself", tab: "feed", anchor: "assistant-add-story" },
-  { id: "sources", label: "Open Sources", describes: "Add, check or pause the websites stories are gathered from", tab: "feed", params: { sources: "true" } },
+  { id: "sources", label: "Open Sources", describes: "Add, check or pause the websites stories are gathered from", tab: "sources" },
   { id: "publish-toggle", label: "Show the Live/Draft switch", describes: "Make the feed public or keep it a draft", anchor: "publish-toggle" },
   { id: "reviews", label: "Open Reviews", describes: "Build a public visual look-back over a period", tab: "reviews" },
   { id: "control-overview", label: "Open Editorial control", describes: "Overview of policy and anything needing a decision", tab: "settings" },

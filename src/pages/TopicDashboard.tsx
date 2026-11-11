@@ -5,7 +5,6 @@ import { ReadingNow, MilestoneNote, DeskLookTracker } from "@/components/pulse/P
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AppLayout } from "@/components/AppLayout";
@@ -21,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { ExternalLink, ChevronDown, Loader2, Sparkles } from "lucide-react";
+import { ExternalLink, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
@@ -152,7 +151,6 @@ const TopicDashboard = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [proGateOpen, setProGateOpen] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
-  const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const { toast } = useToast();
   
   usePageFavicon();
@@ -176,11 +174,12 @@ const TopicDashboard = () => {
 
   useEffect(() => {
     if (searchParams.get('sources') === 'true') {
-      setActiveTab('feed');
-      setSourcesExpanded(true);
+      setActiveTab('sources');
       setAutoSuggestSources(true);
-      searchParams.delete('sources');
-      setSearchParams(searchParams, { replace: true });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('sources');
+      nextParams.set('tab', 'sources');
+      setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
@@ -193,7 +192,8 @@ const TopicDashboard = () => {
       setSearchParams(nextParams, { replace: true });
       return;
     }
-    if (tab === 'feed' || tab === 'reviews' || tab === 'settings') setActiveTab(tab);
+    if (tab === 'feed' || tab === 'sources' || tab === 'stats' || tab === 'reviews' || tab === 'settings') setActiveTab(tab);
+    if (!tab) setActiveTab('feed');
   }, [searchParams, setSearchParams]);
 
   const loadTopicAndStats = async () => {
@@ -708,7 +708,7 @@ const TopicDashboard = () => {
             </div>
           )}
 
-          {/* 2 Tabs: Feed + Settings */}
+          {/* Tabs: Pipeline (default), Sources, Readership, Editorial control, Reviews */}
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
@@ -723,6 +723,9 @@ const TopicDashboard = () => {
             <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
               <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Pipeline
+              </TabsTrigger>
+              <TabsTrigger value="sources" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
+                Sources
               </TabsTrigger>
               <TabsTrigger value="stats" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
                 Readership
@@ -777,27 +780,20 @@ const TopicDashboard = () => {
 
               <UnifiedContentPipeline selectedTopicId={topic.id} />
 
-              {/* Sources — collapsible section within Feed tab */}
-              <Collapsible open={sourcesExpanded} onOpenChange={setSourcesExpanded}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between px-4 py-3 h-auto">
-                    <span className="text-sm font-medium">Sources</span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${sourcesExpanded ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2">
-                  <TopicAwareSourceManager
-                    selectedTopicId={topic.id}
-                    onSourcesChange={loadTopicAndStats}
-                    topicName={topic.name}
-                    description={topic.description || ''}
-                    keywords={topic.keywords || []}
-                    topicType={topic.topic_type}
-                    region={topic.region}
-                    articleCount={stats?.articles || 0}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
+            </TabsContent>
+
+            {/* ===== SOURCES TAB ===== */}
+            <TabsContent value="sources" className="space-y-6">
+              <TopicAwareSourceManager
+                selectedTopicId={topic.id}
+                onSourcesChange={loadTopicAndStats}
+                topicName={topic.name}
+                description={topic.description || ''}
+                keywords={topic.keywords || []}
+                topicType={topic.topic_type}
+                region={topic.region}
+                articleCount={stats?.articles || 0}
+              />
             </TabsContent>
 
             {/* ===== EDITORIAL CONTROL CENTRE ===== */}
