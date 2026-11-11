@@ -356,7 +356,7 @@ const Index = () => {
               center
               lead="Made to be"
               emphasis="read."
-              line={"Readers scroll, swipe of sift 'clippings'.\nAutomated quizzes add interaction."}
+              line={"Readers scroll, swipe or even sift through 'clippings'. Automated quizzes add interaction."}
             />
             <div className="mx-auto mt-14 grid w-full max-w-6xl gap-10 md:mt-20 md:grid-cols-3 md:gap-10">
               {[
