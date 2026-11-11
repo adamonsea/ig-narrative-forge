@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { llmFetch } from '../_shared/llm-router.ts';
 import { getUser, isAdmin, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
-import { parseJsonSalvage } from '../_shared/taxonomy.ts';
+import { parseJsonSalvage, usesGlobalTaxonomy } from '../_shared/taxonomy.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,6 +46,13 @@ Deno.serve(async (req) => {
       .single();
     runId = run?.id ?? null;
 
+    const { data: topic } = await service
+      .from('topics')
+      .select('name, description, topic_type, keywords')
+      .eq('id', topicId)
+      .maybeSingle();
+    const isLocal = usesGlobalTaxonomy(topic?.topic_type);
+
     const { data: topicArticles } = await service
       .from('topic_articles')
       .select('id')
@@ -53,23 +60,51 @@ Deno.serve(async (req) => {
       .limit(20000);
     const taIds = (topicArticles ?? []).map((r: any) => r.id);
 
+    // Prefer published headlines; a new feed falls back to drafts, then to
+    // the articles waiting in Arrivals, so suggestions work from day one.
     const titles: string[] = [];
-    for (let i = 0; i < taIds.length && titles.length < sampleSize; i += 200) {
-      const { data: stories } = await service
-        .from('stories')
-        .select('title, created_at')
-        .in('topic_article_id', taIds.slice(i, i + 200))
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
-      for (const s of stories ?? []) {
-        if (s.title) titles.push(s.title);
-        if (titles.length >= sampleSize) break;
+    const seen = new Set<string>();
+    const push = (t: string | null | undefined) => {
+      const v = (t ?? '').trim();
+      if (!v || seen.has(v.toLowerCase()) || titles.length >= sampleSize) return;
+      seen.add(v.toLowerCase());
+      titles.push(v);
+    };
+    for (const publishedOnly of [true, false]) {
+      for (let i = 0; i < taIds.length && titles.length < sampleSize; i += 200) {
+        let q = service
+          .from('stories')
+          .select('title, created_at')
+          .in('topic_article_id', taIds.slice(i, i + 200))
+          .order('created_at', { ascending: false });
+        if (publishedOnly) q = q.eq('is_published', true);
+        const { data: stories } = await q;
+        for (const st of stories ?? []) push(st.title);
+      }
+      if (titles.length >= 15) break;
+    }
+    if (titles.length < 15) {
+      const { data: arrivals } = await service
+        .from('topic_articles')
+        .select('shared_article_content(title)')
+        .eq('topic_id', topicId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      for (const a of arrivals ?? []) {
+        const c = (a as any).shared_article_content;
+        push(Array.isArray(c) ? c[0]?.title : c?.title);
       }
     }
 
-    if (titles.length === 0) throw new Error('No published stories to sample');
+    const keywords: string[] = Array.isArray(topic?.keywords) ? topic!.keywords.slice(0, 40) : [];
+    if (titles.length === 0 && keywords.length === 0) {
+      throw new Error('Add some sources or keywords first, so there is something to base categories on.');
+    }
 
-    const prompt = `Below are ${titles.length} headlines published by a local news feed.
+    const feedLine = `Feed name: ${topic?.name ?? 'Untitled'}${topic?.description ? `\nAbout: ${topic.description}` : ''}${keywords.length ? `\nKeywords: ${keywords.join(', ')}` : ''}`;
+
+    const prompt = isLocal
+      ? `Below are ${titles.length} headlines published by a local news feed.
 
 Propose a category / sub-category taxonomy that fits this coverage. Aim for 8-14 top-level categories and 2-6 sub-categories each. Use lowercase-hyphen slugs. Include an approximate count of how many of the sampled headlines fall into each top-level category, and two example headlines.
 
@@ -77,7 +112,19 @@ Return ONLY JSON:
 {"categories":[{"slug":"","name":"","description":"","approx_count":0,"examples":["",""],"subcategories":[{"slug":"","name":""}]}]}
 
 HEADLINES:
-${titles.map((t) => `- ${t}`).join('\n')}`;
+${titles.map((t) => `- ${t}`).join('\n')}`
+      : `You are organising a specialist subject feed, NOT a local news site.
+
+${feedLine}
+
+Propose categories a reader of this subject would naturally browse by — themes within the subject itself (for a data science feed: e.g. "Models & Research", "Tools & Platforms", "Industry Adoption", "Policy & Ethics"). Do not use generic local-news sections such as crime, council, planning, transport, weather, sport or housing unless the subject is genuinely about them.
+
+Aim for 5-9 top-level categories, each with a one-line description and 0-4 sub-categories. Names short (1-3 words, "&" allowed). Use lowercase-hyphen slugs. Include an approximate count of how many of the sample headlines fall into each category, and up to two example headlines.
+
+Return ONLY JSON:
+{"categories":[{"slug":"","name":"","description":"","approx_count":0,"examples":["",""],"subcategories":[{"slug":"","name":""}]}]}
+
+${titles.length ? `SAMPLE HEADLINES:\n${titles.map((t) => `- ${t}`).join('\n')}` : 'No headlines yet — base the categories on the feed details above.'}`;
 
     const resp = await llmFetch(
       {

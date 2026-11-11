@@ -11,14 +11,34 @@ export interface CategoryRow {
 }
 
 /**
- * Load the taxonomy available to a topic: the shared global set plus any
- * feed-specific categories. Feed-specific slugs win over global ones.
+ * The shared global category set is a LOCAL NEWS taxonomy (courts, council,
+ * planning...). It only applies to regional feeds; every other feed uses only
+ * its own feed-specific categories. Keep in step with useStoryCategories.
+ */
+export function usesGlobalTaxonomy(topicType: string | null | undefined): boolean {
+  return topicType === 'regional';
+}
+
+/**
+ * Load the taxonomy available to a topic: regional feeds get the shared global
+ * set plus any feed-specific categories (feed-specific slugs win); other feeds
+ * get only their own categories.
  */
 export async function loadTaxonomy(service: any, topicId: string): Promise<CategoryRow[]> {
-  const { data, error } = await service
+  const { data: topic } = await service
+    .from('topics')
+    .select('topic_type')
+    .eq('id', topicId)
+    .maybeSingle();
+  const includeGlobal = usesGlobalTaxonomy(topic?.topic_type);
+
+  let query = service
     .from('story_categories')
-    .select('id, topic_id, parent_id, slug, name, description, is_active')
-    .or(`topic_id.is.null,topic_id.eq.${topicId}`)
+    .select('id, topic_id, parent_id, slug, name, description, is_active');
+  query = includeGlobal
+    ? query.or(`topic_id.is.null,topic_id.eq.${topicId}`)
+    : query.eq('topic_id', topicId);
+  const { data, error } = await query
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 

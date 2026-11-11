@@ -32,6 +32,9 @@ export const useStoryCategories = (topicId?: string) => {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [classifiedCount, setClassifiedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  // The shared global set is a local-news taxonomy: only regional feeds use it.
+  // Other feeds see only their own categories (mirrors _shared/taxonomy.ts).
+  const [isLocal, setIsLocal] = useState(true);
 
   const load = useCallback(async () => {
     if (!topicId) return;
@@ -55,11 +58,19 @@ export const useStoryCategories = (topicId?: string) => {
         return rows;
       };
 
+      const { data: topicRow } = await supabase
+        .from('topics')
+        .select('topic_type')
+        .eq('id', topicId)
+        .maybeSingle();
+      const local = topicRow?.topic_type === 'regional';
+      setIsLocal(local);
+
+      const catQuery = supabase
+        .from('story_categories')
+        .select('id, topic_id, parent_id, slug, name, description, sort_order');
       const [{ data: cats }, { data: setts }, assignments] = await Promise.all([
-        supabase
-          .from('story_categories')
-          .select('id, topic_id, parent_id, slug, name, description, sort_order')
-          .or(`topic_id.is.null,topic_id.eq.${topicId}`)
+        (local ? catQuery.or(`topic_id.is.null,topic_id.eq.${topicId}`) : catQuery.eq('topic_id', topicId))
           .eq('is_active', true)
           .order('sort_order', { ascending: true }),
         supabase.from('topic_category_settings').select('*').eq('topic_id', topicId),
@@ -72,10 +83,17 @@ export const useStoryCategories = (topicId?: string) => {
       for (const s of setts ?? []) settingMap[s.category_id] = s as CategorySetting;
       setSettings(settingMap);
 
+      // Only count assignments to categories this feed actually uses.
+      const validIds = new Set(((cats ?? []) as StoryCategory[]).map((c) => c.id));
       const countMap: Record<string, number> = {};
-      for (const a of assignments ?? []) countMap[a.category_id] = (countMap[a.category_id] ?? 0) + 1;
+      let classified = 0;
+      for (const a of assignments ?? []) {
+        if (!validIds.has(a.category_id)) continue;
+        countMap[a.category_id] = (countMap[a.category_id] ?? 0) + 1;
+        classified += 1;
+      }
       setCounts(countMap);
-      setClassifiedCount((assignments ?? []).length);
+      setClassifiedCount(classified);
     } finally {
       setLoading(false);
     }
@@ -116,5 +134,5 @@ export const useStoryCategories = (topicId?: string) => {
   const parents = categories.filter((c) => !c.parent_id);
   const childrenOf = (id: string) => categories.filter((c) => c.parent_id === id);
 
-  return { categories, parents, childrenOf, settings, counts, classifiedCount, loading, reload: load, saveSetting };
+  return { categories, parents, childrenOf, settings, counts, classifiedCount, loading, isLocal, reload: load, saveSetting };
 };

@@ -102,6 +102,15 @@ Deno.serve(async (req) => {
 
     const categories = await loadTaxonomy(service, topicId);
     const bySlug = new Map(categories.map((c) => [c.slug, c]));
+    const validCategoryIds = new Set(categories.filter((c) => !c.parent_id).map((c) => c.id));
+
+    // Non-local feeds have no categories until the owner adds their own.
+    if (validCategoryIds.size === 0) {
+      return new Response(
+        JSON.stringify({ processed: 0, remaining: 0, needsCategories: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const explicitIds: string[] = Array.isArray(body.storyIds)
       ? body.storyIds.filter((v: unknown) => typeof v === 'string').slice(0, 100)
@@ -114,9 +123,12 @@ Deno.serve(async (req) => {
       // already carry an assignment.
       const { data: assigned } = await service
         .from('story_category_assignments')
-        .select('story_id')
+        .select('story_id, category_id')
         .in('story_id', explicitIds);
-      const assignedIds = new Set((assigned ?? []).map((r: any) => r.story_id));
+      // An assignment to a category this feed no longer uses doesn't count.
+      const assignedIds = new Set(
+        (assigned ?? []).filter((r: any) => validCategoryIds.has(r.category_id)).map((r: any) => r.story_id)
+      );
 
       const { data: stories } = await service
         .from('stories')
@@ -151,10 +163,12 @@ Deno.serve(async (req) => {
       for (let from = 0; ; from += 1000) {
         const { data } = await service
           .from('story_category_assignments')
-          .select('story_id')
+          .select('story_id, category_id')
           .eq('topic_id', topicId)
           .range(from, from + 999);
-        for (const r of data ?? []) assignedIds.add((r as any).story_id);
+        for (const r of data ?? []) {
+          if (validCategoryIds.has((r as any).category_id)) assignedIds.add((r as any).story_id);
+        }
         if (!data || data.length < 1000) break;
       }
 

@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, RefreshCw, Sparkles, ChevronDown } from 'lucide-react';
@@ -17,12 +18,14 @@ interface CategoriesPanelProps {
 }
 
 export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps) => {
-  const { parents, childrenOf, settings, counts, classifiedCount, loading, reload, saveSetting } =
+  const { categories, parents, childrenOf, settings, counts, classifiedCount, loading, isLocal, reload, saveSetting } =
     useStoryCategories(topicId);
   const { toast } = useToast();
   const [classifying, setClassifying] = useState(false);
   const [discovering, setDiscovering] = useState(false);
   const [proposal, setProposal] = useState<any>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [adding, setAdding] = useState(false);
   const [storyTotal, setStoryTotal] = useState<number | null>(totalStories ?? null);
 
   useEffect(() => {
@@ -57,6 +60,13 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
           body: { topicId, limit: 75, batchSize: 25 },
         });
         const payload = data as any;
+        if (payload?.needsCategories) {
+          toast({
+            title: 'Add categories first',
+            description: 'Use Suggest categories to get a set that fits this feed.',
+          });
+          return;
+        }
         if (payload?.blocked) {
           throw new Error(
             payload.error ||
@@ -108,8 +118,11 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
         body: { topicId, sampleSize: 400 },
       });
       if (error) throw error;
-      setProposal((data as any)?.proposal ?? null);
-      toast({ title: 'Taxonomy proposal ready', description: 'Review the suggested categories below.' });
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const next = (data as any)?.proposal ?? null;
+      setProposal(next);
+      setSelected(new Set((next?.categories ?? []).map((c: any) => c.slug)));
+      toast({ title: 'Suggestions ready', description: 'Pick the categories you want below.' });
     } catch (err) {
       toast({
         title: 'Discovery failed',
@@ -118,6 +131,61 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
       });
     } finally {
       setDiscovering(false);
+    }
+  };
+
+  const slugify = (v: string) =>
+    v.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+
+  // Adds the chosen suggestions as this feed's own categories (owner-only via RLS).
+  const addSelected = async () => {
+    const chosen = (proposal?.categories ?? []).filter((c: any) => selected.has(c.slug));
+    if (chosen.length === 0) return;
+    setAdding(true);
+    try {
+      const used = new Set(categories.map((c) => c.slug));
+      let order = categories.reduce((m, c) => Math.max(m, c.sort_order ?? 0), 0) + 1;
+      let added = 0;
+      for (const c of chosen) {
+        const slug = slugify(c.slug || c.name || '');
+        if (!slug || used.has(slug) || !c.name) continue;
+        const { data: parent, error } = await supabase
+          .from('story_categories')
+          .insert({ topic_id: topicId, slug, name: String(c.name).slice(0, 80), description: c.description ?? null, sort_order: order++ })
+          .select('id')
+          .single();
+        if (error) throw error;
+        used.add(slug);
+        added += 1;
+        const subs = (Array.isArray(c.subcategories) ? c.subcategories : [])
+          .filter((sc: any) => sc?.name)
+          .map((sc: any) => {
+            let subSlug = slugify(sc.slug || sc.name);
+            if (!subSlug || used.has(subSlug)) subSlug = `${slug}-${subSlug || 'other'}`;
+            if (used.has(subSlug)) return null;
+            used.add(subSlug);
+            return { topic_id: topicId, parent_id: parent.id, slug: subSlug, name: String(sc.name).slice(0, 80), sort_order: order++ };
+          })
+          .filter(Boolean);
+        if (subs.length) {
+          const { error: subError } = await supabase.from('story_categories').insert(subs as any[]);
+          if (subError) throw subError;
+        }
+      }
+      setProposal(null);
+      toast({
+        title: added ? `${added} ${added === 1 ? 'category' : 'categories'} added` : 'Nothing new to add',
+        description: added ? 'Run Classify stories to sort your stories into them.' : 'Those categories are already on this feed.',
+      });
+      reload();
+    } catch (err) {
+      toast({
+        title: 'Could not add categories',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -148,7 +216,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
             {discovering ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
             Suggest categories
           </Button>
-          <Button size="sm" onClick={runClassification} disabled={classifying}>
+          <Button size="sm" onClick={runClassification} disabled={classifying || parents.length === 0}>
             {classifying ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
             Classify stories
           </Button>
@@ -157,22 +225,54 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
 
       {proposal?.categories?.length > 0 && (
         <div className="rounded-xl border border-border p-4 space-y-2">
-          <p className="text-sm font-medium">Suggested taxonomy from your published stories</p>
-          <ul className="space-y-1.5">
-            {proposal.categories.map((c: any) => (
-              <li key={c.slug} className="text-sm">
-                <span className="font-medium">{c.name}</span>{' '}
-                <span className="text-muted-foreground">
-                  ~{c.approx_count ?? 0} stories
-                  {c.subcategories?.length ? ` · ${c.subcategories.map((s: any) => s.name).join(', ')}` : ''}
-                </span>
-              </li>
-            ))}
+          <p className="text-sm font-medium">Suggested categories for this feed</p>
+          <ul className="space-y-2">
+            {proposal.categories.map((c: any) => {
+              const id = `suggest-${c.slug}`;
+              return (
+                <li key={c.slug} className="flex items-start gap-2.5 text-sm">
+                  <Checkbox
+                    id={id}
+                    className="mt-0.5"
+                    checked={selected.has(c.slug)}
+                    onCheckedChange={(v) =>
+                      setSelected((prev) => {
+                        const next = new Set(prev);
+                        if (v) next.add(c.slug);
+                        else next.delete(c.slug);
+                        return next;
+                      })
+                    }
+                  />
+                  <label htmlFor={id} className="cursor-pointer">
+                    <span className="font-medium">{c.name}</span>
+                    {c.description && <span className="text-muted-foreground"> — {c.description}</span>}
+                    {c.subcategories?.length ? (
+                      <span className="block text-xs text-muted-foreground">
+                        {c.subcategories.map((s: any) => s.name).join(', ')}
+                      </span>
+                    ) : null}
+                  </label>
+                </li>
+              );
+            })}
           </ul>
-          <p className="text-xs text-muted-foreground">
-            This is a suggestion only — nothing has changed. Tell me which of these you want added to your feed.
-          </p>
+          <div className="flex gap-2 pt-1">
+            <Button size="sm" onClick={addSelected} disabled={adding || selected.size === 0}>
+              {adding && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Add {selected.size} {selected.size === 1 ? 'category' : 'categories'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setProposal(null)} disabled={adding}>
+              Dismiss
+            </Button>
+          </div>
         </div>
+      )}
+
+      {parents.length === 0 && !proposal && (
+        <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+          No categories yet. Use Suggest categories to get a set that fits what this feed covers.
+        </p>
       )}
 
       <div className="space-y-2">
@@ -198,8 +298,8 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
               </div>
               <CollapsibleContent className="border-t border-border p-3 space-y-3">
                 {cat.description && <p className="text-xs text-muted-foreground">{cat.description}</p>}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
+                <div className={isLocal ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3 sm:max-w-[50%]'}>
+                  {isLocal && <div className="space-y-1">
                     <Label htmlFor={`radius-${cat.id}`} className="text-xs">
                       Radius (miles)
                     </Label>
@@ -216,7 +316,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                         })
                       }
                     />
-                  </div>
+                  </div>}
                   <div className="space-y-1">
                     <Label htmlFor={`threshold-${cat.id}`} className="text-xs">
                       Relevance threshold
