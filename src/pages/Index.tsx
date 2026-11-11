@@ -346,7 +346,7 @@ const Index = () => {
           {/* 5. Editor */}
           <SplitSection
             flip
-            copy={{ lead: 'You’re still the', emphasis: 'editor.', line: 'Approve, edit or spike anything in seconds.' }}
+            copy={{ lead: 'You’re still the', emphasis: 'editor.', line: 'Approve, edit prioritise or spike anything in seconds. Drip feed your backlog.' }}
             scene={{ id: 'editor', label: 'One story is approved and published while another is spiked.' }}
           />
 
