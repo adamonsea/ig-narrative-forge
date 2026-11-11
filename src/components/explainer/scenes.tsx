@@ -220,7 +220,7 @@ export const SceneSubject = ({ reduced, cue, tap }: SceneProps) => {
 
 /* ---------------------------------------------------------------- 3. Sources */
 
-const SOURCES = ['Local paper', 'Council', 'Community blog', 'Radio', 'Listings'];
+const SOURCES = ['News source', 'Influencers', 'PR channel', 'Thought leader', 'Blog'];
 
 export const SceneSources = ({ reduced, cue }: SceneProps) => {
   const u = useUnit();
