@@ -31,7 +31,7 @@ export const COMMUNITIES: AudienceConfig = {
     { kind: 'publish', sceneLabel: SCENE_LABELS.publish, lead: 'On your site', emphasis: 'and in their inbox.', line: 'Your feed, a widget on your website, a weekly email and social carousels.' },
     { kind: 'text', lead: 'Already', emphasis: 'live.', line: "Eastbourne's feed runs on Curatr - including on the Eastbourne Chamber of Commerce website.", button: EASTBOURNE_BUTTON },
   ],
-  close: { lead: "What's your", emphasis: 'town?', primary: 'start' },
+  close: { lead: "What's your", emphasis: 'patch?', primary: 'start' },
 };
 
 export const ORGANISATIONS: AudienceConfig = {
