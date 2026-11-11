@@ -13,6 +13,7 @@ export const PRO_PRICE = { month: 19, year: 190 } as const;
 export const PRO_MONTHLY_CREDITS = 500;
 export const WELCOME_CREDITS = 20;
 export const TOP_UP_CREDITS = 500;
+export const TOP_UP_PRICE_USD = 10;
 
 /** Unified rate card: 1 credit = 2¢, priced at ~50% gross margin. */
 export const IMAGE_CREDIT_COSTS = {

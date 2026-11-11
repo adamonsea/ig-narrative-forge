@@ -12,6 +12,7 @@ import { PRO_MONTHLY_CREDITS, TOP_UP_CREDITS, WELCOME_CREDITS } from '@/lib/bill
 import { useSubscription } from '@/hooks/useSubscription';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
 import { NewsroomBand } from '@/components/home/NewsroomBand';
+import { CreditScaleTable } from '@/components/pricing/CreditScaleTable';
 
 const features = [
   'Publish public feeds',
@@ -115,6 +116,8 @@ export default function Pricing() {
             <Button onClick={() => checkout('subscription')} disabled={busy !== null} className="mt-8 w-full rounded-full bg-emerald-300 text-slate-950 hover:bg-emerald-200">{busy === 'subscription' ? 'Opening checkout…' : 'Unlock with Pro'}</Button>
           </div>
         </section>
+
+        <CreditScaleTable />
 
         {user && subscribed && <section className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:flex md:items-center md:justify-between">
           <div><h2 className="font-medium">Need more creative credits?</h2><p className="mt-1 text-sm text-white/55">Add {TOP_UP_CREDITS} credits for $10. Top-ups do not expire.</p></div>
