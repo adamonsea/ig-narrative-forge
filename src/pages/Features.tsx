@@ -64,9 +64,6 @@ const Features = () => {
             <CuratrLogo className="text-2xl text-white" />
           </Link>
           <div className="flex items-center gap-6 text-base">
-            <Link to="/discover" className="text-white/70 transition-colors hover:text-white">
-              Discover
-            </Link>
             <Link to="/pricing" className="text-white/70 transition-colors hover:text-white">
               Pricing
             </Link>

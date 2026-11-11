@@ -158,9 +158,6 @@ const Index = () => {
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
             <CuratrLogo className="text-3xl text-white" />
             <div className="hidden md:flex items-center gap-4">
-              <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
-                Discover
-              </Link>
               <Link to="/features" className="text-white/70 hover:text-white transition-colors">
                 Features
               </Link>
@@ -199,7 +196,6 @@ const Index = () => {
               <SheetContent side="right" className="w-[78%] max-w-xs bg-[hsl(214,50%,9%)] border-white/10 text-white">
                 <nav className="mt-10 flex flex-col gap-2">
                   {[
-                    { to: '/discover', label: 'Discover' },
                     { to: '/features', label: 'Features' },
                     { to: '/pricing', label: 'Pricing' },
                   ].map((item) => (

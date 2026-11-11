@@ -83,7 +83,6 @@ export default function Mcp() {
             Curatr
           </Link>
           <nav className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
-            <Link to="/discover" className="hover:text-foreground">Discover</Link>
             <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
           </nav>
         </div>
