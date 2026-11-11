@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { FeedIdeaGenerator } from '@/components/home/FeedIdeaGenerator';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
 import { HomeHeroMedia } from '@/components/home/HomeHeroMedia';
+import { NewsroomBand } from '@/components/home/NewsroomBand';
 import type { HomeSceneId } from '@/components/home/HomeSceneLoop';
 
 /**
@@ -418,7 +419,8 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
           </div>
 
           {/* Close */}
-          <section className="mx-auto flex min-h-[90svh] max-w-5xl flex-col justify-center py-20 text-center md:py-28">
+          <section className="relative mx-auto flex min-h-[90svh] max-w-5xl flex-col justify-center py-20 text-center md:py-28">
+            <NewsroomBand />
             <MaskRevealHeading
               as="h2"
               segments={[{ text: config.close.lead }, { text: config.close.emphasis, italic: true }]}
