@@ -387,7 +387,7 @@ const Index = () => {
               center
               lead="From everywhere"
               emphasis="to everyone."
-              line="Your own feed, a newsletter, a widget on your site, social carousels, and ChatGPT & Claude."
+              line="Your own it all. Your feeds, a newsletter, a widget on your sites, social carousels, and ChatGPT & Claude."
             />
             <div className="mx-auto mt-14 w-full max-w-5xl md:mt-20">
               <Scene id="publish" label="One story fans out to a feed, a newsletter, a site widget and social carousels." />
