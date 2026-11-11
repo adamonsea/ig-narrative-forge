@@ -1,64 +1,76 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { motion, useReducedMotion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { MaskRevealHeading } from '@/components/MaskRevealHeading';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { useAuth } from '@/hooks/useAuth';
-import { FeatureLoop } from '@/components/home/FeatureLoops';
-import { FeatureAnimation } from '@/components/features/FeatureAnimations';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
-import {
-  HEADLINE_FEATURES,
-  DEPTH_FEATURES,
-  PLATFORM_FEATURES,
-} from '@/components/features/featureCatalog';
+import { FeatureScene, type FeatureSceneName } from '@/components/features/FeatureScenes';
+
+const MINT = 'hsl(155,100%,67%)';
+const VIOLET = 'hsl(270,100%,68%)';
+
+const CHAPTERS: { id: FeatureSceneName; kicker: string; title: string; body: string }[] = [
+  { id: 'gather', kicker: 'Gather', title: 'Every source, watched for you', body: 'Journals, regulators, trade press, plus your own content. Curatr watches every source day and night.' },
+  { id: 'filter', kicker: 'Filter', title: 'Only what belongs', body: 'Your topics and keywords decide what stays. The noise never reaches you.' },
+  { id: 'brief', kicker: 'Brief', title: 'Long reads, made quick', body: 'Each story becomes a few swipeable slides in your voice, credited to the original reporter. Or listen instead.' },
+  { id: 'illustrate', kicker: 'Illustrate', title: 'Art for every story', body: 'Original artwork in your colours, for every story. Or a satirical cartoon, when it deserves one.' },
+  { id: 'publish', kicker: 'Publish', title: 'Approve once, appear everywhere', body: 'Your feed, email briefings, website widgets and social reels, all from one tap.' },
+  { id: 'grow', kicker: 'Grow', title: 'Readers become subscribers', body: 'A sign-up card sits in the feed. Daily, weekly or both, confirmed with one email.' },
+  { id: 'readers', kicker: 'Learn', title: 'See what lands', body: 'Reads, the headline that stops the scroll, and where readers drop off.' },
+  { id: 'ask', kicker: 'Ask', title: 'Every channel, inside your AI', body: 'Connect ChatGPT or Claude and ask what’s new. Answers come from your channels, with sources.' },
+];
+
+const EXTRAS = ['Play Mode', 'Quiz cards', 'Sentiment tracking'];
+
+const EVERYTHING = [
+  { group: 'Your channel', items: ['Your own branded feed and address', 'Logo, icon and colours per feed', 'Daily and weekly roundups, plus archive', 'Widgets for any website'] },
+  { group: 'Sources', items: ['RSS, sitemaps or plain web pages', 'Health checks and alerts', 'Duplicates caught automatically', 'Add your own stories'] },
+  { group: 'Insight', items: ['Reads and top headline stopper', 'Drop-off across slides', 'Email opens and clicks', 'Widget views by website'] },
+  { group: 'Trust', items: ['Every story credited and linked', 'Sensitive stories never illustrated', 'Anonymity guard on court reports', 'GDPR-safe subscriber handling'] },
+];
+
+const ease = [0.22, 1, 0.36, 1] as const;
+const fade = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-80px' },
+  transition: { duration: 0.6, ease },
+} as const;
 
 const Features = () => {
   const { user } = useAuth();
-  const reduce = useReducedMotion();
   usePageFavicon();
-
-  const ease = [0.22, 1, 0.36, 1] as const;
-  const reveal: Variants = {
-    hidden: { opacity: 0, y: reduce ? 0 : 12 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
-  };
-  const container: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: reduce ? 0 : 0.08 } },
-  };
-  const viewport = { once: true, margin: '-80px' } as const;
+  const startHref = user ? '/dashboard' : '/auth';
 
   return (
-    <div className="min-h-dvh bg-[hsl(214,50%,9%)]">
+    <div className="min-h-dvh bg-[hsl(214,50%,9%)] text-white">
       <Helmet>
-        <title>Features — Every tool inside Curatr</title>
+        <title>Features — Run your own niche news channel | Curatr</title>
         <meta
           name="description"
-          content="A deep dive into Curatr: source trawling, relevance filtering, AI briefings and illustrations, multi-channel publishing, analytics and full editorial control."
+          content="Curatr gathers, filters, writes, illustrates and publishes the news in your niche, then grows your audience by email. Run one channel or a dozen, from one place."
         />
         <link rel="canonical" href="https://curatr.pro/features" />
-        <meta property="og:title" content="Features — Every tool inside Curatr" />
-        <meta
-          property="og:description"
-          content="Source trawling, relevance filtering, AI briefings, illustrations, multi-channel publishing and full editorial control."
-        />
+        <meta property="og:title" content="Features — Run your own niche news channel | Curatr" />
+        <meta property="og:description" content="Own the channel. Stop renting the audience. Run one niche channel or a dozen, from one place." />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
 
       <header className="border-b border-white/10">
-        <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
-          <Link to="/" aria-label="Curatr home"><CuratrLogo className="text-xl text-white" /></Link>
-          <div className="flex items-center gap-6 text-sm">
-            <Link to="/discover" className="text-white/70 hover:text-white transition-colors">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <Link to="/" aria-label="Curatr home">
+            <CuratrLogo className="text-2xl text-white" />
+          </Link>
+          <div className="flex items-center gap-6 text-base">
+            <Link to="/discover" className="text-white/70 transition-colors hover:text-white">
               Discover
             </Link>
-            <Link to="/pricing" className="text-white/70 hover:text-white transition-colors">
+            <Link to="/pricing" className="text-white/70 transition-colors hover:text-white">
               Pricing
             </Link>
-            <Button asChild size="sm" variant="secondary">
+            <Button asChild variant="secondary">
               <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
             </Button>
           </div>
@@ -67,133 +79,108 @@ const Features = () => {
 
       <main className="px-6">
         {/* Hero */}
-        <section className="max-w-4xl mx-auto py-20 text-center">
-          <MaskRevealHeading
-            as="h1"
-            segments={[{ text: 'Everything Curatr' }, { text: 'offers', italic: true }]}
-            className="text-4xl md:text-6xl font-display tracking-tight text-white leading-[1.1] flex flex-wrap justify-center"
-          />
-          <p className="mt-6 text-lg md:text-xl text-white/70">
-            A guided tour of the platform — from the moment a story is found, to the moment your
-            readers see it. Each step has a short explainer below.
+        <section className="mx-auto max-w-4xl py-24 text-center">
+          <h1 className="font-display text-5xl leading-[1.05] tracking-tight md:text-7xl">
+            From everywhere <em style={{ color: MINT }}>to everyone.</em>
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-xl text-white/75 md:text-2xl">
+            Own the channel. Stop renting the audience. Run one niche channel or a dozen, from one place. You stay the editor.
           </p>
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <Button asChild size="lg" className="h-auto rounded-full px-7 py-3.5 text-lg">
+              <Link to={startHref}>Start free</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary" className="h-auto rounded-full px-7 py-3.5 text-lg">
+              <Link to="/discover">See live channels</Link>
+            </Button>
+          </div>
         </section>
 
-        {/* Tier 1 — headline features */}
-        <motion.section
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={container}
-          className="max-w-6xl mx-auto space-y-24 pb-24"
-        >
-          {HEADLINE_FEATURES.map((f, i) => (
-            <motion.article
-              key={f.id}
-              variants={reveal}
-              className={`grid items-center gap-10 lg:grid-cols-2 ${
-                i % 2 ? 'lg:[&>*:first-child]:order-2' : ''
-              }`}
-            >
-              <FeatureAnimation name={f.animation} />
+        {/* How it works — one animated scene per feature */}
+        <div className="mx-auto max-w-6xl space-y-32 pb-28">
+          {CHAPTERS.map((c, i) => (
+            <motion.article key={c.id} {...fade} className="grid items-center gap-10 md:gap-16 lg:grid-cols-[1.25fr_1fr]">
+              <div className={i % 2 ? 'lg:order-2' : ''}>
+                <FeatureScene name={c.id} />
+              </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-[hsl(155,100%,67%)] mb-3">
-                  {f.kicker}
+                <p className="mb-3 text-base font-semibold uppercase tracking-[0.16em]" style={{ color: MINT }}>
+                  {String(i + 1).padStart(2, '0')} · {c.kicker}
                 </p>
-                <h2 className="text-3xl md:text-4xl font-display italic text-white mb-4 leading-tight">
-                  {f.title}
-                </h2>
-                <p className="text-white/70 leading-relaxed mb-6">{f.body}</p>
-                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-white/50 mb-2">
-                    In brief
-                  </p>
-                  <p className="text-sm text-white/80 leading-relaxed">{f.script}</p>
-                </div>
+                <h2 className="mb-5 font-display text-4xl italic leading-[1.05] md:text-5xl">{c.title}</h2>
+                <p className="text-xl leading-relaxed text-white/75 md:text-2xl md:leading-snug">{c.body}</p>
               </div>
             </motion.article>
           ))}
+        </div>
+
+        {/* Proof */}
+        <motion.section {...fade} className="mx-auto grid max-w-6xl gap-8 border-t border-white/10 py-20 md:grid-cols-2">
+          <div>
+            <div className="font-display text-7xl" style={{ color: MINT }}>5,600+</div>
+            <p className="mt-2 text-xl text-white/75">stories published on a single feed</p>
+          </div>
+          <div>
+            <div className="font-display text-7xl" style={{ color: VIOLET }}>Embedded</div>
+            <p className="mt-2 text-xl text-white/75">Curatr widgets already run on partner websites</p>
+          </div>
         </motion.section>
 
-        {/* Tier 2 — depth features */}
-        <motion.section
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={container}
-          className="max-w-6xl mx-auto border-t border-white/10 py-20"
-        >
-          <motion.div variants={reveal} className="mb-12 max-w-2xl">
-            <h2 className="text-3xl md:text-4xl font-display text-white mb-3">
-              Tools that keep readers coming back
-            </h2>
-            <p className="text-white/70">
-              Engagement features you can switch on per feed, with no extra work.
-            </p>
-          </motion.div>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {DEPTH_FEATURES.map((f) => (
-              <motion.div key={f.id} variants={reveal} className="border-l border-white/10 pl-6">
-                <FeatureLoop name={f.loop} />
-                <h3 className="text-lg font-display italic text-white mb-3">{f.title}</h3>
-                <p className="text-sm text-white/70 leading-relaxed">{f.body}</p>
-              </motion.div>
+        {/* Opt-in extras */}
+        <motion.section {...fade} className="mx-auto max-w-6xl border-t border-white/10 py-20">
+          <h2 className="font-display text-4xl md:text-5xl">Extras, when you’re ready</h2>
+          <p className="mt-3 max-w-2xl text-xl text-white/75">Off by default. Switch them on per feed.</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            {EXTRAS.map((e) => (
+              <span key={e} className="rounded-full border border-white/20 px-5 py-2.5 text-lg">
+                {e}
+              </span>
             ))}
           </div>
         </motion.section>
 
-        {/* Tier 3 — platform checklist */}
-        <motion.section
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={container}
-          className="max-w-6xl mx-auto border-t border-white/10 py-20"
-        >
-          <motion.h2 variants={reveal} className="text-3xl md:text-4xl font-display text-white mb-12">
-            And everything else
-          </motion.h2>
+        {/* Everything else */}
+        <motion.section {...fade} className="mx-auto max-w-6xl border-t border-white/10 py-20">
+          <h2 className="mb-12 font-display text-4xl md:text-5xl">And everything else</h2>
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            {PLATFORM_FEATURES.map((g) => (
-              <motion.div key={g.group} variants={reveal}>
-                <h3 className="text-sm font-semibold uppercase tracking-widest text-[hsl(270,100%,68%)] mb-4">
+            {EVERYTHING.map((g) => (
+              <div key={g.group}>
+                <h3 className="mb-4 text-base font-semibold uppercase tracking-[0.16em]" style={{ color: VIOLET }}>
                   {g.group}
                 </h3>
                 <ul className="space-y-3">
-                  {g.items.map((item) => (
-                    <li key={item} className="flex gap-3 text-sm text-white/70 leading-relaxed">
-                      <span
-                        aria-hidden="true"
-                        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(155,100%,67%)]"
-                      />
-                      {item}
+                  {g.items.map((it) => (
+                    <li key={it} className="flex gap-3 text-lg leading-snug text-white/80">
+                      <span aria-hidden="true" className="mt-2.5 h-2 w-2 shrink-0 rounded-full" style={{ background: MINT }} />
+                      {it}
                     </li>
                   ))}
                 </ul>
-              </motion.div>
+              </div>
             ))}
           </div>
         </motion.section>
 
         {/* CTA */}
-        <section className="max-w-4xl mx-auto border-t border-white/10 py-20 text-center">
-          <h2 className="text-3xl md:text-4xl font-display text-white mb-6">
-            Start your own feed today
-          </h2>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button asChild size="lg">
-              <Link to={user ? '/dashboard' : '/auth'}>Start free</Link>
+        <section className="mx-auto max-w-4xl border-t border-white/10 py-24 text-center">
+          <h2 className="font-display text-5xl md:text-6xl">Start your channel today</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-xl text-white/75">
+            Free to start. Credits cover illustrations, cartoons and animated social packs. Pro unlocks more.
+          </p>
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <Button asChild size="lg" className="h-auto rounded-full px-7 py-3.5 text-lg">
+              <Link to={startHref}>Start free</Link>
             </Button>
-            <Button asChild size="lg" variant="secondary">
-              <Link to="/feed/eastbourne">See a feed</Link>
+            <Button asChild size="lg" variant="secondary" className="h-auto rounded-full px-7 py-3.5 text-lg">
+              <Link to="/pricing">See pricing</Link>
             </Button>
           </div>
         </section>
       </main>
 
       <footer className="border-t border-white/10 py-8">
-        <div className="max-w-6xl mx-auto px-6 text-sm text-white/50">
-          <Link to="/" className="hover:text-white transition-colors">
+        <div className="mx-auto max-w-6xl px-6 text-base text-white/50">
+          <Link to="/" className="transition-colors hover:text-white">
             Back to home
           </Link>
         </div>
