@@ -13,12 +13,12 @@ const VIOLET = 'hsl(270,100%,68%)';
 const CHAPTERS: { id: FeatureSceneName; kicker: string; title: string; body: string }[] = [
   { id: 'gather', kicker: 'Gather', title: 'Every source, watched for you', body: 'Journals, regulators, trade press, plus your own content. Curatr watches every source day and night.' },
   { id: 'filter', kicker: 'Filter', title: 'Only what belongs', body: 'Your topics and keywords decide what stays. The noise never reaches you.' },
-  { id: 'brief', kicker: 'Brief', title: 'Long reads, made quick', body: 'Each story becomes a few swipeable slides in your voice, credited to the original reporter. Or listen instead.' },
+  { id: 'brief', kicker: 'Brief', title: 'Long reads, made quick', body: 'Each story becomes a few swipeable slides in your voice, credited to the original reporter.' },
   { id: 'illustrate', kicker: 'Illustrate', title: 'Art for every story', body: 'Original artwork in your colours, for every story. Or a satirical cartoon, when it deserves one.' },
-  { id: 'publish', kicker: 'Publish', title: 'Approve once, appear everywhere', body: 'Your feed, email briefings, website widgets and social reels, all from one tap.' },
+  { id: 'publish', kicker: 'Publish', title: 'Approve once, appear everywhere', body: 'Your feed, email briefings, website widgets and RSS, all from one tap.' },
   { id: 'grow', kicker: 'Grow', title: 'Readers become subscribers', body: 'A sign-up card sits in the feed. Daily, weekly or both, confirmed with one email.' },
   { id: 'readers', kicker: 'Learn', title: 'See what lands', body: 'Reads, the headline that stops the scroll, and where readers drop off.' },
-  { id: 'ask', kicker: 'Ask', title: 'Every channel, inside your AI', body: 'Connect ChatGPT or Claude and ask what’s new. Answers come from your channels, with sources.' },
+  { id: 'ask', kicker: 'Ask', title: 'Your channel, inside your AI', body: 'Connect ChatGPT or Claude to a channel and ask what’s new. Answers come from your stories, with sources.' },
 ];
 
 const EXTRAS = ['Play Mode', 'Quiz cards', 'Sentiment tracking'];
@@ -27,7 +27,7 @@ const EVERYTHING = [
   { group: 'Your channel', items: ['Your own branded feed and address', 'Logo, icon and colours per feed', 'Daily and weekly roundups, plus archive', 'Widgets for any website'] },
   { group: 'Sources', items: ['RSS, sitemaps or plain web pages', 'Health checks and alerts', 'Duplicates caught automatically', 'Add your own stories'] },
   { group: 'Insight', items: ['Reads and top headline stopper', 'Drop-off across slides', 'Email opens and clicks', 'Widget views by website'] },
-  { group: 'Trust', items: ['Every story credited and linked', 'Sensitive stories never illustrated', 'Anonymity guard on court reports', 'GDPR-safe subscriber handling'] },
+  { group: 'Trust', items: ['Every story credited and linked', 'Extra care on sensitive stories', 'GDPR-safe subscriber handling'] },
 ];
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -99,7 +99,11 @@ const Features = () => {
         {/* How it works — one animated scene per feature */}
         <div className="mx-auto max-w-6xl space-y-32 pb-28">
           {CHAPTERS.map((c, i) => (
-            <motion.article key={c.id} {...fade} className="grid items-center gap-10 md:gap-16 lg:grid-cols-[1.25fr_1fr]">
+            <motion.article
+              key={c.id}
+              {...fade}
+              className={`grid items-center gap-10 md:gap-16 ${i % 2 ? 'lg:grid-cols-[1fr_1.25fr]' : 'lg:grid-cols-[1.25fr_1fr]'}`}
+            >
               <div className={i % 2 ? 'lg:order-2' : ''}>
                 <FeatureScene name={c.id} />
               </div>
@@ -122,7 +126,7 @@ const Features = () => {
           </div>
           <div>
             <div className="font-display text-7xl" style={{ color: VIOLET }}>Embedded</div>
-            <p className="mt-2 text-xl text-white/75">Curatr widgets already run on partner websites</p>
+            <p className="mt-2 text-xl text-white/75">Curatr widgets already run on a partner’s website</p>
           </div>
         </motion.section>
 
@@ -165,7 +169,7 @@ const Features = () => {
         <section className="mx-auto max-w-4xl border-t border-white/10 py-24 text-center">
           <h2 className="font-display text-5xl md:text-6xl">Start your channel today</h2>
           <p className="mx-auto mt-4 max-w-2xl text-xl text-white/75">
-            Free to start. Credits cover illustrations, cartoons and animated social packs. Pro unlocks more.
+            Free to try. Pro to publish. Credits cover artwork, cartoons, reels and audio briefings.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="h-auto rounded-full px-7 py-3.5 text-lg">

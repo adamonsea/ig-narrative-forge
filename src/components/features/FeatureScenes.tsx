@@ -61,12 +61,12 @@ export const TOPIC = {
   growStories: ['Fast-track review for rare disease therapy', 'Patient registry passes 10,000 people'],
   /* 07 Readers — pharma */
   stopper: 'Fast-track review for rare disease therapy',
-  /* 08 Ask — every channel, one place */
-  question: "What's new across my channels this week?",
+  /* 08 Ask — your channel, inside your AI */
+  question: "What's new in rare disease this week?",
   answers: [
-    { t: 'Biomarker guidance updated', s: 'Oncology' },
-    { t: 'Wearable ECG cleared', s: 'MedTech' },
-    { t: 'Fast-track for rare therapy', s: 'Rare Disease' },
+    { t: 'Fast-track for rare therapy', s: 'Regulator updates' },
+    { t: 'Registry passes 10,000 people', s: 'Your team' },
+    { t: 'Newborn screening pilot widens', s: 'Research journal' },
   ],
 };
 
@@ -223,6 +223,29 @@ const Tap = ({ x, y, show }: { x: number; y: number; show: boolean }) => (
           style={{ position: 'absolute', inset: 0, borderRadius: 99, border: `2px solid ${TEXT}` }}
         />
       </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+/** Tap marker centred on its (position: relative) parent. */
+const TapIn = ({ show }: { show: boolean }) => (
+  <AnimatePresence>
+    {show && (
+      <motion.span
+        initial={{ opacity: 0, scale: 1.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.35, ease: EASE }}
+        style={{ position: 'absolute', left: '50%', top: '50%', width: 26, height: 26, marginLeft: -13, marginTop: -13, zIndex: 30, pointerEvents: 'none' }}
+      >
+        <span style={{ position: 'absolute', inset: 6, borderRadius: 99, background: TEXT, opacity: 0.9 }} />
+        <motion.span
+          initial={{ scale: 0.6, opacity: 0.9 }}
+          animate={{ scale: 1.9, opacity: 0 }}
+          transition={{ duration: 0.7, delay: 0.2, repeat: 1 }}
+          style={{ position: 'absolute', inset: 0, borderRadius: 99, border: `2px solid ${TEXT}` }}
+        />
+      </motion.span>
     )}
   </AnimatePresence>
 );
@@ -490,7 +513,7 @@ const FilterScene = ({ active, still }: SceneProps) => {
 
 /* 03 — Brief --------------------------------------------------------------- */
 
-const BRIEF_STEPS = [1300, 1300, 700, 1600, 1600, 1800, 2000];
+const BRIEF_STEPS = [1300, 1300, 700, 1600, 1600, 2400];
 
 const Phone = ({ x, y, w, h, children }: { x: number; y: number; w: number; h: number; children: ReactNode }) => (
   <Abs x={x} y={y} w={w} h={h} style={{ background: 'hsl(214,40%,5%)', border: `1px solid rgba(255,255,255,.18)`, borderRadius: 28, padding: 8, boxShadow: '0 20px 40px rgba(0,0,0,.45)' }}>
@@ -557,28 +580,6 @@ const BriefScene = ({ active, still }: SceneProps) => {
               <motion.span key={i} animate={{ width: i === slide ? 18 : 7, background: i === slide ? MINT : 'rgba(255,255,255,.25)' }} style={{ height: 7, borderRadius: 99 }} />
             ))}
           </div>
-          <AnimatePresence>
-            {step === 6 && (
-              <motion.div
-                initial={{ y: 60 }}
-                animate={{ y: 0 }}
-                exit={{ y: 60 }}
-                transition={{ duration: 0.45, ease: EASE }}
-                style={{ position: 'absolute', left: 8, right: 8, bottom: 28, background: CARD_HI, border: `1px solid ${LINE}`, borderRadius: 14, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8 }}
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18">
-                  <circle cx="9" cy="9" r="9" fill={MINT} />
-                  <path d="M7 5.5l5 3.5-5 3.5z" fill={INK} />
-                </svg>
-                <div style={{ display: 'flex', gap: 3, alignItems: 'center', height: 20 }}>
-                  {[0.5, 0.9, 0.6, 1, 0.7, 0.4, 0.85, 0.55].map((h, i) => (
-                    <motion.span key={i} animate={{ scaleY: [h, 1, h * 0.6, h] }} transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.08 }} style={{ width: 3, height: 18, background: VIOLET, borderRadius: 2 }} />
-                  ))}
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 'auto', color: MUTED }}>0:42</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </Phone>
       </motion.div>
     </>
@@ -682,7 +683,7 @@ const IllustrateScene = ({ active, still }: SceneProps) => {
 /* 05 — Publish ------------------------------------------------------------- */
 
 const PUBLISH_STEPS = [1100, 900, 2600, 1400];
-const DESTS = ['Your feed', 'Email briefing', 'Website widget', 'Social reel'];
+const DESTS = ['Your feed', 'Email briefing', 'Website widget', 'RSS feed'];
 
 const DestIcon = ({ i }: { i: number }) => {
   const stroke = { fill: 'none', stroke: TEXT, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -711,9 +712,8 @@ const DestIcon = ({ i }: { i: number }) => {
       )}
       {i === 3 && (
         <>
-          <rect x="9" y="3" width="16" height="28" rx="4" {...stroke} />
-          <circle cx="17" cy="17" r="5" fill={VIOLET} />
-          <path d="M15.5 14.5l4 2.5-4 2.5z" fill={INK} />
+          <circle cx="9" cy="25" r="2.5" fill={VIOLET} />
+          <path d="M7 15a12 12 0 0 1 12 12M7 7a20 20 0 0 1 20 20" {...stroke} />
         </>
       )}
     </svg>
@@ -807,8 +807,9 @@ const GrowScene = ({ active, still }: SceneProps) => {
             <div style={{ fontFamily: SERIF, fontSize: 21, lineHeight: 1.02 }}>Get {TOPIC.feed} news by email</div>
             <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 999, marginTop: 10, padding: 3 }}>
               {['Daily', 'Weekly', 'Both'].map((f, i) => (
-                <motion.span key={f} animate={{ backgroundColor: freq === i ? MINT : 'rgba(0,0,0,0)', color: freq === i ? INK : TEXT }} style={{ flex: 1, textAlign: 'center', fontSize: 12.5, fontWeight: 600, padding: '4px 0', borderRadius: 999 }}>
+                <motion.span key={f} animate={{ backgroundColor: freq === i ? MINT : 'rgba(0,0,0,0)', color: freq === i ? INK : TEXT }} style={{ position: 'relative', flex: 1, textAlign: 'center', fontSize: 12.5, fontWeight: 600, padding: '4px 0', borderRadius: 999 }}>
                   {f}
+                  {f === 'Both' && <TapIn show={step === 2} />}
                 </motion.span>
               ))}
             </div>
@@ -820,16 +821,16 @@ const GrowScene = ({ active, still }: SceneProps) => {
               ) : (
                 <motion.div key="form" exit={{ opacity: 0 }}>
                   <div style={{ marginTop: 9, border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 9px', fontSize: 13, minHeight: 30, background: 'rgba(0,0,0,.25)', color: email ? TEXT : MUTED }}>{email || 'Your email'}</div>
-                  <div style={{ marginTop: 8, background: MINT, color: INK, borderRadius: 999, textAlign: 'center', fontSize: 13, fontWeight: 700, padding: '6px 0' }}>Sign me up</div>
+                  <div style={{ position: 'relative', marginTop: 8, background: MINT, color: INK, borderRadius: 999, textAlign: 'center', fontSize: 13, fontWeight: 700, padding: '6px 0' }}>
+                    Sign me up
+                    <TapIn show={step === 3 && email.length > 11} />
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </motion.div>
       </Phone>
-      <Tap x={176} y={151} show={step === 2} />
-      <Tap x={124} y={226} show={step === 3 && email.length > 11} />
-
       <AnimatePresence>
         {step >= 4 && (
           <motion.div
@@ -989,12 +990,12 @@ const AskScene = ({ active, still }: SceneProps) => {
                   <motion.span key={i} animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.12 }} style={{ width: 7, height: 7, borderRadius: 7, background: MINT }} />
                 ))}
               </span>
-              Checking your channels…
+              Checking your {TOPIC.feed} channel…
             </motion.div>
           )}
           {step === 2 && (
             <motion.div key="ans" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ maxWidth: 404 }}>
-              <div style={{ fontSize: 15, marginBottom: 6, color: MUTED }}>Top story in each channel:</div>
+              <div style={{ fontSize: 15, marginBottom: 6, color: MUTED }}>Top stories this week:</div>
               {TOPIC.answers.map((a, i) => (
                 <motion.div
                   key={a.t}
@@ -1022,12 +1023,12 @@ export type FeatureSceneName = 'gather' | 'filter' | 'brief' | 'illustrate' | 'p
 const SCENES: Record<FeatureSceneName, { label: string; C: (p: SceneProps) => ReactElement }> = {
   gather: { label: 'New stories arriving from four sources onto your desk', C: GatherScene },
   filter: { label: 'Stories checked against your topics and keywords; off-topic ones kept out', C: FilterScene },
-  brief: { label: 'A long article condensed into three swipeable slides with an audio version', C: BriefScene },
+  brief: { label: 'A long article condensed into three swipeable slides', C: BriefScene },
   illustrate: { label: 'An illustration drawn in layers, recoloured, then switched to a satirical cartoon', C: IllustrateScene },
-  publish: { label: 'One story approved and sent to feed, email, website widget and social reel', C: PublishScene },
+  publish: { label: 'One story approved and sent to feed, email, website widget and RSS', C: PublishScene },
   grow: { label: 'A reader signs up for daily and weekly email in the feed and confirms with one email', C: GrowScene },
   readers: { label: 'Reads counting up, the top headline stopper, and a drop-off curve across slides', C: ReadersScene },
-  ask: { label: 'An AI assistant answering a question with stories from your Curatr feed', C: AskScene },
+  ask: { label: 'An AI assistant answering a question with stories from your Curatr channel', C: AskScene },
 };
 
 export const FeatureScene = ({ name }: { name: FeatureSceneName }) => {
