@@ -90,8 +90,8 @@ export default function Pricing() {
       </header>
       <main className="relative container mx-auto max-w-5xl px-6 pb-24 pt-10">
         <section className="mx-auto max-w-2xl text-center">
-          <p className="mb-4 text-sm font-medium text-emerald-300">Free to create and curate.</p>
-          <h1 className="font-display text-5xl tracking-tight md:text-6xl">Pay when you publish.</h1>
+          <p className="mb-4 text-sm font-medium text-emerald-300">{"\n"}</p>
+          <h1 className="font-display text-5xl tracking-tight md:text-6xl">Create and plan for free.</h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-white/65">One plan. Every distribution channel. Creative credits included.</p>
         </section>
 
