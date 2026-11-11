@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { CueName } from './sfx';
 
@@ -312,15 +312,28 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
 
 /* ---------------------------------------------------------------- 4. Filter */
 
+/** When the kept stories rise to the centre and the relevance line clears. */
+const FILTER_SETTLE_S = 3.0;
+
 export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
   const u = useUnit();
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const stackRef = useRef<HTMLDivElement | null>(null);
+  // Distance (unscaled px) that lifts the kept stack from the bottom to the centre.
+  const [lift, setLift] = useState(0);
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const stack = stackRef.current;
+    if (!box || !stack) return;
+    setLift(Math.max(0, (box.offsetHeight - stack.offsetHeight) / 2));
+  }, [u]);
   useBeats([
     [1400, () => cue('thud')],
     [2000, () => { cue('thud'); tap(14); }],
   ]);
   return (
     <Stage>
-      <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full max-w-[calc(var(--u)*80)]">
+      <div ref={boxRef} className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full max-w-[calc(var(--u)*80)]">
         {[0, 1, 2, 3, 4].map((i) => (
           <motion.div
             key={`d-${i}`}
@@ -332,7 +345,12 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
           />
         ))}
 
-        <div className="absolute left-0 right-0 top-1/2 flex items-center gap-[calc(var(--u)*2)]">
+        <motion.div
+          className="absolute left-0 right-0 top-1/2 flex items-center gap-[calc(var(--u)*2)]"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: reduced ? 1 : 0 }}
+          transition={{ duration: 0.5, delay: reduced ? 0 : FILTER_SETTLE_S }}
+        >
           <div
             className="h-[calc(var(--u)*0.5)] flex-1 rounded-full"
             style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent)' }}
@@ -342,9 +360,16 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
             className="h-[calc(var(--u)*0.5)] flex-1 rounded-full"
             style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent)' }}
           />
-        </div>
+        </motion.div>
 
-        <div className="absolute bottom-0 left-1/2 w-[min(calc(var(--u)*56),86vw)] -translate-x-1/2 space-y-[calc(var(--u)*2)]">
+        <div className="absolute bottom-0 left-1/2 w-[min(calc(var(--u)*56),86vw)] -translate-x-1/2">
+          <motion.div
+            ref={stackRef}
+            className="space-y-[calc(var(--u)*2)]"
+            initial={{ y: 0 }}
+            animate={{ y: reduced ? 0 : -lift }}
+            transition={{ duration: 0.9, delay: FILTER_SETTLE_S + 0.1, ease: [0.22, 1, 0.36, 1] }}
+          >
           {[0, 1, 2].map((i) => (
             <motion.div
               key={`k-${i}`}
@@ -362,6 +387,7 @@ export const SceneFilter = ({ reduced, cue, tap }: SceneProps) => {
               </Chunk>
             </motion.div>
           ))}
+          </motion.div>
         </div>
       </div>
     </Stage>
