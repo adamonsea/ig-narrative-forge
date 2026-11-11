@@ -400,7 +400,7 @@ const Index = () => {
               center
               lead="Try it"
               emphasis="live."
-              line="This local news feed runs on Curatr.pro"
+              line="This local news feed runs entirely on Curatr.pro"
             >
               <motion.div {...hoverLift} className="mt-10 inline-block md:mt-12">
                 <Link
