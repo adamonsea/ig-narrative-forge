@@ -326,7 +326,7 @@ const Index = () => {
           {/* 2. Sources */}
           <div id="runs-itself" className="scroll-mt-8">
             <SplitSection
-              copy={{ lead: '...Now Curatr runs', emphasis: 'it for you.', line: 'Finding the stories that matter, every day, in the background.' }}
+              copy={{ lead: '...Now Curatr runs', emphasis: 'it for you.', line: 'Finding stories that matter, every minute of every day, in the background.' }}
               scene={{ id: 'sources', label: 'Sources light up one by one as the day’s article count climbs.' }}
             />
           </div>
