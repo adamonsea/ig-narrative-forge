@@ -23,7 +23,7 @@ const freeFeatures = [
   'Create feeds and add your sources',
   'Stories gathered, filtered and written for you',
   'Edit, approve and preview privately',
-  `${WELCOME_CREDITS} welcome credits, about 5 illustrations`,
+  `${WELCOME_CREDITS} welcome credits (5 free illustrations)`,
 ];
 
 export default function Pricing() {
@@ -95,7 +95,7 @@ export default function Pricing() {
           <div className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.035] p-8">
             <div className="flex items-center justify-between"><p className="text-sm text-white/55">Free</p><span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/70">No card needed</span></div>
             <div className="mt-3 text-4xl font-semibold">$0</div>
-            <p className="mt-5 text-white/60">Build privately. Upgrade when you’re ready to share.</p>
+            <p className="mt-5 text-white/60">Build your feed. Upgrade when you’re ready to go live and publish.</p>
             <ul className="mt-7 mb-8 space-y-3">{freeFeatures.map((item) => <li key={item} className="flex gap-3 text-sm text-white/75"><Check className="h-5 w-5 shrink-0 text-white/40" />{item}</li>)}</ul>
             <Button asChild variant="outline" className="mt-auto w-full rounded-full border-white/20 bg-transparent text-white hover:bg-white/10"><Link to={user ? '/dashboard' : '/auth'}>Start free</Link></Button>
           </div>
