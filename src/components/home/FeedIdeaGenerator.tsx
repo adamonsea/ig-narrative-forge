@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { savePendingBlueprint, type FeedBlueprint } from '@/lib/feedBlueprint';
 import { BlueprintAccountDialog } from './BlueprintAccountDialog';
 
-const PLACEHOLDER_IDEAS = [
+export const DEFAULT_PLACEHOLDER_IDEAS = [
   'Life science',
   'London Events',
   'Cycle cross',
@@ -18,7 +18,7 @@ const PLACEHOLDER_IDEAS = [
 ];
 
 // Types each idea into the placeholder, holds it, deletes it, then moves on.
-const useTypewriterPlaceholder = (active: boolean) => {
+const useTypewriterPlaceholder = (active: boolean, ideas: readonly string[]) => {
   const [text, setText] = useState('');
 
   useEffect(() => {
@@ -27,7 +27,7 @@ const useTypewriterPlaceholder = (active: boolean) => {
       return;
     }
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setText(PLACEHOLDER_IDEAS[0]);
+      setText(ideas[0]);
       return;
     }
 
@@ -37,7 +37,7 @@ const useTypewriterPlaceholder = (active: boolean) => {
     let timer: number;
 
     const tick = () => {
-      const word = PLACEHOLDER_IDEAS[idea];
+      const word = ideas[idea];
       if (!deleting) {
         char += 1;
         setText(word.slice(0, char));
@@ -52,7 +52,7 @@ const useTypewriterPlaceholder = (active: boolean) => {
         setText(word.slice(0, char));
         if (char === 0) {
           deleting = false;
-          idea = (idea + 1) % PLACEHOLDER_IDEAS.length;
+          idea = (idea + 1) % ideas.length;
           timer = window.setTimeout(tick, 500);
           return;
         }
@@ -62,12 +62,17 @@ const useTypewriterPlaceholder = (active: boolean) => {
 
     timer = window.setTimeout(tick, 600);
     return () => window.clearTimeout(timer);
-  }, [active]);
+  }, [active, ideas]);
 
   return text;
 };
 
-export const FeedIdeaGenerator = () => {
+interface FeedIdeaGeneratorProps {
+  /** Example topics typed into the empty box, one after another. */
+  ideas?: readonly string[];
+}
+
+export const FeedIdeaGenerator = ({ ideas = DEFAULT_PLACEHOLDER_IDEAS }: FeedIdeaGeneratorProps = {}) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
@@ -79,7 +84,7 @@ export const FeedIdeaGenerator = () => {
   const [accountOpen, setAccountOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   // Stop the carousel once the visitor starts typing their own idea.
-  const placeholder = useTypewriterPlaceholder(input.trim().length === 0);
+  const placeholder = useTypewriterPlaceholder(input.trim().length === 0, ideas);
 
   const toggle = (i: number) =>
     setExpanded((prev) => {

@@ -49,6 +49,8 @@ export interface AudienceConfig {
   title: string;
   description: string;
   hero: { line1: string; line2: string };
+  /** Example feed topics typed into the idea box, matched to this audience. */
+  ideaHints: readonly string[];
   sections: AudienceSection[];
   close: {
     lead: string;
@@ -323,7 +325,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
               <HeroTypewriter key={config.path} line1={config.hero.line1} line2={config.hero.line2} />
 
               <motion.div variants={reveal}>
-                <FeedIdeaGenerator />
+                <FeedIdeaGenerator ideas={config.ideaHints} />
               </motion.div>
 
               <motion.div
@@ -427,7 +429,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
               className={`${HEADING} flex flex-wrap justify-center`}
             />
             <div className="mt-6 md:mt-10">
-              <FeedIdeaGenerator />
+              <FeedIdeaGenerator ideas={config.ideaHints} />
             </div>
             <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
               {talkIsPrimary ? (

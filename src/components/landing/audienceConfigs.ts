@@ -15,6 +15,7 @@ export const COMMUNITIES: AudienceConfig = {
   title: "Curatr for communities - your town's news, in one place",
   description: 'One feed for everything happening locally. Curatr finds, writes, illustrates and publishes it. You stay the editor.',
   hero: { line1: 'Your town has more news than ever...', line2: '...and nowhere to read it.' },
+  ideaHints: ['Eastbourne news', 'Brighton events', 'Lewes council & planning', 'Hackney food scene', 'Leeds grassroots football'],
   sections: [
     { kind: 'split', scene: 'sources', sceneLabel: SCENE_LABELS.sources, lead: 'Every source.', emphasis: 'One feed.', line: 'Council, local papers, clubs, venues and blogs. Read every day, in the background.' },
     { kind: 'split', scene: 'filter', sceneLabel: SCENE_LABELS.filter, lead: 'Local means', emphasis: 'local.', line: 'Stories from the next county stay in the next county.' },
@@ -31,6 +32,7 @@ export const ORGANISATIONS: AudienceConfig = {
   title: 'Curatr for organisations - your own news channel',
   description: 'Stop renting attention. Build a feed your audience follows, on your subject, in your voice, signed off by you.',
   hero: { line1: 'Paid media rents you an audience...', line2: '...a feed lets you keep one.' },
+  ideaHints: ['Renewable energy policy', 'NHS workforce', 'Charity fundraising', 'Cyber security', 'Housing law'],
   sections: [
     { kind: 'split', scene: 'sources', sceneLabel: SCENE_LABELS.sources, lead: 'Your field,', emphasis: 'covered.', line: 'Trade press, journals, regulators and news. Tracked daily, in the background.' },
     { kind: 'split', scene: 'filter', sceneLabel: SCENE_LABELS.filter, lead: 'Only what your', emphasis: 'audience needs.', line: 'Off-topic noise never reaches them.' },
@@ -47,6 +49,7 @@ export const AGENCIES: AudienceConfig = {
   title: 'Curatr for agencies - give every client a newsroom',
   description: 'An always-on news feed for each client. Curatr does the trawling and writing. You keep the editorial control and the relationship.',
   hero: { line1: 'Every client wants more content...', line2: '...give them a newsroom.' },
+  ideaHints: ['Fintech regulation', 'Luxury travel', 'Plant-based food', 'EV charging', 'Construction safety'],
   sections: [
     { kind: 'split', scene: 'sources', sceneLabel: SCENE_LABELS.sources, lead: 'One desk.', emphasis: 'Many feeds.', line: 'Run one client feed or ten. Each one tracked daily, in the background.' },
     { kind: 'split', scene: 'written', sceneLabel: SCENE_LABELS.written, lead: 'Their look.', emphasis: 'Their tone.', line: "Each feed carries the client's style. Every story linked to its source." },
