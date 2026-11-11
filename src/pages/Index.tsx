@@ -323,16 +323,17 @@ const Index = () => {
             scene={{ id: 'editor', label: 'One story is approved and published while another is spiked.' }}
           />
 
-          {/* 6. More ways to read */}
+          {/* 6. Made to be read */}
           <section className="mx-auto flex min-h-[90svh] max-w-6xl flex-col justify-center py-20 md:py-28">
             <SectionCopy
               center
-              lead="More ways to"
+              lead="Made to be"
               emphasis="read."
-              line="Swipe through stories in Play Mode, or test yourself with quizzes made from the news."
+              line="Every story illustrated. Swipe through in Play Mode, or test yourself with quizzes."
             />
-            <div className="mx-auto mt-14 grid w-full max-w-4xl gap-10 md:mt-20 md:grid-cols-2 md:gap-12">
+            <div className="mx-auto mt-14 grid w-full max-w-6xl gap-10 md:mt-20 md:grid-cols-3 md:gap-10">
               {[
+                { name: 'illustrations' as const, title: 'Illustrated' },
                 { name: 'play' as const, title: 'Play Mode' },
                 { name: 'quiz' as const, title: 'Quizzes' },
               ].map((loop) => (
@@ -344,7 +345,7 @@ const Index = () => {
                   transition={{ duration: 0.6, ease }}
                   className="text-center"
                 >
-                  <div className="[zoom:1.6] md:[zoom:1.9]">
+                  <div className="[zoom:1.6] md:[zoom:1.3] lg:[zoom:1.6]">
                     <FeatureLoop name={loop.name} />
                   </div>
                   <figcaption className="mt-2 font-display text-2xl italic text-white md:text-3xl">{loop.title}</figcaption>
