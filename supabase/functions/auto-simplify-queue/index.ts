@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { loadCategoryGate, applyCategoryGate } from '../_shared/category-gate.ts';
+import { getUser, userOwnsTopic } from '../_shared/auth.ts';
 import {
   applyNewsValues,
   detectPlaceTier,
@@ -73,26 +74,75 @@ Deno.serve(async (req) => {
     const payload = token ? JSON.parse(atob(token.split('.')[1])) : null;
     jwtRole = payload?.role;
   } catch {}
-  if (jwtRole !== 'service_role') {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized: internal function requires service_role' }),
-      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  const isSystemRun = jwtRole === 'service_role';
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Owner run: a signed-in feed owner (e.g. the new-feed builder) may kick off a
+  // first writing pass for ONE feed they own. It is limited to a handful of
+  // articles, never touches other feeds and never auto-illustrates (a paid tool).
+  // Stories still follow the feed's own publish rules (manual feeds -> drafts).
+  let ownerTopicId: string | null = null;
+  let ownerLimit = 5;
+  if (!isSystemRun) {
+    const user = await getUser(req);
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    let body: { topicId?: unknown; limit?: unknown } = {};
+    try { body = await req.json(); } catch { /* empty body */ }
+    const topicId = typeof body.topicId === 'string' ? body.topicId : '';
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(topicId)) {
+      return new Response(
+        JSON.stringify({ error: 'topicId is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!(await userOwnsTopic(supabase, user.id, topicId))) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    ownerTopicId = topicId;
+    const requested = typeof body.limit === 'number' ? Math.floor(body.limit) : 5;
+    ownerLimit = Math.min(Math.max(requested, 1), 5);
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const startTime = new Date().toISOString();
     console.log(`🔄 Auto-simplify queue check started at: ${startTime}`);
 
     // 1. Fetch topics with auto-simplify enabled (including holiday mode)
-    const { data: topicSettings, error: settingsError } = await supabase
-      .from('topic_automation_settings')
-      .select('topic_id, automation_mode, auto_simplify_enabled, quality_threshold')
-      .in('automation_mode', ['auto_simplify', 'holiday']);
+    let topicSettings: TopicAutomationSettings[] | null = null;
+    let settingsError: unknown = null;
+    if (ownerTopicId) {
+      const { data, error } = await supabase
+        .from('topic_automation_settings')
+        .select('topic_id, automation_mode, auto_simplify_enabled, quality_threshold')
+        .eq('topic_id', ownerTopicId)
+        .maybeSingle();
+      settingsError = error;
+      topicSettings = [{
+        topic_id: ownerTopicId,
+        automation_mode: data?.automation_mode ?? 'manual',
+        auto_simplify_enabled: data?.auto_simplify_enabled ?? false,
+        quality_threshold: data?.quality_threshold ?? 60,
+      }];
+    } else {
+      const { data, error } = await supabase
+        .from('topic_automation_settings')
+        .select('topic_id, automation_mode, auto_simplify_enabled, quality_threshold')
+        .in('automation_mode', ['auto_simplify', 'holiday']);
+      settingsError = error;
+      topicSettings = data as TopicAutomationSettings[] | null;
+    }
 
     if (settingsError) {
       console.error('❌ Error fetching topic settings:', settingsError);
@@ -185,7 +235,7 @@ Deno.serve(async (req) => {
     }
 
     let totalQueued = 0;
-    const maxPerTopic = 50;
+    const maxPerTopic = ownerTopicId ? ownerLimit : 50;
     const topicsWithNewItems: string[] = [];
 
     // 2. Pre-fetch topic voice defaults for all topics
@@ -484,7 +534,7 @@ Deno.serve(async (req) => {
       }
 
       // 4. After processing, invoke auto-illustrate for each topic that had new items
-      for (const topicId of topicsWithNewItems) {
+      for (const topicId of (ownerTopicId ? [] : topicsWithNewItems)) {
         console.log(`🎨 Invoking auto-illustrate-stories for topic ${topicId}...`);
         try {
           const { error: aiError } = await supabase.functions.invoke('auto-illustrate-stories', {
@@ -514,7 +564,8 @@ Deno.serve(async (req) => {
         topics_with_new_items: topicsWithNewItems.length,
         total_queued: totalQueued,
         invoked_queue_processor: totalQueued > 0,
-        invoked_auto_illustrate: topicsWithNewItems.length > 0,
+        invoked_auto_illustrate: !ownerTopicId && topicsWithNewItems.length > 0,
+        owner_run_topic: ownerTopicId,
       },
     });
 
@@ -525,7 +576,7 @@ Deno.serve(async (req) => {
         topics_with_new_items: topicsWithNewItems.length,
         queued: totalQueued,
         invoked_queue_processor: totalQueued > 0,
-        invoked_auto_illustrate: topicsWithNewItems,
+        invoked_auto_illustrate: ownerTopicId ? [] : topicsWithNewItems,
         timestamp: startTime,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
