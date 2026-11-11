@@ -70,7 +70,7 @@ const Features = () => {
         <section className="max-w-4xl mx-auto py-20 text-center">
           <MaskRevealHeading
             as="h1"
-            segments={[{ text: 'Everything Curatr' }, { text: 'does', italic: true }]}
+            segments={[{ text: 'Everything Curatr' }, { text: 'offers', italic: true }]}
             className="text-4xl md:text-6xl font-display tracking-tight text-white leading-[1.1] flex flex-wrap justify-center"
           />
           <p className="mt-6 text-lg md:text-xl text-white/70">
