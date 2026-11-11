@@ -356,7 +356,7 @@ const Index = () => {
               center
               lead="Made to be"
               emphasis="read."
-              line="Every story illustrated. Swipe through in Play Mode, or test yourself with quizzes."
+              line="Every story illustrated. Readers scroll, swipe of sift clippings. Add quizzes for interaction."
             />
             <div className="mx-auto mt-14 grid w-full max-w-6xl gap-10 md:mt-20 md:grid-cols-3 md:gap-10">
               {[
