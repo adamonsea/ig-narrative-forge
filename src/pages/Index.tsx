@@ -16,6 +16,7 @@ import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { FeedIdeaGenerator } from '@/components/home/FeedIdeaGenerator';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
+import heroNewsroom from '@/assets/newsroom-hero.webp.asset.json';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -64,7 +65,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(214,50%,9%)]">
+    <div className="relative isolate min-h-screen bg-[hsl(214,50%,9%)]">
       <Helmet>
         <title>Curatr: AI-Powered News Feed Curation</title>
         <meta name="description" content="Build and publish your own niche news feeds. Curatr uses AI to gather, rewrite, and curate stories with strong source attribution." />
@@ -73,6 +74,24 @@ const Index = () => {
         <meta property="og:description" content="Build and publish your own niche news feeds with AI-assisted curation and strong source attribution." />
         <meta property="og:url" content="https://curatr.pro/" />
       </Helmet>
+      {/* Editorial newsroom photo, washed under the purple gradient */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[100svh] opacity-[0.22]"
+        style={{
+          isolation: 'isolate',
+          maskImage: 'radial-gradient(120% 88% at 50% 42%, #000 34%, transparent 76%)',
+          WebkitMaskImage: 'radial-gradient(120% 88% at 50% 42%, #000 34%, transparent 76%)',
+        }}
+      >
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${heroNewsroom.url})` }}
+        />
+        <div className="absolute inset-0 bg-[hsl(270,100%,68%)] mix-blend-multiply" />
+        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-b from-transparent to-[hsl(214,50%,9%)]" />
+      </div>
+
       {/* Background gradients */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[hsl(270,80%,25%)] rounded-full blur-[150px] opacity-20" />
