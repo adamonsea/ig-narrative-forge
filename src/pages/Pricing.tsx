@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { supabase } from '@/integrations/supabase/client';
-import { PRO_MONTHLY_CREDITS, TOP_UP_CREDITS } from '@/lib/billing';
+import { PRO_MONTHLY_CREDITS, TOP_UP_CREDITS, WELCOME_CREDITS } from '@/lib/billing';
 import { useSubscription } from '@/hooks/useSubscription';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
@@ -17,6 +17,13 @@ const features = [
   'RSS, email, widgets and AI assistant access',
   'All image styles and creative tools',
   `${PRO_MONTHLY_CREDITS} creative credits each month`,
+];
+
+const freeFeatures = [
+  'Create feeds and add your sources',
+  'Stories gathered, filtered and written for you',
+  'Edit, approve and preview privately',
+  `${WELCOME_CREDITS} welcome credits, about 5 illustrations`,
 ];
 
 export default function Pricing() {
@@ -85,11 +92,12 @@ export default function Pricing() {
         </section>
 
         <section className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-8">
-            <p className="text-sm text-white/55">Free</p>
+          <div className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.035] p-8">
+            <div className="flex items-center justify-between"><p className="text-sm text-white/55">Free</p><span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/70">No card needed</span></div>
             <div className="mt-3 text-4xl font-semibold">$0</div>
-            <p className="mt-4 text-white/60">Build your feeds privately. Try premium images with welcome credits.</p>
-            <Button asChild variant="outline" className="mt-8 w-full rounded-full border-white/20 bg-transparent text-white hover:bg-white/10"><Link to={user ? '/dashboard' : '/auth'}>Start creating</Link></Button>
+            <p className="mt-5 text-white/60">Build privately. Upgrade when you’re ready to share.</p>
+            <ul className="mt-7 mb-8 space-y-3">{freeFeatures.map((item) => <li key={item} className="flex gap-3 text-sm text-white/75"><Check className="h-5 w-5 shrink-0 text-white/40" />{item}</li>)}</ul>
+            <Button asChild variant="outline" className="mt-auto w-full rounded-full border-white/20 bg-transparent text-white hover:bg-white/10"><Link to={user ? '/dashboard' : '/auth'}>Start free</Link></Button>
           </div>
 
           <div className="rounded-3xl border border-emerald-300/45 bg-white/[0.06] p-8 shadow-2xl shadow-violet-950/30">
