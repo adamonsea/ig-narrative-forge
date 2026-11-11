@@ -333,7 +333,7 @@ const Index = () => {
           {/* 3. Filter */}
           <SplitSection
             flip
-            copy={{ lead: 'Only what', emphasis: 'matters.', line: 'Everything irrelevant is filtered out before your readers see it.' }}
+            copy={{ lead: 'Only what', emphasis: 'matters.', line: 'Everything irrelevant is filtered out before you, let alone your readers, see it.' }}
             scene={{ id: 'filter', label: 'Irrelevant stories fall away while the relevant ones drop into place.' }}
           />
 
