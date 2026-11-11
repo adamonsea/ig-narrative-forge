@@ -339,7 +339,7 @@ const Index = () => {
 
           {/* 4. Written */}
           <SplitSection
-            copy={{ lead: 'Simplified. Illustrated.', emphasis: 'Queued.', line: 'Clean, readable briefings. Unified tone and pictures. Linked to source.' }}
+            copy={{ lead: 'Simplified. Illustrated.', emphasis: 'Curated.', line: 'Clean, readable briefings. Unified tone and pictures. Linked to source.' }}
             scene={{ id: 'written', label: 'A story card is illustrated and its headline types itself out.' }}
           />
 
