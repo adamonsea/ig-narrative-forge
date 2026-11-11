@@ -244,7 +244,7 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
         <div className="mx-auto flex w-full flex-col items-center gap-[calc(var(--u)*1.8)]">
           <div className="text-center">
             <div className="font-display text-[calc(var(--u)*16)] leading-none text-white tabular-nums">{count}</div>
-            <div className="mt-[calc(var(--u)*1.2)] text-[calc(var(--u)*1.8)] uppercase tracking-[0.3em] text-white/45">
+            <div className="mt-[calc(var(--u)*0.4)] text-[calc(var(--u)*1.8)] uppercase tracking-[0.3em] text-white/45">
               articles today
             </div>
           </div>
@@ -270,7 +270,7 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
         <div className="relative mx-auto h-[calc(var(--u)*62)] w-full max-w-full">
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
           <div className="font-display text-[calc(var(--u)*16)] leading-none text-white tabular-nums">{count}</div>
-          <div className="mt-[calc(var(--u)*1.5)] text-[calc(var(--u)*1.8)] uppercase tracking-[0.3em] text-white/45">
+          <div className="mt-[calc(var(--u)*0.4)] text-[calc(var(--u)*1.8)] uppercase tracking-[0.3em] text-white/45">
             articles today
           </div>
         </div>
@@ -284,7 +284,8 @@ export const SceneSources = ({ reduced, cue }: SceneProps) => {
               initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
               animate={{
                 x: Math.cos(angle) * u * (tall ? 11 : 24),
-                y: Math.sin(angle) * u * (tall ? 27 : 16),
+                // Taller ring keeps the lower pills clear of the "articles today" label.
+                y: Math.sin(angle) * u * (tall ? 27 : 19),
                 opacity: 1,
                 scale: 1,
               }}
