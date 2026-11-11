@@ -27,46 +27,45 @@ export const TOPIC = {
     { name: 'Your team', type: 'Your own posts' },
   ],
   incoming: [
-    'New biomarker testing guidance published',
-    'Phase III trial meets primary endpoint',
-    'Testing rates rise across Europe',
-    'Our analysis: where patients are missed',
-    'Lab network adds next-gen sequencing',
-    'Funding round for liquid biopsy start-up',
+    'New biomarker guidance',
+    'Phase III trial succeeds',
+    'Testing rates rise',
+    'Our patient-gap analysis',
+    'Liquid biopsy funded',
   ],
   keywords: ['Biomarkers', 'Diagnostics', 'Oncology'],
   blocked: 'Stock tips',
   filter: [
-    { t: 'New biomarker testing guidance published', keep: true, hit: 0 },
-    { t: '5 pharma stocks to buy this week', keep: false, hit: 3, why: 'Blocked topic' },
-    { t: 'Liquid biopsy study expands to 12 sites', keep: true, hit: 1 },
-    { t: 'Celebrity launches wellness app', keep: false, hit: -1, why: 'Off topic' },
-    { t: 'Testing gaps found in lung cancer care', keep: true, hit: 2 },
+    { t: 'New biomarker guidance', keep: true, hit: 0 },
+    { t: 'Pharma stocks to buy', keep: false, hit: 3, why: 'Blocked' },
+    { t: 'Liquid biopsy trial grows', keep: true, hit: 1 },
+    { t: 'Celebrity wellness app', keep: false, hit: -1, why: 'Off topic' },
+    { t: 'Lung cancer testing gaps', keep: true, hit: 2 },
   ],
   /* 03 Brief — MedTech */
-  article: { source: 'Trade press', headline: 'Wearable ECG patch cleared for use in remote heart monitoring' },
+  article: { source: 'Trade press', headline: 'Wearable ECG patch cleared for remote monitoring' },
   slides: [
-    'A heart monitor you can wear for two weeks',
-    'The patch records continuously and flags irregular rhythms to clinicians.',
-    'Regulators cleared it for remote monitoring this week.',
+    'A heart monitor you wear for weeks',
+    'It flags irregular rhythms to clinicians.',
+    'Cleared for remote use this week.',
   ],
   byline: 'By Priya Shah, Trade press',
   /* 04 Illustrate — data science */
-  illustrated: 'AI model spots rare disease signals years earlier',
-  gag: '“The model has asked for more data. Again.”',
+  illustrated: 'AI spots rare disease earlier',
+  gag: '“It wants more data.”',
   /* 05 Publish — a non-health channel, to show range */
-  published: 'Grid battery costs fall 18% in a year',
+  published: 'Battery costs fall 18%',
   /* 06 Grow — rare disease channel */
   feed: 'Rare Disease',
-  growStories: ['Fast-track review for rare disease therapy', 'Patient registry passes 10,000 people'],
+  growStories: ['Rare therapy fast-tracked', 'Registry passes 10,000'],
   /* 07 Readers — pharma */
-  stopper: 'Fast-track review for rare disease therapy',
+  stopper: 'Rare therapy fast-tracked',
   /* 08 Ask — your channel, inside your AI */
   question: "What's new in rare disease this week?",
   answers: [
-    { t: 'Fast-track for rare therapy', s: 'Regulator updates' },
-    { t: 'Registry passes 10,000 people', s: 'Your team' },
-    { t: 'Newborn screening pilot widens', s: 'Research journal' },
+    { t: 'Rare therapy fast-tracked', s: 'Regulator' },
+    { t: 'Registry passes 10,000', s: 'Your team' },
+    { t: 'Screening pilot widens', s: 'Journal' },
   ],
 };
 
@@ -362,10 +361,11 @@ type SceneProps = { active: boolean; still: boolean };
 
 /* 01 — Gather -------------------------------------------------------------- */
 
-const GATHER_STEPS = [800, 800, 800, 800, 800, 800, 2000];
+const GATHER_STEPS = [850, 850, 850, 850, 850, 2200];
+const SRC_DOTS = [MINT, VIOLET, '#7AA8FF', '#FFB547'];
 
 const GatherScene = ({ active, still }: SceneProps) => {
-  const step = useSceneClock(GATHER_STEPS, active, still ? 5 : null);
+  const step = useSceneClock(GATHER_STEPS, active, still ? 4 : null);
   const slips = TOPIC.incoming;
   const shown = Math.min(step + 1, slips.length);
   const src = step % TOPIC.sources.length;
@@ -378,13 +378,16 @@ const GatherScene = ({ active, still }: SceneProps) => {
           <Abs key={s.name} x={20} y={48 + i * 70} w={180} h={56}>
             <motion.div animate={{ x: on ? 6 : 0 }} transition={{ duration: 0.3 }} style={{ ...card(on ? MINT : undefined), height: '100%', padding: '8px 14px' }}>
               <div style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1, whiteSpace: 'nowrap' }}>{s.name}</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: on ? MINT : MUTED, marginTop: 5 }}>{s.type}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: on ? MINT : MUTED, marginTop: 6 }}>
+                <span style={{ width: 7, height: 7, borderRadius: 7, background: SRC_DOTS[i] }} />
+                {s.type}
+              </div>
             </motion.div>
           </Abs>
         );
       })}
 
-      <Abs x={262} y={20} w={198} h={320} style={{ ...card(), background: 'rgba(255,255,255,0.03)' }}>
+      <Abs x={222} y={20} w={238} h={320} style={{ ...card(), background: 'rgba(255,255,255,0.03)' }}>
         <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <span style={{ fontFamily: SERIF, fontSize: 24 }}>Your desk</span>
           <motion.span key={shown} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ fontSize: 13, fontWeight: 700, color: MINT }}>
@@ -400,26 +403,31 @@ const GatherScene = ({ active, still }: SceneProps) => {
             <motion.div
               key={t}
               initial={{ x: 150, y: 58 + from * 70, scale: 0.55, opacity: 0 }}
-              animate={{ x: 274, y: 290 - i * 44, scale: 1, opacity: 1 }}
+              animate={{ x: 234, y: 274 - i * 50, scale: 1, opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.35 } }}
               transition={{ type: 'spring', stiffness: 110, damping: 17 }}
               style={{
                 position: 'absolute',
                 left: 0,
                 top: 0,
-                width: 174,
-                padding: '7px 11px',
+                width: 214,
+                padding: '10px 13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 9,
+                whiteSpace: 'nowrap',
                 background: i === shown - 1 ? CARD_HI : CARD,
                 border: `1px solid ${i === shown - 1 ? MINT : LINE}`,
                 borderRadius: 10,
                 boxShadow: '0 8px 20px rgba(0,0,0,.35)',
-                fontSize: 12.5,
+                fontSize: 13.5,
                 fontWeight: 500,
-                lineHeight: 1.25,
+                lineHeight: 1.2,
                 zIndex: 10 + i,
               }}
             >
-              {t}
+              <span style={{ width: 8, height: 8, borderRadius: 8, flexShrink: 0, background: SRC_DOTS[from] }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</span>
             </motion.div>
           );
         })}
@@ -596,7 +604,7 @@ const IllustrateScene = ({ active, still }: SceneProps) => {
   const cartoon = step === 7;
   const drawing = step >= 1 && step <= 3;
   const ART_W = 270;
-  const note = drawing ? 'Illustrating…' : cartoon ? 'Gag written for this story' : step >= 5 ? 'Colours change story to story' : step === 4 ? 'Original. No stock.' : '';
+  const note = drawing ? 'Illustrating…' : cartoon ? 'Gag included' : step >= 5 ? 'Colours vary' : step === 4 ? 'No stock images' : '';
 
   return (
     <>
@@ -804,7 +812,7 @@ const GrowScene = ({ active, still }: SceneProps) => {
             </div>
           ))}
           <div style={{ ...card(MINT), padding: 11 }}>
-            <div style={{ fontFamily: SERIF, fontSize: 21, lineHeight: 1.02 }}>Get {TOPIC.feed} news by email</div>
+            <div style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.02 }}>{TOPIC.feed}, by email</div>
             <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 999, marginTop: 10, padding: 3 }}>
               {['Daily', 'Weekly', 'Both'].map((f, i) => (
                 <motion.span key={f} animate={{ backgroundColor: freq === i ? MINT : 'rgba(0,0,0,0)', color: freq === i ? INK : TEXT }} style={{ position: 'relative', flex: 1, textAlign: 'center', fontSize: 12.5, fontWeight: 600, padding: '4px 0', borderRadius: 999 }}>
@@ -841,7 +849,7 @@ const GrowScene = ({ active, still }: SceneProps) => {
             style={{ position: 'absolute', left: 246, top: 36, width: 216, ...card(), padding: '13px 15px' }}
           >
             <div style={{ ...label, fontSize: 11.5 }}>1 new email</div>
-            <div style={{ fontFamily: SERIF, fontSize: 21, lineHeight: 1.05, margin: '8px 0 12px' }}>Confirm your daily and weekly briefings</div>
+            <div style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.05, margin: '8px 0 12px' }}>Confirm both briefings</div>
             <div style={{ background: MINT, color: INK, borderRadius: 999, textAlign: 'center', fontSize: 13, fontWeight: 700, padding: '7px 0' }}>Confirm</div>
           </motion.div>
         )}
@@ -950,7 +958,7 @@ const ReadersScene = ({ active, still }: SceneProps) => {
             exit={{ opacity: 0 }}
             style={{ position: 'absolute', left: cx(1) + 14, top: cy(DROP[1]) - 40, fontSize: 13, fontWeight: 600, background: VIOLET, color: INK, padding: '5px 10px', borderRadius: 8 }}
           >
-            Most leave after slide 2
+            Drop-off: slide 2
           </motion.div>
         )}
       </AnimatePresence>
