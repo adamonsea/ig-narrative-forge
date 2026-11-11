@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PRO_MONTHLY_CREDITS, TOP_UP_CREDITS, WELCOME_CREDITS } from '@/lib/billing';
 import { useSubscription } from '@/hooks/useSubscription';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
+import { NewsroomBand } from '@/components/home/NewsroomBand';
 
 const features = [
   'Publish public feeds',
@@ -70,7 +71,10 @@ export default function Pricing() {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(214,50%,9%)] text-white">
+    <div className="relative min-h-screen bg-[hsl(214,50%,9%)] text-white">
+      <div aria-hidden className="absolute inset-0 z-0 overflow-hidden">
+        <NewsroomBand />
+      </div>
       <Helmet>
         <title>Pricing — Curatr</title>
         <meta name="description" content="Create and curate for free. Publish with Curatr Pro for $19 a month." />
