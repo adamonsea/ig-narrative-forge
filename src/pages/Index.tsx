@@ -418,7 +418,7 @@ const Index = () => {
           <section className="mx-auto flex min-h-[90svh] max-w-5xl flex-col justify-center py-20 text-center md:py-28">
             <MaskRevealHeading
               as="h2"
-              segments={[{ text: 'What’s your' }, { text: 'feed?', italic: true }]}
+              segments={[{ text: 'Discover your' }, { text: 'feed?', italic: true }]}
               className={`${HEADING} flex flex-wrap justify-center`}
             />
             <div className="mt-6 md:mt-10">
