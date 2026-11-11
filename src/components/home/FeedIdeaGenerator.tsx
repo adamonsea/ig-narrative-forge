@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
@@ -8,6 +8,65 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { savePendingBlueprint, type FeedBlueprint } from '@/lib/feedBlueprint';
 import { BlueprintAccountDialog } from './BlueprintAccountDialog';
+
+const PLACEHOLDER_IDEAS = [
+  'Life science',
+  'London Events',
+  'Cycle cross',
+  'AI in photography',
+  'Family finances',
+];
+
+// Types each idea into the placeholder, holds it, deletes it, then moves on.
+const useTypewriterPlaceholder = (active: boolean) => {
+  const [text, setText] = useState('');
+
+  useEffect(() => {
+    if (!active) {
+      setText('');
+      return;
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setText(PLACEHOLDER_IDEAS[0]);
+      return;
+    }
+
+    let idea = 0;
+    let char = 0;
+    let deleting = false;
+    let timer: number;
+
+    const tick = () => {
+      const word = PLACEHOLDER_IDEAS[idea];
+      if (!deleting) {
+        char += 1;
+        setText(word.slice(0, char));
+        if (char === word.length) {
+          deleting = true;
+          timer = window.setTimeout(tick, 1800);
+          return;
+        }
+        timer = window.setTimeout(tick, 70);
+      } else {
+        char -= 1;
+        setText(word.slice(0, char));
+        if (char === 0) {
+          deleting = false;
+          idea = (idea + 1) % PLACEHOLDER_IDEAS.length;
+          timer = window.setTimeout(tick, 500);
+          return;
+        }
+        timer = window.setTimeout(tick, 35);
+      }
+    };
+
+    timer = window.setTimeout(tick, 600);
+    return () => window.clearTimeout(timer);
+  }, [active]);
+
+  return text;
+};
+
 export const FeedIdeaGenerator = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -19,6 +78,8 @@ export const FeedIdeaGenerator = () => {
   const [chosen, setChosen] = useState<FeedBlueprint | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  // Stop the carousel once the visitor starts typing their own idea.
+  const placeholder = useTypewriterPlaceholder(input.trim().length === 0);
 
   const toggle = (i: number) =>
     setExpanded((prev) => {
@@ -75,7 +136,7 @@ export const FeedIdeaGenerator = () => {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Your niche or topic"
+            placeholder={placeholder || 'Your niche or topic'}
             aria-label="Your niche or topic"
             className="h-14 w-full min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/10 px-5 text-center text-lg text-white shadow-[0_0_30px_-8px_rgba(173,92,255,0.5)] placeholder:text-white/70 focus-visible:border-[hsl(155,100%,67%)]/60 focus-visible:ring-0 focus-visible:ring-offset-0 sm:rounded-full sm:border-none sm:bg-transparent sm:px-6 sm:text-left sm:font-light sm:shadow-none md:text-xl"
           />
