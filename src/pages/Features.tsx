@@ -81,7 +81,7 @@ const Features = () => {
             From everywhere <em style={{ color: MINT }}>to everyone.</em>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-xl text-white/75 md:text-2xl">
-            Own the channel. Stop renting the audience. Run one niche channel or a dozen, from one place. You stay the editor.
+            Own the channel. Stop renting the audience.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="h-auto rounded-full px-7 py-3.5 text-lg">
