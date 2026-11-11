@@ -74,7 +74,7 @@ export default function Pricing() {
   return (
     <div className="relative min-h-screen bg-[hsl(214,50%,9%)] text-white">
       <div aria-hidden className="absolute inset-0 z-0 overflow-hidden">
-        <NewsroomBand />
+        <NewsroomBand overlayClass="bg-[hsl(268,82%,26%)]" />
       </div>
       <Helmet>
         <title>Pricing — Curatr</title>
