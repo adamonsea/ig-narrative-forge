@@ -302,7 +302,7 @@ const Index = () => {
                       aria-hidden="true"
                     />
                   </span>
-                  <span className="text-lg font-medium">See a live feed</span>
+                  <span className="text-lg font-medium">Live demo feed</span>
                 </Link>
               </motion.div>
             </motion.div>
