@@ -1,58 +1,122 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import heroNewsroom from '@/assets/newsroom-hero.webp.asset.json';
+import heroNewsroomBusy from '@/assets/newsroom-busy.webp.asset.json';
+import heroNewsroomTypewriters from '@/assets/newsroom-typewriters.webp.asset.json';
+import heroNewsroomFilm from '@/assets/newsroom-loop.mp4.asset.json';
 
-/**
- * Full-bleed hero backdrop. Plays a muted newsroom film (16:9 on desktop,
- * 9:16 on phones) washed into a purple/navy duotone with grain and vignette.
- * Until the film files exist, or if they fail, a navy-to-purple gradient
- * shows instead so the hero always looks finished. Reduced motion: poster only.
- */
-const MEDIA = {
-  desktop: { video: '/hero/newsroom-16x9.mp4', poster: '/hero/newsroom-16x9.jpg' },
-  mobile: { video: '/hero/newsroom-9x16.mp4', poster: '/hero/newsroom-9x16.jpg' },
-} as const;
-
-const MOBILE_QUERY = '(max-width: 767px)';
+const HERO_STILLS = [heroNewsroom.url, heroNewsroomBusy.url, heroNewsroomTypewriters.url];
+const HERO_VIDEO = 'video';
+const STILL_MS = 7000;
+const VIDEO_WAIT_MS = 6000;
 
 const GRAIN_SVG =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
-const useIsMobile = () => {
-  const [mobile, setMobile] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia(MOBILE_QUERY);
-    const on = () => setMobile(mq.matches);
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
+/**
+ * Randomised newsroom backdrop: the three stills and the short film are
+ * shuffled into a fresh order each visit and crossfade in a loop. The current
+ * still stays on screen until the film is ready to play, so there is never a
+ * blank gap while it loads. Reduced motion: one still, no film.
+ */
+const HeroNewsroomBackground = ({ reduce }: { reduce: boolean }) => {
+  const order = useMemo(() => {
+    const arr: string[] = [...HERO_STILLS, HERO_VIDEO];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }, []);
-  return mobile;
-};
-
-export const HomeHeroMedia = () => {
-  const reduce = !!useReducedMotion();
-  const mobile = useIsMobile();
-  const media = mobile ? MEDIA.mobile : MEDIA.desktop;
-  const [posterOk, setPosterOk] = useState(false);
-  const [videoOk, setVideoOk] = useState(false);
+  const firstStill = order.findIndex((item) => item !== HERO_VIDEO);
+  const [shown, setShown] = useState(() => firstStill);
+  const [pending, setPending] = useState<number | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  useEffect(() => {
-    setPosterOk(false);
-    setVideoOk(false);
-  }, [media.video]);
+  const advance = useCallback(() => {
+    setShown((current) => {
+      const next = (current + 1) % order.length;
+      if (order[next] === HERO_VIDEO && !videoReady) {
+        setPending(next);
+        return current;
+      }
+      return next;
+    });
+  }, [order, videoReady]);
 
-  // React doesn't always reflect `muted` as an attribute, which blocks autoplay
-  // on some mobile browsers, so set it on the element before playing.
+  // Stills advance on a timer; the film advances when it ends.
   useEffect(() => {
+    if (reduce || order[shown] === HERO_VIDEO) return;
+    const t = setTimeout(advance, STILL_MS);
+    return () => clearTimeout(t);
+  }, [shown, reduce, advance, order]);
+
+  // Show the film once it can play; if it takes too long, skip past it.
+  useEffect(() => {
+    if (pending === null) return;
+    if (videoReady) {
+      setShown(pending);
+      setPending(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      setPending(null);
+      setShown((pending + 1) % order.length);
+    }, VIDEO_WAIT_MS);
+    return () => clearTimeout(t);
+  }, [pending, videoReady, order.length]);
+
+  useEffect(() => {
+    if (order[shown] !== HERO_VIDEO || !videoRef.current) return;
     const v = videoRef.current;
-    if (!v || reduce) return;
     v.muted = true;
-    v.play().catch(() => setVideoOk(false));
-  }, [media.video, reduce]);
+    v.currentTime = 0;
+    v.play().catch(() => advance());
+  }, [shown, order, advance]);
 
-  const mediaFilter = 'grayscale(1) contrast(1.15) brightness(0.7)';
+  return (
+    <>
+      {order.map((item, i) =>
+        item === HERO_VIDEO ? (
+          reduce ? null : (
+            <video
+              key="film"
+              ref={videoRef}
+              src={heroNewsroomFilm.url}
+              muted
+              playsInline
+              preload="auto"
+              onCanPlay={() => setVideoReady(true)}
+              onEnded={advance}
+              onError={advance}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+                shown === i && videoReady ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          )
+        ) : (
+          <div
+            key={item}
+            className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ${
+              shown === i ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ backgroundImage: `url(${item})` }}
+          />
+        ),
+      )}
+    </>
+  );
+};
+
+/**
+ * Full-bleed hero layer: the randomised newsroom backdrop graded to black and
+ * white, under a purple-to-navy duotone, animated film grain and a vignette.
+ * A navy gradient sits underneath so the hero looks finished before any
+ * image has loaded.
+ */
+export const HomeHeroMedia = () => {
+  const reduce = !!useReducedMotion();
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[100svh] overflow-hidden">
@@ -68,56 +132,31 @@ export const HomeHeroMedia = () => {
         @media (prefers-reduced-motion: reduce) { .home-hero-grain { animation: none; } }
       `}</style>
 
-      {/* Placeholder: always underneath, visible until real media is ready */}
+      {/* Base: shows while the first image loads */}
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(120% 80% at 70% 15%, hsl(270 70% 32%) 0%, transparent 60%), radial-gradient(90% 70% at 15% 40%, hsl(262 60% 22%) 0%, transparent 65%), linear-gradient(180deg, hsl(250 45% 16%) 0%, hsl(214 50% 9%) 100%)',
-        }}
+        style={{ background: 'linear-gradient(180deg, hsl(250 45% 16%) 0%, hsl(214 50% 9%) 100%)' }}
       />
 
-      {/* Real media, graded to black and white */}
-      <div className="absolute inset-0" style={{ filter: mediaFilter }}>
-        <img
-          key={media.poster}
-          src={media.poster}
-          alt=""
-          decoding="async"
-          onLoad={() => setPosterOk(true)}
-          onError={() => setPosterOk(false)}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-            posterOk ? 'opacity-100' : 'opacity-0'
-          }`}
-        />
-        {!reduce && (
-          <video
-            key={media.video}
-            ref={videoRef}
-            src={media.video}
-            poster={posterOk ? media.poster : undefined}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            onPlaying={() => setVideoOk(true)}
-            onError={() => setVideoOk(false)}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
-              videoOk ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        )}
+      {/* Newsroom stills and film, graded to black and white */}
+      <div className="absolute inset-0" style={{ filter: 'grayscale(1) contrast(1.15) brightness(0.7)' }}>
+        <HeroNewsroomBackground reduce={reduce} />
       </div>
 
-      {/* Duotone: purple tint on the greys, fading to navy at the bottom for legibility */}
+      {/* Duotone: purple tint on the greys, fading to navy at the bottom */}
       <div className="absolute inset-0 bg-[hsl(270,100%,68%)] opacity-30 mix-blend-color" />
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, hsl(270 100% 68% / 0.18) 0%, hsl(270 100% 68% / 0.10) 35%, hsl(214 50% 9% / 0.55) 70%, hsl(214 50% 9%) 100%)',
+            'linear-gradient(180deg, hsl(270 70% 24% / 0.5) 0%, hsl(262 60% 18% / 0.5) 40%, hsl(214 50% 9% / 0.75) 72%, hsl(214 50% 9%) 100%)',
         }}
+      />
+
+      {/* Soft scrim behind the headline and idea box so they stay readable */}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(ellipse 60% 45% at 50% 48%, hsl(214 50% 9% / 0.6) 0%, transparent 100%)' }}
       />
 
       {/* Film grain */}
