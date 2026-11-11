@@ -33,6 +33,66 @@ const Scene = ({ id, label }: { id: HomeSceneId; label: string }) => (
   </Suspense>
 );
 
+const HERO_LINE_1 = 'It used to take';
+const HERO_LINE_2 = 'a newsroom...';
+
+/** Blinking typewriter caret. */
+const Caret = () => (
+  <motion.span
+    aria-hidden="true"
+    className="ml-[0.06em] inline-block h-[0.82em] w-[0.055em] translate-y-[0.08em] bg-current"
+    animate={{ opacity: [1, 1, 0, 0] }}
+    transition={{ duration: 1.1, repeat: Infinity, times: [0, 0.55, 0.55, 1], ease: 'linear' }}
+  />
+);
+
+/**
+ * Hero headline typed out character by character, like a typewriter.
+ * An invisible ghost of the full text reserves the layout, so nothing
+ * shifts as the typing progresses. Reduced motion shows the full text.
+ */
+const HeroTypewriter = () => {
+  const reduce = useReducedMotion();
+  const total = HERO_LINE_1.length + HERO_LINE_2.length;
+  const [count, setCount] = useState(reduce ? total : 0);
+
+  useEffect(() => {
+    if (reduce || count >= total) return;
+    const delay = count === 0 ? 450 : count === HERO_LINE_1.length ? 380 : 55;
+    const t = window.setTimeout(() => setCount((c) => c + 1), delay);
+    return () => window.clearTimeout(t);
+  }, [count, reduce, total]);
+
+  const line1 = HERO_LINE_1.slice(0, Math.min(count, HERO_LINE_1.length));
+  const line2 = HERO_LINE_2.slice(0, Math.max(0, count - HERO_LINE_1.length));
+  const onLine1 = count <= HERO_LINE_1.length;
+
+  return (
+    <h1
+      aria-label={`${HERO_LINE_1} ${HERO_LINE_2}`}
+      className="font-display font-normal tracking-tight leading-[1.04] text-white text-[clamp(3rem,9vw,7.5rem)]"
+    >
+      <span aria-hidden="true" className="relative block">
+        {/* Ghost reserves the final layout so typing never shifts the page */}
+        <span className="invisible block">
+          {HERO_LINE_1}
+          <br />
+          <span className="italic">{HERO_LINE_2}</span>
+        </span>
+        <span className="absolute inset-0 block">
+          {line1}
+          {onLine1 && <Caret />}
+          <br />
+          <span className="italic">
+            {line2}
+            {!onLine1 && <Caret />}
+          </span>
+        </span>
+      </span>
+    </h1>
+  );
+};
+
 interface SectionCopyProps {
   lead: string;
   emphasis: string;
@@ -109,16 +169,6 @@ const Index = () => {
   const container: Variants = {
     hidden: {},
     show: { transition: { staggerChildren: reduce ? 0 : 0.08 } },
-  };
-  // Kinetic editorial reveal: words rise from behind a clipping mask
-  const editorialEase = [0.19, 1, 0.22, 1] as const;
-  const maskWordContainer: Variants = {
-    hidden: {},
-    show: { transition: { delayChildren: 0.1, staggerChildren: reduce ? 0 : 0.09 } },
-  };
-  const maskWord: Variants = {
-    hidden: { y: reduce ? 0 : '110%', opacity: reduce ? 0 : 1 },
-    show: { y: 0, opacity: 1, transition: { duration: reduce ? 0.3 : 0.9, ease: editorialEase } },
   };
   const hoverLift = reduce ? {} : { whileHover: { y: -2 }, whileTap: { y: 0 } };
 
@@ -219,26 +269,7 @@ const Index = () => {
           {/* 1. Hero */}
           <section className="relative mx-auto flex min-h-[calc(100svh-88px)] max-w-5xl items-center justify-center pb-24 pt-6 text-center md:min-h-[calc(100svh-104px)] md:pb-28">
             <motion.div initial="hidden" animate="show" variants={container} className="w-full space-y-8 md:space-y-10">
-              <motion.h1
-                variants={maskWordContainer}
-                className="font-display font-normal tracking-tight leading-[1.04] text-white text-[clamp(3rem,9vw,7.5rem)]"
-              >
-                {['It', 'used', 'to', 'take'].map((word, i) => (
-                  <span key={`l1-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] px-[0.12em] -mx-[0.12em] mr-[0.13em]">
-                    <motion.span variants={maskWord} className="inline-block">
-                      {word}
-                    </motion.span>
-                  </span>
-                ))}
-                <br />
-                {['a', 'newsroom.'].map((word, i) => (
-                  <span key={`l2-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] px-[0.14em] -mx-[0.14em] mr-[0.11em]">
-                    <motion.span variants={maskWord} className="inline-block italic pr-[0.04em]">
-                      {word}
-                    </motion.span>
-                  </span>
-                ))}
-              </motion.h1>
+              <HeroTypewriter />
 
               <motion.div variants={reveal}>
                 <FeedIdeaGenerator />
