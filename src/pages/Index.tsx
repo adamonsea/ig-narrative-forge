@@ -17,6 +17,117 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { FeedIdeaGenerator } from '@/components/home/FeedIdeaGenerator';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
 import heroNewsroom from '@/assets/newsroom-hero.webp.asset.json';
+import heroNewsroomBusy from '@/assets/newsroom-busy.webp.asset.json';
+import heroNewsroomTypewriters from '@/assets/newsroom-typewriters.webp.asset.json';
+import heroNewsroomFilm from '@/assets/newsroom-loop.mp4.asset.json';
+import { useCallback, useMemo, useRef } from 'react';
+
+const HERO_STILLS = [heroNewsroom.url, heroNewsroomBusy.url, heroNewsroomTypewriters.url];
+const HERO_VIDEO = 'video';
+const STILL_MS = 7000;
+const VIDEO_WAIT_MS = 6000;
+
+// Randomised hero backdrop: the three newsroom stills and the short film are
+// shuffled into a fresh order each visit and crossfade in a loop. The current
+// still stays on screen until the film is ready to play, so there is never a
+// blank gap while it loads.
+const HeroNewsroomBackground = ({ reduce }: { reduce: boolean }) => {
+  const order = useMemo(() => {
+    const arr: string[] = [...HERO_STILLS, HERO_VIDEO];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, []);
+  const [shown, setShown] = useState(0);
+  const [pending, setPending] = useState<number | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const advance = useCallback(() => {
+    setShown((current) => {
+      const next = (current + 1) % order.length;
+      if (order[next] === HERO_VIDEO && !videoReady) {
+        setPending(next);
+        return current;
+      }
+      return next;
+    });
+  }, [order, videoReady]);
+
+  // Stills advance on a timer; the film advances when it ends.
+  useEffect(() => {
+    if (reduce || order[shown] === HERO_VIDEO) return;
+    const t = setTimeout(advance, STILL_MS);
+    return () => clearTimeout(t);
+  }, [shown, reduce, advance, order]);
+
+  // Show the film once it can play; if it takes too long, skip past it.
+  useEffect(() => {
+    if (pending === null) return;
+    if (videoReady) {
+      setShown(pending);
+      setPending(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      setPending(null);
+      setShown((pending + 1) % order.length);
+    }, VIDEO_WAIT_MS);
+    return () => clearTimeout(t);
+  }, [pending, videoReady, order.length]);
+
+  useEffect(() => {
+    if (order[shown] !== HERO_VIDEO || !videoRef.current) return;
+    const v = videoRef.current;
+    v.currentTime = 0;
+    v.play().catch(() => advance());
+  }, [shown, order, advance]);
+
+  const videoIndex = order.indexOf(HERO_VIDEO);
+
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 top-0 h-[100svh] opacity-[0.22]"
+      style={{
+        isolation: 'isolate',
+        maskImage: 'radial-gradient(120% 88% at 50% 42%, #000 34%, transparent 76%)',
+        WebkitMaskImage: 'radial-gradient(120% 88% at 50% 42%, #000 34%, transparent 76%)',
+      }}
+    >
+      {order.map((item, i) =>
+        item === HERO_VIDEO ? (
+          <video
+            key="film"
+            ref={videoRef}
+            src={heroNewsroomFilm.url}
+            muted
+            playsInline
+            preload="auto"
+            onCanPlay={() => setVideoReady(true)}
+            onEnded={advance}
+            onError={advance}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+              !reduce && shown === i && videoReady ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ) : (
+          <div
+            key={item}
+            className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ${
+              shown === i || (reduce && i === 0) ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ backgroundImage: `url(${item})` }}
+          />
+        ),
+      )}
+      <div className="absolute inset-0 bg-[hsl(270,100%,68%)] mix-blend-multiply" />
+      <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-b from-transparent to-[hsl(214,50%,9%)]" />
+    </div>
+  );
+};
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -74,23 +185,8 @@ const Index = () => {
         <meta property="og:description" content="Build and publish your own niche news feeds with AI-assisted curation and strong source attribution." />
         <meta property="og:url" content="https://curatr.pro/" />
       </Helmet>
-      {/* Editorial newsroom photo, washed under the purple gradient */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[100svh] opacity-[0.22]"
-        style={{
-          isolation: 'isolate',
-          maskImage: 'radial-gradient(120% 88% at 50% 42%, #000 34%, transparent 76%)',
-          WebkitMaskImage: 'radial-gradient(120% 88% at 50% 42%, #000 34%, transparent 76%)',
-        }}
-      >
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${heroNewsroom.url})` }}
-        />
-        <div className="absolute inset-0 bg-[hsl(270,100%,68%)] mix-blend-multiply" />
-        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-b from-transparent to-[hsl(214,50%,9%)]" />
-      </div>
+      {/* Editorial newsroom backdrop: stills and film on a randomised loop, washed under the purple gradient */}
+      <HeroNewsroomBackground reduce={!!reduce} />
 
       {/* Background gradients */}
       <div className="fixed inset-0 pointer-events-none">
