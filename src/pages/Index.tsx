@@ -290,7 +290,7 @@ const Index = () => {
                       aria-hidden="true"
                     />
                   </span>
-                  <span className="text-lg font-medium">Watch the 60-second film</span>
+                  <span className="text-lg font-medium">The power of Curatr</span>
                 </button>
                 <Link
                   to="/feed/eastbourne"
