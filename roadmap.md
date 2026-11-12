@@ -95,3 +95,9 @@ Events: one home and one sources list (12 November 2026)
 - [x] Old Chamber importer no longer brings back removed events
 - [ ] Drop topics.event_source_url and retire ingest-chamber-events — new reader matches it; waiting on Adam's go-ahead
 - [ ] Add BN20 to Eastbourne's postcodes? (Meads/Old Town) — waiting on Adam; filter already copes when the address names Eastbourne
+
+Events + Desk clickable mocks (12 November 2026)
+- [x] Hidden owner-only route /dashboard/mock/events-desk, dummy data only, live Desk and feed untouched
+- [x] Mock 1: What's on story-style card (cover + one event per slide, Tonight/This weekend/Next week, up to 8 in 14 days), placed after story 1 then every 15+, never beside another extra; phone + desktop
+- [x] Mock 2: one-screen Desk (Waiting mixed stories/events → Live in feed order with What's on in place) and Sources with Auto-publish and auto-detected kind
+- [ ] Adam to review the mocks before any real build

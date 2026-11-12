@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -39,6 +39,7 @@ import PublicWidgetBuilder from "./pages/PublicWidgetBuilder";
 import VerifySubscription from "./pages/VerifySubscription";
 import WidgetsPage from "./pages/dashboard/Widgets";
 import WidgetTestPage from "./pages/dashboard/WidgetTest";
+const EventsDeskMock = lazy(() => import("./pages/dashboard/mock/EventsDeskMock"));
 import Health from "./pages/Health";
 import ExplainerExport from "./pages/ExplainerExport";
 import Unsubscribe from "./pages/Unsubscribe";
@@ -112,6 +113,7 @@ const App = () => {
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
                 <Route path="/dashboard/widgets" element={<WidgetsPage />} />
                 <Route path="/dashboard/widgets/test" element={<WidgetTestPage />} />
+                <Route path="/dashboard/mock/events-desk" element={<Suspense fallback={null}><EventsDeskMock /></Suspense>} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/admin/ai-costs" element={<AICostDashboardPage />} />
                 
