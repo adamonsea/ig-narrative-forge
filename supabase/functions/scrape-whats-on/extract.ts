@@ -209,6 +209,18 @@ export function parseDateText(text: string, today: string): string | null {
 export function parseTimeText(text: string | null | undefined): string | null {
   if (!text) return null;
   const s = text.toLowerCase();
+  // "7-10pm" / "7.30 - 9pm": the start takes the end's am/pm when it has none
+  const range = s.match(/\b(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?\s*[-–—]\s*\d{1,2}(?:[:.]\d{2})?\s*(am|pm)\b/);
+  if (range) {
+    let h = +range[1];
+    const m = range[2] ? +range[2] : 0;
+    const mer = range[3] || range[4];
+    if (h >= 1 && h <= 12 && m <= 59) {
+      if (mer === 'pm' && h !== 12) h += 12;
+      if (mer === 'am' && h === 12) h = 0;
+      return `${pad(h)}:${pad(m)}:00`;
+    }
+  }
   const ampm = s.match(/\b(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)\b/);
   if (ampm) {
     let h = +ampm[1];
@@ -407,8 +419,25 @@ export function anchorLinks(html: string, pageUrl: string): { text: string; url:
   return out;
 }
 
+/** Every index where needle occurs in haystack. */
+function indexesOf(haystack: string, needle: string): number[] {
+  const out: number[] = [];
+  if (!needle) return out;
+  let i = haystack.indexOf(needle);
+  while (i >= 0 && out.length < 200) { out.push(i); i = haystack.indexOf(needle, i + 1); }
+  return out;
+}
+
+/** Date text must sit next to the title: up to 2,000 characters before it (day headings) or 600 after. */
+export function appearsNear(page: string, title: string, dateText: string, before = 2000, after = 600): boolean {
+  const titles = indexesOf(page, title);
+  if (!titles.length) return false;
+  const dates = indexesOf(page, dateText);
+  return dates.some((d) => titles.some((t) => (d <= t && t - d <= before) || (d > t && d - t <= after + title.length)));
+}
+
 /**
- * Keep a candidate only if its title and date text both appear on the page,
+ * Keep a candidate only if its title and date text both appear on the page, close together,
  * then parse the date from that page text. A time is kept only if it also appears.
  */
 export function verifyTextCandidates(
@@ -424,8 +453,7 @@ export function verifyTextCandidates(
     const title = clean(c.title);
     const dateText = clean(c.date_text, 120);
     if (!title || !dateText || title.length < 3 || dateText.length < 3) continue;
-    if (!page.includes(normaliseForMatch(dateText))) continue;
-    if (!page.includes(normaliseForMatch(title))) continue;
+    if (!appearsNear(page, normaliseForMatch(title), normaliseForMatch(dateText))) continue;
     const date = parseDateText(dateText, today);
     if (!date) continue;
     const timeText = clean(c.time_text, 40);

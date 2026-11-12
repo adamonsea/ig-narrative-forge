@@ -4,6 +4,7 @@ import { EngagementFunnel } from "@/components/EngagementFunnel";
 import { readershipChange, barHeights, MEANINGFUL_READERS, dropoffCurve, topStopper, storySignal, type Dropoff, type TopStopper } from "@/lib/readership";
 import { useCountUp } from "@/hooks/useCountUp";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
+import { venueClicksLine } from "@/lib/whatsOn";
 
 interface TopStory { id: string; title: string; reads: number; image?: string | null; seen?: number | null; stop_rate?: number | null; swipe_rate?: number | null }
 interface Readership {
@@ -14,6 +15,7 @@ interface Readership {
   top_stories: TopStory[];
   dropoff?: Dropoff | null;
   top_stopper?: TopStopper | null;
+  event_clicks_week?: number | null;
 }
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
@@ -70,6 +72,7 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
   const storyHref = (id: string) => (topicSlug ? `/feed/${topicSlug}/story/${id}` : undefined);
   const curve = dropoffCurve(data.dropoff);
   const stopper = topStopper(data.top_stopper);
+  const venueClicks = venueClicksLine(data.event_clicks_week);
 
   return (
     <div className="max-w-4xl space-y-14 py-8">
@@ -171,6 +174,8 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
           </div>
         </a>
       )}
+
+      {venueClicks && <p className="text-sm text-muted-foreground tabular-nums">{venueClicks}</p>}
 
       {Number(data.readers_week) >= MEANINGFUL_READERS && <EngagementFunnel topicId={topicId} />}
     </div>

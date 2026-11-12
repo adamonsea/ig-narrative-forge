@@ -455,15 +455,6 @@ verify_jwt = true
 [functions.waitlist-signup]
 verify_jwt = true
 
-[functions.ai-event-generator]
-verify_jwt = true
-
-[functions.api-event-collector]
-verify_jwt = true
-
-[functions.automated-event-scheduler]
-verify_jwt = true
-
 [functions.social-media-publisher]
 verify_jwt = true
 
@@ -609,4 +600,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.search-console-sync]
+verify_jwt = false
+
+[functions.scrape-whats-on]
 verify_jwt = false

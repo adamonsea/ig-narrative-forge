@@ -8,6 +8,7 @@ import { Calendar, MapPin, ExternalLink, Trash2, Clock, Tag } from 'lucide-react
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { recordEventClick } from '@/lib/eventClicks';
 
 interface Event {
   id: string;
@@ -217,6 +218,7 @@ export const EventsAccordion: React.FC<EventsAccordionProps> = ({ topicId, isOwn
                               href={event.source_url}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={() => { if (!isOwner) recordEventClick(event.id); }}
                               className="flex items-center gap-1"
                             >
                               <ExternalLink className="w-3 h-3" />

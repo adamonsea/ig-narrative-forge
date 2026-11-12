@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ReadershipPanel } from "@/components/readership/ReadershipPanel";
+import { WhatsOnSources } from "@/components/events/WhatsOnSources";
 import { TopicPulseProvider } from "@/hooks/useTopicPulse";
 import { ReadingNow, MilestoneNote, DeskLookTracker } from "@/components/pulse/PulseBits";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
@@ -794,6 +795,7 @@ const TopicDashboard = () => {
                 region={topic.region}
                 articleCount={stats?.articles || 0}
               />
+              <WhatsOnSources topicId={topic.id} />
             </TabsContent>
 
             {/* ===== EDITORIAL CONTROL CENTRE ===== */}

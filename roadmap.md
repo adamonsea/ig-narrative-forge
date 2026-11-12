@@ -76,3 +76,11 @@ Public feed sign-up card (9 November 2026)
 - [ ] Both sends one confirmation email instead of two — needs Adam's go-ahead (changes the sign-up and confirm services)
 - [x] Tinted, contrast-checked card surface so it stands apart from stories
 - [x] Body slides 2+ in Lexend 300, tighter tracking and line height, shared with the fit-to-card measurer
+
+What's-on events MVP (12 November 2026)
+- [x] Retire ai-event-generator, automated-event-scheduler, api-event-collector (Chamber import untouched)
+- [x] One reader for pasted pages: JSON-LD → iCal/JSON → text kept only with on-page dates; robots.txt; daily refresh
+- [x] Sources tab: Add a what's-on page → preview → save; events auto-publish; owner delete-on-card enabled
+- [x] Broken-source flag after two empty checks in a row
+- [x] Venue click tracking + Readership line
+- [x] Tested on Eastbourne pages (test data removed afterwards)

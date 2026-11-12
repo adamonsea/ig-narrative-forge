@@ -745,7 +745,7 @@ const TopicFeed = () => {
       if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled && topicMetadata?.eventsCardsEnabled) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
-            <EventsAccordion topicId={topic.id} isOwner={false} />
+            <EventsAccordion topicId={topic.id} isOwner={isOwnFeed} />
           </div>
         );
       }
@@ -829,7 +829,7 @@ const TopicFeed = () => {
     shouldShowCommunityPulse, pulseData, sentimentCards, insightCards,
     quizQuestions, quizCardsEnabled, quizVisitorId, user?.id, markAsAnswered,
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
-    hasParliamentaryDigest, topicMetadata, filterMatchesMap
+    hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed
   ]);
 
   if (loading) {
