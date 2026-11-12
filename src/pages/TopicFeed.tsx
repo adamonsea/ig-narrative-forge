@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
 import { EventsAccordion } from "@/components/EventsAccordion";
+import { showEventsInFeed } from "@/lib/whatsOn";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
@@ -742,7 +743,7 @@ const TopicFeed = () => {
       }
 
       // Events accordion
-      if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled && topicMetadata?.eventsCardsEnabled) {
+      if (shouldShowEvents(storyIndex) && topic?.id && showEventsInFeed(topic?.events_enabled, topicMetadata?.eventsCardsEnabled)) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
             <EventsAccordion topicId={topic.id} isOwner={isOwnFeed} />

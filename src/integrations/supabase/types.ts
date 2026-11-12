@@ -1263,6 +1263,7 @@ export type Database = {
           created_by: string | null
           id: string
           is_active: boolean
+          kind: string
           last_checked_at: string | null
           last_error: string | null
           last_event_count: number | null
@@ -1278,6 +1279,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
           last_checked_at?: string | null
           last_error?: string | null
           last_event_count?: number | null
@@ -1293,6 +1295,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
           last_checked_at?: string | null
           last_error?: string | null
           last_event_count?: number | null
@@ -1327,6 +1330,7 @@ export type Database = {
           description: string | null
           end_date: string | null
           end_time: string | null
+          event_source_id: string | null
           event_type: string
           external_id: string | null
           id: string
@@ -1350,6 +1354,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          event_source_id?: string | null
           event_type: string
           external_id?: string | null
           id?: string
@@ -1373,6 +1378,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          event_source_id?: string | null
           event_type?: string
           external_id?: string | null
           id?: string
@@ -1390,6 +1396,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "events_event_source_id_fkey"
+            columns: ["event_source_id"]
+            isOneToOne: false
+            referencedRelation: "event_sources"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_topic_id_fkey"
             columns: ["topic_id"]

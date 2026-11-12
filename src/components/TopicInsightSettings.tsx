@@ -275,7 +275,6 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           {/* Feed-only switches: data collection and the weekly email are unaffected */}
           {([
             ['parliamentary_cards_enabled', 'Parliament cards', 'MP vote cards and the weekly parliament digest in your public feed'],
-            ['events_cards_enabled', 'Events card', 'Upcoming local events list in your public feed'],
           ] as const).map(([key, label, desc]) => (
             <div key={key} className="flex items-center justify-between p-4 rounded-lg border">
               <div className="flex-1 space-y-1">

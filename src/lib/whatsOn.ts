@@ -25,3 +25,21 @@ export function venueClicksLine(clicks: number | null | undefined): string | nul
   if (n <= 0) return null;
   return `Sent ${n.toLocaleString("en-GB")} ${n === 1 ? "click" : "clicks"} to local venues this week`;
 }
+
+/** Kinds of events source (event_sources.kind). New kinds only need a label here and a reader on the server. */
+export type EventSourceKind = "whats_on_page" | "calendar_feed";
+
+const KIND_LABELS: Record<EventSourceKind, string> = {
+  whats_on_page: "What's-on page",
+  calendar_feed: "Calendar feed",
+};
+
+export const eventSourceKindLabel = (kind: string | null | undefined): string =>
+  KIND_LABELS[(kind as EventSourceKind)] ?? "Events source";
+
+/**
+ * One home for events: the Events switch collects events and adds them to the weekly email;
+ * "Show in the feed" (only meaningful while Events is on) puts them between stories.
+ */
+export const showEventsInFeed = (eventsEnabled: boolean | null | undefined, showInFeed: boolean | null | undefined): boolean =>
+  Boolean(eventsEnabled) && Boolean(showInFeed);

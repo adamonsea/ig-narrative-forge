@@ -84,3 +84,10 @@ What's-on events MVP (12 November 2026)
 - [x] Broken-source flag after two empty checks in a row
 - [x] Venue click tracking + Readership line
 - [x] Tested on Eastbourne pages (test data removed afterwards)
+
+Events: one home and one sources list (12 November 2026)
+- [x] Report why new events weren't visible (feed never loaded the Events switch)
+- [x] Events switch + "Show in the feed" tick box in Sources > What's on; old toggles removed
+- [x] event_sources holds every kind (what's-on page, calendar feed), auto-detected, with status/refresh/edit/remove
+- [ ] What's on card set in the feed (14 days, up to 8) — waiting on Adam's approval of the mock
+- [ ] Drop topics.event_source_url and retire ingest-chamber-events — after Adam confirms the calendar feed row works

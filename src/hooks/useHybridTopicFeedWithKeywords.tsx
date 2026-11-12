@@ -297,7 +297,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at'),
         supabase
           .from('topics')
-          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color')
+          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled')
           .ilike('slug', slug)
           .eq('is_public', true)
           .single()
@@ -345,6 +345,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         donation_config: donationConfig as any,
         automated_insights_enabled: automatedInsightsEnabled,
         illustration_primary_color: fullTopicData?.illustration_primary_color ?? null,
+        events_enabled: fullTopicData?.events_enabled ?? false,
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);

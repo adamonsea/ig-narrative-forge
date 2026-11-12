@@ -17,7 +17,7 @@ const AI_MODEL = 'openai/gpt-6-astra';
 
 // ---------- fetching ----------
 
-function isPublicHttpUrl(raw: string): boolean {
+export function isPublicHttpUrl(raw: string): boolean {
   try {
     const u = new URL(raw);
     if (!/^https?:$/.test(u.protocol)) return false;

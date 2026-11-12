@@ -467,7 +467,7 @@ export function EditorialControlCenter({
                 <section><h3 className="mb-4 text-base font-semibold">Insight cards</h3><TopicInsightSettings topicId={topic.id} /></section>
                 <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Sentiment tracking</h3><SentimentKeywordSettings topicId={topic.id} /></section>
                 <section className="border-t border-border pt-8"><h3 className="mb-1 text-base font-semibold">Community signals</h3><p className="mb-5 text-sm text-muted-foreground">Monitor community discussion without changing the feed’s writing voice.</p><CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} /></section>
-                {topic.topic_type === "regional" && <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Local reporting tools</h3><RegionalFeaturesSettings topicId={topic.id} region={topic.region} parliamentaryEnabled={topic.parliamentary_tracking_enabled} eventsEnabled={topic.events_enabled} eventSourceUrl={topic.event_source_url} onUpdate={onUpdate} /></section>}
+                {topic.topic_type === "regional" && <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Local reporting tools</h3><RegionalFeaturesSettings topicId={topic.id} region={topic.region} parliamentaryEnabled={topic.parliamentary_tracking_enabled} onUpdate={onUpdate} /></section>}
               </div>
             )}
           </div>
