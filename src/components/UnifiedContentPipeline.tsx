@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Mail, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -16,6 +16,10 @@ import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStori
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 import { useTopicPulse } from "@/hooks/useTopicPulse";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
+import { useEventDesk, useEventDeskActions } from "@/hooks/useWhatsOnEvents";
+import { EventsSwitch, HiddenEvents, LiveWhatsOnRow, WaitingEventCard } from "@/components/events/DeskEvents";
+import { isLowRelevance, londonToday } from "@/lib/whatsOn";
+import { whatsOnPositions } from "@/lib/feedCardPositions";
 
 interface Topic {
   id: string;
@@ -49,7 +53,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
-  const [mobileView, setMobileView] = useState<'arrivals' | 'live'>('arrivals');
   const [loadingPreview, setLoadingPreview] = useState(false);
   const { toast } = useToast();
   
@@ -110,6 +113,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     loadingMorePublished,
     loadMorePublished
   } = useMultiTenantTopicPipeline(selectedTopicId);
+
+  // Events flow through the same pipeline: Waiting (Publish / Skip), Hidden, and the What's on set in Live
+  const { data: eventDesk } = useEventDesk(selectedTopicId || propTopicId);
+  const eventActions = useEventDeskActions(selectedTopicId || propTopicId);
 
   const multiTenantActions = useMultiTenantActions();
   const pulseCtx = useTopicPulse();
@@ -220,7 +227,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     try {
       await handleMultiTenantRejectStory(storyId);
       await refreshContent();
-      toast({ title: "Story Rejected", description: "Story has been rejected and returned to Arrivals" });
+      toast({ title: "Story Rejected", description: "Story has been rejected and returned to Waiting" });
     } catch (error) {
       console.error('Error rejecting story:', error);
       toast({ title: "Error", description: "Failed to reject story", variant: "destructive" });
@@ -320,8 +327,37 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
   }, [visibleIdsKey, setPulseIds]);
 
+  // ----- events on the Desk -----
+  const eventsOn = Boolean(eventDesk?.eventsOn);
+  const waitingEvents = eventsOn ? eventDesk?.waiting ?? [] : [];
+  const hiddenEvents = eventsOn ? eventDesk?.hidden ?? [] : [];
+  const waitingCount = totalArticles + waitingEvents.length;
+  const today = londonToday();
+  const waitingEventItems = waitingEvents.map((e) => ({
+    id: e.id,
+    at: Date.parse(e.created_at) || 0,
+    low: isLowRelevance(e.relevance_score),
+    node: <WaitingEventCard event={e} onPublish={() => eventActions.publish(e)} onSkip={() => eventActions.skip(e)} />,
+  }));
+  // The What's on set sits in Live exactly where readers see it (same rule as the feed).
+  const whatsOnAt = new Set(whatsOnPositions(Math.max(visibleStories.length, 1)));
+  const renderWhatsOnAfter = eventsOn && eventDesk
+    ? (position: number) => {
+        if (!whatsOnAt.has(position)) return null;
+        const first = position === 1;
+        // Not shown to readers (or nothing to show): one row at the top to switch it on, no repeats
+        if (!first && (!eventDesk.showInFeed || eventDesk.live.length === 0)) return null;
+        return (
+          <div className="py-1">
+            <LiveWhatsOnRow first={first} events={eventDesk.live} today={today} showInFeed={eventDesk.showInFeed} liveMore={eventDesk.liveMore}
+              onToggleShow={eventActions.setShowInFeed} onRemove={(e) => eventActions.removeFromLive(e)} />
+          </div>
+        );
+      }
+    : undefined;
+
   return (
-    <div className="space-y-4">
+    <div className="max-w-3xl space-y-4">
       {/* Quiet inline load-error banner with retry — replaces the old per-refresh error toasts */}
       {loadError && (
         <div
@@ -340,153 +376,143 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         </div>
       )}
 
-      {/* Mobile switch between the two columns */}
-      <div className="md:hidden flex items-center gap-2" role="tablist" aria-label="Pipeline view">
-        {(["arrivals", "live"] as const).map((view) => (
-          <button
-            key={view}
-            type="button"
-            role="tab"
-            aria-selected={mobileView === view}
-            onClick={() => setMobileView(view)}
-            className={`flex-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
-              mobileView === view ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {view === "arrivals" ? `Arrivals (${totalArticles})` : `Live (${visibleStories.length})`}
-          </button>
-        ))}
-      </div>
-
-      {/* Arrivals beside Live */}
-      <div className="grid gap-6 md:grid-cols-3 items-start">
-        {/* Arrivals — one third */}
-        <section
-          className={`md:col-span-1 space-y-3 rounded-2xl bg-muted/40 p-3 md:p-4 ${mobileView === "arrivals" ? "" : "hidden md:block"}`}
-          aria-label="Arrivals"
-        >
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <h3 className="section-label text-foreground">Arrivals</h3>
-            {totalArticles > 0 && (
-              <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-medium text-background tabular-nums">{totalArticles}</span>
-            )}
-            <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
-          </div>
-          {(pulse?.new_arrivals ?? 0) > 0 && (
-            <p className="text-sm text-muted-foreground">{pulse!.new_arrivals} new since you last looked</p>
+      {/* One pipeline: Waiting (stories and events) on top, Live (what readers see) below */}
+      <section className="space-y-3" aria-labelledby="pipeline-waiting">
+        <div className="flex items-center gap-2 pb-2 border-b">
+          <h3 id="pipeline-waiting" className="section-label text-foreground">Waiting</h3>
+          {waitingCount > 0 && (
+            <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-medium text-background tabular-nums">{waitingCount}</span>
           )}
-          {totalArticles === 0 ? (
+          <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
+          <div className="ml-auto">
+            <EventsSwitch on={eventsOn} disabled={!eventDesk} onChange={eventActions.setEventsOn} />
+          </div>
+        </div>
+        {(pulse?.new_arrivals ?? 0) > 0 && (
+          <p className="text-sm text-muted-foreground">{pulse!.new_arrivals} new since you last looked</p>
+        )}
+        {waitingCount === 0 ? (
+          <div className="space-y-3">
+            <p className="flex items-center gap-2 text-muted-foreground"><Check className="h-4 w-4 text-primary" aria-hidden="true" />All caught up</p>
             <NextGatherPanel topicId={selectedTopicId} />
-          ) : (
-            <MultiTenantArticlesList
-              articles={articles}
-              processingArticle={processingArticle}
-              deletingArticles={deletingArticles}
-              animatingArticles={animatingArticles}
-              duplicateMap={duplicateMap}
-              slideQuantityOverrides={slideQuantities}
-              toneOverrides={toneOverrides}
-              writingStyleOverrides={writingStyleOverrides}
-              onSlideQuantityChange={handleSlideQuantityChange}
-              onToneOverrideChange={handleToneOverrideChange}
-              onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-              onPreview={handlePreviewArticle}
-              onApprove={(article, slideType, tone, writingStyle, generateIllustration) => 
-                handleMultiTenantApprove(article, slideType, tone, writingStyle, generateIllustration)
-              }
-              onDelete={handleMultiTenantDelete}
-              onBulkDelete={handleMultiTenantBulkDelete}
-              onPromote={promoteTopicArticle}
-              defaultTone={currentTopic?.default_tone || 'conversational'}
-              defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
-              onRefresh={refreshContent}
-              hasMoreArticles={hasMoreArticles}
-              totalArticlesCount={totalArticlesCount}
-              loadingMore={loadingMore}
-              onLoadMore={loadMoreArticles}
-            />
-          )}
-        </section>
-
-        {/* Live — two thirds */}
-        <section
-          className={`md:col-span-2 space-y-3 ${mobileView === "live" ? "" : "hidden md:block"}`}
-          aria-label="Live stories"
-        >
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <h3 className="section-label text-foreground">Live</h3>
-            <span className="text-xs text-muted-foreground tabular-nums">{visibleStories.length}</span>
-            {queueItems.length > 0 && (
-              <span className="inline-flex items-center gap-1 text-purple-bright animate-fade-in">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span className="text-xs">{queueItems.length} being prepared</span>
-              </span>
-            )}
-            <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
-            {stuckCount > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
-                    if (error) throw error;
-                    const recovered = data?.totalRecovered || 0;
-                    const processed = data?.processedNow || 0;
-                    toast({
-                      title: recovered ? "Processing stuck items…" : "Nothing to recover",
-                      description: recovered
-                        ? `Requeued ${recovered} · processed ${processed} now. Watch the Published tab.`
-                        : "No stuck items were found.",
-                    });
-                    refreshContent();
-                    // Poll a few times so the user sees items drain live.
-                    for (let i = 0; i < 6; i++) {
-                      await new Promise((r) => setTimeout(r, 5000));
-                      refreshContent();
-                    }
-                  } catch (error) {
-                    toast({ title: "Recovery Failed", description: error instanceof Error ? error.message : "Failed to recover stuck items", variant: "destructive" });
-                  }
-                }}
-                className="text-destructive border-destructive/50 hover:bg-destructive/10 h-7 text-xs"
-              >
-                <AlertCircle className="w-3 h-3 mr-1" />
-                Recover {stuckCount} stuck
-              </Button>
-            )}
           </div>
-          
-          {visibleStories.length === 0 && queueItems.length === 0 ? (
+        ) : (
+          <MultiTenantArticlesList
+            articles={articles}
+            processingArticle={processingArticle}
+            deletingArticles={deletingArticles}
+            animatingArticles={animatingArticles}
+            duplicateMap={duplicateMap}
+            slideQuantityOverrides={slideQuantities}
+            toneOverrides={toneOverrides}
+            writingStyleOverrides={writingStyleOverrides}
+            onSlideQuantityChange={handleSlideQuantityChange}
+            onToneOverrideChange={handleToneOverrideChange}
+            onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+            onPreview={handlePreviewArticle}
+            onApprove={(article, slideType, tone, writingStyle, generateIllustration) => 
+              handleMultiTenantApprove(article, slideType, tone, writingStyle, generateIllustration)
+            }
+            onDelete={handleMultiTenantDelete}
+            onBulkDelete={handleMultiTenantBulkDelete}
+            onPromote={promoteTopicArticle}
+            defaultTone={currentTopic?.default_tone || 'conversational'}
+            defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
+            onRefresh={refreshContent}
+            hasMoreArticles={hasMoreArticles}
+            totalArticlesCount={totalArticlesCount}
+            loadingMore={loadingMore}
+            onLoadMore={loadMoreArticles}
+            extraItems={waitingEventItems}
+            showTypeChips={waitingEvents.length > 0}
+          />
+        )}
+        {eventsOn && <HiddenEvents events={hiddenEvents} onRestore={(e) => eventActions.unhide(e)} />}
+      </section>
+
+      <section className="space-y-3 pt-4" aria-labelledby="pipeline-live">
+        <div className="flex items-center gap-2 pb-2 border-b">
+          <h3 id="pipeline-live" className="section-label text-foreground">Live</h3>
+          <span className="text-xs text-muted-foreground tabular-nums">{visibleStories.length}</span>
+          {queueItems.length > 0 && (
+            <span className="inline-flex items-center gap-1 text-purple-bright animate-fade-in">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="text-xs">{queueItems.length} being prepared</span>
+            </span>
+          )}
+          <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
+          {stuckCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
+                  if (error) throw error;
+                  const recovered = data?.totalRecovered || 0;
+                  const processed = data?.processedNow || 0;
+                  toast({
+                    title: recovered ? "Processing stuck items…" : "Nothing to recover",
+                    description: recovered
+                      ? `Requeued ${recovered} · processed ${processed} now. Watch Live.`
+                      : "No stuck items were found.",
+                  });
+                  refreshContent();
+                  for (let i = 0; i < 6; i++) {
+                    await new Promise((r) => setTimeout(r, 5000));
+                    refreshContent();
+                  }
+                } catch (error) {
+                  toast({ title: "Recovery Failed", description: error instanceof Error ? error.message : "Failed to recover stuck items", variant: "destructive" });
+                }
+              }}
+              className="text-destructive border-destructive/50 hover:bg-destructive/10 h-7 text-xs"
+            >
+              <AlertCircle className="w-3 h-3 mr-1" />
+              Recover {stuckCount} stuck
+            </Button>
+          )}
+          <span className="ml-auto hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
+            <Mail className="h-3.5 w-3.5" aria-hidden="true" />The weekly email takes what's here
+          </span>
+        </div>
+
+        {visibleStories.length === 0 && queueItems.length === 0 ? (
+          <div className="space-y-3">
+            {eventsOn && eventDesk && (
+              <LiveWhatsOnRow first events={eventDesk.live} today={today} showInFeed={eventDesk.showInFeed} liveMore={eventDesk.liveMore}
+                onToggleShow={eventActions.setShowInFeed} onRemove={(e) => eventActions.removeFromLive(e)} />
+            )}
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No generated stories</p>
-              <p className="text-sm mt-2">Approved arrivals will appear here while they are generated and published.</p>
+              <p>Nothing live yet</p>
+              <p className="text-sm mt-2">Approved stories appear here while they are written and published.</p>
             </div>
-          ) : (
-            <PublishedStoriesList 
-              stories={visibleStories}
-              processingItems={queueItems}
-              onArchive={handleArchiveStory}
-              onReturnToReview={handleMultiTenantRejectStory}
-              onDelete={handleMultiTenantRejectStory}
-              onViewStory={handleViewStory}
-              onCancelProcessing={handleMultiTenantCancelQueue}
-              onRefresh={refreshContent}
-              loading={loading}
-              topicSlug={topicSlug}
-              topicId={selectedTopicId}
-              storyReads={pulse?.story_reads}
-              risingStoryId={pulse?.rising_story_id ?? null}
-              readingNowIds={pulse?.reading_now_story_ids}
-              totalPublishedCount={totalPublishedCount}
-              hasMorePublished={hasMorePublished}
-              loadingMorePublished={loadingMorePublished}
-              onLoadMorePublished={loadMorePublished}
-            />
-          )}
-        </section>
-      </div>
+          </div>
+        ) : (
+          <PublishedStoriesList 
+            stories={visibleStories}
+            processingItems={queueItems}
+            onArchive={handleArchiveStory}
+            onReturnToReview={handleMultiTenantRejectStory}
+            onDelete={handleMultiTenantRejectStory}
+            onViewStory={handleViewStory}
+            onCancelProcessing={handleMultiTenantCancelQueue}
+            onRefresh={refreshContent}
+            loading={loading}
+            topicSlug={topicSlug}
+            topicId={selectedTopicId}
+            storyReads={pulse?.story_reads}
+            risingStoryId={pulse?.rising_story_id ?? null}
+            readingNowIds={pulse?.reading_now_story_ids}
+            totalPublishedCount={totalPublishedCount}
+            hasMorePublished={hasMorePublished}
+            loadingMorePublished={loadingMorePublished}
+            onLoadMorePublished={loadMorePublished}
+            renderAfterFeedPosition={renderWhatsOnAfter}
+          />
+        )}
+      </section>
 
       {/* Article Preview Dialog */}
       <Dialog open={previewArticle !== null} onOpenChange={(open) => !open && setPreviewArticle(null)}>

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { EventSourceAddPanel, EventSourceCards } from '@/components/events/EventSources';
+import { detectSourceKind, isEventsSourceKind } from '@/lib/whatsOn';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -199,6 +201,7 @@ export const UnifiedSourceManager = ({
     }
   };
   
+  const [eventSourcesReload, setEventSourcesReload] = useState(0);
   const [newSource, setNewSource] = useState({
     source_name: '',
     feed_url: '',
@@ -1444,6 +1447,9 @@ export const UnifiedSourceManager = ({
     }
   };
 
+  // Events sources (what's-on pages, calendar feeds) share the one add box; the link decides.
+  const isEventsLink = mode === 'topic' && !!topicId && !!newSource.feed_url.trim() && isEventsSourceKind(detectSourceKind(newSource.feed_url));
+
   const getDisplayTitle = () => {
     if (title) return title;
     if (mode === 'topic' && currentTopic) return `${currentTopic.name} Sources`;
@@ -1619,14 +1625,14 @@ export const UnifiedSourceManager = ({
       {showAddForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add New Content Source</CardTitle>
+            <CardTitle>Add a source</CardTitle>
             <CardDescription>
-              Add and validate content sources with enhanced error detection
+              News sites, RSS feeds, what's-on pages and calendar feeds. We work out which from the link.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className={`grid grid-cols-1 gap-4 ${isEventsLink ? "" : "md:grid-cols-2"}`}>
+              <div className={isEventsLink ? "hidden" : ""}>
                 <Label htmlFor="source-name">Source Name *</Label>
                 <Input
                   id="source-name"
@@ -1636,17 +1642,18 @@ export const UnifiedSourceManager = ({
                 />
               </div>
               <div>
-                <Label htmlFor="feed-url">Website or RSS URL *</Label>
+                <Label htmlFor="feed-url">Link *</Label>
                 <div className="flex gap-2">
                   <Input
                     id="feed-url"
-                    placeholder="https://example.com OR https://example.com/feed.xml"
+                    placeholder="Paste a news site, RSS feed or what's-on page"
                     value={newSource.feed_url}
                     onChange={(e) => setNewSource(prev => ({ ...prev, feed_url: e.target.value }))}
                   />
                   <Button
                     type="button"
                     variant="outline"
+                    className={isEventsLink ? "hidden" : ""}
                     onClick={() => validateSource(newSource.feed_url)}
                     disabled={!newSource.feed_url.trim() || validating}
                   >
@@ -1658,11 +1665,24 @@ export const UnifiedSourceManager = ({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Works with any website - RSS feeds, news sites, or regular web pages
+                  {isEventsLink ? 'Events source: what comes through goes to your Desk.' : 'Works with any website - RSS feeds, news sites, or regular web pages'}
                 </p>
               </div>
             </div>
 
+            {isEventsLink && topicId && (
+              <EventSourceAddPanel
+                topicId={topicId}
+                url={newSource.feed_url}
+                onSaved={() => {
+                  setNewSource((prev) => ({ ...prev, source_name: '', feed_url: '' }));
+                  setShowAddForm(false);
+                  setEventSourcesReload((n) => n + 1);
+                }}
+              />
+            )}
+
+            {!isEventsLink && (<>
             {/* Validation Results */}
             {validationResult && (
               <Alert className={validationResult.success ? "" : "border-orange-500"}>
@@ -1788,6 +1808,7 @@ export const UnifiedSourceManager = ({
                 )}
               </Button>
             </div>
+            </>)}
           </CardContent>
         </Card>
       )}
@@ -1942,6 +1963,8 @@ export const UnifiedSourceManager = ({
             </CardContent>
           </Card>
         ))}
+
+        {mode === 'topic' && topicId && <EventSourceCards topicId={topicId} reloadKey={eventSourcesReload} />}
 
         {sources.length === 0 && !loading && (
           <div className="text-center py-12">

@@ -17,7 +17,7 @@ interface RegionalFeaturesSettingsProps {
   onUpdate?: () => void;
 }
 
-// Events (switch, feed tick box and sources) live in the Sources tab — see components/events/WhatsOnSources.tsx
+// Events (switch, Show in the feed) live on the Desk; events sources live in the one Sources list.
 export const RegionalFeaturesSettings = ({
   topicId,
   region: initialRegion,
