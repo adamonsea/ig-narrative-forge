@@ -1332,8 +1332,10 @@ export type Database = {
           end_time: string | null
           event_source_id: string | null
           event_type: string
+          exclusion_reason: string | null
           external_id: string | null
           id: string
+          kept_by_owner: boolean
           location: string | null
           price: string | null
           rank_position: number | null
@@ -1356,8 +1358,10 @@ export type Database = {
           end_time?: string | null
           event_source_id?: string | null
           event_type: string
+          exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          kept_by_owner?: boolean
           location?: string | null
           price?: string | null
           rank_position?: number | null
@@ -1380,8 +1384,10 @@ export type Database = {
           end_time?: string | null
           event_source_id?: string | null
           event_type?: string
+          exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          kept_by_owner?: boolean
           location?: string | null
           price?: string | null
           rank_position?: number | null
@@ -6932,6 +6938,18 @@ export type Database = {
           visits_today: number
         }[]
       }
+      get_topic_whats_on: {
+        Args: { p_topic_id: string }
+        Returns: {
+          id: string
+          location: string
+          source_name: string
+          source_url: string
+          start_date: string
+          start_time: string
+          title: string
+        }[]
+      }
       get_user_dashboard_stats: {
         Args: { p_user_id: string }
         Returns: {
@@ -7129,6 +7147,10 @@ export type Database = {
       set_topic_distribution: {
         Args: { p_enabled: boolean; p_field: string; p_topic_id: string }
         Returns: Json
+      }
+      set_topic_event_visibility: {
+        Args: { p_action: string; p_event_id: string }
+        Returns: number
       }
       settle_credit_reservation: {
         Args: { p_idempotency_key: string; p_user_id: string }

@@ -19,6 +19,10 @@ export interface ReaderEvent {
   category?: string | null;
   /** Per-event credit; falls back to the source's name. */
   source_name?: string | null;
+  /** Fuller address text for the location check only — never stored. */
+  place?: string | null;
+  /** The source marks it as online-only. */
+  online?: boolean;
 }
 
 export interface ReaderResult {
@@ -38,6 +42,4 @@ export interface EventReader {
   /** Does this address look like this kind of source? (cheap; may do one small fetch) */
   detect(url: string): Promise<boolean>;
   read(url: string): Promise<ReaderResult>;
-  /** Re-publish stored rows on every check (legacy calendar behaviour). Default: curator removals stick. */
-  republish?: boolean;
 }

@@ -121,7 +121,6 @@ export const calendarFeedReader: EventReader = {
   kind: 'calendar_feed',
   sourceApi: CALENDAR_SOURCE_API,
   externalId: (_sourceId, key) => key, // same ids as the legacy importer, so rows never double up
-  republish: true,
 
   async detect(url) {
     try {

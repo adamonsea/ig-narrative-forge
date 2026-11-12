@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { AlertTriangle, CalendarDays, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, CalendarDays, ChevronDown, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { eventSourceKindLabel, isBrokenWhatsOnSource, previewSentence } from "@/lib/whatsOn";
+import { eventSourceKindLabel, isBrokenWhatsOnSource, previewSentence, leftOutReason, leftOutSentence, dateBadge, londonToday } from "@/lib/whatsOn";
+import { useEventVisibility } from "@/hooks/useWhatsOnEvents";
 
 interface EventSource {
   id: string;
@@ -22,9 +23,20 @@ interface EventSource {
   consecutive_empty_checks: number;
 }
 
+interface LeftOut {
+  id: string;
+  title: string;
+  start_date: string;
+  location: string | null;
+  source_name: string | null;
+  status: string;
+  exclusion_reason: string | null;
+}
+
 interface Preview {
   kind: string;
   found: number;
+  excluded?: number;
   name: string;
   error: string | null;
   examples: { title: string; start_date: string }[];
@@ -67,15 +79,32 @@ export function WhatsOnSources({ topicId }: { topicId: string }) {
   const [busy, setBusy] = useState<"preview" | "save" | null>(null);
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string; url: string } | null>(null);
+  const [leftOut, setLeftOut] = useState<LeftOut[]>([]);
+  const [showLeftOut, setShowLeftOut] = useState(false);
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const { restore: restoreEvent } = useEventVisibility(topicId);
 
   const load = useCallback(async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const [{ data: rows }, { data: evs }, { data: topic }, { data: insight }] = await Promise.all([
+    const today = londonToday();
+    const [{ data: rows }, { data: evs }, { data: topic }, { data: insight }, { data: out }] = await Promise.all([
       supabase.from("event_sources").select("id, url, name, kind, last_checked_at, last_error, consecutive_empty_checks").eq("topic_id", topicId).order("created_at"),
       supabase.from("events").select("event_source_id").eq("topic_id", topicId).eq("status", "published").not("event_source_id", "is", null).gte("start_date", today).limit(1000),
       supabase.from("topics").select("events_enabled").eq("id", topicId).maybeSingle(),
       supabase.from("topic_insight_settings").select("events_cards_enabled").eq("topic_id", topicId).maybeSingle(),
+      supabase.from("events").select("id, title, start_date, location, source_name, status, exclusion_reason")
+        .eq("topic_id", topicId).in("status", ["excluded", "deleted"]).gte("start_date", today)
+        .order("start_date").limit(500),
     ]);
+    // One line per event (repeat dates and repeat listings of the same show collapse to the soonest)
+    const seen = new Set<string>();
+    const outList: LeftOut[] = [];
+    for (const e of (out as any[]) ?? []) {
+      const k = String(e.title).toLowerCase().trim();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      outList.push(e as LeftOut);
+    }
+    setLeftOut(outList);
     setSources((rows as unknown as EventSource[]) ?? []);
     const counts: Record<string, number> = {};
     for (const e of (evs as any[]) ?? []) {
@@ -187,6 +216,20 @@ export function WhatsOnSources({ topicId }: { topicId: string }) {
     load();
   };
 
+  const bringBack = async (e: LeftOut) => {
+    setRestoring(e.id);
+    try {
+      await restoreEvent(e.id);
+      setLeftOut((list) => list.filter((x) => x.id !== e.id));
+      toast({ title: "Back in your feed", description: e.title });
+      load();
+    } catch {
+      toast({ title: "Couldn't bring that event back", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setRestoring(null);
+    }
+  };
+
   const example = preview?.examples?.[0] ?? null;
 
   return (
@@ -257,9 +300,16 @@ export function WhatsOnSources({ topicId }: { topicId: string }) {
                 <p className="text-sm text-muted-foreground">{eventSourceKindLabel(preview.kind)}</p>
               )}
               <p className={preview.found > 0 ? "text-base" : "text-sm text-muted-foreground"}>
-                {preview.found > 0 ? previewSentence(preview.found, example) : preview.error || previewSentence(0)}
+                {preview.found > 0
+                  ? previewSentence(preview.found, example)
+                  : (preview.excluded ?? 0) > 0
+                    ? "None of the events on this page are in your area."
+                    : preview.error || previewSentence(0)}
               </p>
-              {preview.found > 0 && (
+              {preview.found > 0 && leftOutSentence(preview.excluded) && (
+                <p className="text-sm text-muted-foreground">{leftOutSentence(preview.excluded)}</p>
+              )}
+              {(preview.found > 0 || (preview.excluded ?? 0) > 0) && (
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                   <div className="flex-1 space-y-1">
                     <Label htmlFor="events-source-name" className="text-sm text-muted-foreground">Shown to readers as</Label>
@@ -341,6 +391,47 @@ export function WhatsOnSources({ topicId }: { topicId: string }) {
             );
           })}
         </ul>
+      )}
+
+      {leftOut.length > 0 && (
+        <div className="rounded-xl border">
+          <button
+            type="button"
+            onClick={() => setShowLeftOut((v) => !v)}
+            aria-expanded={showLeftOut}
+            className="flex w-full items-center justify-between gap-3 p-4 text-left text-sm"
+          >
+            <span>
+              <span className="font-medium">{leftOut.length} {leftOut.length === 1 ? "event" : "events"} left out of your feed</span>
+              <span className="text-muted-foreground"> · outside your area or removed by you</span>
+            </span>
+            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showLeftOut ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+          {showLeftOut && (
+            <ul className="divide-y border-t">
+              {leftOut.map((e) => {
+                const d = dateBadge(e.start_date);
+                return (
+                  <li key={e.id} className="flex items-start justify-between gap-4 p-4">
+                    <div className="min-w-0">
+                      <p className="font-medium">{e.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {`${d.weekday.charAt(0)}${d.weekday.slice(1).toLowerCase()} ${d.day} ${d.month.charAt(0)}${d.month.slice(1).toLowerCase()}`}
+                        {e.location ? ` · ${e.location}` : ""}
+                        {e.source_name ? ` · ${e.source_name}` : ""}
+                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">{leftOutReason(e.status, e.exclusion_reason)}</p>
+                    </div>
+                    <Button variant="outline" size="sm" disabled={restoring !== null} onClick={() => bringBack(e)}>
+                      {restoring === e.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Put back
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </section>
   );

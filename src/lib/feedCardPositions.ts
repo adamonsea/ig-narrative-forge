@@ -67,12 +67,12 @@ export const FEED_CARD_POSITIONS = {
     description: 'Interactive quiz questions'
   } as RepeatingCardPosition,
 
-  // Events accordion: positions 11, 22, 33...
+  // What's on card sets (3–4 events each, next set per slot): positions 11, 22, 33...
   events: {
     type: 'repeating',
     interval: 11,
     offset: 0,
-    description: 'Local events listing'
+    description: "What's on card sets"
   } as RepeatingCardPosition,
 
   // Parliamentary insight cards (MAJOR votes only): positions 8, 21, 34...
@@ -160,6 +160,18 @@ export function getCardIndex(
   }
   
   return Math.floor((storyIndex - config.offset) / config.interval);
+}
+
+/**
+ * Which appearance this is in the feed as actually rendered (story positions start at 1):
+ * 0 for the first time the card shows, 1 for the second, and so on.
+ */
+export function getCardSlot(
+  cardType: keyof typeof FEED_CARD_POSITIONS,
+  storyIndex: number
+): number {
+  if (storyIndex <= 1) return 0;
+  return getCardPositions(cardType, storyIndex - 1).filter((p) => p >= 1).length;
 }
 
 /**

@@ -89,5 +89,9 @@ Events: one home and one sources list (12 November 2026)
 - [x] Report why new events weren't visible (feed never loaded the Events switch)
 - [x] Events switch + "Show in the feed" tick box in Sources > What's on; old toggles removed
 - [x] event_sources holds every kind (what's-on page, calendar feed), auto-detected, with status/refresh/edit/remove
-- [ ] What's on card set in the feed (14 days, up to 8) — waiting on Adam's approval of the mock
-- [ ] Drop topics.event_source_url and retire ingest-chamber-events — after Adam confirms the calendar feed row works
+- [x] What's on card sets in the feed (mock approved): 14 days, soonest first, 3–4 per set, next set at each events slot
+- [x] Location filter on place-based feeds: out-of-area / online events left out automatically, listed in Sources with "Put back"
+- [x] Owner removes an event from its card (with Undo); removals and put-backs stick by event name across the feed
+- [x] Old Chamber importer no longer brings back removed events
+- [ ] Drop topics.event_source_url and retire ingest-chamber-events — new reader matches it; waiting on Adam's go-ahead
+- [ ] Add BN20 to Eastbourne's postcodes? (Meads/Old Town) — waiting on Adam; filter already copes when the address names Eastbourne

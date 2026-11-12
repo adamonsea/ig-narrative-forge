@@ -63,14 +63,23 @@ Deno.test('a date far away from the title is not used', () => {
 Deno.test('JSON-LD events, including nested graphs and subtype names', () => {
   const html = `<script type="application/ld+json">{"@graph":[{"@type":"TheaterEvent","name":"Panto &amp; Fun","startDate":"2026-12-10T14:00:00+00:00","location":{"name":"Royal Hippodrome"},"url":"/panto"},{"@type":"Organization","name":"x"}]}</script>`;
   assertEquals(extractJsonLdEvents(html, 'https://venue.org/whats-on'), [
-    { title: 'Panto & Fun', start_date: '2026-12-10', start_time: '14:00:00', venue: 'Royal Hippodrome', url: 'https://venue.org/panto' },
+    { title: 'Panto & Fun', start_date: '2026-12-10', start_time: '14:00:00', venue: 'Royal Hippodrome', url: 'https://venue.org/panto', place: 'Royal Hippodrome', online: false },
   ]);
+});
+
+Deno.test('JSON-LD address and online-only events feed the location check', () => {
+  const html = `<script type="application/ld+json">[{"@type":"Event","name":"Board games","startDate":"2026-12-10T19:00","location":{"@type":"Place","name":"The Dice Box","address":{"streetAddress":"12 Grove Rd","addressLocality":"Eastbourne","postalCode":"BN21 4TX"}}},{"@type":"Event","name":"Talk","startDate":"2026-12-11T19:00","eventAttendanceMode":"https://schema.org/OnlineEventAttendanceMode","location":{"@type":"VirtualLocation","url":"https://zoom.us/x"}}]</script>`;
+  const [a, b] = extractJsonLdEvents(html, 'https://x.org/');
+  assertEquals(a.place, 'The Dice Box, 12 Grove Rd, Eastbourne, BN21 4TX');
+  assertEquals(a.online, false);
+  assertEquals(b.venue, null);
+  assertEquals(b.online, true);
 });
 
 Deno.test('iCal feeds', () => {
   const ics = 'BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:Choir\\, festive\r\nDTSTART;TZID=Europe/London:20261212T173000\r\nLOCATION:St Saviour\'s\\, Eastbourne\r\nURL:https://x.org/e/1\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nSUMMARY:Cancelled thing\r\nSTATUS:CANCELLED\r\nDTSTART;VALUE=DATE:20261213\r\nEND:VEVENT\r\nEND:VCALENDAR';
   assertEquals(parseIcs(ics, 'https://x.org/cal.ics'), [
-    { title: 'Choir, festive', start_date: '2026-12-12', start_time: '17:30:00', venue: "St Saviour's", url: 'https://x.org/e/1' },
+    { title: 'Choir, festive', start_date: '2026-12-12', start_time: '17:30:00', venue: "St Saviour's", url: 'https://x.org/e/1', place: "St Saviour's, Eastbourne" },
   ]);
   assertEquals(findCalendarFeedLinks('<a href="webcal://x.org/a.ics">Add</a><a href="/musical/show">Show</a>', 'https://x.org/'), ['https://x.org/a.ics']);
 });

@@ -17,6 +17,10 @@ export interface WhatsOnEvent {
   start_time: string | null; // HH:MM:SS
   venue: string | null;
   url: string | null;
+  /** Fuller address text, used only for the location check — never stored. */
+  place?: string | null;
+  /** The source marks it as online-only. */
+  online?: boolean;
 }
 
 export type WhatsOnMethod = 'jsonld' | 'ical' | 'json' | 'text';
@@ -254,6 +258,31 @@ function venueName(location: unknown): string | null {
   return null;
 }
 
+/** Venue name plus address parts, for the location check only. */
+function placeText(location: unknown): string | null {
+  const loc = Array.isArray(location) ? location[0] : location;
+  if (!loc) return null;
+  if (typeof loc === 'string') return clean(loc, 300);
+  if (typeof loc !== 'object') return null;
+  const o = loc as Record<string, unknown>;
+  const parts: unknown[] = [o.name];
+  const addr = o.address;
+  if (typeof addr === 'string') parts.push(addr);
+  else if (addr && typeof addr === 'object') {
+    const a = addr as Record<string, unknown>;
+    parts.push(a.streetAddress, a.addressLocality, a.addressRegion, a.postalCode);
+  }
+  const text = parts.map((x) => clean(x, 120)).filter(Boolean).join(', ');
+  return text || null;
+}
+
+function isOnlineOnly(o: Record<string, unknown>): boolean {
+  const mode = String(o.eventAttendanceMode ?? '');
+  if (/Online/i.test(mode) && !/Mixed/i.test(mode)) return true;
+  const loc = Array.isArray(o.location) ? o.location : [o.location];
+  return loc.length > 0 && loc.every((l) => l && typeof l === 'object' && (l as Record<string, unknown>)['@type'] === 'VirtualLocation');
+}
+
 export function extractJsonLdEvents(html: string, pageUrl: string): WhatsOnEvent[] {
   const out: WhatsOnEvent[] = [];
   const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -272,6 +301,8 @@ export function extractJsonLdEvents(html: string, pageUrl: string): WhatsOnEvent
           start_time: when.time,
           venue: venueName(o.location),
           url: absolute(typeof o.url === 'string' ? o.url : null, pageUrl),
+          place: placeText(o.location),
+          online: isOnlineOnly(o),
         });
       }
     }
@@ -347,6 +378,7 @@ export function parseIcs(text: string, feedUrl: string): WhatsOnEvent[] {
             start_time: when.time,
             venue: cur.LOCATION ? clean(icsUnescape(cur.LOCATION.value).split(',')[0], 160) : null,
             url: absolute(cur.URL ? icsUnescape(cur.URL.value) : null, feedUrl),
+            place: cur.LOCATION ? clean(icsUnescape(cur.LOCATION.value), 300) : null,
           });
         }
       }
@@ -392,6 +424,7 @@ export function parseJsonFeed(data: unknown, feedUrl: string): WhatsOnEvent[] {
       start_time: when.time,
       venue: typeof venue === 'string' ? clean(venue, 160) : null,
       url: absolute(pick(o, ['url', 'link', 'permalink', 'htmlLink']) as string, feedUrl),
+      place: placeText(pick(o, ['venue', 'location'])),
     });
   }
   return out;

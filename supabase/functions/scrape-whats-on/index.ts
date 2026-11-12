@@ -12,6 +12,9 @@
  *   {} or { action: 'refresh_all' }                        daily job (EVENTS_CRON_TOKEN / service role)
  *
  * Stores facts and the link only: title, start date/time, venue, source URL, source name.
+ * On place-based feeds, events outside the area are stored as 'excluded' (with a reason)
+ * so the owner can see and restore them in Sources; they never reach readers.
+ * Owner removals and restores stick across refreshes (by event name, across the feed).
  */
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -20,6 +23,7 @@ import { getUser, userOwnsTopic, isServiceRole } from '../_shared/auth.ts';
 import { londonToday } from './extract.ts';
 import { isPublicHttpUrl } from './read.ts';
 import { detectKind, isEventSourceKind, readerFor, type EventReader, type ReaderEvent, type ReaderResult } from './readers/index.ts';
+import { buildPlaceProfile, judgeEvents, type PlaceProfile, type Verdict } from './locality.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -51,37 +55,121 @@ async function readSafely(reader: EventReader, url: string, fallbackName: string
 
 const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 
+// ---------- location filter ----------
+
+type Profiles = Map<string, PlaceProfile | null>;
+
+async function placeProfileFor(supabase: Db, profiles: Profiles, topicId: string): Promise<PlaceProfile | null> {
+  if (profiles.has(topicId)) return profiles.get(topicId)!;
+  const { data } = await supabase.from('topics')
+    .select('topic_type, region, landmarks, postcodes, organizations, competing_regions')
+    .eq('id', topicId).maybeSingle();
+  const profile = buildPlaceProfile(data);
+  profiles.set(topicId, profile);
+  return profile;
+}
+
+const titleKey = (t: string) => t.toLowerCase().replace(/\s+/g, ' ').trim();
+
+function chunks<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
 // ---------- storing (shared by every kind) ----------
 
-async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[]) {
+async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], verdicts: Verdict[]) {
   if (!events.length) return; // never wipe a source's events on an empty read
   const now = new Date().toISOString();
-  const rows = events.map((e) => ({
-    topic_id: source.topic_id,
-    event_source_id: source.id,
-    source_api: reader.sourceApi,
-    external_id: reader.externalId(source.id, e.key),
-    title: e.title,
-    description: e.description ?? null,
-    start_date: e.start_date,
-    start_time: e.start_time,
-    end_time: e.end_time ?? null,
-    location: e.venue,
-    category: e.category ?? null,
-    source_url: e.url || source.url,
-    source_name: e.source_name || source.name,
-    event_type: 'events',
-    updated_at: now,
-    // status only for readers that re-publish; otherwise curator removals stay removed
-    ...(reader.republish ? { status: 'published' } : {}),
-  }));
-  const { error } = await supabase.from('events').upsert(rows, { onConflict: 'topic_id,source_api,external_id' });
+  const ids = events.map((e) => reader.externalId(source.id, e.key));
+
+  // What the owner has already decided: removals and restores stick.
+  const existing = new Map<string, { status: string; kept_by_owner: boolean; exclusion_reason: string | null }>();
+  for (const part of chunks(ids, 150)) {
+    const { data } = await supabase.from('events').select('external_id, status, kept_by_owner, exclusion_reason')
+      .eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
+    for (const r of data || []) existing.set(r.external_id, r);
+  }
+  const removedTitles = new Set<string>();
+  const keptTitles = new Set<string>();
+  // By name across the whole feed: removing a show removes it whichever source lists it
+  const { data: decided } = await supabase.from('events').select('title, status, kept_by_owner')
+    .eq('topic_id', source.topic_id).or('status.eq.deleted,kept_by_owner.eq.true').limit(5000);
+  for (const r of decided || []) {
+    if (r.status === 'deleted') removedTitles.add(titleKey(r.title));
+    else if (r.kept_by_owner) keptTitles.add(titleKey(r.title));
+  }
+
+  const rows = events.map((e, i) => {
+    const id = ids[i];
+    const prev = existing.get(id);
+    const t = titleKey(e.title);
+    const verdict = verdicts[i] ?? { keep: true };
+    let status: string;
+    let reason: string | null = null;
+    let kept = Boolean(prev?.kept_by_owner) || keptTitles.has(t);
+    if (prev?.status === 'deleted' || (!prev?.kept_by_owner && removedTitles.has(t))) {
+      status = 'deleted';
+      kept = false;
+    } else if (kept || verdict.keep) {
+      status = 'published';
+    } else {
+      status = 'excluded';
+      reason = verdict.reason;
+    }
+    return {
+      topic_id: source.topic_id,
+      event_source_id: source.id,
+      source_api: reader.sourceApi,
+      external_id: id,
+      title: e.title,
+      description: e.description ?? null,
+      start_date: e.start_date,
+      start_time: e.start_time,
+      end_time: e.end_time ?? null,
+      location: e.venue,
+      category: e.category ?? null,
+      source_url: e.url || source.url,
+      source_name: e.source_name || source.name,
+      event_type: 'events',
+      status,
+      exclusion_reason: reason,
+      kept_by_owner: kept,
+      updated_at: now,
+    };
+  });
+  // One row per id (a source can repeat itself)
+  const unique = [...new Map(rows.map((r) => [r.external_id, r])).values()];
+  const { error } = await supabase.from('events').upsert(unique, { onConflict: 'topic_id,source_api,external_id' });
   if (error) throw new Error(error.message);
   // Drop upcoming events from this source that it no longer lists
-  const keep = rows.map((r) => `"${String(r.external_id).replace(/"/g, '')}"`).join(',');
+  const keep = unique.map((r) => `"${String(r.external_id).replace(/"/g, '')}"`).join(',');
   await supabase.from('events').delete()
     .eq('event_source_id', source.id).gte('start_date', londonToday())
     .not('external_id', 'in', `(${keep})`);
+}
+
+/**
+ * When a source can't be read, still apply the location filter to what's already
+ * stored from it (title and venue only), so a blocked page can't keep
+ * out-of-area events in the feed.
+ */
+async function filterStored(supabase: Db, source: Source, profile: PlaceProfile | null) {
+  if (!profile) return;
+  const { data } = await supabase.from('events').select('id, title, location')
+    .eq('event_source_id', source.id).eq('status', 'published').eq('kept_by_owner', false)
+    .gte('start_date', londonToday()).limit(1000);
+  const rows = (data || []) as { id: string; title: string; location: string | null }[];
+  if (!rows.length) return;
+  const verdicts = judgeEvents(rows.map((r) => ({ title: r.title, venue: r.location })), profile, source.url);
+  const byReason = new Map<string, string[]>();
+  verdicts.forEach((v, i) => { if (!v.keep) byReason.set(v.reason, [...(byReason.get(v.reason) || []), rows[i].id]); });
+  for (const [reason, ids] of byReason) {
+    for (const part of chunks(ids, 150)) {
+      await supabase.from('events').update({ status: 'excluded', exclusion_reason: reason, updated_at: new Date().toISOString() }).in('id', part);
+    }
+  }
 }
 
 async function deleteUpcoming(supabase: Db, source: Source) {
@@ -111,11 +199,17 @@ async function mirrorLegacyCalendarUrl(supabase: Db, source: Source, newUrl: str
   }
 }
 
-async function checkSource(supabase: Db, source: Source) {
+async function checkSource(supabase: Db, profiles: Profiles, source: Source) {
   const reader = readerFor(source.kind);
   const result = await readSafely(reader, source.url, source.name);
+  const profile = await placeProfileFor(supabase, profiles, source.topic_id);
+  const verdicts = judgeEvents(result.events, profile, source.url);
+  const excluded = verdicts.filter((v) => !v.keep).length;
   let storeError: string | null = null;
-  try { await storeEvents(supabase, reader, source, result.events); } catch (e) { storeError = e instanceof Error ? e.message : 'Store failed'; }
+  try {
+    if (result.events.length) await storeEvents(supabase, reader, source, result.events, verdicts);
+    else await filterStored(supabase, source, profile);
+  } catch (e) { storeError = e instanceof Error ? e.message : 'Store failed'; }
   const empty = result.events.length === 0;
   await supabase.from('event_sources').update({
     last_checked_at: new Date().toISOString(),
@@ -125,17 +219,22 @@ async function checkSource(supabase: Db, source: Source) {
     method: result.method ?? source.method ?? null,
     updated_at: new Date().toISOString(),
   }).eq('id', source.id);
-  return { sourceId: source.id, name: source.name, kind: reader.kind, found: result.events.length, method: result.method, error: result.error ?? storeError };
+  return { sourceId: source.id, name: source.name, kind: reader.kind, found: result.events.length - excluded, excluded, method: result.method, error: result.error ?? storeError };
 }
 
-const summarise = (kind: string, r: ReaderResult) => ({
-  kind,
-  found: r.events.length,
-  method: r.method,
-  name: r.name,
-  error: r.error ?? null,
-  examples: r.events.slice(0, 3).map((e) => ({ title: e.title, start_date: e.start_date, start_time: e.start_time, venue: e.venue })),
-});
+/** found = events that will reach readers; excluded = left out by the location filter. */
+const summarise = (kind: string, r: ReaderResult, verdicts: Verdict[] = []) => {
+  const kept = r.events.filter((_, i) => verdicts[i]?.keep !== false);
+  return {
+    kind,
+    found: kept.length,
+    excluded: r.events.length - kept.length,
+    method: r.method,
+    name: r.name,
+    error: r.error ?? null,
+    examples: kept.slice(0, 3).map((e) => ({ title: e.title, start_date: e.start_date, start_time: e.start_time, venue: e.venue })),
+  };
+};
 
 // ---------- handler ----------
 
@@ -144,6 +243,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const profiles: Profiles = new Map();
 
   try {
     const raw = await req.json().catch(() => ({}));
@@ -160,7 +260,7 @@ Deno.serve(async (req) => {
       const { data: sources, error } = await supabase.from('event_sources').select('*').eq('is_active', true).order('last_checked_at', { ascending: true, nullsFirst: true }).limit(60);
       if (error) throw error;
       const results = [];
-      for (const s of sources || []) results.push(await checkSource(supabase, s));
+      for (const s of sources || []) results.push(await checkSource(supabase, profiles, s));
       console.log(`refresh_all: ${results.length} sources`, JSON.stringify(results));
       return json({ success: true, results });
     }
@@ -176,7 +276,8 @@ Deno.serve(async (req) => {
       const kind = body.action === 'save' && isEventSourceKind(body.kind) ? body.kind : await detectKind(url);
       const reader = readerFor(kind);
       const result = await readSafely(reader, url, hostOf(url));
-      const summary = summarise(kind, result);
+      const verdicts = judgeEvents(result.events, await placeProfileFor(supabase, profiles, body.topicId), url);
+      const summary = summarise(kind, result, verdicts);
       if (body.action === 'preview') return json({ success: true, ...summary });
 
       if (!result.events.length) return json({ success: false, ...summary, error: summary.error || 'No upcoming events found at this address.' }, 422);
@@ -187,7 +288,7 @@ Deno.serve(async (req) => {
         last_error: null, updated_at: new Date().toISOString(),
       }, { onConflict: 'topic_id,url' }).select('*').single();
       if (error) throw error;
-      await storeEvents(supabase, reader, source, result.events);
+      await storeEvents(supabase, reader, source, result.events, verdicts);
       return json({ success: true, ...summary, name, sourceId: source.id });
     }
 
@@ -212,7 +313,8 @@ Deno.serve(async (req) => {
         const kind = await detectKind(newUrl);
         const reader = readerFor(kind);
         const result = await readSafely(reader, newUrl, hostOf(newUrl));
-        if (!result.events.length) return json({ success: false, ...summarise(kind, result), error: result.error || 'No upcoming events found at this address.' }, 422);
+        const verdicts = judgeEvents(result.events, await placeProfileFor(supabase, profiles, source.topic_id), newUrl);
+        if (!result.events.length) return json({ success: false, ...summarise(kind, result, verdicts), error: result.error || 'No upcoming events found at this address.' }, 422);
         await mirrorLegacyCalendarUrl(supabase, source, kind === 'calendar_feed' ? newUrl : null);
         await deleteUpcoming(supabase, source);
         const updated = { ...source, url: newUrl, kind, name: body.name || source.name };
@@ -220,8 +322,8 @@ Deno.serve(async (req) => {
           url: newUrl, kind, name: updated.name, method: result.method, last_checked_at: new Date().toISOString(),
           last_event_count: result.events.length, consecutive_empty_checks: 0, last_error: null, updated_at: new Date().toISOString(),
         }).eq('id', source.id);
-        await storeEvents(supabase, reader, updated, result.events);
-        return json({ success: true, ...summarise(kind, result), name: updated.name });
+        await storeEvents(supabase, reader, updated, result.events, verdicts);
+        return json({ success: true, ...summarise(kind, result, verdicts), name: updated.name });
       }
       if (body.name && body.name !== source.name) {
         await supabase.from('event_sources').update({ name: body.name, updated_at: new Date().toISOString() }).eq('id', source.id);
@@ -231,7 +333,7 @@ Deno.serve(async (req) => {
       return json({ success: true, name: body.name ?? source.name });
     }
 
-    return json({ success: true, ...(await checkSource(supabase, source)) });
+    return json({ success: true, ...(await checkSource(supabase, profiles, source)) });
   } catch (error) {
     console.error('scrape-whats-on failed:', error instanceof Error ? error.message : error);
     return json({ error: 'Something went wrong reading that address.' }, 500);

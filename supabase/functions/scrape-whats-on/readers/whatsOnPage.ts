@@ -23,6 +23,8 @@ export const whatsOnPageReader: EventReader = {
       start_time: e.start_time,
       venue: e.venue,
       url: e.url,
+      place: e.place ?? null,
+      online: e.online ?? false,
     })));
     return { events, method: r.method, name: r.name, error: r.error ?? null };
   },

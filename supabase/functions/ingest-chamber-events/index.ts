@@ -157,7 +157,7 @@ serve(async (req) => {
             category: 'Business & Community',
             source_url: `${feedUrl.origin.replace('members.', 'www.')}/events?id=${e.eventID}`,
             source_name: e.display_name || 'Chamber of Commerce',
-            status: 'published',
+            // No status here: new rows publish by default, and an owner's removal stays removed.
             updated_at: new Date().toISOString(),
           }));
 
