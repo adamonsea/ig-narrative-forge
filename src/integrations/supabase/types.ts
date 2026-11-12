@@ -1214,6 +1214,111 @@ export type Database = {
         }
         Relationships: []
       }
+      event_clicks: {
+        Row: {
+          click_date: string
+          created_at: string
+          event_id: string
+          id: string
+          topic_id: string
+          visitor_id: string
+        }
+        Insert: {
+          click_date?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          topic_id: string
+          visitor_id: string
+        }
+        Update: {
+          click_date?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          topic_id?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_clicks_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_clicks_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_sources: {
+        Row: {
+          consecutive_empty_checks: number
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          last_checked_at: string | null
+          last_error: string | null
+          last_event_count: number | null
+          method: string | null
+          name: string
+          topic_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          consecutive_empty_checks?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_event_count?: number | null
+          method?: string | null
+          name: string
+          topic_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          consecutive_empty_checks?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_event_count?: number | null
+          method?: string | null
+          name?: string
+          topic_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_sources_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_sources_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           category: string | null
@@ -6929,6 +7034,10 @@ export type Database = {
             }
             Returns: string
           }
+      record_event_click: {
+        Args: { p_event_id: string; p_visitor_id: string }
+        Returns: undefined
+      }
       record_feed_visit: {
         Args: {
           p_page_type?: string
