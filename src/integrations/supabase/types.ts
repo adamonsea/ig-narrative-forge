@@ -7024,6 +7024,7 @@ export type Database = {
           seen: number
           stop_rate: number
           story_id: string
+          swipe_rate: number
         }[]
       }
       test_rss_import: { Args: { p_source_name?: string }; Returns: Json }

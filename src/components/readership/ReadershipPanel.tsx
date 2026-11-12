@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EngagementFunnel } from "@/components/EngagementFunnel";
-import { readershipChange, barHeights, MEANINGFUL_READERS, dropoffCurve, topStopper, type Dropoff, type TopStopper } from "@/lib/readership";
+import { readershipChange, barHeights, MEANINGFUL_READERS, dropoffCurve, topStopper, storySignal, type Dropoff, type TopStopper } from "@/lib/readership";
 import { useCountUp } from "@/hooks/useCountUp";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
 
-interface TopStory { id: string; title: string; reads: number; image?: string | null }
+interface TopStory { id: string; title: string; reads: number; image?: string | null; seen?: number | null; stop_rate?: number | null; swipe_rate?: number | null }
 interface Readership {
   reads_week: number;
   reads_prev_week: number;
@@ -17,6 +17,17 @@ interface Readership {
 }
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
+
+/** One quiet line: how many readers who saw the story stopped on it, and how many swiped in to read. */
+function Signal({ story, className }: { story: TopStory; className: string }) {
+  const s = storySignal(story);
+  if (!s) return null;
+  return (
+    <p className={`tabular-nums ${className}`} title={`Of readers who saw it in the feed: ${s.stopped}% paused on it, ${s.swiped}% swiped in to read`}>
+      {s.stopped}% stopped · {s.swiped}% swiped to read
+    </p>
+  );
+}
 
 function Count({ value, className }: { value: number; className?: string }) {
   const v = useCountUp(value);
@@ -103,6 +114,7 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
             <h3 className="mt-3 max-w-2xl font-display text-2xl md:text-3xl leading-tight text-primary-foreground line-clamp-2">
               {best.title}
             </h3>
+            <Signal story={best} className="mt-3 text-sm text-primary-foreground/80" />
           </div>
         </a>
       )}
@@ -117,6 +129,7 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
                 </div>
                 <Count value={Number(s.reads)} className="mt-4 block font-display text-5xl leading-none" />
                 <p className="mt-2 text-base leading-snug line-clamp-2 group-hover:underline">{s.title}</p>
+                <Signal story={s} className="mt-1 text-sm text-muted-foreground" />
               </a>
             </li>
           ))}

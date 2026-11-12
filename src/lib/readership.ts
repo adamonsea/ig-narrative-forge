@@ -42,3 +42,11 @@ export function topStopper(s: TopStopper | null | undefined) {
   if (times < 1.1) return null;
   return { ...s, ratePercent: Math.round(rate * 100), times: Math.round(times * 10) / 10 };
 }
+
+export interface StorySignalInput { seen?: number | null; stop_rate?: number | null; swipe_rate?: number | null }
+
+/** Hook vs hold for one story: % of readers who saw it that stopped, and % that swiped in. Null below the story floor. */
+export function storySignal(s: StorySignalInput | null | undefined) {
+  if (!s || Number(s.seen) < STORY_SCORE_FLOOR || s.stop_rate == null || s.swipe_rate == null) return null;
+  return { stopped: Math.round(Number(s.stop_rate) * 100), swiped: Math.round(Number(s.swipe_rate) * 100) };
+}

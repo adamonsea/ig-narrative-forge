@@ -30,3 +30,11 @@ describe("top headline stopper", () => {
   it("compares with what its feed spot usually gets", () => expect(topStopper(s)?.times).toBe(2));
   it("hidden when it doesn't beat its spot", () => expect(topStopper({ ...s, stop_rate: 0.15 })).toBeNull());
 });
+
+import { storySignal } from "./readership";
+describe("stopped and swiped per story", () => {
+  it("hidden below 30 outside readers", () => expect(storySignal({ seen: 29, stop_rate: 0.5, swipe_rate: 0.3 })).toBeNull());
+  it("shows both as percentages from 30 readers", () =>
+    expect(storySignal({ seen: 30, stop_rate: 0.476, swipe_rate: 0.314 })).toEqual({ stopped: 48, swiped: 31 }));
+  it("hidden when the story has no score yet", () => expect(storySignal({ seen: 40, stop_rate: null, swipe_rate: null })).toBeNull());
+});
