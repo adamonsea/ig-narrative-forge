@@ -1,6 +1,6 @@
 // @ts-nocheck -- run with: bun test ./src/lib/feedCardPositions.test.ts
 import { describe, it, expect } from 'bun:test';
-import { shouldShowCard, getCardPositions, getCardSlot } from './feedCardPositions';
+import { shouldShowCard, getCardPositions, whatsOnPositions, isWhatsOnPosition, FEED_CARD_POSITIONS } from './feedCardPositions';
 
 describe('email sign-up card positions', () => {
   it('appears after stories 3, 13, 28 and 43', () => {
@@ -20,11 +20,22 @@ describe('email sign-up card positions', () => {
   });
 });
 
-describe("what's on card slots", () => {
-  it('the first events slot (after story 11) shows the first set, the next shows the second', () => {
-    expect(shouldShowCard('events', 11)).toBe(true);
-    expect(getCardSlot('events', 11)).toBe(0);
-    expect(getCardSlot('events', 22)).toBe(1);
-    expect(getCardSlot('events', 33)).toBe(2);
+describe("what's on card set", () => {
+  it('sits after the first story, then at least 15 stories apart', () => {
+    const p = whatsOnPositions(60);
+    expect(p[0]).toBe(1);
+    for (let i = 1; i < p.length; i++) expect(p[i] - p[i - 1] >= 15).toBe(true);
+    expect(p).toEqual([1, 20, 35, 51]);
+  });
+
+  it('never shares a gap with any other extra card', () => {
+    const others = Object.keys(FEED_CARD_POSITIONS).flatMap((t) => getCardPositions(t, 100));
+    for (const p of whatsOnPositions(100)) expect(others).not.toContain(p);
+  });
+
+  it('answers per story position the same way', () => {
+    expect(isWhatsOnPosition(1)).toBe(true);
+    expect(isWhatsOnPosition(16)).toBe(false);
+    expect(isWhatsOnPosition(20)).toBe(true);
   });
 });

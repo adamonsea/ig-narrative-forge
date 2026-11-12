@@ -67,14 +67,6 @@ export const FEED_CARD_POSITIONS = {
     description: 'Interactive quiz questions'
   } as RepeatingCardPosition,
 
-  // What's on card sets (3–4 events each, next set per slot): positions 11, 22, 33...
-  events: {
-    type: 'repeating',
-    interval: 11,
-    offset: 0,
-    description: "What's on card sets"
-  } as RepeatingCardPosition,
-
   // Parliamentary insight cards (MAJOR votes only): positions 8, 21, 34...
   parliamentary: {
     type: 'repeating',
@@ -266,4 +258,38 @@ export function getPositionMap(maxPosition: number = 50): string {
   }
   
   return lines.join('\n');
+}
+
+// ---------- What's on ----------
+
+/** The What's on card set sits in the first screenful, after this story. */
+export const WHATS_ON_FIRST_AFTER = 1;
+/** Then no more often than every this-many stories. */
+export const WHATS_ON_MIN_GAP = 15;
+
+/**
+ * Story positions the What's on card set follows (1 = after the first story):
+ * after story 1, then at least 15 stories apart, never in a gap that any other
+ * extra card can use — so it is never side by side with another extra card,
+ * whichever extras a feed has switched on. The Desk's Live list uses the same rule.
+ */
+export function whatsOnPositions(maxPosition: number = 100): number[] {
+  const taken = new Set<number>();
+  for (const type of Object.keys(FEED_CARD_POSITIONS) as (keyof typeof FEED_CARD_POSITIONS)[]) {
+    for (const p of getCardPositions(type, maxPosition + WHATS_ON_MIN_GAP)) taken.add(p);
+  }
+  const out: number[] = [];
+  let next = WHATS_ON_FIRST_AFTER;
+  while (next <= maxPosition) {
+    while (taken.has(next)) next += 1;
+    if (next > maxPosition) break;
+    out.push(next);
+    next += WHATS_ON_MIN_GAP;
+  }
+  return out;
+}
+
+/** Does the What's on card set follow this story position? */
+export function isWhatsOnPosition(storyIndex: number): boolean {
+  return storyIndex >= 1 && whatsOnPositions(storyIndex).includes(storyIndex);
 }

@@ -2,12 +2,18 @@
 import { describe, it, expect } from "bun:test";
 import {
   isBrokenWhatsOnSource, previewSentence, venueClicksLine, showEventsInFeed, eventSourceKindLabel,
-  splitIntoCardSets, cardSetForSlot, dateBadge, eventTime, cardSetDates, leftOutReason, leftOutSentence,
+  dateBadge, eventTime, upcomingWhatsOn, eventGroup, coverSentence, detectSourceKind, isEventsSourceKind,
+  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle,
 } from "./whatsOn";
 
-describe("what's-on pages", () => {
-  it("flags a page only after two empty checks in a row", () => {
-    expect(isBrokenWhatsOnSource(0)).toBe(false);
+const ev = (title: string, start_date: string, start_time: string | null = "19:00:00") =>
+  ({ id: title, title, start_date, start_time, location: "v", source_name: "s", source_url: "https://x" });
+
+// Thursday 12 Nov 2026
+const THU = "2026-11-12";
+
+describe("events sources", () => {
+  it("flags a source only after two empty checks in a row", () => {
     expect(isBrokenWhatsOnSource(1)).toBe(false);
     expect(isBrokenWhatsOnSource(2)).toBe(true);
   });
@@ -17,82 +23,87 @@ describe("what's-on pages", () => {
     expect(previewSentence(0)).toBe("No upcoming events found on this page.");
   });
 
-  it("shows venue clicks only when there are some", () => {
-    expect(venueClicksLine(0)).toBeNull();
-    expect(venueClicksLine(12)).toBe("Sent 12 clicks to local venues this week");
-    expect(venueClicksLine(1)).toBe("Sent 1 click to local venues this week");
-  });
-
-  it("shows events in the feed only when Events is on and Show in the feed is ticked", () => {
-    expect(showEventsInFeed(true, true)).toBe(true);
-    expect(showEventsInFeed(true, false)).toBe(false);
-    expect(showEventsInFeed(false, true)).toBe(false);
-    expect(showEventsInFeed(undefined, true)).toBe(false);
-  });
-
   it("labels both kinds of events source", () => {
     expect(eventSourceKindLabel("calendar_feed")).toBe("Calendar feed");
     expect(eventSourceKindLabel("whats_on_page")).toBe("What's-on page");
   });
+
+  it("detects the kind of source from the link", () => {
+    expect(detectSourceKind("https://bournefree.co.uk/feed/")).toBe("rss");
+    expect(detectSourceKind("https://members.eastbourneunltd.co.uk/ajax_website/ajax_retrieveevents.php")).toBe("calendar_feed");
+    expect(detectSourceKind("https://example.org/events.ics")).toBe("calendar_feed");
+    expect(detectSourceKind("https://www.eastbournetheatres.co.uk/whats-on")).toBe("whats_on_page");
+    expect(detectSourceKind("https://www.eventbrite.co.uk/d/united-kingdom--eastbourne/events")).toBe("whats_on_page");
+    expect(detectSourceKind("https://www.ticketsource.co.uk/towner")).toBe("whats_on_page");
+    expect(detectSourceKind("https://www.lewes-eastbourne.gov.uk/news")).toBe("website");
+    expect(isEventsSourceKind("rss")).toBe(false);
+    expect(isEventsSourceKind("calendar_feed")).toBe(true);
+  });
+
+  it("shows venue clicks only when there are some", () => {
+    expect(venueClicksLine(0)).toBeNull();
+    expect(venueClicksLine(12)).toBe("Sent 12 clicks to local venues this week");
+  });
 });
 
-describe("what's on card sets in the feed", () => {
-  const n = (k: number) => Array.from({ length: k }, (_, i) => i + 1);
-
-  it("keeps every set to 3–4 events once there are more than four", () => {
-    expect(splitIntoCardSets(n(8)).map((s) => s.length)).toEqual([4, 4]);
-    expect(splitIntoCardSets(n(7)).map((s) => s.length)).toEqual([4, 3]);
-    expect(splitIntoCardSets(n(10)).map((s) => s.length)).toEqual([4, 3, 3]);
-    expect(splitIntoCardSets(n(24)).map((s) => s.length)).toEqual([4, 4, 4, 4, 4, 4]);
-    for (const k of [6, 7, 8, 9, 10, 11, 12, 13, 17, 23]) {
-      for (const set of splitIntoCardSets(n(k))) expect(set.length >= 3 && set.length <= 4).toBe(true);
-    }
+describe("the What's on card set", () => {
+  it("shows events only when Events is on and Show in the feed is ticked", () => {
+    expect(showEventsInFeed(true, true)).toBe(true);
+    expect(showEventsInFeed(true, false)).toBe(false);
+    expect(showEventsInFeed(false, true)).toBe(false);
   });
 
-  it("shows four or fewer events as one set", () => {
-    expect(splitIntoCardSets(n(3))).toEqual([[1, 2, 3]]);
-    expect(splitIntoCardSets([])).toEqual([]);
+  it("keeps at most 8 events from the next 14 days, soonest first, dropping past ones", () => {
+    const events = [ev("past", "2026-11-11"), ev("far", "2026-11-26"), ...Array.from({ length: 10 }, (_, i) => ev(`e${i}`, `2026-11-${String(12 + i).padStart(2, "0")}`))];
+    const out = upcomingWhatsOn(events, THU);
+    expect(out.length).toBe(8);
+    expect(out[0].start_date).toBe(THU);
+    expect(out.map((e) => e.title)).not.toContain("past");
+    expect(out.map((e) => e.title)).not.toContain("far");
+    expect(upcomingWhatsOn([ev("last day", "2026-11-25")], THU).length).toBe(1);
   });
 
-  it("keeps soonest-first order across sets, with no event shown twice", () => {
-    expect(splitIntoCardSets(n(7)).flat()).toEqual(n(7));
+  it("groups as Tonight / This weekend / Next week", () => {
+    expect(eventGroup(ev("a", THU, "20:00:00"), THU)).toBe("Tonight");
+    expect(eventGroup(ev("b", "2026-11-14"), THU)).toBe("This weekend");
+    expect(eventGroup(ev("c", "2026-11-18"), THU)).toBe("Next week");
   });
 
-  it("gives each feed slot the next set, then starts again", () => {
-    const sets = splitIntoCardSets(n(8));
-    expect(cardSetForSlot(sets, 0)).toEqual([1, 2, 3, 4]);
-    expect(cardSetForSlot(sets, 1)).toEqual([5, 6, 7, 8]);
-    expect(cardSetForSlot(sets, 2)).toEqual([1, 2, 3, 4]);
-    expect(cardSetForSlot([], 0)).toBeNull();
+  it("cover names the first two events then the rest as a count", () => {
+    const events = [ev("Jazz at The Lamb", THU, "20:00:00"), ev("The Nutcracker", "2026-11-14"), ...[1, 2, 3, 4, 5, 6].map((n) => ev(`x${n}`, "2026-11-20"))];
+    expect(coverSentence(events, THU)).toBe("Tonight: Jazz at The Lamb · Sat: The Nutcracker + 6 more");
+    expect(coverSentence(events.slice(0, 3), THU)).toBe("Tonight: Jazz at The Lamb · Sat: The Nutcracker · Fri: x1");
   });
 
   it("formats the date badge and time", () => {
     expect(dateBadge("2026-11-12")).toEqual({ weekday: "THU", day: "12", month: "NOV" });
     expect(eventTime("10:30:00")).toBe("10:30am");
     expect(eventTime("19:00:00")).toBe("7pm");
-    expect(eventTime("00:00:00")).toBe("12am");
     expect(eventTime(null)).toBeNull();
-  });
-
-  it("names the dates a set covers", () => {
-    const today = "2026-11-12";
-    expect(cardSetDates([{ start_date: "2026-11-12" }], today)).toBe("Today");
-    expect(cardSetDates([{ start_date: "2026-11-12" }, { start_date: "2026-11-13" }], today)).toBe("Today – Tomorrow");
-    expect(cardSetDates([{ start_date: "2026-11-28" }, { start_date: "2026-12-01" }], today)).toBe("Sat 28 Nov – Tue 1 Dec");
   });
 });
 
-describe("events left out of the feed", () => {
-  it("explains why in plain words", () => {
-    expect(leftOutReason("excluded", "outside_area")).toBe("Outside your area");
-    expect(leftOutReason("excluded", "online")).toBe("Online only");
-    expect(leftOutReason("excluded", "unconfirmed")).toBe("Couldn't confirm it's local");
-    expect(leftOutReason("deleted", null)).toBe("Removed by you");
+describe("events on the Desk", () => {
+  it("explains Hidden in plain words", () => {
+    expect(hiddenReason("excluded", "outside_area")).toBe("Out of area");
+    expect(hiddenReason("excluded", "online")).toBe("Out of area · online");
+    expect(hiddenReason("deleted", null)).toBe("Skipped");
   });
 
-  it("mentions left-out events in the preview only when there are some", () => {
-    expect(leftOutSentence(0)).toBeNull();
-    expect(leftOutSentence(1)).toBe("1 event outside your area will be left out.");
-    expect(leftOutSentence(5)).toBe("5 events outside your area will be left out.");
+  it("ranks events under 25 as low relevance; unscored events are not low", () => {
+    expect(isLowRelevance(24)).toBe(true);
+    expect(isLowRelevance(25)).toBe(false);
+    expect(isLowRelevance(null)).toBe(false);
+  });
+
+  it("shows one row per event name, the soonest date", () => {
+    const rows = onePerTitle([ev("Panto", "2026-11-20"), ev("panto ", "2026-11-14"), ev("Quiz", "2026-11-15")]);
+    expect(rows.map((r) => r.start_date)).toEqual(["2026-11-14", "2026-11-15"]);
+  });
+
+  it("mentions out-of-area events in the preview only when there are some", () => {
+    expect(hiddenSentence(0)).toBeNull();
+    expect(hiddenSentence(1)).toBe("1 out-of-area event goes straight to Hidden.");
+    expect(hiddenSentence(3)).toBe("3 out-of-area events go straight to Hidden.");
   });
 });

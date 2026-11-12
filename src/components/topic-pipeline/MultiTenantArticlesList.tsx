@@ -12,6 +12,17 @@ import { Switch } from "@/components/ui/switch";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
+import { TypeChip } from "@/components/events/DeskEvents";
+
+/** Something else waiting on the Desk (an event), mixed in by arrival time. */
+export interface WaitingExtraItem {
+  id: string;
+  /** Arrival time (ms). */
+  at: number;
+  /** Low relevance: listed after everything else. */
+  low?: boolean;
+  node: React.ReactNode;
+}
 
 interface MultiTenantArticlesListProps {
   articles: MultiTenantArticle[];
@@ -45,6 +56,10 @@ interface MultiTenantArticlesListProps {
   totalArticlesCount?: number | null;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  /** Events (or other items) waiting alongside stories, newest first. */
+  extraItems?: WaitingExtraItem[];
+  /** Show a small Story chip on each card (when stories and events are mixed). */
+  showTypeChips?: boolean;
 }
 
 export default function MultiTenantArticlesList({
@@ -73,7 +88,9 @@ export default function MultiTenantArticlesList({
   hasMoreArticles = false,
   totalArticlesCount = null,
   loadingMore = false,
-  onLoadMore
+  onLoadMore,
+  extraItems = [],
+  showTypeChips = false
 }: MultiTenantArticlesListProps) {
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
@@ -211,6 +228,7 @@ export default function MultiTenantArticlesList({
                 className="mr-1"
               />
             )}
+            {showTypeChips && <TypeChip type="story" />}
             <span className="truncate max-w-[140px]">{getSourceDomain(article.url)}</span>
             <div className={`px-1.5 py-0.5 rounded text-xs font-medium border ${getRelevanceColor(article.regional_relevance_score)}`}>
               {getRelevanceLabel(article.regional_relevance_score)}
@@ -437,8 +455,37 @@ export default function MultiTenantArticlesList({
     );
   };
 
+  /** Stories in their usual order, with extras slotted in by arrival time; low-relevance extras last. */
+  const mergedNodes = () => {
+    const wrap = (x: WaitingExtraItem) => (
+      <motion.div
+        key={`extra-${x.id}`}
+        layout={prefersReducedMotion ? false : "position"}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 24, height: 0, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+        style={{ overflow: "hidden" }}
+      >
+        {x.node}
+      </motion.div>
+    );
+    const main = extraItems.filter((x) => !x.low).sort((a, b) => b.at - a.at);
+    const low = extraItems.filter((x) => x.low).sort((a, b) => b.at - a.at);
+    const out: React.ReactNode[] = [];
+    let j = 0;
+    for (const article of visibleArticles) {
+      const t = Date.parse(article.created_at) || 0;
+      while (j < main.length && main[j].at >= t) out.push(wrap(main[j++]));
+      out.push(renderArticleCard(article));
+    }
+    while (j < main.length) out.push(wrap(main[j++]));
+    low.forEach((x) => out.push(wrap(x)));
+    return out;
+  };
+
   // Success message for bulk delete
-  if (bulkDeleteCount !== null && articles.length === 0) {
+  if (bulkDeleteCount !== null && articles.length === 0 && extraItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mb-4">
@@ -459,7 +506,7 @@ export default function MultiTenantArticlesList({
   }
 
   // Empty state
-  if (articles.length === 0) {
+  if (articles.length === 0 && extraItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
@@ -482,7 +529,7 @@ export default function MultiTenantArticlesList({
   return (
     <div className="space-y-3">
       {/* Header toolbar */}
-      <div className="flex items-center justify-between">
+      <div className={`flex items-center justify-between ${articles.length === 0 ? "hidden" : ""}`}>
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -562,7 +609,7 @@ export default function MultiTenantArticlesList({
       )}
 
       <AnimatePresence initial={false} mode="popLayout">
-        {visibleArticles.map((article) => renderArticleCard(article))}
+        {mergedNodes()}
       </AnimatePresence>
       
       {/* Load more button */}

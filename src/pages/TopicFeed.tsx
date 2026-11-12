@@ -7,9 +7,9 @@ import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
-import { WhatsOnCards } from "@/components/events/WhatsOnCards";
-import { showEventsInFeed, splitIntoCardSets, cardSetForSlot, cardSetDates, londonToday } from "@/lib/whatsOn";
-import { useWhatsOnEvents, useEventVisibility } from "@/hooks/useWhatsOnEvents";
+import { WhatsOnCard } from "@/components/events/WhatsOnCard";
+import { showEventsInFeed, upcomingWhatsOn, londonToday } from "@/lib/whatsOn";
+import { useWhatsOnEvents } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
@@ -59,7 +59,7 @@ import {
   FEED_CARD_POSITIONS, 
   shouldShowCard, 
   getCardIndex,
-  getCardSlot,
+  isWhatsOnPosition,
   logCollisionReport 
 } from "@/lib/feedCardPositions";
 import { buildShareUrl } from "@/lib/urlUtils";
@@ -73,8 +73,6 @@ const shouldShowAutomatedInsight = (idx: number) => shouldShowCard('automatedIns
 const getAutomatedInsightIndex = (idx: number) => getCardIndex('automatedInsight', idx);
 const shouldShowQuiz = (idx: number) => shouldShowCard('quiz', idx);
 const getQuizIndex = (idx: number) => getCardIndex('quiz', idx);
-const shouldShowEvents = (idx: number) => shouldShowCard('events', idx);
-const getEventsSlot = (idx: number) => getCardSlot('events', idx);
 const shouldShowParliamentary = (idx: number) => shouldShowCard('parliamentary', idx);
 const shouldShowParliamentaryDigest = (idx: number) => shouldShowCard('parliamentaryDigest', idx);
 const shouldShowFlashback = (idx: number) => shouldShowCard('flashback', idx);
@@ -331,11 +329,11 @@ const TopicFeed = () => {
   const stopNodesRef = useRef<Map<Element, { id: string; pos: number }>>(new Map());
   const isOwnFeed = !!user && !!topic && (topic as any).created_by === user.id;
 
-  // "What's on": one fetch, spread through the feed as sets of 3–4 events per events slot
+  // "What's on": one fetch; the same card set (up to 8 events) at each What's on position
   const eventsInFeed = showEventsInFeed(topic?.events_enabled, topicMetadata?.eventsCardsEnabled);
   const { data: whatsOnEvents } = useWhatsOnEvents(topic?.id, eventsInFeed);
-  const whatsOnSets = useMemo(() => splitIntoCardSets(whatsOnEvents ?? []), [whatsOnEvents]);
-  const { remove: removeEvent } = useEventVisibility(topic?.id);
+  const whatsOnToday = londonToday();
+  const whatsOn = useMemo(() => upcomingWhatsOn(whatsOnEvents ?? [], whatsOnToday), [whatsOnEvents, whatsOnToday]);
   useEffect(() => {
     if (!topic?.id) return;
     const t = createHeadlineStopTracker(topic.id, { skip: isOwnFeed });
@@ -751,17 +749,15 @@ const TopicFeed = () => {
         trackInsightCardDisplay(insightCard.id);
       }
 
-      // What's on: each events slot shows the next set of 3–4 events
-      const eventSet = eventsInFeed && shouldShowEvents(storyIndex) ? cardSetForSlot(whatsOnSets, getEventsSlot(storyIndex)) : null;
-      if (eventSet && eventSet.length) {
+      // What's on: after story 1, then at least 15 stories apart, never beside another extra card
+      if (contentItem.type === 'story' && eventsInFeed && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
-            <WhatsOnCards
-              events={eventSet}
-              dates={cardSetDates(eventSet, londonToday())}
+            <WhatsOnCard
+              events={whatsOn}
+              today={whatsOnToday}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               isOwner={isOwnFeed}
-              onRemove={removeEvent}
             />
           </div>
         );
@@ -847,7 +843,7 @@ const TopicFeed = () => {
     quizQuestions, quizCardsEnabled, quizVisitorId, user?.id, markAsAnswered,
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
     hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed,
-    eventsInFeed, whatsOnSets, removeEvent
+    eventsInFeed, whatsOn, whatsOnToday
   ]);
 
   if (loading) {

@@ -1,6 +1,11 @@
-/** Small, testable rules for what's-on pages (events sources) in the Sources tab. */
+/**
+ * Small, testable rules for events: sources, the Desk (Waiting / Hidden / Live)
+ * and the feed's "What's on" card set.
+ */
 
-/** A saved page is flagged once two checks in a row found no events. */
+// ---------- sources ----------
+
+/** A saved events source is flagged once two checks in a row found no events. */
 export const BROKEN_AFTER_EMPTY_CHECKS = 2;
 
 export const isBrokenWhatsOnSource = (consecutiveEmptyChecks: number | null | undefined): boolean =>
@@ -37,14 +42,33 @@ const KIND_LABELS: Record<EventSourceKind, string> = {
 export const eventSourceKindLabel = (kind: string | null | undefined): string =>
   KIND_LABELS[(kind as EventSourceKind)] ?? "Events source";
 
+export type SourceKind = "rss" | "website" | EventSourceKind;
+
+const LISTINGS_HOSTS = /(^|\.)(eventbrite\.|ticketsource\.|skiddle\.com|ents24\.com|wegottickets\.com|seetickets\.|allevents\.in|designmynight\.com|billetto\.|fatsoma\.com|dice\.fm|meetup\.com)/;
+
+/** What kind of source a pasted link is, so the owner never has to choose. */
+export function detectSourceKind(raw: string): SourceKind {
+  const url = raw.trim().toLowerCase();
+  if (/^webcal:|\.ics(\?|#|$)|[?&]format=(ical|ics)|\/ical\b|\/ajax|ajax_retrieveevents/.test(url)) return "calendar_feed";
+  if (/\/(feed|rss|atom)(\/|\?|#|$)|\.(xml|rss|atom)(\?|#|$)|[?&]feed=rss/.test(url)) return "rss";
+  let host = "";
+  try { host = new URL(/^\w+:\/\//.test(url) ? url : `https://${url}`).hostname; } catch { /* not a link yet */ }
+  if (host && LISTINGS_HOSTS.test(host)) return "whats_on_page";
+  if (/(whats-?on|what-s-on|\/events?(\/|\?|#|$)|\/listings|\/gigs|\/calendar|\/diary)/.test(url)) return "whats_on_page";
+  return "website";
+}
+
+export const isEventsSourceKind = (kind: SourceKind): kind is EventSourceKind =>
+  kind === "whats_on_page" || kind === "calendar_feed";
+
 /**
- * One home for events: the Events switch collects events and adds them to the weekly email;
- * "Show in the feed" (only meaningful while Events is on) puts them between stories.
+ * Events switch (collect + weekly email) and "Show in the feed" (only meaningful while
+ * Events is on) together decide whether readers see the What's on card set.
  */
 export const showEventsInFeed = (eventsEnabled: boolean | null | undefined, showInFeed: boolean | null | undefined): boolean =>
   Boolean(eventsEnabled) && Boolean(showInFeed);
 
-// ---------- "What's on" card sets in the feed ----------
+// ---------- dates ----------
 
 export interface WhatsOnFeedEvent {
   id: string;
@@ -56,41 +80,20 @@ export interface WhatsOnFeedEvent {
   source_name: string | null;
 }
 
-/** Most events a single card set shows; sets are 3–4 events, balanced. */
-export const EVENTS_PER_SET = 4;
-
-/**
- * Spread events (soonest first) across the feed: each events slot gets its own
- * set of 3–4, so they're peppered through the feed instead of all in one place.
- */
-export function splitIntoCardSets<T>(events: T[], maxPerSet = EVENTS_PER_SET): T[][] {
-  if (!events.length) return [];
-  if (events.length <= maxPerSet) return [events.slice()];
-  const sets = Math.ceil(events.length / maxPerSet);
-  const base = Math.floor(events.length / sets);
-  const extra = events.length % sets;
-  const out: T[][] = [];
-  let i = 0;
-  for (let s = 0; s < sets; s++) {
-    const size = base + (s < extra ? 1 : 0);
-    out.push(events.slice(i, i + size));
-    i += size;
-  }
-  return out;
-}
-
-/** The set for the nth events slot in the feed; starts again from the soonest once every set has shown. */
-export function cardSetForSlot<T>(sets: T[][], slot: number): T[] | null {
-  if (!sets.length || slot < 0) return null;
-  return sets[slot % sets.length];
-}
-
+const DAY = 86_400_000;
 const ymdToUtc = (ymd: string) => {
   const [y, m, d] = ymd.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d));
 };
 const fmt = (ymd: string, opts: Intl.DateTimeFormatOptions) =>
   ymdToUtc(ymd).toLocaleDateString("en-GB", { ...opts, timeZone: "UTC" });
+const daysBetween = (from: string, to: string) => Math.round((ymdToUtc(to).getTime() - ymdToUtc(from).getTime()) / DAY);
+const addDays = (ymd: string, n: number) => new Date(ymdToUtc(ymd).getTime() + n * DAY).toISOString().slice(0, 10);
+
+/** Today's date in London as YYYY-MM-DD (events are dated in UK local time). */
+export function londonToday(now: Date = new Date()): string {
+  return now.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+}
 
 /** Date badge parts: THU / 12 / NOV */
 export function dateBadge(ymd: string): { weekday: string; day: string; month: string } {
@@ -100,6 +103,9 @@ export function dateBadge(ymd: string): { weekday: string; day: string; month: s
     month: fmt(ymd, { month: "short" }).toUpperCase(),
   };
 }
+
+/** "Thu 12 Nov" */
+export const dayLabel = (ymd: string): string => fmt(ymd, { weekday: "short", day: "numeric", month: "short" }).replace(",", "");
 
 /** "10:30am", "7pm"; null when no time was given. */
 export function eventTime(hms: string | null | undefined): string | null {
@@ -111,44 +117,87 @@ export function eventTime(hms: string | null | undefined): string | null {
   return m ? `${h12}:${String(m).padStart(2, "0")}${suffix}` : `${h12}${suffix}`;
 }
 
-/** The dates a set covers: "Today", "Sat 14 Nov", "Today – Sat 14 Nov", "Sat 28 Nov – Tue 1 Dec". */
-export function cardSetDates(set: { start_date: string }[], today: string): string {
-  if (!set.length) return "";
-  const dates = set.map((e) => e.start_date).sort();
-  const tomorrow = fmtYmd(new Date(ymdToUtc(today).getTime() + 86400000));
-  const label = (d: string) =>
-    d === today ? "Today" : d === tomorrow ? "Tomorrow" : fmt(d, { weekday: "short", day: "numeric", month: "short" }).replace(",", "");
-  const first = dates[0];
-  const last = dates[dates.length - 1];
-  return first === last ? label(first) : `${label(first)} – ${label(last)}`;
+const evening = (hms: string | null) => Boolean(hms) && Number(hms!.slice(0, 2)) >= 17;
+
+// ---------- the feed's What's on card set ----------
+
+export const WHATS_ON_WINDOW_DAYS = 14;
+export const WHATS_ON_MAX = 8;
+
+/** What the card set shows: today onwards, next 14 days, soonest first, at most 8. Past events drop off on their own. */
+export function upcomingWhatsOn<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">>(events: T[], today: string): T[] {
+  const last = addDays(today, WHATS_ON_WINDOW_DAYS - 1);
+  return events
+    .filter((e) => e.start_date >= today && e.start_date <= last)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99") || a.title.localeCompare(b.title))
+    .slice(0, WHATS_ON_MAX);
 }
 
-function fmtYmd(d: Date): string {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+export type EventGroup = "Tonight" | "Today" | "This weekend" | "This week" | "Next week" | "Coming up";
+
+/** Reader-facing group: Tonight / This weekend / Next week (with Today / This week / Coming up for the gaps). */
+export function eventGroup(e: Pick<WhatsOnFeedEvent, "start_date" | "start_time">, today: string): EventGroup {
+  const d = daysBetween(today, e.start_date);
+  if (d <= 0) return evening(e.start_time) ? "Tonight" : "Today";
+  const toSunday = (7 - ymdToUtc(today).getUTCDay()) % 7;
+  if (d <= toSunday) {
+    const dow = ymdToUtc(e.start_date).getUTCDay();
+    return dow === 5 || dow === 6 || dow === 0 ? "This weekend" : "This week";
+  }
+  if (d <= toSunday + 7) return "Next week";
+  return "Coming up";
 }
 
-/** Today's date in London as YYYY-MM-DD (events are dated in UK local time). */
-export function londonToday(now: Date = new Date()): string {
-  return now.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+/** Short day for the cover line: "Tonight", "Tomorrow", "Sat". */
+export function shortDay(e: Pick<WhatsOnFeedEvent, "start_date" | "start_time">, today: string): string {
+  const d = daysBetween(today, e.start_date);
+  if (d <= 0) return evening(e.start_time) ? "Tonight" : "Today";
+  if (d === 1) return "Tomorrow";
+  return fmt(e.start_date, { weekday: "short" });
 }
 
-// ---------- events left out (Sources tab) ----------
+/** Cover lines that earn the stop: the first two or three events, then "+ N more". */
+export function coverLines<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">>(events: T[], today: string) {
+  const shown = events.length <= 3 ? events : events.slice(0, 2);
+  return { lines: shown.map((e) => ({ day: shortDay(e, today), title: e.title })), more: events.length - shown.length };
+}
 
-const LEFT_OUT_LABELS: Record<string, string> = {
-  outside_area: "Outside your area",
-  online: "Online only",
-  unconfirmed: "Couldn't confirm it's local",
-};
+/** "Tonight: Jazz at The Lamb · Sat: The Nutcracker + 6 more" */
+export function coverSentence<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">>(events: T[], today: string): string {
+  const { lines, more } = coverLines(events, today);
+  const body = lines.map((l) => `${l.day}: ${l.title}`).join(" · ");
+  return more > 0 ? `${body} + ${more} more` : body;
+}
 
-/** Why an event isn't in the feed, in the owner's words. */
-export function leftOutReason(status: string, reason: string | null | undefined): string {
-  if (status === "deleted") return "Removed by you";
-  return LEFT_OUT_LABELS[reason ?? ""] ?? "Outside your area";
+// ---------- the Desk ----------
+
+/** Below this an event ranks under local ones in Waiting (mirrors LOW_RELEVANCE on the server). */
+export const LOW_RELEVANCE = 25;
+
+export const isLowRelevance = (score: number | null | undefined): boolean =>
+  score !== null && score !== undefined && score < LOW_RELEVANCE;
+
+/** Why an event is in Hidden, in the owner's words. */
+export function hiddenReason(status: string, reason: string | null | undefined): string {
+  if (status === "deleted") return "Skipped";
+  if (reason === "online") return "Out of area · online";
+  if (reason === "unconfirmed") return "Couldn't confirm it's local";
+  return "Out of area";
+}
+
+/** One row per event name (repeat dates and repeat listings collapse to the soonest). */
+export function onePerTitle<T extends { title: string; start_date: string }>(events: T[]): T[] {
+  const seen = new Map<string, T>();
+  for (const e of [...events].sort((a, b) => a.start_date.localeCompare(b.start_date))) {
+    const k = e.title.toLowerCase().replace(/\s+/g, " ").trim();
+    if (!seen.has(k)) seen.set(k, e);
+  }
+  return [...seen.values()];
 }
 
 /** Preview line under "Found N…"; hidden at zero. */
-export function leftOutSentence(excluded: number | null | undefined): string | null {
+export function hiddenSentence(excluded: number | null | undefined): string | null {
   const n = Number(excluded) || 0;
   if (n <= 0) return null;
-  return `${n} ${n === 1 ? "event" : "events"} outside your area will be left out.`;
+  return `${n} out-of-area ${n === 1 ? "event goes" : "events go"} straight to Hidden.`;
 }

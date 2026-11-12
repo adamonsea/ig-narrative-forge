@@ -115,6 +115,11 @@ function explicitVerdict(ev: LocalityInput, p: PlaceProfile): Verdict | null {
   return null;
 }
 
+/** True when the event's own place text or title names the feed's area (rules 2–4 said "in"). */
+export function hasLocalEvidence(ev: LocalityInput, profile: PlaceProfile | null): boolean {
+  return profile ? explicitVerdict(ev, profile)?.keep === true : false;
+}
+
 /**
  * Judge every event from one read of one source. A source counts as broad when
  * it's a known listings site, or when at least two of its events (and a quarter

@@ -1258,6 +1258,7 @@ export type Database = {
       }
       event_sources: {
         Row: {
+          auto_publish: boolean
           consecutive_empty_checks: number
           created_at: string
           created_by: string | null
@@ -1274,6 +1275,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          auto_publish?: boolean
           consecutive_empty_checks?: number
           created_at?: string
           created_by?: string | null
@@ -1290,6 +1292,7 @@ export type Database = {
           url: string
         }
         Update: {
+          auto_publish?: boolean
           consecutive_empty_checks?: number
           created_at?: string
           created_by?: string | null
@@ -1339,6 +1342,7 @@ export type Database = {
           location: string | null
           price: string | null
           rank_position: number | null
+          relevance_score: number | null
           source_api: string | null
           source_name: string | null
           source_url: string | null
@@ -1365,6 +1369,7 @@ export type Database = {
           location?: string | null
           price?: string | null
           rank_position?: number | null
+          relevance_score?: number | null
           source_api?: string | null
           source_name?: string | null
           source_url?: string | null
@@ -1391,6 +1396,7 @@ export type Database = {
           location?: string | null
           price?: string | null
           rank_position?: number | null
+          relevance_score?: number | null
           source_api?: string | null
           source_name?: string | null
           source_url?: string | null
@@ -7143,6 +7149,10 @@ export type Database = {
           deleted_count: number
           message: string
         }[]
+      }
+      set_event_source_auto_publish: {
+        Args: { p_on: boolean; p_source_id: string }
+        Returns: number
       }
       set_topic_distribution: {
         Args: { p_enabled: boolean; p_field: string; p_topic_id: string }

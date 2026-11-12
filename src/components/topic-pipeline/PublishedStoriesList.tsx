@@ -103,6 +103,8 @@ interface PublishedStoriesListProps {
   storyReads?: Record<string, number>;
   risingStoryId?: string | null;
   readingNowIds?: string[];
+  /** Something readers see after the story at this feed position (1 = after the first live story). */
+  renderAfterFeedPosition?: (position: number) => React.ReactNode;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -123,7 +125,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onLoadMorePublished,
   storyReads,
   risingStoryId = null,
-  readingNowIds = []
+  readingNowIds = [],
+  renderAfterFeedPosition
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -207,6 +210,18 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     } else sorted.sort(byNewest);
     return sorted;
   }, [stories, storyFilter, sourceFilter, sortMode]);
+
+  /** Feed position of each live story, as readers see them (only in the default newest-first, unfiltered view). */
+  const feedPositions = useMemo(() => {
+    const map = new Map<string, number>();
+    if (sortMode !== 'newest' || storyFilter !== 'all' || sourceFilter !== 'all') return map;
+    let n = 0;
+    for (const s of filteredStories) {
+      const scheduled = s.scheduled_publish_at && isFuture(new Date(s.scheduled_publish_at));
+      if (s.status === 'published' && !scheduled) map.set(s.id, ++n);
+    }
+    return map;
+  }, [filteredStories, sortMode, storyFilter, sourceFilter]);
 
   const availableSources = useMemo(() => {
     const counts = new Map<string, number>();
@@ -500,8 +515,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         const isDraft = story.status === 'draft';
         const storyTitle = story.title || story.headline || 'Untitled';
         
+        const feedPosition = feedPositions.get(story.id);
+        const afterNode = feedPosition !== undefined && renderAfterFeedPosition ? renderAfterFeedPosition(feedPosition) : null;
         return (
-          <Card key={story.id} className="transition-all duration-200 hover:shadow-md">
+          <React.Fragment key={story.id}>
+          <Card className="transition-all duration-200 hover:shadow-md">
             <div className="p-4 space-y-2.5">
               {/* Status line + overflow menu */}
               <div className="flex items-center justify-between">
@@ -860,6 +878,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               />
             )}
           </Card>
+          {afterNode}
+          </React.Fragment>
         );
       })}
 

@@ -101,3 +101,12 @@ Events + Desk clickable mocks (12 November 2026)
 - [x] Mock 1: What's on story-style card (cover + one event per slide, Tonight/This weekend/Next week, up to 8 in 14 days), placed after story 1 then every 15+, never beside another extra; phone + desktop
 - [x] Mock 2: one-screen Desk (Waiting mixed stories/events → Live in feed order with What's on in place) and Sources with Auto-publish and auto-detected kind
 - [ ] Adam to review the mocks before any real build
+
+One pipeline for stories and events (12 November 2026)
+- [x] Data: events get a Waiting status and a local-relevance score; events sources get Auto-publish (existing sources on)
+- [ ] Reader: score events like news, out-of-area → Hidden, never auto-publish out-of-area/low-relevance; new sources wait
+- [ ] Desk: Waiting (stories + events, one-tap Publish/Skip, collapsed Hidden) above Live (What's on row in feed position, Show in the feed); Events switch in the Desk
+- [ ] Sources: one list for news and events, kind detected from the link, no event items or switches
+- [ ] Feed: What's on card set (cover + one event per swipe), next 14 days, up to 8, after story 1 then every 15+, click tracking
+- [ ] Remove the mock route; leave event_source_url and the old Chamber importer alone
+- [ ] Check end to end on Eastbourne: arrive → Waiting → Publish → Live → feed card → weekly email preview

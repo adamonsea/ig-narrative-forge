@@ -12,9 +12,11 @@
  *   {} or { action: 'refresh_all' }                        daily job (EVENTS_CRON_TOKEN / service role)
  *
  * Stores facts and the link only: title, start date/time, venue, source URL, source name.
- * On place-based feeds, events outside the area are stored as 'excluded' (with a reason)
- * so the owner can see and restore them in Sources; they never reach readers.
- * Owner removals and restores stick across refreshes (by event name, across the feed).
+ * Every event goes through the Desk, like news: each one gets a local-relevance score
+ * (relevance.ts, same scorer as news). New events wait on the Desk ('pending') unless
+ * their source is set to Auto-publish; clearly out-of-area events go to Hidden
+ * ('excluded', with a reason) and never auto-publish. Owner decisions (Publish / Skip)
+ * stick across refreshes (by event name, across the feed).
  */
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -23,7 +25,9 @@ import { getUser, userOwnsTopic, isServiceRole } from '../_shared/auth.ts';
 import { londonToday } from './extract.ts';
 import { isPublicHttpUrl } from './read.ts';
 import { detectKind, isEventSourceKind, readerFor, type EventReader, type ReaderEvent, type ReaderResult } from './readers/index.ts';
-import { buildPlaceProfile, judgeEvents, type PlaceProfile, type Verdict } from './locality.ts';
+import { buildPlaceProfile, hasLocalEvidence, judgeEvents, type PlaceProfile, type Verdict } from './locality.ts';
+import { baseEventScore, combineRelevance, isOutOfArea, placeEvent } from './relevance.ts';
+import type { TopicConfig } from '../_shared/hybrid-content-scoring.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -40,7 +44,7 @@ const Body = z.discriminatedUnion('action', [
 
 // deno-lint-ignore no-explicit-any
 type Db = any;
-interface Source { id: string; topic_id: string; url: string; name: string; kind: string; method?: string | null; consecutive_empty_checks?: number }
+interface Source { id: string; topic_id: string; url: string; name: string; kind: string; method?: string | null; consecutive_empty_checks?: number; auto_publish?: boolean }
 
 // ---------- reading ----------
 
@@ -57,16 +61,30 @@ const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^w
 
 // ---------- location filter ----------
 
-type Profiles = Map<string, PlaceProfile | null>;
+interface TopicContext { profile: PlaceProfile | null; config: TopicConfig | null }
+type Profiles = Map<string, TopicContext>;
 
-async function placeProfileFor(supabase: Db, profiles: Profiles, topicId: string): Promise<PlaceProfile | null> {
+async function topicContextFor(supabase: Db, profiles: Profiles, topicId: string): Promise<TopicContext> {
   if (profiles.has(topicId)) return profiles.get(topicId)!;
   const { data } = await supabase.from('topics')
-    .select('topic_type, region, landmarks, postcodes, organizations, competing_regions')
+    .select('id, topic_type, region, keywords, landmarks, postcodes, organizations, competing_regions, nearby_places, locality_strength, big_story_override')
     .eq('id', topicId).maybeSingle();
-  const profile = buildPlaceProfile(data);
-  profiles.set(topicId, profile);
-  return profile;
+  const ctx: TopicContext = {
+    profile: buildPlaceProfile(data),
+    config: data ? ({ ...data, keywords: data.keywords || [] } as TopicConfig) : null,
+  };
+  profiles.set(topicId, ctx);
+  return ctx;
+}
+
+const placeProfileFor = async (supabase: Db, profiles: Profiles, topicId: string) => (await topicContextFor(supabase, profiles, topicId)).profile;
+
+/** The location verdict and the local-relevance score for every event in one read. */
+async function judgeAndScore(supabase: Db, profiles: Profiles, topicId: string, events: ReaderEvent[], sourceUrl: string) {
+  const ctx = await topicContextFor(supabase, profiles, topicId);
+  const verdicts = judgeEvents(events, ctx.profile, sourceUrl);
+  const scores = events.map((e, i) => combineRelevance(baseEventScore(e, ctx.config), verdicts[i], hasLocalEvidence(e, ctx.profile)));
+  return { verdicts, scores };
 }
 
 const titleKey = (t: string) => t.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -79,7 +97,7 @@ function chunks<T>(list: T[], size: number): T[][] {
 
 // ---------- storing (shared by every kind) ----------
 
-async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], verdicts: Verdict[]) {
+async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], verdicts: Verdict[], scores: (number | null)[]) {
   if (!events.length) return; // never wipe a source's events on an empty read
   const now = new Date().toISOString();
   const ids = events.map((e) => reader.externalId(source.id, e.key));
@@ -106,18 +124,11 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
     const prev = existing.get(id);
     const t = titleKey(e.title);
     const verdict = verdicts[i] ?? { keep: true };
-    let status: string;
-    let reason: string | null = null;
-    let kept = Boolean(prev?.kept_by_owner) || keptTitles.has(t);
-    if (prev?.status === 'deleted' || (!prev?.kept_by_owner && removedTitles.has(t))) {
-      status = 'deleted';
-      kept = false;
-    } else if (kept || verdict.keep) {
-      status = 'published';
-    } else {
-      status = 'excluded';
-      reason = verdict.reason;
-    }
+    const score = scores[i] ?? null;
+    const { status, reason, kept } = placeEvent({
+      prev, removedByOwner: removedTitles.has(t), publishedByOwner: keptTitles.has(t),
+      verdict, score, autoPublish: Boolean(source.auto_publish),
+    });
     return {
       topic_id: source.topic_id,
       event_source_id: source.id,
@@ -136,6 +147,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       status,
       exclusion_reason: reason,
       kept_by_owner: kept,
+      relevance_score: score,
       updated_at: now,
     };
   });
@@ -164,7 +176,7 @@ async function filterStored(supabase: Db, source: Source, profile: PlaceProfile 
   if (!rows.length) return;
   const verdicts = judgeEvents(rows.map((r) => ({ title: r.title, venue: r.location })), profile, source.url);
   const byReason = new Map<string, string[]>();
-  verdicts.forEach((v, i) => { if (!v.keep) byReason.set(v.reason, [...(byReason.get(v.reason) || []), rows[i].id]); });
+  verdicts.forEach((v, i) => { if (!v.keep && isOutOfArea(v)) byReason.set(v.reason, [...(byReason.get(v.reason) || []), rows[i].id]); });
   for (const [reason, ids] of byReason) {
     for (const part of chunks(ids, 150)) {
       await supabase.from('events').update({ status: 'excluded', exclusion_reason: reason, updated_at: new Date().toISOString() }).in('id', part);
@@ -203,11 +215,11 @@ async function checkSource(supabase: Db, profiles: Profiles, source: Source) {
   const reader = readerFor(source.kind);
   const result = await readSafely(reader, source.url, source.name);
   const profile = await placeProfileFor(supabase, profiles, source.topic_id);
-  const verdicts = judgeEvents(result.events, profile, source.url);
-  const excluded = verdicts.filter((v) => !v.keep).length;
+  const { verdicts, scores } = await judgeAndScore(supabase, profiles, source.topic_id, result.events, source.url);
+  const excluded = verdicts.filter(isOutOfArea).length;
   let storeError: string | null = null;
   try {
-    if (result.events.length) await storeEvents(supabase, reader, source, result.events, verdicts);
+    if (result.events.length) await storeEvents(supabase, reader, source, result.events, verdicts, scores);
     else await filterStored(supabase, source, profile);
   } catch (e) { storeError = e instanceof Error ? e.message : 'Store failed'; }
   const empty = result.events.length === 0;
@@ -222,9 +234,9 @@ async function checkSource(supabase: Db, profiles: Profiles, source: Source) {
   return { sourceId: source.id, name: source.name, kind: reader.kind, found: result.events.length - excluded, excluded, method: result.method, error: result.error ?? storeError };
 }
 
-/** found = events that will reach readers; excluded = left out by the location filter. */
+/** found = events that reach the Desk; excluded = clearly out of area (straight to Hidden). */
 const summarise = (kind: string, r: ReaderResult, verdicts: Verdict[] = []) => {
-  const kept = r.events.filter((_, i) => verdicts[i]?.keep !== false);
+  const kept = r.events.filter((_, i) => !verdicts[i] || !isOutOfArea(verdicts[i]));
   return {
     kind,
     found: kept.length,
@@ -276,7 +288,7 @@ Deno.serve(async (req) => {
       const kind = body.action === 'save' && isEventSourceKind(body.kind) ? body.kind : await detectKind(url);
       const reader = readerFor(kind);
       const result = await readSafely(reader, url, hostOf(url));
-      const verdicts = judgeEvents(result.events, await placeProfileFor(supabase, profiles, body.topicId), url);
+      const { verdicts, scores } = await judgeAndScore(supabase, profiles, body.topicId, result.events, url);
       const summary = summarise(kind, result, verdicts);
       if (body.action === 'preview') return json({ success: true, ...summary });
 
@@ -288,8 +300,8 @@ Deno.serve(async (req) => {
         last_error: null, updated_at: new Date().toISOString(),
       }, { onConflict: 'topic_id,url' }).select('*').single();
       if (error) throw error;
-      await storeEvents(supabase, reader, source, result.events, verdicts);
-      return json({ success: true, ...summary, name, sourceId: source.id });
+      await storeEvents(supabase, reader, source, result.events, verdicts, scores);
+      return json({ success: true, ...summary, name, sourceId: source.id, autoPublish: Boolean(source.auto_publish) });
     }
 
     // update / refresh / remove one saved source
@@ -313,7 +325,7 @@ Deno.serve(async (req) => {
         const kind = await detectKind(newUrl);
         const reader = readerFor(kind);
         const result = await readSafely(reader, newUrl, hostOf(newUrl));
-        const verdicts = judgeEvents(result.events, await placeProfileFor(supabase, profiles, source.topic_id), newUrl);
+        const { verdicts, scores } = await judgeAndScore(supabase, profiles, source.topic_id, result.events, newUrl);
         if (!result.events.length) return json({ success: false, ...summarise(kind, result, verdicts), error: result.error || 'No upcoming events found at this address.' }, 422);
         await mirrorLegacyCalendarUrl(supabase, source, kind === 'calendar_feed' ? newUrl : null);
         await deleteUpcoming(supabase, source);
@@ -322,7 +334,7 @@ Deno.serve(async (req) => {
           url: newUrl, kind, name: updated.name, method: result.method, last_checked_at: new Date().toISOString(),
           last_event_count: result.events.length, consecutive_empty_checks: 0, last_error: null, updated_at: new Date().toISOString(),
         }).eq('id', source.id);
-        await storeEvents(supabase, reader, updated, result.events, verdicts);
+        await storeEvents(supabase, reader, updated, result.events, verdicts, scores);
         return json({ success: true, ...summarise(kind, result, verdicts), name: updated.name });
       }
       if (body.name && body.name !== source.name) {
