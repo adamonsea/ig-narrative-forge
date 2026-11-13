@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { FEATURES } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -207,7 +208,7 @@ serve(async (req) => {
       .single();
 
     let audioGenerated = false;
-    if (topicSettings?.audio_briefings_weekly_enabled) {
+    if (FEATURES.audioBriefings && topicSettings?.audio_briefings_weekly_enabled) {
       console.log('🎙️ Audio briefing enabled, triggering generation...');
       try {
         const audioResponse = await supabase.functions.invoke('generate-audio-briefing', {

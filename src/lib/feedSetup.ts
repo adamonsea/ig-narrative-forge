@@ -1,5 +1,6 @@
 // Shared rules for creating a feed from one sentence (or by hand).
 // Pure functions only, so the setup decisions are testable.
+import { FEATURES } from './featureFlags';
 
 export type PictureChoice = 'editorial_illustrative' | 'editorial_photographic' | 'illustrated_icon' | 'source';
 
@@ -69,7 +70,7 @@ export function draftFromSuggestion(s: {
     pictures: s.brand_or_fandom ? 'source' : (s.illustration_style as PictureChoice),
     welcome: s.welcome,
     brand_or_fandom: s.brand_or_fandom,
-    family_safe: s.family_safe,
+    family_safe: FEATURES.familySafe && s.family_safe,
     autopilot: true,
   };
 }
@@ -88,7 +89,8 @@ export function topicInsertFromDraft(d: FeedSetupDraft, slug: string, userId: st
     illustration_primary_color: d.colour,
     illustration_style: d.pictures === 'source' ? 'illustrated_icon' : d.pictures,
     branding_config: { subheader: d.welcome.trim().slice(0, 110) },
-    family_safe: d.family_safe,
+    // Family-safe is parked (docs/parked-features.md): new feeds keep the column default while it's off.
+    ...(FEATURES.familySafe ? { family_safe: d.family_safe } : {}),
     brand_safe_pictures: d.brand_or_fandom,
     // Autopilot: written stories publish straight away (the story writer reads this flag).
     auto_simplify_enabled: d.autopilot,

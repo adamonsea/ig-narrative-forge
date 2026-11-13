@@ -18,16 +18,16 @@ publish-toggle — The Live/Draft switch in the feed header
 reviews — Build a public visual look-back over a period
 control-overview — Settings: Brand, What we look for, Autopilot, Share and grow, Extras
 news-values — Settings → What we look for → More options → How local
-coverage-terms — Settings → What we look for: "More of this" / "Less of this" lists and Family-safe
-exclusions — Settings → What we look for → More options → Exclusions and clean-up
+coverage-terms — Settings → What we look for: "More of this" / "Less of this" lists, with suggested terms under More of this
+exclusions — Settings → What we look for → "Less of this", with "Clean up past stories" (asks before removing anything)
 categories — Settings → What we look for → More options → Categories
 voice — Settings → Brand → More options → Voice and tone
 picture-references — Settings → What we look for → More options → Picture references and picture style
 automation — Settings → Autopilot: on/off and publishing pace; More options has exact behaviour and release timing
-distribution — Settings → Share and grow: email sign-ups, weekly roundup, widget code; Advanced has segments, audio, RSS, donations
+distribution — Settings → Share and grow: email sign-ups, weekly roundup, widget code; Advanced has the subscriber list, widget builder, RSS, AI assistants, donations
 ai-assistants — Settings → Share and grow → Advanced → Connect the feed to ChatGPT or Claude
 identity — Settings → Brand: name, logo, colour, welcome line; More options has app icon, welcome card, About page
-features — Settings → Extras: in-feed cards, quizzes, coverage mood, community discussion, local tools
+features — Settings → Extras: in-feed cards, quizzes, local tools
 your-feeds — The list of all feeds you own
 public-feed — What readers see
 `.trim();
@@ -106,8 +106,6 @@ Deno.serve(async (req) => {
         topic?.email_subscriptions_enabled && 'email',
         topic?.rss_enabled && 'RSS',
         topic?.public_widget_builder_enabled && 'website widget',
-        topic?.audio_briefings_daily_enabled && 'daily audio',
-        topic?.audio_briefings_weekly_enabled && 'weekly audio',
         topic?.mcp_enabled && 'AI assistants',
       ].filter(Boolean),
     };
@@ -117,7 +115,6 @@ Deno.serve(async (req) => {
       !topic?.email_subscriptions_enabled && { name: 'Reader email edition', what: 'Send published stories to readers by email.', destination: 'distribution' },
       !topic?.rss_enabled && { name: 'RSS feed', what: 'Let readers and other apps follow the feed automatically.', destination: 'distribution' },
       !topic?.public_widget_builder_enabled && { name: 'Website widget', what: 'Put a live strip of your stories on any website.', destination: 'distribution' },
-      !(topic?.audio_briefings_daily_enabled || topic?.audio_briefings_weekly_enabled) && { name: 'Audio briefings', what: 'A spoken version of the feed for listeners.', destination: 'distribution' },
       !topic?.mcp_enabled && { name: 'ChatGPT and Claude access', what: 'Readers can ask an AI assistant about your feed.', destination: 'ai-assistants' },
       !(topic?.landmarks || []).length && { name: 'Picture references', what: 'Add local places so illustrations look like the real thing.', destination: 'picture-references' },
       !(topic?.negative_keywords || []).length && { name: 'Exclusions', what: 'Words that keep unwanted stories out of arrivals.', destination: 'exclusions' },
@@ -156,7 +153,7 @@ Reply as JSON only:
   "answer": "one or two short sentences",
   "steps": ["short step", "short step"],
   "actions": [{"label": "Open Picture references", "destination": "picture-references"}],
-  "nudge": {"title": "Audio briefings", "body": "one short sentence on why it would help them", "destination": "distribution"},
+  "nudge": {"title": "Website widget", "body": "one short sentence on why it would help them", "destination": "distribution"},
   "suggestions": ["short follow-up question the owner might ask next", "another"]
 }
 steps, actions and suggestions may be empty arrays and nudge may be null. Give 1-3 actions when a place is relevant, and always 2-3 suggestions.`;

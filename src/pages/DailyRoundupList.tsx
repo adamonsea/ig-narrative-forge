@@ -14,6 +14,7 @@ import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { buildShareUrl } from "@/lib/urlUtils";
 import { shortenUrl } from "@/lib/urlShortener";
 import { AudioBriefingPlayer } from "@/components/AudioBriefingPlayer";
+import { FEATURES } from "@/lib/featureFlags";
 
 interface Topic {
   id: string;
@@ -506,7 +507,7 @@ export default function DailyRoundupList() {
             </Button>
             
             {/* Audio Player */}
-            {roundup.audio_url && (
+            {FEATURES.audioBriefings && roundup.audio_url && (
               <AudioBriefingPlayer
                 audioUrl={roundup.audio_url}
                 title={`${topic.name} Daily Briefing`}

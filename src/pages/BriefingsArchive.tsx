@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BriefingsArchiveSEO } from "@/components/seo/BriefingsArchiveSEO";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { getCachedBriefings, setCachedBriefings, isBriefingsCacheFresh, CachedRoundup } from "@/lib/briefingsCache";
+import { FEATURES } from "@/lib/featureFlags";
 
 interface Topic {
   id: string;
@@ -303,7 +304,7 @@ export default function BriefingsArchive() {
                                 <CardTitle className="text-base flex items-start justify-between gap-2">
                                   <span className="flex items-center gap-2">
                                     {formattedDate}
-                                    {roundup.audio_url && (
+                                    {FEATURES.audioBriefings && roundup.audio_url && (
                                       <Volume2 className="w-3 h-3 text-primary" />
                                     )}
                                   </span>
@@ -357,7 +358,7 @@ export default function BriefingsArchive() {
                                 <CardTitle className="text-base flex items-start justify-between gap-2">
                                   <span className="flex items-center gap-2">
                                     {formattedDate}
-                                    {roundup.audio_url && (
+                                    {FEATURES.audioBriefings && roundup.audio_url && (
                                       <Volume2 className="w-3 h-3 text-primary" />
                                     )}
                                   </span>

@@ -8,6 +8,7 @@ import {
   parseNearbyPlaces,
   type NewsValuesConfig,
 } from '../_shared/news-values.ts';
+import { FEATURES } from '../_shared/parked-features.ts';
 
 
 const corsHeaders = {
@@ -325,7 +326,7 @@ Deno.serve(async (req) => {
       let topicQueued = 0;
 
       const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
-      const familySafe = topicDefaultsMap[topic_id]?.family_safe === true;
+      const familySafe = FEATURES.familySafe && topicDefaultsMap[topic_id]?.family_safe === true;
       const topicType = topicDefaultsMap[topic_id]?.topic_type;
       const newsValues = topicDefaultsMap[topic_id]?.newsValues;
       const localityGateActive = topicType === 'regional' && !!newsValues && !!topicDefaultsMap[topic_id]?.hasAnchors;

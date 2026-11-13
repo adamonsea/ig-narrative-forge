@@ -1,6 +1,7 @@
 // @ts-nocheck -- run with: bun test ./src/lib/feedSetup.test.ts
 import { describe, expect, test } from "bun:test";
 import { slugify, nameCandidate, addTerm, draftFromSuggestion, topicInsertFromDraft, automationFromDraft } from "./feedSetup";
+import { FEATURES } from "./featureFlags";
 
 const pokemon = {
   name: "Pokémon Pulse", topic_type: "keyword", region: null, description: "Pokémon news.",
@@ -46,10 +47,15 @@ describe("feed setup", () => {
     expect(automationFromDraft(d).auto_illustrate_enabled).toBe(false);
   });
 
-  test("Family-safe follows the owner's choice: off for news, on when chosen", () => {
-    expect(topicInsertFromDraft(draftFromSuggestion(eastbourne), "e", "u").family_safe).toBe(false);
-    expect(topicInsertFromDraft(draftFromSuggestion(pokemon), "p", "u").family_safe).toBe(true);
-    expect(topicInsertFromDraft({ ...draftFromSuggestion(pokemon), family_safe: false }, "p", "u").family_safe).toBe(false);
+  test("Family-safe is parked: new feeds never get it switched on while the feature is off", () => {
+    if (FEATURES.familySafe) {
+      expect(topicInsertFromDraft(draftFromSuggestion(pokemon), "p", "u").family_safe).toBe(true);
+      expect(topicInsertFromDraft(draftFromSuggestion(eastbourne), "e", "u").family_safe).toBe(false);
+      return;
+    }
+    expect(draftFromSuggestion(pokemon).family_safe).toBe(false);
+    expect("family_safe" in topicInsertFromDraft(draftFromSuggestion(pokemon), "p", "u")).toBe(false);
+    expect("family_safe" in topicInsertFromDraft(draftFromSuggestion(eastbourne), "e", "u")).toBe(false);
   });
 
   test("the welcome line becomes the feed's subheader", () => {

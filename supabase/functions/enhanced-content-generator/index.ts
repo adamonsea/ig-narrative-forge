@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { stripGeneratedAttribution } from '../_shared/attribution-guard.ts';
 import { llmFetch } from '../_shared/llm-router.ts';
 import { familySafeVerdict, familySafeReason } from '../_shared/family-safe.ts';
+import { FEATURES } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1191,7 +1192,7 @@ Return in JSON format:
         .maybeSingle();
 
       // Family-safe (owner's choice): never write adult, violent or gambling stories.
-      if ((topicData as any)?.family_safe) {
+      if (FEATURES.familySafe && (topicData as any)?.family_safe) {
         const verdict = familySafeVerdict(article.title, article.body);
         if (!verdict.safe) {
           const reason = familySafeReason(verdict);

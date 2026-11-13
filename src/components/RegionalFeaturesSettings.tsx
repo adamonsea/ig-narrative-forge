@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TrackedMPsManager } from "@/components/TrackedMPsManager";
+import { FEATURES } from "@/lib/featureFlags";
 
 
 interface RegionalFeaturesSettingsProps {
@@ -63,7 +64,7 @@ export const RegionalFeaturesSettings = ({
           className="max-w-md"
         />
         <p className="text-xs text-muted-foreground">
-          Used for parliamentary tracking and regional content filtering
+          {FEATURES.parliament ? "Used for parliamentary tracking and regional content filtering" : "Used to judge which stories are local"}
         </p>
       </div>
 
@@ -73,7 +74,8 @@ export const RegionalFeaturesSettings = ({
 
 
 
-      {/* Parliamentary Tracking */}
+      {/* Parliamentary Tracking — parked (docs/parked-features.md); the saved setting is kept */}
+      {FEATURES.parliament && (
       <div className="space-y-4 py-3 border-t">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -99,6 +101,7 @@ export const RegionalFeaturesSettings = ({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { buildShareUrl } from "@/lib/urlUtils";
 import { AudioBriefingPlayer } from "@/components/AudioBriefingPlayer";
+import { FEATURES } from "@/lib/featureFlags";
 
 interface Topic {
   id: string;
@@ -541,7 +542,7 @@ export default function WeeklyRoundupList() {
             </Button>
             
             {/* Audio Player */}
-            {roundup.audio_url && (
+            {FEATURES.audioBriefings && roundup.audio_url && (
               <AudioBriefingPlayer
                 audioUrl={roundup.audio_url}
                 title={`${topic.name} Weekly Briefing`}

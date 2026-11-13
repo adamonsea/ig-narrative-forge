@@ -125,3 +125,10 @@ One pipeline for stories and events (12 November 2026)
 - [x] Feed: What's on card set (cover + one event per swipe), next 14 days, up to 8, after story 1 then every 15+, click tracking
 - [x] Remove the mock route; leave event_source_url and the old Chamber importer alone
 - [x] Check end to end on Eastbourne: arrive → Waiting → Publish → Live → feed card → weekly email events (rendered email preview and signed-in Desk screens not viewable from here)
+
+Park six features + tidy keywords (13 November 2026)
+- [x] Report which of the six were on for Eastbourne before switching anything off
+- [x] One switch file for Community discussion, Parliament, Sentiment, Email segments, Audio briefings, Family-safe (all off); jobs return early, screens hide, saved values untouched
+- [x] docs/parked-features.md: what each does, why parked, how to bring it back
+- [x] What we look for: one place for terms, case-insensitive, one list per term with "Moved from…" note, compact long lists with search, suggestions inline, Clean up past stories asks first
+- [x] Check Eastbourne feed + values after (signed-in Desk/Settings/setup screens not viewable from here)

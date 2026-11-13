@@ -8,9 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { PictureReferences } from "@/components/topics/PictureReferences";
-import { CoverageTerms } from "@/components/topics/CoverageTerms";
 import { AiAssistantAccess } from "@/components/topics/AiAssistantAccess";
-import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
@@ -33,6 +31,7 @@ import { BrandBasics } from "@/components/settings/BrandBasics";
 import { LookForPanel } from "@/components/settings/LookForPanel";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
+import { FEATURES } from "@/lib/featureFlags";
 
 export interface EditorialTopic {
   id: string;
@@ -230,13 +229,13 @@ export function EditorialControlCenter({
           topicId={topic.id}
           keywords={topic.keywords}
           negativeKeywords={negativeKeywords}
-          familySafe={topic.family_safe === true}
+          setupState={topic.coverage_setup_state || {}}
           onChange={(values) => {
             if (values.negative_keywords) onNegativeKeywordsChange(values.negative_keywords);
             patch(values);
           }}
         />
-        <RememberedFold foldKey="lookfor-more" label="More options: how local, suggested terms, exclusion clean-up, categories, picture references">
+        <RememberedFold foldKey="lookfor-more" label="More options: how local, categories, picture references">
           <div className="space-y-10">
             {topic.topic_type === "regional" && (
               <section aria-labelledby="news-values-heading">
@@ -254,21 +253,7 @@ export function EditorialControlCenter({
                 />
               </section>
             )}
-            <section className="border-t border-border pt-8 first:border-t-0 first:pt-0" aria-labelledby="discovery-heading">
-              <SubHeading id="discovery-heading" hint="Suggested from your own recent stories.">Suggested terms</SubHeading>
-              <CoverageTerms
-                key={topic.keywords.join("|")}
-                topicId={topic.id}
-                keywords={topic.keywords}
-                setupState={topic.coverage_setup_state || {}}
-                onChange={(values) => patch(values)}
-              />
-            </section>
-            <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
-              <SubHeading id="exclusions-heading" hint="Also finds and removes published stories that match.">Exclusions and clean-up</SubHeading>
-              <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
-            </section>
-            <section className="border-t border-border pt-8" aria-labelledby="coverage-categories-heading">
+            <section className="border-t border-border pt-8 first:border-t-0 first:pt-0" aria-labelledby="coverage-categories-heading">
               <SubHeading id="coverage-categories-heading" hint="How published stories are grouped for readers' filters and look-backs.">Categories</SubHeading>
               <CategoriesPanel topicId={topic.id} />
             </section>
@@ -331,20 +316,24 @@ export function EditorialControlCenter({
           onTopicPatch={(values) => patch(values)}
           onProRequired={onProRequired}
         />
-        <RememberedFold foldKey="share-more" label="Advanced: subscribers, email segments, audio briefings, widget builder, RSS, AI assistants, donations">
+        <RememberedFold foldKey="share-more" label={`Advanced: subscribers${FEATURES.emailSegments ? ", email segments" : ""}${FEATURES.audioBriefings ? ", audio briefings" : ""}, widget builder, RSS, AI assistants, donations`}>
           <div className="divide-y divide-border border-y border-border">
             <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
             {topic.email_subscriptions_enabled && (
               <div className="space-y-8 py-6">
                 <NewsletterSignupsManager topicId={topic.id} />
-                <div className="border-t border-border pt-6"><EmailSegmentsManager topicId={topic.id} /></div>
+                {FEATURES.emailSegments && <div className="border-t border-border pt-6"><EmailSegmentsManager topicId={topic.id} /></div>}
               </div>
             )}
             {!topic.email_subscriptions_enabled && (
-              <div className="flex items-center gap-3 py-5 text-sm text-muted-foreground"><Mail className="h-4 w-4" />Subscriber list and email segments appear once email sign-ups are on.</div>
+              <div className="flex items-center gap-3 py-5 text-sm text-muted-foreground"><Mail className="h-4 w-4" />The subscriber list appears once email sign-ups are on.</div>
             )}
-            <ChannelRow icon={Mic2} label="Daily audio briefing" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
-            <ChannelRow icon={Mic2} label="Weekly audio review" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
+            {FEATURES.audioBriefings && (
+              <>
+                <ChannelRow icon={Mic2} label="Daily audio briefing" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
+                <ChannelRow icon={Mic2} label="Weekly audio review" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
+              </>
+            )}
             <ChannelRow icon={Settings2} label="Website widget" description="Embed this feed on another website" checked={topic.public_widget_builder_enabled || false} onCheckedChange={(checked) => onChannelToggle("public_widget_builder_enabled", checked, "Website widget")} />
             {topic.public_widget_builder_enabled && (
               <div className="space-y-4 py-6">
@@ -377,16 +366,20 @@ export function EditorialControlCenter({
           foldKey="extras"
           variant="section"
           label="Extras"
-          description="In-feed cards, quizzes, coverage mood, community discussion and local reporting tools. All off unless you switch them on."
+          description={`In-feed cards, quizzes${FEATURES.sentiment ? ", coverage mood" : ""}${FEATURES.communityDiscussion ? ", community discussion" : ""} and local reporting tools. All off unless you switch them on.`}
         >
           <div className="space-y-10">
             <section><SubHeading>In-feed cards and quizzes</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
-            <section className="border-t border-border pt-8"><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>
-            <section className="border-t border-border pt-8">
-              <SubHeading>Community discussion</SubHeading>
-              <p className="-mt-2 mb-5 text-sm text-muted-foreground">Follow what people are saying online without changing the feed's writing voice.</p>
-              <CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} />
-            </section>
+            {FEATURES.sentiment && (
+              <section className="border-t border-border pt-8"><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>
+            )}
+            {FEATURES.communityDiscussion && (
+              <section className="border-t border-border pt-8">
+                <SubHeading>Community discussion</SubHeading>
+                <p className="-mt-2 mb-5 text-sm text-muted-foreground">Follow what people are saying online without changing the feed's writing voice.</p>
+                <CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} />
+              </section>
+            )}
             {topic.topic_type === "regional" && (
               <section className="border-t border-border pt-8">
                 <SubHeading>Local reporting tools</SubHeading>

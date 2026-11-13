@@ -5,8 +5,7 @@ import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { PictureReferences } from "@/components/topics/PictureReferences";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CoverageTerms } from "@/components/topics/CoverageTerms";
-import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
+import { LookForPanel } from "@/components/settings/LookForPanel";
 import { NewsValuesPanel } from "@/components/topics/NewsValuesPanel";
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
@@ -207,11 +206,16 @@ export const FeedSetupGuide = ({
 
         {step === 2 && (
           <div className="space-y-8">
-            <CoverageTerms
+            <LookForPanel
+              show="more"
               topicId={topic.id}
               keywords={topic.keywords || []}
+              negativeKeywords={negativeKeywords}
               setupState={(topic as any).coverage_setup_state || {}}
-              onChange={(patch) => onTopicChange(patch as never)}
+              onChange={(patch) => {
+                if (patch.negative_keywords) onNegativeKeywordsChange(patch.negative_keywords);
+                onTopicChange(patch as never);
+              }}
             />
             {topic.topic_type === "regional" && (
               <PictureReferences
@@ -239,10 +243,16 @@ export const FeedSetupGuide = ({
 
         {step === 3 && (
           <div className="space-y-4">
-            <TopicNegativeKeywords
+            <LookForPanel
+              show="less"
               topicId={topic.id}
+              keywords={topic.keywords || []}
               negativeKeywords={negativeKeywords}
-              onUpdate={onNegativeKeywordsChange}
+              setupState={(topic as any).coverage_setup_state || {}}
+              onChange={(patch) => {
+                if (patch.negative_keywords) onNegativeKeywordsChange(patch.negative_keywords);
+                onTopicChange(patch as never);
+              }}
             />
             {topic.topic_type === "regional" && (
               <NewsValuesPanel

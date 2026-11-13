@@ -6,6 +6,7 @@
 import { getUser } from '../_shared/auth.ts';
 import { llmFetch } from '../_shared/llm-router.ts';
 import { fallbackSetup, normaliseSetup } from './rules.ts';
+import { FEATURES } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,8 +33,8 @@ const SYSTEM = `You set up curated news feeds from one short description. Return
  "colour":"#RRGGBB brand colour suited to the subject, mid-tone, not near white or black",
  "illustration_style":"editorial_illustrative | editorial_photographic | illustrated_icon",
  "welcome":"one sentence welcoming readers, under 90 characters, adult newsroom tone, no exclamation marks",
- "brand_or_fandom": true if the subject is a brand, franchise, game, film/TV property, character, band or fandom, else false,
- "family_safe": true for hobby, fandom, games, children's and family subjects; false for news, local news, politics, business, crime or general current affairs}
+ "brand_or_fandom": true if the subject is a brand, franchise, game, film/TV property, character, band or fandom, else false${FEATURES.familySafe ? `,
+ "family_safe": true for hobby, fandom, games, children's and family subjects; false for news, local news, politics, business, crime or general current affairs` : ''}}
 Never invent facts about places. Plain English, no hype.`;
 
 Deno.serve(async (req) => {

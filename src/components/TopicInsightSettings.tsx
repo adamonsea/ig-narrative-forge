@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
+import { FEATURES } from "@/lib/featureFlags";
 
 interface TopicInsightSettingsProps {
   topicId: string;
@@ -273,7 +274,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           </div>
 
           {/* Feed-only switches: data collection and the weekly email are unaffected */}
-          {([
+          {FEATURES.parliament && ([
             ['parliamentary_cards_enabled', 'Parliament cards', 'MP vote cards and the weekly parliament digest in your public feed'],
           ] as const).map(([key, label, desc]) => (
             <div key={key} className="flex items-center justify-between p-4 rounded-lg border">

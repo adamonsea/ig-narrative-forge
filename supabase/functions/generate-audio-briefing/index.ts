@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isServiceRole, unauthorized } from '../_shared/auth.ts';
+import { FEATURES, parkedResponseBody } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +62,10 @@ interface StoryWithCaption {
 const AUDIO_BRIEFING_CREDITS = 30;
 
 serve(async (req) => {
+  // Parked feature (docs/parked-features.md): do nothing until switched back on.
+  if (req.method !== 'OPTIONS' && !FEATURES.audioBriefings) {
+    return new Response(parkedResponseBody('audioBriefings'), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

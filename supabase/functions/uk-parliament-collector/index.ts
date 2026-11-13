@@ -4,6 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { FEATURES, parkedResponseBody } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -127,6 +128,10 @@ async function fetchCurrentMpForConstituency(constituency: string): Promise<MPIn
 }
 
 serve(async (req) => {
+  // Parked feature (docs/parked-features.md): do nothing until switched back on.
+  if (req.method !== 'OPTIONS' && !FEATURES.parliament) {
+    return new Response(parkedResponseBody('parliament'), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

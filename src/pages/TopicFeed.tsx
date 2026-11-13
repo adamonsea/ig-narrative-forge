@@ -66,6 +66,7 @@ import {
 import { buildShareUrl } from "@/lib/urlUtils";
 import { isInAppBrowser } from "@/lib/deviceUtils";
 import { FEED_FILTERS_ENABLED, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
+import { FEATURES } from "@/lib/featureFlags";
 
 // Helper functions using centralized position system
 const shouldShowSentiment = (idx: number) => shouldShowCard('sentiment', idx);
@@ -467,8 +468,9 @@ const TopicFeed = () => {
   }, [slug]);
 
   // Optimization #5: Defer secondary hooks until main feed has rendered
-  const { sentimentCards } = useSentimentCards(storiesLoading ? undefined : topic?.id);
-  const { data: pulseData } = useCommunityPulseKeywords(storiesLoading ? '' : (topic?.id || ''));
+  // Parked features (docs/parked-features.md) never load or show while switched off.
+  const { sentimentCards } = useSentimentCards(storiesLoading || !FEATURES.sentiment ? undefined : topic?.id);
+  const { data: pulseData } = useCommunityPulseKeywords(storiesLoading || !FEATURES.communityDiscussion ? '' : (topic?.id || ''));
   const { data: insightCards = [] } = useAutomatedInsightCards(
     storiesLoading ? undefined : topic?.id, 
     !storiesLoading && (topic?.automated_insights_enabled ?? true)
@@ -484,18 +486,18 @@ const TopicFeed = () => {
   const { votes: parliamentaryVotes, hasData: hasParliamentaryData } = useParliamentaryInsightCards(
     storiesLoading ? undefined : topic?.id,
     topic?.topic_type,
-    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled && topicMetadata.parliamentaryCardsEnabled
+    FEATURES.parliament && !storiesLoading && (topic as any)?.parliamentary_tracking_enabled && topicMetadata.parliamentaryCardsEnabled
   );
   
   const { votes: parliamentaryDigestVotes, hasData: hasParliamentaryDigest } = useParliamentaryDigestCards(
     storiesLoading ? undefined : topic?.id,
     topic?.topic_type,
-    !storiesLoading && (topic as any)?.parliamentary_tracking_enabled && topicMetadata.parliamentaryCardsEnabled
+    FEATURES.parliament && !storiesLoading && (topic as any)?.parliamentary_tracking_enabled && topicMetadata.parliamentaryCardsEnabled
   );
   
 
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
-  const shouldShowCommunityPulse = topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
+  const shouldShowCommunityPulse = FEATURES.communityDiscussion && topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
 
   const lastStoryContentIndex = useMemo(() => {
     let lastIndex = -1;
@@ -695,7 +697,7 @@ const TopicFeed = () => {
       }
 
       // Sentiment cards - wrapped in Suspense for lazy loading
-      if (shouldShowSentiment(storyIndex) && sentimentCards.length > 0) {
+      if (FEATURES.sentiment && shouldShowSentiment(storyIndex) && sentimentCards.length > 0) {
         const keywordCards = sentimentCards.filter(card => card.card_type !== 'comparison');
         const comparisonCards = sentimentCards.filter(card => card.card_type === 'comparison');
         const totalSentimentCardsShown = getSentimentIndex(storyIndex);
@@ -790,7 +792,7 @@ const TopicFeed = () => {
       }
 
       // Parliamentary insight cards
-      if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0 && topicMetadata?.parliamentaryCardsEnabled) {
+      if (FEATURES.parliament && shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0 && topicMetadata?.parliamentaryCardsEnabled) {
         items.push(
           <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
             <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
@@ -801,7 +803,7 @@ const TopicFeed = () => {
       }
 
       // Parliamentary weekly digest
-      if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0 && topicMetadata?.parliamentaryCardsEnabled) {
+      if (FEATURES.parliament && shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0 && topicMetadata?.parliamentaryCardsEnabled) {
         items.push(
           <div key={`parliamentary-digest-${storyIndex}`} className="w-full max-w-2xl">
             <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>

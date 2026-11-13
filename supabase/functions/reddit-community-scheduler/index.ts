@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { FEATURES, parkedResponseBody } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +11,10 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 serve(async (req) => {
+  // Parked feature (docs/parked-features.md): do nothing until switched back on.
+  if (req.method !== 'OPTIONS' && !FEATURES.communityDiscussion) {
+    return new Response(parkedResponseBody('communityDiscussion'), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   console.log('🚀 reddit-community-scheduler INITIALIZED - Function started');
   
   if (req.method === 'OPTIONS') {

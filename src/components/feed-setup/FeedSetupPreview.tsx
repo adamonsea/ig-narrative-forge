@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { BRAND_COLOURS, PICTURE_LABELS, type FeedSetupDraft, type PictureChoice } from "@/lib/feedSetup";
 import { TermList } from "./TermList";
+import { FEATURES } from "@/lib/featureFlags";
+import { addToList, normaliseTerm, removeTerm, type ListName } from "@/lib/termLists";
 
 export interface SetupSource {
   url: string;
@@ -63,6 +65,14 @@ export function FeedSetupPreview({
   const [newSource, setNewSource] = useState("");
   const [sourceError, setSourceError] = useState<string | null>(null);
   const set = <K extends keyof FeedSetupDraft>(key: K, value: FeedSetupDraft[K]) => onChange({ ...draft, [key]: value });
+  const [moved, setMoved] = useState<{ list: ListName; text: string } | null>(null);
+  // A term lives in one list only: adding it to one moves it out of the other.
+  const addTo = (list: ListName, term: string) => {
+    const r = addToList({ more: draft.keywords, less: draft.negative_keywords }, list, term);
+    if (!r.added) return;
+    onChange({ ...draft, keywords: r.more, negative_keywords: r.less });
+    setMoved(r.movedFrom ? { list, text: `“${normaliseTerm(term)}” moved from ${r.movedFrom === "more" ? "More of this" : "Less of this"}` } : null);
+  };
   const addSource = () => {
     const error = onAddSource(newSource);
     setSourceError(error);
@@ -172,14 +182,18 @@ export function FeedSetupPreview({
           label="More of this"
           hint="Stories that mention these belong in the feed."
           terms={draft.keywords}
-          onChange={(next) => set("keywords", next)}
+          onAdd={(t) => addTo("more", t)}
+          onRemove={(t) => set("keywords", removeTerm(draft.keywords, t))}
+          notice={moved?.list === "more" ? moved.text : null}
         />
         <TermList
           label="Less of this"
           hint="Stories about these are left out."
           tone="less"
           terms={draft.negative_keywords}
-          onChange={(next) => set("negative_keywords", next)}
+          onAdd={(t) => addTo("less", t)}
+          onRemove={(t) => set("negative_keywords", removeTerm(draft.negative_keywords, t))}
+          notice={moved?.list === "less" ? moved.text : null}
         />
       </section>
 
@@ -212,7 +226,7 @@ export function FeedSetupPreview({
         )}
       </Row>
 
-      <SwitchRow
+      {FEATURES.familySafe && <SwitchRow
         id="setup-family-safe"
         title="Family-safe"
         hint={draft.family_safe
@@ -220,7 +234,7 @@ export function FeedSetupPreview({
           : "Off: crime, courts and hard news come through. Turn on to leave out adult, violent and gambling stories."}
         checked={draft.family_safe}
         onChange={(v) => set("family_safe", v)}
-      />
+      />}
       <SwitchRow
         id="setup-autopilot"
         title="Autopilot"

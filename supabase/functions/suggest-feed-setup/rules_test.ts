@@ -1,11 +1,12 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { normaliseSetup, fallbackSetup, usableColour } from './rules.ts';
+import { FEATURES } from '../_shared/parked-features.ts';
 
-Deno.test('a fandom subject gets brand-safe, plain-graphic pictures and Family-safe on', () => {
+Deno.test('a fandom subject gets brand-safe, plain-graphic pictures (Family-safe only while that feature is on)', () => {
   const s = normaliseSetup({ name: 'Pokémon Today', topic_type: 'keyword', keywords: ['Pokémon', 'pokémon tcg'], brand_or_fandom: true, illustration_style: 'editorial_photographic', colour: '#E3350D' }, 'Pokémon');
   assertEquals(s.brand_or_fandom, true);
   assertEquals(s.illustration_style, 'illustrated_icon');
-  assertEquals(s.family_safe, true);
+  assertEquals(s.family_safe, FEATURES.familySafe);
   assertEquals(s.keywords, ['pokémon', 'pokémon tcg']);
 });
 

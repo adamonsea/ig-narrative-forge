@@ -1,4 +1,5 @@
 // Pure rules for the one-sentence feed setup. No network, fully testable.
+import { FEATURES } from '../_shared/parked-features.ts';
 
 export const PICTURE_STYLES = ['editorial_illustrative', 'editorial_photographic', 'illustrated_icon'] as const;
 export type PictureStyle = typeof PICTURE_STYLES[number];
@@ -89,6 +90,7 @@ export function normaliseSetup(raw: any, about: string): FeedSetup {
     welcome: clean(raw.welcome, 110) || base.welcome,
     brand_or_fandom: brand,
     // Brand/fandom subjects default to Family-safe on; news never does unless the model says so.
-    family_safe: raw.family_safe === true || (brand && raw.family_safe !== false),
+    // Family-safe is parked (docs/parked-features.md): never suggested while off.
+    family_safe: FEATURES.familySafe && (raw.family_safe === true || (brand && raw.family_safe !== false)),
   };
 }

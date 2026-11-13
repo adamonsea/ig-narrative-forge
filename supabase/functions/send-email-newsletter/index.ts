@@ -7,6 +7,7 @@ import { DailyRoundupEmail } from './_templates/daily-roundup.tsx';
 import { WeeklyRoundupEmail } from './_templates/weekly-roundup.tsx';
 import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProAccess } from '../_shared/auth.ts';
 import { dedupeByEvent, EMAIL_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
+import { FEATURES } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -113,7 +114,8 @@ serve(async (req) => {
       include_events: boolean;
     } | null = null;
 
-    if (segmentId) {
+    // Parked feature: while email segments are off, every send is the plain, unsegmented one.
+    if (segmentId && FEATURES.emailSegments) {
       const { data: segmentRow, error: segmentError } = await supabase
         .from('email_segments')
         .select('id, name, topic_id, source_domain, signup_source, intro_heading, intro_text, include_events')
@@ -384,7 +386,7 @@ serve(async (req) => {
 
       let list = (subscribers || []).filter((s) => s.email);
 
-      if (!segment) {
+      if (!segment && FEATURES.emailSegments) {
         // Default send: exclude anyone already covered by an active segment,
         // so nobody receives two versions of the same briefing.
         const { data: otherSegments } = await supabase

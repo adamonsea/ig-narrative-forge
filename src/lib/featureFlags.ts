@@ -12,3 +12,11 @@ export const FEED_FILTERS_ENABLED = false;
  * (cookie banner + one swipe hint only). Set to true to bring them all back.
  */
 export const READER_ONBOARDING_EXTRAS = false;
+
+/**
+ * Parked features (community discussion, parliament, sentiment, email
+ * segments, audio briefings, Family-safe). One shared switchboard for the
+ * web app and the edge functions — flip a value there to bring one back.
+ * See docs/parked-features.md.
+ */
+export { FEATURES } from "../../supabase/functions/_shared/parked-features.ts";

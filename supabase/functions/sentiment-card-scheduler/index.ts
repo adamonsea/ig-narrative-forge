@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { FEATURES, parkedResponseBody } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +8,10 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Parked feature (docs/parked-features.md): do nothing until switched back on.
+  if (req.method !== 'OPTIONS' && !FEATURES.sentiment) {
+    return new Response(parkedResponseBody('sentiment'), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
