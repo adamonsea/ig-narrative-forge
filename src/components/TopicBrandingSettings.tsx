@@ -258,7 +258,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
       console.log('Branding save completed successfully');
       toast({
         title: "Branding updated",
-        description: "Your topic branding has been saved successfully"
+        description: "Your feed branding is saved"
       });
 
       onUpdate();
@@ -286,7 +286,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
           <div>
             <Label className="text-base font-medium">Logo (Header Branding)</Label>
             <p className="text-sm text-muted-foreground mb-3">
-              Upload a logo to replace your topic name. Recommended size: 200x60px, max 2MB
+              Upload a logo to replace your feed name. Recommended size: 200x60px, max 2MB
             </p>
             
             {logoPreview ? (
@@ -331,7 +331,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
           {/* Icon Upload */}
           <div>
-            <Label className="text-base font-medium">App Icon (PWA/Favicon)</Label>
+            <Label className="text-base font-medium">App and browser icon</Label>
             <p className="text-sm text-muted-foreground mb-3">
               Upload an icon for browser favicon and mobile home screen. Recommended: 512x512px square, max 1MB
             </p>
@@ -382,11 +382,11 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
               Subheader
             </Label>
             <p className="text-sm text-muted-foreground mb-3">
-              Add a custom description that appears below your topic name or logo
+              Add a custom description that appears below your feed name or logo
             </p>
             <Textarea
               id="subheader"
-              placeholder="Enter a custom subheader for your topic..."
+              placeholder="One line shown under your feed name"
               value={subheader}
               onChange={(e) => setSubheader(e.target.value)}
               maxLength={200}

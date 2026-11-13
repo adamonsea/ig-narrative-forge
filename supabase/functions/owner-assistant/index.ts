@@ -11,23 +11,23 @@ const corsHeaders = {
 };
 
 const DESTINATIONS = `
-pipeline — Arrivals waiting for review and live published stories
+pipeline — The Desk: stories and events waiting for review (Waiting) and everything live
 add-story — Add a story by hand (paste or upload)
-sources — Add, check or pause the websites stories are gathered from
+sources — Add, check or pause the websites stories and events come from; per-source Auto-publish
 publish-toggle — The Live/Draft switch in the feed header
 reviews — Build a public visual look-back over a period
-control-overview — Editorial control overview: policy and decisions needed
-news-values — How local a story must be, big-story exceptions
-coverage-terms — Words that tell Curatr what belongs in the feed
-exclusions — Words that keep unwanted stories out
-categories — How published stories are grouped
-voice — Tone, writing style, house style, example sentences
-picture-references — Local places, reference photos, illustration style
-automation — How much Curatr may publish without you, publishing pace
-distribution — Email, RSS, widget, audio briefings, donations
-ai-assistants — Connect the feed to ChatGPT or Claude
-identity — Brand, colour, welcome message, About page
-features — Insight cards, sentiment, community signals, local tools
+control-overview — Settings: Brand, What we look for, Autopilot, Share and grow, Extras
+news-values — Settings → What we look for → More options → How local
+coverage-terms — Settings → What we look for: "More of this" / "Less of this" lists and Family-safe
+exclusions — Settings → What we look for → More options → Exclusions and clean-up
+categories — Settings → What we look for → More options → Categories
+voice — Settings → Brand → More options → Voice and tone
+picture-references — Settings → What we look for → More options → Picture references and picture style
+automation — Settings → Autopilot: on/off and publishing pace; More options has exact behaviour and release timing
+distribution — Settings → Share and grow: email sign-ups, weekly roundup, widget code; Advanced has segments, audio, RSS, donations
+ai-assistants — Settings → Share and grow → Advanced → Connect the feed to ChatGPT or Claude
+identity — Settings → Brand: name, logo, colour, welcome line; More options has app icon, welcome card, About page
+features — Settings → Extras: in-feed cards, quizzes, coverage mood, community discussion, local tools
 your-feeds — The list of all feeds you own
 public-feed — What readers see
 `.trim();

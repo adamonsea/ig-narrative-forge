@@ -1,28 +1,12 @@
-import { useMemo } from "react";
+import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import {
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  CircleAlert,
-  ExternalLink,
-  Gauge,
-  Globe2,
-  Mail,
-  MapPin,
-  Mic2,
-  Palette,
-  Radio,
-  Rss,
-  Settings2,
-  Sparkles,
-  SlidersHorizontal,
-} from "lucide-react";
+import { CircleAlert, ExternalLink, Globe2, Mail, Mic2, Rss, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 import { PictureReferences } from "@/components/topics/PictureReferences";
 import { CoverageTerms } from "@/components/topics/CoverageTerms";
 import { AiAssistantAccess } from "@/components/topics/AiAssistantAccess";
@@ -39,12 +23,16 @@ import { SentimentKeywordSettings } from "@/components/SentimentKeywordSettings"
 import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
 import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
+import { EmailSegmentsManager } from "@/components/EmailSegmentsManager";
 import { WidgetAnalytics } from "@/components/WidgetAnalytics";
 import { InfoHint } from "@/components/ui/editorial";
-import { ILLUSTRATION_STYLE_LABELS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
-import { getDial, parseNearbyPlaces } from "@/lib/newsValues";
+import { type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
-import { cn } from "@/lib/utils";
+import { RememberedFold, openFold } from "@/components/settings/RememberedFold";
+import { BrandBasics } from "@/components/settings/BrandBasics";
+import { LookForPanel } from "@/components/settings/LookForPanel";
+import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
+import { ShareBasics } from "@/components/settings/ShareBasics";
 
 export interface EditorialTopic {
   id: string;
@@ -87,6 +75,8 @@ export interface EditorialTopic {
   email_subscriptions_enabled?: boolean;
   audio_briefings_daily_enabled?: boolean;
   audio_briefings_weekly_enabled?: boolean;
+  family_safe?: boolean;
+  weekly_email_enabled?: boolean;
   is_public: boolean;
 }
 
@@ -98,7 +88,15 @@ interface EditorialStats {
   email_subscribers_total?: number;
 }
 
-type SectionKey = "overview" | "coverage" | "voice" | "automation" | "distribution" | "identity" | "features";
+/** Old ?section= links (help answers, bookmarks) → the section and fold that now hold them. */
+const SECTION_TARGETS: Record<string, { anchor: string; folds: string[] }> = {
+  identity: { anchor: "settings-brand", folds: ["brand-more"] },
+  voice: { anchor: "voice-heading", folds: ["brand-more", "lookfor-more"] },
+  coverage: { anchor: "settings-look-for", folds: ["lookfor-more"] },
+  automation: { anchor: "settings-autopilot", folds: ["autopilot-more"] },
+  distribution: { anchor: "settings-share", folds: ["share-more"] },
+  features: { anchor: "settings-extras", folds: ["extras"] },
+};
 
 interface EditorialControlCenterProps {
   topic: EditorialTopic;
@@ -109,29 +107,35 @@ interface EditorialControlCenterProps {
   onUpdate: () => void;
   onChannelToggle: (field: string, checked: boolean, label: string) => void;
   onToast: (title: string, description?: string) => void;
+  onProRequired?: () => void;
 }
 
-const titleCase = (value?: string) => value ? value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Not set";
+function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 space-y-6 border-t border-border pt-10 first:border-t-0 first:pt-0">
+      <header>
+        <h2 id={`${id}-title`} className="display-heading text-xl md:text-2xl">{title}</h2>
+        {description && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
 
-const sections: { key: SectionKey; label: string; icon: typeof MapPin }[] = [
-  { key: "overview", label: "Overview", icon: SlidersHorizontal },
-  { key: "coverage", label: "Coverage", icon: MapPin },
-  { key: "voice", label: "Voice & pictures", icon: BookOpen },
-  { key: "automation", label: "Automation", icon: Gauge },
-  { key: "distribution", label: "Distribution", icon: Radio },
-  { key: "identity", label: "Identity", icon: Palette },
-  { key: "features", label: "Optional features", icon: Sparkles },
-];
+function SubHeading({ id, children, hint }: { id?: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <h3 id={id} className="mb-4 flex items-center gap-1.5 text-base font-semibold">
+      {children}
+      {hint && <InfoHint label={`About ${String(children).toLowerCase()}`}>{hint}</InfoHint>}
+    </h3>
+  );
+}
 
-const sectionHeadings: Record<Exclude<SectionKey, "overview">, { title: string; copy: string }> = {
-  coverage: { title: "Coverage", copy: "Define what belongs in this feed and what should wait for your judgement." },
-  voice: { title: "Voice & pictures", copy: "Set the audience, writing character and visual treatment for every story." },
-  automation: { title: "Automation", copy: "Choose what Curatr may prepare or publish without waiting for you." },
-  distribution: { title: "Distribution", copy: "Control where the feed reaches readers and monitor each destination." },
-  identity: { title: "Identity", copy: "Shape how the feed introduces itself and appears to readers." },
-  features: { title: "Optional features", copy: "Turn on specialist editorial tools only when they are useful." },
-};
-
+/**
+ * Settings: simple by default, deep on demand. Each section shows the few
+ * choices most owners need; everything else is one tap away under
+ * "More options", remembered per owner. Nothing that existed is removed.
+ */
 export function EditorialControlCenter({
   topic,
   stats,
@@ -141,398 +145,269 @@ export function EditorialControlCenter({
   onUpdate,
   onChannelToggle,
   onToast,
+  onProRequired,
 }: EditorialControlCenterProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedSection = searchParams.get("section") as SectionKey | null;
-  const section: SectionKey = ["coverage", "voice", "automation", "distribution", "identity", "features"].includes(requestedSection || "")
-    ? requestedSection as SectionKey
-    : "overview";
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const requested = searchParams.get("section");
+  const patch = (values: Partial<EditorialTopic> | Record<string, unknown>) => onTopicChange({ ...topic, ...(values as Partial<EditorialTopic>) });
 
-  const openSection = (next: SectionKey) => {
-    const nextParams = new URLSearchParams(searchParams);
-    if (next === "overview") nextParams.delete("section");
-    else nextParams.set("section", next);
-    setSearchParams(nextParams, { replace: true });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Deep links open the right fold and scroll to it.
+  useEffect(() => {
+    const target = requested ? SECTION_TARGETS[requested] : null;
+    if (!target) return;
+    target.folds.forEach((fold) => openFold(user?.id, fold));
+    const t = window.setTimeout(() => {
+      document.getElementById(target.anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [requested, user?.id]);
 
-  const dial = getDial(topic.locality_strength ?? 3);
-  const nearbyCount = parseNearbyPlaces(topic.nearby_places).length;
-  const activeChannels = [
-    topic.is_public,
-    topic.email_subscriptions_enabled,
-    topic.rss_enabled,
-    topic.public_widget_builder_enabled,
-    topic.audio_briefings_daily_enabled,
-    topic.audio_briefings_weekly_enabled,
-  ].filter(Boolean).length;
-
-  const policy = useMemo(() => {
-    const place = topic.topic_type === "regional"
-      ? `${dial.label.toLowerCase()} coverage${nearbyCount ? ` across ${nearbyCount} nearby ${nearbyCount === 1 ? "place" : "places"}` : ""}`
-      : `${topic.keywords.length} discovery ${topic.keywords.length === 1 ? "term" : "terms"}`;
-    const exception = topic.topic_type === "regional" && topic.big_story_override !== false ? ", with strong nearby stories allowed" : "";
-    return `Prioritise ${topic.region || topic.name}; use ${place}${exception}.`;
-  }, [topic, dial.label, nearbyCount]);
-
-  const unconfirmedPlaces = (topic.landmarks || []).filter(
-    (place) => topic.landmark_setup_state?.[place]?.status !== "confirmed"
-  );
-  type AttentionItem = { text: string; section?: SectionKey; anchor?: string };
-  const attention: AttentionItem[] = [];
-  // Story volumes live in the Pipeline dashboard now — this list is only for
-  // settings that need a decision.
-  if (!topic.is_public) {
-    attention.push({ text: "This feed is a draft and cannot currently reach readers", section: "distribution" });
-  }
+  const unconfirmedPlaces = (topic.landmarks || []).filter((place) => topic.landmark_setup_state?.[place]?.status !== "confirmed");
+  const attention: string[] = [];
+  if (!topic.is_public) attention.push("This feed is a draft — readers can't see it yet. Use the Live switch at the top to publish it.");
   if ((topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0) {
-    attention.push({
-      text: `${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references`,
-      section: "voice",
-      anchor: "picture-references-heading",
-    });
-  }
-  if ((topic.landmarks || []).length === 0) {
-    attention.push({ text: "Add picture references so illustrations draw your local places accurately", section: "voice", anchor: "picture-references-heading" });
+    attention.push(`${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your confirmation in Picture references (What we look for → More options).`);
   }
 
-  const goToAttention = (item: { section?: SectionKey; anchor?: string }) => {
-    if (!item.section) return;
-    openSection(item.section);
-    if (item.anchor) {
-      window.setTimeout(() => {
-        document.getElementById(item.anchor!)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 120);
-    }
-  };
+  const brandKey = JSON.stringify([topic.name, topic.illustration_primary_color, topic.branding_config]);
 
-  const controlRows = [
-    {
-      key: "coverage" as const,
-      icon: MapPin,
-      title: "Coverage",
-      summary: topic.topic_type === "regional"
-        ? `${dial.label} · ${nearbyCount} nearby ${nearbyCount === 1 ? "place" : "places"}`
-        : `${topic.keywords.length} discovery ${topic.keywords.length === 1 ? "term" : "terms"}`,
-    },
-    {
-      key: "voice" as const,
-      icon: BookOpen,
-      title: "Voice & pictures",
-      summary: `${titleCase(topic.default_tone || "conversational")} · ${titleCase(topic.default_writing_style || "journalistic")}`,
-    },
-    {
-      key: "automation" as const,
-      icon: Gauge,
-      title: "Automation",
-      summary: "How much Curatr may do without you",
-    },
-    {
-      key: "distribution" as const,
-      icon: Radio,
-      title: "Distribution",
-      summary: `${activeChannels} active ${activeChannels === 1 ? "channel" : "channels"}`,
-    },
-    {
-      key: "identity" as const,
-      icon: Palette,
-      title: "Identity",
-      summary: "Brand, colour, welcome and About",
-    },
-    {
-      key: "features" as const,
-      icon: Sparkles,
-      title: "Optional features",
-      summary: "Insights, sentiment, community and local tools",
-    },
-  ];
-
-  return (
-    <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
-      {/* Section rail — desktop */}
-      <nav aria-label="Editorial control sections" className="hidden lg:block">
-        <div className="sticky top-24 space-y-0.5">
-          {sections.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => openSection(key)}
-              aria-current={section === key ? "page" : undefined}
-              className={cn(
-                "relative flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors text-left",
-                section === key
-                  ? "bg-accent font-medium text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-              )}
-            >
-              {section === key && <span className="nav-marker" />}
-              <Icon className={cn("h-4 w-4 flex-shrink-0", section === key ? "text-purple-bright" : "text-muted-foreground")} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      <div className="min-w-0">
-        {/* Section picker — mobile */}
-        <div className="lg:hidden mb-6 -mx-4 px-4 overflow-x-auto">
-          <div className="flex gap-1.5 pb-1">
-            {sections.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => openSection(key)}
-                aria-current={section === key ? "page" : undefined}
-                className={cn(
-                  "flex-shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                  section === key
-                    ? "border-transparent bg-purple-soft text-purple-dark"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {section === "overview" && (
-          <OverviewBriefing
-            topic={topic}
-            policy={policy}
-            attention={attention}
-            controlRows={controlRows}
-            onOpenSection={openSection}
-            onGoToAttention={goToAttention}
-          />
-        )}
-
-        {section !== "overview" && (
-          <div className="mx-auto max-w-4xl space-y-8">
-            <header className="space-y-1 border-b border-border pb-6">
-              <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">{sectionHeadings[section].title}</h2>
-              <p className="max-w-2xl text-sm text-muted-foreground">{sectionHeadings[section].copy}</p>
-            </header>
-
-            {section === "coverage" && (
-              <div className="space-y-10">
-                {topic.topic_type === "regional" && (
-                  <section aria-labelledby="news-values-heading">
-                    <h3 id="news-values-heading" className="mb-4 text-base font-semibold">News values</h3>
-                    <NewsValuesPanel
-                      topicId={topic.id}
-                      region={topic.region}
-                      landmarks={topic.landmarks}
-                      postcodes={topic.postcodes}
-                      organizations={topic.organizations}
-                      localityStrength={topic.locality_strength}
-                      nearbyPlaces={topic.nearby_places}
-                      bigStoryOverride={topic.big_story_override}
-                      onChange={(values) => onTopicChange({ ...topic, ...values })}
-                    />
-                  </section>
-                )}
-                <section className="border-t border-border pt-8" aria-labelledby="discovery-heading">
-                  <h3 id="discovery-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
-                    Coverage terms
-                    <InfoHint label="About coverage terms">Words that tell Curatr what belongs — suggested from your own recent stories.</InfoHint>
-                  </h3>
-                  <CoverageTerms
-                    topicId={topic.id}
-                    keywords={topic.keywords}
-                    setupState={topic.coverage_setup_state || {}}
-                    onChange={(patch) => onTopicChange({ ...topic, ...patch })}
-                  />
-                </section>
-                <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
-                  <h3 id="exclusions-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
-                    Exclusions
-                    <InfoHint label="About exclusions">Keeps predictable near-misses out of the review queue.</InfoHint>
-                  </h3>
-                  <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
-                </section>
-                <section className="border-t border-border pt-8" aria-labelledby="coverage-categories-heading">
-                  <h3 id="coverage-categories-heading" className="mb-5 flex items-center gap-1.5 text-base font-semibold">
-                    Categories
-                    <InfoHint label="About categories">How published stories are grouped — this shapes your feed’s filters and period reviews.</InfoHint>
-                  </h3>
-                  <CategoriesPanel topicId={topic.id} />
-                </section>
-              </div>
-            )}
-
-            {section === "voice" && (
-              <div className="space-y-10">
-                <ContentVoiceSettings
-                  topicId={topic.id}
-                  topicName={topic.name}
-                  topicType={topic.topic_type}
-                  region={topic.region}
-                  currentExpertise={topic.audience_expertise}
-                  currentTone={topic.default_tone}
-                  currentWritingStyle={topic.default_writing_style}
-                  currentHouseStyleNotes={topic.house_style_notes}
-                  currentHouseStyleExamples={topic.house_style_examples}
-                  onUpdate={onUpdate}
-                />
-                <section className="border-t border-border pt-8" aria-labelledby="picture-references-heading">
-                  <PictureReferences
-                    topicId={topic.id}
-                    topicName={topic.name}
-                    region={topic.region}
-                    landmarks={topic.landmarks || []}
-                    descriptions={topic.landmark_descriptions || {}}
-                    photos={topic.landmark_reference_images || {}}
-                    setupState={topic.landmark_setup_state || {}}
-                    illustrationStyle={topic.illustration_style}
-                    onIllustrationStyleChange={async (style) => {
-                      const previous = topic.illustration_style;
-                      onTopicChange({ ...topic, illustration_style: style });
-                      const { error } = await supabase
-                        .from('topics')
-                        .update({ illustration_style: style, updated_at: new Date().toISOString() } as never)
-                        .eq('id', topic.id);
-                      if (error) {
-                        onTopicChange({ ...topic, illustration_style: previous });
-                        toast({ title: 'Could not save the picture style', description: error.message, variant: 'destructive' });
-                        return;
-                      }
-                      toast({ title: 'Picture style saved' });
-                      onUpdate?.();
-                    }}
-                    onChange={(patch) => onTopicChange({ ...topic, ...patch })}
-                  />
-                </section>
-              </div>
-            )}
-
-            {section === "automation" && (
-              <div className="space-y-10">
-                <TopicAutomationSettings topicId={topic.id} />
-                <section className="border-t border-border pt-8">
-                  <h3 className="mb-4 text-base font-semibold">Publishing pace</h3>
-                  <DripFeedSettings topicId={topic.id} onUpdate={onUpdate} />
-                </section>
-              </div>
-            )}
-
-            {section === "distribution" && (
-              <div className="divide-y divide-border border-y border-border">
-                <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
-                <ChannelRow icon={Mail} label="Email" description={`${stats.email_subscribers_total || 0} subscribers`} checked={topic.email_subscriptions_enabled || false} onCheckedChange={(checked) => onChannelToggle("email_subscriptions_enabled", checked, "Email subscriptions")} />
-                {topic.email_subscriptions_enabled && <div className="py-6"><NewsletterSignupsManager topicId={topic.id} /></div>}
-                <ChannelRow icon={Rss} label="RSS" description="A live feed for reader apps" checked={topic.rss_enabled || false} onCheckedChange={(checked) => onChannelToggle("rss_enabled", checked, "RSS feed")} />
-                <ChannelRow icon={Settings2} label="Website widget" description="Embed this feed on another website" checked={topic.public_widget_builder_enabled || false} onCheckedChange={(checked) => onChannelToggle("public_widget_builder_enabled", checked, "Widget builder")} />
-                {topic.public_widget_builder_enabled && (
-                  <div className="space-y-4 py-6">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/feed/${topic.slug}/widget`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Open widget builder</Link>
-                    </Button>
-                    <WidgetAnalytics topicId={topic.id} onNewSiteDetected={(domain) => onToast("New widget integration", `Your widget is now live on ${domain}`)} />
-                  </div>
-                )}
-                <ChannelRow icon={Mic2} label="Daily audio" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
-                <ChannelRow icon={Mic2} label="Weekly audio" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
-                <div id="ai-assistants-heading">
-                  <AiAssistantAccess
-                    topicId={topic.id}
-                    topicSlug={topic.slug}
-                    topicName={topic.name}
-                    enabled={topic.mcp_enabled || false}
-                    access={topic.mcp_access === "open" ? "open" : "key"}
-                    onChange={(patch) => onTopicChange({ ...topic, ...patch })}
-                    onEnabledChange={(checked) => onChannelToggle("mcp_enabled", checked, "AI assistants")}
-                  />
-                </div>
-                <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
-              </div>
-            )}
-
-            {section === "identity" && (
-              <div className="space-y-10">
-                <section>
-                  <h3 className="mb-4 text-base font-semibold">Brand</h3>
-                  <TopicBrandingSettings topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
-                </section>
-                <section className="border-t border-border pt-8">
-                  <h3 className="mb-1 text-base font-semibold">Welcome & About</h3>
-                  <p className="mb-5 text-sm text-muted-foreground">Introduce the feed to first-time readers and explain its purpose.</p>
-                  <OnboardingSettings topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
-                </section>
-              </div>
-            )}
-
-            {section === "features" && (
-              <div className="space-y-10">
-                <section><h3 className="mb-4 text-base font-semibold">Insight cards</h3><TopicInsightSettings topicId={topic.id} /></section>
-                <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Sentiment tracking</h3><SentimentKeywordSettings topicId={topic.id} /></section>
-                <section className="border-t border-border pt-8"><h3 className="mb-1 text-base font-semibold">Community signals</h3><p className="mb-5 text-sm text-muted-foreground">Monitor community discussion without changing the feed’s writing voice.</p><CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} /></section>
-                {topic.topic_type === "regional" && <section className="border-t border-border pt-8"><h3 className="mb-4 text-base font-semibold">Local reporting tools</h3><RegionalFeaturesSettings topicId={topic.id} region={topic.region} parliamentaryEnabled={topic.parliamentary_tracking_enabled} onUpdate={onUpdate} /></section>}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function OverviewBriefing({
-  topic,
-  policy,
-  attention,
-  controlRows,
-  onOpenSection,
-  onGoToAttention,
-}: {
-  topic: EditorialTopic;
-  policy: string;
-  attention: { text: string; section?: SectionKey; anchor?: string }[];
-  controlRows: { key: SectionKey; icon: typeof MapPin; title: string; summary: string }[];
-  onOpenSection: (key: SectionKey) => void;
-  onGoToAttention: (item: { section?: SectionKey; anchor?: string }) => void;
-}) {
   return (
     <div className="mx-auto max-w-4xl space-y-10">
-      <header className="border-b border-border pb-7">
-        <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">How this feed behaves</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{policy}</p>
-      </header>
-
-
       {attention.length > 0 && (
         <section className="border-l-2 border-destructive bg-destructive/5 px-5 py-4" aria-labelledby="attention-heading">
           <div className="flex gap-3">
             <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-            <div><h3 id="attention-heading" className="text-sm font-semibold">Needs your attention</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((item) => <li key={item.text}>{item.section ? <button type="button" onClick={() => onGoToAttention(item)} className="text-left underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground">{item.text}</button> : item.text}</li>)}</ul></div>
+            <div>
+              <h2 id="attention-heading" className="text-sm font-semibold">Needs your attention</h2>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">{attention.map((text) => <li key={text}>{text}</li>)}</ul>
+            </div>
           </div>
         </section>
       )}
 
-      <section aria-label="Control areas">
-        <div className="divide-y divide-border border-y border-border">
-          {controlRows.map(({ key, icon: Icon, title, summary }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onOpenSection(key)}
-              className="group flex w-full items-center gap-4 py-4 text-left transition-colors hover:bg-accent/40"
-            >
-              <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-              <span className="flex-1 min-w-0">
-                <span className="block text-sm font-medium text-foreground">{title}</span>
-                <span className="block truncate text-xs text-muted-foreground">{summary}</span>
-              </span>
-              <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </button>
-          ))}
-        </div>
+      {/* 1. BRAND */}
+      <Section id="settings-brand" title="Brand" description="How readers recognise the feed.">
+        <BrandBasics
+          topicId={topic.id}
+          name={topic.name}
+          colour={topic.illustration_primary_color}
+          brandingConfig={topic.branding_config}
+          onSaved={(values) => patch(values)}
+        />
+        <RememberedFold foldKey="brand-more" label="More options: app icon, picture colours, welcome card, About page, voice and tone">
+          <div className="space-y-10">
+            <section>
+              <SubHeading>Logo, icon and picture colours</SubHeading>
+              <TopicBrandingSettings key={brandKey} topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
+            </section>
+            <section className="border-t border-border pt-8">
+              <SubHeading>Welcome card and About page</SubHeading>
+              <OnboardingSettings topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
+            </section>
+            <section className="border-t border-border pt-8" aria-labelledby="voice-heading">
+              <SubHeading id="voice-heading">Voice and tone</SubHeading>
+              <ContentVoiceSettings
+                topicId={topic.id}
+                topicName={topic.name}
+                topicType={topic.topic_type}
+                region={topic.region}
+                currentExpertise={topic.audience_expertise}
+                currentTone={topic.default_tone}
+                currentWritingStyle={topic.default_writing_style}
+                currentHouseStyleNotes={topic.house_style_notes}
+                currentHouseStyleExamples={topic.house_style_examples}
+                onUpdate={onUpdate}
+              />
+            </section>
+          </div>
+        </RememberedFold>
+      </Section>
+
+      {/* 2. WHAT WE LOOK FOR */}
+      <Section id="settings-look-for" title="What we look for" description="Two plain lists decide what reaches your Desk.">
+        <LookForPanel
+          topicId={topic.id}
+          keywords={topic.keywords}
+          negativeKeywords={negativeKeywords}
+          familySafe={topic.family_safe === true}
+          onChange={(values) => {
+            if (values.negative_keywords) onNegativeKeywordsChange(values.negative_keywords);
+            patch(values);
+          }}
+        />
+        <RememberedFold foldKey="lookfor-more" label="More options: how local, suggested terms, exclusion clean-up, categories, picture references">
+          <div className="space-y-10">
+            {topic.topic_type === "regional" && (
+              <section aria-labelledby="news-values-heading">
+                <SubHeading id="news-values-heading">How local</SubHeading>
+                <NewsValuesPanel
+                  topicId={topic.id}
+                  region={topic.region}
+                  landmarks={topic.landmarks}
+                  postcodes={topic.postcodes}
+                  organizations={topic.organizations}
+                  localityStrength={topic.locality_strength}
+                  nearbyPlaces={topic.nearby_places}
+                  bigStoryOverride={topic.big_story_override}
+                  onChange={(values) => patch(values)}
+                />
+              </section>
+            )}
+            <section className="border-t border-border pt-8 first:border-t-0 first:pt-0" aria-labelledby="discovery-heading">
+              <SubHeading id="discovery-heading" hint="Suggested from your own recent stories.">Suggested terms</SubHeading>
+              <CoverageTerms
+                key={topic.keywords.join("|")}
+                topicId={topic.id}
+                keywords={topic.keywords}
+                setupState={topic.coverage_setup_state || {}}
+                onChange={(values) => patch(values)}
+              />
+            </section>
+            <section className="border-t border-border pt-8" aria-labelledby="exclusions-heading">
+              <SubHeading id="exclusions-heading" hint="Also finds and removes published stories that match.">Exclusions and clean-up</SubHeading>
+              <TopicNegativeKeywords topicId={topic.id} negativeKeywords={negativeKeywords} onUpdate={onNegativeKeywordsChange} />
+            </section>
+            <section className="border-t border-border pt-8" aria-labelledby="coverage-categories-heading">
+              <SubHeading id="coverage-categories-heading" hint="How published stories are grouped for readers' filters and look-backs.">Categories</SubHeading>
+              <CategoriesPanel topicId={topic.id} />
+            </section>
+            <section className="border-t border-border pt-8" aria-labelledby="picture-references-heading">
+              <PictureReferences
+                topicId={topic.id}
+                topicName={topic.name}
+                region={topic.region}
+                landmarks={topic.landmarks || []}
+                descriptions={topic.landmark_descriptions || {}}
+                photos={topic.landmark_reference_images || {}}
+                setupState={topic.landmark_setup_state || {}}
+                illustrationStyle={topic.illustration_style}
+                onIllustrationStyleChange={async (style) => {
+                  const previous = topic.illustration_style;
+                  patch({ illustration_style: style });
+                  const { error } = await supabase
+                    .from("topics")
+                    .update({ illustration_style: style, updated_at: new Date().toISOString() } as never)
+                    .eq("id", topic.id);
+                  if (error) {
+                    patch({ illustration_style: previous });
+                    toast({ title: "Could not save the picture style", description: error.message, variant: "destructive" });
+                    return;
+                  }
+                  toast({ title: "Picture style saved" });
+                  onUpdate?.();
+                }}
+                onChange={(values) => patch(values)}
+              />
+            </section>
+          </div>
+        </RememberedFold>
+      </Section>
+
+      {/* 3. AUTOPILOT */}
+      <Section id="settings-autopilot" title="Autopilot" description="How much happens without you. Per-source Auto-publish lives on each source.">
+        <AutopilotBasics key={`ap-${topic.drip_feed_enabled}`} topicId={topic.id} onChanged={onUpdate} />
+        <RememberedFold foldKey="autopilot-more" label="More options: exact behaviour, checking frequency, quality bars, release timing">
+          <div className="space-y-10">
+            <TopicAutomationSettings topicId={topic.id} />
+            <section className="border-t border-border pt-8">
+              <SubHeading>Release timing</SubHeading>
+              <DripFeedSettings topicId={topic.id} onUpdate={onUpdate} />
+            </section>
+          </div>
+        </RememberedFold>
+      </Section>
+
+      {/* 4. SHARE AND GROW */}
+      <Section id="settings-share" title="Share and grow" description="Ways for readers to follow the feed.">
+        <ShareBasics
+          topicId={topic.id}
+          slug={topic.slug}
+          emailEnabled={topic.email_subscriptions_enabled === true}
+          weeklyEnabled={topic.weekly_email_enabled !== false}
+          widgetEnabled={topic.public_widget_builder_enabled === true}
+          subscriberCount={stats.email_subscribers_total || 0}
+          onChannelToggle={onChannelToggle}
+          onTopicPatch={(values) => patch(values)}
+          onProRequired={onProRequired}
+        />
+        <RememberedFold foldKey="share-more" label="Advanced: subscribers, email segments, audio briefings, widget builder, RSS, AI assistants, donations">
+          <div className="divide-y divide-border border-y border-border">
+            <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
+            {topic.email_subscriptions_enabled && (
+              <div className="space-y-8 py-6">
+                <NewsletterSignupsManager topicId={topic.id} />
+                <div className="border-t border-border pt-6"><EmailSegmentsManager topicId={topic.id} /></div>
+              </div>
+            )}
+            {!topic.email_subscriptions_enabled && (
+              <div className="flex items-center gap-3 py-5 text-sm text-muted-foreground"><Mail className="h-4 w-4" />Subscriber list and email segments appear once email sign-ups are on.</div>
+            )}
+            <ChannelRow icon={Mic2} label="Daily audio briefing" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
+            <ChannelRow icon={Mic2} label="Weekly audio review" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
+            <ChannelRow icon={Settings2} label="Website widget" description="Embed this feed on another website" checked={topic.public_widget_builder_enabled || false} onCheckedChange={(checked) => onChannelToggle("public_widget_builder_enabled", checked, "Website widget")} />
+            {topic.public_widget_builder_enabled && (
+              <div className="space-y-4 py-6">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/feed/${topic.slug}/widget`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Open the full widget builder</Link>
+                </Button>
+                <WidgetAnalytics topicId={topic.id} onNewSiteDetected={(domain) => onToast("Widget now live on a new site", `Your widget is now live on ${domain}`)} />
+              </div>
+            )}
+            <ChannelRow icon={Rss} label="RSS" description="A live feed for reader apps" checked={topic.rss_enabled || false} onCheckedChange={(checked) => onChannelToggle("rss_enabled", checked, "RSS feed")} />
+            <div id="ai-assistants-heading">
+              <AiAssistantAccess
+                topicId={topic.id}
+                topicSlug={topic.slug}
+                topicName={topic.name}
+                enabled={topic.mcp_enabled || false}
+                access={topic.mcp_access === "open" ? "open" : "key"}
+                onChange={(values) => patch(values)}
+                onEnabledChange={(checked) => onChannelToggle("mcp_enabled", checked, "AI assistants")}
+              />
+            </div>
+            <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
+          </div>
+        </RememberedFold>
+      </Section>
+
+      {/* 5. EXTRAS — folded, at the bottom */}
+      <section id="settings-extras" className="scroll-mt-24 border-t border-border pt-10">
+        <RememberedFold
+          foldKey="extras"
+          variant="section"
+          label="Extras"
+          description="In-feed cards, quizzes, coverage mood, community discussion and local reporting tools. All off unless you switch them on."
+        >
+          <div className="space-y-10">
+            <section><SubHeading>In-feed cards and quizzes</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
+            <section className="border-t border-border pt-8"><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>
+            <section className="border-t border-border pt-8">
+              <SubHeading>Community discussion</SubHeading>
+              <p className="-mt-2 mb-5 text-sm text-muted-foreground">Follow what people are saying online without changing the feed's writing voice.</p>
+              <CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} />
+            </section>
+            {topic.topic_type === "regional" && (
+              <section className="border-t border-border pt-8">
+                <SubHeading>Local reporting tools</SubHeading>
+                <RegionalFeaturesSettings topicId={topic.id} region={topic.region} parliamentaryEnabled={topic.parliamentary_tracking_enabled} onUpdate={onUpdate} />
+              </section>
+            )}
+          </div>
+        </RememberedFold>
       </section>
     </div>
   );
 }
 
-
-function ChannelRow({ icon: Icon, label, description, checked, onCheckedChange, disabled = false }: { icon: typeof Mail; label: string; description: string; checked: boolean; onCheckedChange?: (checked: boolean) => void; disabled?: boolean }) {
-  return <div className="flex items-center justify-between gap-5 py-5"><div className="flex items-center gap-3"><Icon className="h-4 w-4 text-muted-foreground" /><div><Label className="text-sm">{label}</Label><p className="mt-0.5 text-xs text-muted-foreground">{description}</p></div></div>{disabled ? <CheckCircle2 className="h-4 w-4 text-pop" /> : <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={`Enable ${label}`} />}</div>;
+function ChannelRow({ icon: Icon, label, description, checked, onCheckedChange }: { icon: typeof Mail; label: string; description: string; checked: boolean; onCheckedChange?: (checked: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-5 py-5">
+      <div className="flex items-center gap-3">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div><Label className="text-sm">{label}</Label><p className="mt-0.5 text-xs text-muted-foreground">{description}</p></div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
+    </div>
+  );
 }

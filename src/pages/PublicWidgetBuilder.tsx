@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { WIDGET_JS_VERSION } from '@/lib/widgetEmbed';
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -205,7 +206,6 @@ export default function PublicWidgetBuilder() {
     fetchPreview();
   }, [slug, config.maxHeadlines, sourcesParam, featuredParam, featuredDaysParam]);
 
-  const WIDGET_JS_VERSION = '1.5.2';
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {

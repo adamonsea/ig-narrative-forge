@@ -154,7 +154,7 @@ export const CommunityVoiceSettings = ({
       {enabled && (
         <div className="space-y-4 pt-2 border-t">
           <div className="space-y-2">
-            <Label className="text-xs">Subreddits to Monitor</Label>
+            <Label className="text-xs">Reddit communities to follow</Label>
             <div className="flex gap-2">
               <Input
                 placeholder="e.g. eastbourne"
@@ -184,7 +184,7 @@ export const CommunityVoiceSettings = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-xs">Processing Frequency</Label>
+              <Label className="text-xs">How often to check</Label>
               <Select value={processingFrequency.toString()} onValueChange={(v) => setProcessingFrequency(Number(v))}>
                 <SelectTrigger className="h-9">
                   <SelectValue />

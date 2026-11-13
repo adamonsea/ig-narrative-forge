@@ -708,7 +708,7 @@ const TopicDashboard = () => {
             </div>
           )}
 
-          {/* Tabs: Pipeline (default), Sources, Readership, Editorial control, Reviews */}
+          {/* Tabs: Desk (default), Sources, Readership, Settings, Reviews */}
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
@@ -722,7 +722,7 @@ const TopicDashboard = () => {
           >
             <TabsList className="w-full bg-transparent border-b border-border rounded-none h-9 p-0 gap-4 justify-start">
               <TabsTrigger value="feed" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
-                Pipeline
+                Desk
               </TabsTrigger>
               <TabsTrigger value="sources" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Sources
@@ -731,7 +731,7 @@ const TopicDashboard = () => {
                 Readership
               </TabsTrigger>
               <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
-                Editorial control
+                Settings
               </TabsTrigger>
               <TabsTrigger value="reviews" className=" rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
                 Reviews
@@ -807,6 +807,7 @@ const TopicDashboard = () => {
                 onUpdate={loadTopicAndStats}
                 onChannelToggle={handleChannelToggle}
                 onToast={(title, description) => toast({ title, description })}
+                onProRequired={() => setProGateOpen(true)}
               />
             </TabsContent>
           </Tabs>

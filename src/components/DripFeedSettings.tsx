@@ -116,7 +116,7 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label className="text-sm">Drip Feed</Label>
+        <Label className="text-sm">Release in batches</Label>
         <div className="flex items-center gap-2">
           {saving && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
           <Switch

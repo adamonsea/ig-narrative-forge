@@ -294,10 +294,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
       setTopicId(topicData.id);
 
       // The settings row is created with the feed; switch on Autopilot (or hold for review).
-      await supabase
+      const { error: automationError } = await supabase
         .from("topic_automation_settings")
         .update({ ...automationFromDraft(finalDraft), updated_at: new Date().toISOString() } as any)
         .eq("topic_id", topicData.id);
+      if (automationError) {
+        console.error("Autopilot not saved:", automationError);
+        toast({ title: "Autopilot is not on yet", description: "Switch it on in Settings once your feed opens." });
+      }
 
       const chosen = sources.filter((s) => selected.has(s.url));
       setAttemptedSourceCount(chosen.length);

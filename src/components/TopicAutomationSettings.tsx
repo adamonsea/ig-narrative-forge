@@ -17,11 +17,11 @@ interface TopicAutomationSettingsProps {
 type AutomationMode = 'manual' | 'auto_gather' | 'auto_simplify' | 'auto_illustrate' | 'holiday';
 
 const MODE_LABELS: Record<AutomationMode, string> = {
-  manual: 'Manual',
-  auto_gather: 'Auto-Gather',
-  auto_simplify: 'Auto-Simplify',
-  auto_illustrate: 'Auto-Illustrate',
-  holiday: 'Holiday Mode',
+  manual: 'Hands-on',
+  auto_gather: 'Collect only',
+  auto_simplify: 'Collect and write',
+  auto_illustrate: 'Collect, write and illustrate',
+  holiday: 'Autopilot',
 };
 
 const MODE_DESCRIPTIONS: Record<AutomationMode, string> = {

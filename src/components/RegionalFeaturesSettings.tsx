@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TrackedMPsManager } from "@/components/TrackedMPsManager";
-import { EmailSegmentsManager } from "@/components/EmailSegmentsManager";
 
 
 interface RegionalFeaturesSettingsProps {
@@ -68,10 +67,7 @@ export const RegionalFeaturesSettings = ({
         </p>
       </div>
 
-      {/* Email segments */}
-      <div className="py-3 border-t">
-        <EmailSegmentsManager topicId={topicId} />
-      </div>
+      {/* Email segments moved to Settings → Share and grow → Advanced */}
 
 
 
@@ -83,7 +79,7 @@ export const RegionalFeaturesSettings = ({
           <div className="space-y-0.5">
             <Label className="flex items-center gap-2">
               <Building2 className="w-4 h-4" />
-              Parliamentary Tracking
+              Parliament: local MPs and debates
             </Label>
             <p className="text-xs text-muted-foreground">Track local MPs and debates</p>
           </div>

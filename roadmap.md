@@ -1,17 +1,17 @@
 # Simplification — "a 10-year-old can run a feed" (13 Nov 2026)
 Rules: hide or switch off, never delete; existing feeds keep values; specialist features move out of sight.
-- [ ] 1. New feed in one sentence: "What's your feed about?" → one preview → "Looks good"; Autopilot on for new feeds
-- [ ] 2. One "What we look for" panel: More of this / Less of this
-- [ ] 3. One Brand screen: name, logo, colour, one-line welcome
-- [ ] 4. One Autopilot setting (on/off + pace); per-source Auto-publish stays
-- [ ] 5. Share & grow basics (sign-ups, weekly roundup, widget code); rest under Advanced
-- [ ] 6. Folded "Extras" group at bottom of Settings; off by default for new feeds
-- [ ] 7. Plain language for new owners; list changed labels
-- [ ] 8. Family-safe (setup choice, see below) + no trademarked characters/logos in pictures
-- [ ] Clarification (08:56): simple by default, deep on demand — every capability within one tap; remember open Advanced/Extras per owner; Desk keeps full power; professional tone; add "Set it up myself" path
-- [ ] Family-safe NOT default for news; offered at setup, suggested on for hobby/fandom/kids topics, owner decides
-- [ ] Report: Eastbourne owner capability map (what they can do today → where it lives now)
-- [ ] Test: create real "Pokémon" feed, time it, report taps/screens/stuck points/story safety; leave unpublished & private
+- [x] 1. New feed in one sentence: "What's your feed about?" → one preview → "Looks good"; Autopilot on for new feeds
+- [x] 2. One "What we look for" panel: More of this / Less of this
+- [x] 3. One Brand screen: name, logo, colour, one-line welcome
+- [x] 4. One Autopilot setting (on/off + pace); per-source Auto-publish stays
+- [x] 5. Share & grow basics (sign-ups, weekly roundup, widget code); rest under Advanced
+- [x] 6. Folded "Extras" group at bottom of Settings; off by default for new feeds
+- [x] 7. Plain language for new owners; list changed labels
+- [x] 8. Family-safe (setup choice, see below) + no trademarked characters/logos in pictures
+- [x] Clarification (08:56): simple by default, deep on demand — every capability within one tap; remember open Advanced/Extras per owner; Desk keeps full power; professional tone; add "Set it up myself" path
+- [x] Family-safe NOT default for news; offered at setup, suggested on for hobby/fandom/kids topics, owner decides
+- [x] Report: Eastbourne owner capability map (what they can do today → where it lives now)
+- [ ] Test: create real "Pokémon" feed, time it, report taps/screens/stuck points/story safety; leave unpublished & private — BLOCKED: preview sign-in cannot be simulated for this project; Adam to run it, then check stories/pictures
 
 # Roadmap — scraping overhaul
 
