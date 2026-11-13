@@ -37,7 +37,8 @@ export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor,
   if (!events.length) return null;
   const { lines, more } = coverLines(events, today);
   const current = slide > 0 ? events[slide - 1] : null;
-  const fan = events.slice(0, 3);
+  // Cover badges: up to three different dates from this set, so a multi-day set shows its spread
+  const fan = events.filter((e, i) => events.findIndex((x) => x.start_date === e.start_date) === i).slice(0, 3);
 
   const cover = (
     <div key="cover" className="flex h-full flex-col">
