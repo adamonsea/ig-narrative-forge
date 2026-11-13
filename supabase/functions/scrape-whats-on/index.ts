@@ -9,6 +9,7 @@
  *   { action: 'update', sourceId, name?, url? }            owner: rename and/or change the address
  *   { action: 'refresh', sourceId }                        owner: re-check one source
  *   { action: 'remove', sourceId }                         owner: remove a source and its upcoming events
+ *   { action: 'suggest', topicId, title, date, time?, venue, url, visitorId, website? }  anyone: a reader's event suggestion (Waiting only)
  *   {} or { action: 'refresh_all' }                        daily job (EVENTS_CRON_TOKEN / service role)
  *
  * Stores facts and the link only: title, start date/time, venue, source URL, source name.
@@ -24,6 +25,7 @@ import { z } from 'npm:zod@3';
 import { getUser, userOwnsTopic, isServiceRole } from '../_shared/auth.ts';
 import { addDays, londonToday } from './extract.ts';
 import { isPublicHttpUrl } from './read.ts';
+import { listingUrlOk, suggestionDateOk, suggestionStatus, SUGGEST_PER_FEED_PER_DAY, SUGGEST_PER_READER_PER_DAY } from './suggestion.ts';
 import { detectKind, isEventSourceKind, readerFor, type EventReader, type ReaderEvent, type ReaderResult } from './readers/index.ts';
 import { buildPlaceProfile, hasLocalEvidence, judgeEvents, type PlaceProfile, type Verdict } from './locality.ts';
 import { baseEventScore, combineRelevance, isOutOfArea, placeEvent } from './relevance.ts';
@@ -40,6 +42,13 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('refresh'), sourceId: z.string().uuid() }),
   z.object({ action: z.literal('remove'), sourceId: z.string().uuid() }),
   z.object({ action: z.literal('refresh_all') }),
+  z.object({
+    action: z.literal('suggest'), topicId: z.string().uuid(),
+    title: z.string().trim().min(3).max(160), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal('')),
+    venue: z.string().trim().min(2).max(160), url: Url, visitorId: z.string().trim().min(6).max(120),
+    website: z.string().max(200).optional(), // honeypot: people never fill it
+  }),
 ]);
 
 // deno-lint-ignore no-explicit-any
@@ -267,6 +276,55 @@ const summarise = (kind: string, r: ReaderResult, verdicts: Verdict[] = []) => {
 
 // ---------- handler ----------
 
+// ---------- reader suggestions ----------
+
+async function sha(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+type Suggest = Extract<z.infer<typeof Body>, { action: 'suggest' }>;
+
+/** A reader's suggestion lands in Waiting (or Hidden if clearly out of area). Never live without the owner. */
+async function suggestEvent(supabase: Db, profiles: Profiles, req: Request, b: Suggest) {
+  const thanks = () => json({ success: true });
+  if (b.website) return thanks(); // honeypot: pretend it worked
+  const { data: settings } = await supabase.from('topic_insight_settings').select('reader_event_submissions').eq('topic_id', b.topicId).maybeSingle();
+  const { data: topic } = await supabase.from('topics').select('events_enabled').eq('id', b.topicId).maybeSingle();
+  if (!settings?.reader_event_submissions || !topic?.events_enabled) return json({ error: 'This feed isn’t taking suggestions right now.' }, 403);
+  const today = londonToday();
+  if (!suggestionDateOk(b.date, today)) return json({ error: 'Please pick a date from today up to three months ahead.' }, 422);
+  const url = b.url.trim();
+  if (!listingUrlOk(url) || !isPublicHttpUrl(url)) return json({ error: 'Please add a link to the full listing.' }, 422);
+
+  const ip = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || '').split(',')[0].trim();
+  const [who, where] = await Promise.all([sha(`v:${b.visitorId}`), sha(`ip:${ip}`)]);
+  const since = `${today}T00:00:00Z`;
+  const count = async (pattern: string | null) => {
+    let q = supabase.from('events').select('id', { count: 'exact', head: true }).eq('source_api', 'reader').gte('created_at', since);
+    q = pattern ? q.like('external_id', pattern) : q.eq('topic_id', b.topicId);
+    return (await q).count ?? 0;
+  };
+  const [byReader, byIp, byFeed] = await Promise.all([count(`${who}|%`), ip ? count(`%|${where}|%`) : Promise.resolve(0), count(null)]);
+  if (byReader >= SUGGEST_PER_READER_PER_DAY || byIp >= SUGGEST_PER_READER_PER_DAY * 2 || byFeed >= SUGGEST_PER_FEED_PER_DAY) {
+    return json({ error: 'Thanks – that’s plenty for today. Please try again tomorrow.' }, 429);
+  }
+
+  const ctx = await topicContextFor(supabase, profiles, b.topicId);
+  const ev = { title: b.title, venue: b.venue };
+  const [verdict] = judgeEvents([ev], ctx.profile, url);
+  const score = combineRelevance(baseEventScore(ev, ctx.config), verdict, hasLocalEvidence(ev, ctx.profile));
+  const { status, reason } = suggestionStatus(verdict);
+  const { error } = await supabase.from('events').insert({
+    topic_id: b.topicId, title: b.title, start_date: b.date, start_time: b.time ? `${b.time}:00` : null,
+    location: b.venue, source_url: url, source_name: hostOf(url), source_api: 'reader',
+    external_id: `${who}|${where}|${crypto.randomUUID()}`, event_type: 'events',
+    status, exclusion_reason: reason, kept_by_owner: false, relevance_score: score,
+  });
+  if (error) throw error;
+  return thanks();
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -293,6 +351,8 @@ Deno.serve(async (req) => {
       console.log(`refresh_all: ${results.length} sources`, JSON.stringify(results));
       return json({ success: true, results });
     }
+
+    if (body.action === 'suggest') return await suggestEvent(supabase, profiles, req, body);
 
     // Everything else needs the feed's owner
     const user = isSystem ? null : await getUser(req);

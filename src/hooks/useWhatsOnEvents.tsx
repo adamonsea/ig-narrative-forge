@@ -31,6 +31,7 @@ export interface DeskEvent {
   source_name: string | null;
   source_url: string | null;
   status: "pending" | "excluded" | "deleted" | "published";
+  source_api?: string | null;
   exclusion_reason: string | null;
   relevance_score: number | null;
   created_at: string;
@@ -39,6 +40,8 @@ export interface DeskEvent {
 export interface EventDesk {
   eventsOn: boolean;
   showInFeed: boolean;
+  /** Readers may suggest events (they land in Waiting). */
+  readerSuggestions: boolean;
   sourceCount: number;
   waiting: DeskEvent[];
   hidden: DeskEvent[];
@@ -58,10 +61,10 @@ export function useEventDesk(topicId: string | undefined) {
       const today = londonToday();
       const [topicRes, insightRes, sourcesRes, queueRes, liveRes] = await Promise.all([
         supabase.from("topics").select("events_enabled").eq("id", topicId!).maybeSingle(),
-        supabase.from("topic_insight_settings").select("events_cards_enabled").eq("topic_id", topicId!).maybeSingle(),
+        supabase.from("topic_insight_settings").select("events_cards_enabled, reader_event_submissions").eq("topic_id", topicId!).maybeSingle(),
         supabase.from("event_sources").select("id", { count: "exact", head: true }).eq("topic_id", topicId!),
         supabase.from("events")
-          .select("id, title, start_date, start_time, location, source_name, source_url, status, exclusion_reason, relevance_score, created_at")
+          .select("id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, relevance_score, created_at")
           .eq("topic_id", topicId!).in("status", ["pending", "excluded", "deleted"]).gte("start_date", today)
           .order("start_date").limit(1000),
         (supabase.rpc as any)("get_topic_whats_on", { p_topic_id: topicId }),
@@ -75,6 +78,7 @@ export function useEventDesk(topicId: string | undefined) {
       return {
         eventsOn: Boolean((topicRes.data as any)?.events_enabled),
         showInFeed: Boolean((insightRes.data as any)?.events_cards_enabled),
+        readerSuggestions: Boolean((insightRes.data as any)?.reader_event_submissions),
         sourceCount: sourcesRes.count ?? 0,
         waiting: onePerTitle(rows.filter((e) => e.status === "pending").filter(notLive)),
         hidden: onePerTitle(rows.filter((e) => e.status !== "pending").filter(notLive)),
@@ -140,17 +144,19 @@ export function useEventDeskActions(topicId: string | undefined) {
     refresh();
   }, [refresh, toast, topicId]);
 
-  const setShowInFeed = useCallback(async (on: boolean) => {
-    const { data, error } = await supabase.from("topic_insight_settings").update({ events_cards_enabled: on } as any).eq("topic_id", topicId!).select("topic_id");
+  const saveInsight = useCallback(async (field: "events_cards_enabled" | "reader_event_submissions", on: boolean) => {
+    const { data, error } = await supabase.from("topic_insight_settings").update({ [field]: on } as any).eq("topic_id", topicId!).select("topic_id");
     let failed = Boolean(error);
     if (!error && (!data || data.length === 0)) {
-      const { error: insertError } = await supabase.from("topic_insight_settings").insert({ topic_id: topicId, events_cards_enabled: on } as any);
+      const { error: insertError } = await supabase.from("topic_insight_settings").insert({ topic_id: topicId, [field]: on } as any);
       failed = Boolean(insertError);
     }
     if (failed) toast({ title: "Couldn't save", description: "Please try again.", variant: "destructive" });
     queryClient.invalidateQueries({ queryKey: ["topic-insight-settings", topicId] });
     refresh();
   }, [queryClient, refresh, toast, topicId]);
+  const setShowInFeed = useCallback((on: boolean) => saveInsight("events_cards_enabled", on), [saveInsight]);
+  const setReaderSuggestions = useCallback((on: boolean) => saveInsight("reader_event_submissions", on), [saveInsight]);
 
   return {
     publish: (e: Pick<DeskEvent, "id" | "title">) => act(e, "publish"),
@@ -160,6 +166,7 @@ export function useEventDeskActions(topicId: string | undefined) {
     unhide: (e: Pick<DeskEvent, "id" | "title">) => act(e, "unhide"),
     setEventsOn,
     setShowInFeed,
+    setReaderSuggestions,
     refresh,
   };
 }

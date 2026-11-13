@@ -761,6 +761,7 @@ const TopicFeed = () => {
               today={whatsOnToday}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               isOwner={isOwnFeed}
+              suggestTopicId={topicMetadata?.readerEventSubmissions ? topic?.id : null}
             />
           </div>
         );

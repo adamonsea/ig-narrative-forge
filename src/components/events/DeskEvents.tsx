@@ -53,6 +53,7 @@ export function WaitingEventCard({ event, onPublish, onSkip }: { event: DeskEven
       <div className="space-y-2.5 p-4">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <TypeChip type="event" />
+          {event.source_api === "reader" && <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium">Reader</span>}
           <span className="max-w-[160px] truncate">{event.source_name}</span>
           <RelevancePill score={event.relevance_score} />
           {low && <span>Couldn't confirm it's local</span>}
@@ -163,11 +164,22 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
 }
 
 /** Pipeline setting: collect events and add them to the weekly email. */
-export function EventsSwitch({ on, onChange, disabled }: { on: boolean; onChange: (on: boolean) => void; disabled?: boolean }) {
+export function EventsSwitch({ on, onChange, disabled, suggestOn, onSuggestChange }: {
+  on: boolean; onChange: (on: boolean) => void; disabled?: boolean;
+  suggestOn?: boolean; onSuggestChange?: (on: boolean) => void;
+}) {
   return (
-    <div className="flex items-center gap-2">
-      <Label htmlFor="desk-events-switch" className="text-sm text-muted-foreground">Events</Label>
-      <Switch id="desk-events-switch" checked={on} onCheckedChange={onChange} disabled={disabled} />
+    <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+      {on && onSuggestChange && (
+        <div className="flex items-center gap-2">
+          <Checkbox id="desk-reader-suggest" checked={Boolean(suggestOn)} onCheckedChange={(v) => onSuggestChange(v === true)} disabled={disabled} />
+          <Label htmlFor="desk-reader-suggest" className="text-sm text-muted-foreground">Let readers suggest events</Label>
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <Label htmlFor="desk-events-switch" className="text-sm text-muted-foreground">Events</Label>
+        <Switch id="desk-events-switch" checked={on} onCheckedChange={onChange} disabled={disabled} />
+      </div>
     </div>
   );
 }

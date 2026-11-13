@@ -4706,6 +4706,7 @@ export type Database = {
           parliamentary_cards_enabled: boolean
           play_mode_enabled: boolean | null
           quiz_cards_enabled: boolean | null
+          reader_event_submissions: boolean
           sift_enabled: boolean | null
           social_proof_enabled: boolean | null
           story_momentum_enabled: boolean | null
@@ -4721,6 +4722,7 @@ export type Database = {
           parliamentary_cards_enabled?: boolean
           play_mode_enabled?: boolean | null
           quiz_cards_enabled?: boolean | null
+          reader_event_submissions?: boolean
           sift_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null
@@ -4736,6 +4738,7 @@ export type Database = {
           parliamentary_cards_enabled?: boolean
           play_mode_enabled?: boolean | null
           quiz_cards_enabled?: boolean | null
+          reader_event_submissions?: boolean
           sift_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null

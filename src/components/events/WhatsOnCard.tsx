@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
 import { feedBrandPalette, toCss } from "@/lib/feedBrandColor";
 import { recordEventClick } from "@/lib/eventClicks";
+import { SuggestEventButton } from "@/components/events/SuggestEventDialog";
 import { coverLines, dateBadge, eventGroup, eventTime, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 
 function brandVars(color?: string | null) {
@@ -26,13 +27,15 @@ interface WhatsOnCardProps {
   brandColor?: string | null;
   /** The feed's owner: their clicks don't count as sending readers. */
   isOwner?: boolean;
+  /** Set when the feed lets readers suggest events: shows "+ Add an event" on the cover and last slide. */
+  suggestTopicId?: string | null;
 }
 
 /**
  * The feed's "What's on" card set, built like a story card: a cover naming the
  * first events, then one event per swipe. Facts and a link back to the source only.
  */
-export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor, isOwner = false }: WhatsOnCardProps) {
+export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor, isOwner = false, suggestTopicId = null }: WhatsOnCardProps) {
   const [slide, setSlide] = useState(0);
   if (!events.length) return null;
   const { lines, more } = coverLines(events, today);
@@ -105,7 +108,7 @@ export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor,
         <div className="relative flex-1 overflow-hidden">
           <EmblaSlideCarousel slides={slides} height="100%" showDots dotStyle="instagram" onSlideChange={setSlide} ariaLabel="What's on: events" />
         </div>
-        <div className="flex min-h-[68px] justify-center p-4">
+        <div className="flex min-h-[68px] flex-wrap items-center justify-center gap-2 p-4">
           {current ? (
             current.source_url ? (
               <a href={current.source_url} target="_blank" rel="noopener noreferrer" className={PILL}
@@ -120,6 +123,7 @@ export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor,
               Swipe for {events.length} {events.length === 1 ? "event" : "events"}
             </span>
           )}
+          {suggestTopicId && (slide === 0 || slide === events.length) && <SuggestEventButton topicId={suggestTopicId} />}
         </div>
       </div>
     </Card>

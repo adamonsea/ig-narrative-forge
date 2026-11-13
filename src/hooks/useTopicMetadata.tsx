@@ -10,6 +10,7 @@ interface TopicMetadata {
   this_time_last_month_enabled: boolean;
   parliamentaryCardsEnabled: boolean;
   eventsCardsEnabled: boolean;
+  readerEventSubmissions: boolean;
   latestDailyRoundup: string | null;
   latestWeeklyRoundup: string | null;
   emailSubscriptionsEnabled: boolean;
@@ -95,7 +96,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
           
           const { data, error } = await supabase
             .from('topic_insight_settings')
-            .select('play_mode_enabled, quiz_cards_enabled, sift_enabled, this_time_last_month_enabled, parliamentary_cards_enabled, events_cards_enabled')
+            .select('play_mode_enabled, quiz_cards_enabled, sift_enabled, this_time_last_month_enabled, parliamentary_cards_enabled, events_cards_enabled, reader_event_submissions')
             .eq('topic_id', topicId)
             .maybeSingle();
 
@@ -124,6 +125,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
             thisTimeLastMonthEnabled: data.this_time_last_month_enabled ?? false,
             parliamentaryCardsEnabled: (data as any).parliamentary_cards_enabled ?? false,
             eventsCardsEnabled: (data as any).events_cards_enabled ?? false,
+            readerEventSubmissions: (data as any).reader_event_submissions ?? false,
           };
         },
         enabled: !!topicId,
@@ -206,6 +208,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
       this_time_last_month_enabled: insightSettingsResult.data?.thisTimeLastMonthEnabled ?? false,
       parliamentaryCardsEnabled: (insightSettingsResult.data as any)?.parliamentaryCardsEnabled ?? false,
       eventsCardsEnabled: (insightSettingsResult.data as any)?.eventsCardsEnabled ?? false,
+      readerEventSubmissions: (insightSettingsResult.data as any)?.readerEventSubmissions ?? false,
       latestDailyRoundup: roundupsResult.data?.daily ?? null,
       latestWeeklyRoundup: roundupsResult.data?.weekly ?? null,
       emailSubscriptionsEnabled: (emailSubsResult.data as boolean) ?? false,

@@ -385,7 +385,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
           <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
           <div className="ml-auto">
-            <EventsSwitch on={eventsOn} disabled={!eventDesk} onChange={eventActions.setEventsOn} />
+            <EventsSwitch on={eventsOn} disabled={!eventDesk} onChange={eventActions.setEventsOn}
+              suggestOn={eventDesk?.readerSuggestions} onSuggestChange={eventActions.setReaderSuggestions} />
           </div>
         </div>
         {(pulse?.new_arrivals ?? 0) > 0 && (
