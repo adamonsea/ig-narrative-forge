@@ -22,7 +22,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 import { getUser, userOwnsTopic, isServiceRole } from '../_shared/auth.ts';
-import { londonToday } from './extract.ts';
+import { addDays, londonToday } from './extract.ts';
 import { isPublicHttpUrl } from './read.ts';
 import { detectKind, isEventSourceKind, readerFor, type EventReader, type ReaderEvent, type ReaderResult } from './readers/index.ts';
 import { buildPlaceProfile, hasLocalEvidence, judgeEvents, type PlaceProfile, type Verdict } from './locality.ts';
@@ -97,6 +97,19 @@ function chunks<T>(list: T[], size: number): T[][] {
 
 // ---------- storing (shared by every kind) ----------
 
+/** Links that answer 404/410 (or don't answer). Up to 30 links, 6s each. */
+async function deadLinks(urls: string[]): Promise<Set<string>> {
+  const dead = new Set<string>();
+  await Promise.all([...new Set(urls)].slice(0, 30).map(async (u) => {
+    try {
+      const r = await fetch(u, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(6000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CuratrEvents/1.0)' } });
+      if (r.status === 404 || r.status === 410) dead.add(u);
+      await r.body?.cancel();
+    } catch { /* timeouts and blocks: keep the link */ }
+  }));
+  return dead;
+}
+
 async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], verdicts: Verdict[], scores: (number | null)[]) {
   if (!events.length) return; // never wipe a source's events on an empty read
   const now = new Date().toISOString();
@@ -118,6 +131,10 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
     if (r.status === 'deleted') removedTitles.add(titleKey(r.title));
     else if (r.kept_by_owner) keptTitles.add(titleKey(r.title));
   }
+
+  // Venue pages often vanish once a show starts: for events in the next two days,
+  // check the link and fall back to the source's listings page if it's gone.
+  const dead = await deadLinks(events.filter((e) => e.url && e.url !== source.url && e.start_date <= addDays(londonToday(), 1)).map((e) => e.url!));
 
   const rows = events.map((e, i) => {
     const id = ids[i];
@@ -141,7 +158,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       end_time: e.end_time ?? null,
       location: e.venue,
       category: e.category ?? null,
-      source_url: e.url || source.url,
+      source_url: e.url && !dead.has(e.url) ? e.url : source.url,
       source_name: e.source_name || source.name,
       event_type: 'events',
       status,

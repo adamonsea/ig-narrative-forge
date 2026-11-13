@@ -21,6 +21,8 @@ interface WhatsOnCardProps {
   /** Up to 8 upcoming events, soonest first. */
   events: WhatsOnFeedEvent[];
   today: string;
+  /** Which set this is: "Today", "This week" or "Later this month". */
+  label?: string;
   brandColor?: string | null;
   /** The feed's owner: their clicks don't count as sending readers. */
   isOwner?: boolean;
@@ -30,7 +32,7 @@ interface WhatsOnCardProps {
  * The feed's "What's on" card set, built like a story card: a cover naming the
  * first events, then one event per swipe. Facts and a link back to the source only.
  */
-export function WhatsOnCard({ events, today, brandColor, isOwner = false }: WhatsOnCardProps) {
+export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor, isOwner = false }: WhatsOnCardProps) {
   const [slide, setSlide] = useState(0);
   if (!events.length) return null;
   const { lines, more } = coverLines(events, today);
@@ -97,7 +99,7 @@ export function WhatsOnCard({ events, today, brandColor, isOwner = false }: What
       <div className="relative flex min-h-[600px] flex-col">
         <div className="feed-card-header flex items-center justify-between border-b p-4">
           <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${ACCENT}`}><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />What's on</span>
-          <span className="text-xs text-muted-foreground">Next 2 weeks</span>
+          <span className="text-xs text-muted-foreground">{label}</span>
         </div>
         <div className="relative flex-1 overflow-hidden">
           <EmblaSlideCarousel slides={slides} height="100%" showDots dotStyle="instagram" onSlideChange={setSlide} ariaLabel="What's on: events" />

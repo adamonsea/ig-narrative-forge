@@ -107,3 +107,27 @@ describe("events on the Desk", () => {
     expect(hiddenSentence(3)).toBe("3 out-of-area events go straight to Hidden.");
   });
 });
+
+import { whatsOnSets, hasStarted } from "./whatsOn";
+describe("three rotating What's on sets", () => {
+  const ev = (title: string, start_date: string, start_time: string | null = null) => ({ title, start_date, start_time });
+  const all = [ev("Tonight gig", "2026-11-13", "19:30:00"), ev("Morning", "2026-11-13", "09:30:00"), ev("No time", "2026-11-13"),
+    ev("Sat show", "2026-11-14"), ev("Thu talk", "2026-11-19"), ev("Next Fri", "2026-11-20"), ev("Month end", "2026-11-30"), ev("December", "2026-12-02")];
+  it("splits into Today, This week (1-6 days) and Later this month", () => {
+    const s = whatsOnSets(all, "2026-11-13", "08:00:00");
+    expect(s.map((x) => x.label)).toEqual(["Today", "This week", "Later this month"]);
+    expect(s[0].events.map((e) => e.title)).toEqual(["Morning", "Tonight gig", "No time"]);
+    expect(s[1].events.map((e) => e.title)).toEqual(["Sat show", "Thu talk"]);
+    expect(s[2].events.map((e) => e.title)).toEqual(["Next Fri", "Month end"]);
+  });
+  it("drops same-day events once started, and untimed ones at 6pm", () => {
+    expect(hasStarted(ev("a", "2026-11-13", "09:30:00"), "2026-11-13", "10:00:00")).toBe(true);
+    expect(hasStarted(ev("a", "2026-11-13"), "2026-11-13", "17:59:00")).toBe(false);
+    expect(hasStarted(ev("a", "2026-11-13"), "2026-11-13", "18:00:00")).toBe(true);
+    const s = whatsOnSets(all, "2026-11-13", "18:30:00");
+    expect(s[0].events.map((e) => e.title)).toEqual(["Tonight gig"]);
+  });
+  it("skips empty sets", () => {
+    expect(whatsOnSets([ev("x", "2026-11-14")], "2026-11-13", "08:00:00").map((x) => x.kind)).toEqual(["week"]);
+  });
+});

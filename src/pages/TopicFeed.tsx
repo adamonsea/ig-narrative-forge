@@ -7,8 +7,9 @@ import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
+import { whatsOnPositions } from "@/lib/feedCardPositions";
 import { WhatsOnCard } from "@/components/events/WhatsOnCard";
-import { showEventsInFeed, upcomingWhatsOn, londonToday } from "@/lib/whatsOn";
+import { showEventsInFeed, whatsOnSets, londonToday, londonTime } from "@/lib/whatsOn";
 import { useWhatsOnEvents } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
@@ -333,7 +334,8 @@ const TopicFeed = () => {
   const eventsInFeed = showEventsInFeed(topic?.events_enabled, topicMetadata?.eventsCardsEnabled);
   const { data: whatsOnEvents } = useWhatsOnEvents(topic?.id, eventsInFeed);
   const whatsOnToday = londonToday();
-  const whatsOn = useMemo(() => upcomingWhatsOn(whatsOnEvents ?? [], whatsOnToday), [whatsOnEvents, whatsOnToday]);
+  const whatsOnClock = londonTime().slice(0, 4); // re-group every 10 minutes
+  const whatsOn = useMemo(() => whatsOnSets(whatsOnEvents ?? [], whatsOnToday, londonTime()), [whatsOnEvents, whatsOnToday, whatsOnClock]);
   useEffect(() => {
     if (!topic?.id) return;
     const t = createHeadlineStopTracker(topic.id, { skip: isOwnFeed });
@@ -754,7 +756,8 @@ const TopicFeed = () => {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
             <WhatsOnCard
-              events={whatsOn}
+              events={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length].events}
+              label={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length].label}
               today={whatsOnToday}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               isOwner={isOwnFeed}

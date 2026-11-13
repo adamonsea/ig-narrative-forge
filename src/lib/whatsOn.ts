@@ -201,3 +201,43 @@ export function hiddenSentence(excluded: number | null | undefined): string | nu
   if (n <= 0) return null;
   return `${n} out-of-area ${n === 1 ? "event goes" : "events go"} straight to Hidden.`;
 }
+
+// ---------- three rotating What's on sets ----------
+
+export type WhatsOnSetKind = "today" | "week" | "month";
+export interface WhatsOnSet<T> { kind: WhatsOnSetKind; label: string; events: T[] }
+
+/** After 6pm an event with no start time is treated as already under way. */
+export const NO_TIME_CUTOFF = "18:00:00";
+
+/** London wall-clock time as HH:MM:SS. */
+export function londonTime(now: Date = new Date()): string {
+  return now.toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour12: false });
+}
+
+/** A same-day event has started (or, with no time, it's past 6pm): its page may already be gone. */
+export function hasStarted(e: Pick<WhatsOnFeedEvent, "start_date" | "start_time">, today: string, time: string): boolean {
+  if (e.start_date !== today) return e.start_date < today;
+  return e.start_time ? e.start_time < time : time >= NO_TIME_CUTOFF;
+}
+
+/**
+ * The feed rotates up to three card sets: Today (not yet started), This week
+ * (tomorrow to 6 days out) and Later this month (7+ days out, to month end).
+ * Empty sets are skipped; each holds at most WHATS_ON_MAX, soonest first.
+ */
+export function whatsOnSets<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">>(events: T[], today: string, time: string): WhatsOnSet<T>[] {
+  const [y, m] = today.split("-").map(Number);
+  const monthEnd = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const sorted = events
+    .filter((e) => !hasStarted(e, today, time))
+    .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99") || a.title.localeCompare(b.title));
+  const pick = (from: number, to: string) => sorted
+    .filter((e) => { const d = daysBetween(today, e.start_date); return d >= from && e.start_date <= to; });
+  const sets: WhatsOnSet<T>[] = [
+    { kind: "today", label: "Today", events: sorted.filter((e) => e.start_date === today) },
+    { kind: "week", label: "This week", events: pick(1, addDays(today, 6)) },
+    { kind: "month", label: "Later this month", events: pick(7, monthEnd) },
+  ];
+  return sets.map((s) => ({ ...s, events: s.events.slice(0, WHATS_ON_MAX) })).filter((s) => s.events.length > 0);
+}
