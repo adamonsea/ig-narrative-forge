@@ -30,8 +30,8 @@ interface FeedBuildProgressProps {
 const ENCOURAGING_MESSAGES = [
   "Connecting to your sources…",
   "Scanning for the latest stories…",
-  "Building something great for your audience…",
-  "Almost there — curating content…",
+  "Reading the latest from each source…",
+  "Almost there — choosing the best stories…",
   "Your feed is coming alive…",
 ];
 
@@ -47,7 +47,7 @@ export const FeedBuildProgress = ({
   const [phases, setPhases] = useState<BuildPhase[]>([
     { key: 'sources', label: 'Sources connected', status: 'pending' },
     { key: 'gather', label: 'Gathering stories', status: 'pending' },
-    { key: 'generate', label: 'Generating your feed', status: 'pending' },
+    { key: 'generate', label: 'Writing your first stories', status: 'pending' },
   ]);
   const [stories, setStories] = useState<StoryPreview[]>([]);
   const [messageIndex, setMessageIndex] = useState(0);

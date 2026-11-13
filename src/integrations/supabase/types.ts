@@ -5255,6 +5255,7 @@ export type Database = {
           automated_insights_enabled: boolean | null
           automation_quality_threshold: number | null
           big_story_override: boolean
+          brand_safe_pictures: boolean
           branding_config: Json | null
           community_config: Json | null
           community_intelligence_enabled: boolean | null
@@ -5280,6 +5281,7 @@ export type Database = {
           events_enabled: boolean | null
           events_last_checked_at: string | null
           events_last_new_count: number
+          family_safe: boolean
           house_style_examples: string | null
           house_style_notes: string | null
           id: string
@@ -5312,6 +5314,7 @@ export type Database = {
           slug: string | null
           topic_type: string
           updated_at: string | null
+          weekly_email_enabled: boolean
         }
         Insert: {
           archived_at?: string | null
@@ -5325,6 +5328,7 @@ export type Database = {
           automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
           big_story_override?: boolean
+          brand_safe_pictures?: boolean
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
@@ -5350,6 +5354,7 @@ export type Database = {
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
           events_last_new_count?: number
+          family_safe?: boolean
           house_style_examples?: string | null
           house_style_notes?: string | null
           id?: string
@@ -5382,6 +5387,7 @@ export type Database = {
           slug?: string | null
           topic_type?: string
           updated_at?: string | null
+          weekly_email_enabled?: boolean
         }
         Update: {
           archived_at?: string | null
@@ -5395,6 +5401,7 @@ export type Database = {
           automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
           big_story_override?: boolean
+          brand_safe_pictures?: boolean
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
@@ -5420,6 +5427,7 @@ export type Database = {
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
           events_last_new_count?: number
+          family_safe?: boolean
           house_style_examples?: string | null
           house_style_notes?: string | null
           id?: string
@@ -5452,6 +5460,7 @@ export type Database = {
           slug?: string | null
           topic_type?: string
           updated_at?: string | null
+          weekly_email_enabled?: boolean
         }
         Relationships: []
       }

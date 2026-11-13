@@ -604,3 +604,6 @@ verify_jwt = false
 
 [functions.scrape-whats-on]
 verify_jwt = false
+
+[functions.suggest-feed-setup]
+verify_jwt = false

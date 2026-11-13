@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { loadCategoryGate, applyCategoryGate } from '../_shared/category-gate.ts';
+import { familySafeVerdict, familySafeReason } from '../_shared/family-safe.ts';
 import { getUser, userOwnsTopic } from '../_shared/auth.ts';
 import {
   applyNewsValues,
@@ -242,7 +243,7 @@ Deno.serve(async (req) => {
     const topicIds = topicSettings.map((s: TopicAutomationSettings) => s.topic_id);
     const { data: topicDefaults } = await supabase
       .from('topics')
-      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations, nearby_places, locality_strength, big_story_override')
+      .select('id, default_tone, default_writing_style, audience_expertise, negative_keywords, topic_type, region, landmarks, postcodes, organizations, nearby_places, locality_strength, big_story_override, family_safe')
       .in('id', topicIds);
 
     const topicDefaultsMap: Record<string, {
@@ -254,6 +255,7 @@ Deno.serve(async (req) => {
       region?: string;
       newsValues?: NewsValuesConfig;
       hasAnchors?: boolean;
+      family_safe?: boolean;
     }> = {};
     for (const t of (topicDefaults || [])) {
       const newsValues: NewsValuesConfig = {
@@ -278,6 +280,7 @@ Deno.serve(async (req) => {
         region: t.region || '',
         newsValues,
         hasAnchors,
+        family_safe: (t as any).family_safe === true,
       };
     }
 
@@ -322,6 +325,7 @@ Deno.serve(async (req) => {
       let topicQueued = 0;
 
       const negativeKeywords = topicDefaultsMap[topic_id]?.negative_keywords || [];
+      const familySafe = topicDefaultsMap[topic_id]?.family_safe === true;
       const topicType = topicDefaultsMap[topic_id]?.topic_type;
       const newsValues = topicDefaultsMap[topic_id]?.newsValues;
       const localityGateActive = topicType === 'regional' && !!newsValues && !!topicDefaultsMap[topic_id]?.hasAnchors;
@@ -348,13 +352,33 @@ Deno.serve(async (req) => {
 
         // Defensive fallback: if the JOIN somehow returned no content but we need
         // it for gating, fetch once. On failure we DO NOT hold (fail-open) below.
-        if (!sharedContent && (negativeKeywords.length > 0 || localityGateActive || categoryGate.active) && article.shared_content_id) {
+        if (!sharedContent && (familySafe || negativeKeywords.length > 0 || localityGateActive || categoryGate.active) && article.shared_content_id) {
           const { data } = await supabase
             .from('shared_article_content')
             .select('title, body, url')
             .eq('id', article.shared_content_id)
             .maybeSingle();
           sharedContent = data;
+        }
+
+        // Family-safe (owner's choice): drop adult, violent and gambling stories early.
+        if (familySafe && sharedContent) {
+          const verdict = familySafeVerdict(sharedContent.title, sharedContent.body);
+          if (!verdict.safe) {
+            const reason = familySafeReason(verdict);
+            console.log(`  🛡️ Discarding article ${article.id}: ${reason}`);
+            await supabase.from('topic_articles').update({ processing_status: 'discarded' }).eq('id', article.id);
+            const sourceUrl = sharedContent.url || article.shared_content_id;
+            await supabase.from('discarded_articles').upsert({
+              topic_id: topic_id,
+              url: sourceUrl,
+              normalized_url: String(sourceUrl).toLowerCase().trim(),
+              title: sharedContent.title,
+              discarded_reason: reason,
+              discarded_by: 'family-safe',
+            }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
+            continue;
+          }
         }
 
         // Negative keyword check: reject matches

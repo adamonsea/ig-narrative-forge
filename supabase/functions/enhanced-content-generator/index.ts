@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { stripGeneratedAttribution } from '../_shared/attribution-guard.ts';
 import { llmFetch } from '../_shared/llm-router.ts';
+import { familySafeVerdict, familySafeReason } from '../_shared/family-safe.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1180,13 +1181,40 @@ Return in JSON format:
     let dripFeedEnabled = false;
     let autoSimplifyEnabled = false; // Controls whether stories skip editorial review
     let houseStyleGuidance = '';
+    let brandSafePictures = false; // brand/character/fandom feed: keep the source's own picture
     
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples')
+        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples, family_safe, brand_safe_pictures')
         .eq('id', article.topic_id)
         .maybeSingle();
+
+      // Family-safe (owner's choice): never write adult, violent or gambling stories.
+      if ((topicData as any)?.family_safe) {
+        const verdict = familySafeVerdict(article.title, article.body);
+        if (!verdict.safe) {
+          const reason = familySafeReason(verdict);
+          console.log(`🛡️ ${reason} — not writing "${article.title}"`);
+          if (topicArticleId) {
+            await supabase.from('topic_articles').update({ processing_status: 'discarded' }).eq('id', topicArticleId);
+          }
+          if (article.source_url) {
+            await supabase.from('discarded_articles').upsert({
+              topic_id: article.topic_id,
+              url: article.source_url,
+              normalized_url: String(article.source_url).toLowerCase().trim(),
+              title: article.title,
+              discarded_reason: reason,
+              discarded_by: 'family-safe',
+            }, { onConflict: 'topic_id,normalized_url', ignoreDuplicates: true });
+          }
+          return new Response(
+            JSON.stringify({ success: false, skipped: true, reason: 'family_safe', message: reason }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
       
       if (topicData) {
         topicExpertise = audienceExpertise ?? topicData.audience_expertise ?? 'intermediate';
@@ -1194,6 +1222,7 @@ Return in JSON format:
         effectiveWritingStyle = writingStyle ?? topicData.default_writing_style ?? 'journalistic';
         dripFeedEnabled = topicData.drip_feed_enabled || false;
         autoSimplifyEnabled = topicData.auto_simplify_enabled || false;
+        brandSafePictures = (topicData as any).brand_safe_pictures === true;
 
         const notes = (topicData.house_style_notes || '').trim();
         const examples = (topicData.house_style_examples || '').trim();
@@ -1666,6 +1695,8 @@ Return in JSON format:
     // Only generate if the user opted in (generateIllustration flag, defaults to true)
     if (generateIllustration === false) {
       console.log('⏭️ Skipping illustration generation - user opted out');
+    } else if (brandSafePictures) {
+      console.log('⏭️ Skipping illustration generation - brand-safe feed keeps the source picture');
     } else {
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

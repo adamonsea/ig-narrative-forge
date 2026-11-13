@@ -103,6 +103,8 @@ type IllustrationStyle = typeof VALID_ILLUSTRATION_STYLES[number]
 
 // Satirical = Sunburst medium ($0.041) + gag writer (~$0.005), x2 margin ≈ 4 credits
 const SATIRICAL_CREDITS = 4
+// Applies to every feed and every model: no franchise characters, mascots or logos.
+const TRADEMARK_RULE = 'Never depict trademarked, copyrighted or franchise characters, creatures, mascots, logos, brand marks or product packaging; use only original, generic shapes.'
 
 function isValidIllustrationStyle(value: unknown): value is IllustrationStyle {
   return typeof value === 'string' && 
@@ -465,13 +467,18 @@ serve(async (req) => {
     let topicLandmarkDescriptions: Record<string, string> | null = null // owner-written appearance notes
     let topicLandmarkPhotos: Record<string, Array<{ url: string }>> | null = null // owner-saved reference photos
     
+    // Brand, character or fandom feeds: never draw trademarked characters or logos.
+    let brandSafePictures = false
+
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions, landmark_reference_images')
+        .select('illustration_style, illustration_primary_color, region, landmarks, landmark_descriptions, landmark_reference_images, brand_safe_pictures')
         .eq('id', topicId)
         .single()
       
+      brandSafePictures = (topicData as any)?.brand_safe_pictures === true
+
       if (topicData?.illustration_style) {
         // Validate enum value
         if (isValidIllustrationStyle(topicData.illustration_style)) {
@@ -518,6 +525,22 @@ serve(async (req) => {
     // Per-story style choice (Arrivals / regenerate) overrides the feed default
     if (styleOverride && isValidIllustrationStyle(styleOverride)) {
       illustrationStyle = styleOverride
+    }
+    if (brandSafePictures && isAutomated) {
+      console.log(`Brand-safe feed: skipping automated illustration for story ${storyId}; the source picture stays`)
+      return new Response(
+        JSON.stringify({
+          success: true,
+          skipped: true,
+          reason: 'brand_safe_pictures',
+          message: 'This feed keeps each source\'s own picture instead of drawing characters or logos.',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    if (brandSafePictures && ['satirical', 'cartoon', 'anime'].includes(illustrationStyle)) {
+      // Character-led styles invite copied characters; use a plain graphic style instead.
+      illustrationStyle = 'illustrated_icon'
     }
     // Satire always renders on Sunburst medium, whichever tier was picked
     let satiricalGag: Record<string, string | null> | null = null
@@ -694,12 +717,17 @@ serve(async (req) => {
     
     
     // Extract subject matter with location context
-    const subjectMatter = await extractSubjectMatter(
+    let subjectMatter = await extractSubjectMatter(
       slides || [],
       OPENAI_API_KEY,
       story.title,
       locationDetails
     )
+    // Prompt title: brand-safe feeds never pass names of characters, games or brands to the artist.
+    const promptTitle: string = brandSafePictures ? 'An abstract cover picture' : (story.title || '')
+    if (brandSafePictures) {
+      subjectMatter = 'an abstract, non-figurative arrangement of simple geometric shapes and flat colour fields that suggests the general mood of the story, with no creatures, characters, people, products, game items or logos'
+    }
 
     const prepMs = Date.now() - prepStart
     console.log(`⏱️ Prompt pre-processing took ${prepMs}ms`)
@@ -718,22 +746,22 @@ serve(async (req) => {
     const placeLine = locationDetails ? ` Location: ${locationDetails}.` : (topicRegion ? ` Set in ${topicRegion}.` : '')
     const customStylePrompts: Partial<Record<IllustrationStyle, string>> = {
       cartoon:
-        `Original editorial cartoon illustrating: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `Original editorial cartoon illustrating: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `Hand-drawn comic linework with confident ink outlines, exaggerated but warm character expressions, ` +
         `bright flat colour fills, simple staging, generous negative space, 3:2 landscape. ` +
         `No text, letters, numbers or captions. No photographic realism, no 3D rendering, no copied characters or named artist styles.`,
       bw_editorial_photo:
-        `Aged black-and-white editorial news photograph of: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `Aged black-and-white editorial news photograph of: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `Authentic mid-century press photography: silver-gelatin tonal range, visible film grain, slight print wear, ` +
         `natural available light, candid documentary framing, 35mm perspective, 3:2 landscape. ` +
         `Strictly monochrome — no colour anywhere. No text, watermarks or borders. No illustration, no CGI.`,
       anime:
-        `Original editorial anime scene depicting: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `Original editorial anime scene depicting: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `Modern cel-shaded anime aesthetic: clean linework, expressive faces, saturated skies, painterly backgrounds, ` +
         `cinematic wide framing, 3:2 landscape. ` +
         `No text or subtitles. Do not copy any named studio, franchise or existing character. No photographic realism.`,
       illustrated_icon:
-        `Bold minimal spot illustration for: ${subjectMatter}. Story: "${story.title}".${placeLine} ` +
+        `Bold minimal spot illustration for: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `One single clear visual idea, thick uniform strokes, simple geometric shapes, two or three flat colours ` +
         `(${primaryColor} as the accent) on a plain light background, large amounts of empty space, centred, 3:2 landscape. ` +
         `No text, no shading, no gradients, no scenery clutter, no photographic detail.`,
@@ -758,9 +786,10 @@ serve(async (req) => {
 
     let illustrationPrompt = satiricalPrompt ?? customStylePrompts[illustrationStyle]
       ?? (illustrationStyle === 'editorial_photographic'
-        ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails)
-        : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor, topicRegion, locationDetails))
+        ? buildPhotographicPrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails)
+        : buildIllustrativePrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails))
 
+    illustrationPrompt = `${illustrationPrompt} ${TRADEMARK_RULE}`
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
 
@@ -790,7 +819,7 @@ serve(async (req) => {
       }
 
       // Build MidJourney-optimized prompt
-      const mjPrompt = `${modelConfig.stylePrefix}${subjectMatter}. ${story.title}. ${expressionInstruction}. --ar 3:2 --v 7 --quality 1 --style raw`;
+      const mjPrompt = `${modelConfig.stylePrefix}${subjectMatter}. ${promptTitle}. ${expressionInstruction}. ${TRADEMARK_RULE} --ar 3:2 --v 7 --quality 1 --style raw`;
       console.log('MidJourney prompt:', mjPrompt.substring(0, 200) + '...');
 
       // Start generation with KIE API
@@ -887,7 +916,7 @@ serve(async (req) => {
 
 SUBJECT: ${subjectMatter}
 
-STORY: "${story.title}"
+STORY: "${promptTitle}"
 
 VISUAL EXECUTION CHECKLIST:
 ✓ Bold black outlines (2-4px weight) defining building shapes
@@ -907,7 +936,9 @@ WHAT TO AVOID (CRITICAL):
 ❌ Interior architectural details (molding, frames, panels)
 ❌ Any color other than black and mint green (#58FFBC)
 
-Style benchmark: Think flat vector illustration with maximum 30 line strokes total.`;
+Style benchmark: Think flat vector illustration with maximum 30 line strokes total.
+
+${TRADEMARK_RULE}`;
       
       const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
       if (!REPLICATE_API_KEY) {
@@ -1214,7 +1245,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           }
 
           // FLUX-specific prompt (simplified for reliability)
-          const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${story.title}". Style: Clean editorial illustration with bold black outlines and ${primaryColor} accent color. Tone: ${storyTone}. No text.`;
+          const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${promptTitle}". Style: Clean editorial illustration with bold black outlines and ${primaryColor} accent color. Tone: ${storyTone}. No text. ${TRADEMARK_RULE}`;
 
           const fluxResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
             method: 'POST',

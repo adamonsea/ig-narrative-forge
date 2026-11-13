@@ -276,6 +276,20 @@ serve(async (req) => {
           body: generatorBody
         });
 
+        if (!generationError && generationResult?.skipped && generationResult?.reason === 'family_safe') {
+          await supabase
+            .from('content_generation_queue')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+              result_data: { success: true, skipped: true, reason: 'family_safe', detail: generationResult?.message ?? null }
+            })
+            .eq('id', job.id);
+          console.log(`⏩ Skipped ${jobType} job ${job.id} - Family-safe filter`);
+          results.push({ jobId: job.id, articleId: jobIdentifier, success: true, skipped: true, reason: 'family_safe' });
+          continue;
+        }
+
         if (generationError || !generationResult?.success) {
           throw new Error(generationError?.message || generationResult?.error || 'Content generation failed');
         }

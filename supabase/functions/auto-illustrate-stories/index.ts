@@ -113,6 +113,23 @@ Deno.serve(async (req) => {
       console.log(`Found ${topicsToProcess.length} Holiday Mode topics to scan`);
     }
 
+    // Brand, character and fandom feeds keep each source's own picture: never auto-draw.
+    {
+      const { data: brandSafeRows } = await supabase
+        .from('topics')
+        .select('id')
+        .in('id', topicsToProcess.map((t) => t.topic_id))
+        .eq('brand_safe_pictures', true);
+      const skip = new Set((brandSafeRows || []).map((r: { id: string }) => r.id));
+      topicsToProcess = topicsToProcess.filter((t) => !skip.has(t.topic_id));
+      if (topicsToProcess.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, message: 'Brand-safe feeds keep source pictures', topicsProcessed: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Extended age filter: 7 days instead of 24 hours to catch older unillustrated stories
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     

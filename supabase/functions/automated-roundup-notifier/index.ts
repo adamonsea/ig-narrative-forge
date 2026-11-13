@@ -24,7 +24,7 @@ serve(async (req) => {
     // Get all active topics
     const { data: topics, error: topicsError } = await supabase
       .from('topics')
-      .select('id, name, slug, created_by, email_subscriptions_enabled')
+      .select('id, name, slug, created_by, email_subscriptions_enabled, weekly_email_enabled')
       .eq('is_active', true);
 
     if (topicsError || !topics) {
@@ -90,6 +90,7 @@ serve(async (req) => {
       // === EMAIL NEWSLETTERS ===
       try {
         if (!topic.email_subscriptions_enabled) throw new Error('Email disabled');
+        if (notification_type === 'weekly' && (topic as any).weekly_email_enabled === false) throw new Error('Weekly roundup email switched off');
         const emailBody: any = {
           topicId: topic.id,
           notificationType: notification_type
