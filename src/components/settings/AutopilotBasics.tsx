@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
+import { InfoHint, SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PACE_LABELS, paceFields, paceOf, type Pace, type PaceFields } from "@/lib/autopilotPace";
@@ -90,12 +90,14 @@ export function AutopilotBasics({ topicId, onChanged }: { topicId: string; onCha
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-6">
         <div>
-          <label htmlFor="autopilot" className="text-base font-semibold">Autopilot</label>
-          <p className="mt-0.5 max-w-xl text-sm text-muted-foreground">
-            {on
-              ? "On: new stories are collected, written and published without you. You can still edit, reorder or remove anything on the Desk."
-              : OTHER_MODES[mode] || "Off: new stories wait on your Desk for you to publish."}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="autopilot" className="text-base font-semibold">Autopilot</label>
+            <InfoHint label="About Autopilot">
+              {on
+                ? "On: new stories are collected, written and published without you. You can still edit, reorder or remove anything on the Desk."
+                : OTHER_MODES[mode] || "Off: new stories wait on your Desk for you to publish."}
+            </InfoHint>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <SaveIndicator state={state} />

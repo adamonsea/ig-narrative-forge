@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { visibleTerms } from "@/lib/termLists";
 import { cn } from "@/lib/utils";
+import { InfoHint } from "@/components/ui/editorial";
 
 /**
  * One editable list of plain words: tap × to remove, type and press Enter to add
@@ -49,11 +50,13 @@ export function TermList({
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 id={id} className="text-base font-semibold">
-            {label}
-            {terms.length > 0 && <span className="ml-2 text-sm font-normal text-muted-foreground">{terms.length}</span>}
-          </h3>
-          {hint && <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>}
+          <div className="flex items-center gap-1.5">
+            <h3 id={id} className="text-base font-semibold">
+              {label}
+              {terms.length > 0 && <span className="ml-2 text-sm font-normal text-muted-foreground">{terms.length}</span>}
+            </h3>
+            {hint && <InfoHint label={`About ${label.toLowerCase()}`}>{hint}</InfoHint>}
+          </div>
         </div>
         {headerAction}
       </div>

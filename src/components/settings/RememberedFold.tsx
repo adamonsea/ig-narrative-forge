@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { InfoHint } from "@/components/ui/editorial";
 
 const storageKey = (userId: string | undefined, foldKey: string) => `curatr:fold:${userId ?? "anon"}:${foldKey}`;
 
@@ -62,33 +63,36 @@ export function RememberedFold({
     }
   };
 
+  if (variant === "section") {
+    // The info icon sits outside the fold's trigger so tapping it never opens or closes the fold.
+    return (
+      <Collapsible open={open} onOpenChange={toggle} className={className}>
+        <div className="flex items-center justify-between gap-3 py-2">
+          <div className="flex items-center gap-2">
+            <CollapsibleTrigger className="display-heading text-left text-xl md:text-2xl">{label}</CollapsibleTrigger>
+            {description && <InfoHint label={`About ${label.toLowerCase()}`}>{description}</InfoHint>}
+          </div>
+          <CollapsibleTrigger className="group rounded-md p-1" aria-label={open ? `Close ${label}` : `Open ${label}`}>
+            <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
+          <div className="pt-6">{children}</div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+
   return (
     <Collapsible open={open} onOpenChange={toggle} className={className}>
       <CollapsibleTrigger
-        className={cn(
-          "group flex w-full items-center gap-2 text-left transition-colors",
-          variant === "section"
-            ? "justify-between py-2"
-            : "py-1 text-sm font-medium text-muted-foreground hover:text-foreground",
-        )}
+        className="group flex w-full items-center gap-2 py-1 text-left text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        {variant === "section" ? (
-          <>
-            <span>
-              <span className="block display-heading text-xl md:text-2xl">{label}</span>
-              {description && <span className="mt-1 block text-sm text-muted-foreground">{description}</span>}
-            </span>
-            <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-          </>
-        ) : (
-          <>
-            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-            {label}
-          </>
-        )}
+        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+        {label}
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
-        <div className={variant === "section" ? "pt-6" : "pt-5"}>{children}</div>
+        <div className="pt-5">{children}</div>
       </CollapsibleContent>
     </Collapsible>
   );

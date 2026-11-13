@@ -112,9 +112,9 @@ interface EditorialControlCenterProps {
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 space-y-6 border-t border-border pt-10 first:border-t-0 first:pt-0">
-      <header>
+      <header className="flex items-center gap-2">
         <h2 id={`${id}-title`} className="display-heading text-xl md:text-2xl">{title}</h2>
-        {description && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>}
+        {description && <InfoHint label={`About ${title.toLowerCase()}`}>{description}</InfoHint>}
       </header>
       {children}
     </section>
@@ -318,7 +318,7 @@ export function EditorialControlCenter({
         />
         <RememberedFold foldKey="share-more" label={`Advanced: subscribers${FEATURES.emailSegments ? ", email segments" : ""}${FEATURES.audioBriefings ? ", audio briefings" : ""}, widget builder, RSS, AI assistants, donations`}>
           <div className="divide-y divide-border border-y border-border">
-            <ChannelRow icon={Globe2} label="Public feed" description={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
+            <ChannelRow icon={Globe2} label="Public feed" status={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
             {topic.email_subscriptions_enabled && (
               <div className="space-y-8 py-6">
                 <NewsletterSignupsManager topicId={topic.id} />
@@ -330,11 +330,11 @@ export function EditorialControlCenter({
             )}
             {FEATURES.audioBriefings && (
               <>
-                <ChannelRow icon={Mic2} label="Daily audio briefing" description="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
-                <ChannelRow icon={Mic2} label="Weekly audio review" description="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
+                <ChannelRow icon={Mic2} label="Daily audio briefing" hint="A daily spoken briefing" checked={topic.audio_briefings_daily_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_daily_enabled", checked, "Daily audio briefings")} />
+                <ChannelRow icon={Mic2} label="Weekly audio review" hint="A weekly spoken review" checked={topic.audio_briefings_weekly_enabled || false} onCheckedChange={(checked) => onChannelToggle("audio_briefings_weekly_enabled", checked, "Weekly audio briefings")} />
               </>
             )}
-            <ChannelRow icon={Settings2} label="Website widget" description="Embed this feed on another website" checked={topic.public_widget_builder_enabled || false} onCheckedChange={(checked) => onChannelToggle("public_widget_builder_enabled", checked, "Website widget")} />
+            <ChannelRow icon={Settings2} label="Website widget" hint="Embed this feed on another website" checked={topic.public_widget_builder_enabled || false} onCheckedChange={(checked) => onChannelToggle("public_widget_builder_enabled", checked, "Website widget")} />
             {topic.public_widget_builder_enabled && (
               <div className="space-y-4 py-6">
                 <Button variant="outline" size="sm" asChild>
@@ -343,7 +343,7 @@ export function EditorialControlCenter({
                 <WidgetAnalytics topicId={topic.id} onNewSiteDetected={(domain) => onToast("Widget now live on a new site", `Your widget is now live on ${domain}`)} />
               </div>
             )}
-            <ChannelRow icon={Rss} label="RSS" description="A live feed for reader apps" checked={topic.rss_enabled || false} onCheckedChange={(checked) => onChannelToggle("rss_enabled", checked, "RSS feed")} />
+            <ChannelRow icon={Rss} label="RSS" hint="A live feed for reader apps" checked={topic.rss_enabled || false} onCheckedChange={(checked) => onChannelToggle("rss_enabled", checked, "RSS feed")} />
             <div id="ai-assistants-heading">
               <AiAssistantAccess
                 topicId={topic.id}
@@ -375,8 +375,7 @@ export function EditorialControlCenter({
             )}
             {FEATURES.communityDiscussion && (
               <section className="border-t border-border pt-8">
-                <SubHeading>Community discussion</SubHeading>
-                <p className="-mt-2 mb-5 text-sm text-muted-foreground">Follow what people are saying online without changing the feed's writing voice.</p>
+                <SubHeading hint="Follow what people are saying online without changing the feed's writing voice.">Community discussion</SubHeading>
                 <CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} />
               </section>
             )}
@@ -393,12 +392,16 @@ export function EditorialControlCenter({
   );
 }
 
-function ChannelRow({ icon: Icon, label, description, checked, onCheckedChange }: { icon: typeof Mail; label: string; description: string; checked: boolean; onCheckedChange?: (checked: boolean) => void }) {
+function ChannelRow({ icon: Icon, label, hint, status, checked, onCheckedChange }: { icon: typeof Mail; label: string; hint?: string; status?: string; checked: boolean; onCheckedChange?: (checked: boolean) => void }) {
   return (
     <div className="flex items-center justify-between gap-5 py-5">
       <div className="flex items-center gap-3">
         <Icon className="h-4 w-4 text-muted-foreground" />
-        <div><Label className="text-sm">{label}</Label><p className="mt-0.5 text-xs text-muted-foreground">{description}</p></div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <Label className="text-sm">{label}</Label>
+          {hint && <InfoHint label={`About ${label.toLowerCase()}`}>{hint}</InfoHint>}
+          {status && <span className="text-xs text-muted-foreground">{status}</span>}
+        </div>
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
     </div>
