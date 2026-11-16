@@ -15,9 +15,9 @@ import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 import { useTopicPulse } from "@/hooks/useTopicPulse";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
 import { useEventDesk, useEventDeskActions } from "@/hooks/useWhatsOnEvents";
-import { ComingUpEventCard, EventsOffCard, EventsSettings, HiddenEvents, LiveWhatsOnRow } from "@/components/events/DeskEvents";
+import { ComingUpPanel, EventsOffCard, EventsSettings, LiveWhatsOnRow } from "@/components/events/DeskEvents";
 import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
-import { comingUpOrder, horizonBuckets, londonTime, londonToday } from "@/lib/whatsOn";
+import { comingUpTimeline, horizonBuckets, leftOutOrder, londonTime, londonToday } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
 
@@ -291,8 +291,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const eventsOn = Boolean(eventDesk?.eventsOn);
   const today = londonToday();
   const nowTime = londonTime();
-  const comingUp = eventsOn ? comingUpOrder(eventDesk?.waiting ?? [], today, nowTime) : [];
-  const hiddenEvents = eventsOn ? eventDesk?.hidden ?? [] : [];
+  // Every upcoming event, live in the feed or waiting, soonest first; the rest didn't make the cut.
+  const comingUp = eventsOn && eventDesk ? comingUpTimeline(eventDesk.allLive, eventDesk.waiting, today, nowTime) : [];
+  const leftOutEvents = eventsOn && eventDesk ? leftOutOrder(eventDesk.hidden, today, nowTime) : [];
   const eventsThisWeek = eventsOn && eventDesk
     ? (() => { const w = horizonBuckets(eventDesk.allLive, eventDesk.waiting, today, nowTime).find((b) => b.key === 'week'); return w ? w.live + w.waiting : 0; })()
     : 0;
@@ -504,7 +505,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           </p>
         </section>
 
-        {/* ===== Coming up: waiting events, soonest first ===== */}
+        {/* ===== Coming up: every upcoming event, soonest first; the left-out ones one tap away ===== */}
         <section className={areaClass('coming')} aria-labelledby="desk-coming">
           <div className="flex min-h-10 items-center gap-2 border-b pb-2">
             <h3 id="desk-coming" className="text-lg font-semibold text-foreground">Coming up</h3>
@@ -520,19 +521,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           {!eventsOn ? (
             <EventsOffCard disabled={!eventDesk} onSwitchOn={() => eventActions.setEventsOn(true)} />
           ) : (
-            <>
-              {comingUp.length === 0 ? (
-                <p className="flex items-center gap-2 text-base text-muted-foreground">
-                  <CalendarDays className="h-4 w-4" aria-hidden="true" />No events waiting
-                </p>
-              ) : (
-                comingUp.map((e) => (
-                  <ComingUpEventCard key={e.id} event={e} today={today}
-                    onPublish={() => eventActions.publish(e)} onSkip={() => eventActions.skip(e)} />
-                ))
-              )}
-              <HiddenEvents events={hiddenEvents} onRestore={(e) => eventActions.unhide(e)} />
-            </>
+            <ComingUpPanel upcoming={comingUp} leftOut={leftOutEvents} today={today} actions={eventActions} />
           )}
         </section>
       </div>

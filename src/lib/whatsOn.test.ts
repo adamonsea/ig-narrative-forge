@@ -3,7 +3,7 @@ import { describe, it, expect } from "bun:test";
 import {
   isBrokenWhatsOnSource, previewSentence, venueClicksLine, showEventsInFeed, eventSourceKindLabel,
   dateBadge, eventTime, upcomingWhatsOn, eventGroup, coverSentence, detectSourceKind, isEventsSourceKind,
-  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle, horizonBuckets, inHorizon, countdown, comingUpOrder,
+  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle, horizonBuckets, inHorizon, countdown, comingUpTimeline, leftOutOrder, leftOutExplanation,
 } from "./whatsOn";
 
 const ev = (title: string, start_date: string, start_time: string | null = "19:00:00") =>
@@ -168,17 +168,23 @@ describe("Desk Coming up column", () => {
     expect(countdown("2026-11-18", THU)).toBe("in 6 days");
   });
 
-  it("drops started events, puts the soonest first and unconfirmed-local ones last", () => {
-    const low = { ...ev("Far away fair", "2026-11-13"), relevance_score: 10 };
-    const events = [
-      { ...ev("Next week talk", "2026-11-19"), relevance_score: 80 },
-      low,
-      { ...ev("Morning talk", THU, "10:00:00"), relevance_score: 80 }, // started at 3pm
-      { ...ev("Tonight gig", THU, "19:30:00"), relevance_score: 80 },
-      { ...ev("Fri market", "2026-11-13", null), relevance_score: null },
-    ];
-    expect(comingUpOrder(events, THU, "15:00:00").map((e) => e.title)).toEqual([
-      "Tonight gig", "Fri market", "Next week talk", "Far away fair",
+  it("Coming up lists live and waiting events together, strictly soonest first, started ones dropped", () => {
+    const live = [ev("Next week talk", "2026-11-19"), ev("Morning talk", THU, "10:00:00"), ev("Fri market", "2026-11-13", null)];
+    const waiting = [{ ...ev("Far away fair", "2026-11-13", "09:00:00"), relevance_score: 10 }, ev("Tonight gig", THU, "19:30:00")];
+    const list = comingUpTimeline(live, waiting, THU, "15:00:00");
+    expect(list.map((e) => `${e.title}:${e.state}`)).toEqual([
+      "Tonight gig:waiting", "Far away fair:waiting", "Fri market:live", "Next week talk:live",
     ]);
+  });
+
+  it("lists events that didn't make the cut soonest first, dropping started ones", () => {
+    const hidden = [ev("Brighton show", "2026-11-20"), ev("Lewes walk", THU, "09:00:00"), ev("Hastings gig", "2026-11-14")];
+    expect(leftOutOrder(hidden, THU, "15:00:00").map((e) => e.title)).toEqual(["Hastings gig", "Brighton show"]);
+  });
+
+  it("explains why an event was left out", () => {
+    expect(leftOutExplanation("deleted", null)).toMatch(/skipped/);
+    expect(leftOutExplanation("excluded", "online")).toMatch(/online/);
+    expect(leftOutExplanation("excluded", "outside_area")).toMatch(/area/);
   });
 });

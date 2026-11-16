@@ -288,15 +288,34 @@ export function countdown(ymd: string, today: string): string {
   return `in ${d} days`;
 }
 
+const byWhen = <T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">>(a: T, b: T) =>
+  a.start_date.localeCompare(b.start_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99") || a.title.localeCompare(b.title);
+
+type Timed = Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">;
+
 /**
- * Waiting events in the Coming up column: already-started ones drop out (same rule as the feed),
- * soonest first, and the ones we couldn't confirm are local sink to the bottom.
+ * The Coming up column: every upcoming event, live in the feed or waiting, in one list.
+ * Strictly soonest first; events that have started drop out (same rule as the feed).
  */
-export function comingUpOrder<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title"> & { relevance_score?: number | null }>(
-  events: T[], today: string, time: string,
-): T[] {
-  const sorted = events
-    .filter((e) => !hasStarted(e, today, time))
-    .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99") || a.title.localeCompare(b.title));
-  return [...sorted.filter((e) => !isLowRelevance(e.relevance_score)), ...sorted.filter((e) => isLowRelevance(e.relevance_score))];
+export function comingUpTimeline<L extends Timed, W extends Timed>(
+  live: L[], waiting: W[], today: string, time: string,
+): Array<(L & { state: "live" }) | (W & { state: "waiting" })> {
+  const all: Array<(L & { state: "live" }) | (W & { state: "waiting" })> = [
+    ...live.map((e) => ({ ...e, state: "live" as const })),
+    ...waiting.map((e) => ({ ...e, state: "waiting" as const })),
+  ];
+  return all.filter((e) => !hasStarted(e, today, time)).sort(byWhen);
+}
+
+/** Events that didn't make the cut (out of area or skipped), soonest first, started ones dropped. */
+export function leftOutOrder<T extends Timed>(events: T[], today: string, time: string): T[] {
+  return events.filter((e) => !hasStarted(e, today, time)).sort(byWhen);
+}
+
+/** One plain sentence on why an event didn't make the cut. */
+export function leftOutExplanation(status: string, reason: string | null | undefined): string {
+  if (status === "deleted") return "You or a co-owner skipped this one.";
+  if (reason === "online") return "This looks like an online event, so it was left out of a local feed.";
+  if (reason === "unconfirmed") return "We couldn't tell from the listing whether this is in your area.";
+  return "The venue didn't look like it's in your area.";
 }
