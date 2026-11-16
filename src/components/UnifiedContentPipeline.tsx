@@ -17,9 +17,9 @@ import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 import { useTopicPulse } from "@/hooks/useTopicPulse";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
 import { useEventDesk, useEventDeskActions } from "@/hooks/useWhatsOnEvents";
-import { ComingUpPanel, EventsOffCard, EventsSettings, LiveWhatsOnRow } from "@/components/events/DeskEvents";
+import { AttentionTag, ComingUpPanel, EventsOffCard, EventsSettings, LiveWhatsOnRow } from "@/components/events/DeskEvents";
 import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
-import { comingUpTimeline, leftOutOrder, londonTime, londonToday } from "@/lib/whatsOn";
+import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
 
@@ -293,8 +293,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const eventsOn = Boolean(eventDesk?.eventsOn);
   const today = londonToday();
   const nowTime = londonTime();
-  // Every upcoming event, live in the feed or waiting, soonest first; the rest didn't make the cut.
-  const comingUp = eventsOn && eventDesk ? comingUpTimeline(eventDesk.allLive, eventDesk.waiting, today, nowTime) : [];
+  // Waiting events are pinned on top for a one-click OK (reader suggestions first);
+  // below them every live event, soonest first; the rest didn't make the cut.
+  const eventsToCheck = eventsOn && eventDesk ? toCheckOrder(eventDesk.waiting, today, nowTime) : [];
+  const comingUp = eventsOn && eventDesk ? comingUpTimeline(eventDesk.allLive, [] as typeof eventDesk.waiting, today, nowTime) : [];
   const leftOutEvents = eventsOn && eventDesk ? leftOutOrder(eventDesk.hidden, today, nowTime) : [];
   const newsCount = totalArticlesCount ?? totalArticles;
   const autopilot = useAutopilotOn(selectedTopicId);
@@ -324,7 +326,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const areaTabs: { key: DeskArea; label: string; count?: number }[] = [
     { key: 'happened', label: 'Story pool', count: newsCount },
     { key: 'live', label: 'Live now' },
-    { key: 'coming', label: 'Event pool' },
+    { key: 'coming', label: 'Event pool', count: eventsToCheck.length },
   ];
 
   const recoverStuck = async () => {
@@ -520,6 +522,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           <div className="flex min-h-10 items-center gap-2 border-b pb-2">
             <ArrowLeft className="hidden h-4 w-4 text-muted-foreground/70 lg:block" aria-hidden="true" />
             <h3 id="desk-coming" className="text-lg font-semibold text-foreground">Event pool</h3>
+            {eventsToCheck.length > 0 && <AttentionTag>{eventsToCheck.length} to check</AttentionTag>}
             <div className="ml-auto">
               <EventsSettings on={eventsOn} disabled={!eventDesk} onChange={eventActions.setEventsOn}
                 showInFeed={eventDesk?.showInFeed} onShowInFeedChange={eventActions.setShowInFeed}
@@ -534,7 +537,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           {!eventsOn ? (
             <EventsOffCard disabled={!eventDesk} onSwitchOn={() => eventActions.setEventsOn(true)} />
           ) : (
-            <ComingUpPanel upcoming={comingUp} leftOut={leftOutEvents} today={today} actions={eventActions} />
+            <ComingUpPanel toCheck={eventsToCheck} upcoming={comingUp} leftOut={leftOutEvents} today={today} actions={eventActions} />
           )}
         </section>
       </div>

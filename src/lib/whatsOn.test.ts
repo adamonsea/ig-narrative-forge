@@ -3,7 +3,7 @@ import { describe, it, expect } from "bun:test";
 import {
   isBrokenWhatsOnSource, previewSentence, venueClicksLine, showEventsInFeed, eventSourceKindLabel,
   dateBadge, eventTime, upcomingWhatsOn, eventGroup, coverSentence, detectSourceKind, isEventsSourceKind,
-  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle, horizonBuckets, inHorizon, countdown, comingUpTimeline, leftOutOrder, leftOutExplanation,
+  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle, horizonBuckets, inHorizon, countdown, comingUpTimeline, leftOutOrder, leftOutExplanation, toCheckOrder,
 } from "./whatsOn";
 
 const ev = (title: string, start_date: string, start_time: string | null = "19:00:00") =>
@@ -175,6 +175,16 @@ describe("Desk Event pool", () => {
     expect(list.map((e) => `${e.title}:${e.state}`)).toEqual([
       "Tonight gig:waiting", "Far away fair:waiting", "Fri market:live", "Next week talk:live",
     ]);
+  });
+
+  it("pins waiting events for a one-click OK: reader suggestions first, then soonest, started ones dropped", () => {
+    const waiting = [
+      ev("Venue gig", "2026-11-13", "20:00:00"),
+      { ...ev("Pub quiz", "2026-11-19", "21:00:00"), source_api: "reader" },
+      ev("Morning talk", THU, "10:00:00"),
+      ev("Tonight market", THU, "18:00:00"),
+    ];
+    expect(toCheckOrder(waiting, THU, "15:00:00").map((e) => e.title)).toEqual(["Pub quiz", "Tonight market", "Venue gig"]);
   });
 
   it("lists events that didn't make the cut soonest first, dropping started ones", () => {

@@ -272,6 +272,11 @@ All colors MUST be HSL.
     --mint-soft: 155 70% 93%;
     --mint: 155 100% 67%;
 
+    /* Amber — needs the owner's OK (waiting items) */
+    --attention: 38 92% 50%;
+    --attention-soft: 45 100% 95%;
+    --attention-foreground: 28 80% 24%;
+
     /* Violet — selection, navigation, creative moments */
     --purple-bright: 270 65% 58%;
     --purple-dark: 270 65% 40%;
@@ -328,6 +333,9 @@ All colors MUST be HSL.
     --pop: 155 90% 55%;
     --pop-foreground: 214 50% 9%;
     --mint-soft: 155 50% 15%;
+    --attention: 38 92% 55%;
+    --attention-soft: 36 60% 13%;
+    --attention-foreground: 42 95% 72%;
 
     /* Violet — selection, navigation, creative moments */
     --purple-bright: 270 90% 74%;

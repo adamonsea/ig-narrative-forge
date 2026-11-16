@@ -76,6 +76,11 @@ export default {
 					DEFAULT: 'hsl(var(--mint))',
 					soft: 'hsl(var(--mint-soft))'
 				},
+				attention: {
+					DEFAULT: 'hsl(var(--attention))',
+					soft: 'hsl(var(--attention-soft))',
+					foreground: 'hsl(var(--attention-foreground))'
+				},
 				purple: {
 					bright: 'hsl(var(--purple-bright))',
 					dark: 'hsl(var(--purple-dark))',

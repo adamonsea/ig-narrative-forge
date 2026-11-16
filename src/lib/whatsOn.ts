@@ -307,6 +307,15 @@ export function comingUpTimeline<L extends Timed, W extends Timed>(
   return all.filter((e) => !hasStarted(e, today, time)).sort(byWhen);
 }
 
+/**
+ * Events waiting for the owner's OK, pinned at the top of the Event pool:
+ * reader suggestions first, then soonest first; started ones dropped.
+ */
+export function toCheckOrder<T extends Timed & { source_api?: string | null }>(waiting: T[], today: string, time: string): T[] {
+  const reader = (e: T) => (e.source_api === "reader" ? 0 : 1);
+  return waiting.filter((e) => !hasStarted(e, today, time)).sort((a, b) => reader(a) - reader(b) || byWhen(a, b));
+}
+
 /** Events that didn't make the cut (out of area or skipped), soonest first, started ones dropped. */
 export function leftOutOrder<T extends Timed>(events: T[], today: string, time: string): T[] {
   return events.filter((e) => !hasStarted(e, today, time)).sort(byWhen);

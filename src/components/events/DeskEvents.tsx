@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CalendarDays, ChevronDown, Clock, ExternalLink, MapPin, Settings2, Ticket, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { CalendarDays, Check, ChevronDown, Clock, ExternalLink, MapPin, Settings2, Ticket, UserRound, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -52,6 +52,61 @@ const sourceLink = (url: string | null | undefined, name: string | null | undefi
   </a>
 ) : undefined;
 
+/** Amber tag for anything waiting on the owner. */
+export function AttentionTag({ children }: { children: ReactNode }) {
+  return <span className="inline-flex items-center gap-1 rounded-full bg-attention/15 px-2 py-0.5 text-sm font-medium text-attention-foreground">{children}</span>;
+}
+
+/**
+ * Events waiting for the owner's OK, pinned above the timeline with Publish and Skip
+ * always showing: one click each, no hovering. Reader suggestions come first.
+ */
+function ToCheckList({ events, today, actions, onOpen }: {
+  events: DeskEvent[]; today: string; actions: EventActions; onOpen: (e: DeskEvent) => void;
+}) {
+  if (events.length === 0) return null;
+  return (
+    <section aria-labelledby="events-to-check" className="space-y-2 rounded-xl border border-attention/50 bg-attention-soft p-3">
+      <h4 id="events-to-check" className="flex items-center gap-2 text-base font-semibold text-attention-foreground">
+        <span className="h-2 w-2 rounded-full bg-attention" aria-hidden="true" />
+        {events.length === 1 ? "1 event needs your OK" : `${events.length} events need your OK`}
+      </h4>
+      <ul className="space-y-2">
+        {events.map((e) => {
+          const reader = e.source_api === "reader";
+          return (
+            <li key={e.id} className="rounded-lg border border-border bg-background p-3">
+              <button type="button" onClick={() => onOpen(e)} className="flex w-full min-w-0 items-start gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
+                <DateTile date={e.start_date} size="sm" />
+                <span className="min-w-0 flex-1">
+                  {reader && (
+                    <span className="mb-1 flex items-center gap-1 text-sm font-medium text-attention-foreground">
+                      <UserRound className="h-3.5 w-3.5" aria-hidden="true" />Suggested by a reader
+                    </span>
+                  )}
+                  <span className="block text-lg font-semibold leading-snug">{e.title}</span>
+                  <span className="mt-0.5 block text-sm text-muted-foreground">
+                    {[countdown(e.start_date, today), eventTime(e.start_time), e.location, isLowRelevance(e.relevance_score) ? "may not be local" : null].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+              </button>
+              {sourceLink(e.source_url, e.source_name)}
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" className="flex-1" onClick={() => actions.publish(e)}>
+                  <Check className="mr-1.5 h-4 w-4" aria-hidden="true" />Publish
+                </Button>
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => actions.skip(e)}>
+                  <X className="mr-1.5 h-4 w-4" aria-hidden="true" />Skip
+                </Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 /** One upcoming event in the Event pool: live in the feed or waiting. Click for its details. */
 function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpItem; today: string; actions: EventActions; onOpen: () => void }) {
   const waiting = event.state === "waiting";
@@ -62,7 +117,7 @@ function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpI
       visual={<DateTile date={event.start_date} />}
       onOpen={onOpen}
       badges={waiting
-        ? <><DeskBadge tone="warning">Waiting</DeskBadge>{event.source_api === "reader" ? <DeskBadge>Reader</DeskBadge> : null}</>
+        ? <><AttentionTag>Needs your OK</AttentionTag>{event.source_api === "reader" ? <DeskBadge>Reader</DeskBadge> : null}</>
         : null}
       meta={
         <MetaLine parts={[
@@ -148,7 +203,12 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
               <SheetDescription asChild>
                 <div>
                   {item.state === "live" && <DeskBadge tone="primary">In the feed</DeskBadge>}
-                  {item.state === "waiting" && <DeskBadge tone="warning">Waiting</DeskBadge>}
+                  {item.state === "waiting" && (
+                    <span className="flex flex-wrap gap-1.5">
+                      <AttentionTag>Needs your OK</AttentionTag>
+                      {item.source_api === "reader" && <DeskBadge><UserRound className="h-3.5 w-3.5" aria-hidden="true" />Suggested by a reader</DeskBadge>}
+                    </span>
+                  )}
                   {item.state === "left_out" && <DeskBadge tone={item.status === "excluded" ? "destructive" : "muted"}>{hiddenReason(item.status, item.exclusion_reason)}</DeskBadge>}
                 </div>
               </SheetDescription>
@@ -215,8 +275,8 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
  * The Event pool: every upcoming event (live or waiting), soonest first,
  * with a switch to see the ones that didn't make the cut. Click any event for its details.
  */
-export function ComingUpPanel({ upcoming, leftOut, today, actions }: {
-  upcoming: ComingUpItem[]; leftOut: DeskEvent[]; today: string; actions: EventActions;
+export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions }: {
+  toCheck?: DeskEvent[]; upcoming: ComingUpItem[]; leftOut: DeskEvent[]; today: string; actions: EventActions;
 }) {
   const [view, setView] = useState<"upcoming" | "left_out">("upcoming");
   const [shown, setShown] = useState(PAGE);
@@ -230,6 +290,7 @@ export function ComingUpPanel({ upcoming, leftOut, today, actions }: {
 
   return (
     <div className="space-y-3">
+      <ToCheckList events={toCheck} today={today} actions={actions} onOpen={(e) => setOpen({ ...e, state: "waiting" })} />
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Which events">
         {tabs.map((t) => (
           <button
