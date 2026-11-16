@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ExternalLink, Eye, Trash2, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2, Copy, Settings2, CheckSquare, ImageIcon } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { FileText, RefreshCw, CheckCircle, Loader2, Copy, MoreHorizontal } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
-import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
+import type { HighlightTerms } from "@/lib/highlightTerms";
 import { TypeChip } from "@/components/events/DeskEvents";
+import { DeskCard, MetaLine } from "./DeskCard";
+import { WaitingStoryDrawer } from "./WaitingStoryDrawer";
 
 /** Something else waiting on the Desk (an event), mixed in by arrival time. */
 export interface WaitingExtraItem {
@@ -42,7 +42,8 @@ interface MultiTenantArticlesListProps {
   onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => void;
   onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   
-  onPreview?: (article: MultiTenantArticle) => void;
+  /** The feed's region, landmarks, keywords and organisations, highlighted in the drawer's article preview. */
+  highlightTerms?: HighlightTerms;
   onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven', generateIllustration?: boolean) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
@@ -76,7 +77,7 @@ export default function MultiTenantArticlesList({
   onSlideQuantityChange,
   onToneOverrideChange,
   onWritingStyleOverrideChange,
-  onPreview,
+  highlightTerms,
   onApprove,
   onDelete,
   onDiscardAndSuppress,
@@ -96,7 +97,7 @@ export default function MultiTenantArticlesList({
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
   const [selectMode, setSelectMode] = useState(false);
   const [bulkDeleteCount, setBulkDeleteCount] = useState<number | null>(null);
-  const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
+  const [openArticleId, setOpenArticleId] = useState<string | null>(null);
   const [illustrationOverrides, setIllustrationOverrides] = useState<Record<string, boolean>>({});
   // Duplicates from other sources are hidden behind their leader by default.
   const [showAllDuplicates, setShowAllDuplicates] = useState(false);
@@ -126,18 +127,6 @@ export default function MultiTenantArticlesList({
     }
   }, [articles.length]);
 
-  const getRelevanceColor = (score: number) => {
-    if (score >= 50) return "text-green-600 bg-green-50 border-green-200";
-    if (score >= 25) return "text-yellow-600 bg-yellow-50 border-yellow-200";
-    return "text-red-600 bg-red-50 border-red-200";
-  };
-
-  const getRelevanceLabel = (score: number) => {
-    if (score >= 50) return `${score}%`;
-    if (score >= 25) return `${score}%`;
-    return `${score}%`;
-  };
-
   const handleBulkDelete = () => {
     if (selectedArticles.size === 0) return;
     setBulkDeleteCount(selectedArticles.size);
@@ -165,14 +154,6 @@ export default function MultiTenantArticlesList({
     setSelectedArticles(new Set());
   };
 
-  const toggleConfig = (articleId: string) => {
-    setExpandedConfig(prev => {
-      const next = new Set(prev);
-      next.has(articleId) ? next.delete(articleId) : next.add(articleId);
-      return next;
-    });
-  };
-
   const getSourceDomain = (url: string) => {
     try {
       return new URL(url).hostname.replace('www.', '');
@@ -181,17 +162,37 @@ export default function MultiTenantArticlesList({
     }
   };
 
+  const slideTypeFor = (article: MultiTenantArticle) =>
+    slideQuantityOverrides[article.id] || (article.is_snippet ? 'short' : defaultSlideQuantity);
+
+  /** Publish = write it now with the feed's defaults (or the drawer's choices); warns on a second version of a covered story. */
+  const publishArticle = (
+    article: MultiTenantArticle,
+    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive',
+    tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet',
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven',
+  ) => {
+    const dupInfo = duplicateMap?.get(article.id);
+    if (dupInfo && !dupInfo.isDuplicateLeader) {
+      const ok = window.confirm(
+        `Another source already reported this story:\n\n• ${dupInfo.similarTitles[0] ?? ''}\n\nContinue and publish this version too?`
+      );
+      if (!ok) return false;
+    }
+    onApprove(article, slideType, tone, writingStyle, illustrationOverrides[article.id] ?? true);
+    return true;
+  };
+
   const renderArticleCard = (article: MultiTenantArticle) => {
-    const defaultType = article.is_snippet ? 'short' : defaultSlideQuantity;
-    const slideType = slideQuantityOverrides[article.id] || defaultType;
+    const slideType = slideTypeFor(article);
     const toneOverride = toneOverrides[article.id] || defaultTone;
     const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
     const isProcessing = processingArticle === article.id;
     const isDeleting = deletingArticles.has(article.id);
     const isAnimating = animatingArticles.has(article.id);
     const dupInfo = duplicateMap?.get(article.id);
-    const showConfig = expandedConfig.has(article.id);
-    
+    const happened = article.published_at || article.created_at;
+
     return (
       <motion.div
         key={article.id}
@@ -208,249 +209,72 @@ export default function MultiTenantArticlesList({
         }}
         style={{ overflow: "hidden", willChange: "transform, opacity" }}
       >
-      <Card 
-        className={`transition-shadow duration-200 hover:shadow-md ${
-          dupInfo && !dupInfo.isDuplicateLeader ? 'ml-4 border-l-4 border-l-amber-400' : ''
-        }`}
-      >
-        <div className="p-4 space-y-2.5">
-          {/* Metadata line: source domain, relevance pill, currentness */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {selectMode && (
-              <Checkbox
-                checked={selectedArticles.has(article.id)}
-                onCheckedChange={(checked) => {
-                  const newSelected = new Set(selectedArticles);
-                  if (checked) newSelected.add(article.id);
-                  else newSelected.delete(article.id);
-                  setSelectedArticles(newSelected);
-                }}
-                className="mr-1"
-              />
-            )}
-            {showTypeChips && <TypeChip type="story" />}
-            <span className="truncate max-w-[140px]">{getSourceDomain(article.url)}</span>
-            <div className={`px-1.5 py-0.5 rounded text-xs font-medium border ${getRelevanceColor(article.regional_relevance_score)}`}>
-              {getRelevanceLabel(article.regional_relevance_score)}
-            </div>
-            {article.is_snippet && (
-              <Badge variant="outline" className="text-[10px] h-4 px-1 bg-blue-50 text-blue-700 border-blue-200">
-                Snippet
-              </Badge>
-            )}
-            <div className={`px-1.5 py-0.5 rounded text-xs border ${getCurrentnessColor(article.published_at, article.created_at)}`}>
-              {getCurrentnessTag(article.published_at, article.created_at)}
-            </div>
-            {dupInfo && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge 
-                      variant="outline"
-                      className="text-[10px] h-4 px-1 bg-amber-50 text-amber-600 border-amber-200"
-                    >
-                      <Copy className="w-2.5 h-2.5 mr-0.5" />
-                      {dupInfo.isDuplicateLeader ? `${dupInfo.similarCount}` : 'dup'}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="font-semibold mb-1">
-                      {dupInfo.isDuplicateLeader ? 'Similar articles:' : 'Similar to:'}
-                    </p>
-                    {dupInfo.similarTitles.map((t, i) => (
-                      <p key={i} className="text-xs truncate">• {t}</p>
-                    ))}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-
-          {/* Headline */}
-          <h3 className="font-semibold text-base leading-tight line-clamp-2">
-            {article.title}
-          </h3>
-
-          {/* Same story from other sources, collapsed behind the first report */}
-          {dupInfo && dupInfo.isDuplicateLeader && dupInfo.similarCount > 0 && !showAllDuplicates && (
+        <DeskCard
+          className={dupInfo && !dupInfo.isDuplicateLeader ? "ml-4 border-l-4 border-l-muted-foreground/40" : undefined}
+          title={article.title}
+          thumbnailUrl={article.image_url}
+          onOpen={() => setOpenArticleId(article.id)}
+          keepActions={isProcessing}
+          leading={selectMode ? (
+            <Checkbox
+              checked={selectedArticles.has(article.id)}
+              onClick={(e) => e.stopPropagation()}
+              onCheckedChange={(checked) => {
+                const next = new Set(selectedArticles);
+                if (checked) next.add(article.id);
+                else next.delete(article.id);
+                setSelectedArticles(next);
+              }}
+              className="mt-1"
+              aria-label={`Select “${article.title}”`}
+            />
+          ) : undefined}
+          badges={showTypeChips ? <TypeChip type="story" /> : null}
+          meta={
+            <MetaLine parts={[
+              getSourceDomain(article.url),
+              happened ? formatDistanceToNow(new Date(happened), { addSuffix: true }) : null,
+              dupInfo ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                        {dupInfo.isDuplicateLeader ? `${dupInfo.similarCount} similar` : "Similar"}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="mb-1 font-semibold">{dupInfo.isDuplicateLeader ? "Similar articles:" : "Similar to:"}</p>
+                      {dupInfo.similarTitles.map((t, i) => <p key={i} className="truncate text-sm">• {t}</p>)}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null,
+            ]} />
+          }
+          footer={dupInfo && dupInfo.isDuplicateLeader && dupInfo.similarCount > 0 && !showAllDuplicates ? (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => toggleDuplicateGroup(dupInfo.duplicateGroupId)}
-              className="h-6 px-2 -ml-2 text-xs text-amber-700 hover:text-amber-800"
+              onClick={(e) => { e.stopPropagation(); toggleDuplicateGroup(dupInfo.duplicateGroupId); }}
+              className="-ml-2 mt-1 h-8 px-2 text-sm text-muted-foreground"
               aria-expanded={expandedDuplicateGroups.has(dupInfo.duplicateGroupId)}
             >
-              <Copy className="w-3 h-3 mr-1" />
               {expandedDuplicateGroups.has(dupInfo.duplicateGroupId)
-                ? 'Hide similar reports'
-                : `${dupInfo.similarCount} similar from other source${dupInfo.similarCount > 1 ? 's' : ''}`}
+                ? "Hide similar reports"
+                : `${dupInfo.similarCount} similar from other source${dupInfo.similarCount > 1 ? "s" : ""}`}
             </Button>
-          )}
-
-          {/* Author */}
-          {article.author && (
-            <p className="text-sm text-muted-foreground">by {article.author}</p>
-          )}
-
-          {/* Keywords */}
-          {(article.keyword_matches || []).length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {(article.keyword_matches || []).slice(0, 4).map((keyword, idx) => (
-                <Badge key={idx} variant="secondary" className="text-xs">
-                  {keyword}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* Configure expansion */}
-          {showConfig && (
-            <div className="flex gap-2 pt-1">
-              <Select
-                value={slideType}
-                onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
-                  onSlideQuantityChange(article.id, value)
-                }
-              >
-                <SelectTrigger className="w-16 h-7 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="short">3</SelectItem>
-                  <SelectItem value="tabloid">6</SelectItem>
-                  <SelectItem value="indepth">8</SelectItem>
-                  <SelectItem value="extensive">12</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={toneOverride}
-                onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => 
-                  onToneOverrideChange(article.id, value)
-                }
-              >
-                <SelectTrigger className="w-24 h-7 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="formal">Formal</SelectItem>
-                  <SelectItem value="conversational">Conversational</SelectItem>
-                  <SelectItem value="engaging">Engaging</SelectItem>
-                  <SelectItem value="satirical">Satirical</SelectItem>
-                  <SelectItem value="rhyming_couplet">Rhyming</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={writingStyleOverride}
-                onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => 
-                  onWritingStyleOverrideChange(article.id, value)
-                }
-              >
-                <SelectTrigger className="w-28 h-7 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="journalistic">Journalistic</SelectItem>
-                  <SelectItem value="educational">Educational</SelectItem>
-                  <SelectItem value="listicle">Listicle</SelectItem>
-                  <SelectItem value="story_driven">Story-driven</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Action bar */}
-          <div className="flex items-center gap-1.5 pt-1 border-t border-border/40">
-            <Button
-              onClick={() => {
-                // Warn before publishing a second version of a story already covered.
-                if (dupInfo && !dupInfo.isDuplicateLeader) {
-                  const ok = window.confirm(
-                    `Another source already reported this story:\n\n• ${dupInfo.similarTitles[0] ?? ''}\n\nContinue and publish this version too?`
-                  );
-                  if (!ok) return;
-                }
-                onApprove(article, slideType, toneOverride, writingStyleOverride, illustrationOverrides[article.id] ?? true);
-              }}
-              disabled={isProcessing || isDeleting}
-              size="sm"
-              className="h-7 text-xs"
-            >
-              {isProcessing ? (
-                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-              ) : (
-                <PlayCircle className="w-3 h-3 mr-1" />
-              )}
-              Simplify
-            </Button>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-1 h-7 px-1.5"
-                  onClick={() => setIllustrationOverrides(prev => ({
-                    ...prev,
-                    [article.id]: !(prev[article.id] ?? true)
-                  }))}
-                >
-                  <ImageIcon className={`w-3 h-3 ${(illustrationOverrides[article.id] ?? true) ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <Switch
-                    checked={illustrationOverrides[article.id] ?? true}
-                    className="scale-75 -mx-1"
-                    tabIndex={-1}
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p className="text-xs">{(illustrationOverrides[article.id] ?? true) ? 'Image will be auto-generated' : 'No image generation'}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => toggleConfig(article.id)}
-              className="h-7 w-7 p-0"
-              title="Configure"
-            >
-              <Settings2 className="w-3.5 h-3.5" />
-            </Button>
-
-            <div className="ml-auto flex items-center gap-1">
-              {onPreview && (
-                <Button size="sm" variant="ghost" onClick={() => onPreview(article)} className="h-7 w-7 p-0" title="Preview">
-                  <Eye className="w-3.5 h-3.5" />
-                </Button>
-              )}
-              <Button size="sm" variant="ghost" onClick={() => window.open(article.url, '_blank')} className="h-7 w-7 p-0" title="Source">
-                <ExternalLink className="w-3.5 h-3.5" />
+          ) : undefined}
+          actions={
+            <>
+              <Button size="sm" onClick={() => publishArticle(article, slideType, toneOverride, writingStyleOverride)} disabled={isProcessing || isDeleting}>
+                {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                Publish
               </Button>
-              {onDiscardAndSuppress && topicId && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onDiscardAndSuppress(article.id, topicId, article.url, article.title)}
-                  disabled={isDeleting}
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                  title="Suppress"
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onDelete(article.id, article.title)}
-                disabled={isDeleting}
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                title="Delete"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
+              <Button size="sm" variant="ghost" onClick={() => onDelete(article.id, article.title)} disabled={isDeleting}>Skip</Button>
+            </>
+          }
+        />
       </motion.div>
     );
   };
@@ -528,48 +352,47 @@ export default function MultiTenantArticlesList({
 
   return (
     <div className="space-y-3">
-      {/* Header toolbar */}
-      <div className={`flex items-center justify-between ${articles.length === 0 ? "hidden" : ""}`}>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={selectMode ? "default" : "outline"}
-            onClick={() => {
-              setSelectMode(!selectMode);
-              if (selectMode) {
-                setSelectedArticles(new Set());
-              }
-            }}
-            className="h-7 text-xs gap-1.5"
-          >
-            <CheckSquare className="w-3 h-3" />
-            Select
-          </Button>
-          {totalArticlesCount !== null && totalArticlesCount > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {articles.length} of {totalArticlesCount}
-            </span>
-          )}
-        </div>
+      {/* One quiet row: count, and a menu for the tools that don't belong on a card */}
+      <div className={`flex items-center justify-end gap-2 ${articles.length === 0 ? "hidden" : ""}`}>
+        {totalArticlesCount !== null && totalArticlesCount > 0 && (
+          <span className="text-sm text-muted-foreground tabular-nums">{articles.length} of {totalArticlesCount}</span>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Waiting tools">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => { if (selectMode) setSelectedArticles(new Set()); setSelectMode(!selectMode); }}>
+              {selectMode ? "Stop selecting" : "Select several"}
+            </DropdownMenuItem>
+            {duplicateMap && duplicateMap.size > 0 && (
+              <DropdownMenuCheckboxItem checked={showAllDuplicates} onCheckedChange={(v) => setShowAllDuplicates(v === true)}>
+                Show duplicates
+              </DropdownMenuCheckboxItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Bulk action toolbar - only in select mode */}
       {selectMode && (
         <div className="flex items-center justify-between flex-wrap gap-3 p-3 rounded-lg border border-border/60 bg-muted/10">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium">
+            <span className="text-sm font-medium">
               {selectedArticles.size} selected
             </span>
-            <Button size="sm" variant="ghost" onClick={handleSelectAll} className="h-6 text-xs px-2">
+            <Button size="sm" variant="ghost" onClick={handleSelectAll} className="h-8 text-sm px-2">
               All ({articles.length})
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleDeselectAll} className="h-6 text-xs px-2">
+            <Button size="sm" variant="ghost" onClick={handleDeselectAll} className="h-8 text-sm px-2">
               None
             </Button>
           </div>
           <div className="flex items-center gap-2">
             <Select value={bulkDeleteRelevanceThreshold.toString()} onValueChange={(value) => setBulkDeleteRelevanceThreshold(Number(value))}>
-              <SelectTrigger className="w-16 h-7 text-xs">
+              <SelectTrigger className="w-16 h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -579,7 +402,7 @@ export default function MultiTenantArticlesList({
                 <SelectItem value="75">75%</SelectItem>
               </SelectContent>
             </Select>
-            <Button size="sm" variant="destructive" onClick={handleBulkDeleteByRelevance} className="h-7 text-xs">
+            <Button size="sm" variant="destructive" onClick={handleBulkDeleteByRelevance} className="h-9 text-sm">
               Delete below ({articles.filter(a => a.regional_relevance_score < bulkDeleteRelevanceThreshold).length})
             </Button>
             <Button 
@@ -587,7 +410,7 @@ export default function MultiTenantArticlesList({
               variant="destructive" 
               onClick={handleBulkDelete}
               disabled={selectedArticles.size === 0}
-              className="h-7 text-xs"
+              className="h-9 text-sm"
             >
               Delete selected ({selectedArticles.size})
             </Button>
@@ -595,19 +418,6 @@ export default function MultiTenantArticlesList({
         </div>
       )}
       
-      {duplicateMap && duplicateMap.size > 0 && (
-        <div className="flex items-center justify-end gap-2 pb-1">
-          <Label htmlFor="show-duplicates" className="text-xs text-muted-foreground">
-            Show duplicates
-          </Label>
-          <Switch
-            id="show-duplicates"
-            checked={showAllDuplicates}
-            onCheckedChange={setShowAllDuplicates}
-          />
-        </div>
-      )}
-
       <AnimatePresence initial={false} mode="popLayout">
         {mergedNodes()}
       </AnimatePresence>
@@ -618,17 +428,17 @@ export default function MultiTenantArticlesList({
           <Button 
             onClick={onLoadMore} 
             variant="outline" 
-            className="w-full gap-2 h-8 text-xs"
+            className="w-full gap-2 text-sm"
             disabled={loadingMore}
           >
             {loadingMore ? (
               <>
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Loading...
               </>
             ) : (
               <>
-                <RefreshCw className="w-3 h-3" />
+                <RefreshCw className="w-4 h-4" />
                 Load More {totalArticlesCount !== null && articles.length < totalArticlesCount 
                   ? `(${totalArticlesCount - articles.length} remaining)` 
                   : ''}
@@ -637,6 +447,34 @@ export default function MultiTenantArticlesList({
           </Button>
         </div>
       )}
+      {(() => {
+        const a = openArticleId ? articles.find((x) => x.id === openArticleId) ?? null : null;
+        return (
+          <WaitingStoryDrawer
+            article={a}
+            open={!!a}
+            onOpenChange={(o) => !o && setOpenArticleId(null)}
+            dupInfo={a ? duplicateMap?.get(a.id) : undefined}
+            slideType={a ? slideTypeFor(a) : defaultSlideQuantity}
+            tone={(a && toneOverrides[a.id]) || defaultTone}
+            writingStyle={(a && writingStyleOverrides[a.id]) || defaultWritingStyle}
+            onSlideType={(v) => a && onSlideQuantityChange(a.id, v)}
+            onTone={(v) => a && onToneOverrideChange(a.id, v)}
+            onWritingStyle={(v) => a && onWritingStyleOverrideChange(a.id, v)}
+            makePicture={a ? illustrationOverrides[a.id] ?? true : true}
+            onMakePicture={(on) => a && setIllustrationOverrides((prev) => ({ ...prev, [a.id]: on }))}
+            highlightTerms={highlightTerms}
+            isProcessing={a ? processingArticle === a.id : false}
+            isDeleting={a ? deletingArticles.has(a.id) : false}
+            onPublish={() => {
+              if (!a) return;
+              if (publishArticle(a, slideTypeFor(a), toneOverrides[a.id] || defaultTone, writingStyleOverrides[a.id] || defaultWritingStyle)) setOpenArticleId(null);
+            }}
+            onSkip={() => { if (a) { onDelete(a.id, a.title); setOpenArticleId(null); } }}
+            onSuppress={onDiscardAndSuppress && topicId && a ? () => { onDiscardAndSuppress(a.id, topicId, a.url, a.title); setOpenArticleId(null); } : undefined}
+          />
+        );
+      })()}
     </div>
   );
 }

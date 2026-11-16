@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Mail, Check } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, Mail, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -52,31 +50,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
-  const [previewArticle, setPreviewArticle] = useState<any>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
   const { toast } = useToast();
-  
-  const handlePreviewArticle = async (article: any) => {
-    if (!article) return;
-    setPreviewArticle(article);
-    setLoadingPreview(true);
-    try {
-      if (article.shared_content_id) {
-        const { data, error } = await supabase
-          .from('shared_article_content')
-          .select('body')
-          .eq('id', article.shared_content_id)
-          .single();
-        if (!error && data?.body) {
-          setPreviewArticle((prev: any) => ({ ...prev, body: data.body }));
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching article body:', error);
-    } finally {
-      setLoadingPreview(false);
-    }
-  };
 
   const [runningPublishMigration, setRunningPublishMigration] = useState(false);
 
@@ -294,32 +268,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     );
   }
 
-  const highlightContentWithContext = (
-    text: string, 
-    regionName: string,
-    landmarks: string[],
-    keywords: string[],
-    organizations: string[]
-  ) => {
-    if (!text) return '';
-    const escapeHtml = (value: string) =>
-      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    let highlightedText = escapeHtml(text);
-    const createRegex = (term: string) => {
-      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const useWordBoundaries = /^[\w-]+$/.test(term.trim());
-      const boundary = useWordBoundaries ? '\\b' : '';
-      return new RegExp(`${boundary}(${escaped})${boundary}`, 'gi');
-    };
-    if (regionName) {
-      highlightedText = highlightedText.replace(createRegex(regionName), '<mark class="bg-green-200 text-green-900 px-1.5 py-0.5 rounded font-bold border-2 border-green-500">$1</mark>');
-    }
-    landmarks.forEach(l => { if (l?.trim()) highlightedText = highlightedText.replace(createRegex(l), '<mark class="bg-blue-200 text-blue-900 px-1 rounded font-semibold border border-blue-400">$1</mark>'); });
-    organizations.forEach(o => { if (o?.trim()) highlightedText = highlightedText.replace(createRegex(o), '<mark class="bg-purple-200 text-purple-900 px-1 rounded border border-purple-300">$1</mark>'); });
-    keywords.forEach(k => { if (k?.trim()) highlightedText = highlightedText.replace(createRegex(k), '<mark class="bg-yellow-100 text-yellow-800 px-1 rounded">$1</mark>'); });
-    return highlightedText;
-  };
-
   const visibleStories = stories.filter(s => ['draft', 'ready', 'published'].includes(s.status));
   const visibleIdsKey = visibleStories.map(s => s.id).join(',');
   const setPulseIds = pulseCtx?.setStoryIds;
@@ -414,7 +362,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             onSlideQuantityChange={handleSlideQuantityChange}
             onToneOverrideChange={handleToneOverrideChange}
             onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-            onPreview={handlePreviewArticle}
+            highlightTerms={{
+              regionName: currentTopic?.name || '',
+              landmarks: currentTopic?.landmarks || [],
+              keywords: currentTopic?.keywords || [],
+              organizations: currentTopic?.organizations || [],
+            }}
             onApprove={(article, slideType, tone, writingStyle, generateIllustration) => 
               handleMultiTenantApprove(article, slideType, tone, writingStyle, generateIllustration)
             }
@@ -519,105 +472,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         )}
       </section>
 
-      {/* Article Preview Dialog */}
-      <Dialog open={previewArticle !== null} onOpenChange={(open) => !open && setPreviewArticle(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {previewArticle?.title}
-              {previewArticle?.url && (
-                <Button variant="ghost" size="sm" asChild>
-                  <a href={previewArticle.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {previewArticle?.word_count && (
-                  <Badge variant="secondary">{previewArticle.word_count} words</Badge>
-                )}
-                {previewArticle?.regional_relevance_score && (
-                  <Badge variant="secondary">Relevance: {previewArticle.regional_relevance_score}%</Badge>
-                )}
-                {previewArticle?.content_quality_score && (
-                  <Badge variant="secondary">Quality: {previewArticle.content_quality_score}%</Badge>
-                )}
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 p-3 bg-muted/50 rounded-lg border">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-green-200 border-2 border-green-500 rounded font-bold flex items-center justify-center text-[8px]">R</div>
-                <span className="text-xs font-semibold text-green-700">Region Name</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-blue-200 border border-blue-400 rounded font-semibold flex items-center justify-center text-[8px]">L</div>
-                <span className="text-xs font-medium text-blue-700">Landmarks</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-purple-200 border border-purple-300 rounded flex items-center justify-center text-[8px]">O</div>
-                <span className="text-xs font-medium text-purple-700">Organizations</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center text-[8px]">K</div>
-                <span className="text-xs text-muted-foreground">Keywords</span>
-              </div>
-            </div>
-
-            {previewArticle?.title && (
-              <div className="border-b pb-3">
-                <div className="text-xs font-semibold text-muted-foreground mb-1">HEADLINE</div>
-                <div
-                  className="text-lg font-semibold leading-tight"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightContentWithContext(
-                      previewArticle.title,
-                      currentTopic?.name || '',
-                      currentTopic?.landmarks || [],
-                      currentTopic?.keywords || [],
-                      currentTopic?.organizations || []
-                    )
-                  }}
-                />
-              </div>
-            )}
-
-            {loadingPreview && !previewArticle?.body && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading article content...</span>
-              </div>
-            )}
-            {previewArticle?.body && (
-              <div className="relative">
-                <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-amber-200 via-green-300 to-amber-200 rounded-l"></div>
-                <div className="prose max-w-none">
-                  <div
-                    className="min-h-[300px] whitespace-pre-wrap text-sm leading-relaxed border rounded-md p-4 pl-6 bg-muted/30"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightContentWithContext(
-                        previewArticle.body,
-                        currentTopic?.name || '',
-                        currentTopic?.landmarks || [],
-                        currentTopic?.keywords || [],
-                        currentTopic?.organizations || []
-                      )
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-            {!loadingPreview && !previewArticle?.body && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="text-sm">No article body available for preview.</p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

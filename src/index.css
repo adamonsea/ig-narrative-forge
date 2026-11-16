@@ -492,3 +492,15 @@ All colors MUST be HSL.
 @keyframes read-ring { 0%,100% { box-shadow: 0 0 0 2px hsl(var(--mint)); } 50% { box-shadow: 0 0 0 4px hsl(var(--mint) / 0.45); } }
 .reading-ring { animation: read-ring 2.4s ease-in-out infinite; box-shadow: 0 0 0 2px hsl(var(--mint)); }
 @media (prefers-reduced-motion: reduce) { .reading-ring { animation: none; } }
+
+/* Desk cards: actions appear on hover (desktop) or on first tap (touch). */
+@media (hover: hover) {
+  .desk-card .desk-card-actions { opacity: 0; pointer-events: none; transition: opacity 200ms ease; }
+  .desk-card:hover .desk-card-actions,
+  .desk-card:focus-within .desk-card-actions,
+  .desk-card[data-revealed="true"] .desk-card-actions { opacity: 1; pointer-events: auto; }
+}
+@media (hover: none) {
+  .desk-card .desk-card-actions { display: none; }
+  .desk-card[data-revealed="true"] .desk-card-actions { display: flex; }
+}
