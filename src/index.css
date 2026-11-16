@@ -493,14 +493,20 @@ All colors MUST be HSL.
 .reading-ring { animation: read-ring 2.4s ease-in-out infinite; box-shadow: 0 0 0 2px hsl(var(--mint)); }
 @media (prefers-reduced-motion: reduce) { .reading-ring { animation: none; } }
 
-/* Desk cards: actions appear on hover (desktop) or on first tap (touch). */
+/* Desk cards: actions appear on hover (desktop, over the end of the quiet line) or on first tap (touch, as a row underneath). */
+.desk-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.375rem; }
 @media (hover: hover) {
-  .desk-card .desk-card-actions { opacity: 0; pointer-events: none; transition: opacity 200ms ease; }
+  .desk-card .desk-card-actions {
+    position: absolute; right: 0.75rem; bottom: 0.5rem; padding-left: 2.5rem;
+    background: linear-gradient(to right, hsl(var(--card) / 0), hsl(var(--card)) 2.25rem);
+    opacity: 0; pointer-events: none; transition: opacity 200ms ease;
+  }
   .desk-card:hover .desk-card-actions,
   .desk-card:focus-within .desk-card-actions,
   .desk-card[data-revealed="true"] .desk-card-actions { opacity: 1; pointer-events: auto; }
 }
 @media (hover: none) {
-  .desk-card .desk-card-actions { display: none; }
+  .desk-card .desk-card-actions { display: none; padding: 0 0.75rem 0.75rem; }
   .desk-card[data-revealed="true"] .desk-card-actions { display: flex; }
 }
+@media (prefers-reduced-motion: reduce) { .desk-card .desk-card-actions { transition: none; } }

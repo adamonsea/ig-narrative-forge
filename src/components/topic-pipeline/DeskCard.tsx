@@ -107,7 +107,7 @@ export function DeskCard({
         </div>
       </div>
       <div
-        className="desk-card-actions absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-card/95 p-1 shadow-sm backdrop-blur flex"
+        className="desk-card-actions [&_button]:h-8"
         onClick={(e) => e.stopPropagation()}
       >
         {actions}
