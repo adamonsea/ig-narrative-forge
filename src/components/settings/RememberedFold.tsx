@@ -27,6 +27,7 @@ export function RememberedFold({
   description,
   children,
   className,
+  contentClassName = "pt-5",
   variant = "inline",
 }: {
   foldKey: string;
@@ -34,6 +35,8 @@ export function RememberedFold({
   description?: string;
   children: React.ReactNode;
   className?: string;
+  /** Spacing above the opened content (inline variant). */
+  contentClassName?: string;
   variant?: "inline" | "section";
 }) {
   const { user } = useAuth();
@@ -92,7 +95,7 @@ export function RememberedFold({
         {label}
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
-        <div className="pt-5">{children}</div>
+        <div className={contentClassName}>{children}</div>
       </CollapsibleContent>
     </Collapsible>
   );

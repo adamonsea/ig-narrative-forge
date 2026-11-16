@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, Mail, Check, CalendarDays } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, Mail, Check, CalendarDays, ArrowRight, ArrowLeft } from "lucide-react";
+import { RememberedFold } from "@/components/settings/RememberedFold";
+import { AutopilotPill, EventHorizonGlance, PublishedGlance, useAutopilotOn } from "@/components/topic-pipeline/PoolGlance";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -17,7 +19,7 @@ import { NewContentBadge } from "@/components/ui/new-content-badge";
 import { useEventDesk, useEventDeskActions } from "@/hooks/useWhatsOnEvents";
 import { ComingUpPanel, EventsOffCard, EventsSettings, LiveWhatsOnRow } from "@/components/events/DeskEvents";
 import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
-import { comingUpTimeline, horizonBuckets, leftOutOrder, londonTime, londonToday } from "@/lib/whatsOn";
+import { comingUpTimeline, leftOutOrder, londonTime, londonToday } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
 
@@ -294,11 +296,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   // Every upcoming event, live in the feed or waiting, soonest first; the rest didn't make the cut.
   const comingUp = eventsOn && eventDesk ? comingUpTimeline(eventDesk.allLive, eventDesk.waiting, today, nowTime) : [];
   const leftOutEvents = eventsOn && eventDesk ? leftOutOrder(eventDesk.hidden, today, nowTime) : [];
-  const eventsThisWeek = eventsOn && eventDesk
-    ? (() => { const w = horizonBuckets(eventDesk.allLive, eventDesk.waiting, today, nowTime).find((b) => b.key === 'week'); return w ? w.live + w.waiting : 0; })()
-    : 0;
   const newsCount = totalArticlesCount ?? totalArticles;
-  const readsToday = pulse?.reads_today ?? 0;
+  const autopilot = useAutopilotOn(selectedTopicId);
   // The What's on set sits in Live exactly where readers see it (same rule as the feed).
   const whatsOnAt = new Set(whatsOnPositions(Math.max(visibleStories.length, 1)));
   const renderWhatsOnAfter = eventsOn && eventDesk
@@ -316,11 +315,16 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       }
     : undefined;
 
-  const areaClass = (area: DeskArea) => cn('min-w-0 space-y-3', mobileArea === area ? 'block' : 'hidden lg:block');
+  // Desktop: the two pools sit on a quiet tint and feed the clean, raised Live now column between them.
+  const areaClass = (area: DeskArea) => cn(
+    'min-w-0 space-y-3',
+    mobileArea === area ? 'block' : 'hidden lg:block',
+    area === 'live' ? 'lg:rounded-xl lg:border lg:bg-card lg:p-4 lg:shadow-sm' : 'lg:rounded-xl lg:border lg:border-border/60 lg:bg-muted/40 lg:p-3',
+  );
   const areaTabs: { key: DeskArea; label: string; count?: number }[] = [
     { key: 'happened', label: 'Story pool', count: newsCount },
     { key: 'live', label: 'Live now' },
-    { key: 'coming', label: 'Event pool', count: eventsOn ? comingUp.length : undefined },
+    { key: 'coming', label: 'Event pool' },
   ];
 
   const recoverStuck = async () => {
@@ -391,10 +395,19 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         <section className={areaClass('happened')} aria-labelledby="desk-happened">
           <div className="flex min-h-10 items-center gap-2 border-b pb-2">
             <h3 id="desk-happened" className="text-lg font-semibold text-foreground">Story pool</h3>
+            {autopilot.on && <AutopilotPill />}
             {newsCount > 0 && <span className="text-base text-muted-foreground tabular-nums">{newsCount} new</span>}
             <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
-            <div className="ml-auto"><HappenedSettings topicId={selectedTopicId} /></div>
+            <div className="ml-auto flex items-center gap-1">
+              <HappenedSettings topicId={selectedTopicId} onChanged={autopilot.refresh} />
+              <ArrowRight className="hidden h-4 w-4 text-muted-foreground/70 lg:block" aria-hidden="true" />
+            </div>
           </div>
+          {selectedTopicId && (
+            <RememberedFold foldKey="desk-story-glance" label="Published" contentClassName="pt-2">
+              <PublishedGlance topicId={selectedTopicId} />
+            </RememberedFold>
+          )}
           {(pulse?.new_arrivals ?? 0) > 0 && (
             <p className="text-sm text-muted-foreground">{pulse!.new_arrivals} new since you last looked</p>
           )}
@@ -447,9 +460,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-mint" />
             </span>
             <h3 id="desk-live" className="text-lg font-semibold text-foreground">Live now</h3>
-            {readsToday > 0 && (
-              <span className="text-base text-muted-foreground tabular-nums" title="Reads by real readers today">{readsToday.toLocaleString()} {readsToday === 1 ? 'read' : 'reads'} today</span>
-            )}
             <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
             {queueItems.length > 0 && (
               <span className="inline-flex items-center gap-1 text-sm text-muted-foreground animate-fade-in">
@@ -508,16 +518,19 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         {/* ===== Event pool: every upcoming event, soonest first; the left-out ones one tap away ===== */}
         <section className={areaClass('coming')} aria-labelledby="desk-coming">
           <div className="flex min-h-10 items-center gap-2 border-b pb-2">
+            <ArrowLeft className="hidden h-4 w-4 text-muted-foreground/70 lg:block" aria-hidden="true" />
             <h3 id="desk-coming" className="text-lg font-semibold text-foreground">Event pool</h3>
-            {eventsOn && eventsThisWeek > 0 && (
-              <span className="text-base text-muted-foreground tabular-nums">{eventsThisWeek} {eventsThisWeek === 1 ? 'event' : 'events'} this week</span>
-            )}
             <div className="ml-auto">
               <EventsSettings on={eventsOn} disabled={!eventDesk} onChange={eventActions.setEventsOn}
                 showInFeed={eventDesk?.showInFeed} onShowInFeedChange={eventActions.setShowInFeed}
                 suggestOn={eventDesk?.readerSuggestions} onSuggestChange={eventActions.setReaderSuggestions} />
             </div>
           </div>
+          {eventsOn && (
+            <RememberedFold foldKey="desk-event-glance" label="Events ahead" contentClassName="pt-2">
+              <EventHorizonGlance topicId={selectedTopicId} waiting={eventDesk?.waiting ?? []} />
+            </RememberedFold>
+          )}
           {!eventsOn ? (
             <EventsOffCard disabled={!eventDesk} onSwitchOn={() => eventActions.setEventsOn(true)} />
           ) : (

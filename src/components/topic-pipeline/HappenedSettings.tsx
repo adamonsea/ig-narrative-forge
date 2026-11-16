@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 
 /** The news pipeline's settings, one tap from the Story pool: Autopilot and pace, with the rest in Settings. */
-export function HappenedSettings({ topicId }: { topicId: string }) {
+export function HappenedSettings({ topicId, onChanged }: { topicId: string; onChanged?: () => void }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   return (
@@ -20,7 +20,7 @@ export function HappenedSettings({ topicId }: { topicId: string }) {
         <SheetHeader className="text-left">
           <SheetTitle className="text-xl">News</SheetTitle>
         </SheetHeader>
-        {open && <AutopilotBasics topicId={topicId} />}
+        {open && <AutopilotBasics topicId={topicId} onChanged={onChanged} />}
         <Button variant="outline" asChild onClick={() => setOpen(false)}>
           <Link to={`${pathname}?tab=settings&section=automation`}>All news settings</Link>
         </Button>
