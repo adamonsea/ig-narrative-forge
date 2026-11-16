@@ -3,7 +3,7 @@ import { describe, it, expect } from "bun:test";
 import {
   isBrokenWhatsOnSource, previewSentence, venueClicksLine, showEventsInFeed, eventSourceKindLabel,
   dateBadge, eventTime, upcomingWhatsOn, eventGroup, coverSentence, detectSourceKind, isEventsSourceKind,
-  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle, horizonBuckets, inHorizon,
+  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle, horizonBuckets, inHorizon, countdown, comingUpOrder,
 } from "./whatsOn";
 
 const ev = (title: string, start_date: string, start_time: string | null = "19:00:00") =>
@@ -158,5 +158,27 @@ describe("Desk horizon bar", () => {
     const e = ev("All-day fair", THU, null);
     expect(inHorizon(e, "today", THU, "17:59:00")).toBe(true);
     expect(inHorizon(e, "today", THU, "18:00:00")).toBe(false);
+  });
+});
+
+describe("Desk Coming up column", () => {
+  it("counts down in plain words", () => {
+    expect(countdown(THU, THU)).toBe("today");
+    expect(countdown("2026-11-13", THU)).toBe("tomorrow");
+    expect(countdown("2026-11-18", THU)).toBe("in 6 days");
+  });
+
+  it("drops started events, puts the soonest first and unconfirmed-local ones last", () => {
+    const low = { ...ev("Far away fair", "2026-11-13"), relevance_score: 10 };
+    const events = [
+      { ...ev("Next week talk", "2026-11-19"), relevance_score: 80 },
+      low,
+      { ...ev("Morning talk", THU, "10:00:00"), relevance_score: 80 }, // started at 3pm
+      { ...ev("Tonight gig", THU, "19:30:00"), relevance_score: 80 },
+      { ...ev("Fri market", "2026-11-13", null), relevance_score: null },
+    ];
+    expect(comingUpOrder(events, THU, "15:00:00").map((e) => e.title)).toEqual([
+      "Tonight gig", "Fri market", "Next week talk", "Far away fair",
+    ]);
   });
 });

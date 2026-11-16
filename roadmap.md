@@ -1,8 +1,8 @@
 # Desk redesign: news and events, clean cards (16 Nov 2026)
 Plan: .lovable/plan/desk-redesign-news-and-events-clean-cards-2026-11-16.md. One phase at a time, stop after each for Adam to test. Presentation only; nothing removed, only moved.
 - [x] Phase 1: story cards with three states (rest / hover / drawer), filter popover, slim processing rows
-- [ ] Phase 2: Desk in three areas (Happened / Live now / Coming up) — waits on Adam testing Phase 1
-- [ ] Phase 3: motion hooks (desk-arrive, desk-to-live, desk-expire, desk-drawer) — waits on Phase 2
+- [x] Phase 2: Desk in three areas (Happened / Live now / Coming up)
+- [ ] Phase 3: motion hooks (desk-arrive, desk-to-live, desk-expire, desk-drawer) — waits on Adam testing Phase 2
 
 # Reader stats — one credible definition of a real reader (14–16 Nov 2026)
 Rules: tracking and dashboard only; per-tenant, owner-only; never delete data.

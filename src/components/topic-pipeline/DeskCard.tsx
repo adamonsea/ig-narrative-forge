@@ -32,7 +32,12 @@ interface DeskCardProps {
   actions: ReactNode;
   /** Keep the actions showing (e.g. while one is running). */
   keepActions?: boolean;
-  onOpen: () => void;
+  /** Click to open the item (e.g. its drawer). Without it the card only reveals its actions. */
+  onOpen?: () => void;
+  /** Replaces the thumbnail, e.g. an event's date tile. */
+  visual?: ReactNode;
+  /** Faded, for items that rank below the rest. */
+  faded?: boolean;
   /** Something before the thumbnail, e.g. a selection tick box. */
   leading?: ReactNode;
   /** Something under the quiet line, e.g. the similar-reports fold. */
@@ -42,13 +47,13 @@ interface DeskCardProps {
 
 /** A calm Desk card: at rest a thumbnail, headline and one quiet line; actions on hover; click to open. */
 export function DeskCard({
-  title, thumbnailUrl, thumbClassName, thumbTitle, badges, meta, actions, keepActions, onOpen, leading, footer, className,
+  title, thumbnailUrl, thumbClassName, thumbTitle, badges, meta, actions, keepActions, onOpen, visual, faded, leading, footer, className,
 }: DeskCardProps) {
   const [revealed, setRevealed] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
 
   const handleBodyClick = () => {
-    if (isTouch() && !revealed) {
+    if (!onOpen || (isTouch() && !revealed)) {
       setRevealed(true);
       return;
     }
@@ -63,13 +68,14 @@ export function DeskCard({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setRevealed(false);
       }}
       className={cn(
-        "desk-card group relative rounded-xl border border-border bg-card outline-none transition-shadow duration-200 hover:shadow-md",
+        "desk-card group relative rounded-xl border border-border bg-card outline-none transition-[box-shadow,opacity] duration-200 hover:shadow-md",
+        faded && "opacity-60 hover:opacity-100 focus-within:opacity-100",
         className,
       )}
     >
-      <div className="flex cursor-pointer items-start gap-3 p-3" onClick={handleBodyClick}>
+      <div className={cn("flex items-start gap-3 p-3", onOpen && "cursor-pointer")} onClick={handleBodyClick}>
         {leading}
-        {thumbnailUrl && !thumbFailed ? (
+        {visual ? visual : thumbnailUrl && !thumbFailed ? (
           <img
             src={thumbnailUrl}
             alt=""
@@ -92,13 +98,17 @@ export function DeskCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onOpen(); }}
-            className="line-clamp-2 rounded text-left text-lg font-semibold leading-snug text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {title}
-          </button>
+          {onOpen ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onOpen(); }}
+              className="line-clamp-2 rounded text-left text-lg font-semibold leading-snug text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {title}
+            </button>
+          ) : (
+            <p className="line-clamp-2 text-lg font-semibold leading-snug text-foreground">{title}</p>
+          )}
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             {badges}
             {meta}

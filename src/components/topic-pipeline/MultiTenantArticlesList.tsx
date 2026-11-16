@@ -10,19 +10,8 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
 import type { HighlightTerms } from "@/lib/highlightTerms";
-import { TypeChip } from "@/components/events/DeskEvents";
 import { DeskCard, MetaLine } from "./DeskCard";
 import { WaitingStoryDrawer } from "./WaitingStoryDrawer";
-
-/** Something else waiting on the Desk (an event), mixed in by arrival time. */
-export interface WaitingExtraItem {
-  id: string;
-  /** Arrival time (ms). */
-  at: number;
-  /** Low relevance: listed after everything else. */
-  low?: boolean;
-  node: React.ReactNode;
-}
 
 interface MultiTenantArticlesListProps {
   articles: MultiTenantArticle[];
@@ -57,10 +46,6 @@ interface MultiTenantArticlesListProps {
   totalArticlesCount?: number | null;
   loadingMore?: boolean;
   onLoadMore?: () => void;
-  /** Events (or other items) waiting alongside stories, newest first. */
-  extraItems?: WaitingExtraItem[];
-  /** Show a small Story chip on each card (when stories and events are mixed). */
-  showTypeChips?: boolean;
 }
 
 export default function MultiTenantArticlesList({
@@ -90,8 +75,6 @@ export default function MultiTenantArticlesList({
   totalArticlesCount = null,
   loadingMore = false,
   onLoadMore,
-  extraItems = [],
-  showTypeChips = false
 }: MultiTenantArticlesListProps) {
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
@@ -229,7 +212,6 @@ export default function MultiTenantArticlesList({
               aria-label={`Select “${article.title}”`}
             />
           ) : undefined}
-          badges={showTypeChips ? <TypeChip type="story" /> : null}
           meta={
             <MetaLine parts={[
               getSourceDomain(article.url),
@@ -279,37 +261,8 @@ export default function MultiTenantArticlesList({
     );
   };
 
-  /** Stories in their usual order, with extras slotted in by arrival time; low-relevance extras last. */
-  const mergedNodes = () => {
-    const wrap = (x: WaitingExtraItem) => (
-      <motion.div
-        key={`extra-${x.id}`}
-        layout={prefersReducedMotion ? false : "position"}
-        initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 24, height: 0, scale: 0.98 }}
-        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-        style={{ overflow: "hidden" }}
-      >
-        {x.node}
-      </motion.div>
-    );
-    const main = extraItems.filter((x) => !x.low).sort((a, b) => b.at - a.at);
-    const low = extraItems.filter((x) => x.low).sort((a, b) => b.at - a.at);
-    const out: React.ReactNode[] = [];
-    let j = 0;
-    for (const article of visibleArticles) {
-      const t = Date.parse(article.created_at) || 0;
-      while (j < main.length && main[j].at >= t) out.push(wrap(main[j++]));
-      out.push(renderArticleCard(article));
-    }
-    while (j < main.length) out.push(wrap(main[j++]));
-    low.forEach((x) => out.push(wrap(x)));
-    return out;
-  };
-
   // Success message for bulk delete
-  if (bulkDeleteCount !== null && articles.length === 0 && extraItems.length === 0) {
+  if (bulkDeleteCount !== null && articles.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mb-4">
@@ -330,7 +283,7 @@ export default function MultiTenantArticlesList({
   }
 
   // Empty state
-  if (articles.length === 0 && extraItems.length === 0) {
+  if (articles.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
@@ -354,9 +307,6 @@ export default function MultiTenantArticlesList({
     <div className="space-y-3">
       {/* One quiet row: count, and a menu for the tools that don't belong on a card */}
       <div className={`flex items-center justify-end gap-2 ${articles.length === 0 ? "hidden" : ""}`}>
-        {totalArticlesCount !== null && totalArticlesCount > 0 && (
-          <span className="text-sm text-muted-foreground tabular-nums">{articles.length} of {totalArticlesCount}</span>
-        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Waiting tools">
@@ -419,7 +369,7 @@ export default function MultiTenantArticlesList({
       )}
       
       <AnimatePresence initial={false} mode="popLayout">
-        {mergedNodes()}
+        {visibleArticles.map(renderArticleCard)}
       </AnimatePresence>
       
       {/* Load more button */}

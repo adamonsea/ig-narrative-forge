@@ -277,3 +277,26 @@ export function horizonBuckets(
     waiting: waiting.filter((e) => inHorizon(e, key, today, time)).length,
   }));
 }
+
+// ---------- the Desk's Coming up column ----------
+
+/** "today", "tomorrow" or "in 6 days" for an event date. */
+export function countdown(ymd: string, today: string): string {
+  const d = daysBetween(today, ymd);
+  if (d <= 0) return "today";
+  if (d === 1) return "tomorrow";
+  return `in ${d} days`;
+}
+
+/**
+ * Waiting events in the Coming up column: already-started ones drop out (same rule as the feed),
+ * soonest first, and the ones we couldn't confirm are local sink to the bottom.
+ */
+export function comingUpOrder<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title"> & { relevance_score?: number | null }>(
+  events: T[], today: string, time: string,
+): T[] {
+  const sorted = events
+    .filter((e) => !hasStarted(e, today, time))
+    .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99") || a.title.localeCompare(b.title));
+  return [...sorted.filter((e) => !isLowRelevance(e.relevance_score)), ...sorted.filter((e) => isLowRelevance(e.relevance_score))];
+}

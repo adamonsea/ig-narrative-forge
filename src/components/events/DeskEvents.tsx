@@ -1,106 +1,85 @@
 import { useState } from "react";
-import { formatDistanceToNow } from "date-fns";
-import { CalendarDays, ChevronDown, ExternalLink, X } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { CalendarDays, ChevronDown, ExternalLink, Settings2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  coverSentence, dateBadge, dayLabel, eventTime, hiddenReason, horizonBuckets, inHorizon, isLowRelevance, londonTime,
-  type HorizonKey, type WhatsOnFeedEvent,
-} from "@/lib/whatsOn";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { coverSentence, countdown, dateBadge, eventTime, hiddenReason, isLowRelevance, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 import type { DeskEvent } from "@/hooks/useWhatsOnEvents";
+import { DeskBadge, DeskCard, MetaLine } from "@/components/topic-pipeline/DeskCard";
 
-export function TypeChip({ type }: { type: "story" | "event" }) {
-  return type === "event" ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-      <CalendarDays className="h-3 w-3" aria-hidden="true" />Event
-    </span>
-  ) : (
-    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Story</span>
-  );
-}
-
-function MiniDate({ date }: { date: string }) {
+/** Day and number, the event's at-a-glance date. */
+function DateTile({ date, size = "lg" }: { date: string; size?: "lg" | "sm" }) {
   const b = dateBadge(date);
   return (
-    <div className="w-11 shrink-0 rounded-lg border border-border py-1 text-center leading-none" aria-hidden="true">
-      <div className="text-[10px] font-semibold tracking-wider text-muted-foreground">{b.weekday}</div>
-      <div className="mt-0.5 text-lg font-bold">{b.day}</div>
+    <div
+      className={`flex shrink-0 flex-col items-center justify-center rounded-lg border border-border bg-background leading-none ${size === "lg" ? "h-16 w-16" : "h-12 w-12"}`}
+      aria-hidden="true"
+    >
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{b.weekday}</span>
+      <span className={`mt-1 font-bold tabular-nums ${size === "lg" ? "text-2xl" : "text-lg"}`}>{b.day}</span>
     </div>
   );
 }
 
-function RelevancePill({ score }: { score: number | null }) {
-  if (score === null || score === undefined) return null;
-  const low = isLowRelevance(score);
-  return (
-    <span
-      title={low ? "Less likely to be local" : "Local relevance"}
-      className={`rounded border px-1.5 py-0.5 text-xs font-medium ${low ? "border-border bg-muted text-muted-foreground" : "border-primary/30 bg-primary/10 text-primary"}`}
-    >
-      {score}%
-    </span>
-  );
-}
-
-const when = (e: Pick<DeskEvent, "start_date" | "start_time" | "location">) =>
-  [dayLabel(e.start_date), eventTime(e.start_time), e.location].filter(Boolean).join(" · ");
-
-/** One event waiting on the Desk: one tap, Publish or Skip. */
-export function WaitingEventCard({ event, onPublish, onSkip }: { event: DeskEvent; onPublish: () => void; onSkip: () => void }) {
+/** One event waiting in Coming up: date tile, title, countdown line; Publish / Skip on hover. */
+export function ComingUpEventCard({ event, today, onPublish, onSkip }: { event: DeskEvent; today: string; onPublish: () => void; onSkip: () => void }) {
   const low = isLowRelevance(event.relevance_score);
   return (
-    <Card className="transition-shadow duration-200 hover:shadow-md">
-      <div className="space-y-2.5 p-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <TypeChip type="event" />
-          {event.source_api === "reader" && <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium">Reader</span>}
-          <span className="max-w-[160px] truncate">{event.source_name}</span>
-          <RelevancePill score={event.relevance_score} />
-          {low && <span>Couldn't confirm it's local</span>}
-          <span className="ml-auto">{formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}</span>
-        </div>
-        <div className="flex items-start gap-3">
-          <MiniDate date={event.start_date} />
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold leading-snug">{event.title}</p>
-            <p className="text-sm text-muted-foreground">{when(event)}</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          {event.source_url && (
-            <Button variant="ghost" size="sm" asChild className="mr-auto text-muted-foreground">
-              <a href={event.source_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />Original</a>
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={onSkip}>Skip</Button>
-          <Button size="sm" onClick={onPublish} className="min-w-[96px]">Publish</Button>
-        </div>
-      </div>
-    </Card>
+    <DeskCard
+      title={event.title}
+      visual={<DateTile date={event.start_date} />}
+      faded={low}
+      badges={event.source_api === "reader" ? <DeskBadge>Reader</DeskBadge> : null}
+      meta={
+        <MetaLine parts={[
+          <span key="c" className="font-medium text-foreground">{countdown(event.start_date, today)}</span>,
+          eventTime(event.start_time),
+          event.location,
+          low ? "may not be local" : null,
+        ]} />
+      }
+      footer={event.source_url ? (
+        <a
+          href={event.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="truncate">{event.source_name || "Original listing"}</span>
+        </a>
+      ) : undefined}
+      actions={
+        <>
+          <Button size="sm" onClick={onPublish}>Publish</Button>
+          <Button size="sm" variant="ghost" onClick={onSkip}>Skip</Button>
+        </>
+      }
+    />
   );
 }
 
-/** Skipped and out-of-area events, collapsed at the bottom of Waiting. */
+/** Skipped and out-of-area events: a quiet "Hidden (n)" link at the bottom of Coming up. */
 export function HiddenEvents({ events, onRestore }: { events: DeskEvent[]; onRestore: (e: DeskEvent) => void }) {
   const [open, setOpen] = useState(false);
   if (!events.length) return null;
   return (
-    <div className="rounded-xl border border-border">
+    <div className="pt-1">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm text-muted-foreground">
-        <span>Hidden <span className="tabular-nums">{events.length}</span></span>
-        <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+        className="inline-flex items-center gap-1 rounded text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <span className="tabular-nums">{`Hidden (${events.length})`}</span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
       {open && (
-        <ul className="divide-y divide-border border-t border-border">
+        <ul className="mt-2 divide-y divide-border rounded-xl border border-border">
           {events.map((e) => (
-            <li key={e.id} className="flex items-center gap-3 px-4 py-3">
-              <MiniDate date={e.start_date} />
+            <li key={e.id} className="flex items-center gap-3 px-3 py-2.5">
+              <DateTile date={e.start_date} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{e.title}</p>
+                <p className="truncate text-base font-medium">{e.title}</p>
                 <p className="truncate text-sm text-muted-foreground">
                   <span className={e.status === "excluded" ? "font-medium text-destructive" : ""}>{hiddenReason(e.status, e.exclusion_reason)}</span>
                   {` · ${[e.location, e.source_name].filter(Boolean).join(" · ")}`}
@@ -115,7 +94,7 @@ export function HiddenEvents({ events, onRestore }: { events: DeskEvent[]; onRes
   );
 }
 
-/** The What's on card set in Live, where readers see it. Only the first one carries the controls. */
+/** The What's on card set in Live now, where readers see it. Only the first one carries the controls. */
 export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onToggleShow, onRemove }: {
   events: WhatsOnFeedEvent[]; today: string; showInFeed: boolean; liveMore: number; first: boolean;
   onToggleShow: (on: boolean) => void; onRemove: (e: WhatsOnFeedEvent) => void;
@@ -135,7 +114,7 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-3 text-left" disabled={!events.length}>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><CalendarDays className="h-5 w-5" aria-hidden="true" /></div>
           <div className="min-w-0 flex-1">
-            <p className="font-medium">What's on · {events.length ? count : "nothing in the next 2 weeks"}</p>
+            <p className="text-base font-medium">What's on · {events.length ? count : "nothing in the next 2 weeks"}</p>
             {events.length > 0 && <p className="truncate text-sm text-muted-foreground">{coverSentence(events, today)}</p>}
           </div>
           {events.length > 0 && <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />}
@@ -149,15 +128,15 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
         <ul className="divide-y divide-border border-t border-primary/20 px-3">
           {events.map((e) => (
             <li key={e.id} className="flex items-center gap-3 py-2.5">
-              <MiniDate date={e.start_date} />
+              <DateTile date={e.start_date} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{e.title}</p>
+                <p className="truncate text-base font-medium">{e.title}</p>
                 <p className="truncate text-sm text-muted-foreground">{[eventTime(e.start_time), e.location].filter(Boolean).join(" · ")}</p>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemove(e)} aria-label={`Remove “${e.title}” from the feed`}><X className="h-4 w-4" /></Button>
             </li>
           ))}
-          <li className="py-2.5 text-xs text-muted-foreground">
+          <li className="py-2.5 text-sm text-muted-foreground">
             Past events drop off on their own{liveMore > 0 ? ` · ${liveMore} more published, coming up after these` : ""}.
           </li>
         </ul>
@@ -166,104 +145,48 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
   );
 }
 
-/** Pipeline setting: collect events and add them to the weekly email. */
-export function EventsSwitch({ on, onChange, disabled, suggestOn, onSuggestChange }: {
+/** Coming up's settings: events on/off, reader suggestions and show in the feed. */
+export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestChange, showInFeed, onShowInFeedChange }: {
   on: boolean; onChange: (on: boolean) => void; disabled?: boolean;
   suggestOn?: boolean; onSuggestChange?: (on: boolean) => void;
+  showInFeed?: boolean; onShowInFeedChange?: (on: boolean) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
-      {on && onSuggestChange && (
-        <div className="flex items-center gap-2">
-          <Checkbox id="desk-reader-suggest" checked={Boolean(suggestOn)} onCheckedChange={(v) => onSuggestChange(v === true)} disabled={disabled} />
-          <Label htmlFor="desk-reader-suggest" className="text-sm text-muted-foreground">Let readers suggest events</Label>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" aria-label="Events settings" disabled={disabled}>
+          <Settings2 className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="desk-events-switch" className="text-base">Events</Label>
+          <Switch id="desk-events-switch" checked={on} onCheckedChange={onChange} disabled={disabled} />
         </div>
-      )}
-      <div className="flex items-center gap-2">
-        <Label htmlFor="desk-events-switch" className="text-sm text-muted-foreground">Events</Label>
-        <Switch id="desk-events-switch" checked={on} onCheckedChange={onChange} disabled={disabled} />
-      </div>
-    </div>
+        {on && onShowInFeedChange && (
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="desk-events-show-in-feed" className="text-base font-normal">Show in the feed</Label>
+            <Switch id="desk-events-show-in-feed" checked={Boolean(showInFeed)} onCheckedChange={onShowInFeedChange} disabled={disabled} />
+          </div>
+        )}
+        {on && onSuggestChange && (
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="desk-reader-suggest" className="text-base font-normal">Let readers suggest events</Label>
+            <Switch id="desk-reader-suggest" checked={Boolean(suggestOn)} onCheckedChange={onSuggestChange} disabled={disabled} />
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
-/**
- * The month ahead at a glance: Today / Tomorrow / This week / This month, each with
- * Live and Waiting counts. Tap a window to see (and act on) just those events.
- */
-export function EventHorizon({ live, waiting, today, onPublish, onSkip, onRemove }: {
-  live: WhatsOnFeedEvent[]; waiting: DeskEvent[]; today: string;
-  onPublish: (e: DeskEvent) => void; onSkip: (e: DeskEvent) => void; onRemove: (e: WhatsOnFeedEvent) => void;
-}) {
-  const [selected, setSelected] = useState<HorizonKey | null>(null);
-  const time = londonTime();
-  const buckets = horizonBuckets(live, waiting, today, time);
-  const month = buckets[buckets.length - 1];
-  if (month.live + month.waiting === 0) {
-    return <p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" aria-hidden="true" />No events in the next 30 days</p>;
-  }
-  const sortByDate = <T extends { start_date: string; start_time: string | null; title: string }>(xs: T[]) =>
-    [...xs].sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99") || a.title.localeCompare(b.title));
-  const shownWaiting = selected ? sortByDate(waiting.filter((e) => inHorizon(e, selected, today, time))) : [];
-  const shownLive = selected ? sortByDate(live.filter((e) => inHorizon(e, selected, today, time))) : [];
-  const label = buckets.find((b) => b.key === selected)?.label;
-
+/** When events are off, Coming up is one slim card. */
+export function EventsOffCard({ onSwitchOn, disabled }: { onSwitchOn: () => void; disabled?: boolean }) {
   return (
-    <div className="space-y-2" role="group" aria-label="Events coming up">
-      <div className="grid grid-cols-4 gap-2">
-        {buckets.map((b) => {
-          const total = b.live + b.waiting;
-          const on = selected === b.key;
-          return (
-            <button key={b.key} type="button" aria-pressed={on} disabled={total === 0}
-              onClick={() => setSelected(on ? null : b.key)}
-              className={`rounded-xl border px-2.5 py-2 text-left transition-colors disabled:cursor-default disabled:opacity-60 ${on ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
-              <span className="block text-xs text-muted-foreground">{b.label}</span>
-              <span className="block text-xl font-semibold tabular-nums leading-tight">{total}</span>
-              <span className="block text-[11px] leading-snug text-muted-foreground">
-                {total === 0 ? "None" : (
-                  <>
-                    <span className="tabular-nums">{b.live}</span> live
-                    {b.waiting > 0 && <> · <span className="font-medium text-primary"><span className="tabular-nums">{b.waiting}</span> waiting</span></>}
-                  </>
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {selected && (
-        <div className="rounded-xl border border-border">
-          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 text-sm">
-            <span className="font-medium">{label}</span>
-            <Button variant="ghost" size="sm" className="h-7 text-muted-foreground" onClick={() => setSelected(null)}>Close</Button>
-          </div>
-          <ul className="max-h-[420px] divide-y divide-border overflow-y-auto">
-            {shownWaiting.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 px-3 py-2.5">
-                <MiniDate date={e.start_date} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{e.title}</p>
-                  <p className="truncate text-sm text-muted-foreground"><span className="font-medium text-primary">Waiting</span>{` · ${when(e)}`}</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => onSkip(e)}>Skip</Button>
-                <Button size="sm" onClick={() => onPublish(e)}>Publish</Button>
-              </li>
-            ))}
-            {shownLive.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 px-3 py-2.5">
-                <MiniDate date={e.start_date} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{e.title}</p>
-                  <p className="truncate text-sm text-muted-foreground">Live{` · ${when(e)}`}</p>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemove(e)} aria-label={`Remove “${e.title}” from the feed`}><X className="h-4 w-4" /></Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-4">
+      <CalendarDays className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <p className="min-w-0 flex-1 text-base">Add what's on to your feed</p>
+      <Button size="sm" onClick={onSwitchOn} disabled={disabled}>Switch on</Button>
     </div>
   );
 }
