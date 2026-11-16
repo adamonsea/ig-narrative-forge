@@ -74,7 +74,8 @@ export default {
 				},
 				mint: {
 					DEFAULT: 'hsl(var(--mint))',
-					soft: 'hsl(var(--mint-soft))'
+					soft: 'hsl(var(--mint-soft))',
+					foreground: 'hsl(var(--mint-foreground))'
 				},
 				attention: {
 					DEFAULT: 'hsl(var(--attention))',

@@ -321,7 +321,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const areaClass = (area: DeskArea) => cn(
     'min-w-0 space-y-3',
     mobileArea === area ? 'block' : 'hidden lg:block',
-    area === 'live' ? 'lg:rounded-xl lg:border lg:bg-card lg:p-4 lg:shadow-sm' : 'lg:rounded-xl lg:border lg:border-border/60 lg:bg-muted/40 lg:p-3',
+    area === 'live' ? 'bg-mint-soft lg:rounded-xl lg:border lg:p-4 lg:shadow-sm' : 'lg:rounded-xl lg:border lg:border-border/60 lg:bg-muted/40 lg:p-3',
   );
   const areaTabs: { key: DeskArea; label: string; count?: number }[] = [
     { key: 'happened', label: 'Story pool', count: newsCount },
@@ -456,15 +456,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
         {/* ===== Live now: exactly what readers see, in feed order ===== */}
         <section className={areaClass('live')} aria-labelledby="desk-live">
-          <div className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 border-b pb-2">
+          <div className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 bg-mint px-2 py-2 lg:-mx-4 lg:-mt-4 lg:rounded-t-xl lg:px-4">
             <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-60 motion-reduce:animate-none" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-mint" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint-foreground opacity-70 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-mint-foreground" />
             </span>
-            <h3 id="desk-live" className="text-lg font-semibold text-foreground">Live now</h3>
+            <h3 id="desk-live" className="text-lg font-semibold text-pop-foreground">Live now</h3>
             <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
             {queueItems.length > 0 && (
-              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground animate-fade-in">
+              <span className="inline-flex items-center gap-1 text-sm text-pop-foreground animate-fade-in">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />{queueItems.length} being written
               </span>
             )}
