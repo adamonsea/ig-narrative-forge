@@ -6,7 +6,9 @@
  * Order of trust:
  *   1. schema.org/Event JSON-LD on the page
  *   2. an iCal (.ics) or JSON calendar feed
- *   3. plain-text fallback — candidates are only kept when their date text
+ *   3. the page's own calendar data — the JSON a listings widget loads after
+ *      the page opens, found in the page's scripts (pageData.ts)
+ *   4. plain-text fallback — candidates are only kept when their date text
  *      (and title) appear on the page verbatim. Dates are parsed from that
  *      page text by these rules, never taken from a model.
  */
@@ -24,6 +26,7 @@ export interface WhatsOnEvent {
 }
 
 export type WhatsOnMethod = 'jsonld' | 'ical' | 'json' | 'text';
+// 'json' covers both advertised JSON feeds and the page's own calendar data (see pageData.ts).
 
 const LONDON = 'Europe/London';
 
@@ -395,38 +398,91 @@ export function parseIcs(text: string, feedUrl: string): WhatsOnEvent[] {
   return out;
 }
 
+/** Value at a dotted path; keys match case-insensitively ("Url" finds "url"). */
+function at(o: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((acc, part) => {
+    if (!acc || typeof acc !== 'object' || Array.isArray(acc)) return undefined;
+    const rec = acc as Record<string, unknown>;
+    if (part in rec) return rec[part];
+    const lower = part.toLowerCase();
+    const key = Object.keys(rec).find((k) => k.toLowerCase() === lower);
+    return key === undefined ? undefined : rec[key];
+  }, o);
+}
+
 function pick(o: Record<string, unknown>, keys: string[]): unknown {
   for (const k of keys) {
-    const v = k.split('.').reduce<unknown>((acc, part) => (acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[part] : undefined), o);
+    const v = at(o, k);
     if (v !== undefined && v !== null && v !== '') return v;
   }
   return undefined;
 }
 
-export function parseJsonFeed(data: unknown, feedUrl: string): WhatsOnEvent[] {
-  let list: unknown = data;
-  if (list && !Array.isArray(list) && typeof list === 'object') {
-    const o = list as Record<string, unknown>;
-    list = o.events ?? o.items ?? o.data ?? o.results ?? null;
+const TITLE_KEYS = ['title.rendered', 'EventNameOverride', 'eventName', 'event_name', 'name', 'title', 'summary', 'headline'];
+const DATE_KEYS = [
+  'startDate', 'start_date', 'start.dateTime', 'start.date', 'start', 'dtstart', 'startDateTime', 'start_datetime',
+  'EventDates.EventDate', 'eventDate', 'event_date', 'FirstDate', 'InstanceDate', 'date', 'datetime', 'dateTime', 'start_time',
+];
+const TIME_KEYS = ['EventTime', 'eventTime', 'startTime', 'start_time', 'time', 'doors'];
+const URL_KEYS = ['url', 'link', 'permalink', 'htmlLink', 'eventUrl', 'event_url', 'pageUrl', 'BookingLink', 'bookingUrl', 'ticketUrl'];
+const VENUE_KEYS = ['venue.venue', 'venue.name', 'location.name', 'venueName', 'venue_name', 'venue', 'location'];
+
+/** The first date field that holds a real published date (ISO-like only — never guessed). */
+function eventWhen(o: Record<string, unknown>): { date: string; time: string | null } | null {
+  for (const k of DATE_KEYS) {
+    const when = parseIsoLike(at(o, k));
+    if (when) {
+      if (when.time) return when;
+      const t = pick(o, TIME_KEYS);
+      return { date: when.date, time: typeof t === 'string' && !/^\d{4}-/.test(t) ? parseTimeText(t) : null };
+    }
   }
-  if (!Array.isArray(list)) return [];
+  return null;
+}
+
+function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: string | null): WhatsOnEvent | null {
+  const when = eventWhen(o);
+  const title = clean(pick(o, TITLE_KEYS));
+  if (!when || !title) return null;
+  const venue = pick(o, VENUE_KEYS);
+  const url = pick(o, URL_KEYS);
+  return {
+    title,
+    start_date: when.date,
+    start_time: when.time,
+    venue: typeof venue === 'string' ? clean(venue, 160) : null,
+    url: absolute(typeof url === 'string' ? url : null, feedUrl),
+    place: placeText(pick(o, ['venue', 'location'])) ?? fallbackPlace,
+  };
+}
+
+/**
+ * Events from any JSON a calendar publishes, however it's nested
+ * ({ events: [...] }, { Data: [{ Month, Events: [...] }] }, a bare list …).
+ * A list counts as events when at least half its items have a title and an
+ * ISO-like date; dates are read from the data by rule, never inferred.
+ * fallbackPlace (e.g. the venue site's own name) is used only for the location check.
+ */
+export function parseJsonFeed(data: unknown, feedUrl: string, fallbackPlace: string | null = null): WhatsOnEvent[] {
   const out: WhatsOnEvent[] = [];
-  for (const item of list.slice(0, 500)) {
-    if (!item || typeof item !== 'object') continue;
-    const o = item as Record<string, unknown>;
-    const when = parseIsoLike(pick(o, ['startDate', 'start_date', 'start', 'start.dateTime', 'start.date', 'start_time', 'dtstart', 'date', 'datetime']));
-    const title = clean(pick(o, ['title.rendered', 'name', 'title', 'summary']));
-    if (!when || !title) continue;
-    const venue = pick(o, ['venue.venue', 'venue.name', 'location.name', 'venue', 'location']);
-    out.push({
-      title,
-      start_date: when.date,
-      start_time: when.time,
-      venue: typeof venue === 'string' ? clean(venue, 160) : null,
-      url: absolute(pick(o, ['url', 'link', 'permalink', 'htmlLink']) as string, feedUrl),
-      place: placeText(pick(o, ['venue', 'location'])),
-    });
-  }
+  const walk = (node: unknown, depth: number) => {
+    if (out.length >= 500 || depth > 7 || !node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      const items = node.slice(0, 500);
+      const objects = items.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x));
+      const parsed = objects.map((o) => jsonEvent(o, feedUrl, fallbackPlace));
+      const hits = parsed.filter((e): e is WhatsOnEvent => !!e);
+      const isList = hits.length > 0 && hits.length * 2 >= objects.length;
+      if (isList) out.push(...hits);
+      const found = new Set(objects.filter((_, i) => parsed[i]));
+      for (const x of items) {
+        if (!(isList && found.has(x as Record<string, unknown>))) walk(x, depth + 1);
+      }
+      return;
+    }
+    for (const v of Object.values(node as Record<string, unknown>)) walk(v, depth + 1);
+  };
+  walk(data, 0);
   return out;
 }
 

@@ -7,6 +7,7 @@ import {
   parseJsonFeed, htmlToText, verifyTextCandidates, anchorLinks, upcomingUnique, robotsAllows,
   pageName, londonToday,
 } from './extract.ts';
+import { siteScriptUrls, inlineScripts, findDataEndpoints } from './pageData.ts';
 
 const USER_AGENT = 'Mozilla/5.0 (compatible; CuratrEvents/1.0; +https://curatr.pro)';
 const FETCH_TIMEOUT_MS = 15000;
@@ -31,11 +32,20 @@ export function isPublicHttpUrl(raw: string): boolean {
   }
 }
 
-async function fetchText(url: string, accept: string): Promise<{ ok: boolean; status: number; type: string; text: string; finalUrl: string }> {
+async function fetchText(
+  url: string, accept: string,
+  opts: { method?: 'GET' | 'POST'; body?: string; headers?: Record<string, string>; timeoutMs?: number } = {},
+): Promise<{ ok: boolean; status: number; type: string; text: string; finalUrl: string }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: accept }, redirect: 'follow', signal: controller.signal });
+    const res = await fetch(url, {
+      method: opts.method ?? 'GET',
+      body: opts.body,
+      headers: { 'User-Agent': USER_AGENT, Accept: accept, ...(opts.headers ?? {}) },
+      redirect: 'follow',
+      signal: controller.signal,
+    });
     const buf = new Uint8Array(await res.arrayBuffer());
     const text = new TextDecoder().decode(buf.byteLength > MAX_BYTES ? buf.slice(0, MAX_BYTES) : buf);
     return { ok: res.ok, status: res.status, type: res.headers.get('content-type') || '', text, finalUrl: res.url || url };
@@ -110,6 +120,62 @@ async function textCandidates(pageText: string, url: string): Promise<unknown[]>
   }
 }
 
+// ---------- the page's own calendar data ----------
+
+const DATA_TIMEOUT_MS = 8000;
+
+async function jsonFrom(url: string, pageUrl: string, method: 'GET' | 'POST'): Promise<unknown | null> {
+  try {
+    const r = await fetchText(url, 'application/json, text/javascript, */*;q=0.1', {
+      method,
+      body: method === 'POST' ? '{}' : undefined,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: pageUrl,
+        ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+      },
+      timeoutMs: DATA_TIMEOUT_MS,
+    });
+    if (!r.ok || !/^\s*[[{]/.test(r.text)) return null;
+    return JSON.parse(r.text);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Listings widgets that fill an empty page after it opens: find the data address in
+ * the site's own scripts and read it the way the page does (GET, then an empty POST).
+ */
+export async function readPageData(html: string, pageUrl: string, name: string, today: string): Promise<WhatsOnEvent[]> {
+  const scriptUrls = siteScriptUrls(html, pageUrl);
+  const scripts = await Promise.all(scriptUrls.map(async (u) => {
+    if (!(await allowedByRobots(u))) return '';
+    try {
+      const r = await fetchText(u, '*/*', { timeoutMs: DATA_TIMEOUT_MS });
+      return r.ok ? r.text.slice(0, 1_000_000) : '';
+    } catch { return ''; }
+  }));
+  const endpoints = findDataEndpoints([inlineScripts(html), ...scripts], html, pageUrl)
+    .filter((u) => isPublicHttpUrl(u));
+  if (!endpoints.length) return [];
+
+  const results = await Promise.all(endpoints.map(async (u) => {
+    if (!(await allowedByRobots(u))) return [];
+    for (const method of ['GET', 'POST'] as const) {
+      const data = await jsonFrom(u, pageUrl, method);
+      if (data === null) continue;
+      const events = upcomingUnique(parseJsonFeed(data, pageUrl, name), today, DAYS_AHEAD);
+      if (events.length) return events;
+    }
+    return [];
+  }));
+  // Endpoints are ordered most-likely first; take the first that gave real events
+  const best = results.find((e) => e.length) ?? [];
+  console.log(`page data ${pageUrl}: ${endpoints.length} addresses tried, ${best.length} upcoming events`);
+  return best;
+}
+
 // ---------- reading a page ----------
 
 export interface ReadResult {
@@ -173,7 +239,15 @@ export async function readWhatsOn(url: string): Promise<ReadResult> {
     } catch { /* try next */ }
   }
 
-  // 3. plain-text fallback: keep only events whose date text is on the page
+  // 3. the page's own calendar data (listings loaded after the page opens)
+  try {
+    const fromData = await readPageData(html, page.finalUrl, name, today);
+    if (fromData.length) return { events: fromData, method: 'json', name };
+  } catch (e) {
+    console.warn('Page data step failed', e instanceof Error ? e.message : e);
+  }
+
+  // 4. plain-text fallback: keep only events whose date text is on the page
   const text = htmlToText(html);
   if (text.length < 80) return { events: [], method: null, name };
   const candidates = await textCandidates(text, page.finalUrl);
