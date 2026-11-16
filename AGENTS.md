@@ -35,4 +35,4 @@
 - Feed Settings is one page in `EditorialControlCenter.tsx`: each section shows basics, every existing control stays one tap away in a per-owner `RememberedFold`, and old `?section=` links open the matching fold.
 - New feeds start from one sentence (`suggest-feed-setup` rules + `src/lib/feedSetup.ts`); fandom feeds set `brand_safe_pictures` (no drawn characters/logos). Feed terms are edited only in `LookForPanel` via `src/lib/termLists.ts` (case-insensitive, one list per term).
 - Autopilot = automation_mode 'holiday' + `topics.auto_simplify_enabled=true`; turning it off never clears that flag (hand-written stories use it).
-- Desk story cards render through `DeskCard` (rest: thumbnail/headline/one quiet line; hover or first tap: up to two actions; click: `StoryDrawer`/`WaitingStoryDrawer` with every other control); keeps cards calm while no control is lost.
+- Desk story cards use `DeskCard` (quiet at rest, ≤2 actions on hover/tap, drawer for the rest); calm cards, no lost controls.
