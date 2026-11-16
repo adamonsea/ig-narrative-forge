@@ -5,6 +5,7 @@
  * position they reached, so no extra field is needed for the drop-off curve.
  */
 import { canTrackReader, getVisitorId } from './visitorIdentity';
+import { hasHumanSignal } from './humanSignal';
 
 const SEEN_RATIO = 0.6;
 const STOP_MS = 3000; // a "stop" = 3s+ continuous dwell (matches story_stop_scores)
@@ -40,6 +41,8 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   };
 
   const flush = () => {
+    // Nothing is sent for a page no person has touched, moved, scrolled or typed on.
+    if (!hasHumanSignal()) return;
     const now = performance.now();
     const items: Array<{ s: string; p: boolean; d: number; i?: number }> = [];
     stories.forEach((e, s) => {

@@ -42,54 +42,22 @@ serve(async (req) => {
       throw new Error(`Topic not found: ${topicError?.message}`);
     }
 
-    // Display boost utility: adds +15 for small communities, accurate for established ones
-    const getDisplayCount = (actualCount: number): number => {
-      if (actualCount >= 100) return actualCount;
-      return actualCount + 15;
+    // Reader numbers are always the real ones (same definition as the dashboard: count_topic_readers).
+    const getDisplayCount = (actualCount: number): number => actualCount;
+    const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+    const countReaders = async (from: string, to?: string): Promise<number> => {
+      const { data, error } = await supabase.rpc('count_topic_readers', to
+        ? { p_topic_id: topicId, p_from: from, p_to: to }
+        : { p_topic_id: topicId, p_from: from });
+      if (error) throw error;
+      return Number(data) || 0;
     };
 
-    // Get all-time unique readers (deduplicate visitor_ids)
-    const { data: allReaders, error: readersError } = await supabase
-      .from('story_interactions')
-      .select('visitor_id')
-      .eq('topic_id', topicId)
-      .neq('visitor_id', '');
-
-    if (readersError) throw readersError;
-    
-    const actualTotalReaders = new Set(allReaders?.map(r => r.visitor_id) || []).size;
+    const actualTotalReaders = await countReaders('2000-01-01');
     const displayTotalReaders = getDisplayCount(actualTotalReaders);
-
-    // Get last 7 days unique readers
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const { data: weekData, error: weekError } = await supabase
-      .from('story_interactions')
-      .select('visitor_id')
-      .eq('topic_id', topicId)
-      .gte('created_at', sevenDaysAgo.toISOString())
-      .neq('visitor_id', '');
-
-    if (weekError) throw weekError;
-    
-    const actualWeekReaders = new Set(weekData?.map(r => r.visitor_id) || []).size;
-
-    // Get previous week readers for growth calculation
-    const fourteenDaysAgo = new Date();
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-    
-    const { data: prevWeekData, error: prevWeekError } = await supabase
-      .from('story_interactions')
-      .select('visitor_id')
-      .eq('topic_id', topicId)
-      .gte('created_at', fourteenDaysAgo.toISOString())
-      .lt('created_at', sevenDaysAgo.toISOString())
-      .neq('visitor_id', '');
-
-    if (prevWeekError) throw prevWeekError;
-    
-    const actualPreviousWeekReaders = new Set(prevWeekData?.map(r => r.visitor_id) || []).size;
+    const actualWeekReaders = await countReaders(daysAgo(6));
+    const actualPreviousWeekReaders = await countReaders(daysAgo(13), daysAgo(7));
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
     const readerGrowth = actualWeekReaders - actualPreviousWeekReaders;
 
     // Get PWA installs

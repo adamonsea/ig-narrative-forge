@@ -1,17 +1,17 @@
 # Reader stats — one credible definition of a real reader (14–16 Nov 2026)
 Rules: tracking and dashboard only; per-tenant, owner-only; never delete data.
-- [ ] A1. Readers = swiped, paused 3s+ on a headline, or 10s+ on a story page; internal/test excluded
-- [ ] A2. Stories read uses the same rule (bare story-page load is not a read)
-- [ ] A3. "Visits" shown separately, smaller, no arrow, labelled as including automated traffic
-- [ ] B5. Remove +15 reader padding in AutomatedInsightCard; audit other boosts
-- [ ] B6. Exclude v_test / "test" UA visitors everywhere; own tests use excluded prefix
-- [ ] B7. Find why 5 real swipers have no site_visits row; fix
-- [ ] B8. Explain zero story_impressions on 14 Nov (tracking failure vs story pages)
-- [ ] C9. Human-gated visit tracking (touch/pointer/scroll/key/swipe), no feed slowdown
-- [ ] C10. Dashboard leads with weekly: readers, returning readers, where readers came from
-- [ ] C11. Feed-level stop/swipe rates until a story has 30 readers
-- [ ] C12. Daily self-check note: visits up sharply while readers flat = likely automated
-- [ ] Finish: Eastbourne 14-day per-day old vs new visitors/readers and reads
+- [x] A1. Readers = swiped, paused 3s+ on a headline, or 10s+ on a story page; internal/test excluded
+- [x] A2. Stories read uses the same rule (bare story-page load is not a read)
+- [x] A3. "Visits" shown separately, smaller, no arrow, labelled as including automated traffic
+- [x] B5. Remove +15 reader padding in AutomatedInsightCard; audit other boosts
+- [x] B6. Exclude v_test / "test" UA visitors everywhere; own tests use excluded prefix
+- [x] B7. Find why 5 real swipers have no site_visits row; fix
+- [x] B8. Explain zero story_impressions on 14 Nov (tracking failure vs story pages)
+- [x] C9. Human-gated visit tracking (touch/pointer/scroll/key/swipe), no feed slowdown
+- [x] C10. Dashboard leads with weekly: readers, returning readers, where readers came from
+- [x] C11. Feed-level stop/swipe rates until a story has 30 readers
+- [x] C12. Daily self-check note: visits up sharply while readers flat = likely automated
+- [x] Finish: Eastbourne 14-day per-day old vs new visitors/readers and reads
 
 # Simplification — "a 10-year-old can run a feed" (13 Nov 2026)
 Rules: hide or switch off, never delete; existing feeds keep values; specialist features move out of sight.

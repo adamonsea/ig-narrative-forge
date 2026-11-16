@@ -10,6 +10,7 @@ import { StoryPageSEO } from "@/components/seo/StoryPageSEO";
 import { StoryStructuredData } from "@/components/seo/StoryStructuredData";
 import { StoryRatingCard } from "@/components/swipe-mode/StoryRatingCard";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
+import { startStoryPageDwell } from "@/lib/storyPageDwell";
 
 interface Story {
   id: string;
@@ -179,6 +180,12 @@ const StoryPage = () => {
 
     loadStoryAndTopic();
   }, [slug, storyId, navigate]);
+
+  // Reader signal: 10+ visible seconds on this story page (after a human signal) counts as a read.
+  useEffect(() => {
+    if (!story?.id || !topic?.id) return;
+    return startStoryPageDwell(story.id, topic.id);
+  }, [story?.id, topic?.id]);
 
   // Update favicon based on topic branding (pass full branding config for optimized variants)
   useTopicFavicon(topic?.branding_config as any);

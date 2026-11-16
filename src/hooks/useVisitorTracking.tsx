@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getVisitorId, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
+import { onHumanSignal, hasHumanSignal } from "@/lib/humanSignal";
 
 export const useVisitorTracking = (topicId: string | undefined, pageType: string = 'feed') => {
   const [visitorId, setVisitorId] = useState<string>('');
@@ -61,15 +62,17 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
       }
     };
 
-    // Track click immediately (reduced from 1s to 100ms)
-    const clickTimer = setTimeout(trackClick, 100);
-    
-    // Track unique visit after brief delay
-    const visitTimer = setTimeout(trackVisit, 150);
+    // Track click and unique visit only after a human signal (touch, pointer, wheel, key, scroll)
+    let clickTimer: ReturnType<typeof setTimeout> | undefined;
+    let visitTimer: ReturnType<typeof setTimeout> | undefined;
+    const stopWaiting = onHumanSignal(() => {
+      clickTimer = setTimeout(trackClick, 100);
+      visitTimer = setTimeout(trackVisit, 150);
+    });
 
     // Backup: track on page unload for quick bounces
     const handleBeforeUnload = () => {
-      if (!hasTrackedClick.current) {
+      if (!hasTrackedClick.current && hasHumanSignal()) {
         // Use sendBeacon for reliable tracking during page unload
         const payload = JSON.stringify({
           topic_id: topicId,
@@ -88,8 +91,9 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      clearTimeout(clickTimer);
-      clearTimeout(visitTimer);
+      if (clickTimer) clearTimeout(clickTimer);
+      stopWaiting();
+      if (visitTimer) clearTimeout(visitTimer);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [topicId, visitorId, pageType]);

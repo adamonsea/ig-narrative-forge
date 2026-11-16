@@ -1,0 +1,3 @@
+ALTER TABLE public.story_interactions DROP CONSTRAINT IF EXISTS story_interactions_interaction_type_check;
+ALTER TABLE public.story_interactions ADD CONSTRAINT story_interactions_interaction_type_check
+  CHECK (interaction_type = ANY (ARRAY['swipe'::text, 'share_click'::text, 'donation_button_clicked'::text, 'donation_modal_opened'::text, 'donation_tier_clicked'::text, 'source_click'::text, 'page_dwell'::text]));

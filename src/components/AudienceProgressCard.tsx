@@ -168,8 +168,6 @@ export function AudienceProgressCard({ topicId }: AudienceProgressCardProps) {
   const { nextMilestone, prevMilestone, progress, remaining } = getMilestoneData(metrics.uniqueReaders);
   const tierInfo = getTierInfo(metrics.uniqueReaders, remaining, nextMilestone);
   
-  // Calculate what readers see (actual + 15 if under 100)
-  const displayCount = metrics.uniqueReaders >= 100 ? metrics.uniqueReaders : metrics.uniqueReaders + 15;
 
   return (
     <Card>
@@ -201,11 +199,6 @@ export function AudienceProgressCard({ topicId }: AudienceProgressCardProps) {
               <div className="text-sm text-muted-foreground">
                 {metrics.uniqueReaders} / {nextMilestone} readers
               </div>
-              {displayCount !== metrics.uniqueReaders && (
-                <div className="text-xs text-muted-foreground/70">
-                  Displays as {displayCount} in feeds
-                </div>
-              )}
             </div>
           </div>
           

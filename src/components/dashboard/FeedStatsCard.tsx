@@ -1,6 +1,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect, useMemo, useState } from "react";
 import { pickHighlight, type HighlightStats } from "@/lib/feedHighlights";
+import { likelyAutomatedRise, sourceName } from "@/lib/readerStats";
 
 export interface FeedCardStats {
   topic_id: string;
@@ -60,6 +61,13 @@ export interface FeedCardStats {
   readers_month?: number | null;
   published_month?: number | null;
   reads_daily_month?: number[] | null;
+  visits_week?: number | null;
+  visits_month?: number | null;
+  readers_weekly?: number[] | null;
+  returning_week?: number | null;
+  visits_daily?: number[] | null;
+  readers_daily?: number[] | null;
+  top_sources?: { host: string; visitors: number; readers: number }[] | null;
 }
 
 export type CardPeriod = "week" | "month";
@@ -171,15 +179,19 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
     return <div className="h-24 rounded-lg bg-muted/50 animate-pulse" />;
   }
   const isMonth = period === "month";
-  const readsWeek = n(stats.reads_week);
-  const readsMonth = n(stats.reads_month);
-  const readsShown = isMonth ? readsMonth : readsWeek;
-  const rise = isMonth ? null : visibleRise(weekChange(readsWeek, n(stats.reads_prev_week)));
+  const readersWeek = n(stats.readers_week);
+  const readersShown = isMonth ? n(stats.readers_month) : readersWeek;
+  const rise = isMonth ? null : visibleRise(weekChange(readersWeek, n(stats.readers_prev_week)));
   const collecting = daysOfData(stats.first_read_date) < 7;
-  const daily = (isMonth ? (stats.reads_daily_month || []) : (stats.reads_daily || [])).map(n);
-  const readersShown = isMonth ? n(stats.readers_month) : n(stats.readers_week);
+  const weekly = (stats.readers_weekly || []).map(n);
+  const readsShown = isMonth ? n(stats.reads_month) : n(stats.reads_week);
+  const visitsShown = isMonth ? n(stats.visits_month) : n(stats.visits_week);
   const publishedShown = isMonth ? n(stats.published_month) : n(stats.published_week);
+  const returning = n(stats.returning_week);
+  const source = (stats.top_sources || [])[0];
+  const automated = likelyAutomatedRise(stats.visits_daily, stats.readers_daily);
   const isMostRead = highlight?.kind === "story_took_off";
+  const periodWord = isMonth ? "month" : "week";
 
   return (
     <div className="space-y-3">
@@ -200,19 +212,19 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
         ))}
       </div>
 
-      {/* Line 2: hero */}
+      {/* Line 2: hero — readers this week (people who swiped, paused 3s+ or read a story page 10s+) */}
       {collecting ? (
         <p className="text-base text-foreground">
-          {readsWeek > 0 ? `${readsWeek} ${readsWeek === 1 ? "story read" : "stories read"} in your first week so far` : "Collecting your first week of readers"}
+          {readersWeek > 0 ? `${readersWeek} ${readersWeek === 1 ? "reader" : "readers"} in your first week so far` : "Collecting your first week of readers"}
         </p>
       ) : (
         <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-1">
           <span className="inline-flex items-end gap-1.5">
-            <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readsShown.toLocaleString("en-GB")}</span>
-            {daily.length > 0 && <Sparkline values={daily} />}
+            <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readersShown.toLocaleString("en-GB")}</span>
+            {weekly.length > 0 && <Sparkline values={weekly} />}
           </span>
           <span className="inline-flex items-baseline gap-x-2">
-            <span className="text-sm md:text-base text-muted-foreground">stories read this {isMonth ? "month" : "week"}</span>
+            <span className="text-sm md:text-base text-muted-foreground">readers this {periodWord}</span>
             {rise !== null && <span className="text-sm font-medium tabular-nums text-pop">▲ {rise}%</span>}
           </span>
         </div>
@@ -232,9 +244,23 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
         </p>
       )}
 
-      {/* Line 4: muted meta */}
+      {/* Line 4: what's going well — returning readers and where readers came from */}
+      {(returning > 0 || source) && (
+        <p className="text-sm text-foreground tabular-nums">
+          {returning > 0 && <span className="whitespace-nowrap">{returning.toLocaleString("en-GB")} returning</span>}
+          {returning > 0 && source && " · "}
+          {source && (
+            <span title="Last 14 days: visitors who arrived from this site, and how many of them became readers">
+              From {sourceName(source.host)}: {n(source.visitors).toLocaleString("en-GB")} {n(source.visitors) === 1 ? "visitor" : "visitors"},{" "}
+              <span className="whitespace-nowrap">{n(source.readers).toLocaleString("en-GB")} became readers</span>
+            </span>
+          )}
+        </p>
+      )}
+
+      {/* Line 5: muted meta; plain visits smaller and never trended */}
       <p className="text-sm text-muted-foreground tabular-nums">
-        <span className="whitespace-nowrap">{readersShown.toLocaleString("en-GB")} readers ·</span> {" "}
+        <span className="whitespace-nowrap">{readsShown.toLocaleString("en-GB")} {readsShown === 1 ? "story" : "stories"} read ·</span>{" "}
         <span className="whitespace-nowrap">
         <Popover>
           <PopoverTrigger asChild>
@@ -251,9 +277,16 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             </ul>
           </PopoverContent>
         </Popover>
-        {" · "}{publishedShown.toLocaleString("en-GB")} published{isMonth ? " this month" : " this week"}
+        {" · "}{publishedShown.toLocaleString("en-GB")} published
+        </span>{" "}
+        <span className="whitespace-nowrap text-xs" title="Every page load, including automated traffic such as scrapers">
+          · {visitsShown.toLocaleString("en-GB")} visits incl. automated
         </span>
       </p>
+
+      {automated && (
+        <p className="text-xs text-muted-foreground">Visits jumped while readers stayed flat, so the rise is likely automated traffic.</p>
+      )}
     </div>
   );
 }

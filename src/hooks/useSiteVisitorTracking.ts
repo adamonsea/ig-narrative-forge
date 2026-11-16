@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { applyExcludeLink, isExcludedBrowser } from '@/lib/filmPlays';
 import { getVisitorId, getCachedCountry, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
+import { onHumanSignal } from "@/lib/humanSignal";
 
 interface PageClassification {
   pageType: string;
@@ -87,9 +88,10 @@ export const useSiteVisitorTracking = () => {
     applyExcludeLink();
     if (!canTrackReader() || isExcludedBrowser()) return;
     if (hasTracked.current.has(trackKey)) return;
-    hasTracked.current.add(trackKey);
 
     const trackVisit = async () => {
+      if (hasTracked.current.has(trackKey)) return;
+      hasTracked.current.add(trackKey);
       try {
         const { pageType, topicSlug } = classifyPage(pagePath);
         
@@ -157,10 +159,11 @@ export const useSiteVisitorTracking = () => {
       return null;
     }
 
-    // Track after a brief delay to ensure page is loaded
-    const timer = setTimeout(trackVisit, 150);
+    // Record only once a real person has touched, moved, scrolled or typed (bots that just load never count).
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = onHumanSignal(() => { timer = setTimeout(trackVisit, 150); });
 
-    return () => clearTimeout(timer);
+    return () => { unsubscribe(); if (timer) clearTimeout(timer); };
   }, [location.pathname]);
 
   return visitorId.current;

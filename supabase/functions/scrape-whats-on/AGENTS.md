@@ -1,0 +1,2 @@
+# scrape-whats-on rules
+- Event location filtering lives only in `supabase/functions/scrape-whats-on/locality.ts` (pure rules, regional feeds only: online → postcode district → competing area → own places → broad-source trust); left-out events are stored as status `excluded` with a reason, and owner removals/put-backs go through `set_topic_event_visibility` and stick by event name across the feed; one rule set keeps the feed, email and Sources list in agreement.

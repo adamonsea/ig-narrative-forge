@@ -20,22 +20,8 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
     }
   };
 
-  // Process slide content once and memoize to prevent recalculation on re-renders
-  const processedSlides = useMemo(() => {
-    return card.slides.map(slide => {
-      // Boost engagement numbers by fixed +15 for testing
-      let processedContent = slide.content;
-      
-      // Match patterns like "143 readers" or "57 engaged readers" and add 15
-      processedContent = processedContent.replace(/(\d+)\s+(engaged\s+)?readers?/gi, (match, num, engaged) => {
-        const originalNum = parseInt(num);
-        const boostedNum = originalNum + 15; // Fixed boost of +15
-        return `${boostedNum} ${engaged || ''}readers`;
-      });
-      
-      return processedContent;
-    });
-  }, [card.slides, card.card_type]);
+  // Slide copy is shown exactly as generated: reader numbers are never adjusted.
+  const processedSlides = useMemo(() => card.slides.map(slide => slide.content), [card.slides]);
 
   // Render slide content with basic markdown formatting
   const renderContent = (content: string) => {

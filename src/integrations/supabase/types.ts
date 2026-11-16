@@ -6158,6 +6158,10 @@ export type Database = {
         Returns: Json
       }
       cleanup_stuck_scrape_jobs: { Args: never; Returns: number }
+      count_topic_readers: {
+        Args: { p_from: string; p_to?: string; p_topic_id: string }
+        Returns: number
+      }
       count_topic_visitors: {
         Args: { p_from: string; p_to?: string; p_topic_id: string }
         Returns: number
@@ -6349,10 +6353,12 @@ export type Database = {
           published_total: number
           published_week: number
           push_subscribers: number
+          readers_daily: number[]
           readers_month: number
           readers_prev_week: number
           readers_today: number
           readers_week: number
+          readers_weekly: number[]
           reading_now: number
           reads_daily: number[]
           reads_daily_month: number[]
@@ -6363,6 +6369,7 @@ export type Database = {
           registrants_total: number
           return_rate_prev: number
           return_rate_week: number
+          returning_week: number
           search_best_prior_week: number
           search_clicks_week: number
           search_impressions_prev: number
@@ -6377,6 +6384,7 @@ export type Database = {
           top_search_story_clicks: number
           top_search_story_id: string
           top_search_story_title: string
+          top_sources: Json
           top_stop_rate: number
           top_stop_seen: number
           top_stop_story_id: string
@@ -6388,6 +6396,9 @@ export type Database = {
           top_weekday: number
           top_weekday_share: number
           topic_id: string
+          visits_daily: number[]
+          visits_month: number
+          visits_week: number
           weekly_reads: number[]
         }[]
       }
@@ -7023,6 +7034,7 @@ export type Database = {
       is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
       is_story_published: { Args: { p_story_id: string }; Returns: boolean }
       is_story_visible: { Args: { story_updated_at: string }; Returns: boolean }
+      is_test_visitor: { Args: { p_visitor_id: string }; Returns: boolean }
       log_drip_feed_event: {
         Args: {
           p_details?: Json
@@ -7202,9 +7214,38 @@ export type Database = {
           title: string
         }[]
       }
+      topic_engagement: {
+        Args: {
+          p_from: string
+          p_since?: string
+          p_to?: string
+          p_topic_id: string
+          p_with_pauses?: boolean
+        }
+        Returns: {
+          dy: string
+          sid: string
+          signal: string
+          vid: string
+        }[]
+      }
+      topic_excluded_visitors: {
+        Args: { p_topic_id: string }
+        Returns: {
+          vid: string
+        }[]
+      }
       topic_has_active_signups: {
         Args: { p_topic_id: string }
         Returns: boolean
+      }
+      topic_reads: {
+        Args: { p_from: string; p_to?: string; p_topic_id: string }
+        Returns: {
+          dy: string
+          sid: string
+          vid: string
+        }[]
       }
       update_cron_schedules: { Args: never; Returns: undefined }
       update_scheduler_setting: {

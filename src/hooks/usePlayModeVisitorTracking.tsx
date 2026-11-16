@@ -2,6 +2,7 @@ import { canTrackReader } from '@/lib/visitorIdentity';
 import { getVisitorId } from '@/lib/visitorIdentity';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { onHumanSignal } from '@/lib/humanSignal';
 
 const generateVisitorId = (): string => getVisitorId('visitor');
 
@@ -50,9 +51,10 @@ export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
       }
     };
 
-    // Track visit after a short delay to ensure component is mounted
-    const timer = setTimeout(trackVisit, 300);
-    return () => clearTimeout(timer);
+    // Track visit only after a human signal (touch, pointer, wheel, key, scroll)
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = onHumanSignal(() => { timer = setTimeout(trackVisit, 300); });
+    return () => { unsubscribe(); if (timer) clearTimeout(timer); };
   }, [topicId]);
 
   return VISITOR_ID;

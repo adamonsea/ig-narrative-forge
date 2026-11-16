@@ -5,6 +5,7 @@ import { readershipChange, barHeights, MEANINGFUL_READERS, dropoffCurve, topStop
 import { useCountUp } from "@/hooks/useCountUp";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
 import { venueClicksLine } from "@/lib/whatsOn";
+import { feedSignal, type FeedSignal } from "@/lib/readerStats";
 
 interface TopStory { id: string; title: string; reads: number; image?: string | null; seen?: number | null; stop_rate?: number | null; swipe_rate?: number | null }
 interface Readership {
@@ -16,6 +17,7 @@ interface Readership {
   dropoff?: Dropoff | null;
   top_stopper?: TopStopper | null;
   event_clicks_week?: number | null;
+  feed_signal?: FeedSignal | null;
 }
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
@@ -73,6 +75,9 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
   const curve = dropoffCurve(data.dropoff);
   const stopper = topStopper(data.top_stopper);
   const venueClicks = venueClicksLine(data.event_clicks_week);
+  // Until a story has enough readers for its own stopped/swiped line, show the feed-wide rates.
+  const anyStorySignal = (data.top_stories ?? []).some((s) => storySignal(s));
+  const feedRates = anyStorySignal ? null : feedSignal(data.feed_signal);
 
   return (
     <div className="max-w-4xl space-y-14 py-8">
@@ -137,6 +142,13 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
             </li>
           ))}
         </ol>
+      )}
+
+      {feedRates && (
+        <p className="text-sm text-muted-foreground tabular-nums"
+          title={`Of the headlines outside readers saw in the feed this week (${feedRates.readers} readers): how many they paused on for 3+ seconds, and how many they swiped into`}>
+          Across the feed this week: {feedRates.stopped}% of headlines stopped readers · {feedRates.swiped}% swiped to read
+        </p>
       )}
 
       {curve && (
