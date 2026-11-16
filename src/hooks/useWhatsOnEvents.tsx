@@ -49,6 +49,8 @@ export interface EventDesk {
   live: WhatsOnFeedEvent[];
   /** Published upcoming events beyond the 8 shown. */
   liveMore: number;
+  /** Every published upcoming event (next 31 days, one per name), for the horizon bar. */
+  allLive: WhatsOnFeedEvent[];
 }
 
 /** Everything the Desk needs about events: Waiting, Hidden, Live and the two switches. */
@@ -84,6 +86,7 @@ export function useEventDesk(topicId: string | undefined) {
         hidden: onePerTitle(rows.filter((e) => e.status !== "pending").filter(notLive)),
         live,
         liveMore: Math.max(0, allLive.length - live.length),
+        allLive,
       };
     },
   });
@@ -117,6 +120,7 @@ export function useEventDeskActions(topicId: string | undefined) {
         waiting: before.waiting.filter((e) => e.id !== event.id),
         hidden: before.hidden.filter((e) => e.id !== event.id),
         live: action === "skip" ? before.live.filter((e) => e.id !== event.id) : before.live,
+        allLive: action === "skip" ? before.allLive.filter((e) => e.id !== event.id) : before.allLive,
       });
     }
     try {

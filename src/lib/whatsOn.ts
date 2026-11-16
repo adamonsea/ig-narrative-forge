@@ -241,3 +241,39 @@ export function whatsOnSets<T extends Pick<WhatsOnFeedEvent, "start_date" | "sta
   ];
   return sets.map((s) => ({ ...s, events: s.events.slice(0, WHATS_ON_MAX) })).filter((s) => s.events.length > 0);
 }
+
+// ---------- the Desk's horizon bar ----------
+
+export type HorizonKey = "today" | "tomorrow" | "week" | "month";
+
+/** Rolling windows, each counted from today: a week is the next 7 days, a month the next 30. */
+export const HORIZONS: { key: HorizonKey; label: string; lastDay: number }[] = [
+  { key: "today", label: "Today", lastDay: 0 },
+  { key: "tomorrow", label: "Tomorrow", lastDay: 1 },
+  { key: "week", label: "This week", lastDay: 6 },
+  { key: "month", label: "This month", lastDay: 29 },
+];
+
+/** Is this event inside the window? Today leaves out events that have already started (same rule as the feed). */
+export function inHorizon(e: Pick<WhatsOnFeedEvent, "start_date" | "start_time">, key: HorizonKey, today: string, time: string): boolean {
+  if (hasStarted(e, today, time)) return false;
+  const d = daysBetween(today, e.start_date);
+  if (key === "tomorrow") return d === 1;
+  const h = HORIZONS.find((x) => x.key === key)!;
+  return d >= 0 && d <= h.lastDay;
+}
+
+export interface HorizonBucket { key: HorizonKey; label: string; live: number; waiting: number }
+
+/** Live (in the feed and weekly email) and Waiting (one tap away) counts per window. Hidden events never count. */
+export function horizonBuckets(
+  live: Pick<WhatsOnFeedEvent, "start_date" | "start_time">[],
+  waiting: Pick<WhatsOnFeedEvent, "start_date" | "start_time">[],
+  today: string, time: string,
+): HorizonBucket[] {
+  return HORIZONS.map(({ key, label }) => ({
+    key, label,
+    live: live.filter((e) => inHorizon(e, key, today, time)).length,
+    waiting: waiting.filter((e) => inHorizon(e, key, today, time)).length,
+  }));
+}

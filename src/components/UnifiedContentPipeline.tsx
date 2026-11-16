@@ -17,7 +17,7 @@ import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 import { useTopicPulse } from "@/hooks/useTopicPulse";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
 import { useEventDesk, useEventDeskActions } from "@/hooks/useWhatsOnEvents";
-import { EventsSwitch, HiddenEvents, LiveWhatsOnRow, WaitingEventCard } from "@/components/events/DeskEvents";
+import { EventHorizon, EventsSwitch, HiddenEvents, LiveWhatsOnRow, WaitingEventCard } from "@/components/events/DeskEvents";
 import { isLowRelevance, londonToday } from "@/lib/whatsOn";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
 
@@ -389,6 +389,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               suggestOn={eventDesk?.readerSuggestions} onSuggestChange={eventActions.setReaderSuggestions} />
           </div>
         </div>
+        {eventsOn && eventDesk && (
+          <EventHorizon live={eventDesk.allLive} waiting={eventDesk.waiting} today={today}
+            onPublish={(e) => eventActions.publish(e)} onSkip={(e) => eventActions.skip(e)} onRemove={(e) => eventActions.removeFromLive(e)} />
+        )}
         {(pulse?.new_arrivals ?? 0) > 0 && (
           <p className="text-sm text-muted-foreground">{pulse!.new_arrivals} new since you last looked</p>
         )}

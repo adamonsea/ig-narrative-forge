@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { coverSentence, dateBadge, dayLabel, eventTime, hiddenReason, isLowRelevance, type WhatsOnFeedEvent } from "@/lib/whatsOn";
+import {
+  coverSentence, dateBadge, dayLabel, eventTime, hiddenReason, horizonBuckets, inHorizon, isLowRelevance, londonTime,
+  type HorizonKey, type WhatsOnFeedEvent,
+} from "@/lib/whatsOn";
 import type { DeskEvent } from "@/hooks/useWhatsOnEvents";
 
 export function TypeChip({ type }: { type: "story" | "event" }) {
@@ -180,6 +183,87 @@ export function EventsSwitch({ on, onChange, disabled, suggestOn, onSuggestChang
         <Label htmlFor="desk-events-switch" className="text-sm text-muted-foreground">Events</Label>
         <Switch id="desk-events-switch" checked={on} onCheckedChange={onChange} disabled={disabled} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * The month ahead at a glance: Today / Tomorrow / This week / This month, each with
+ * Live and Waiting counts. Tap a window to see (and act on) just those events.
+ */
+export function EventHorizon({ live, waiting, today, onPublish, onSkip, onRemove }: {
+  live: WhatsOnFeedEvent[]; waiting: DeskEvent[]; today: string;
+  onPublish: (e: DeskEvent) => void; onSkip: (e: DeskEvent) => void; onRemove: (e: WhatsOnFeedEvent) => void;
+}) {
+  const [selected, setSelected] = useState<HorizonKey | null>(null);
+  const time = londonTime();
+  const buckets = horizonBuckets(live, waiting, today, time);
+  const month = buckets[buckets.length - 1];
+  if (month.live + month.waiting === 0) {
+    return <p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" aria-hidden="true" />No events in the next 30 days</p>;
+  }
+  const sortByDate = <T extends { start_date: string; start_time: string | null; title: string }>(xs: T[]) =>
+    [...xs].sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99") || a.title.localeCompare(b.title));
+  const shownWaiting = selected ? sortByDate(waiting.filter((e) => inHorizon(e, selected, today, time))) : [];
+  const shownLive = selected ? sortByDate(live.filter((e) => inHorizon(e, selected, today, time))) : [];
+  const label = buckets.find((b) => b.key === selected)?.label;
+
+  return (
+    <div className="space-y-2" role="group" aria-label="Events coming up">
+      <div className="grid grid-cols-4 gap-2">
+        {buckets.map((b) => {
+          const total = b.live + b.waiting;
+          const on = selected === b.key;
+          return (
+            <button key={b.key} type="button" aria-pressed={on} disabled={total === 0}
+              onClick={() => setSelected(on ? null : b.key)}
+              className={`rounded-xl border px-2.5 py-2 text-left transition-colors disabled:cursor-default disabled:opacity-60 ${on ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
+              <span className="block text-xs text-muted-foreground">{b.label}</span>
+              <span className="block text-xl font-semibold tabular-nums leading-tight">{total}</span>
+              <span className="block text-[11px] leading-snug text-muted-foreground">
+                {total === 0 ? "None" : (
+                  <>
+                    <span className="tabular-nums">{b.live}</span> live
+                    {b.waiting > 0 && <> · <span className="font-medium text-primary"><span className="tabular-nums">{b.waiting}</span> waiting</span></>}
+                  </>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {selected && (
+        <div className="rounded-xl border border-border">
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 text-sm">
+            <span className="font-medium">{label}</span>
+            <Button variant="ghost" size="sm" className="h-7 text-muted-foreground" onClick={() => setSelected(null)}>Close</Button>
+          </div>
+          <ul className="max-h-[420px] divide-y divide-border overflow-y-auto">
+            {shownWaiting.map((e) => (
+              <li key={e.id} className="flex items-center gap-3 px-3 py-2.5">
+                <MiniDate date={e.start_date} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{e.title}</p>
+                  <p className="truncate text-sm text-muted-foreground"><span className="font-medium text-primary">Waiting</span>{` · ${when(e)}`}</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => onSkip(e)}>Skip</Button>
+                <Button size="sm" onClick={() => onPublish(e)}>Publish</Button>
+              </li>
+            ))}
+            {shownLive.map((e) => (
+              <li key={e.id} className="flex items-center gap-3 px-3 py-2.5">
+                <MiniDate date={e.start_date} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{e.title}</p>
+                  <p className="truncate text-sm text-muted-foreground">Live{` · ${when(e)}`}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemove(e)} aria-label={`Remove “${e.title}” from the feed`}><X className="h-4 w-4" /></Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

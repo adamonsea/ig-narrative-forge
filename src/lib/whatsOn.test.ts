@@ -3,7 +3,7 @@ import { describe, it, expect } from "bun:test";
 import {
   isBrokenWhatsOnSource, previewSentence, venueClicksLine, showEventsInFeed, eventSourceKindLabel,
   dateBadge, eventTime, upcomingWhatsOn, eventGroup, coverSentence, detectSourceKind, isEventsSourceKind,
-  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle,
+  hiddenReason, hiddenSentence, isLowRelevance, onePerTitle, horizonBuckets, inHorizon,
 } from "./whatsOn";
 
 const ev = (title: string, start_date: string, start_time: string | null = "19:00:00") =>
@@ -129,5 +129,34 @@ describe("three rotating What's on sets", () => {
   });
   it("skips empty sets", () => {
     expect(whatsOnSets([ev("x", "2026-11-14")], "2026-11-13", "08:00:00").map((x) => x.kind)).toEqual(["week"]);
+  });
+});
+
+describe("Desk horizon bar", () => {
+  // Thursday 12 Nov 2026, 3pm
+  const live = [
+    ev("Tonight gig", THU, "19:30:00"),
+    ev("Morning talk", THU, "10:00:00"), // already started: not counted today
+    ev("Fri market", "2026-11-13", null),
+    ev("Wed panto", "2026-11-18"), // day 6 = still this week
+    ev("Thu quiz", "2026-11-19"), // day 7 = next week, this month
+    ev("Day 29 show", "2026-12-11"),
+    ev("Day 30 show", "2026-12-12"), // outside the 30-day month
+  ];
+  const waiting = [ev("Fri choir", "2026-11-13"), ev("Sat fair", "2026-11-14", null), ev("Way off", "2027-02-01")];
+
+  it("counts Live and Waiting per rolling window from today", () => {
+    expect(horizonBuckets(live, waiting, THU, "15:00:00")).toEqual([
+      { key: "today", label: "Today", live: 1, waiting: 0 },
+      { key: "tomorrow", label: "Tomorrow", live: 1, waiting: 1 },
+      { key: "week", label: "This week", live: 3, waiting: 2 },
+      { key: "month", label: "This month", live: 5, waiting: 2 },
+    ]);
+  });
+
+  it("an untimed event today drops out of Today after 6pm", () => {
+    const e = ev("All-day fair", THU, null);
+    expect(inHorizon(e, "today", THU, "17:59:00")).toBe(true);
+    expect(inHorizon(e, "today", THU, "18:00:00")).toBe(false);
   });
 });
