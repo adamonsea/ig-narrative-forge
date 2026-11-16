@@ -278,7 +278,7 @@ export function horizonBuckets(
   }));
 }
 
-// ---------- the Desk's Coming up column ----------
+// ---------- the Desk's Event pool ----------
 
 /** "today", "tomorrow" or "in 6 days" for an event date. */
 export function countdown(ymd: string, today: string): string {
@@ -294,7 +294,7 @@ const byWhen = <T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "
 type Timed = Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">;
 
 /**
- * The Coming up column: every upcoming event, live in the feed or waiting, in one list.
+ * The Event pool: every upcoming event, live in the feed or waiting, in one list.
  * Strictly soonest first; events that have started drop out (same rule as the feed).
  */
 export function comingUpTimeline<L extends Timed, W extends Timed>(

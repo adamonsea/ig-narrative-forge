@@ -52,7 +52,7 @@ const sourceLink = (url: string | null | undefined, name: string | null | undefi
   </a>
 ) : undefined;
 
-/** One upcoming event in Coming up: live in the feed or waiting. Click for its details. */
+/** One upcoming event in the Event pool: live in the feed or waiting. Click for its details. */
 function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpItem; today: string; actions: EventActions; onOpen: () => void }) {
   const waiting = event.state === "waiting";
   const low = waiting && isLowRelevance(event.relevance_score);
@@ -212,7 +212,7 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
 }
 
 /**
- * The Coming up column: every upcoming event (live or waiting), soonest first,
+ * The Event pool: every upcoming event (live or waiting), soonest first,
  * with a switch to see the ones that didn't make the cut. Click any event for its details.
  */
 export function ComingUpPanel({ upcoming, leftOut, today, actions }: {
@@ -325,7 +325,7 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
   );
 }
 
-/** Coming up's settings: events on/off, reader suggestions and show in the feed. */
+/** The Event pool's settings: events on/off, reader suggestions and show in the feed. */
 export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestChange, showInFeed, onShowInFeedChange }: {
   on: boolean; onChange: (on: boolean) => void; disabled?: boolean;
   suggestOn?: boolean; onSuggestChange?: (on: boolean) => void;
@@ -360,7 +360,7 @@ export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestCha
   );
 }
 
-/** When events are off, Coming up is one slim card. */
+/** When events are off, the Event pool is one slim card. */
 export function EventsOffCard({ onSwitchOn, disabled }: { onSwitchOn: () => void; disabled?: boolean }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-4">

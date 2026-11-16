@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 
-/** The news pipeline's settings, one tap from Happened: Autopilot and pace, with the rest in Settings. */
+/** The news pipeline's settings, one tap from the Story pool: Autopilot and pace, with the rest in Settings. */
 export function HappenedSettings({ topicId }: { topicId: string }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();

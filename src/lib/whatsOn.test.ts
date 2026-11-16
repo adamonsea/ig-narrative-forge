@@ -161,14 +161,14 @@ describe("Desk horizon bar", () => {
   });
 });
 
-describe("Desk Coming up column", () => {
+describe("Desk Event pool", () => {
   it("counts down in plain words", () => {
     expect(countdown(THU, THU)).toBe("today");
     expect(countdown("2026-11-13", THU)).toBe("tomorrow");
     expect(countdown("2026-11-18", THU)).toBe("in 6 days");
   });
 
-  it("Coming up lists live and waiting events together, strictly soonest first, started ones dropped", () => {
+  it("the Event pool lists live and waiting events together, strictly soonest first, started ones dropped", () => {
     const live = [ev("Next week talk", "2026-11-19"), ev("Morning talk", THU, "10:00:00"), ev("Fri market", "2026-11-13", null)];
     const waiting = [{ ...ev("Far away fair", "2026-11-13", "09:00:00"), relevance_score: 10 }, ev("Tonight gig", THU, "19:30:00")];
     const list = comingUpTimeline(live, waiting, THU, "15:00:00");

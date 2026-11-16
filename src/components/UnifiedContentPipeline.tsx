@@ -59,7 +59,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [runningPublishMigration, setRunningPublishMigration] = useState(false);
   // Phones show one area at a time, opening on Live now.
   const [mobileArea, setMobileArea] = useState<DeskArea>('live');
-  // Re-check the clock every minute so started events leave Coming up on their own.
+  // Re-check the clock every minute so started events leave the Event pool on their own.
   const [, setMinuteTick] = useState(0);
   useEffect(() => {
     const id = window.setInterval(() => setMinuteTick((n) => n + 1), 60_000);
@@ -287,7 +287,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
   }, [visibleIdsKey, setPulseIds]);
 
-  // ----- events on the Desk: their own column, Coming up -----
+  // ----- events on the Desk: their own column, the Event pool -----
   const eventsOn = Boolean(eventDesk?.eventsOn);
   const today = londonToday();
   const nowTime = londonTime();
@@ -318,9 +318,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   const areaClass = (area: DeskArea) => cn('min-w-0 space-y-3', mobileArea === area ? 'block' : 'hidden lg:block');
   const areaTabs: { key: DeskArea; label: string; count?: number }[] = [
-    { key: 'happened', label: 'Happened', count: newsCount },
+    { key: 'happened', label: 'Story pool', count: newsCount },
     { key: 'live', label: 'Live now' },
-    { key: 'coming', label: 'Coming up', count: eventsOn ? comingUp.length : undefined },
+    { key: 'coming', label: 'Event pool', count: eventsOn ? comingUp.length : undefined },
   ];
 
   const recoverStuck = async () => {
@@ -387,10 +387,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
       {/* Desktop: incoming news on the left, the feed in the middle, events coming up on the right */}
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
-        {/* ===== Happened: waiting news ===== */}
+        {/* ===== Story pool: waiting news ===== */}
         <section className={areaClass('happened')} aria-labelledby="desk-happened">
           <div className="flex min-h-10 items-center gap-2 border-b pb-2">
-            <h3 id="desk-happened" className="text-lg font-semibold text-foreground">Happened</h3>
+            <h3 id="desk-happened" className="text-lg font-semibold text-foreground">Story pool</h3>
             {newsCount > 0 && <span className="text-base text-muted-foreground tabular-nums">{newsCount} new</span>}
             <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
             <div className="ml-auto"><HappenedSettings topicId={selectedTopicId} /></div>
@@ -505,10 +505,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           </p>
         </section>
 
-        {/* ===== Coming up: every upcoming event, soonest first; the left-out ones one tap away ===== */}
+        {/* ===== Event pool: every upcoming event, soonest first; the left-out ones one tap away ===== */}
         <section className={areaClass('coming')} aria-labelledby="desk-coming">
           <div className="flex min-h-10 items-center gap-2 border-b pb-2">
-            <h3 id="desk-coming" className="text-lg font-semibold text-foreground">Coming up</h3>
+            <h3 id="desk-coming" className="text-lg font-semibold text-foreground">Event pool</h3>
             {eventsOn && eventsThisWeek > 0 && (
               <span className="text-base text-muted-foreground tabular-nums">{eventsThisWeek} {eventsThisWeek === 1 ? 'event' : 'events'} this week</span>
             )}
