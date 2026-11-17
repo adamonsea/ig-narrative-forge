@@ -1,3 +1,4 @@
+import { priceFacts, shortDescription } from '../_shared/eventCategories.ts';
 /**
  * What's-on page reader: pure helpers (no network, no database) so every rule
  * can be tested. Data contract is deliberately tiny — title, start date/time,
@@ -23,12 +24,38 @@ export interface WhatsOnEvent {
   place?: string | null;
   /** The source marks it as online-only. */
   online?: boolean;
+  /** Short plain-text description, when the source gives one. */
+  description?: string | null;
+  /** Stated price ("€12") — null when the source doesn't say. */
+  price?: string | null;
+  /** True only when the source says it's free. */
+  is_free?: boolean | null;
+  /** The source's own category or schema.org type, for categorizeEvent(). */
+  hint?: string | null;
 }
 
 export type WhatsOnMethod = 'jsonld' | 'ical' | 'json' | 'text';
 // 'json' covers both advertised JSON feeds and the page's own calendar data (see pageData.ts).
 
 const LONDON = 'Europe/London';
+
+function hintText(...vals: unknown[]): string | null {
+  const out: string[] = [];
+  const add = (v: unknown, d = 0) => {
+    if (d > 2 || v == null) return;
+    if (typeof v === 'string') out.push(v);
+    else if (Array.isArray(v)) v.forEach((x) => add(x, d + 1));
+    else if (typeof v === 'object') {
+      const o = v as Record<string, unknown>;
+      const own = o.name ?? o.slug ?? o.title;
+      if (own != null) add(own, d + 1);
+      else Object.values(o).forEach((x) => add(x, d + 1)); // slug-keyed maps ({ "music": { name } })
+    }
+  };
+  vals.forEach((v) => add(v));
+  const t = out.map((x) => x.trim()).filter((x) => x && !/^(event|events)$/i.test(x)).join(' ');
+  return t ? t.slice(0, 200) : null;
+}
 
 // ---------- small text helpers ----------
 
@@ -348,6 +375,9 @@ export function extractJsonLdEvents(html: string, pageUrl: string): WhatsOnEvent
           url: absolute(typeof o.url === 'string' ? o.url : null, pageUrl),
           place: placeText(o.location),
           online: isOnlineOnly(o),
+          description: shortDescription(typeof o.description === 'string' ? decodeEntities(o.description) : null),
+          ...priceFacts(o.offers, o.isAccessibleForFree),
+          hint: hintText(o['@type'], o.keywords, o.genre, o.about),
         });
       }
     }
@@ -512,6 +542,9 @@ function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: s
     venue,
     url: absolute(typeof url === 'string' ? url : null, feedUrl),
     place: placeText(pick(o, ['venue', 'location'])) ?? venue ?? fallbackPlace,
+    description: shortDescription(((d) => (typeof d === 'string' ? decodeEntities(d) : Array.isArray(d) ? decodeEntities(d.filter((x) => typeof x === 'string').join(' ')) : null))(pick(o, ['description', 'excerpt.rendered', 'excerpt', 'details', 'content.rendered']))),
+    ...priceFacts(o.offers, o.is_free ?? o.isAccessibleForFree ?? (o.price_cat === 'free' ? true : undefined), o.cost ?? (typeof o.price === 'string' || typeof o.price === 'number' ? String(o.price) : undefined)),
+    hint: hintText(o.categories, o.categories_name_list, o.category, o.subject, o.tags, o.tags_name_list, o.genre),
   };
 }
 

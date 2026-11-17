@@ -82,6 +82,11 @@ export interface WhatsOnFeedEvent {
   location: string | null;
   source_url: string | null;
   source_name: string | null;
+  /** Category key (see EventCategoryIcon); individual cards only. */
+  event_type?: string | null;
+  price?: string | null;
+  is_free?: boolean | null;
+  description?: string | null;
 }
 
 const DAY = 86_400_000;
@@ -342,4 +347,23 @@ export function leftOutExplanation(status: string, reason: string | null | undef
   if (reason === "online") return "This looks like an online event, so it was left out of a local feed.";
   if (reason === "unconfirmed") return "We couldn't tell from the listing whether this is in your area.";
   return "The venue didn't look like it's in your area.";
+}
+
+// ---------- individual event cards (events-led feeds) ----------
+
+/** Sentence-case date block parts: Thu / 19 / Nov */
+export function dateBlock(ymd: string): { weekday: string; day: string; month: string } {
+  return { weekday: fmt(ymd, { weekday: "short" }), day: String(Number(ymd.slice(8, 10))), month: fmt(ymd, { month: "short" }) };
+}
+
+/** "Free" or the stated price — only when the source said so; null otherwise. */
+export function priceLine(price: string | null | undefined, isFree: boolean | null | undefined): string | null {
+  if (isFree === true) return "Free";
+  return price?.trim() ? price.trim() : null;
+}
+
+/** One card per event, soonest first: started events dropped, one per name. */
+export function individualEvents<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">>(events: T[], today: string, time: string): T[] {
+  const sorted = [...events].sort((a, b) => (a.start_date + (a.start_time ?? "99")).localeCompare(b.start_date + (b.start_time ?? "99")));
+  return onePerTitle(sorted.filter((e) => e.start_date >= today && !hasStarted(e, today, time)));
 }

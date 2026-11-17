@@ -584,7 +584,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           {!eventsOn ? (
             <EventsOffCard disabled={!eventDesk} onSwitchOn={() => eventActions.setEventsOn(true)} />
           ) : (
-            <ComingUpPanel toCheck={eventsToCheck} upcoming={comingUp} leftOut={leftOutEvents} today={today} actions={eventActions} />
+            <ComingUpPanel toCheck={eventsToCheck} upcoming={comingUp} leftOut={leftOutEvents} today={today} actions={eventActions} topicId={selectedTopicId} />
           )}
         </section>
       </div>

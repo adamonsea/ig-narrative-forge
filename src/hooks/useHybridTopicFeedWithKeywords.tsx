@@ -63,6 +63,8 @@ interface Topic {
   created_by: string;
   parliamentary_tracking_enabled?: boolean;
   events_enabled?: boolean;
+  feed_lead?: string | null;
+  event_cards?: string | null;
   community_intelligence_enabled?: boolean;
   community_pulse_frequency?: number;
   automated_insights_enabled?: boolean;
@@ -297,7 +299,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at'),
         supabase
           .from('topics')
-          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled')
+          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled, feed_lead, event_cards')
           .ilike('slug', slug)
           .eq('is_public', true)
           .single()
@@ -346,6 +348,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         automated_insights_enabled: automatedInsightsEnabled,
         illustration_primary_color: fullTopicData?.illustration_primary_color ?? null,
         events_enabled: fullTopicData?.events_enabled ?? false,
+        feed_lead: (fullTopicData as any)?.feed_lead ?? 'news',
+        event_cards: (fullTopicData as any)?.event_cards ?? null,
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);

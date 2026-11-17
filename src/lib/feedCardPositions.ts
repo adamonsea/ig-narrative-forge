@@ -293,3 +293,50 @@ export function whatsOnPositions(maxPosition: number = 100): number[] {
 export function isWhatsOnPosition(storyIndex: number): boolean {
   return storyIndex >= 1 && whatsOnPositions(storyIndex).includes(storyIndex);
 }
+
+// ---------- Events-led feeds ----------
+
+export type FeedLead = 'news' | 'events';
+export type EventCardMode = 'grouped' | 'individual';
+
+/** The feed's event card mode: its own choice, else Individual for events-led and Grouped for news-led. */
+export function eventCardMode(lead: string | null | undefined, cards: string | null | undefined): EventCardMode {
+  if (cards === 'grouped' || cards === 'individual') return cards;
+  return lead === 'events' ? 'individual' : 'grouped';
+}
+
+/**
+ * In an events-led feed the events are the main run of cards and news stories
+ * are the slotted card type: after event 3, then every 5 events (3, 8, 13 …).
+ * Same sequence rule shape as the registry above, counted in events, not stories.
+ */
+export const NEWS_IN_EVENTS: SequenceCardPosition = {
+  type: 'sequence',
+  leading: [3],
+  interval: 5,
+  offset: 8,
+  description: 'News stories in an events-led feed: after event 3, then every 5 events',
+};
+
+/** How many events come before news story n (1-based) in an events-led feed. */
+export function eventsBeforeNews(storyNumber: number, rule: SequenceCardPosition = NEWS_IN_EVENTS): number {
+  if (storyNumber <= 0) return 0;
+  if (storyNumber <= rule.leading.length) return rule.leading[storyNumber - 1];
+  return rule.offset + (storyNumber - rule.leading.length - 1) * rule.interval;
+}
+
+/**
+ * The events that sit just before news story n: [start, end) indexes into the
+ * events list, capped at how many events there are. Events left over after the
+ * last loaded story follow it (see eventsAfterLastNews).
+ */
+export function eventsSliceBeforeNews(storyNumber: number, eventCount: number): [number, number] {
+  const start = Math.min(eventsBeforeNews(storyNumber - 1), eventCount);
+  const end = Math.min(eventsBeforeNews(storyNumber), eventCount);
+  return [start, end];
+}
+
+/** Index of the first event that follows the last of `storyCount` news stories. */
+export function eventsAfterLastNews(storyCount: number, eventCount: number): number {
+  return Math.min(eventsBeforeNews(storyCount), eventCount);
+}

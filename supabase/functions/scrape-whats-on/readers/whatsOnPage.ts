@@ -25,6 +25,10 @@ export const whatsOnPageReader: EventReader = {
       url: e.url,
       place: e.place ?? null,
       online: e.online ?? false,
+      description: e.description ?? null,
+      price: e.price ?? null,
+      is_free: e.is_free ?? null,
+      hint: e.hint ?? null,
     })));
     return { events, method: r.method, name: r.name, error: r.error ?? null };
   },

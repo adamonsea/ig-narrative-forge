@@ -22,6 +22,20 @@ export function useWhatsOnEvents(topicId: string | undefined, enabled: boolean) 
   });
 }
 
+/** Individual event cards for events-led feeds: same filters as What's on, longer range, with card facts. */
+export function useEventsFeed(topicId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["events-feed", topicId] as const,
+    enabled: Boolean(topicId) && enabled,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)("get_topic_events_feed", { p_topic_id: topicId });
+      if (error) throw error;
+      return (data ?? []) as WhatsOnFeedEvent[];
+    },
+  });
+}
+
 export interface DeskEvent {
   id: string;
   title: string;
@@ -37,6 +51,7 @@ export interface DeskEvent {
   area_confirmed?: boolean;
   relevance_score: number | null;
   created_at: string;
+  event_type?: string | null;
 }
 
 export interface EventDesk {
@@ -65,13 +80,13 @@ export function useEventDesk(topicId: string | undefined) {
     refetchInterval: 60_000,
     queryFn: async (): Promise<EventDesk> => {
       const today = londonToday();
-      const fields = "id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, area_confirmed, relevance_score, created_at";
+      const fields = "id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, area_confirmed, relevance_score, created_at, event_type";
       const [topicRes, insightRes, sourcesRes, queueRes, liveRes, publishedRes] = await Promise.all([
         supabase.from("topics").select("events_enabled").eq("id", topicId!).maybeSingle(),
         supabase.from("topic_insight_settings").select("events_cards_enabled, reader_event_submissions").eq("topic_id", topicId!).maybeSingle(),
         supabase.from("event_sources").select("id", { count: "exact", head: true }).eq("topic_id", topicId!),
         supabase.from("events")
-          .select("id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, relevance_score, created_at")
+          .select("id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, relevance_score, created_at, event_type")
           .eq("topic_id", topicId!).in("status", ["pending", "excluded", "deleted"]).gte("start_date", today)
           .order("start_date").limit(1000),
         (supabase.rpc as any)("get_topic_whats_on", { p_topic_id: topicId }),

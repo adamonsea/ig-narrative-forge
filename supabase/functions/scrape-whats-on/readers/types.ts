@@ -23,6 +23,12 @@ export interface ReaderEvent {
   place?: string | null;
   /** The source marks it as online-only. */
   online?: boolean;
+  /** Stated price; null when unknown. */
+  price?: string | null;
+  /** True only when the source says free. */
+  is_free?: boolean | null;
+  /** The source's own category label, for categorizeEvent(). */
+  hint?: string | null;
 }
 
 export interface ReaderResult {

@@ -7,10 +7,11 @@ import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
-import { whatsOnPositions } from "@/lib/feedCardPositions";
+import { whatsOnPositions, eventCardMode, eventsSliceBeforeNews, eventsAfterLastNews } from "@/lib/feedCardPositions";
 import { WhatsOnCard } from "@/components/events/WhatsOnCard";
-import { showEventsInFeed, whatsOnSets, londonToday, londonTime } from "@/lib/whatsOn";
-import { useWhatsOnEvents } from "@/hooks/useWhatsOnEvents";
+import { EventCard } from "@/components/events/EventCard";
+import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
+import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
@@ -333,10 +334,21 @@ const TopicFeed = () => {
 
   // "What's on": one fetch; the same card set (up to 8 events) at each What's on position
   const eventsInFeed = showEventsInFeed(topic?.events_enabled, topicMetadata?.eventsCardsEnabled);
-  const { data: whatsOnEvents } = useWhatsOnEvents(topic?.id, eventsInFeed);
+  // Events-led feeds and individual event cards (feed settings; news-led + grouped is the default)
+  const eventsLed = topic?.feed_lead === 'events' && eventsInFeed;
+  const individualCards = eventsInFeed && eventCardMode(topic?.feed_lead, topic?.event_cards) === 'individual';
+  const { data: whatsOnEvents } = useWhatsOnEvents(topic?.id, eventsInFeed && !individualCards);
+  const { data: feedEventsRaw } = useEventsFeed(topic?.id, individualCards);
   const whatsOnToday = londonToday();
   const whatsOnClock = londonTime().slice(0, 4); // re-group every 10 minutes
   const whatsOn = useMemo(() => whatsOnSets(whatsOnEvents ?? [], whatsOnToday, londonTime()), [whatsOnEvents, whatsOnToday, whatsOnClock]);
+  const feedEvents = useMemo(() => individualEvents(feedEventsRaw ?? [], whatsOnToday, londonTime()), [feedEventsRaw, whatsOnToday, whatsOnClock]);
+  const feedBrand = topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color;
+  const renderEventCard = (e: (typeof feedEvents)[number]) => (
+    <div key={`event-${e.id}`} className="w-full max-w-2xl">
+      <EventCard event={e} brandColor={feedBrand} isOwner={isOwnFeed} />
+    </div>
+  );
   useEffect(() => {
     if (!topic?.id) return;
     const t = createHeadlineStopTracker(topic.id, { skip: isOwnFeed });
@@ -626,11 +638,17 @@ const TopicFeed = () => {
       ? displayableContent.map(item => item.type).lastIndexOf('story')
       : -1;
     
-    return displayableContent.map((contentItem, index) => {
+    const rendered: React.ReactNode[] = displayableContent.map((contentItem, index) => {
       const items: React.ReactNode[] = [];
       
       const storyIndex = displayableContent.slice(0, index + 1).filter(item => item.type === 'story').length;
       
+      // Events-led: events are the main run; this news story follows its slice of them
+      if (contentItem.type === 'story' && eventsLed && individualCards && feedEvents.length > 0) {
+        const [from, to] = eventsSliceBeforeNews(storyIndex, feedEvents.length);
+        feedEvents.slice(from, to).forEach((e) => items.push(renderEventCard(e)));
+      }
+
       if (contentItem.type === 'story') {
         const story = contentItem.data as any;
         const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
@@ -754,7 +772,12 @@ const TopicFeed = () => {
       }
 
       // What's on: after story 1, then at least 15 stories apart, never beside another extra card
-      if (contentItem.type === 'story' && eventsInFeed && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
+      // News-led with individual cards: one event at each What's on position
+      if (contentItem.type === 'story' && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
+        items.push(renderEventCard(feedEvents[whatsOnPositions(storyIndex).indexOf(storyIndex) % feedEvents.length]));
+      }
+
+      if (contentItem.type === 'story' && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
             <WhatsOnCard
@@ -841,6 +864,12 @@ const TopicFeed = () => {
 
       return items;
     }).flat();
+    // Events-led: the rest of the events follow the last loaded news story
+    if (eventsLed && individualCards && feedEvents.length > 0) {
+      const storyCount = displayableContent.filter((item) => item.type === 'story').length;
+      rendered.push(...feedEvents.slice(eventsAfterLastNews(storyCount, feedEvents.length)).map(renderEventCard));
+    }
+    return rendered;
   }, [
     filteredContent, slug, topic, lastStoryElementRef, handleStorySwipe,
     handleStoryScrolledPast, handleMoreLikeThis, handlePrefetchFilter,
@@ -849,7 +878,7 @@ const TopicFeed = () => {
     quizQuestions, quizCardsEnabled, quizVisitorId, user?.id, markAsAnswered,
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
     hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed,
-    eventsInFeed, whatsOn, whatsOnToday
+    eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand
   ]);
 
   if (loading) {
@@ -1267,7 +1296,9 @@ const TopicFeed = () => {
         )}
 
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
-        {!loading && filteredContent.length === 0 ? (
+        {!loading && filteredContent.length === 0 && eventsLed && individualCards && feedEvents.length > 0 ? (
+          <div className="space-y-6 md:space-y-8 flex flex-col items-center">{feedEvents.map(renderEventCard)}</div>
+        ) : !loading && filteredContent.length === 0 ? (
           <div className="text-center py-12 space-y-4">
             {hasActiveFilters ? (
               <>

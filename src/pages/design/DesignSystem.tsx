@@ -1,3 +1,5 @@
+import { EventCategoryIcon, EVENT_CATEGORY_LABELS, type EventCategory } from "@/components/events/EventCategoryIcon";
+import { EventCard, EventDateBlock } from "@/components/events/EventCard";
 import { useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { Archive, ArrowLeft, ArrowRight, Eye, Check, RefreshCw, Plus } from "lucide-react";
@@ -320,6 +322,30 @@ export default function DesignSystem() {
                 <ArrowLeft className="h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
                 <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-base font-semibold">Event pool</div>
               </div>
+            </Spec>
+          </Block>
+
+          <Block id="events" title="Event categories">
+            <Spec name="Icons · static on the Desk; animated only for the reader card in view; accent = feed colour">
+              <div className="grid grid-cols-3 gap-4 sm:grid-cols-5 md:grid-cols-7">
+                {(Object.keys(EVENT_CATEGORY_LABELS) as EventCategory[]).map((c) => (
+                  <div key={c} className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
+                    <EventCategoryIcon category={c} animate className="h-12 w-12 text-foreground" />
+                    {EVENT_CATEGORY_LABELS[c]}
+                  </div>
+                ))}
+              </div>
+            </Spec>
+            <Spec name="With a feed colour as accent">
+              <div className="flex gap-4">
+                {(["music", "film", "markets"] as EventCategory[]).map((c) => <EventCategoryIcon key={c} category={c} accent="#E4572E" className="h-12 w-12 text-foreground" />)}
+              </div>
+            </Spec>
+            <Spec name="Reader date block · sentence case">
+              <EventDateBlock ymd="2026-11-19" />
+            </Spec>
+            <Spec name="Individual event card · two slides; price only when the source says it" className="w-full max-w-md">
+              <EventCard brandColor="#0E7C7B" event={{ id: "demo", title: "Fado by the river", start_date: "2026-11-19", start_time: "21:00:00", location: "Clube de Fado, Alfama", source_url: "https://example.com", source_name: "Agenda LX", event_type: "music", price: "€15", is_free: false, description: "An evening of traditional fado in a small Alfama tavern." }} isOwner />
             </Spec>
           </Block>
 

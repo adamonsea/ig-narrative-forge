@@ -221,3 +221,24 @@ describe("liveAreaFlag once the owner keeps an event", () => {
     expect(liveAreaFlag("outside_area", false)).toBe("Looks out of area");
   });
 });
+
+import { dateBlock, priceLine, individualEvents } from "./whatsOn";
+describe("individual event cards", () => {
+  it("date block is sentence case", () => {
+    expect(dateBlock("2026-11-19")).toEqual({ weekday: "Thu", day: "19", month: "Nov" });
+  });
+  it("price shows only when known; Free only when the source says free", () => {
+    expect(priceLine(null, true)).toBe("Free");
+    expect(priceLine("€12", false)).toBe("€12");
+    expect(priceLine(null, null)).toBeNull();
+  });
+  it("drops started events and repeats, soonest first", () => {
+    const ev = [
+      { title: "Jazz", start_date: "2026-11-20", start_time: null },
+      { title: "Fado", start_date: "2026-11-19", start_time: "10:00:00" },
+      { title: "Talk", start_date: "2026-11-19", start_time: "20:00:00" },
+      { title: "Jazz", start_date: "2026-11-21", start_time: null },
+    ];
+    expect(individualEvents(ev, "2026-11-19", "12:00:00").map((e) => `${e.title} ${e.start_date}`)).toEqual(["Talk 2026-11-19", "Jazz 2026-11-20"]);
+  });
+});

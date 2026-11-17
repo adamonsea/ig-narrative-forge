@@ -63,8 +63,15 @@ Deno.test('a date far away from the title is not used', () => {
 Deno.test('JSON-LD events, including nested graphs and subtype names', () => {
   const html = `<script type="application/ld+json">{"@graph":[{"@type":"TheaterEvent","name":"Panto &amp; Fun","startDate":"2026-12-10T14:00:00+00:00","location":{"name":"Royal Hippodrome"},"url":"/panto"},{"@type":"Organization","name":"x"}]}</script>`;
   assertEquals(extractJsonLdEvents(html, 'https://venue.org/whats-on'), [
-    { title: 'Panto & Fun', start_date: '2026-12-10', start_time: '14:00:00', venue: 'Royal Hippodrome', url: 'https://venue.org/panto', place: 'Royal Hippodrome', online: false },
+    { title: 'Panto & Fun', start_date: '2026-12-10', start_time: '14:00:00', venue: 'Royal Hippodrome', url: 'https://venue.org/panto', place: 'Royal Hippodrome', online: false, description: null, price: null, is_free: null, hint: 'TheaterEvent' },
   ]);
+});
+
+Deno.test('JSON-LD price and description, never guessed', () => {
+  const html = `<script type="application/ld+json">[{"@type":"MusicEvent","name":"Fado night","startDate":"2026-12-10T21:00","description":"<p>Fado in an old tavern.</p>","offers":{"price":"15","priceCurrency":"EUR"}},{"@type":"Event","name":"Open day","startDate":"2026-12-11","isAccessibleForFree":true}]</script>`;
+  const [a, b] = extractJsonLdEvents(html, 'https://x.pt/');
+  assertEquals([a.price, a.is_free, a.description], ['€15', false, 'Fado in an old tavern.']);
+  assertEquals([b.price, b.is_free], [null, true]);
 });
 
 Deno.test('JSON-LD address and online-only events feed the location check', () => {

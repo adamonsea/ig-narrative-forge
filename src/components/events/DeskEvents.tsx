@@ -11,18 +11,25 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { coverSentence, countdown, dateBadge, eventTime, dayLabel, hiddenReason, isLowRelevance, leftOutExplanation, liveAreaFlag, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 import type { DeskEvent } from "@/hooks/useWhatsOnEvents";
+import { EventCategoryIcon, EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
+import { useEventCategories, useEventCategoryActions } from "@/hooks/useEventCategories";
 import { DeskBadge, DeskCard, MetaLine } from "@/components/topic-pipeline/DeskCard";
 
 /** Day and number, the event's at-a-glance date. */
-function DateTile({ date, size = "lg" }: { date: string; size?: "lg" | "sm" }) {
+function DateTile({ date, size = "lg", category }: { date: string; size?: "lg" | "sm"; category?: string | null }) {
   const b = dateBadge(date);
   return (
     <div
-      className={`flex shrink-0 flex-col items-center justify-center rounded-lg border border-border bg-background leading-none ${size === "lg" ? "h-16 w-16" : "h-12 w-12"}`}
+      className={`relative flex shrink-0 flex-col items-center justify-center rounded-lg border border-border bg-background leading-none ${size === "lg" ? "h-16 w-16" : "h-12 w-12"}`}
       aria-hidden="true"
     >
       <span className="text-sm font-medium text-muted-foreground">{b.weekday}</span>
       <span className={`mt-1 font-bold tabular-nums ${size === "lg" ? "text-2xl" : "text-lg"}`}>{b.day}</span>
+      {category !== undefined && (
+        <span className="absolute -bottom-2 -right-2 rounded-full border border-border bg-background p-0.5">
+          <EventCategoryIcon category={category} className="h-6 w-6" />
+        </span>
+      )}
     </div>
   );
 }
@@ -161,6 +168,23 @@ function FlaggedList({ events, today, actions, onOpen }: {
   );
 }
 
+/** One amber line when 8+ "Other" events share a theme: "12 events look like Comedy. Add it?" */
+function CategorySuggestion({ topicId }: { topicId: string }) {
+  const { data } = useEventCategories(topicId);
+  const { decide } = useEventCategoryActions(topicId);
+  const s = data?.suggestion;
+  if (!s) return null;
+  const label = EVENT_CATEGORY_LABELS[s.category as keyof typeof EVENT_CATEGORY_LABELS] ?? s.category;
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-attention/40 bg-attention-soft p-3 text-base">
+      <EventCategoryIcon category={s.category} className="h-6 w-6" title="" />
+      <p className="min-w-0 flex-1">{s.count} events look like {label}. Add it?</p>
+      <Button size="sm" onClick={() => void decide(s.category, "added", s.ids)}>Add</Button>
+      <Button size="sm" variant="ghost" onClick={() => void decide(s.category, "skipped")}>Skip</Button>
+    </div>
+  );
+}
+
 /** One upcoming event in the Event pool: live in the feed or waiting. Click for its details. */
 function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpItem; today: string; actions: EventActions; onOpen: () => void }) {
   const waiting = event.state === "waiting";
@@ -168,7 +192,7 @@ function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpI
   return (
     <DeskCard
       title={event.title}
-      visual={<DateTile date={event.start_date} />}
+      visual={<DateTile date={event.start_date} category={event.event_type ?? null} />}
       onOpen={onOpen}
       badges={waiting
         ? <><AttentionTag>Needs your OK</AttentionTag>{event.source_api === "reader" ? <DeskBadge>Reader</DeskBadge> : null}</>
@@ -219,17 +243,21 @@ interface EventDetailRow {
   description: string | null;
   end_date: string | null;
   end_time: string | null;
+  is_free?: boolean | null;
+  event_type?: string | null;
   price: string | null;
 }
 
 /** The full listing for one event, with the actions that fit where it is. */
-function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem | null; today: string; actions: EventActions; onClose: () => void }) {
+function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: DetailItem | null; today: string; actions: EventActions; onClose: () => void; topicId?: string }) {
+  const { data: cats } = useEventCategories(topicId);
+  const { setCategory } = useEventCategoryActions(topicId);
   const { data: detail, isLoading } = useQuery({
     queryKey: ["event-detail", item?.id],
     enabled: Boolean(item?.id),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("events").select("description, end_date, end_time, price").eq("id", item!.id).maybeSingle();
+      const { data, error } = await supabase.from("events").select("description, end_date, end_time, price, is_free, event_type").eq("id", item!.id).maybeSingle();
       if (error) throw error;
       return (data ?? null) as EventDetailRow | null;
     },
@@ -280,6 +308,22 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
               {item.state === "left_out" && (
                 <p className="rounded-lg bg-muted p-3 text-muted-foreground">{leftOutExplanation(item.status, item.exclusion_reason)}</p>
               )}
+              {topicId && cats && (
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Category">
+                  {cats.categories.map((c) => {
+                    const on = (detail?.event_type ?? item.event_type ?? "other") === c;
+                    return (
+                      <button key={c} type="button" role="radio" aria-checked={on}
+                        onClick={() => { if (!on) void setCategory(item.id, c); }}
+                        className={cn("inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          on ? "border-purple-bright bg-purple-bright/10 font-medium text-foreground" : "border-border text-muted-foreground hover:text-foreground")}>
+                        <EventCategoryIcon category={c} className="h-5 w-5" title="" />
+                        {isEventCategory(c) ? EVENT_CATEGORY_LABELS[c] : c}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <dl className="space-y-3">
                 {item.location && (
                   <div className="flex gap-3"><dt className="sr-only">Where</dt><MapPin className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{item.location}</dd></div>
@@ -287,8 +331,8 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
                 {ends && (
                   <div className="flex gap-3"><dt className="sr-only">Ends</dt><Clock className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{ends}</dd></div>
                 )}
-                {detail?.price && (
-                  <div className="flex gap-3"><dt className="sr-only">Price</dt><Ticket className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{detail.price}</dd></div>
+                {(detail?.price || detail?.is_free) && (
+                  <div className="flex gap-3"><dt className="sr-only">Price</dt><Ticket className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{detail.is_free ? "Free" : detail.price}</dd></div>
                 )}
               </dl>
               {isLoading ? (
@@ -340,8 +384,8 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
  * The Event pool: every upcoming event (live or waiting), soonest first,
  * with a switch to see the ones that didn't make the cut. Click any event for its details.
  */
-export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions }: {
-  toCheck?: DeskEvent[]; upcoming: ComingUpItem[]; leftOut: DeskEvent[]; today: string; actions: EventActions;
+export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions, topicId }: {
+  toCheck?: DeskEvent[]; upcoming: ComingUpItem[]; leftOut: DeskEvent[]; today: string; actions: EventActions; topicId?: string;
 }) {
   const [view, setView] = useState<"upcoming" | "left_out">("upcoming");
   const [shown, setShown] = useState(PAGE);
@@ -355,6 +399,7 @@ export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions 
 
   return (
     <div className="space-y-3">
+      {topicId && <CategorySuggestion topicId={topicId} />}
       <ToCheckList events={toCheck} today={today} actions={actions} onOpen={(e) => setOpen({ ...e, state: "waiting" })} />
       <FlaggedList events={upcoming.filter((e) => e.state === "live" && liveAreaFlag(e.exclusion_reason, e.area_confirmed))} today={today} actions={actions} onOpen={setOpen} />
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Which events">
@@ -396,7 +441,7 @@ export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions 
         </Button>
       )}
 
-      <EventDetailSheet item={open} today={today} actions={actions} onClose={() => setOpen(null)} />
+      <EventDetailSheet item={open} today={today} actions={actions} onClose={() => setOpen(null)} topicId={topicId} />
     </div>
   );
 }

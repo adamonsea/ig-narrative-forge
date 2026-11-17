@@ -39,3 +39,27 @@ describe("what's on card set", () => {
     expect(isWhatsOnPosition(20)).toBe(true);
   });
 });
+
+import { eventCardMode, eventsBeforeNews, eventsSliceBeforeNews, eventsAfterLastNews } from './feedCardPositions';
+
+describe('events-led feeds', () => {
+  it('news-led feeds keep grouped event cards, events-led default to individual', () => {
+    expect(eventCardMode('news', null)).toBe('grouped');
+    expect(eventCardMode(undefined, undefined)).toBe('grouped');
+    expect(eventCardMode('events', null)).toBe('individual');
+    expect(eventCardMode('events', 'grouped')).toBe('grouped');
+  });
+  it('news slots in after event 3, then every 5 events', () => {
+    expect([1, 2, 3, 4].map((n) => eventsBeforeNews(n))).toEqual([3, 8, 13, 18]);
+  });
+  it('every event appears exactly once, in order, around the news', () => {
+    const events = 20, stories = 2;
+    const seen: number[] = [];
+    for (let n = 1; n <= stories; n++) { const [a, b] = eventsSliceBeforeNews(n, events); for (let i = a; i < b; i++) seen.push(i); }
+    for (let i = eventsAfterLastNews(stories, events); i < events; i++) seen.push(i);
+    expect(seen).toEqual(Array.from({ length: events }, (_, i) => i));
+  });
+  it('a feed with no news shows only events', () => {
+    expect(eventsAfterLastNews(0, 5)).toBe(0);
+  });
+});

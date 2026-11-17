@@ -31,6 +31,7 @@ import { BrandBasics } from "@/components/settings/BrandBasics";
 import { LookForPanel } from "@/components/settings/LookForPanel";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
+import { FeedLeadSettings } from "@/components/settings/FeedLeadSettings";
 import { FEATURES, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
 
 export interface EditorialTopic {
@@ -62,6 +63,8 @@ export interface EditorialTopic {
   community_config?: { subreddits?: string[]; last_processed?: string; processing_frequency_hours?: number };
   parliamentary_tracking_enabled?: boolean;
   events_enabled?: boolean;
+  feed_lead?: string | null;
+  event_cards?: string | null;
   event_source_url?: string;
   branding_config?: unknown;
   donation_enabled?: boolean;
@@ -194,6 +197,7 @@ export function EditorialControlCenter({
           brandingConfig={topic.branding_config}
           onSaved={(values) => patch(values)}
         />
+        <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} onSaved={(values) => patch(values)} />
         <RememberedFold foldKey="brand-more" label="More options">
           <div className="space-y-12">
             <section>

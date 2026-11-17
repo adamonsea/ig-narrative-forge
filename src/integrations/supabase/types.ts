@@ -1329,6 +1329,7 @@ export type Database = {
         Row: {
           area_confirmed: boolean
           category: string | null
+          category_locked: boolean
           created_at: string
           created_by: string | null
           description: string | null
@@ -1339,6 +1340,7 @@ export type Database = {
           exclusion_reason: string | null
           external_id: string | null
           id: string
+          is_free: boolean | null
           kept_by_owner: boolean
           location: string | null
           price: string | null
@@ -1357,16 +1359,18 @@ export type Database = {
         Insert: {
           area_confirmed?: boolean
           category?: string | null
+          category_locked?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_date?: string | null
           end_time?: string | null
           event_source_id?: string | null
-          event_type: string
+          event_type?: string
           exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
           price?: string | null
@@ -1385,6 +1389,7 @@ export type Database = {
         Update: {
           area_confirmed?: boolean
           category?: string | null
+          category_locked?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1395,6 +1400,7 @@ export type Database = {
           exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
           price?: string | null
@@ -4658,6 +4664,42 @@ export type Database = {
           },
         ]
       }
+      topic_event_categories: {
+        Row: {
+          category: string
+          created_at: string
+          state: string
+          topic_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          state?: string
+          topic_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          state?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_event_categories_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_event_categories_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_event_preferences: {
         Row: {
           created_at: string
@@ -5280,11 +5322,13 @@ export type Database = {
           drip_start_hour: number | null
           drip_stories_per_release: number | null
           email_subscriptions_enabled: boolean | null
+          event_cards: string | null
           event_source_url: string | null
           events_enabled: boolean | null
           events_last_checked_at: string | null
           events_last_new_count: number
           family_safe: boolean
+          feed_lead: string
           house_style_examples: string | null
           house_style_notes: string | null
           id: string
@@ -5353,11 +5397,13 @@ export type Database = {
           drip_start_hour?: number | null
           drip_stories_per_release?: number | null
           email_subscriptions_enabled?: boolean | null
+          event_cards?: string | null
           event_source_url?: string | null
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
           events_last_new_count?: number
           family_safe?: boolean
+          feed_lead?: string
           house_style_examples?: string | null
           house_style_notes?: string | null
           id?: string
@@ -5426,11 +5472,13 @@ export type Database = {
           drip_start_hour?: number | null
           drip_stories_per_release?: number | null
           email_subscriptions_enabled?: boolean | null
+          event_cards?: string | null
           event_source_url?: string | null
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
           events_last_new_count?: number
           family_safe?: boolean
+          feed_lead?: string
           house_style_examples?: string | null
           house_style_notes?: string | null
           id?: string
@@ -6800,6 +6848,22 @@ export type Database = {
           title: string
         }[]
       }
+      get_topic_events_feed: {
+        Args: { p_topic_id: string }
+        Returns: {
+          description: string
+          event_type: string
+          id: string
+          is_free: boolean
+          location: string
+          price: string
+          source_name: string
+          source_url: string
+          start_date: string
+          start_time: string
+          title: string
+        }[]
+      }
       get_topic_filter_options: {
         Args: { p_topic_slug: string }
         Returns: {
@@ -7179,6 +7243,10 @@ export type Database = {
         Args: { p_backup_id: string }
         Returns: Json
       }
+      retag_topic_events: {
+        Args: { p_category: string; p_event_ids: string[]; p_topic_id: string }
+        Returns: number
+      }
       run_nightly_topic_backups: { Args: never; Returns: Json }
       safe_cleanup_inactive_sources: {
         Args: never
@@ -7186,6 +7254,10 @@ export type Database = {
           deleted_count: number
           message: string
         }[]
+      }
+      set_event_category: {
+        Args: { p_category: string; p_event_id: string }
+        Returns: number
       }
       set_event_source_auto_publish: {
         Args: { p_on: boolean; p_source_id: string }

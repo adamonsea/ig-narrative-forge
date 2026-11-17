@@ -1,3 +1,4 @@
+import { categorizeEvent } from '../_shared/eventCategories.ts';
 /**
  * scrape-whats-on — every kind of events source for a feed (event_sources).
  * The right reader is picked by the source's kind (see readers/index.ts); a
@@ -125,9 +126,9 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const ids = events.map((e) => reader.externalId(source.id, e.key));
 
   // What the owner has already decided: removals and restores stick.
-  const existing = new Map<string, { status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean }>();
+  const existing = new Map<string, { status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean }>();
   for (const part of chunks(ids, 150)) {
-    const { data } = await supabase.from('events').select('external_id, status, kept_by_owner, exclusion_reason, area_confirmed')
+    const { data } = await supabase.from('events').select('external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked')
       .eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
     for (const r of data || []) existing.set(r.external_id, r);
   }
@@ -142,6 +143,10 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
     if (r.status === 'deleted') removedTitles.add(titleKey(r.title));
     else if (r.kept_by_owner) keptTitles.add(titleKey(r.title));
   }
+
+  // Spare categories (Comedy, Workshops …) the owner has added for this feed
+  const { data: addedRows } = await supabase.from('topic_event_categories').select('category').eq('topic_id', source.topic_id).eq('state', 'added');
+  const addedCategories = (addedRows || []).map((r: { category: string }) => r.category);
 
   // Venue pages often vanish once a show starts: for events in the next two days,
   // check the link and fall back to the source's listings page if it's gone.
@@ -170,9 +175,13 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       end_time: e.end_time ?? null,
       location: e.venue,
       category: e.category ?? null,
+      price: e.price ?? null,
+      is_free: e.is_free ?? null,
       source_url: e.url && !dead.has(e.url) ? e.url : source.url,
       source_name: e.source_name || source.name,
-      event_type: 'events',
+      // The owner's choice sticks; otherwise rules (listing's own category, then keywords)
+      event_type: prev?.category_locked && prev.event_type ? prev.event_type : categorizeEvent({ title: e.title, description: e.description, venue: e.venue, hint: e.hint ?? e.category }, addedCategories),
+      category_locked: Boolean(prev?.category_locked),
       status,
       exclusion_reason: reason,
       kept_by_owner: kept,
@@ -322,7 +331,7 @@ async function suggestEvent(supabase: Db, profiles: Profiles, req: Request, b: S
   const { error } = await supabase.from('events').insert({
     topic_id: b.topicId, title: b.title, start_date: b.date, start_time: b.time ? `${b.time}:00` : null,
     location: b.venue, source_url: url, source_name: hostOf(url), source_api: 'reader',
-    external_id: `${who}|${where}|${crypto.randomUUID()}`, event_type: 'events',
+    external_id: `${who}|${where}|${crypto.randomUUID()}`, event_type: 'other',
     status, exclusion_reason: reason, kept_by_owner: false, relevance_score: score,
   });
   if (error) throw error;
