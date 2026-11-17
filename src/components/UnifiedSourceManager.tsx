@@ -1476,7 +1476,6 @@ export const UnifiedSourceManager = ({
   };
 
   const getDisplayDescription = () => {
-    if (description) return description;
     if (mode === 'topic') return 'Manage content sources for this topic';
     if (mode === 'region') return `Manage content sources for ${region} region`;
     return 'Manage all content sources with enhanced validation and health monitoring';
