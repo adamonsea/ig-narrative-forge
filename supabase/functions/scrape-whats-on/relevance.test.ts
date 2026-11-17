@@ -60,3 +60,15 @@ Deno.test('an owner-published event the location rules now place elsewhere stays
   // "Couldn't tell" is not a flag
   assertEquals(placeEvent({ prev: { status: 'published', kept_by_owner: true }, verdict: { keep: false, reason: 'unconfirmed' }, score: 1, autoPublish: false }).reason, null);
 });
+
+Deno.test('owner-confirmed events are never flagged or hidden as out of area again', () => {
+  const out = { keep: false as const, reason: 'outside_area' as const };
+  // A kept live event: no flag
+  assertEquals(placeEvent({ prev: { status: 'published', kept_by_owner: true }, areaConfirmed: true, verdict: out, score: 5, autoPublish: false }), { status: 'published', reason: null, kept: true });
+  // Without the confirmation it is flagged (the old behaviour)
+  assertEquals(placeEvent({ prev: { status: 'published', kept_by_owner: true }, verdict: out, score: 5, autoPublish: false }).reason, 'outside_area');
+  // A new date of a confirmed name doesn't go to Hidden
+  assertEquals(placeEvent({ areaConfirmed: true, verdict: out, score: 5, autoPublish: false }).status, 'pending');
+  // Removal still wins
+  assertEquals(placeEvent({ removedByOwner: true, areaConfirmed: true, verdict: out, score: 5, autoPublish: true }).status, 'deleted');
+});

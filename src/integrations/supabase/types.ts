@@ -1327,6 +1327,7 @@ export type Database = {
       }
       events: {
         Row: {
+          area_confirmed: boolean
           category: string | null
           created_at: string
           created_by: string | null
@@ -1354,6 +1355,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          area_confirmed?: boolean
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -1381,6 +1383,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          area_confirmed?: boolean
           category?: string | null
           created_at?: string
           created_by?: string | null

@@ -27,7 +27,7 @@ function DateTile({ date, size = "lg" }: { date: string; size?: "lg" | "sm" }) {
   );
 }
 
-type ComingUpItem = (WhatsOnFeedEvent & { exclusion_reason?: string | null; state: "live" }) | (DeskEvent & { state: "waiting" });
+type ComingUpItem = (WhatsOnFeedEvent & { exclusion_reason?: string | null; area_confirmed?: boolean; state: "live" }) | (DeskEvent & { state: "waiting" });
 type DetailItem = ComingUpItem | (DeskEvent & { state: "left_out" });
 
 interface EventActions {
@@ -35,6 +35,8 @@ interface EventActions {
   skip: (e: Pick<DeskEvent, "id" | "title">) => void;
   removeFromLive: (e: Pick<DeskEvent, "id" | "title">) => void;
   removeManyFromLive?: (events: Pick<DeskEvent, "id" | "title">[]) => void;
+  /** The owner says flagged events are fine where they are: never flagged again. */
+  keepInArea?: (events: Pick<DeskEvent, "id" | "title">[]) => void;
   unhide: (e: Pick<DeskEvent, "id" | "title">) => void;
 }
 
@@ -108,7 +110,7 @@ function ToCheckList({ events, today, actions, onOpen }: {
   );
 }
 
-/** Live events the location rules now place elsewhere: pinned under the to-check box with one-click Remove. */
+/** Live events the location rules now place elsewhere: pinned in amber with one-click Keep (never flagged again) or Remove. */
 function FlaggedList({ events, today, actions, onOpen }: {
   events: ComingUpItem[]; today: string; actions: EventActions; onOpen: (e: ComingUpItem) => void;
 }) {
@@ -116,14 +118,17 @@ function FlaggedList({ events, today, actions, onOpen }: {
   if (events.length === 0) return null;
   const shown = all ? events : events.slice(0, 3);
   return (
-    <section aria-labelledby="events-flagged" className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+    <section aria-labelledby="events-flagged" className="space-y-2 rounded-xl border border-attention/50 bg-attention-soft p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h4 id="events-flagged" className="flex flex-1 items-center gap-2 text-base font-semibold text-destructive">
+        <h4 id="events-flagged" className="flex flex-1 items-center gap-2 text-base font-semibold text-attention-foreground">
           <MapPin className="h-4 w-4" aria-hidden="true" />
           {events.length === 1 ? "1 live event looks out of area" : `${events.length} live events look out of area`}
         </h4>
+        {events.length > 1 && actions.keepInArea && (
+          <Button size="sm" variant="ghost" onClick={() => actions.keepInArea!(events)}>Keep all</Button>
+        )}
         {events.length > 1 && actions.removeManyFromLive && (
-          <Button size="sm" variant="outline" onClick={() => actions.removeManyFromLive!(events)}>Remove all {events.length}</Button>
+          <Button size="sm" variant="ghost" onClick={() => actions.removeManyFromLive!(events)}>Remove all</Button>
         )}
       </div>
       <ul className="space-y-2">
@@ -136,7 +141,14 @@ function FlaggedList({ events, today, actions, onOpen }: {
                 <span className="block truncate text-sm text-muted-foreground">{[countdown(e.start_date, today), e.location || e.source_name].filter(Boolean).join(" · ")}</span>
               </span>
             </button>
-            <Button size="sm" variant="outline" onClick={() => actions.removeFromLive(e)}>Remove</Button>
+            <div className="flex shrink-0 gap-2">
+              {actions.keepInArea && (
+                <Button size="sm" variant="outline" onClick={() => actions.keepInArea!([e])} aria-label={`Keep “${e.title}” in the feed`}>
+                  <Check className="mr-2 h-4 w-4" aria-hidden="true" />Keep
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => actions.removeFromLive(e)} aria-label={`Remove “${e.title}” from the feed`}>Remove</Button>
+            </div>
           </li>
         ))}
       </ul>
@@ -160,7 +172,7 @@ function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpI
       onOpen={onOpen}
       badges={waiting
         ? <><AttentionTag>Needs your OK</AttentionTag>{event.source_api === "reader" ? <DeskBadge>Reader</DeskBadge> : null}</>
-        : liveAreaFlag(event.exclusion_reason) ? <DeskBadge tone="destructive">{liveAreaFlag(event.exclusion_reason)}</DeskBadge> : null}
+        : liveAreaFlag(event.exclusion_reason, event.area_confirmed) ? <AttentionTag>{liveAreaFlag(event.exclusion_reason, event.area_confirmed)}</AttentionTag> : null}
       meta={
         <MetaLine parts={[
           <span key="c" className="font-medium text-foreground">{countdown(event.start_date, today)}</span>,
@@ -247,7 +259,7 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
                   {item.state === "live" && (
                     <span className="flex flex-wrap gap-2">
                       <DeskBadge tone="primary">In the feed</DeskBadge>
-                      {liveAreaFlag(item.exclusion_reason) && <DeskBadge tone="destructive">{liveAreaFlag(item.exclusion_reason)}</DeskBadge>}
+                      {liveAreaFlag(item.exclusion_reason, item.area_confirmed) && <AttentionTag>{liveAreaFlag(item.exclusion_reason, item.area_confirmed)}</AttentionTag>}
                     </span>
                   )}
                   {item.state === "waiting" && (
@@ -262,8 +274,8 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
             </SheetHeader>
 
             <div className="flex-1 space-y-6 p-6 text-base">
-              {item.state === "live" && liveAreaFlag(item.exclusion_reason) && (
-                <p className="rounded-lg bg-destructive/5 p-3 text-muted-foreground">You published this earlier, but {leftOutExplanation("excluded", item.exclusion_reason).charAt(0).toLowerCase() + leftOutExplanation("excluded", item.exclusion_reason).slice(1)} It stays in the feed until you remove it.</p>
+              {item.state === "live" && liveAreaFlag(item.exclusion_reason, item.area_confirmed) && (
+                <p className="rounded-lg bg-attention-soft p-3 text-muted-foreground">{leftOutExplanation("excluded", item.exclusion_reason)}</p>
               )}
               {item.state === "left_out" && (
                 <p className="rounded-lg bg-muted p-3 text-muted-foreground">{leftOutExplanation(item.status, item.exclusion_reason)}</p>
@@ -298,6 +310,9 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
             </div>
 
             <div className="sticky bottom-0 flex gap-2 border-t bg-background p-4">
+              {item.state === "live" && liveAreaFlag(item.exclusion_reason, item.area_confirmed) && actions.keepInArea && (
+                <Button className="flex-1" onClick={() => done(() => actions.keepInArea!([item]))}>Keep</Button>
+              )}
               {item.state === "live" && (
                 <Button variant="outline" className="flex-1" onClick={() => done(() => actions.removeFromLive(item))}>Remove from feed</Button>
               )}
@@ -341,7 +356,7 @@ export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions 
   return (
     <div className="space-y-3">
       <ToCheckList events={toCheck} today={today} actions={actions} onOpen={(e) => setOpen({ ...e, state: "waiting" })} />
-      <FlaggedList events={upcoming.filter((e) => e.state === "live" && liveAreaFlag(e.exclusion_reason))} today={today} actions={actions} onOpen={setOpen} />
+      <FlaggedList events={upcoming.filter((e) => e.state === "live" && liveAreaFlag(e.exclusion_reason, e.area_confirmed))} today={today} actions={actions} onOpen={setOpen} />
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Which events">
         {tabs.map((t) => (
           <button

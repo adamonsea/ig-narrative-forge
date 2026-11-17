@@ -47,6 +47,8 @@ export interface PlaceInput {
   removedByOwner?: boolean;
   /** The owner published an event with this name elsewhere in the feed. */
   publishedByOwner?: boolean;
+  /** The owner confirmed this event (or one with its name) is fine where it is: never flag it again. */
+  areaConfirmed?: boolean;
   verdict: Verdict;
   score: number | null;
   autoPublish: boolean;
@@ -59,12 +61,14 @@ export interface PlaceInput {
  *   something already in Waiting or Live stays put (a live one that turns out
  *   to be out of area moves to Hidden);
  *   new: out of area → Hidden; auto-publish source and not low relevance → Live; else Waiting.
+ *   An owner-confirmed name skips the location rules entirely.
  */
 export function placeEvent(i: PlaceInput): { status: EventStatus; reason: string | null; kept: boolean } {
   const prevKept = Boolean(i.prev?.kept_by_owner);
   if (i.prev?.status === 'deleted' || (!prevKept && i.removedByOwner)) return { status: 'deleted', reason: null, kept: false };
-  const out = isOutOfArea(i.verdict);
-  const reason = !i.verdict.keep ? i.verdict.reason : null;
+  const verdict: Verdict = i.areaConfirmed ? { keep: true } : i.verdict;
+  const out = isOutOfArea(verdict);
+  const reason = !verdict.keep ? verdict.reason : null;
   if (prevKept || i.publishedByOwner) return { status: 'published', reason: out ? reason : null, kept: true };
   if (i.prev && i.prev.status !== 'excluded') {
     if (i.prev.status === 'published' && out) return { status: 'excluded', reason, kept: false };

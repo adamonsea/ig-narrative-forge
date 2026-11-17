@@ -213,3 +213,11 @@ describe("live events flagged out of area", () => {
     expect(liveAreaFlag(null)).toBeNull();
   });
 });
+
+describe("liveAreaFlag once the owner keeps an event", () => {
+  it("drops the out-of-area flag for good", () => {
+    expect(liveAreaFlag("outside_area", true)).toBeNull();
+    expect(liveAreaFlag("online", true)).toBeNull();
+    expect(liveAreaFlag("outside_area", false)).toBe("Looks out of area");
+  });
+});

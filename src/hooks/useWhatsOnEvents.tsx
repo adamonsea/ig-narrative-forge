@@ -33,6 +33,8 @@ export interface DeskEvent {
   status: "pending" | "excluded" | "deleted" | "published";
   source_api?: string | null;
   exclusion_reason: string | null;
+  /** The owner confirmed it's fine where it is: never flagged as out of area again. */
+  area_confirmed?: boolean;
   relevance_score: number | null;
   created_at: string;
 }
@@ -63,7 +65,7 @@ export function useEventDesk(topicId: string | undefined) {
     refetchInterval: 60_000,
     queryFn: async (): Promise<EventDesk> => {
       const today = londonToday();
-      const fields = "id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, relevance_score, created_at";
+      const fields = "id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, area_confirmed, relevance_score, created_at";
       const [topicRes, insightRes, sourcesRes, queueRes, liveRes, publishedRes] = await Promise.all([
         supabase.from("topics").select("events_enabled").eq("id", topicId!).maybeSingle(),
         supabase.from("topic_insight_settings").select("events_cards_enabled, reader_event_submissions").eq("topic_id", topicId!).maybeSingle(),
@@ -196,8 +198,46 @@ export function useEventDeskActions(topicId: string | undefined) {
     }
   }, [refresh, run, toast]);
 
+  /** Live events flagged out of area that the owner says are fine: the flag goes and never comes back. Undo restores it. */
+  const keepInArea = useCallback(async (events: Pick<DeskEvent, "id" | "title">[]) => {
+    if (events.length === 0) return;
+    const seen = new Set<string>();
+    const unique = events.filter((e) => { const k = e.title.trim().toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+    const keys = new Set(unique.map((e) => e.title.trim().toLowerCase()));
+    const mark = (on: boolean) => {
+      const cur = queryClient.getQueryData<EventDesk>(deskKey(topicId));
+      if (!cur) return;
+      queryClient.setQueryData<EventDesk>(deskKey(topicId), {
+        ...cur,
+        upcoming: cur.upcoming.map((e) => (keys.has(e.title.trim().toLowerCase()) ? { ...e, area_confirmed: on } : e)),
+      });
+    };
+    const setArea = (e: Pick<DeskEvent, "id">, on: boolean) =>
+      (supabase.rpc as any)("set_topic_event_visibility", { p_event_id: e.id, p_action: on ? "confirm_area" : "unconfirm_area" })
+        .then(({ error }: { error: unknown }) => { if (error) throw error; });
+    mark(true);
+    const done: Pick<DeskEvent, "id" | "title">[] = [];
+    try {
+      for (const e of unique) { await setArea(e, true); done.push(e); }
+      toast({
+        title: events.length === 1 ? "Kept" : `Kept ${events.length} events`,
+        description: events.length === 1 ? events[0].title : undefined,
+        action: (
+          <ToastAction altText="Undo" onClick={async () => { mark(false); try { for (const e of done) await setArea(e, false); } finally { refresh(); } }}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    } catch {
+      toast({ title: "Couldn't do that", description: "Please try again.", variant: "destructive" });
+    } finally {
+      refresh();
+    }
+  }, [queryClient, refresh, toast, topicId]);
+
   return {
     publish: (e: Pick<DeskEvent, "id" | "title">) => act(e, "publish"),
+    keepInArea,
     removeManyFromLive,
     skip: (e: Pick<DeskEvent, "id" | "title">) => act(e, "skip"),
     /** Take a Live event off the feed (to Hidden); Undo puts it straight back. */

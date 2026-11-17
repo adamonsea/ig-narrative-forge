@@ -125,18 +125,20 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const ids = events.map((e) => reader.externalId(source.id, e.key));
 
   // What the owner has already decided: removals and restores stick.
-  const existing = new Map<string, { status: string; kept_by_owner: boolean; exclusion_reason: string | null }>();
+  const existing = new Map<string, { status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean }>();
   for (const part of chunks(ids, 150)) {
-    const { data } = await supabase.from('events').select('external_id, status, kept_by_owner, exclusion_reason')
+    const { data } = await supabase.from('events').select('external_id, status, kept_by_owner, exclusion_reason, area_confirmed')
       .eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
     for (const r of data || []) existing.set(r.external_id, r);
   }
   const removedTitles = new Set<string>();
   const keptTitles = new Set<string>();
+  const confirmedTitles = new Set<string>();
   // By name across the whole feed: removing a show removes it whichever source lists it
-  const { data: decided } = await supabase.from('events').select('title, status, kept_by_owner')
-    .eq('topic_id', source.topic_id).or('status.eq.deleted,kept_by_owner.eq.true').limit(5000);
+  const { data: decided } = await supabase.from('events').select('title, status, kept_by_owner, area_confirmed')
+    .eq('topic_id', source.topic_id).or('status.eq.deleted,kept_by_owner.eq.true,area_confirmed.eq.true').limit(5000);
   for (const r of decided || []) {
+    if (r.area_confirmed) confirmedTitles.add(titleKey(r.title));
     if (r.status === 'deleted') removedTitles.add(titleKey(r.title));
     else if (r.kept_by_owner) keptTitles.add(titleKey(r.title));
   }
@@ -151,9 +153,10 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
     const t = titleKey(e.title);
     const verdict = verdicts[i] ?? { keep: true };
     const score = scores[i] ?? null;
+    const areaConfirmed = Boolean(prev?.area_confirmed) || confirmedTitles.has(t);
     const { status, reason, kept } = placeEvent({
       prev, removedByOwner: removedTitles.has(t), publishedByOwner: keptTitles.has(t),
-      verdict, score, autoPublish: Boolean(source.auto_publish),
+      areaConfirmed, verdict, score, autoPublish: Boolean(source.auto_publish),
     });
     return {
       topic_id: source.topic_id,
@@ -173,6 +176,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       status,
       exclusion_reason: reason,
       kept_by_owner: kept,
+      area_confirmed: areaConfirmed,
       relevance_score: score,
       updated_at: now,
     };
@@ -196,7 +200,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
 async function filterStored(supabase: Db, source: Source, profile: PlaceProfile | null) {
   if (!profile) return;
   const { data } = await supabase.from('events').select('id, title, location')
-    .eq('event_source_id', source.id).eq('status', 'published').eq('kept_by_owner', false)
+    .eq('event_source_id', source.id).eq('status', 'published').eq('kept_by_owner', false).eq('area_confirmed', false)
     .gte('start_date', londonToday()).limit(1000);
   const rows = (data || []) as { id: string; title: string; location: string | null }[];
   if (!rows.length) return;

@@ -191,9 +191,10 @@ export function hiddenReason(status: string, reason: string | null | undefined):
 
 /**
  * A live event the location rules now say is elsewhere (the owner published it earlier):
- * it stays in the feed, flagged on the Desk so the owner can take it off. null = no flag.
+ * it stays in the feed, flagged on the Desk until the owner keeps it (never flagged again) or removes it. null = no flag.
  */
-export function liveAreaFlag(reason: string | null | undefined): string | null {
+export function liveAreaFlag(reason: string | null | undefined, confirmed = false): string | null {
+  if (confirmed) return null;
   if (reason === "outside_area") return "Looks out of area";
   if (reason === "online") return "Looks online-only";
   return null;
