@@ -198,3 +198,13 @@ describe("Desk Event pool", () => {
     expect(leftOutExplanation("excluded", "outside_area")).toMatch(/area/);
   });
 });
+
+import { liveAreaFlag } from "./whatsOn";
+describe("live events flagged out of area", () => {
+  it("flags only clear out-of-area or online reasons", () => {
+    expect(liveAreaFlag("outside_area")).toBe("Looks out of area");
+    expect(liveAreaFlag("online")).toBe("Looks online-only");
+    expect(liveAreaFlag("unconfirmed")).toBeNull();
+    expect(liveAreaFlag(null)).toBeNull();
+  });
+});

@@ -6855,6 +6855,16 @@ export type Database = {
           term: string
         }[]
       }
+      get_topic_source_rhythm: {
+        Args: { p_topic_id: string }
+        Returns: {
+          added_at: string
+          arrival_days: string[]
+          last_arrival_at: string
+          last7: number[]
+          source_id: string
+        }[]
+      }
       get_topic_source_stats: {
         Args: { p_topic_id: string }
         Returns: {

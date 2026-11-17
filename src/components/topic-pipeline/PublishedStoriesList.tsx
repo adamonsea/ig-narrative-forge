@@ -43,6 +43,8 @@ interface PublishedStoriesListProps {
   readingNowIds?: string[];
   /** Something readers see after the story at this feed position (1 = after the first live story). */
   renderAfterFeedPosition?: (position: number) => React.ReactNode;
+  /** Stories arrive already in the public feed's order and are all in the feed (Live now). */
+  feedOrder?: boolean;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -64,7 +66,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   storyReads,
   risingStoryId = null,
   readingNowIds = [],
-  renderAfterFeedPosition
+  renderAfterFeedPosition,
+  feedOrder = false
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -142,9 +145,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       sorted.sort((a, b) =>
         storySourceLabel(a).localeCompare(storySourceLabel(b)) || byNewest(a, b)
       );
-    } else sorted.sort(byNewest);
+    } else if (!feedOrder) sorted.sort(byNewest);
     return sorted;
-  }, [stories, storyFilter, sourceFilter, sortMode]);
+  }, [stories, storyFilter, sourceFilter, sortMode, feedOrder]);
 
   /** Feed position of each live story, as readers see them (only in the default newest-first, unfiltered view). */
   const feedPositions = useMemo(() => {
@@ -153,10 +156,10 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     let n = 0;
     for (const s of filteredStories) {
       const scheduled = s.scheduled_publish_at && isFuture(new Date(s.scheduled_publish_at));
-      if (s.status === 'published' && !scheduled) map.set(s.id, ++n);
+      if (feedOrder || (s.status === 'published' && !scheduled)) map.set(s.id, ++n);
     }
     return map;
-  }, [filteredStories, sortMode, storyFilter, sourceFilter]);
+  }, [filteredStories, sortMode, storyFilter, sourceFilter, feedOrder]);
 
   const availableSources = useMemo(() => {
     const counts = new Map<string, number>();
@@ -364,8 +367,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
       {paginatedStories.map((story) => {
         const isScheduled = Boolean(story.scheduled_publish_at && isFuture(new Date(story.scheduled_publish_at)));
-        const isLive = story.status === 'published' && !isScheduled;
-        const isReady = story.status === 'ready' && !isScheduled;
+        const isLive = feedOrder || (story.status === 'published' && !isScheduled);
+        const isReady = !feedOrder && story.status === 'ready' && !isScheduled;
         const isDraft = story.status === 'draft';
         const storyTitle = story.title || story.headline || 'Untitled';
         const reads = storyReads?.[story.id] ?? 0;

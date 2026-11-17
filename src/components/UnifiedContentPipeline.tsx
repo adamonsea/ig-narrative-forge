@@ -22,6 +22,7 @@ import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
 import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
+import { splitLiveNow } from "@/lib/liveNow";
 
 interface Topic {
   id: string;
@@ -282,8 +283,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     );
   }
 
-  const visibleStories = stories.filter(s => ['draft', 'ready', 'published'].includes(s.status));
-  const visibleIdsKey = visibleStories.map(s => s.id).join(',');
+  // Live now = exactly the feed (same stories, same order); written-but-not-live waits in the Story pool.
+  const { live: liveStories, held: heldStories } = splitLiveNow(stories);
+  const visibleIdsKey = [...liveStories, ...heldStories].map(s => s.id).join(',');
   const setPulseIds = pulseCtx?.setStoryIds;
   useEffect(() => {
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
@@ -296,12 +298,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   // Waiting events are pinned on top for a one-click OK (reader suggestions first);
   // below them every live event, soonest first; the rest didn't make the cut.
   const eventsToCheck = eventsOn && eventDesk ? toCheckOrder(eventDesk.waiting, today, nowTime) : [];
-  const comingUp = eventsOn && eventDesk ? comingUpTimeline(eventDesk.allLive, [] as typeof eventDesk.waiting, today, nowTime) : [];
+  const comingUp = eventsOn && eventDesk ? comingUpTimeline(eventDesk.upcoming, [] as typeof eventDesk.waiting, today, nowTime) : [];
   const leftOutEvents = eventsOn && eventDesk ? leftOutOrder(eventDesk.hidden, today, nowTime) : [];
   const newsCount = totalArticlesCount ?? totalArticles;
   const autopilot = useAutopilotOn(selectedTopicId);
   // The What's on set sits in Live exactly where readers see it (same rule as the feed).
-  const whatsOnAt = new Set(whatsOnPositions(Math.max(visibleStories.length, 1)));
+  const whatsOnAt = new Set(whatsOnPositions(Math.max(liveStories.length, 1)));
   const renderWhatsOnAfter = eventsOn && eventDesk
     ? (position: number) => {
         if (!whatsOnAt.has(position)) return null;
@@ -410,6 +412,21 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <PublishedGlance topicId={selectedTopicId} />
             </RememberedFold>
           )}
+          {heldStories.length > 0 && (
+            <RememberedFold foldKey="desk-written-not-live" label={`Written, not in the feed · ${heldStories.length}`} contentClassName="pt-2">
+              <PublishedStoriesList
+                stories={heldStories}
+                onArchive={handleArchiveStory}
+                onReturnToReview={handleMultiTenantRejectStory}
+                onDelete={handleMultiTenantRejectStory}
+                onViewStory={handleViewStory}
+                onRefresh={refreshContent}
+                loading={loading}
+                topicSlug={topicSlug}
+                topicId={selectedTopicId}
+              />
+            </RememberedFold>
+          )}
           {(pulse?.new_arrivals ?? 0) > 0 && (
             <p className="text-sm text-muted-foreground">{pulse!.new_arrivals} new since you last looked</p>
           )}
@@ -477,7 +494,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
           </div>
 
-          {visibleStories.length === 0 && queueItems.length === 0 ? (
+          {liveStories.length === 0 && queueItems.length === 0 ? (
             <div className="space-y-3">
               {eventsOn && eventDesk && (
                 <LiveWhatsOnRow first events={eventDesk.live} today={today} showInFeed={eventDesk.showInFeed} liveMore={eventDesk.liveMore}
@@ -491,7 +508,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </div>
           ) : (
             <PublishedStoriesList
-              stories={visibleStories}
+              feedOrder
+              stories={liveStories}
               processingItems={queueItems}
               onArchive={handleArchiveStory}
               onReturnToReview={handleMultiTenantRejectStory}

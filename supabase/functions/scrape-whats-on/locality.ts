@@ -8,7 +8,9 @@
  *                                                 neighbouring one and the address names the area), else out
  *   3. Names one of the feed's competing areas  → out
  *   4. Names the feed's own area or places      → in
- *   5. Nothing to go on: trusted from a source that only lists local things,
+ *   5. Nothing to go on, and the source itself is named after a competing area
+ *      (e.g. "Brighton Dome" on an Eastbourne feed)  → out
+ *   6. Nothing to go on: trusted from a source that only lists local things,
  *      left out ("unconfirmed") when the source is a broad listings site or
  *      clearly lists other areas too.
  *
@@ -125,13 +127,16 @@ export function hasLocalEvidence(ev: LocalityInput, profile: PlaceProfile | null
  * it's a known listings site, or when at least two of its events (and a quarter
  * of them) are clearly somewhere else.
  */
-export function judgeEvents(events: LocalityInput[], profile: PlaceProfile | null, sourceUrl: string): Verdict[] {
+export function judgeEvents(events: LocalityInput[], profile: PlaceProfile | null, sourceUrl: string, sourceName?: string | null): Verdict[] {
   if (!profile) return events.map(() => ({ keep: true }));
   const explicit = events.map((e) => explicitVerdict(e, profile));
+  const nameN = norm(sourceName || '');
+  const sourceElsewhere = Boolean(sourceName) && profile.competing.some((c) => has(nameN, c)) && !profile.places.some((pl) => has(nameN, pl));
   const elsewhere = explicit.filter((v) => v && !v.keep && v.reason === 'outside_area').length;
   const broad = isBroadListingSite(sourceUrl) || (elsewhere >= 2 && elsewhere / Math.max(1, events.length) >= 0.25);
   return explicit.map((v) => {
     if (v) return v;
+    if (sourceElsewhere) return { keep: false, reason: 'outside_area' };
     if (!broad) return { keep: true };
     return { keep: false, reason: 'unconfirmed' };
   });

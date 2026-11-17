@@ -89,9 +89,9 @@ async function topicContextFor(supabase: Db, profiles: Profiles, topicId: string
 const placeProfileFor = async (supabase: Db, profiles: Profiles, topicId: string) => (await topicContextFor(supabase, profiles, topicId)).profile;
 
 /** The location verdict and the local-relevance score for every event in one read. */
-async function judgeAndScore(supabase: Db, profiles: Profiles, topicId: string, events: ReaderEvent[], sourceUrl: string) {
+async function judgeAndScore(supabase: Db, profiles: Profiles, topicId: string, events: ReaderEvent[], sourceUrl: string, sourceName?: string | null) {
   const ctx = await topicContextFor(supabase, profiles, topicId);
-  const verdicts = judgeEvents(events, ctx.profile, sourceUrl);
+  const verdicts = judgeEvents(events, ctx.profile, sourceUrl, sourceName);
   const scores = events.map((e, i) => combineRelevance(baseEventScore(e, ctx.config), verdicts[i], hasLocalEvidence(e, ctx.profile)));
   return { verdicts, scores };
 }
@@ -200,7 +200,7 @@ async function filterStored(supabase: Db, source: Source, profile: PlaceProfile 
     .gte('start_date', londonToday()).limit(1000);
   const rows = (data || []) as { id: string; title: string; location: string | null }[];
   if (!rows.length) return;
-  const verdicts = judgeEvents(rows.map((r) => ({ title: r.title, venue: r.location })), profile, source.url);
+  const verdicts = judgeEvents(rows.map((r) => ({ title: r.title, venue: r.location })), profile, source.url, source.name);
   const byReason = new Map<string, string[]>();
   verdicts.forEach((v, i) => { if (!v.keep && isOutOfArea(v)) byReason.set(v.reason, [...(byReason.get(v.reason) || []), rows[i].id]); });
   for (const [reason, ids] of byReason) {
@@ -241,7 +241,7 @@ async function checkSource(supabase: Db, profiles: Profiles, source: Source) {
   const reader = readerFor(source.kind);
   const result = await readSafely(reader, source.url, source.name);
   const profile = await placeProfileFor(supabase, profiles, source.topic_id);
-  const { verdicts, scores } = await judgeAndScore(supabase, profiles, source.topic_id, result.events, source.url);
+  const { verdicts, scores } = await judgeAndScore(supabase, profiles, source.topic_id, result.events, source.url, source.name);
   const excluded = verdicts.filter(isOutOfArea).length;
   let storeError: string | null = null;
   try {
@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
       const kind = body.action === 'save' && isEventSourceKind(body.kind) ? body.kind : await detectKind(url);
       const reader = readerFor(kind);
       const result = await readSafely(reader, url, hostOf(url));
-      const { verdicts, scores } = await judgeAndScore(supabase, profiles, body.topicId, result.events, url);
+      const { verdicts, scores } = await judgeAndScore(supabase, profiles, body.topicId, result.events, url, body.name || result.name);
       const summary = summarise(kind, result, verdicts);
       if (body.action === 'preview') return json({ success: true, ...summary });
 
@@ -402,7 +402,7 @@ Deno.serve(async (req) => {
         const kind = await detectKind(newUrl);
         const reader = readerFor(kind);
         const result = await readSafely(reader, newUrl, hostOf(newUrl));
-        const { verdicts, scores } = await judgeAndScore(supabase, profiles, source.topic_id, result.events, newUrl);
+        const { verdicts, scores } = await judgeAndScore(supabase, profiles, source.topic_id, result.events, newUrl, body.name || source.name);
         if (!result.events.length) return json({ success: false, ...summarise(kind, result, verdicts), error: result.error || 'No upcoming events found at this address.' }, 422);
         await mirrorLegacyCalendarUrl(supabase, source, kind === 'calendar_feed' ? newUrl : null);
         await deleteUpcoming(supabase, source);

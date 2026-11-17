@@ -185,6 +185,16 @@ export function hiddenReason(status: string, reason: string | null | undefined):
   return "Out of area";
 }
 
+/**
+ * A live event the location rules now say is elsewhere (the owner published it earlier):
+ * it stays in the feed, flagged on the Desk so the owner can take it off. null = no flag.
+ */
+export function liveAreaFlag(reason: string | null | undefined): string | null {
+  if (reason === "outside_area") return "Looks out of area";
+  if (reason === "online") return "Looks online-only";
+  return null;
+}
+
 /** One row per event name (repeat dates and repeat listings collapse to the soonest). */
 export function onePerTitle<T extends { title: string; start_date: string }>(events: T[]): T[] {
   const seen = new Map<string, T>();

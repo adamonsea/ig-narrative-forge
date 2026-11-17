@@ -90,6 +90,8 @@ export interface MultiTenantStory {
   scheduled_publish_at?: string | null;
   duplicate_of_story_id?: string | null;
   duplicate_similarity?: number | null;
+  /** The original article's publication time; with created_at it decides the feed's display date. */
+  article_published_at?: string | null;
 }
 
 export interface MultiTenantStats {
@@ -823,7 +825,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           audience_expertise: story.audience_expertise || '',
           is_teaser: story.is_teaser || false,
           is_parliamentary: isParliamentary,
-          scheduled_publish_at: story.scheduled_publish_at || null
+          scheduled_publish_at: story.scheduled_publish_at || null,
+          article_published_at: story.article_published_at || null
         };
       });
 
@@ -1608,7 +1611,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           audience_expertise: story.audience_expertise || '',
           is_teaser: false,
           is_parliamentary: false,
-          scheduled_publish_at: story.scheduled_publish_at || null
+          scheduled_publish_at: story.scheduled_publish_at || null,
+          article_published_at: story.article_published_at || null
         } as any;
       });
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { EventSourceAddPanel, EventSourceCards } from '@/components/events/EventSources';
+import { EventSourceAddPanel } from '@/components/events/EventSources';
+import { SourceShelves } from '@/components/sources/SourceShelves';
 import { detectSourceKind, isEventsSourceKind } from '@/lib/whatsOn';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -1007,7 +1008,7 @@ export const UnifiedSourceManager = ({
       setGatheringSource(source.id);
       
       toast({
-        title: options?.forceRescrape ? 'Force Rescrape Started' : 'Content Gathering Started',
+        title: options?.forceRescrape ? 'Gathering now' : 'Content Gathering Started',
         description: `Now gathering articles from ${source.source_name}...`,
       });
 
@@ -1422,6 +1423,23 @@ export const UnifiedSourceManager = ({
     }
   };
 
+  /** Archive a source for this feed only: it stops being gathered here and moves to the Archived fold. */
+  const handleArchiveSource = async (source: ContentSource) => {
+    if (!topicId) return;
+    const { error } = await supabase
+      .from('topic_sources')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('topic_id', topicId)
+      .eq('source_id', source.id);
+    if (error) {
+      toast({ title: "Couldn't archive", description: 'Please try again.', variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Archived', description: `${source.source_name} won't be gathered. Restore it any time from Archived.` });
+    loadSources();
+    onSourcesChange();
+  };
+
   const handleCheckNewContent = async () => {
     
     try {
@@ -1515,14 +1533,16 @@ export const UnifiedSourceManager = ({
               AI Discover
             </Button>
           )}
-          <Button
-            onClick={() => setShowDisabled(!showDisabled)}
-            variant="outline"
-            size="sm"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            {showDisabled ? 'Hide' : 'Show'} Disabled
-          </Button>
+          {mode !== 'topic' && (
+            <Button
+              onClick={() => setShowDisabled(!showDisabled)}
+              variant="outline"
+              size="sm"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              {showDisabled ? 'Hide' : 'Show'} Disabled
+            </Button>
+          )}
           <Button onClick={() => setShowAddForm(true)} size="sm">
             <Plus className="w-4 w-4 mr-2" />
             Add Source
@@ -1552,7 +1572,7 @@ export const UnifiedSourceManager = ({
       )}
 
       {/* Backfill Modal */}
-      <Dialog open={showBackfillModal} onOpenChange={setShowBackfillModal}>
+      <Dialog open={showBackfillModal} onOpenChange={(open) => { setShowBackfillModal(open); if (!open) setSourceToBackfill(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Backfill Historical Content</DialogTitle>
@@ -1583,7 +1603,7 @@ export const UnifiedSourceManager = ({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBackfillModal(false)}>
+            <Button variant="outline" onClick={() => { setShowBackfillModal(false); setSourceToBackfill(null); }}>
               Cancel
             </Button>
             <Button 
@@ -1813,7 +1833,30 @@ export const UnifiedSourceManager = ({
         </Card>
       )}
 
-      {/* Sources List */}
+      {/* Topic feeds: News and Events shelves of source cards, with one Archived fold */}
+      {mode === 'topic' && topicId && (
+        <SourceShelves
+          topicId={topicId}
+          sources={sources}
+          loading={loading}
+          eventsReloadKey={eventSourcesReload}
+          gatheringId={gatheringSource}
+          testingId={testingSource}
+          onGather={(s) => handleScrapeSource(s as ContentSource, { forceRescrape: true })}
+          onArchive={(s) => handleArchiveSource(s as ContentSource)}
+          onRestore={(s) => handleReactivateSource(s.id, false)}
+          onRemove={(s) => handleDeleteSource(s.id, s.source_name)}
+          onSave={(s, v) => handleUpdateSource(s.id, {
+            feed_url: v.feed_url,
+            scraping_config: { ...(s.scraping_config || {}), trust_content_relevance: v.trust, trusted_max_age_days: v.trustDays },
+          })}
+          onTest={(s) => handleTestSource(s as ContentSource)}
+          onBackfill={(s) => { setSourceToBackfill(s.id); setShowBackfillModal(true); }}
+        />
+      )}
+
+      {/* Sources List (global/region modes) */}
+      {mode !== 'topic' && (
       <div className="grid gap-4">
         {sources.filter(s => showDisabled || s.is_active).map((source) => (
           <Card key={source.id}>
@@ -1841,15 +1884,6 @@ export const UnifiedSourceManager = ({
                   </div>
                 </div>
 
-                {/* Center: Sparkline Chart (most important) */}
-                {mode === 'topic' && topicId && source.is_active && (
-                  <div className="flex-1 min-w-0">
-                    <SourceStorySparkline 
-                      sourceId={source.id} 
-                      topicId={topicId}
-                    />
-                  </div>
-                )}
 
                 {/* Right: Metrics + Actions */}
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
@@ -1860,15 +1894,7 @@ export const UnifiedSourceManager = ({
                     </Badge>
                   )}
 
-                  {/* Live Stories Count */}
-                  {mode === 'topic' && (
-                    <LiveStoriesCount count={source.stories_published_7d || 0} />
-                  )}
 
-                  {/* Average Daily Stories */}
-                  {mode === 'topic' && source.avg_daily_stories !== undefined && (
-                    <AverageDailyStoriesBadge average={source.avg_daily_stories} />
-                  )}
 
                   {/* Cooldown Status */}
                   <CooldownMinimal
@@ -1964,8 +1990,6 @@ export const UnifiedSourceManager = ({
           </Card>
         ))}
 
-        {mode === 'topic' && topicId && <EventSourceCards topicId={topicId} reloadKey={eventSourcesReload} />}
-
         {sources.length === 0 && !loading && (
           <div className="text-center py-12">
             <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1975,6 +1999,7 @@ export const UnifiedSourceManager = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Edit Source Settings Dialog */}
       <Dialog open={!!editingSource} onOpenChange={(open) => !open && setEditingSource(null)}>

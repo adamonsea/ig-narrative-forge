@@ -1,3 +1,12 @@
+# Sources as cards + Desk fixes (17 Nov 2026)
+- [x] Sources: News / Events shelves of cards (name, health colour, 7-day dots, one number); needs-attention pinned on top
+- [x] Sources: one Gather (no separate force rescrape); click card opens Desk-style side panel with everything else
+- [x] Sources: health from each source's own rhythm (amber = quiet 2-3x normal gap; red = repeated errors or nothing in 14 days); tests
+- [x] Sources: Archived fold replaces Show Disabled (restore / remove)
+- [x] Desk: Live now shows what's in the feed
+- [x] Desk: Brighton Dome event flagged out of area (Eastbourne); Hastings stays local (Adam, 17 Nov)
+- [x] Desk: Coming up shows all events (no 60 cap)
+
 # Desk redesign: news and events, clean cards (16 Nov 2026)
 Plan: .lovable/plan/desk-redesign-news-and-events-clean-cards-2026-11-16.md. One phase at a time, stop after each for Adam to test. Presentation only; nothing removed, only moved.
 - [x] Phase 1: story cards with three states (rest / hover / drawer), filter popover, slim processing rows

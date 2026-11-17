@@ -51,6 +51,8 @@ export interface EventDesk {
   liveMore: number;
   /** Every published upcoming event (next 31 days, one per name), for the horizon bar. */
   allLive: WhatsOnFeedEvent[];
+  /** Every published upcoming event however far ahead (one per name), for Coming up. */
+  upcoming: DeskEvent[];
 }
 
 /** Everything the Desk needs about events: Waiting, Hidden, Live and the two switches. */
@@ -61,7 +63,8 @@ export function useEventDesk(topicId: string | undefined) {
     refetchInterval: 60_000,
     queryFn: async (): Promise<EventDesk> => {
       const today = londonToday();
-      const [topicRes, insightRes, sourcesRes, queueRes, liveRes] = await Promise.all([
+      const fields = "id, title, start_date, start_time, location, source_name, source_url, source_api, status, exclusion_reason, relevance_score, created_at";
+      const [topicRes, insightRes, sourcesRes, queueRes, liveRes, publishedRes] = await Promise.all([
         supabase.from("topics").select("events_enabled").eq("id", topicId!).maybeSingle(),
         supabase.from("topic_insight_settings").select("events_cards_enabled, reader_event_submissions").eq("topic_id", topicId!).maybeSingle(),
         supabase.from("event_sources").select("id", { count: "exact", head: true }).eq("topic_id", topicId!),
@@ -70,10 +73,14 @@ export function useEventDesk(topicId: string | undefined) {
           .eq("topic_id", topicId!).in("status", ["pending", "excluded", "deleted"]).gte("start_date", today)
           .order("start_date").limit(1000),
         (supabase.rpc as any)("get_topic_whats_on", { p_topic_id: topicId }),
+        supabase.from("events").select(fields)
+          .eq("topic_id", topicId!).eq("status", "published").gte("start_date", today)
+          .order("start_date").limit(2000),
       ]);
       if (queueRes.error) throw queueRes.error;
       const rows = (queueRes.data ?? []) as unknown as DeskEvent[];
-      const publishedTitles = new Set(((liveRes.data ?? []) as WhatsOnFeedEvent[]).map((e) => e.title.toLowerCase().replace(/\s+/g, " ").trim()));
+      const published = (publishedRes.data ?? []) as unknown as DeskEvent[];
+      const publishedTitles = new Set([...((liveRes.data ?? []) as WhatsOnFeedEvent[]), ...published].map((e) => e.title.toLowerCase().replace(/\s+/g, " ").trim()));
       const notLive = (e: DeskEvent) => !publishedTitles.has(e.title.toLowerCase().replace(/\s+/g, " ").trim());
       const allLive = (liveRes.data ?? []) as WhatsOnFeedEvent[];
       const live = upcomingWhatsOn(allLive, today);
@@ -87,6 +94,7 @@ export function useEventDesk(topicId: string | undefined) {
         live,
         liveMore: Math.max(0, allLive.length - live.length),
         allLive,
+        upcoming: onePerTitle(published),
       };
     },
   });
@@ -121,6 +129,7 @@ export function useEventDeskActions(topicId: string | undefined) {
         hidden: before.hidden.filter((e) => e.id !== event.id),
         live: action === "skip" ? before.live.filter((e) => e.id !== event.id) : before.live,
         allLive: action === "skip" ? before.allLive.filter((e) => e.id !== event.id) : before.allLive,
+        upcoming: action === "skip" ? before.upcoming.filter((e) => e.id !== event.id) : before.upcoming,
       });
     }
     try {
@@ -162,8 +171,34 @@ export function useEventDeskActions(topicId: string | undefined) {
   const setShowInFeed = useCallback((on: boolean) => saveInsight("events_cards_enabled", on), [saveInsight]);
   const setReaderSuggestions = useCallback((on: boolean) => saveInsight("reader_event_submissions", on), [saveInsight]);
 
+  /** Take several Live events off the feed at once (e.g. all flagged out of area); one toast, Undo puts them back. */
+  const removeManyFromLive = useCallback(async (events: Pick<DeskEvent, "id" | "title">[]) => {
+    if (events.length === 0) return;
+    // Removal sticks by event name across the feed, so one call per name is enough.
+    const seen = new Set<string>();
+    const unique = events.filter((e) => { const k = e.title.trim().toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+    const done: Pick<DeskEvent, "id" | "title">[] = [];
+    try {
+      for (const e of unique) { await run(e.id, "skip"); done.push(e); }
+      toast({
+        title: `Removed ${events.length} ${events.length === 1 ? "event" : "events"}`,
+        description: "They're in Didn't make the cut.",
+        action: (
+          <ToastAction altText="Undo" onClick={async () => { try { for (const e of done) await run(e.id, "publish"); } finally { refresh(); } }}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    } catch {
+      toast({ title: "Couldn't remove them all", description: done.length ? `${done.length} removed. Please try again for the rest.` : "Please try again.", variant: "destructive" });
+    } finally {
+      refresh();
+    }
+  }, [refresh, run, toast]);
+
   return {
     publish: (e: Pick<DeskEvent, "id" | "title">) => act(e, "publish"),
+    removeManyFromLive,
     skip: (e: Pick<DeskEvent, "id" | "title">) => act(e, "skip"),
     /** Take a Live event off the feed (to Hidden); Undo puts it straight back. */
     removeFromLive: (e: Pick<DeskEvent, "id" | "title">) => act(e, "skip", "publish"),

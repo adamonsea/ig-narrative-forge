@@ -83,3 +83,18 @@ Deno.test('listings hosts', () => {
   assertEquals(isBroadListingSite(EB), true);
   assertEquals(isBroadListingSite(LOCAL), false);
 });
+
+Deno.test('a source named after a competing area: its unplaced events are out, local evidence still wins', () => {
+  const p = buildPlaceProfile({ topic_type: 'regional', region: 'Eastbourne', landmarks: ['Congress Theatre'], competing_regions: ['brighton', 'worthing'] });
+  const DOME = 'https://brightondome.org/whats-on/';
+  const v = judgeEvents([
+    { title: 'Bellowhead', venue: 'Concert Hall' },
+    { title: 'Hothouse Flowers', venue: 'Brighton Dome Corn Exchange' },
+    { title: 'Touring show', venue: 'Congress Theatre, Eastbourne' },
+  ], p, DOME, 'Brighton Dome');
+  assertEquals(v, [{ keep: false, reason: 'outside_area' }, { keep: false, reason: 'outside_area' }, keep]);
+  // Without the name it can't tell, so a single-venue site is trusted as before
+  assertEquals(judgeEvents([{ title: 'Bellowhead', venue: 'Concert Hall' }], p, DOME), [keep]);
+  // A source named after the feed's own area is never treated as elsewhere
+  assertEquals(judgeEvents([{ title: 'Quiz', venue: null }], p, LOCAL, 'Eastbourne v Brighton derby nights'), [keep]);
+});

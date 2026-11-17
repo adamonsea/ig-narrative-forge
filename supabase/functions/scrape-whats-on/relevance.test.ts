@@ -52,3 +52,11 @@ Deno.test('owner decisions and what is already placed stick', () => {
   assertEquals(placeEvent({ prev: { status: 'published', kept_by_owner: false }, verdict: { keep: false, reason: 'outside_area' }, score: 1, autoPublish: true }).status, 'excluded');
   assertEquals(placeEvent({ publishedByOwner: true, verdict: { keep: false, reason: 'online' }, score: 1, autoPublish: false }).status, 'published');
 });
+
+Deno.test('an owner-published event the location rules now place elsewhere stays Live, flagged with the reason', () => {
+  const out = { keep: false as const, reason: 'outside_area' as const };
+  assertEquals(placeEvent({ prev: { status: 'published', kept_by_owner: true }, verdict: out, score: 1, autoPublish: false }), { status: 'published', reason: 'outside_area', kept: true });
+  assertEquals(placeEvent({ prev: { status: 'published', kept_by_owner: true }, verdict: { keep: true }, score: 80, autoPublish: false }), { status: 'published', reason: null, kept: true });
+  // "Couldn't tell" is not a flag
+  assertEquals(placeEvent({ prev: { status: 'published', kept_by_owner: true }, verdict: { keep: false, reason: 'unconfirmed' }, score: 1, autoPublish: false }).reason, null);
+});

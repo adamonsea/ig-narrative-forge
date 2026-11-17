@@ -54,7 +54,8 @@ export interface PlaceInput {
 
 /**
  * Where an incoming event goes:
- *   owner decisions stick (skipped stays Hidden, published stays Live);
+ *   owner decisions stick (skipped stays Hidden, published stays Live — but a published one
+ *   the location rules now place elsewhere carries the reason as a flag for the Desk);
  *   something already in Waiting or Live stays put (a live one that turns out
  *   to be out of area moves to Hidden);
  *   new: out of area → Hidden; auto-publish source and not low relevance → Live; else Waiting.
@@ -62,9 +63,9 @@ export interface PlaceInput {
 export function placeEvent(i: PlaceInput): { status: EventStatus; reason: string | null; kept: boolean } {
   const prevKept = Boolean(i.prev?.kept_by_owner);
   if (i.prev?.status === 'deleted' || (!prevKept && i.removedByOwner)) return { status: 'deleted', reason: null, kept: false };
-  if (prevKept || i.publishedByOwner) return { status: 'published', reason: null, kept: true };
   const out = isOutOfArea(i.verdict);
   const reason = !i.verdict.keep ? i.verdict.reason : null;
+  if (prevKept || i.publishedByOwner) return { status: 'published', reason: out ? reason : null, kept: true };
   if (i.prev && i.prev.status !== 'excluded') {
     if (i.prev.status === 'published' && out) return { status: 'excluded', reason, kept: false };
     return { status: i.prev.status === 'pending' ? 'pending' : 'published', reason: null, kept: false };
