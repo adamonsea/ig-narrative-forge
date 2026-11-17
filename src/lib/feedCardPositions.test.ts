@@ -40,7 +40,7 @@ describe("what's on card set", () => {
   });
 });
 
-import { eventCardMode, eventsBeforeNews, eventsSliceBeforeNews, eventsAfterLastNews } from './feedCardPositions';
+import { eventCardMode, eventsBeforeNews, eventsLedRun } from './feedCardPositions';
 
 describe('events-led feeds', () => {
   it('news-led feeds keep grouped event cards, events-led default to individual', () => {
@@ -53,18 +53,12 @@ describe('events-led feeds', () => {
     expect([1, 2, 3, 4].map((n) => eventsBeforeNews(n))).toEqual([3, 8, 13, 18]);
   });
   it('every event appears exactly once, in order, around the news', () => {
-    const events = 20, stories = 2;
-    const seen: number[] = [];
-    for (let n = 1; n <= stories; n++) { const [a, b] = eventsSliceBeforeNews(n, events); for (let i = a; i < b; i++) seen.push(i); }
-    for (let i = eventsAfterLastNews(stories, events); i < events; i++) seen.push(i);
-    expect(seen).toEqual(Array.from({ length: events }, (_, i) => i));
-  });
-  it('a feed with no news shows only events', () => {
-    expect(eventsAfterLastNews(0, 5)).toBe(0);
+    const run = eventsLedRun(20, 2, true);
+    expect(run.filter((i) => i.kind === 'event').map((i) => i.index)).toEqual(Array.from({ length: 20 }, (_, i) => i));
   });
 });
 
-import { eventsLedRun, newsSlotsWithin } from "./feedCardPositions";
+import { newsSlotsWithin } from "./feedCardPositions";
 describe("events-led run", () => {
   it("news slots in after events 3, 8, 13, 18 in the first 20 events", () => {
     const run = eventsLedRun(20, 10, false);

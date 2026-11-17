@@ -367,3 +367,27 @@ export function individualEvents<T extends Pick<WhatsOnFeedEvent, "start_date" |
   const sorted = [...events].sort((a, b) => (a.start_date + (a.start_time ?? "99")).localeCompare(b.start_date + (b.start_time ?? "99")));
   return onePerTitle(sorted.filter((e) => e.start_date >= today && !hasStarted(e, today, time)));
 }
+
+// ---------- paging individual event cards (same rules as news) ----------
+
+/** Events-led feeds load this many events at a time. */
+export const EVENTS_PER_PAGE = 20;
+/** Each next page starts this many events before what's loaded; repeats are dropped by id. */
+export const EVENTS_PAGE_OVERLAP = 2;
+
+/** All loaded pages as one list, in order, each event once. */
+export function mergeEventPages<T extends { id: string }>(pages: T[][]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const page of pages) for (const e of page) if (!seen.has(e.id)) { seen.add(e.id); out.push(e); }
+  return out;
+}
+
+/** Where the next page starts, or undefined when the last page was short or brought nothing new. */
+export function nextEventsOffset<T extends { id: string }>(pages: T[][]): number | undefined {
+  const last = pages[pages.length - 1];
+  if (!last || last.length < EVENTS_PER_PAGE) return undefined;
+  const loaded = mergeEventPages(pages).length;
+  if (pages.length > 1 && loaded === mergeEventPages(pages.slice(0, -1)).length) return undefined;
+  return Math.max(0, loaded - EVENTS_PAGE_OVERLAP);
+}

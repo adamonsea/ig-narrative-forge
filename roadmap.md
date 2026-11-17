@@ -182,9 +182,9 @@ Park six features + tidy keywords (13 November 2026)
 - [x] Other owner-visible open items in the review file
 
 # Events-led feeds — Phase 1 follow-ups (17 Nov 2026)
-- [ ] Lisbon source → agendalx English list (?lang=en); one gather; report English titles / descriptions / non-Other categories
-- [ ] Per-feed currency (default from country: € Lisbon, £ UK); prices "€12" / "Free"; hidden when unknown
-- [ ] Category fallback: model in a background job after saving; never blocks; never overwrites owner choice
-- [ ] Events-led feeds page 20 at a time (news paging rules); smooth swiping
-- [ ] Events-led feeds: extra cards count positions against events
-- [ ] Widgets page: 17 tiny-text spots to the type scale
+- [x] Lisbon source → agendalx English list (?lang=en); one gather; report English titles / descriptions / non-Other categories
+- [x] Per-feed currency (default from country: € Lisbon, £ UK); prices "€12" / "Free"; hidden when unknown
+- [x] Category fallback: model in a background job after saving; never blocks; never overwrites owner choice
+- [x] Events-led feeds page 20 at a time (news paging rules); smooth swiping
+- [x] Events-led feeds: extra cards count positions against events
+- [x] Widgets page: 17 tiny-text spots to the type scale

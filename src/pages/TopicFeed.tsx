@@ -7,7 +7,7 @@ import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
-import { whatsOnPositions, eventCardMode, eventsSliceBeforeNews, eventsAfterLastNews } from "@/lib/feedCardPositions";
+import { whatsOnPositions, eventCardMode, eventsLedRun, newsSlotsWithin } from "@/lib/feedCardPositions";
 import { WhatsOnCard } from "@/components/events/WhatsOnCard";
 import { EventCard } from "@/components/events/EventCard";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
@@ -338,7 +338,8 @@ const TopicFeed = () => {
   const eventsLed = topic?.feed_lead === 'events' && eventsInFeed;
   const individualCards = eventsInFeed && eventCardMode(topic?.feed_lead, topic?.event_cards) === 'individual';
   const { data: whatsOnEvents } = useWhatsOnEvents(topic?.id, eventsInFeed && !individualCards);
-  const { data: feedEventsRaw } = useEventsFeed(topic?.id, individualCards);
+  const { events: feedEventsRaw, isLoading: eventsLoading, hasMore: eventsHasMore, loadingMore: eventsLoadingMore, loadMore: loadMoreEvents } = useEventsFeed(topic?.id, individualCards);
+  const eventCurrency = (topic as any)?.event_currency ?? null;
   const whatsOnToday = londonToday();
   const whatsOnClock = londonTime().slice(0, 4); // re-group every 10 minutes
   const whatsOn = useMemo(() => whatsOnSets(whatsOnEvents ?? [], whatsOnToday, londonTime()), [whatsOnEvents, whatsOnToday, whatsOnClock]);
@@ -346,7 +347,7 @@ const TopicFeed = () => {
   const feedBrand = topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color;
   const renderEventCard = (e: (typeof feedEvents)[number]) => (
     <div key={`event-${e.id}`} className="w-full max-w-2xl">
-      <EventCard event={e} brandColor={feedBrand} isOwner={isOwnFeed} />
+      <EventCard event={e} brandColor={feedBrand} isOwner={isOwnFeed} currency={eventCurrency} />
     </div>
   );
   useEffect(() => {
@@ -559,6 +560,24 @@ const TopicFeed = () => {
     
     if (node) observerRef.current.observe(node);
   }, [loading, loadingMore, hasMore, loadMore, isMobile]);
+
+  // Events-led feeds: one bottom sentinel loads whatever the run needs next —
+  // news if the loaded events have room for more stories, else the next 20 events,
+  // else (all events in) the rest of the news.
+  const eventsObserverRef = useRef<IntersectionObserver | null>(null);
+  const eventsSentinelRef = useCallback((node: HTMLDivElement | null) => {
+    eventsObserverRef.current?.disconnect();
+    if (!node) return;
+    const storiesLoaded = filteredContent.filter((item) => item.type === 'story').length;
+    const needNews = hasMore && storiesLoaded < newsSlotsWithin(feedEvents.length);
+    eventsObserverRef.current = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting || loading || loadingMore || eventsLoadingMore) return;
+      if (needNews) loadMore();
+      else if (eventsHasMore) void loadMoreEvents();
+      else if (hasMore) loadMore();
+    }, { rootMargin: isMobile ? '1200px' : '800px' });
+    eventsObserverRef.current.observe(node);
+  }, [filteredContent, feedEvents.length, hasMore, loading, loadingMore, eventsLoadingMore, eventsHasMore, loadMore, loadMoreEvents, isMobile]);
   
 
   useEffect(() => {
@@ -638,29 +657,17 @@ const TopicFeed = () => {
       ? displayableContent.map(item => item.type).lastIndexOf('story')
       : -1;
     
-    const rendered: React.ReactNode[] = displayableContent.map((contentItem, index) => {
+    // One story card (and the in-feed install card after the fifth item)
+    const renderStory = (story: any, storyIndex: number, index: number, watchForMore: boolean): React.ReactNode[] => {
       const items: React.ReactNode[] = [];
-      
-      const storyIndex = displayableContent.slice(0, index + 1).filter(item => item.type === 'story').length;
-      
-      // Events-led: events are the main run; this news story follows its slice of them
-      if (contentItem.type === 'story' && eventsLed && individualCards && feedEvents.length > 0) {
-        const [from, to] = eventsSliceBeforeNews(storyIndex, feedEvents.length);
-        feedEvents.slice(from, to).forEach((e) => items.push(renderEventCard(e)));
-      }
-
-      if (contentItem.type === 'story') {
-        const story = contentItem.data as any;
-        const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
+      const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
         
         items.push(
           <div
             key={`story-${story.id}`}
             className="w-full max-w-2xl"
             ref={(node) => {
-              if (index === lastDisplayableStoryIndex) {
-                lastStoryElementRef(node);
-              }
+              if (watchForMore) lastStoryElementRef(node);
               if (node) { stopNodesRef.current.set(node, { id: story.id, pos: storyIndex - 1 }); stopTrackerRef.current?.observe(node, story.id, storyIndex - 1); }
               if (node && sharedStoryObserverRef.current) {
                 storyObserverMapRef.current.set(node, story.id);
@@ -698,8 +705,12 @@ const TopicFeed = () => {
             </div>
           );
         }
-      }
+      return items;
+    };
 
+    // Extra cards (quiz, email sign-up …) at a position: stories in a news-led feed, events in an events-led one
+    const renderExtras = (storyIndex: number, index: number, isStory: boolean): React.ReactNode[] => {
+      const items: React.ReactNode[] = [];
       // Community pulse cards
       if (shouldShowCommunityPulseCard(storyIndex) && shouldShowCommunityPulse && topic && pulseData) {
         items.push(
@@ -773,11 +784,11 @@ const TopicFeed = () => {
 
       // What's on: after story 1, then at least 15 stories apart, never beside another extra card
       // News-led with individual cards: one event at each What's on position
-      if (contentItem.type === 'story' && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
+      if (isStory && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
         items.push(renderEventCard(feedEvents[whatsOnPositions(storyIndex).indexOf(storyIndex) % feedEvents.length]));
       }
 
-      if (contentItem.type === 'story' && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
+      if (isStory && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
             <WhatsOnCard
@@ -863,13 +874,27 @@ const TopicFeed = () => {
       }
 
       return items;
-    }).flat();
-    // Events-led: the rest of the events follow the last loaded news story
-    if (eventsLed && individualCards && feedEvents.length > 0) {
-      const storyCount = displayableContent.filter((item) => item.type === 'story').length;
-      rendered.push(...feedEvents.slice(eventsAfterLastNews(storyCount, feedEvents.length)).map(renderEventCard));
+    };
+
+    // Events-led: events are the run of cards; news and extras slot in counted against events
+    if (eventsLed && individualCards) {
+      const stories = displayableContent.filter((item) => item.type === 'story');
+      const run: React.ReactNode[] = [];
+      eventsLedRun(feedEvents.length, stories.length, !eventsHasMore).forEach((item, k) => {
+        if (item.kind === 'event') run.push(renderEventCard(feedEvents[item.index]));
+        else run.push(...renderStory(stories[item.index].data, item.index + 1, k, false));
+        if (item.extrasAt !== null) run.push(...renderExtras(item.extrasAt, k, false));
+      });
+      return run;
     }
-    return rendered;
+
+    return displayableContent.map((contentItem, index) => {
+      const storyIndex = displayableContent.slice(0, index + 1).filter(item => item.type === 'story').length;
+      const isStory = contentItem.type === 'story';
+      const items = isStory ? renderStory(contentItem.data, storyIndex, index, index === lastDisplayableStoryIndex) : [];
+      items.push(...renderExtras(storyIndex, index, isStory));
+      return items;
+    }).flat();
   }, [
     filteredContent, slug, topic, lastStoryElementRef, handleStorySwipe,
     handleStoryScrolledPast, handleMoreLikeThis, handlePrefetchFilter,
@@ -878,7 +903,7 @@ const TopicFeed = () => {
     quizQuestions, quizCardsEnabled, quizVisitorId, user?.id, markAsAnswered,
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
     hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed,
-    eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand
+    eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand, eventsHasMore, eventCurrency
   ]);
 
   if (loading) {
@@ -1296,8 +1321,22 @@ const TopicFeed = () => {
         )}
 
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
-        {!loading && filteredContent.length === 0 && eventsLed && individualCards && feedEvents.length > 0 ? (
-          <div className="space-y-6 md:space-y-8 flex flex-col items-center">{feedEvents.map(renderEventCard)}</div>
+        {!loading && eventsLed && individualCards && (feedEvents.length > 0 || eventsLoading) ? (
+          <div className="space-y-6 md:space-y-8 flex flex-col items-center">
+            {feedItems}
+            {(eventsHasMore || hasMore) && <div ref={eventsSentinelRef} className="h-px w-full" aria-hidden="true" />}
+            {(eventsLoading || eventsLoadingMore || loadingMore) && (
+              <div className="w-full max-w-2xl space-y-8">
+                {[...Array(2)].map((_, i) => <Skeleton key={i} className="w-full h-96 rounded-lg" />)}
+              </div>
+            )}
+            {!eventsLoading && !eventsHasMore && !hasMore && !eventsLoadingMore && !loadingMore && topic && (
+              <div className="pt-8">
+                <EndOfFeedCTA topicName={topic.name} topicId={topic.id} topicSlug={topic.slug}
+                  topicIcon={topic.branding_config?.icon_url || topic.branding_config?.logo_url} />
+              </div>
+            )}
+          </div>
         ) : !loading && filteredContent.length === 0 ? (
           <div className="text-center py-12 space-y-4">
             {hasActiveFilters ? (

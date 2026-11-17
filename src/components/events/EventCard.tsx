@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
@@ -44,7 +44,7 @@ interface EventCardProps {
  * Slide 1: date block, category icon, title, venue. Slide 2: time, venue, price
  * (only when known), up to two lines of description, one link to the organiser.
  */
-export function EventCard({ event: e, brandColor, isOwner = false, currency = null }: EventCardProps) {
+function EventCardView({ event: e, brandColor, isOwner = false, currency = null }: EventCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -107,3 +107,6 @@ export function EventCard({ event: e, brandColor, isOwner = false, currency = nu
     </Card>
   );
 }
+
+/** Memoised so loading the next 20 events doesn't re-render the cards already on screen. */
+export const EventCard = memo(EventCardView);

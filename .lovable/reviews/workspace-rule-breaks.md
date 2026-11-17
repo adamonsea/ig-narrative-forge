@@ -121,6 +121,6 @@ Shared drawer pass done 17 Nov: link editor, slide editor, animation instruction
 
 ---
 
-Not in this list and still open: the Widgets page (/dashboard/widgets) has tiny text in 17 places; it wasn't part of this audit.
+Widgets page (/dashboard/widgets): done 17 Nov — 13 tiny-text spots in the settings now use Small (14px), and the featured-days picker is 44px tall. The other 4 sit inside the live widget preview, which copies the real embedded widget's sizes (public/widget.js) on purpose, so they stay.
 
 Already fine: delete confirmations use the confirm box (Reviews, Clean up, delete feed), which the rules allow.

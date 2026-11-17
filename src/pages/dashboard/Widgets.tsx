@@ -382,7 +382,7 @@ export default function Widgets() {
                     className="w-12 p-1 h-10"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Leave empty to use feed's brand color
                 </p>
               </div>
@@ -398,7 +398,7 @@ export default function Widgets() {
                   value={config.customTitle}
                   onChange={(e) => setConfig(prev => ({ ...prev, customTitle: e.target.value }))}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Leave blank to use the feed's name
                 </p>
               </div>
@@ -446,7 +446,7 @@ export default function Widgets() {
                       <p className="text-sm font-medium truncate">
                         {avatarFileName || "Custom logo"}
                       </p>
-                      <p className="text-xs text-muted-foreground">Click × to remove</p>
+                      <p className="text-sm text-muted-foreground">Click × to remove</p>
                     </div>
                     <Button
                       type="button"
@@ -475,13 +475,13 @@ export default function Widgets() {
                       <>
                         <Upload className="w-8 h-8 text-muted-foreground mb-2" />
                         <p className="text-sm font-medium">Upload image</p>
-                        <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
+                        <p className="text-sm text-muted-foreground mt-1">or drag and drop</p>
                       </>
                     )}
                   </div>
                 )}
 
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Ideal size: <strong>128×128px</strong> (square). Max 500KB. PNG, JPG, or WebP.
                 </p>
               </div>
@@ -490,7 +490,7 @@ export default function Widgets() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="subscribe">Show subscribe box</Label>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Readers can sign up for email highlights without leaving the page
                   </p>
                 </div>
@@ -517,7 +517,7 @@ export default function Widgets() {
                       <SelectItem value="weekly">Weekly briefing (includes what's on)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     What new sign-ups from this embed will receive.
                   </p>
                 </div>
@@ -528,7 +528,7 @@ export default function Widgets() {
                 <div className="space-y-3">
                   <div>
                     <Label>Publications</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Choose which publications appear, and feature up to 3 at the top.
                     </p>
                   </div>
@@ -545,10 +545,10 @@ export default function Widgets() {
                               aria-label={`Show stories from ${source.name}`}
                             />
                             <span>{source.name}</span>
-                            <span className="text-xs text-muted-foreground">({source.count})</span>
+                            <span className="text-sm text-muted-foreground">({source.count})</span>
                           </label>
                           <div className="flex items-center gap-2">
-                            <label className={`flex items-center gap-2 text-xs cursor-pointer ${included ? "" : "opacity-40 pointer-events-none"}`}>
+                            <label className={`flex items-center gap-2 text-sm cursor-pointer ${included ? "" : "opacity-40 pointer-events-none"}`}>
                               <Checkbox
                                 checked={featured}
                                 disabled={!included}
@@ -567,7 +567,7 @@ export default function Widgets() {
                                   }))
                                 }
                               >
-                                <SelectTrigger className="h-7 w-[92px] text-xs" aria-label={`Keep ${source.name} featured for`}>
+                                <SelectTrigger className="h-11 w-[104px] text-sm" aria-label={`Keep ${source.name} featured for`}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -585,12 +585,12 @@ export default function Widgets() {
                     })}
                   </div>
                   {config.sources.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Nothing selected — the embed will show every publication.
                     </p>
                   )}
                   {config.featuredSources.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Each featured publication keeps its top slot for the days you choose, then its stories move down into the main list.
                     </p>
                   )}

@@ -244,3 +244,23 @@ describe("individual event cards", () => {
     expect(individualEvents(ev, "2026-11-19", "12:00:00").map((e) => `${e.title} ${e.start_date}`)).toEqual(["Talk 2026-11-19", "Jazz 2026-11-20"]);
   });
 });
+
+import { mergeEventPages, nextEventsOffset, EVENTS_PER_PAGE } from "./whatsOn";
+describe("events-led paging", () => {
+  const page = (from: number, n: number) => Array.from({ length: n }, (_, i) => ({ id: `e${from + i}` }));
+  it("loads 20 at a time; the next page starts 2 before what's loaded", () => {
+    expect(EVENTS_PER_PAGE).toBe(20);
+    expect(nextEventsOffset([page(0, 20)])).toBe(18);
+  });
+  it("the overlap is dropped by id, order kept", () => {
+    const merged = mergeEventPages([page(0, 20), page(18, 20)]);
+    expect(merged).toHaveLength(38);
+    expect(merged[19].id).toBe("e19");
+    expect(nextEventsOffset([page(0, 20), page(18, 20)])).toBe(36);
+  });
+  it("stops after a short page or a page with nothing new", () => {
+    expect(nextEventsOffset([page(0, 20), page(18, 5)])).toBeUndefined();
+    expect(nextEventsOffset([page(0, 20), page(0, 20)])).toBeUndefined();
+    expect(nextEventsOffset([])).toBeUndefined();
+  });
+});

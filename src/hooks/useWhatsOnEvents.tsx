@@ -1,9 +1,9 @@
-import { useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { londonToday, onePerTitle, upcomingWhatsOn, type WhatsOnFeedEvent } from "@/lib/whatsOn";
+import { londonToday, onePerTitle, upcomingWhatsOn, mergeEventPages, nextEventsOffset, EVENTS_PER_PAGE, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 
 const feedKey = (topicId: string | undefined) => ["whats-on", topicId] as const;
 const deskKey = (topicId: string | undefined) => ["event-desk", topicId] as const;
@@ -22,18 +22,33 @@ export function useWhatsOnEvents(topicId: string | undefined, enabled: boolean) 
   });
 }
 
-/** Individual event cards for events-led feeds: same filters as What's on, longer range, with card facts. */
+/**
+ * Individual event cards for events-led feeds: same filters as What's on, longer range,
+ * with card facts — 20 at a time, each next page starting 2 before what's loaded.
+ */
 export function useEventsFeed(topicId: string | undefined, enabled: boolean) {
-  return useQuery({
+  const q = useInfiniteQuery({
     queryKey: ["events-feed", topicId] as const,
     enabled: Boolean(topicId) && enabled,
     staleTime: 10 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)("get_topic_events_feed", { p_topic_id: topicId });
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await (supabase.rpc as any)("get_topic_events_feed", {
+        p_topic_id: topicId, p_limit: EVENTS_PER_PAGE, p_offset: pageParam,
+      });
       if (error) throw error;
       return (data ?? []) as WhatsOnFeedEvent[];
     },
+    getNextPageParam: (_last, pages) => nextEventsOffset(pages),
   });
+  const events = useMemo(() => mergeEventPages(q.data?.pages ?? []), [q.data]);
+  return {
+    events,
+    isLoading: q.isLoading,
+    hasMore: Boolean(q.hasNextPage),
+    loadingMore: q.isFetchingNextPage,
+    loadMore: q.fetchNextPage,
+  };
 }
 
 export interface DeskEvent {

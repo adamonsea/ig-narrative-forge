@@ -325,22 +325,6 @@ export function eventsBeforeNews(storyNumber: number, rule: SequenceCardPosition
   return rule.offset + (storyNumber - rule.leading.length - 1) * rule.interval;
 }
 
-/**
- * The events that sit just before news story n: [start, end) indexes into the
- * events list, capped at how many events there are. Events left over after the
- * last loaded story follow it (see eventsAfterLastNews).
- */
-export function eventsSliceBeforeNews(storyNumber: number, eventCount: number): [number, number] {
-  const start = Math.min(eventsBeforeNews(storyNumber - 1), eventCount);
-  const end = Math.min(eventsBeforeNews(storyNumber), eventCount);
-  return [start, end];
-}
-
-/** Index of the first event that follows the last of `storyCount` news stories. */
-export function eventsAfterLastNews(storyCount: number, eventCount: number): number {
-  return Math.min(eventsBeforeNews(storyCount), eventCount);
-}
-
 /** How many news stories an events-led feed has room for among this many events. */
 export function newsSlotsWithin(eventCount: number, rule: SequenceCardPosition = NEWS_IN_EVENTS): number {
   let n = 0;
