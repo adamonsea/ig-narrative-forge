@@ -1476,10 +1476,12 @@ export const UnifiedSourceManager = ({
   };
 
   const getDisplayDescription = () => {
-    if (mode === 'topic') return 'Manage content sources for this topic';
+    if (mode === 'topic') return '';
     if (mode === 'region') return `Manage content sources for ${region} region`;
     return 'Manage all content sources with enhanced validation and health monitoring';
   };
+
+  const displayDescription = getDisplayDescription();
 
   return (
     <div className="space-y-6">
@@ -1487,7 +1489,9 @@ export const UnifiedSourceManager = ({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">{getDisplayTitle()}</h2>
-          <p className="text-muted-foreground">{getDisplayDescription()}</p>
+          {displayDescription && (
+            <p className="text-muted-foreground">{displayDescription}</p>
+          )}
           {mode === 'global' && (
             <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
               Only showing sources actively linked to topics. Use "Clean Legacy Sources" to remove orphaned sources.
