@@ -36,6 +36,11 @@ describe("events sources", () => {
     expect(detectSourceKind("https://www.eventbrite.co.uk/d/united-kingdom--eastbourne/events")).toBe("whats_on_page");
     expect(detectSourceKind("https://www.ticketsource.co.uk/towner")).toBe("whats_on_page");
     expect(detectSourceKind("https://www.lewes-eastbourne.gov.uk/news")).toBe("website");
+    expect(detectSourceKind("https://www.agendalx.pt/")).toBe("whats_on_page");
+    expect(detectSourceKind("https://www.agendalx.pt/?s=&type=event&archive=todos+os+eventos")).toBe("whats_on_page");
+    expect(detectSourceKind("https://www.example.es/agenda/")).toBe("whats_on_page");
+    expect(detectSourceKind("https://www.example.pt/eventos")).toBe("whats_on_page");
+    expect(detectSourceKind("https://www.publico.pt/")).toBe("website");
     expect(isEventsSourceKind("rss")).toBe(false);
     expect(isEventsSourceKind("calendar_feed")).toBe(true);
   });

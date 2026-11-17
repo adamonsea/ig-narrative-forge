@@ -55,6 +55,10 @@ export function detectSourceKind(raw: string): SourceKind {
   try { host = new URL(/^\w+:\/\//.test(url) ? url : `https://${url}`).hostname; } catch { /* not a link yet */ }
   if (host && LISTINGS_HOSTS.test(host)) return "whats_on_page";
   if (/(whats-?on|what-s-on|\/events?(\/|\?|#|$)|\/listings|\/gigs|\/calendar|\/diary)/.test(url)) return "whats_on_page";
+  // Other languages' listings words (agenda, eventos, évènements, veranstaltungen…) and ?type=event searches
+  if (/\/(agenda|eventos?|evenements?|évènements?|événements?|veranstaltungen|termine|programma|programa|cartelera|spectacles)(\/|\?|#|$)/.test(url)) return "whats_on_page";
+  if (/[?&](post_)?type=(tribe_)?events?(&|#|$)/.test(url)) return "whats_on_page";
+  if (host && /(^|[.-])agenda/.test(host)) return "whats_on_page";
   return "website";
 }
 

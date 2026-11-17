@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { findDataEndpoints, siteScriptUrls, inlineScripts } from './pageData.ts';
+import { findDataEndpoints, siteScriptUrls, inlineScripts, wpRestBase, wpEventLists } from './pageData.ts';
 import { parseJsonFeed, upcomingUnique } from './extract.ts';
 
 const PAGE = 'https://brightoncentre.co.uk/whats-on/';
@@ -73,4 +73,18 @@ Deno.test('a list that is mostly not events (e.g. months or menus) is not read a
 Deno.test('dates are only taken from real date fields, never guessed from text', () => {
   const data = { events: [{ title: 'Quiz night', date: 'Every Thursday' }, { title: 'Jazz', start: { dateTime: '2026-11-20T19:30:00+00:00' } }] };
   assertEquals(parseJsonFeed(data, PAGE).map((e) => [e.title, e.start_date, e.start_time]), [['Jazz', '2026-11-20', '19:30:00']]);
+});
+
+Deno.test('a WordPress site\'s own events list is found from its data index', () => {
+  const html = '<link rel=https://api.w.org/ href=https://www.agendalx.pt/wp-json/ >';
+  const base = wpRestBase(html, 'https://www.agendalx.pt/?lang=en');
+  assertEquals(base, 'https://www.agendalx.pt/wp-json/');
+  const routes = ['/', '/wp/v2/event', '/agendalx/v1', '/agendalx/v1/events', '/agendalx/v1/events/(?P<id>[\\d]+)', '/agendalx/v1/venues', '/wpml/v1/capture/event'];
+  assertEquals(wpEventLists(routes, base!, 'https://www.agendalx.pt/?lang=en'), [
+    'https://www.agendalx.pt/wp-json/agendalx/v1/events?per_page=50&lang=en',
+  ]);
+});
+
+Deno.test('another site\'s data index is never used', () => {
+  assertEquals(wpRestBase('<link rel="https://api.w.org/" href="https://other.example.com/wp-json/">', 'https://www.agendalx.pt/'), null);
 });

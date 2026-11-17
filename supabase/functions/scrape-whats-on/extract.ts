@@ -142,18 +142,50 @@ export function parseIsoLike(value: unknown): { date: string; time: string | nul
   return { date: `${y}-${mo}-${d}`, time };
 }
 
+/**
+ * Month and weekday words, English plus the main European languages, written without
+ * accents (page text is accent-stripped before matching). Short forms that are also
+ * everyday English words ("out", "set", "ago") are left out on purpose.
+ */
 const MONTHS: Record<string, number> = {
+  // English
   jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5,
   jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9,
   oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+  // Portuguese
+  janeiro: 1, fev: 2, fevereiro: 2, marco: 3, abr: 4, abril: 4, mai: 5, maio: 5, junho: 6, julho: 7,
+  agosto: 8, setembro: 9, outubro: 10, novembro: 11, dez: 12, dezembro: 12,
+  // Spanish
+  ene: 1, enero: 1, febrero: 2, marzo: 3, mayo: 5, junio: 6, julio: 7, septiembre: 9, setiembre: 9,
+  octubre: 10, noviembre: 11, dic: 12, diciembre: 12,
+  // French
+  janv: 1, janvier: 1, fevr: 2, fevrier: 2, mars: 3, avr: 4, avril: 4, juin: 6, juil: 7, juillet: 7,
+  aout: 8, septembre: 9, octobre: 10, novembre: 11, decembre: 12,
+  // German
+  januar: 1, februar: 2, marz: 3, maerz: 3, juni: 6, juli: 7, oktober: 10, okt: 10, dezember: 12,
+  // Italian
+  gennaio: 1, febbraio: 2, aprile: 4, maggio: 5, giugno: 6, luglio: 7, settembre: 9, ottobre: 10, dicembre: 12,
 };
 const WEEKDAYS: Record<string, number> = {
   sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2, wed: 3, wednesday: 3,
   thu: 4, thur: 4, thurs: 4, thursday: 4, fri: 5, friday: 5, sat: 6, saturday: 6,
+  // Full names only in other languages, so a word like "quinta" (an estate) is never read as a day
+  domingo: 0, 'segunda-feira': 1, 'terca-feira': 2, 'quarta-feira': 3, 'quinta-feira': 4, 'sexta-feira': 5, sabado: 6,
+  lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5,
+  dimanche: 0, lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6,
+  sonntag: 0, montag: 1, dienstag: 2, mittwoch: 3, donnerstag: 4, freitag: 5, samstag: 6,
+  domenica: 0, lunedi: 1, martedi: 2, mercoledi: 3, giovedi: 4, venerdi: 5,
 };
-const MONTH_RE = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
-const WEEKDAY_RE = '(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)';
-const ORD = '(?:st|nd|rd|th)?';
+const alternation = (words: Record<string, number>) =>
+  `(${Object.keys(words).sort((a, b) => b.length - a.length).map((w) => w.replace(/-/g, '\\-')).join('|')})`;
+const MONTH_RE = alternation(MONTHS);
+const WEEKDAY_RE = alternation(WEEKDAYS);
+const ORD = '(?:st|nd|rd|th|\\.)?';
+// "of" (English) and "de"/"di" (Portuguese, Spanish, French, Italian) may sit between day, month and year
+const LINK = '(?:\\s+(?:of|de|di))?';
+
+/** Lower-case, accent-free text for reading dates ("março" -> "marco"). */
+const dateText = (text: string) => normaliseForMatch(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 function weekdayOf(y: number, m: number, d: number): number {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -166,7 +198,7 @@ function weekdayOf(y: number, m: number, d: number): number {
  * today is used; a written weekday must agree with that date or the event is dropped.
  */
 export function parseDateText(text: string, today: string): string | null {
-  const s = normaliseForMatch(text);
+  const s = dateText(text);
   const [ty, tm, td] = today.split('-').map(Number);
 
   const iso = s.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
@@ -182,16 +214,26 @@ export function parseDateText(text: string, today: string): string | null {
   let month: number | null = null;
   let year: number | null = null;
 
-  // 4 Dec / 4th December 2026 / 4 - 6 Dec 2026
-  const dm = s.match(new RegExp(`\\b(\\d{1,2})${ORD}(?:\\s*-\\s*\\d{1,2}${ORD})?\\s+(?:of\\s+)?${MONTH_RE}\\b\\.?(?:,?\\s+(\\d{4}))?`));
+  // 4 Dec / 4th December 2026 / 4 - 6 Dec 2026 / 18 de novembro de 2026 / 18. November 2026
+  const dm = s.match(new RegExp(`\\b(\\d{1,2})${ORD}(?:\\s*-\\s*\\d{1,2}${ORD})?${LINK}\\s+${MONTH_RE}\\b\\.?(?:,?${LINK}\\s+(\\d{4}))?`));
   // December 4, 2026 / Dec 4th
-  const md = s.match(new RegExp(`\\b${MONTH_RE}\\.?\\s+(\\d{1,2})${ORD}\\b(?:\\s*-\\s*\\d{1,2}${ORD})?(?:,?\\s+(\\d{4}))?`));
-  if (dm && (!md || (dm.index ?? 0) <= (md.index ?? 0))) {
+  const md = s.match(new RegExp(`\\b${MONTH_RE}\\.?\\s+(\\d{1,2})${ORD}(?!\\d)(?:\\s*-\\s*\\d{1,2}${ORD})?(?:,?\\s+(\\d{4}))?`));
+  const first = dm && (!md || (dm.index ?? 0) <= (md.index ?? 0)) ? dm : md;
+  if (first === dm && dm) {
     day = +dm[1]; month = MONTHS[dm[2]]; year = dm[3] ? +dm[3] : null;
   } else if (md) {
     month = MONTHS[md[1]]; day = +md[2]; year = md[3] ? +md[3] : null;
   }
   if (!day || !month) return null;
+
+  // A range written "3 November to 18 December 2026" gives its year only at the end
+  if (!year) {
+    const rest = s.slice(first?.index ?? 0);
+    const later = rest.match(new RegExp(`${MONTH_RE}\\b\\.?(?:,?${LINK}\\s+(\\d{4}))`, 'g'));
+    const endYear = later?.map((x) => +x.slice(-4)).find((y) => y > 1900);
+    const endMonth = later?.length ? MONTHS[later[later.length - 1].match(new RegExp(MONTH_RE))![1]] : null;
+    if (endYear && endMonth) year = month > endMonth ? endYear - 1 : endYear;
+  }
 
   const wdMatch = s.match(new RegExp(`\\b${WEEKDAY_RE}\\b`));
   const weekday = wdMatch ? WEEKDAYS[wdMatch[1]] : null;
@@ -423,13 +465,14 @@ const DATE_KEYS = [
   'startDate', 'start_date', 'start.dateTime', 'start.date', 'start', 'dtstart', 'startDateTime', 'start_datetime',
   'EventDates.EventDate', 'eventDate', 'event_date', 'FirstDate', 'InstanceDate', 'date', 'datetime', 'dateTime', 'start_time',
 ];
+const START_KEYS = DATE_KEYS.filter((k) => /start|first/i.test(k));
 const TIME_KEYS = ['EventTime', 'eventTime', 'startTime', 'start_time', 'time', 'doors'];
 const URL_KEYS = ['url', 'link', 'permalink', 'htmlLink', 'eventUrl', 'event_url', 'pageUrl', 'BookingLink', 'bookingUrl', 'ticketUrl'];
 const VENUE_KEYS = ['venue.venue', 'venue.name', 'location.name', 'venueName', 'venue_name', 'venue', 'location'];
 
 /** The first date field that holds a real published date (ISO-like only — never guessed). */
-function eventWhen(o: Record<string, unknown>): { date: string; time: string | null } | null {
-  for (const k of DATE_KEYS) {
+function eventWhen(o: Record<string, unknown>, keys: string[]): { date: string; time: string | null } | null {
+  for (const k of keys) {
     const when = parseIsoLike(at(o, k));
     if (when) {
       if (when.time) return when;
@@ -440,19 +483,35 @@ function eventWhen(o: Record<string, unknown>): { date: string; time: string | n
   return null;
 }
 
-function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: string | null): WhatsOnEvent | null {
-  const when = eventWhen(o);
+/** Venue name from a string, { name }, a list, or a slug-keyed map ({ "lx-factory": { name } }). */
+function venueFrom(v: unknown, depth = 0): string | null {
+  if (typeof v === 'string') return clean(v, 160);
+  if (!v || typeof v !== 'object' || depth > 2) return null;
+  if (Array.isArray(v)) return venueFrom(v[0], depth + 1);
+  const o = v as Record<string, unknown>;
+  if (typeof o.name === 'string' || typeof o.venue === 'string') return clean(o.name ?? o.venue, 160);
+  const first = Object.values(o).find((x) => x && typeof x === 'object');
+  return first ? venueFrom(first, depth + 1) : null;
+}
+
+export interface JsonFeedOptions {
+  /** Only fields that name a start ("StartDate", "start_date" …); generic "date" can be a publish date. */
+  startOnly?: boolean;
+}
+
+function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: string | null, opts: JsonFeedOptions): WhatsOnEvent | null {
+  const when = eventWhen(o, opts.startOnly ? START_KEYS : DATE_KEYS);
   const title = clean(pick(o, TITLE_KEYS));
   if (!when || !title) return null;
-  const venue = pick(o, VENUE_KEYS);
+  const venue = venueFrom(pick(o, VENUE_KEYS));
   const url = pick(o, URL_KEYS);
   return {
     title,
     start_date: when.date,
     start_time: when.time,
-    venue: typeof venue === 'string' ? clean(venue, 160) : null,
+    venue,
     url: absolute(typeof url === 'string' ? url : null, feedUrl),
-    place: placeText(pick(o, ['venue', 'location'])) ?? fallbackPlace,
+    place: placeText(pick(o, ['venue', 'location'])) ?? venue ?? fallbackPlace,
   };
 }
 
@@ -463,14 +522,16 @@ function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: s
  * ISO-like date; dates are read from the data by rule, never inferred.
  * fallbackPlace (e.g. the venue site's own name) is used only for the location check.
  */
-export function parseJsonFeed(data: unknown, feedUrl: string, fallbackPlace: string | null = null): WhatsOnEvent[] {
+export function parseJsonFeed(
+  data: unknown, feedUrl: string, fallbackPlace: string | null = null, opts: JsonFeedOptions = {},
+): WhatsOnEvent[] {
   const out: WhatsOnEvent[] = [];
   const walk = (node: unknown, depth: number) => {
     if (out.length >= 500 || depth > 7 || !node || typeof node !== 'object') return;
     if (Array.isArray(node)) {
       const items = node.slice(0, 500);
       const objects = items.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x));
-      const parsed = objects.map((o) => jsonEvent(o, feedUrl, fallbackPlace));
+      const parsed = objects.map((o) => jsonEvent(o, feedUrl, fallbackPlace, opts));
       const hits = parsed.filter((e): e is WhatsOnEvent => !!e);
       const isList = hits.length > 0 && hits.length * 2 >= objects.length;
       if (isList) out.push(...hits);

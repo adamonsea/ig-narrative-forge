@@ -7,7 +7,7 @@ import {
   parseJsonFeed, htmlToText, verifyTextCandidates, anchorLinks, upcomingUnique, robotsAllows,
   pageName, londonToday,
 } from './extract.ts';
-import { siteScriptUrls, inlineScripts, findDataEndpoints } from './pageData.ts';
+import { siteScriptUrls, inlineScripts, findDataEndpoints, wpRestBase, wpEventLists } from './pageData.ts';
 
 const USER_AGENT = 'Mozilla/5.0 (compatible; CuratrEvents/1.0; +https://curatr.pro)';
 const FETCH_TIMEOUT_MS = 15000;
@@ -158,6 +158,10 @@ export async function readPageData(html: string, pageUrl: string, name: string, 
   }));
   const endpoints = findDataEndpoints([inlineScripts(html), ...scripts], html, pageUrl)
     .filter((u) => isPublicHttpUrl(u));
+
+  // A WordPress site's own events list (named in its data index) comes first
+  const wp = await readWordPressEvents(html, pageUrl, name, today);
+  if (wp.length) return wp;
   if (!endpoints.length) return [];
 
   const results = await Promise.all(endpoints.map(async (u) => {
@@ -174,6 +178,32 @@ export async function readPageData(html: string, pageUrl: string, name: string, 
   const best = results.find((e) => e.length) ?? [];
   console.log(`page data ${pageUrl}: ${endpoints.length} addresses tried, ${best.length} upcoming events`);
   return best;
+}
+
+const WP_MAX_PAGES = 4;
+
+/** WordPress events lists: read the site's data index, then up to four pages of 50 from each list. */
+async function readWordPressEvents(html: string, pageUrl: string, name: string, today: string): Promise<WhatsOnEvent[]> {
+  const base = wpRestBase(html, pageUrl);
+  if (!base || !isPublicHttpUrl(base) || !(await allowedByRobots(base))) return [];
+  const index = await jsonFrom(base, pageUrl, 'GET') as { routes?: Record<string, unknown> } | null;
+  const lists = wpEventLists(Object.keys(index?.routes ?? {}), base, pageUrl);
+  for (const list of lists) {
+    if (!(await allowedByRobots(list))) continue;
+    const all: WhatsOnEvent[] = [];
+    for (let page = 1; page <= WP_MAX_PAGES; page++) {
+      const u = new URL(list);
+      if (page > 1) u.searchParams.set('page', String(page));
+      const data = await jsonFrom(u.toString(), pageUrl, 'GET');
+      if (data === null) break;
+      all.push(...parseJsonFeed(data, pageUrl, name, { startOnly: true }));
+      if (!Array.isArray(data) || data.length < 50) break;
+    }
+    const events = upcomingUnique(all, today, DAYS_AHEAD);
+    console.log(`wordpress events ${list}: ${events.length} upcoming`);
+    if (events.length) return events;
+  }
+  return [];
 }
 
 // ---------- reading a page ----------

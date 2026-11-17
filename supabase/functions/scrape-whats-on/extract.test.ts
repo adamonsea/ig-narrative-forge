@@ -1,7 +1,7 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   parseDateText, parseTimeText, parseIsoLike, verifyTextCandidates, extractJsonLdEvents, parseIcs,
-  robotsAllows, upcomingUnique, findCalendarFeedLinks,
+  robotsAllows, upcomingUnique, findCalendarFeedLinks, parseJsonFeed,
 } from './extract.ts';
 
 const TODAY = '2026-11-12'; // a Thursday
@@ -96,4 +96,41 @@ Deno.test('robots.txt', () => {
 Deno.test('past events are dropped and repeats collapse', () => {
   const e = (d: string) => ({ title: 'Show', start_date: d, start_time: null, venue: null, url: null });
   assertEquals(upcomingUnique([e('2026-11-11'), e('2026-11-20'), e('2026-11-20')], TODAY).map((x) => x.start_date), ['2026-11-20']);
+});
+
+Deno.test('European month names are read, with or without accents and "de"', () => {
+  assertEquals(parseDateText('18 novembro 2026', TODAY), '2026-11-18');
+  assertEquals(parseDateText('18 de novembro de 2026', TODAY), '2026-11-18');
+  assertEquals(parseDateText('3 março', TODAY), '2027-03-03');
+  assertEquals(parseDateText('12 décembre 2026', TODAY), '2026-12-12');
+  assertEquals(parseDateText('18. November 2026', TODAY), '2026-11-18');
+  assertEquals(parseDateText('5 diciembre', TODAY), '2026-12-05');
+  assertEquals(parseDateText('4 dicembre 2026', TODAY), '2026-12-04');
+});
+
+Deno.test('a European weekday must agree with the date too', () => {
+  assertEquals(parseDateText('sexta-feira, 4 dezembro 2026', TODAY), '2026-12-04'); // a Friday
+  assertEquals(parseDateText('sábado, 4 dezembro 2026', TODAY), null);
+});
+
+Deno.test('everyday English words are never read as months', () => {
+  assertEquals(parseDateText('4 out of 5', TODAY), null);
+  assertEquals(parseDateText('2 set menus', TODAY), null);
+});
+
+Deno.test('a range takes its year from the end date, never next year by mistake', () => {
+  assertEquals(parseDateText('3 novembro a 18 dezembro 2026', TODAY), '2026-11-03');
+  assertEquals(parseDateText('20 December to 6 January 2027', TODAY), '2026-12-20');
+});
+
+Deno.test('venue names come from slug-keyed maps, and start-only lists ignore publish dates', () => {
+  const items = [
+    { title: { rendered: 'Fado na Mouraria' }, StartDate: '2026-12-01', link: 'https://x.pt/e/1',
+      venue: { 'casa-do-fado': { id: 1, slug: 'casa-do-fado', name: 'Casa do Fado' } } },
+    { title: { rendered: 'Blog post' }, date: '2026-12-02T10:00:00', link: 'https://x.pt/p/2' },
+  ];
+  const ev = parseJsonFeed(items, 'https://x.pt/', null, { startOnly: true });
+  assertEquals(ev.length, 1);
+  assertEquals(ev[0].venue, 'Casa do Fado');
+  assertEquals(ev[0].start_date, '2026-12-01');
 });

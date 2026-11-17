@@ -107,3 +107,34 @@ export function findDataEndpoints(scripts: string[], html: string, pageUrl: stri
 
   return [...found.entries()].sort((a, b) => b[1] - a[1]).map(([u]) => u).slice(0, MAX_ENDPOINTS);
 }
+
+// ---------- WordPress sites with their own events list ----------
+
+/** The site's WordPress data address, when the page names one (<link rel="https://api.w.org/" …>). */
+export function wpRestBase(html: string, pageUrl: string): string | null {
+  const tag = html.match(/<link\b[^>]*rel=["']?https:\/\/api\.w\.org\/?["']?[^>]*>/i)?.[0];
+  if (!tag) return null;
+  const href = tag.match(/href=["']?([^"'\s>]+)/i)?.[1];
+  const abs = href ? sameOrigin(href.replace(/&amp;/g, '&'), pageUrl) : null;
+  return abs && /\/wp-json\/?$/i.test(new URL(abs).pathname) ? abs.replace(/\/?$/, '/') : null;
+}
+
+/**
+ * Event lists a WordPress site publishes under its own name ("/agendalx/v1/events",
+ * "/tribe/events/v1/events"), picked from the routes in its data index. Core post
+ * listings (/wp/v2/…) are skipped: their dates are publish dates, not event dates.
+ * The pasted page's language (?lang=en) is carried over so titles match the page.
+ */
+export function wpEventLists(routes: string[], restBase: string, pageUrl: string): string[] {
+  let lang: string | null = null;
+  try { lang = new URL(pageUrl).searchParams.get('lang'); } catch { /* ignore */ }
+  return routes
+    .filter((r) => /^\/[\w-]+(\/[\w-]+)?\/v\d+\/events?$/i.test(r) && !/^\/wp\//i.test(r) && !UNSAFE.test(r))
+    .slice(0, 2)
+    .map((r) => {
+      const u = new URL(restBase + r.replace(/^\//, ''));
+      u.searchParams.set('per_page', '50');
+      if (lang && /^[a-z]{2}(-[a-z]{2})?$/i.test(lang)) u.searchParams.set('lang', lang);
+      return u.toString();
+    });
+}
