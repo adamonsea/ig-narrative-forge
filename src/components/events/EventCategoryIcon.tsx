@@ -37,12 +37,6 @@ export const DEFAULT_EVENT_CATEGORIES: EventCategory[] = [
   "music", "family", "sport", "food-drink", "arts-theatre", "film", "talks", "nightlife", "outdoors", "markets",
 ];
 
-/**
- * Slot for one supplied illustration per category (image URL or imported asset).
- * Empty until Adam supplies them; when set, the card shows it instead of the line icon.
- */
-export const EVENT_CATEGORY_ILLUSTRATIONS: Partial<Record<EventCategory, string>> = {};
-
 const A = "var(--ec-accent)";
 
 const ICONS: Record<EventCategory, React.ReactElement> = {
@@ -179,10 +173,6 @@ export function isEventCategory(value: string | null | undefined): value is Even
 
 export function EventCategoryIcon({ category, animate = false, accent, className, title }: EventCategoryIconProps) {
   const key: EventCategory = isEventCategory(category) ? category : "other";
-  const illustration = EVENT_CATEGORY_ILLUSTRATIONS[key];
-  if (illustration) {
-    return <img src={illustration} alt={title ?? EVENT_CATEGORY_LABELS[key]} className={cn("h-12 w-12 object-contain", className)} />;
-  }
   return (
     <svg
       viewBox="0 0 48 48"

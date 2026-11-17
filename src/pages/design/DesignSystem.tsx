@@ -1,4 +1,5 @@
 import { EventCategoryIcon, EVENT_CATEGORY_LABELS, type EventCategory } from "@/components/events/EventCategoryIcon";
+import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
 import { EventCard, EventDateBlock } from "@/components/events/EventCard";
 import { useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
@@ -331,6 +332,16 @@ export default function DesignSystem() {
                 {(Object.keys(EVENT_CATEGORY_LABELS) as EventCategory[]).map((c) => (
                   <div key={c} className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
                     <EventCategoryIcon category={c} animate className="h-12 w-12 text-foreground" />
+                    {EVENT_CATEGORY_LABELS[c]}
+                  </div>
+                ))}
+              </div>
+            </Spec>
+            <Spec name="Illustrations · top band of the reader event card, in the feed colour; animated only for the card in view">
+              <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                {(Object.keys(EVENT_CATEGORY_LABELS) as EventCategory[]).map((c) => (
+                  <div key={c} className="space-y-2 text-sm text-muted-foreground">
+                    <div className="h-24 overflow-hidden rounded-lg"><EventCategoryIllustration category={c} color="#0E7C7B" /></div>
                     {EVENT_CATEGORY_LABELS[c]}
                   </div>
                 ))}

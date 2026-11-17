@@ -584,3 +584,14 @@ All colors MUST be HSL.
 @keyframes ec-paint { 0%,100% { transform: rotate(0) } 25% { transform: rotate(-8deg) } 75% { transform: rotate(6deg) } }
 @keyframes ec-spark { 0%,100% { transform: scale(.92) rotate(0) } 50% { transform: scale(1.08) rotate(12deg) } }
 @media (prefers-reduced-motion: reduce) { .ec-icon * { animation: none !important; } }
+
+/* Event category illustrations (src/components/events/EventCategoryIllustration.tsx) — supplied, do not restyle */
+.ec-ill { display: block; width: 100%; height: 100%; }
+.ec-ill * { transform-box: view-box; }
+.ec-ill[data-animate="true"] .ill-drift { animation: ill-drift 9s ease-in-out infinite; }
+.ec-ill[data-animate="true"] .ill-twinkle { animation: ill-twinkle 4s ease-in-out infinite; }
+.ec-ill[data-animate="true"] .ill-spin { animation: ill-spin 40s linear infinite; }
+@keyframes ill-drift { 0%,100% { transform: translate(0,0) } 50% { transform: translate(-6px,3px) } }
+@keyframes ill-twinkle { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
+@keyframes ill-spin { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .ec-ill * { animation: none !important; } }

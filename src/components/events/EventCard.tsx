@@ -2,24 +2,21 @@ import { memo, useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
-import { feedBrandPalette, feedBrandSurface, toCss } from "@/lib/feedBrandColor";
+import { feedBrandPalette, toCss } from "@/lib/feedBrandColor";
 import { recordEventClick } from "@/lib/eventClicks";
-import { EventCategoryIcon, EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
+import { EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
+import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
 import { dateBlock, eventTime, priceLine, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 
 function brandVars(color?: string | null) {
   const p = feedBrandPalette(color);
-  const t = feedBrandSurface(color);
   return {
     "--ev-fill": toCss(p.light.fill), "--ev-on-fill": toCss(p.light.onFill), "--ev-accent": toCss(p.light.text),
     "--ev-fill-dark": toCss(p.dark.fill), "--ev-on-fill-dark": toCss(p.dark.onFill), "--ev-accent-dark": toCss(p.dark.text),
-    "--ev-tint": toCss(t.light.surface), "--ev-tint-dark": toCss(t.dark.surface),
   } as React.CSSProperties;
 }
 const FILL = "bg-[color:var(--ev-fill)] text-[color:var(--ev-on-fill)] dark:bg-[color:var(--ev-fill-dark)] dark:text-[color:var(--ev-on-fill-dark)]";
 const ACCENT = "text-[color:var(--ev-accent)] dark:text-[color:var(--ev-accent-dark)]";
-/** Soft tint of the feed colour behind the hero icon (and, later, the category illustration). */
-const TINT = "bg-[color:var(--ev-tint)] dark:bg-[color:var(--ev-tint-dark)]";
 const PILL = `inline-flex items-center gap-1.5 min-h-11 px-5 py-2 text-sm font-semibold whitespace-nowrap rounded-full transition-opacity hover:opacity-90 ${FILL}`;
 
 /** The large sentence-case date block (Thu / 19 / Nov). Shown on /design. */
@@ -45,8 +42,8 @@ interface EventCardProps {
 
 /**
  * One event, two slides, built like the feed's story card so swiping is identical.
- * Slide 1: date block, category icon as the hero (on a soft feed-colour tint,
- * the box a per-category illustration will later fill), title, venue.
+ * Slide 1: full-bleed category illustration in the feed colour (top third), the
+ * date block across its angled seam, then title and venue.
  * Slide 2: day (and time), venue, price (only when known), up to four lines of
  * description. Both slides are top-aligned; the one link sits below both.
  */
@@ -68,18 +65,20 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null 
   const price = priceLine(e.price, e.is_free, currency);
   const source = e.source_name || "the organiser";
 
-  // Longer titles step down a size so the whole title and the hero icon fit the fixed-height card
+  // Longer titles step down a size so the whole title fits below the illustration band
   const titleSize = e.title.length > 50 ? "text-2xl md:text-3xl" : e.title.length > 28 ? "text-3xl md:text-4xl" : "text-4xl md:text-5xl";
   const first = (
-    <div key="date" className="flex h-full flex-col px-5 pb-14 pt-6 md:px-8 md:pb-16 md:pt-8">
-      <div className="mx-auto flex h-full w-full max-w-xl flex-col">
-        <EventDateBlock ymd={e.start_date} className="shrink-0" />
-        <div className="flex min-h-0 flex-1 items-center justify-center py-6">
-          <div className={`flex aspect-square h-full max-h-36 min-h-20 items-center justify-center rounded-2xl ${TINT}`}>
-            <EventCategoryIcon category={category} animate={inView} accent={toCss(palette.light.text)} className="h-[78%] w-[78%]" />
+    <div key="date" className="flex h-full flex-col">
+      <div className="relative h-[184px] shrink-0">
+        <EventCategoryIllustration category={category} color={toCss(palette.light.fill)} animate={inView} />
+        <div className="absolute bottom-0 left-0 right-0 px-5 md:px-8">
+          <div className="mx-auto w-full max-w-xl">
+            <EventDateBlock ymd={e.start_date} className="translate-y-1/2 shadow-md ring-4 ring-[hsl(var(--feed-card))]" />
           </div>
         </div>
-        <div className="shrink-0">
+      </div>
+      <div className="min-h-0 flex-1 px-5 pb-14 pt-[96px] md:px-8 md:pb-16">
+        <div className="mx-auto w-full max-w-xl">
           <h3 className={`line-clamp-4 font-lexend font-semibold leading-[1.1] text-pretty ${titleSize}`}>
             <span className="sr-only">{`${b.weekday} ${b.day} ${b.month}, ${EVENT_CATEGORY_LABELS[category]}: `}</span>{e.title}
           </h3>
