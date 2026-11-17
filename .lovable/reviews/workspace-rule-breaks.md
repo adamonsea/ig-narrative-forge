@@ -30,7 +30,8 @@ Rule key: **Size** = text outside 32/24/18/16/14 or tiny text · **Caps** = uppe
 - **Others**: average-stories badge has tiny text and raw emerald (ui/average-daily-stories-badge.tsx 22); style tooltip has tiny text (ui/style-tooltip.tsx 80, 83); sidebar has tiny text in four places.
 - **No shared error state** exists yet ("one sentence + one fix"), so every screen does its own.
 
-## 2. Desk
+## 2. Desk — fixed 17 Nov 2026
+Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPanel, MultiTenantStoriesList, SlideEditor and ReelStudio are no longer shown on the Desk, so they were left alone.
 
 - **Colour**:
   - The load-error banner is raw amber (UnifiedContentPipeline.tsx 363, 365).

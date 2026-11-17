@@ -106,18 +106,18 @@ export function WaitingStoryDrawer({
               </div>
               {dupInfo && (
                 <div className="rounded-lg bg-muted px-3 py-2 text-sm">
-                  <p className="flex items-center gap-1.5 font-medium"><Copy className="h-4 w-4" aria-hidden="true" />{dupInfo.isDuplicateLeader ? "Also reported as:" : "Similar to:"}</p>
-                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                  <p className="flex items-center gap-2 font-medium"><Copy className="h-4 w-4" aria-hidden="true" />{dupInfo.isDuplicateLeader ? "Also reported as:" : "Similar to:"}</p>
+                  <ul className="mt-1 space-y-1 text-muted-foreground">
                     {dupInfo.similarTitles.map((t, i) => <li key={i} className="truncate">• {t}</li>)}
                   </ul>
                 </div>
               )}
             </SheetHeader>
 
-            <section className="space-y-4 border-t border-border px-6 py-5">
+            <section className="space-y-4 border-t border-border px-6 py-6">
               <h3 className="text-sm font-medium text-muted-foreground">How it will be written</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label className="text-sm">Length</Label>
                   <Select value={slideType} onValueChange={(v) => onSlideType(v as SlideLength)}>
                     <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
@@ -129,7 +129,7 @@ export function WaitingStoryDrawer({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label className="text-sm">Tone</Label>
                   <Select value={tone} onValueChange={(v) => onTone(v as StoryTone)}>
                     <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
@@ -142,7 +142,7 @@ export function WaitingStoryDrawer({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label className="text-sm">Writing style</Label>
                   <Select value={writingStyle} onValueChange={(v) => onWritingStyle(v as WritingStyle)}>
                     <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
@@ -163,7 +163,7 @@ export function WaitingStoryDrawer({
               </div>
             </section>
 
-            <section className="space-y-3 border-t border-border px-6 py-5">
+            <section className="space-y-3 border-t border-border px-6 py-6">
               <h3 className="text-sm font-medium text-muted-foreground">Original</h3>
               {loadingBody && !body ? (
                 <div className="space-y-2" aria-label="Loading the original" role="status"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-4/5" /></div>
@@ -176,12 +176,12 @@ export function WaitingStoryDrawer({
 
             <div className="sticky bottom-0 mt-auto flex items-center gap-2 border-t border-border bg-background px-6 py-4">
               <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-                <a href={article.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1.5 h-4 w-4" />Source</a>
+                <a href={article.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" />Source</a>
               </Button>
               <div className="ml-auto flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={onSkip} disabled={isDeleting}>Skip</Button>
                 <Button size="sm" onClick={onPublish} disabled={isProcessing || isDeleting} className="min-w-[96px]">
-                  {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-1.5 h-4 w-4" />}Publish
+                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}Publish
                 </Button>
                 {onSuppress && (
                   <DropdownMenu>

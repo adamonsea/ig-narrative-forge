@@ -37,9 +37,9 @@ export function StoryFilters({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 space-y-4">
         {parliamentaryCount > 0 && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <p className="text-sm font-medium">Show</p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {([
                 ["all", allLabel],
                 ["regular", `Regular (${regularCount})`],
@@ -53,7 +53,7 @@ export function StoryFilters({
           </div>
         )}
         {sources.length > 1 && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <p className="text-sm font-medium">Source</p>
             <Select value={sourceFilter} onValueChange={onSourceFilter}>
               <SelectTrigger className="text-sm"><SelectValue placeholder="All sources" /></SelectTrigger>
@@ -66,7 +66,7 @@ export function StoryFilters({
             </Select>
           </div>
         )}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <p className="text-sm font-medium">Order</p>
           <Select value={sortMode} onValueChange={(v) => onSortMode(v as StorySort)}>
             <SelectTrigger className="text-sm" aria-label="Sort stories"><SelectValue /></SelectTrigger>
@@ -87,7 +87,7 @@ export function StoryFilters({
             Clear
           </Button>
           <Button variant="outline" size="sm" className="text-sm" onClick={onRefresh}>
-            {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-1.5 h-4 w-4" />}
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
             Refresh
           </Button>
         </div>

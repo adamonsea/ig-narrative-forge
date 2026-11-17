@@ -409,7 +409,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               ) : (
                 <>
                   <Button size="sm" onClick={() => handlePublishNow(story.id, storyTitle)} disabled={publishing}>
-                    {publishing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Zap className="mr-1.5 h-4 w-4" />}
+                    {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
                     Publish now
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setOpenStoryId(story.id)}>Open</Button>

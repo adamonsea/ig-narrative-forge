@@ -74,7 +74,7 @@ function renderContentWithLinks(content: string, links: StoryLink[] = []) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3 border-t border-border px-6 py-5">
+    <section className="space-y-3 border-t border-border px-6 py-6">
       <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
       {children}
     </section>
@@ -196,18 +196,18 @@ export function StoryDrawer({
                 />
                 {story.cover_illustration_url && !story.animated_illustration_url && (
                   <Button variant="outline" size="sm" onClick={onAnimate} disabled={animating}>
-                    {animating ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Film className="mr-1.5 h-4 w-4" />}
+                    {animating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Film className="mr-2 h-4 w-4" />}
                     Animate
                   </Button>
                 )}
                 {story.animated_illustration_url && (
                   <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={onDeleteAnimation}>
-                    <Film className="mr-1.5 h-4 w-4" />Delete animation
+                    <Film className="mr-2 h-4 w-4" />Delete animation
                   </Button>
                 )}
                 {story.cover_illustration_url && (
                   <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={onDeleteIllustration}>
-                    <ImageIcon className="mr-1.5 h-4 w-4" />Delete picture
+                    <ImageIcon className="mr-2 h-4 w-4" />Delete picture
                   </Button>
                 )}
               </div>
@@ -231,18 +231,18 @@ export function StoryDrawer({
                       <textarea
                         value={edits[slide.id]}
                         onChange={(e) => setEdits((prev) => ({ ...prev, [slide.id]: e.target.value }))}
-                        className="min-h-[120px] w-full resize-y rounded-md border border-input bg-background p-2.5 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="min-h-[120px] w-full resize-y rounded-md border border-input bg-background p-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
                         placeholder="Slide text…"
                         aria-label={`Slide ${slide.slide_number || index + 1} text`}
                       />
                     ) : (
                       <p className="text-base leading-relaxed">{renderContentWithLinks(slide.content, slide.links)}</p>
                     )}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       {edits[slide.id] !== undefined ? (
                         <>
                           <Button size="sm" onClick={() => saveSlide(slide.id)} disabled={saving.has(slide.id)}>
-                            <Save className="mr-1.5 h-4 w-4" />{saving.has(slide.id) ? "Saving…" : "Save"}
+                            <Save className="mr-2 h-4 w-4" />{saving.has(slide.id) ? "Saving…" : "Save"}
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => setEdits((prev) => { const next = { ...prev }; delete next[slide.id]; return next; })}>Cancel</Button>
                         </>
@@ -250,7 +250,7 @@ export function StoryDrawer({
                         <>
                           <Button variant="outline" size="sm" onClick={() => setEdits((prev) => ({ ...prev, [slide.id]: slide.content }))}>Edit</Button>
                           <Button variant="ghost" size="sm" onClick={() => setLinkEditorSlide(slide)}>
-                            <LinkIcon className="mr-1.5 h-4 w-4" />Links ({slide.links?.length || 0})
+                            <LinkIcon className="mr-2 h-4 w-4" />Links ({slide.links?.length || 0})
                           </Button>
                         </>
                       )}
@@ -276,13 +276,13 @@ export function StoryDrawer({
             <div className="sticky bottom-0 mt-auto flex items-center gap-2 border-t border-border bg-background px-6 py-4">
               {story.source_url ? (
                 <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-                  <a href={story.source_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1.5 h-4 w-4" />Source article</a>
+                  <a href={story.source_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" />Source article</a>
                 </Button>
               ) : <span />}
               <div className="ml-auto flex items-center gap-2">
                 {!isLive && (
                   <Button size="sm" onClick={onPublishNow} disabled={publishing}>
-                    {publishing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Zap className="mr-1.5 h-4 w-4" />}Publish now
+                    {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}Publish now
                   </Button>
                 )}
                 <DropdownMenu>

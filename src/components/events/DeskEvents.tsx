@@ -86,7 +86,7 @@ function ToCheckList({ events, today, actions, onOpen }: {
                     </span>
                   )}
                   <span className="block text-lg font-semibold leading-snug">{e.title}</span>
-                  <span className="mt-0.5 block text-sm text-muted-foreground">
+                  <span className="mt-1 block text-sm text-muted-foreground">
                     {[countdown(e.start_date, today), eventTime(e.start_time), e.location, isLowRelevance(e.relevance_score) ? "may not be local" : null].filter(Boolean).join(" · ")}
                   </span>
                 </span>
@@ -94,10 +94,10 @@ function ToCheckList({ events, today, actions, onOpen }: {
               {sourceLink(e.source_url, e.source_name)}
               <div className="mt-2 flex gap-2">
                 <Button size="sm" className="flex-1" onClick={() => actions.publish(e)}>
-                  <Check className="mr-1.5 h-4 w-4" aria-hidden="true" />Publish
+                  <Check className="mr-2 h-4 w-4" aria-hidden="true" />Publish
                 </Button>
                 <Button size="sm" variant="outline" className="flex-1" onClick={() => actions.skip(e)}>
-                  <X className="mr-1.5 h-4 w-4" aria-hidden="true" />Skip
+                  <X className="mr-2 h-4 w-4" aria-hidden="true" />Skip
                 </Button>
               </div>
             </li>
@@ -245,13 +245,13 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
               <SheetDescription asChild>
                 <div>
                   {item.state === "live" && (
-                    <span className="flex flex-wrap gap-1.5">
+                    <span className="flex flex-wrap gap-2">
                       <DeskBadge tone="primary">In the feed</DeskBadge>
                       {liveAreaFlag(item.exclusion_reason) && <DeskBadge tone="destructive">{liveAreaFlag(item.exclusion_reason)}</DeskBadge>}
                     </span>
                   )}
                   {item.state === "waiting" && (
-                    <span className="flex flex-wrap gap-1.5">
+                    <span className="flex flex-wrap gap-2">
                       <AttentionTag>Needs your OK</AttentionTag>
                       {item.source_api === "reader" && <DeskBadge><UserRound className="h-3.5 w-3.5" aria-hidden="true" />Suggested by a reader</DeskBadge>}
                     </span>
@@ -261,7 +261,7 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
               </SheetDescription>
             </SheetHeader>
 
-            <div className="flex-1 space-y-5 p-6 text-base">
+            <div className="flex-1 space-y-6 p-6 text-base">
               {item.state === "live" && liveAreaFlag(item.exclusion_reason) && (
                 <p className="rounded-lg bg-destructive/5 p-3 text-muted-foreground">You published this earlier, but {leftOutExplanation("excluded", item.exclusion_reason).charAt(0).toLowerCase() + leftOutExplanation("excluded", item.exclusion_reason).slice(1)} It stays in the feed until you remove it.</p>
               )}
@@ -270,13 +270,13 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
               )}
               <dl className="space-y-3">
                 {item.location && (
-                  <div className="flex gap-3"><dt className="sr-only">Where</dt><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{item.location}</dd></div>
+                  <div className="flex gap-3"><dt className="sr-only">Where</dt><MapPin className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{item.location}</dd></div>
                 )}
                 {ends && (
-                  <div className="flex gap-3"><dt className="sr-only">Ends</dt><Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{ends}</dd></div>
+                  <div className="flex gap-3"><dt className="sr-only">Ends</dt><Clock className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{ends}</dd></div>
                 )}
                 {detail?.price && (
-                  <div className="flex gap-3"><dt className="sr-only">Price</dt><Ticket className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{detail.price}</dd></div>
+                  <div className="flex gap-3"><dt className="sr-only">Price</dt><Ticket className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><dd>{detail.price}</dd></div>
                 )}
               </dl>
               {isLoading ? (
@@ -351,7 +351,7 @@ export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions 
             aria-selected={view === t.key}
             onClick={() => choose(t.key)}
             className={cn(
-              "truncate rounded-lg px-2 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "truncate rounded-lg px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               view === t.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -419,7 +419,7 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
       {open && events.length > 0 && (
         <ul className="divide-y divide-border border-t border-primary/20 px-3">
           {events.map((e) => (
-            <li key={e.id} className="flex items-center gap-3 py-2.5">
+            <li key={e.id} className="flex items-center gap-3 py-3">
               <DateTile date={e.start_date} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-medium">{e.title}</p>
@@ -428,7 +428,7 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemove(e)} aria-label={`Remove “${e.title}” from the feed`}><X className="h-4 w-4" /></Button>
             </li>
           ))}
-          <li className="py-2.5 text-sm text-muted-foreground">
+          <li className="py-3 text-sm text-muted-foreground">
             Past events drop off on their own{liveMore > 0 ? ` · ${liveMore} more published, coming up after these` : ""}.
           </li>
         </ul>

@@ -2,7 +2,7 @@
 List: .lovable/reviews/workspace-rule-breaks.md. One group at a time; Adam picks the order.
 - [x] Dashboard and new-feed setup
 - [x] Shared building blocks
-- [ ] Desk (in progress)
+- [x] Desk
 - [ ] Sources, Settings, Readership, Reviews (Adam to pick the order)
 
 # Sources as cards + Desk fixes (17 Nov 2026)
