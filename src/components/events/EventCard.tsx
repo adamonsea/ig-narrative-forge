@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, type ComponentType } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
@@ -38,6 +38,8 @@ interface EventCardProps {
   isOwner?: boolean;
   /** The feed's currency (GBP / EUR / USD) for bare listing prices; unknown hides them. */
   currency?: string | null;
+  /** Illustration set for the top band; the live feed always uses the default (set A). */
+  Illustration?: ComponentType<{ category?: string | null; color: string; animate?: boolean }>;
 }
 
 /**
@@ -47,7 +49,7 @@ interface EventCardProps {
  * Slide 2: day (and time), venue, price (only when known), up to four lines of
  * description. Both slides are top-aligned; the one link sits below both.
  */
-function EventCardView({ event: e, brandColor, isOwner = false, currency = null }: EventCardProps) {
+function EventCardView({ event: e, brandColor, isOwner = false, currency = null, Illustration = EventCategoryIllustration }: EventCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -70,7 +72,7 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null 
   const first = (
     <div key="date" className="flex h-full flex-col">
       <div className="relative h-[184px] shrink-0">
-        <EventCategoryIllustration category={category} color={toCss(palette.light.fill)} animate={inView} />
+        <Illustration category={category} color={toCss(palette.light.fill)} animate={inView} />
         <div className="absolute bottom-0 left-0 right-0 px-5 md:px-8">
           <div className="mx-auto w-full max-w-xl">
             <EventDateBlock ymd={e.start_date} className="translate-y-1/2 shadow-md ring-4 ring-[hsl(var(--feed-card))]" />

@@ -595,3 +595,18 @@ All colors MUST be HSL.
 @keyframes ill-twinkle { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
 @keyframes ill-spin { to { transform: rotate(360deg) } }
 @media (prefers-reduced-motion: reduce) { .ec-ill * { animation: none !important; } }
+
+/* Event category illustrations, set B (src/components/events/EventCategoryIllustrationAlt.tsx) — compare page only until chosen */
+.ec-alt { display: block; width: 100%; height: 100%; }
+.ec-alt :is(.alt-drift, .alt-rise, .alt-sway, .alt-turn, .alt-glow) { transform-box: fill-box; transform-origin: center; }
+.ec-alt[data-animate="true"] .alt-drift { animation: alt-drift 12s ease-in-out infinite; }
+.ec-alt[data-animate="true"] .alt-rise { animation: alt-rise 10s ease-in-out infinite; }
+.ec-alt[data-animate="true"] .alt-sway { animation: alt-sway 11s ease-in-out infinite; }
+.ec-alt[data-animate="true"] .alt-turn { animation: alt-turn 48s linear infinite; }
+.ec-alt[data-animate="true"] .alt-glow { animation: alt-glow 7s ease-in-out infinite; }
+@keyframes alt-drift { 0%,100% { transform: translateX(0) } 50% { transform: translateX(-10px) } }
+@keyframes alt-rise { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+@keyframes alt-sway { 0%,100% { transform: rotate(-2deg) } 50% { transform: rotate(2deg) } }
+@keyframes alt-turn { to { transform: rotate(360deg) } }
+@keyframes alt-glow { 0%,100% { opacity: 1 } 50% { opacity: .6 } }
+@media (prefers-reduced-motion: reduce) { .ec-alt * { animation: none !important; } }
