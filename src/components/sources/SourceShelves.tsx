@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { londonToday, eventSourceKindLabel } from "@/lib/whatsOn";
-import { attentionOrder, needsAttention, newsSourceHealth, typicalGapDays, type HealthVerdict } from "@/lib/sourceHealth";
+import { attentionOrder, newsSourceHealth, typicalGapDays, type HealthVerdict } from "@/lib/sourceHealth";
 import { EventSourcePanel, host, useEventSourcesDeck, type EventSourceCardData } from "@/components/events/EventSources";
 import { SourceCard, SourceIcon, hostOf } from "./SourceCard";
 import { NewsSourcePanel, type NewsSourceSettings, type NewsSourceView } from "./NewsSourcePanel";
@@ -30,16 +30,10 @@ export interface SourceShelvesProps {
   onBackfill: (s: NewsSourceView) => void;
 }
 
-function Shelf({ id, title, legend, attention, children }: { id: string; title: string; legend: string; attention: number; children: React.ReactNode }) {
+function Shelf({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section aria-labelledby={id} className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 id={id} className="text-xl font-semibold">{title}</h3>
-        <p className="text-sm text-muted-foreground">
-          {attention > 0 && <span className="mr-3 font-medium text-foreground">{attention} {attention === 1 ? "needs" : "need"} a look</span>}
-          Dots: last 7 days · number: {legend}
-        </p>
-      </div>
+      <h3 id={id} className="text-xl font-semibold">{title}</h3>
       {children}
     </section>
   );
@@ -97,7 +91,7 @@ export function SourceShelves(p: SourceShelvesProps) {
 
   return (
     <div className="space-y-10">
-      <Shelf id="shelf-news" title="News" legend="in the feed this week" attention={activeNews.filter((c) => needsAttention(c.health)).length}>
+      <Shelf id="shelf-news" title="News">
         {activeNews.length === 0 ? (
           <p className="rounded-xl border border-dashed p-6 text-center text-base text-muted-foreground">
             {p.loading ? "Loading sources…" : "No news sources yet. Paste a website above to add one."}
@@ -123,7 +117,7 @@ export function SourceShelves(p: SourceShelvesProps) {
         )}
       </Shelf>
 
-      <Shelf id="shelf-events" title="Events" legend="coming up in the feed" attention={activeEvents.filter((s) => needsAttention(s.health)).length}>
+      <Shelf id="shelf-events" title="Events">
         {activeEvents.length === 0 ? (
           <p className="rounded-xl border border-dashed p-6 text-center text-base text-muted-foreground">No events sources yet. Paste a what's-on page above to add one.</p>
         ) : (
