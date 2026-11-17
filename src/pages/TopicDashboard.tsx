@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { ReadershipPanel } from "@/components/readership/ReadershipPanel";
 import { TopicPulseProvider } from "@/hooks/useTopicPulse";
@@ -612,7 +613,7 @@ const TopicDashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="w-full space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-64 w-full rounded-xl" /></div>
         </div>
       </div>
     );
@@ -622,7 +623,7 @@ const TopicDashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 text-center space-y-4">
-          <h1 className="display-heading text-4xl">Feed not found</h1>
+          <h1 className="font-display text-[32px] leading-tight font-normal">Feed not found</h1>
           <p className="text-muted-foreground">This feed doesn't exist or you don't have access.</p>
           <Button asChild><Link to="/dashboard">Back to your feeds</Link></Button>
         </div>
@@ -644,9 +645,9 @@ const TopicDashboard = () => {
           {/* Simplified Header — name + toggle + view feed icon */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <h1 className="display-heading text-2xl md:text-3xl leading-snug">{topic.name}</h1>
+              <h1 className="font-display text-[32px] leading-tight font-normal">{topic.name}</h1>
               <span className="flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1">
-                <span className="text-xs text-muted-foreground" id="publish-toggle-label">{topic.is_public ? "Live" : "Draft"}</span>
+                <span className="text-sm text-muted-foreground" id="publish-toggle-label">{topic.is_public ? "Live" : "Draft"}</span>
                 <Switch
                   id="publish-toggle"
                   aria-labelledby="publish-toggle-label"

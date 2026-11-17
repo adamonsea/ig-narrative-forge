@@ -293,7 +293,7 @@ export const TopicManager = () => {
                         )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
-                            <h3 className="text-lg md:text-xl font-semibold tracking-tight group-hover:text-purple-dark transition-colors break-words">
+                            <h3 className="text-lg font-semibold tracking-tight break-words">
                               {topic.name}
                             </h3>
                             <FeedStatus live={topic.is_public} readingNow={Number(cardStats.get(topic.id)?.reading_now) || 0} onToggle={() => handlePublishToggle(topic)} />
@@ -305,7 +305,7 @@ export const TopicManager = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 hover:bg-purple-soft hover:text-purple-dark hover:border-purple-bright/30"
+                          className="h-8"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -313,7 +313,7 @@ export const TopicManager = () => {
                           }}
                         >
                           <ExternalLink className="w-3 h-3 mr-1.5" />
-                          <span className="hidden md:inline text-xs">View</span>
+                          <span className="hidden md:inline text-sm">View</span>
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

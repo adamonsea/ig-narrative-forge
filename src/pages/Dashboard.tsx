@@ -1,11 +1,19 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Helmet } from "react-helmet-async";
-import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TopicManager } from "@/components/TopicManager";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "@/components/AppLayout";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PlanStatus } from "@/components/billing/PlanStatus";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 
 const Dashboard = () => {
@@ -26,7 +34,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center min-h-[60vh]">
-            <Spinner size="lg" />
+            <div className="w-full max-w-3xl space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-40 w-full rounded-xl" /></div>
           </div>
         </div>
       </div>
@@ -52,7 +60,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="display-heading text-4xl">
+            <h1 className="font-display text-[32px] leading-tight font-normal">
               Your feeds
             </h1>
           </div>

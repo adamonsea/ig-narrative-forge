@@ -49,7 +49,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         
         <div className="flex flex-col flex-1 w-full">
           {/* Single unified header bar */}
-          <header className="sticky top-0 z-50 flex h-10 items-center gap-3 border-b border-border/30 bg-white dark:bg-sidebar-background px-4 relative">
+          <header className="sticky top-0 z-50 flex h-10 items-center gap-3 border-b border-border/30 bg-card dark:bg-sidebar-background px-4 relative">
             <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent" />
             
             {hasBreadcrumbs && (
@@ -78,7 +78,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               variant="ghost"
               size="sm"
               onClick={signOut}
-              className="ml-auto h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+              className="ml-auto h-7 gap-1.5 px-2 text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Sign out</span>

@@ -203,7 +203,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
             type="button"
             onClick={choosePeriod(p)}
             aria-pressed={period === p}
-            className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+            className={`px-2 py-1 text-sm rounded-full transition-colors ${
               period === p ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -220,7 +220,7 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
       ) : (
         <div className="flex flex-wrap items-baseline gap-x-2 md:gap-x-3 gap-y-1">
           <span className="inline-flex items-end gap-1.5">
-            <span className="text-4xl font-semibold tracking-tight tabular-nums leading-none">{readersShown.toLocaleString("en-GB")}</span>
+            <span className="text-[32px] font-semibold tracking-tight tabular-nums leading-none">{readersShown.toLocaleString("en-GB")}</span>
             {weekly.length > 0 && <Sparkline values={weekly} />}
           </span>
           <span className="inline-flex items-baseline gap-x-2">
@@ -279,13 +279,13 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
         </Popover>
         {" · "}{publishedShown.toLocaleString("en-GB")} published
         </span>{" "}
-        <span className="whitespace-nowrap text-xs" title="Every page load, including automated traffic such as scrapers">
+        <span className="whitespace-nowrap text-sm" title="Every page load, including automated traffic such as scrapers">
           · {visitsShown.toLocaleString("en-GB")} visits incl. automated
         </span>
       </p>
 
       {automated && (
-        <p className="text-xs text-muted-foreground">Visits jumped while readers stayed flat, so the rise is likely automated traffic.</p>
+        <p className="text-sm text-muted-foreground">Visits up, readers flat: likely automated.</p>
       )}
     </div>
   );
