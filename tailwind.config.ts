@@ -26,6 +26,10 @@ export default {
 			},
 			colors: {
 				border: 'hsl(var(--border))',
+				chip: {
+					DEFAULT: 'hsl(var(--chip))',
+					border: 'hsl(var(--chip-border))'
+				},
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
@@ -40,7 +44,9 @@ export default {
 				},
 				destructive: {
 					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
+					foreground: 'hsl(var(--destructive-foreground))',
+					soft: 'hsl(var(--destructive-soft))',
+					ink: 'hsl(var(--destructive-ink))'
 				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
@@ -75,6 +81,7 @@ export default {
 				mint: {
 					DEFAULT: 'hsl(var(--mint))',
 					soft: 'hsl(var(--mint-soft))',
+					ink: 'hsl(var(--mint-ink))',
 					foreground: 'hsl(var(--mint-foreground))'
 				},
 				attention: {

@@ -1,2 +1,3 @@
 # Sources tab rules
 - Sources tab health (green/amber/red, attention-first order) comes only from the pure rules in `src/lib/sourceHealth.ts`, fed for news by the guarded `get_topic_source_rhythm`; archiving is per feed (`topic_sources.is_active` / `event_sources.is_active`), never `content_sources.is_active`, so one feed's tidy-up never switches a shared source off for others.
+- A source card shows health as a muted full-card fill from `HEALTH_FILL`/`HEALTH_DOT`/`HEALTH_TEXT` in `src/components/sources/SourceCard.tsx` (soft tokens, no bright edge or stripe), so one map keeps card, dots, label and panel in the same colour and readable in light and dark mode.

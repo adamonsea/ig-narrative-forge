@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Last 7 days (oldest → today), up to 3 dots a day: at a glance, is this tap running? */
-export function SourceDots({ counts, size = "sm", className }: { counts: number[]; size?: "sm" | "lg"; className?: string }) {
+export function SourceDots({ counts, size = "sm", className, dotClass = "bg-pop", emptyClass = "border border-muted-foreground/75 bg-transparent" }: { counts: number[]; size?: "sm" | "lg"; className?: string; dotClass?: string; emptyClass?: string }) {
   const days = counts.length ? counts : Array(7).fill(0);
   const total = days.reduce((a, b) => a + b, 0);
   const dot = size === "lg" ? "h-2.5 w-2.5" : "h-1.5 w-1.5";
@@ -17,8 +17,8 @@ export function SourceDots({ counts, size = "sm", className }: { counts: number[
         return (
           <span key={i} className="flex flex-col-reverse items-center gap-[2px]" title={`${DAY_NAMES[d.getDay()]}: ${n}`}>
             {level === 0
-              ? <span className={cn(dot, "rounded-full bg-muted-foreground/20")} />
-              : Array.from({ length: level }).map((_, j) => <span key={j} className={cn(dot, "rounded-full bg-pop")} style={{ opacity: 0.55 + j * 0.2 }} />)}
+              ? <span className={cn(dot, "rounded-full", emptyClass)} />
+              : Array.from({ length: level }).map((_, j) => <span key={j} className={cn(dot, dotClass, "rounded-full")} style={{ opacity: 0.55 + j * 0.2 }} />)}
           </span>
         );
       })}

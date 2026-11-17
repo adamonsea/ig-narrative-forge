@@ -243,6 +243,8 @@ All colors MUST be HSL.
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 98%;
+    --destructive-soft: 0 75% 95%;
+    --destructive-ink: 0 72% 42%;
 
     --border: 214 18% 90%;
     --input: 214 18% 90%;
@@ -270,6 +272,7 @@ All colors MUST be HSL.
     --pop: 155 85% 38%;
     --pop-foreground: 214 50% 9%;
     --mint-soft: 155 70% 93%;
+    --mint-ink: 155 80% 26%;
     --mint: 155 100% 67%;
     --mint-foreground: 0 0% 100%;
 
@@ -282,6 +285,10 @@ All colors MUST be HSL.
     --purple-bright: 270 65% 58%;
     --purple-dark: 270 65% 40%;
     --purple-soft: 270 70% 96%;
+
+    /* Favicon / source-icon chip: stays light so site icons keep their own colours */
+    --chip: 0 0% 100%;
+    --chip-border: 214 18% 88%;
   }
 
   .dark {
@@ -309,6 +316,8 @@ All colors MUST be HSL.
 
     --destructive: 0 62% 40%;
     --destructive-foreground: 210 25% 96%;
+    --destructive-soft: 0 45% 14%;
+    --destructive-ink: 0 90% 68%;
 
     --border: 214 25% 17%;
     --input: 214 25% 17%;
@@ -334,6 +343,7 @@ All colors MUST be HSL.
     --pop: 155 90% 55%;
     --pop-foreground: 214 50% 9%;
     --mint-soft: 155 50% 15%;
+    --mint-ink: 155 85% 62%;
     --mint-foreground: 0 0% 100%;
     --attention: 38 92% 55%;
     --attention-soft: 36 60% 13%;
@@ -343,6 +353,10 @@ All colors MUST be HSL.
     --purple-bright: 270 90% 74%;
     --purple-dark: 270 70% 58%;
     --purple-soft: 270 50% 18%;
+
+    /* Favicon / source-icon chip: stays light so site icons keep their own colours */
+    --chip: 214 25% 96%;
+    --chip-border: 214 20% 70%;
   }
 }
 

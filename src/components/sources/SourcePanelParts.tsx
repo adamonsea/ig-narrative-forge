@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { HealthVerdict } from "@/lib/sourceHealth";
 
-const DOT: Record<string, string> = { healthy: "bg-mint", quiet: "bg-attention", failing: "bg-destructive", new: "bg-muted-foreground/50" };
-const BOX: Record<string, string> = { healthy: "bg-mint-soft", quiet: "bg-attention-soft", failing: "bg-destructive/10", new: "bg-muted" };
+const DOT: Record<string, string> = { healthy: "bg-mint", quiet: "bg-attention", failing: "bg-destructive-ink", new: "bg-muted-foreground/50" };
+const BOX: Record<string, string> = { healthy: "bg-mint-soft", quiet: "bg-attention-soft", failing: "bg-destructive-soft", new: "bg-muted" };
 
 /** Health in one plain sentence at the top of the panel. */
 export function HealthLine({ verdict }: { verdict: HealthVerdict }) {
