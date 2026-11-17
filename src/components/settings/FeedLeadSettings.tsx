@@ -3,19 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { eventCardMode, type EventCardMode, type FeedLead } from "@/lib/feedCardPositions";
 import { cn } from "@/lib/utils";
+import { CURRENCY_SYMBOL, FEED_CURRENCIES, isFeedCurrency, type FeedCurrency } from "@/lib/currency";
 
 interface Props {
   topicId: string;
   lead: string | null | undefined;
   cards: string | null | undefined;
+  currency?: string | null;
   onSaved: (values: Record<string, unknown>) => void;
 }
 
-function Choice<T extends string>({ id, label, value, options, onChange }: { id: string; label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
+function Choice<T extends string>({ id, label, value, options, onChange }: { id: string; label: string; value: T | null; options: [T, string][]; onChange: (v: T) => void }) {
   return (
     <div className="space-y-3">
       <p className="text-sm font-medium" id={id}>{label}</p>
-      <div className="grid grid-cols-2 gap-2 sm:max-w-sm" role="radiogroup" aria-labelledby={id}>
+      <div className={cn("grid gap-2 sm:max-w-sm", options.length === 3 ? "grid-cols-3" : "grid-cols-2")} role="radiogroup" aria-labelledby={id}>
         {options.map(([v, text]) => (
           <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)}
             className={cn("min-h-11 rounded-lg border p-3 text-left text-base transition-colors",
@@ -28,8 +30,8 @@ function Choice<T extends string>({ id, label, value, options, onChange }: { id:
   );
 }
 
-/** "Lead with: News | Events" and "Event cards: Grouped | Individual". Auto-saves. */
-export function FeedLeadSettings({ topicId, lead, cards, onSaved }: Props) {
+/** "Lead with: News | Events", "Event cards: Grouped | Individual" and the event price currency. Auto-saves. */
+export function FeedLeadSettings({ topicId, lead, cards, currency, onSaved }: Props) {
   const [state, setState] = useState<SaveState>(null);
   const currentLead: FeedLead = lead === "events" ? "events" : "news";
   const currentCards = eventCardMode(currentLead, cards);
@@ -62,6 +64,11 @@ export function FeedLeadSettings({ topicId, lead, cards, onSaved }: Props) {
       <Choice id="event-cards" label="Event cards" value={currentCards}
         options={[["grouped", "Grouped"], ["individual", "Individual"]]}
         onChange={(v: EventCardMode) => { if (v !== currentCards) void save({ event_cards: v }); }} />
+      {currentCards === "individual" && (
+        <Choice id="event-currency" label="Currency" value={isFeedCurrency(currency) ? currency : null}
+          options={FEED_CURRENCIES.map((c) => [c, CURRENCY_SYMBOL[c]] as [FeedCurrency, string])}
+          onChange={(v: FeedCurrency) => { if (v !== currency) void save({ event_currency: v }); }} />
+      )}
     </div>
   );
 }

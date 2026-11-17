@@ -1,6 +1,9 @@
+import { tidyPrice } from './currency.ts';
+
 /**
  * Event categories — one rule set for the gatherer (scrape-whats-on) and the app
- * (re-exported from src/lib/eventCategories.ts). Rules only; never a model.
+ * (re-exported from src/lib/eventCategories.ts). Rules only; unplaced events get one
+ * background model check after saving (scrape-whats-on/categoryCheck.ts).
  * Keys match EventCategoryIcon. Starting ten for every feed; Comedy and Workshops
  * are spare and arrive through suggestions; "other" catches the rest.
  */
@@ -110,9 +113,8 @@ export function shortDescription(raw: string | null | undefined, max = 240): str
 export function priceFacts(offers: unknown, freeFlag?: unknown, costText?: unknown): { price: string | null; is_free: boolean | null } {
   if (freeFlag === true || freeFlag === 'true') return { price: null, is_free: true };
   if (typeof costText === 'string' && costText.trim()) {
-    const c = costText.replace(/<[^>]+>/g, '').trim();
-    if (/^(free|gr[aá]tis|entrada (livre|gratuita)|0([.,]0+)?\s*(€|£|eur|gbp)?)$/i.test(c)) return { price: null, is_free: true };
-    return { price: c.slice(0, 40), is_free: false };
+    const tidy = tidyPrice(costText);
+    if (tidy.price || tidy.is_free) return tidy;
   }
   const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
   for (const o of list) {

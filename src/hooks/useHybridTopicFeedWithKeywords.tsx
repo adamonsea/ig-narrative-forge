@@ -65,6 +65,7 @@ interface Topic {
   events_enabled?: boolean;
   feed_lead?: string | null;
   event_cards?: string | null;
+  event_currency?: string | null;
   community_intelligence_enabled?: boolean;
   community_pulse_frequency?: number;
   automated_insights_enabled?: boolean;
@@ -299,7 +300,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at'),
         supabase
           .from('topics')
-          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled, feed_lead, event_cards')
+          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled, feed_lead, event_cards, event_currency')
           .ilike('slug', slug)
           .eq('is_public', true)
           .single()
@@ -350,6 +351,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         events_enabled: fullTopicData?.events_enabled ?? false,
         feed_lead: (fullTopicData as any)?.feed_lead ?? 'news',
         event_cards: (fullTopicData as any)?.event_cards ?? null,
+        event_currency: (fullTopicData as any)?.event_currency ?? null,
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);

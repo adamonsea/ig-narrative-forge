@@ -1,4 +1,6 @@
 import { categorizeEvent } from '../_shared/eventCategories.ts';
+import { currencyFromUrls } from '../_shared/currency.ts';
+import { checkOtherCategories, inBackground } from './categoryCheck.ts';
 /**
  * scrape-whats-on — every kind of events source for a feed (event_sources).
  * The right reader is picked by the source's kind (see readers/index.ts); a
@@ -179,8 +181,11 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       is_free: e.is_free ?? null,
       source_url: e.url && !dead.has(e.url) ? e.url : source.url,
       source_name: e.source_name || source.name,
-      // The owner's choice sticks; otherwise rules (listing's own category, then keywords)
-      event_type: prev?.category_locked && prev.event_type ? prev.event_type : categorizeEvent({ title: e.title, description: e.description, venue: e.venue, hint: e.hint ?? e.category }, addedCategories),
+      // The owner's choice sticks; otherwise rules (listing's own category, then keywords);
+      // a category found earlier (rules or the background check) isn't lost to a fresh "Other"
+      event_type: ((ruled) => prev?.category_locked && prev.event_type ? prev.event_type
+        : ruled === 'other' && prev?.event_type && prev.event_type !== 'other' ? prev.event_type : ruled)(
+        categorizeEvent({ title: e.title, description: e.description, venue: e.venue, hint: e.hint ?? e.category }, addedCategories)),
       category_locked: Boolean(prev?.category_locked),
       status,
       exclusion_reason: reason,
@@ -194,6 +199,11 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const unique = [...new Map(rows.map((r) => [r.external_id, r])).values()];
   const { error } = await supabase.from('events').upsert(unique, { onConflict: 'topic_id,source_api,external_id' });
   if (error) throw new Error(error.message);
+  // A feed without a currency yet takes it from its sources' country (.pt → €, .co.uk → £)
+  const currency = currencyFromUrls([source.url, ...unique.slice(0, 20).map((r) => r.source_url)]) ?? 'GBP';
+  await supabase.from('topics').update({ event_currency: currency }).eq('id', source.topic_id).is('event_currency', null);
+  // Events the rules left as "Other": one model check, after this response
+  inBackground(checkOtherCategories(supabase, source.topic_id, source.id));
   // Drop upcoming events from this source that it no longer lists
   const keep = unique.map((r) => `"${String(r.external_id).replace(/"/g, '')}"`).join(',');
   await supabase.from('events').delete()
@@ -378,7 +388,7 @@ Deno.serve(async (req) => {
       const kind = body.action === 'save' && isEventSourceKind(body.kind) ? body.kind : await detectKind(url);
       const reader = readerFor(kind);
       const result = await readSafely(reader, url, hostOf(url));
-      const { verdicts, scores } = await judgeAndScore(supabase, profiles, body.topicId, result.events, url, body.name || result.name);
+      const { verdicts, scores } = await judgeAndScore(supabase, profiles, body.topicId, result.events, url, ("name" in body ? body.name : undefined) || result.name);
       const summary = summarise(kind, result, verdicts);
       if (body.action === 'preview') return json({ success: true, ...summary });
 

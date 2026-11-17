@@ -345,7 +345,7 @@ export default function DesignSystem() {
               <EventDateBlock ymd="2026-11-19" />
             </Spec>
             <Spec name="Individual event card · two slides; price only when the source says it" className="w-full max-w-md">
-              <EventCard brandColor="#0E7C7B" event={{ id: "demo", title: "Fado by the river", start_date: "2026-11-19", start_time: "21:00:00", location: "Clube de Fado, Alfama", source_url: "https://example.com", source_name: "Agenda LX", event_type: "music", price: "€15", is_free: false, description: "An evening of traditional fado in a small Alfama tavern." }} isOwner />
+              <EventCard brandColor="#0E7C7B" event={{ id: "demo", title: "Fado by the river", start_date: "2026-11-19", start_time: "21:00:00", location: "Clube de Fado, Alfama", source_url: "https://example.com", source_name: "Agenda LX", event_type: "music", price: "15", is_free: false, description: "An evening of traditional fado in a small Alfama tavern." }} currency="EUR" isOwner />
             </Spec>
           </Block>
 

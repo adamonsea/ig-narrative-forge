@@ -1329,6 +1329,7 @@ export type Database = {
         Row: {
           area_confirmed: boolean
           category: string | null
+          category_ai_checked: boolean
           category_locked: boolean
           created_at: string
           created_by: string | null
@@ -1359,6 +1360,7 @@ export type Database = {
         Insert: {
           area_confirmed?: boolean
           category?: string | null
+          category_ai_checked?: boolean
           category_locked?: boolean
           created_at?: string
           created_by?: string | null
@@ -1389,6 +1391,7 @@ export type Database = {
         Update: {
           area_confirmed?: boolean
           category?: string | null
+          category_ai_checked?: boolean
           category_locked?: boolean
           created_at?: string
           created_by?: string | null
@@ -5323,6 +5326,7 @@ export type Database = {
           drip_stories_per_release: number | null
           email_subscriptions_enabled: boolean | null
           event_cards: string | null
+          event_currency: string | null
           event_source_url: string | null
           events_enabled: boolean | null
           events_last_checked_at: string | null
@@ -5398,6 +5402,7 @@ export type Database = {
           drip_stories_per_release?: number | null
           email_subscriptions_enabled?: boolean | null
           event_cards?: string | null
+          event_currency?: string | null
           event_source_url?: string | null
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
@@ -5473,6 +5478,7 @@ export type Database = {
           drip_stories_per_release?: number | null
           email_subscriptions_enabled?: boolean | null
           event_cards?: string | null
+          event_currency?: string | null
           event_source_url?: string | null
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
@@ -6849,7 +6855,7 @@ export type Database = {
         }[]
       }
       get_topic_events_feed: {
-        Args: { p_topic_id: string }
+        Args: { p_limit?: number; p_offset?: number; p_topic_id: string }
         Returns: {
           description: string
           event_type: string

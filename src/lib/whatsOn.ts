@@ -2,6 +2,7 @@
  * Small, testable rules for events: sources, the Desk (Waiting / Hidden / Live)
  * and the feed's "What's on" card set.
  */
+import { formatPrice } from "./currency";
 
 // ---------- sources ----------
 
@@ -356,10 +357,9 @@ export function dateBlock(ymd: string): { weekday: string; day: string; month: s
   return { weekday: fmt(ymd, { weekday: "short" }), day: String(Number(ymd.slice(8, 10))), month: fmt(ymd, { month: "short" }) };
 }
 
-/** "Free" or the stated price — only when the source said so; null otherwise. */
-export function priceLine(price: string | null | undefined, isFree: boolean | null | undefined): string | null {
-  if (isFree === true) return "Free";
-  return price?.trim() ? price.trim() : null;
+/** "Free", "€12" (in the feed's currency) or the listing's own words — only when the source said so; null otherwise. */
+export function priceLine(price: string | null | undefined, isFree: boolean | null | undefined, currency?: string | null): string | null {
+  return formatPrice(price, isFree, currency);
 }
 
 /** One card per event, soonest first: started events dropped, one per name. */

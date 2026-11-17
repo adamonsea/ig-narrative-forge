@@ -141,3 +141,13 @@ Deno.test('venue names come from slug-keyed maps, and start-only lists ignore pu
   assertEquals(ev[0].venue, 'Casa do Fado');
   assertEquals(ev[0].start_date, '2026-12-01');
 });
+
+Deno.test('Agenda LX serialised price values are read as the listing wrote them', async () => {
+  const { listedPriceValue } = await import('./extract.ts');
+  assertEquals(listedPriceValue('a:1:{i:0;a:2:{s:5:"value";s:1:"4";s:11:"description";s:27:"(entry ticket not included)";}}'), '4');
+  assertEquals(listedPriceValue('a:1:{i:0;a:1:{s:5:"value";s:12:"15 € to 20";}}'), '15 € to 20');
+  assertEquals(listedPriceValue(''), undefined);
+  const events = parseJsonFeed([{ title: 'Fado night', StartDate: '2030-01-10', price_cat: 'value', price_val: 'a:1:{i:0;a:1:{s:5:"value";s:2:"12";}}' }], 'https://x.pt/', null, { startOnly: true });
+  assertEquals(events[0].price, '12');
+  assertEquals(events[0].is_free, false);
+});

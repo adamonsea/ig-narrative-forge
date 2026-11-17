@@ -228,9 +228,11 @@ describe("individual event cards", () => {
     expect(dateBlock("2026-11-19")).toEqual({ weekday: "Thu", day: "19", month: "Nov" });
   });
   it("price shows only when known; Free only when the source says free", () => {
-    expect(priceLine(null, true)).toBe("Free");
-    expect(priceLine("€12", false)).toBe("€12");
-    expect(priceLine(null, null)).toBeNull();
+    expect(priceLine(null, true, "EUR")).toBe("Free");
+    expect(priceLine("€12", false, "EUR")).toBe("€12");
+    expect(priceLine("12", false, "EUR")).toBe("€12");
+    expect(priceLine("12", false, "GBP")).toBe("£12");
+    expect(priceLine(null, null, "EUR")).toBeNull();
   });
   it("drops started events and repeats, soonest first", () => {
     const ev = [

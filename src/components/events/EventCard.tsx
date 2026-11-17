@@ -35,6 +35,8 @@ interface EventCardProps {
   brandColor?: string | null;
   /** The feed's owner: their clicks don't count as sending readers. */
   isOwner?: boolean;
+  /** The feed's currency (GBP / EUR / USD) for bare listing prices; unknown hides them. */
+  currency?: string | null;
 }
 
 /**
@@ -42,7 +44,7 @@ interface EventCardProps {
  * Slide 1: date block, category icon, title, venue. Slide 2: time, venue, price
  * (only when known), up to two lines of description, one link to the organiser.
  */
-export function EventCard({ event: e, brandColor, isOwner = false }: EventCardProps) {
+export function EventCard({ event: e, brandColor, isOwner = false, currency = null }: EventCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -57,7 +59,7 @@ export function EventCard({ event: e, brandColor, isOwner = false }: EventCardPr
   const category = isEventCategory(e.event_type) ? e.event_type : "other";
   const b = dateBlock(e.start_date);
   const time = eventTime(e.start_time);
-  const price = priceLine(e.price, e.is_free);
+  const price = priceLine(e.price, e.is_free, currency);
   const source = e.source_name || "the organiser";
 
   const first = (

@@ -529,6 +529,16 @@ export interface JsonFeedOptions {
   startOnly?: boolean;
 }
 
+/**
+ * Price some WordPress listings (Agenda LX) keep as a PHP-serialised list:
+ * a:1:{i:0;a:1:{s:5:"value";s:2:"12";}} → "12". First value only; undefined otherwise.
+ */
+export function listedPriceValue(v: unknown): string | undefined {
+  if (typeof v !== 'string' || !v.includes('"value"')) return undefined;
+  const m = v.match(/s:5:"value";s:\d+:"([^"]*)"/);
+  return m?.[1]?.trim() || undefined;
+}
+
 function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: string | null, opts: JsonFeedOptions): WhatsOnEvent | null {
   const when = eventWhen(o, opts.startOnly ? START_KEYS : DATE_KEYS);
   const title = clean(pick(o, TITLE_KEYS));
@@ -543,7 +553,7 @@ function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: s
     url: absolute(typeof url === 'string' ? url : null, feedUrl),
     place: placeText(pick(o, ['venue', 'location'])) ?? venue ?? fallbackPlace,
     description: shortDescription(((d) => (typeof d === 'string' ? decodeEntities(d) : Array.isArray(d) ? decodeEntities(d.filter((x) => typeof x === 'string').join(' ')) : null))(pick(o, ['description', 'excerpt.rendered', 'excerpt', 'details', 'content.rendered']))),
-    ...priceFacts(o.offers, o.is_free ?? o.isAccessibleForFree ?? (o.price_cat === 'free' ? true : undefined), o.cost ?? (typeof o.price === 'string' || typeof o.price === 'number' ? String(o.price) : undefined)),
+    ...priceFacts(o.offers, o.is_free ?? o.isAccessibleForFree ?? (o.price_cat === 'free' ? true : undefined), o.cost ?? (typeof o.price === 'string' || typeof o.price === 'number' ? String(o.price) : undefined) ?? listedPriceValue(o.price_val)),
     hint: hintText(o.categories, o.categories_name_list, o.category, o.subject, o.tags, o.tags_name_list, o.genre),
   };
 }

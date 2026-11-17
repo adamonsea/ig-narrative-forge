@@ -65,6 +65,7 @@ export interface EditorialTopic {
   events_enabled?: boolean;
   feed_lead?: string | null;
   event_cards?: string | null;
+  event_currency?: string | null;
   event_source_url?: string;
   branding_config?: unknown;
   donation_enabled?: boolean;
@@ -197,7 +198,7 @@ export function EditorialControlCenter({
           brandingConfig={topic.branding_config}
           onSaved={(values) => patch(values)}
         />
-        <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} onSaved={(values) => patch(values)} />
+        <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} currency={topic.event_currency} onSaved={(values) => patch(values)} />
         <RememberedFold foldKey="brand-more" label="More options">
           <div className="space-y-12">
             <section>

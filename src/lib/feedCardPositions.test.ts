@@ -63,3 +63,26 @@ describe('events-led feeds', () => {
     expect(eventsAfterLastNews(0, 5)).toBe(0);
   });
 });
+
+import { eventsLedRun, newsSlotsWithin } from "./feedCardPositions";
+describe("events-led run", () => {
+  it("news slots in after events 3, 8, 13, 18 in the first 20 events", () => {
+    const run = eventsLedRun(20, 10, false);
+    const storiesAfter = run.flatMap((item, k) => item.kind === "story" ? [run.slice(0, k).filter((x) => x.kind === "event").length] : []);
+    expect(storiesAfter).toEqual([3, 8, 13, 18]);
+    expect(newsSlotsWithin(20)).toBe(4);
+  });
+  it("extra cards count against events, not news", () => {
+    const run = eventsLedRun(20, 10, false);
+    expect(run.filter((i) => i.kind === "event").map((i) => i.extrasAt)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
+    expect(run.filter((i) => i.kind === "story").every((i) => i.extrasAt === null)).toBe(true);
+  });
+  it("stories wait for more events until every event is loaded, then follow and keep counting", () => {
+    expect(eventsLedRun(4, 3, false).filter((i) => i.kind === "story")).toHaveLength(1);
+    const done = eventsLedRun(4, 3, true);
+    expect(done.map((i) => `${i.kind[0]}${i.extrasAt ?? "-"}`)).toEqual(["e1", "e2", "e3", "s-", "e4", "s5", "s6"]);
+  });
+  it("a feed with only events is just its events", () => {
+    expect(eventsLedRun(3, 0, true).map((i) => i.kind)).toEqual(["event", "event", "event"]);
+  });
+});

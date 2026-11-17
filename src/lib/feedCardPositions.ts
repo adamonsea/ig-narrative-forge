@@ -340,3 +340,35 @@ export function eventsSliceBeforeNews(storyNumber: number, eventCount: number): 
 export function eventsAfterLastNews(storyCount: number, eventCount: number): number {
   return Math.min(eventsBeforeNews(storyCount), eventCount);
 }
+
+/** How many news stories an events-led feed has room for among this many events. */
+export function newsSlotsWithin(eventCount: number, rule: SequenceCardPosition = NEWS_IN_EVENTS): number {
+  let n = 0;
+  while (eventsBeforeNews(n + 1, rule) <= eventCount) n += 1;
+  return n;
+}
+
+export type EventsLedItem =
+  | { kind: 'event'; index: number; extrasAt: number }
+  | { kind: 'story'; index: number; extrasAt: number | null };
+
+/**
+ * The run of cards in an events-led feed. Events are the base list; news stories
+ * slot in by NEWS_IN_EVENTS. `extrasAt` is the position other extra cards (quiz,
+ * email sign-up …) count against — the event's number, exactly as stories are
+ * counted in a news-led feed — so the same registry places them. Once every
+ * event is loaded, leftover stories follow and keep counting on.
+ */
+export function eventsLedRun(eventCount: number, storyCount: number, allEventsLoaded: boolean): EventsLedItem[] {
+  const out: EventsLedItem[] = [];
+  let story = 0;
+  for (let i = 0; i < eventCount; i++) {
+    out.push({ kind: 'event', index: i, extrasAt: i + 1 });
+    if (story < storyCount && eventsBeforeNews(story + 1) === i + 1) out.push({ kind: 'story', index: story++, extrasAt: null });
+  }
+  if (allEventsLoaded) {
+    let position = eventCount;
+    while (story < storyCount) out.push({ kind: 'story', index: story++, extrasAt: ++position });
+  }
+  return out;
+}
