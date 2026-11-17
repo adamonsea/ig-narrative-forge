@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { BRAND_COLOURS, PICTURE_LABELS, type FeedSetupDraft, type PictureChoice } from "@/lib/feedSetup";
 import { TermList } from "./TermList";
 import { FEATURES } from "@/lib/featureFlags";
+import { InfoHint } from "@/components/ui/editorial";
 import { addToList, normaliseTerm, removeTerm, type ListName } from "@/lib/termLists";
 
 export interface SetupSource {
@@ -23,9 +24,9 @@ const DRAWN_CHOICES: PictureChoice[] = ["editorial_illustrative", "editorial_pho
 function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3 border-t border-border py-6 first:border-t-0 first:pt-0">
-      <div>
-        <h3 className="text-base font-semibold">{title}</h3>
-        {hint && <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>}
+      <div className="flex items-center gap-1.5">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        {hint && <InfoHint label={`About ${title.toLowerCase()}`}>{hint}</InfoHint>}
       </div>
       {children}
     </section>
@@ -35,9 +36,9 @@ function Row({ title, hint, children }: { title: string; hint?: string; children
 function SwitchRow({ id, title, hint, checked, onChange }: { id: string; title: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <section className="flex items-start justify-between gap-6 border-t border-border py-6">
-      <div>
-        <label htmlFor={id} className="text-base font-semibold">{title}</label>
-        <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>
+      <div className="flex items-center gap-1.5">
+        <label htmlFor={id} className="text-lg font-semibold">{title}</label>
+        <InfoHint label={`About ${title.toLowerCase()}`}>{hint}</InfoHint>
       </div>
       <Switch id={id} checked={checked} onCheckedChange={onChange} className="mt-1" />
     </section>
@@ -92,7 +93,7 @@ export function FeedSetupPreview({
               value={draft.name}
               readOnly={nameLocked}
               onChange={(e) => set("name", e.target.value.slice(0, 60))}
-              className="h-12 border-transparent bg-transparent px-0 text-2xl font-semibold tracking-tight shadow-none focus-visible:border-border focus-visible:px-3 md:text-3xl"
+              className="h-12 border-transparent bg-transparent px-0 font-display text-[32px] font-normal leading-tight shadow-none focus-visible:border-border focus-visible:px-3 md:text-[32px]"
             />
           </div>
         </div>
@@ -133,9 +134,9 @@ export function FeedSetupPreview({
         </div>
       </section>
 
-      <Row title="Sources" hint="Where stories come from. Tap to include or leave out.">
+      <Row title="Sources" hint="Tap to include or leave out.">
         {sources.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No sources found automatically. Add a website below.</p>
+          <p className="text-muted-foreground">None found. Add a website.</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {sources.map((s) => {

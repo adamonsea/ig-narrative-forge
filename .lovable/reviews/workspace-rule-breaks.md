@@ -91,7 +91,7 @@ Rule key: **Size** = text outside 32/24/18/16/14 or tiny text · **Caps** = uppe
 - **Spinner**: the funnel loads with a spinner (EngagementFunnel 57).
 - **Space**: 56px and 40px gaps (ReadershipPanel 83–84, 120).
 
-## 6. Dashboard and new-feed setup
+## 6. Dashboard and new-feed setup (done 17 Nov, except the backups and safety pop-ups, which wait for the shared drawer)
 
 - **Size**:
   - The "Your feeds" heading is serif at 36px (Dashboard 55).

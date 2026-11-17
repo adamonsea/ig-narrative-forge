@@ -400,16 +400,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                 <AnimatePresence mode="wait">
                   {step === "about" && (
                     <motion.div key="about" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-8">
-                      <div className="space-y-3 text-center">
-                        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">What's your feed about?</h1>
-                        <p className="text-lg text-muted-foreground">A subject, a place, or both. We'll suggest everything else.</p>
-                      </div>
+                      <h1 className="text-center text-2xl font-semibold">What's your feed about?</h1>
                       <Input
                         value={about}
                         onChange={(e) => setAbout(e.target.value.slice(0, 80))}
                         placeholder={EXAMPLES[exampleIndex]}
                         aria-label="What your feed is about"
-                        className="h-16 rounded-xl border-2 text-center text-xl font-medium placeholder:text-muted-foreground/50 focus:border-primary md:text-2xl"
+                        className="h-12 rounded-lg text-center text-base placeholder:text-muted-foreground"
                         autoFocus
                         onKeyDown={(e) => { if (e.key === "Enter" && about.trim().length >= 2) handleAboutContinue(); }}
                       />
@@ -428,17 +425,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
 
                   {step === "name" && (
                     <motion.div key="name" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-                      <div className="space-y-2 text-center">
-                        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Name your feed</h1>
-                        <p className="text-muted-foreground">Next you'll choose its sources and what it looks for.</p>
-                      </div>
+                      <h1 className="text-center text-2xl font-semibold">Name your feed</h1>
                       <div className="relative">
                         <Input
                           value={manualName}
                           onChange={(e) => setManualName(e.target.value)}
                           placeholder="e.g. Eastbourne Today"
                           aria-label="Feed name"
-                          className={cn("h-16 rounded-xl border-2 text-center text-xl font-medium md:text-2xl", nameError ? "border-destructive" : "focus:border-primary")}
+                          className={cn("h-12 rounded-lg text-center text-base", nameError && "border-destructive")}
                           autoFocus
                           onKeyDown={(e) => { if (e.key === "Enter") handleNameContinue(); }}
                         />
@@ -452,7 +446,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                     <motion.div key="thinking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center space-y-8 py-6" aria-live="polite">
                       <SourceScanLoop />
                       <div className="space-y-2 text-center">
-                        <p className="text-xl font-medium">Setting up "{about.trim()}"</p>
+                        <p className="text-lg font-semibold">Setting up "{about.trim()}"</p>
                         <motion.p key={thinkingIndex} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-muted-foreground">
                           {THINKING_MESSAGES[thinkingIndex]}
                         </motion.p>
@@ -463,10 +457,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
 
                   {step === "sources" && (
                     <motion.div key="sources" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-                      <div className="space-y-2 text-center">
-                        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Choose sources</h1>
-                        <p className="text-muted-foreground">Tap to include or leave out. You can add your own.</p>
-                      </div>
+                      <h1 className="text-center text-2xl font-semibold">Choose sources</h1>
                       {findingSources || !draft ? (
                         <div className="flex flex-col items-center space-y-6 py-6" aria-live="polite">
                           <SourceScanLoop />
@@ -481,7 +472,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
 
                   {step === "preview" && draft && (
                     <motion.div key="preview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-                      <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         {manual ? "Check the details" : "Here's your feed"}
                       </p>
                       <FeedSetupPreview
@@ -529,10 +520,10 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                         <CheckCircle className="h-8 w-8 text-accent-foreground" />
                       </div>
                       <div className="space-y-2 text-center">
-                        <h2 className="text-3xl font-semibold tracking-tight">
+                        <h2 className="text-2xl font-semibold">
                           {completedStories.length > 0 ? "Your feed is live" : "Your feed is set up"}
                         </h2>
-                        <p className="text-lg text-muted-foreground">
+                        <p className="text-muted-foreground">
                           {completedStories.length > 0
                             ? draft?.autopilot
                               ? `${completedStories.length} stories so far. Autopilot will keep it up to date.`

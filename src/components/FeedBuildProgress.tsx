@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Check, Newspaper } from 'lucide-react';
+import { Check, Newspaper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ClippingStackLoop } from '@/components/onboarding/WaitingAnimations';
 
@@ -192,7 +192,7 @@ export const FeedBuildProgress = ({
 
       {/* Title */}
       <div className="text-center space-y-3" aria-live="polite">
-        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+        <h2 className="text-2xl font-semibold">
           Building your feed…
         </h2>
         <motion.p
@@ -240,7 +240,7 @@ export const FeedBuildProgress = ({
               {phase.status === 'done' ? (
                 <Check className="w-4 h-4 text-accent-foreground" />
               ) : phase.status === 'active' ? (
-                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                <span className="live-pulse h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
               ) : (
                 <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
               )}
@@ -268,7 +268,7 @@ export const FeedBuildProgress = ({
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-sm space-y-2"
           >
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               Stories found
             </p>
             {stories.slice(0, 3).map((story, i) => (

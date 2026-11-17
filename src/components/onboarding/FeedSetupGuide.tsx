@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { InfoHint } from "@/components/ui/editorial";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { PictureReferences } from "@/components/topics/PictureReferences";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,12 +144,9 @@ export const FeedSetupGuide = ({
     return (
       <section className="max-w-2xl mx-auto py-12 text-center space-y-6" aria-live="polite">
         <ClippingStackLoop />
-        <h2 className="text-xl font-semibold text-foreground">Gathering your first stories</h2>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          We're reading your sources now. New arrivals appear in your pipeline within a few minutes — you don't
-          need to wait here.
-        </p>
-        <Button onClick={onSkip}>Go to my pipeline</Button>
+        <h2 className="text-2xl font-semibold text-foreground">Gathering your first stories</h2>
+        <p className="text-muted-foreground">They'll reach your Desk in a few minutes.</p>
+        <Button onClick={onSkip}>Open the Desk</Button>
       </section>
     );
   }
@@ -168,19 +166,19 @@ export const FeedSetupGuide = ({
             />
           ))}
         </div>
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
           Step {step} of {TOTAL_STEPS}
         </span>
       </div>
 
       <header className="mb-6 space-y-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5" /> Set up {topic.name}
-        </p>
-        <h2 id="setup-step-title" className="text-2xl font-semibold text-foreground">
-          {current.title}
-        </h2>
-        <p className="text-sm text-muted-foreground">{current.why}</p>
+        <p className="text-sm text-muted-foreground">Set up {topic.name}</p>
+        <div className="flex items-center gap-1.5">
+          <h2 id="setup-step-title" className="text-2xl font-semibold text-foreground">
+            {current.title}
+          </h2>
+          <InfoHint label="Why this step">{current.why}</InfoHint>
+        </div>
       </header>
 
       <div className="space-y-6">
@@ -317,10 +315,10 @@ export const FeedSetupGuide = ({
       </div>
 
       {step === 1 && sourceCount === 0 && (
-        <p className="mt-3 text-xs text-muted-foreground text-right">Add at least one source to continue.</p>
+        <p className="mt-3 text-sm text-muted-foreground text-right">Add a source first.</p>
       )}
       {step === 2 && !hasKeywords && (
-        <p className="mt-3 text-xs text-muted-foreground text-right">Add at least one keyword to continue.</p>
+        <p className="mt-3 text-sm text-muted-foreground text-right">Add a word first.</p>
       )}
     </section>
   );

@@ -7,7 +7,6 @@ import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AppLayout } from "@/components/AppLayout";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { AddStoryDialog } from "@/components/manual/AddStoryDialog";
@@ -149,9 +148,7 @@ const TopicDashboard = () => {
     return requested || "feed";
   });
   const [autoSuggestSources, setAutoSuggestSources] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [proGateOpen, setProGateOpen] = useState(false);
-  const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const { toast } = useToast();
   
   usePageFavicon();
@@ -553,17 +550,8 @@ const TopicDashboard = () => {
     }
   };
 
-  const handlePublishToggle = (newState: boolean) => {
-    if (!topic) return;
-    if (!newState) {
-      setPendingPublishState(newState);
-      setShowConfirmDialog(true);
-    } else {
-      confirmPublishToggle(newState);
-    }
-  };
-
-  const confirmPublishToggle = async (newState: boolean) => {
+  // The Live/Draft switch is on screen and one tap undoes it, so no confirm box and no toast on success
+  const handlePublishToggle = async (newState: boolean) => {
     if (!topic) return;
     try {
       const { data, error } = await supabase.rpc('set_topic_distribution' as any, {
@@ -578,10 +566,9 @@ const TopicDashboard = () => {
       }
       if (!(data as any)?.success) throw new Error((data as any)?.error || 'Not saved');
       setTopic(prev => prev ? { ...prev, is_public: newState, is_active: newState } : null);
-      toast({ title: "Success", description: `Feed ${newState ? 'published' : 'unpublished'}` });
     } catch (error) {
       console.error('Error updating publish status:', error);
-      toast({ title: "Error", description: "Failed to update publish status", variant: "destructive" });
+      toast({ title: newState ? "Couldn't make the feed live" : "Couldn't take the feed offline", variant: "destructive" });
     }
   };
 
@@ -659,7 +646,7 @@ const TopicDashboard = () => {
             <div className="flex items-center gap-3">
             <ReadingNow />
             <Button variant="ghost" size="icon" asChild>
-              <Link to={`/feed/${topic.slug}`} target="_blank">
+              <Link to={`/feed/${topic.slug}`} target="_blank" aria-label="Open feed" title="Open feed">
                 <ExternalLink className="w-4 h-4" />
               </Link>
             </Button>
@@ -813,19 +800,6 @@ const TopicDashboard = () => {
             </TabsContent>
           </Tabs>
         </div>
-
-        <ConfirmationDialog
-          isOpen={showConfirmDialog}
-          onClose={() => setShowConfirmDialog(false)}
-          onConfirm={() => {
-            confirmPublishToggle(pendingPublishState);
-            setShowConfirmDialog(false);
-          }}
-          title="Unpublish Feed"
-          description="This will make your feed private and remove it from public access. Subscribers won't be able to view new content. Are you sure?"
-          confirmText="Unpublish"
-          variant="destructive"
-        />
 
         {isOwner && (
           <OwnerAssistant topicId={topic.id} topicSlug={topic.slug} topicName={topic.name} />

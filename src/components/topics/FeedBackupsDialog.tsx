@@ -184,11 +184,11 @@ export const FeedBackupsDialog = ({
                       <span className="text-sm font-medium">
                         {new Date(b.created_at).toLocaleString()}
                       </span>
-                      <Badge variant="secondary" className="text-[10px]">
+                      <Badge variant="secondary">
                         {reasonLabel[b.reason] || b.reason}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-sm text-muted-foreground mt-0.5">
                       {counts.sources ?? 0} sources · {counts.articles ?? 0} articles ·{" "}
                       {counts.subscribers ?? 0} subscribers
                     </p>

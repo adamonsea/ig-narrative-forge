@@ -128,13 +128,10 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
     <div
       role="dialog"
       aria-label="Feed help"
-      className="fixed bottom-0 right-0 z-40 flex h-[min(34rem,85dvh)] w-full flex-col overflow-hidden border border-border bg-background shadow-2xl sm:bottom-5 sm:right-5 sm:w-[24rem] sm:rounded-2xl"
+      className="fixed bottom-0 right-0 z-40 flex h-[min(34rem,85dvh)] w-full flex-col overflow-hidden border border-border bg-background shadow-2xl sm:bottom-5 sm:right-5 sm:w-[24rem] sm:rounded-xl"
     >
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <p className="text-sm font-medium">Help with {topicName}</p>
-          <p className="text-xs text-muted-foreground">Ask anything about running your feed</p>
-        </div>
+        <h2 className="text-lg font-semibold">Help with {topicName}</h2>
         <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close help">
           <X className="h-4 w-4" />
         </Button>
@@ -143,14 +140,14 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {turns.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            I know how your feed is set up right now, and I can take you straight to the right setting.
+            Ask about anything on this feed.
           </p>
         )}
 
         {turns.map((turn, index) =>
           turn.role === "user" ? (
             <div key={index} className="flex justify-end">
-              <p className="max-w-[85%] rounded-2xl bg-primary px-3.5 py-2 text-sm text-primary-foreground">
+              <p className="max-w-[85%] rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground">
                 {turn.content}
               </p>
             </div>
@@ -161,7 +158,7 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
                 <ol className="space-y-2">
                   {turn.steps.map((step, stepIndex) => (
                     <li key={stepIndex} className="flex items-start gap-2.5">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-medium">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
                         {stepIndex + 1}
                       </span>
                       <span className="text-muted-foreground">{step}</span>
@@ -184,8 +181,8 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
                 </div>
               )}
               {turn.nudge && (
-                <div className="rounded-xl border border-dashed border-border bg-muted/40 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border bg-muted/40 p-3">
+                  <p className="text-sm text-muted-foreground">
                     Not using this yet
                   </p>
                   <p className="mt-1 font-medium">{turn.nudge.title}</p>
@@ -224,7 +221,7 @@ export const OwnerAssistant = ({ topicId, topicSlug, topicName }: Props) => {
               type="button"
               onClick={() => ask(pill)}
               className={cn(
-                "rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground",
+                "rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground",
                 "transition-colors hover:border-foreground hover:text-foreground",
               )}
             >
