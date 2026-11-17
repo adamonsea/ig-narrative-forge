@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { HealthVerdict } from "@/lib/sourceHealth";
 
@@ -32,5 +34,19 @@ export function Figure({ value, label }: { value: ReactNode; label: string }) {
       <p className="text-2xl font-semibold tabular-nums">{value}</p>
       <p className="text-sm text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+/** Small info icon with a tooltip: explanations live here, never as sublines. */
+export function InfoTip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" aria-label={label} className="mt-0.5 shrink-0 rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Info className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-sm">{children}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -94,7 +94,7 @@ export function SourceShelves(p: SourceShelvesProps) {
       <Shelf id="shelf-news" title="News">
         {activeNews.length === 0 ? (
           <p className="rounded-xl border border-dashed p-6 text-center text-base text-muted-foreground">
-            {p.loading ? "Loading sources…" : "No news sources yet. Paste a website above to add one."}
+            {p.loading ? "Loading…" : "No news sources yet."}
           </p>
         ) : (
           <div className={GRID}>
@@ -106,7 +106,7 @@ export function SourceShelves(p: SourceShelvesProps) {
                   figure={c.source.stories_published_7d ?? 0} figureLabel="in feed this week" busy={busy}
                   onOpen={() => setOpenNews(c.source.id)}
                   action={
-                    <Button size="sm" onClick={() => p.onGather(c.source)} disabled={busy || !c.source.feed_url} aria-label={`Gather from ${c.name} now`}>
+                    <Button size="sm" variant="outline" onClick={() => p.onGather(c.source)} disabled={busy || !c.source.feed_url} aria-label={`Gather from ${c.name} now`}>
                       {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="mr-1.5 h-4 w-4" aria-hidden="true" />}
                       {busy ? "Gathering…" : "Gather"}
                     </Button>
@@ -119,7 +119,7 @@ export function SourceShelves(p: SourceShelvesProps) {
 
       <Shelf id="shelf-events" title="Events">
         {activeEvents.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-6 text-center text-base text-muted-foreground">No events sources yet. Paste a what's-on page above to add one.</p>
+          <p className="rounded-xl border border-dashed p-6 text-center text-base text-muted-foreground">No events sources yet.</p>
         ) : (
           <div className={GRID}>
             {activeEvents.map((s) => {
@@ -128,7 +128,7 @@ export function SourceShelves(p: SourceShelvesProps) {
                 <SourceCard key={s.id} name={s.name} domain={host(s.url)} kind="events" health={s.health} healthLabel={s.verdict.label}
                   dots={s.dots} figure={s.upcoming} figureLabel="coming up" busy={busy} onOpen={() => setOpenEvent(s.id)}
                   action={
-                    <Button size="sm" onClick={() => deck.gather(s)} disabled={busy} aria-label={`Gather from ${s.name} now`}>
+                    <Button size="sm" variant="outline" onClick={() => deck.gather(s)} disabled={busy} aria-label={`Gather from ${s.name} now`}>
                       <RefreshCw className={`mr-1.5 h-4 w-4 ${busy ? "animate-spin" : ""}`} aria-hidden="true" />{busy ? "Checking…" : "Gather"}
                     </Button>
                   } />

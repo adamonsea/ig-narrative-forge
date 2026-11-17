@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { EventSourceAddPanel } from '@/components/events/EventSources';
+import { AddSourceSheet, type NewNewsSource } from '@/components/sources/AddSourceSheet';
 import { SourceShelves } from '@/components/sources/SourceShelves';
 import { detectSourceKind, isEventsSourceKind } from '@/lib/whatsOn';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,7 +47,6 @@ import { CooldownMinimal } from '@/components/CooldownMinimal';
 import { SourceActionsMenu } from '@/components/SourceActionsMenu';
 import { AverageDailyStoriesBadge } from '@/components/ui/average-daily-stories-badge';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
-import { SourceDiscoveryModal } from '@/components/SourceDiscoveryModal';
 
 interface ContentSource {
   id: string;
@@ -154,7 +153,6 @@ export const UnifiedSourceManager = ({
   const [testingSource, setTestingSource] = useState<string | null>(null);
   const [lastGatherAllAt, setLastGatherAllAt] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
-  const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [showBackfillModal, setShowBackfillModal] = useState(false);
   const [backfillMaxAgeDays, setBackfillMaxAgeDays] = useState(30);
   const [sourceToBackfill, setSourceToBackfill] = useState<string | null>(null);
@@ -183,7 +181,7 @@ export const UnifiedSourceManager = ({
       
       if (result.success) {
         toast({
-          title: "Cleanup Successful",
+          title: 'Cleaned up',
           description: result.message || "Legacy source cleanup completed successfully",
         });
         // Reload sources to reflect changes
@@ -194,7 +192,7 @@ export const UnifiedSourceManager = ({
     } catch (error: any) {
       console.error('Legacy cleanup failed:', error);
       toast({
-        title: "Cleanup Failed",
+        title: "Couldn't clean up",
         description: error.message || "Failed to run legacy source cleanup",
         variant: "destructive",
       });
@@ -483,7 +481,7 @@ export const UnifiedSourceManager = ({
     } catch (error) {
       console.error('Error loading sources:', error);
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: 'Failed to load sources',
         variant: 'destructive',
       });
@@ -518,12 +516,12 @@ export const UnifiedSourceManager = ({
           ? ` (✓ Arc API compatible - fast scraping available)`
           : '';
         toast({
-          title: 'Source Validated',
+          title: 'Link works',
           description: `Source appears to be working correctly${arcMessage}`,
         });
       } else {
         toast({
-          title: 'Validation Issues',
+          title: 'Link has problems',
           description: data.error || 'Source may have issues',
           variant: 'destructive',
         });
@@ -531,7 +529,7 @@ export const UnifiedSourceManager = ({
     } catch (error) {
       console.error('Validation error:', error);
       toast({
-        title: 'Validation Failed',
+        title: "Couldn't check the link",
         description: 'Could not validate source',
         variant: 'destructive',
       });
@@ -580,19 +578,22 @@ export const UnifiedSourceManager = ({
     }
   };
 
-  const handleAddSource = async () => {
-    if (!newSource.source_name.trim() || !newSource.feed_url.trim()) {
+  const handleAddSource = async (override?: NewNewsSource): Promise<boolean> => {
+    const src = override
+      ? { ...newSource, source_name: override.name, feed_url: override.url, trustContentRelevance: override.trust, trustedMaxAgeDays: override.trustDays }
+      : newSource;
+    if (!src.source_name.trim() || !src.feed_url.trim()) {
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: 'Source name and feed URL are required',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
 
     try {
       setLoading(true);
-      const normalizedUrl = normalizeUrl(newSource.feed_url.trim());
+      const normalizedUrl = normalizeUrl(src.feed_url.trim());
       const domain = extractDomainFromUrl(normalizedUrl);
       
       if (mode === 'topic' && topicId) {
@@ -606,13 +607,13 @@ export const UnifiedSourceManager = ({
         
         if (duplicateUrl) {
           toast({
-            title: 'Already Added',
+            title: 'Already added',
             description: `This URL is already linked to this topic. Try a different URL from the same domain (e.g., ${normalizedUrl.replace(/\/[^/]*$/, '/different-section')})`,
             variant: 'destructive',
           });
           setLoading(false);
           // Keep form open so user can modify the URL
-          return;
+          return false;
         }
         
         // First, check if source already exists globally
@@ -639,13 +640,13 @@ export const UnifiedSourceManager = ({
 
         if (activeLink) {
           toast({
-            title: 'Already Added',
+            title: 'Already added',
             description: `The URL "${normalizedUrl}" is already linked to this topic as "${existingSource.source_name}"`,
             variant: 'destructive',
           });
           setLoading(false);
           // Keep form open so user can modify the URL
-          return;
+          return false;
         }
 
         if (inactiveLink) {
@@ -661,16 +662,16 @@ export const UnifiedSourceManager = ({
             if (error) throw error;
             
             toast({
-              title: 'Source Reactivated',
+              title: 'Restored',
               description: `"${existingSource.source_name}" has been reactivated for this topic`,
             });
             
         await loadSources();
         onSourcesChange();
         setShowAddForm(false);
-        return;
+        return true;
           } else {
-            return;
+            return false;
           }
         }
 
@@ -681,7 +682,7 @@ export const UnifiedSourceManager = ({
             p_source_config: {
               added_via: 'unified_source_manager',
               added_at: new Date().toISOString(),
-              original_name: newSource.source_name.trim()
+              original_name: src.source_name.trim()
             }
           });
 
@@ -689,7 +690,7 @@ export const UnifiedSourceManager = ({
           sourceId = existingSource.id;
 
           toast({
-            title: 'Success',
+            title: 'Done',
             description: `Existing source "${existingSource.source_name}" linked to topic`,
           });
         } else {
@@ -705,18 +706,18 @@ export const UnifiedSourceManager = ({
           }
           
           // Add trusted source configuration
-          if (newSource.trustContentRelevance) {
+          if (src.trustContentRelevance) {
             scrapingConfig.trust_content_relevance = true;
-            scrapingConfig.trusted_max_age_days = newSource.trustedMaxAgeDays;
-            console.log('🔓 Storing trusted source config:', { trust_content_relevance: true, trusted_max_age_days: newSource.trustedMaxAgeDays });
+            scrapingConfig.trusted_max_age_days = src.trustedMaxAgeDays;
+            console.log('🔓 Storing trusted source config:', { trust_content_relevance: true, trusted_max_age_days: src.trustedMaxAgeDays });
           }
           
           const sourceData = {
-            source_name: newSource.source_name.trim(),
+            source_name: src.source_name.trim(),
             feed_url: normalizedUrl,
             canonical_domain: domain,
-            scrape_frequency_hours: newSource.scrape_frequency_hours,
-            content_type: newSource.content_type,
+            scrape_frequency_hours: src.scrape_frequency_hours,
+            content_type: src.content_type,
             is_active: true,
             is_whitelisted: true,
             is_blacklisted: false,
@@ -748,7 +749,7 @@ export const UnifiedSourceManager = ({
           if (linkError) throw linkError;
 
           toast({
-            title: 'Success',
+            title: 'Done',
             description: 'New content source created and linked to topic',
           });
         }
@@ -774,16 +775,16 @@ export const UnifiedSourceManager = ({
       } else {
         // For non-topic mode, use the original approach
         const sourceData = {
-          source_name: newSource.source_name.trim(),
+          source_name: src.source_name.trim(),
           feed_url: normalizedUrl,
           canonical_domain: domain,
-          scrape_frequency_hours: newSource.scrape_frequency_hours,
-          content_type: newSource.content_type,
+          scrape_frequency_hours: src.scrape_frequency_hours,
+          content_type: src.content_type,
           is_active: true,
           is_whitelisted: true,
           is_blacklisted: false,
-          ...(mode === 'region' && region && { region: newSource.region }),
-          ...(mode === 'global' && { region: newSource.region }),
+          ...(mode === 'region' && region && { region: src.region }),
+          ...(mode === 'global' && { region: src.region }),
         };
 
         const { error } = await supabase
@@ -793,7 +794,7 @@ export const UnifiedSourceManager = ({
         if (error) throw error;
 
         toast({
-          title: 'Success',
+          title: 'Done',
           description: 'Content source added successfully',
         });
 
@@ -824,16 +825,18 @@ export const UnifiedSourceManager = ({
       setValidationResult(null);
       await loadSources();
       onSourcesChange();
+      return true;
     } catch (error) {
       console.error('Error adding source:', error);
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: error.message || 'Failed to add content source',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
+    return false;
   };
 
   const handleUpdateSource = async (sourceId: string, updates: Partial<ContentSource>) => {
@@ -883,13 +886,13 @@ export const UnifiedSourceManager = ({
       
       let description = 'Source updated successfully';
       if (isTrusted && ageWindow) {
-        description = `✅ Source is now TRUSTED with ${ageWindow}-day bypass active`;
+        description = `Trusted for the last ${ageWindow} ${ageWindow === 1 ? 'day' : 'days'}.`;
       } else if (updates.scraping_config?.trust_content_relevance === false) {
-        description = '✅ Source is now UNTRUSTED (keyword filtering enabled)';
+        description = 'Relevance check is back on.';
       }
 
       toast({
-        title: 'Success',
+        title: 'Done',
         description,
       });
 
@@ -898,7 +901,7 @@ export const UnifiedSourceManager = ({
     } catch (error) {
       console.error('Error updating source:', error);
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: error.message || 'Failed to update source',
         variant: 'destructive',
       });
@@ -924,7 +927,7 @@ export const UnifiedSourceManager = ({
       const userInput = window.prompt(confirmMessage);
       if (userInput !== 'DELETE') {
         toast({
-          title: 'Deletion Cancelled',
+          title: 'Not removed',
           description: 'Source was not deleted',
         });
         return;
@@ -944,7 +947,7 @@ export const UnifiedSourceManager = ({
         if (error) throw error;
 
         toast({
-          title: 'Success',
+          title: 'Done',
           description: `Source "${sourceName}" removed from topic`,
         });
       } else {
@@ -959,13 +962,13 @@ export const UnifiedSourceManager = ({
           if (error.message?.includes('still linked to active topics') || 
               error.message?.includes('Cannot delete source')) {
             toast({
-              title: 'Cannot Delete',
+              title: "Can't remove",
               description: 'Source is linked to active topics. Remove all topic associations first.',
               variant: 'destructive',
             });
           } else if (error.code === '23503') {
             toast({
-              title: 'Cannot Delete',
+              title: "Can't remove",
               description: 'Source has associated data. Remove topic links first.',
               variant: 'destructive',
             });
@@ -976,7 +979,7 @@ export const UnifiedSourceManager = ({
         }
 
         toast({
-          title: 'Success',
+          title: 'Done',
           description: `Source "${sourceName}" permanently deleted`,
         });
       }
@@ -986,7 +989,7 @@ export const UnifiedSourceManager = ({
     } catch (error: any) {
       console.error('Error deleting source:', error);
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: error.message || 'Failed to remove/delete source',
         variant: 'destructive',
       });
@@ -998,7 +1001,7 @@ export const UnifiedSourceManager = ({
   const handleScrapeSource = async (source: ContentSource, options?: { forceRescrape?: boolean }) => {
     if (!source.feed_url) {
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: 'No URL configured for this source',
         variant: 'destructive',
       });
@@ -1046,7 +1049,7 @@ export const UnifiedSourceManager = ({
       // Handle cooldown skips (not a failure!)
       if (data?.status === 'skipped_cooldown') {
         toast({
-          title: '⏸️ Source Recently Scraped',
+          title: 'Checked recently',
           description: data.message || `${source.source_name} was recently scraped. Use force rescrape to bypass cooldown.`,
           variant: 'default'
         });
@@ -1080,20 +1083,20 @@ export const UnifiedSourceManager = ({
         // Enhanced toast messaging with specific queue information
         if (stored > 0) {
           toast({
-            title: 'Content Gathering Complete',
-            description: `Discovered ${totalFound} articles • ${stored} added to arrivals queue${duplicates > 0 ? ` • ${duplicates} duplicates skipped` : ''}`,
+            title: 'Gathered',
+            description: `Discovered ${totalFound} articles • ${stored} sent to the Story pool${duplicates > 0 ? ` • ${duplicates} duplicates skipped` : ''}`,
             variant: 'default'
           });
         } else if (totalFound > 0) {
           toast({
-            title: 'Gathering Complete - Articles Filtered',
-            description: `Discovered ${totalFound} articles • 0 added to arrivals queue (filtered for relevance)`,
+            title: 'Nothing relevant',
+            description: `Found ${totalFound}, none relevant`,
             variant: 'default'
           });
         } else {
           toast({
-            title: 'Gathering Complete - No Articles Found',
-            description: `0 articles discovered from ${source.source_name} • 0 added to arrivals queue`,
+            title: 'Nothing new',
+            description: `Nothing new from ${source.source_name}`,
             variant: 'default'
           });
         }
@@ -1106,10 +1109,10 @@ export const UnifiedSourceManager = ({
     } catch (error) {
       console.error('Content gathering error:', error);
       toast({
-        title: 'Content Gathering Failed',
+        title: "Couldn't gather",
         description: error.message?.includes('Failed to fetch') 
-          ? `⚠️ Having trouble connecting to ${source.source_name}. The source may be temporarily unavailable.`
-          : error.message || '⚠️ Connection issue with this source. Please check the URL and try again.',
+          ? `Couldn't reach ${source.source_name}. Try again later.`
+          : error.message || "Couldn't reach this source. Check the link.",
         variant: 'destructive',
       });
     } finally {
@@ -1131,7 +1134,7 @@ export const UnifiedSourceManager = ({
     
     if (activeSources.length === 0) {
       toast({
-        title: 'No Sources',
+        title: 'No sources',
         description: 'No active sources found to gather from',
         variant: 'destructive',
       });
@@ -1142,7 +1145,7 @@ export const UnifiedSourceManager = ({
       setGatheringAll(true);
       
       toast({
-        title: 'Gathering Started',
+        title: 'Gathering',
         description: `Fetching recent content from ${activeSources.length} sources...`,
       });
 
@@ -1160,8 +1163,8 @@ export const UnifiedSourceManager = ({
       setLastGatherAllAt(Date.now());
       setNowTick(Date.now());
       toast({
-        title: 'Gathering Complete',
-        description: 'Content has been gathered from all sources',
+        title: 'Gathered',
+        description: 'New stories go to the Story pool.',
       });
 
       loadSources();
@@ -1169,7 +1172,7 @@ export const UnifiedSourceManager = ({
     } catch (error: any) {
       console.error('Gather all error:', error);
       toast({
-        title: 'Gathering Failed',
+        title: "Couldn't gather",
         description: error.message || 'Failed to gather content',
         variant: 'destructive',
       });
@@ -1186,7 +1189,7 @@ export const UnifiedSourceManager = ({
       setGatheringAll(true);
       
       toast({
-        title: 'Backfill Started',
+        title: 'Gathering older stories',
         description: `Gathering content from the last ${maxAgeDays} days...`,
       });
 
@@ -1203,7 +1206,7 @@ export const UnifiedSourceManager = ({
       if (error) throw error;
 
       toast({
-        title: 'Backfill Complete',
+        title: 'Older stories gathered',
         description: `Historical content has been gathered`,
       });
 
@@ -1214,7 +1217,7 @@ export const UnifiedSourceManager = ({
     } catch (error: any) {
       console.error('Backfill error:', error);
       toast({
-        title: 'Backfill Failed',
+        title: "Couldn't gather older stories",
         description: error.message || 'Failed to backfill content',
         variant: 'destructive',
       });
@@ -1228,7 +1231,7 @@ export const UnifiedSourceManager = ({
     
     if (activeSources.length === 0) {
       toast({
-        title: 'No Sources',
+        title: 'No sources',
         description: 'No active sources found to gather from',
         variant: 'destructive',
       });
@@ -1242,7 +1245,7 @@ export const UnifiedSourceManager = ({
       let failedSources = 0;
 
       toast({
-        title: 'Bulk Content Gathering Started',
+        title: 'Gathering',
         description: `Now gathering from ${activeSources.length} sources...`,
       });
 
@@ -1286,8 +1289,8 @@ export const UnifiedSourceManager = ({
       }
 
       toast({
-        title: 'Bulk Gathering Complete',
-        description: `Discovered ${totalArticlesFound} articles • ${totalArticlesScraped} added to arrivals queue${failedSources > 0 ? ` • ${failedSources} sources failed` : ''}`,
+        title: 'Gathered',
+        description: `Discovered ${totalArticlesFound} articles • ${totalArticlesScraped} sent to the Story pool${failedSources > 0 ? ` • ${failedSources} sources failed` : ''}`,
       });
 
       loadSources();
@@ -1295,7 +1298,7 @@ export const UnifiedSourceManager = ({
     } catch (error) {
       console.error('Bulk content gathering error:', error);
       toast({
-        title: 'Bulk Content Gathering Failed',
+        title: "Couldn't gather",
         description: error.message || 'Failed to complete bulk content gathering',
         variant: 'destructive',
       });
@@ -1368,7 +1371,7 @@ export const UnifiedSourceManager = ({
         if (error) throw error;
         
         toast({
-          title: 'Source Test Successful',
+          title: 'Link works',
           description: `${source.source_name} is now responding correctly`,
         });
         
@@ -1411,7 +1414,7 @@ export const UnifiedSourceManager = ({
       }
       
       toast({
-        title: 'Source Reactivated',
+        title: 'Restored',
         description: `${source.source_name} has been reactivated`,
       });
       
@@ -1425,7 +1428,7 @@ export const UnifiedSourceManager = ({
     } catch (error) {
       console.error('Failed to reactivate source:', error);
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: 'Failed to reactivate source',
         variant: 'destructive',
       });
@@ -1455,19 +1458,19 @@ export const UnifiedSourceManager = ({
       const success = await runContentMonitor();
       if (success) {
         toast({
-          title: 'Content Check Complete',
+          title: 'Checked',
           description: 'New content availability has been updated',
         });
       } else {
         toast({
-          title: 'Content Check Failed',
+          title: "Couldn't check",
           description: 'Could not check for new content',
           variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: 'Failed to check for new content',
         variant: 'destructive',
       });
@@ -1568,37 +1571,24 @@ export const UnifiedSourceManager = ({
 
       {/* Contextual Backfill Prompt - for new topics with few articles */}
       {mode === 'topic' && topicId && articleCount < 10 && sources.length > 0 && (
-        <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
-          <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <span className="text-blue-700 dark:text-blue-300">
-              <strong>New feed?</strong> Run a backfill to gather older content and populate your feed faster.
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50 shrink-0"
-              onClick={() => setShowBackfillModal(true)}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Run Backfill
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-muted p-4">
+          <span className="text-base">Gather older stories?</span>
+          <Button size="sm" variant="outline" className="shrink-0" onClick={() => setShowBackfillModal(true)}>
+            <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />Gather
+          </Button>
+        </div>
       )}
 
       {/* Backfill Modal */}
       <Dialog open={showBackfillModal} onOpenChange={(open) => { setShowBackfillModal(open); if (!open) setSourceToBackfill(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Backfill Historical Content</DialogTitle>
-            <DialogDescription>
-              Gather older articles from your sources. This is useful when setting up a new feed or after adding new sources.
-            </DialogDescription>
+            <DialogTitle>Gather older stories</DialogTitle>
+            <DialogDescription className="sr-only">Choose how far back to gather.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="backfill-age">Content Age Window</Label>
+              <Label htmlFor="backfill-age">How far back</Label>
               <Select 
                 value={backfillMaxAgeDays.toString()} 
                 onValueChange={(v) => setBackfillMaxAgeDays(Number(v))}
@@ -1613,9 +1603,6 @@ export const UnifiedSourceManager = ({
                   <SelectItem value="100">Last 100 days</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Longer windows may take more time and find more duplicate content.
-              </p>
             </div>
           </div>
           <DialogFooter>
@@ -1631,34 +1618,36 @@ export const UnifiedSourceManager = ({
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              Start Backfill
+              Gather
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* AI Source Discovery Modal */}
-      {mode === 'topic' && topicId && topicName && (
-        <SourceDiscoveryModal
-          open={showDiscoveryModal}
-          onOpenChange={setShowDiscoveryModal}
+      {/* Add source: link → kind → that kind's fields, with "Find sources" on step one */}
+      {mode === 'topic' && topicId && (
+        <AddSourceSheet
+          open={showAddForm}
+          onOpenChange={setShowAddForm}
           topicId={topicId}
-          topicName={topicName}
-          description={description || ''}
-          keywords={keywords || []}
-          topicType={topicType || 'keyword'}
-          region={region}
-          onSourceAdded={() => {
-            loadSources();
-            onSourcesChange();
-          }}
+          finder={topicName ? {
+            topicId,
+            topicName,
+            description: description || '',
+            keywords: keywords || [],
+            topicType: topicType || 'keyword',
+            region,
+            onSourceAdded: () => { loadSources(); onSourcesChange(); },
+          } : null}
+          onAddNews={(v) => handleAddSource(v)}
+          onEventsSaved={() => setEventSourcesReload((n) => n + 1)}
         />
       )}
 
       <Separator />
 
-      {/* Add Source Form */}
-      {showAddForm && (
+      {/* Add Source Form (legacy global/region screens) */}
+      {mode !== 'topic' && showAddForm && (
         <Card>
           <CardHeader>
             <CardTitle>Add a source</CardTitle>
@@ -1667,19 +1656,6 @@ export const UnifiedSourceManager = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mode === 'topic' && topicId && topicName && (
-              <button
-                type="button"
-                onClick={() => setShowDiscoveryModal(true)}
-                className="flex w-full items-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:bg-muted"
-              >
-                <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-                <span className="min-w-0">
-                  <span className="block font-medium">Find sources for me</span>
-                  <span className="block text-sm text-muted-foreground">We'll suggest sites that fit this feed. You pick which to add.</span>
-                </span>
-              </button>
-            )}
             <div className={`grid grid-cols-1 gap-4 ${isEventsLink ? "" : "md:grid-cols-2"}`}>
               <div className={isEventsLink ? "hidden" : ""}>
                 <Label htmlFor="source-name">Source Name *</Label>
@@ -1719,18 +1695,6 @@ export const UnifiedSourceManager = ({
               </div>
             </div>
 
-            {isEventsLink && topicId && (
-              <EventSourceAddPanel
-                topicId={topicId}
-                url={newSource.feed_url}
-                onSaved={() => {
-                  setNewSource((prev) => ({ ...prev, source_name: '', feed_url: '' }));
-                  setShowAddForm(false);
-                  setEventSourcesReload((n) => n + 1);
-                }}
-              />
-            )}
-
             {!isEventsLink && (<>
             {/* Validation Results */}
             {validationResult && (
@@ -1766,7 +1730,7 @@ export const UnifiedSourceManager = ({
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {mode !== 'topic' && (
+              {(
                 <div>
                   <Label htmlFor="region">Region</Label>
                   <Select 
@@ -1841,7 +1805,7 @@ export const UnifiedSourceManager = ({
                 Cancel
               </Button>
               <Button 
-                onClick={handleAddSource} 
+                onClick={() => handleAddSource()} 
                 disabled={loading || !newSource.source_name.trim() || !newSource.feed_url.trim()}
               >
                 {loading ? (
@@ -2118,7 +2082,7 @@ export const UnifiedSourceManager = ({
                     }
                   });
                   toast({
-                    title: 'Source Updated',
+                    title: 'Saved',
                     description: `Settings for ${editingSource.source_name} have been updated`,
                   });
                   setEditingSource(null);

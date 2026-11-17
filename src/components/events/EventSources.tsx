@@ -14,7 +14,7 @@ import { eventSourceKindLabel, hiddenSentence, londonToday, previewSentence } fr
 import { eventSourceHealth, type HealthVerdict } from "@/lib/sourceHealth";
 import { SourceDots } from "@/components/sources/SourceDots";
 import { SourceIcon } from "@/components/sources/SourceCard";
-import { Figure, HealthLine, PanelSection } from "@/components/sources/SourcePanelParts";
+import { Figure, HealthLine, InfoTip, PanelSection } from "@/components/sources/SourcePanelParts";
 
 interface EventSource {
   id: string;
@@ -57,8 +57,7 @@ async function callReader(body: Record<string, unknown>) {
 }
 
 /**
- * Adding an events source from the one "Add a source" box, once the pasted link looks
- * like a what's-on page or calendar feed: preview what's there, then save.
+ * Step two of Add source for a what's-on page or calendar feed: preview what's there, then add.
  * New events wait on the Desk (or go straight to Live once Auto-publish is on).
  */
 export function EventSourceAddPanel({ topicId, url, onSaved }: { topicId: string; url: string; onSaved: () => void }) {
@@ -68,31 +67,35 @@ export function EventSourceAddPanel({ topicId, url, onSaved }: { topicId: string
   const [name, setName] = useState("");
   const [busy, setBusy] = useState<"preview" | "save" | null>(null);
 
-  useEffect(() => { setPreview(null); }, [url]);
-
-  const runPreview = async () => {
+  // Read the page as soon as the step opens: the link is already there.
+  useEffect(() => {
+    let cancelled = false;
     const target = withScheme(url);
+    setPreview(null);
     if (!target) return;
     setBusy("preview");
-    const res = await callReader({ action: "preview", topicId, url: target });
-    setBusy(null);
-    if (res.failed) {
-      setPreview({ kind: "whats_on_page", found: 0, name: "", error: res.message, examples: [] });
-      return;
-    }
-    setPreview(res.data);
-    setName(res.data?.name ?? "");
-  };
+    callReader({ action: "preview", topicId, url: target }).then((res) => {
+      if (cancelled) return;
+      setBusy(null);
+      if (res.failed) {
+        setPreview({ kind: "whats_on_page", found: 0, name: "", error: res.message, examples: [] });
+        return;
+      }
+      setPreview(res.data);
+      setName(res.data?.name ?? "");
+    });
+    return () => { cancelled = true; };
+  }, [topicId, url]);
 
   const save = async () => {
     setBusy("save");
     const res = await callReader({ action: "save", topicId, url: withScheme(url), name: name.trim() || undefined, kind: preview?.kind });
     setBusy(null);
     if (res.failed) {
-      toast({ title: "Couldn't save this source", description: res.message, variant: "destructive" });
+      toast({ title: "Couldn't add this source", description: res.message, variant: "destructive" });
       return;
     }
-    toast({ title: `${eventSourceKindLabel(res.data?.kind)} added`, description: "Its events are waiting on your Desk." });
+    toast({ title: `${eventSourceKindLabel(res.data?.kind)} added` });
     queryClient.invalidateQueries({ queryKey: ["event-desk", topicId] });
     onSaved();
   };
@@ -100,39 +103,34 @@ export function EventSourceAddPanel({ topicId, url, onSaved }: { topicId: string
   const example = preview?.examples?.[0] ?? null;
   const usable = preview && (preview.found > 0 || (preview.excluded ?? 0) > 0);
 
+  if (!preview) {
+    return (
+      <p className="flex items-center gap-2 text-base text-muted-foreground" aria-live="polite">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />Reading…
+      </p>
+    );
+  }
+
   return (
-    <div className="space-y-3 rounded-xl border p-4" aria-live="polite">
-      {!preview ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">Looks like an events source. Its events will come to your Desk.</p>
-          <Button onClick={runPreview} disabled={busy !== null || !url.trim()}>
-            {busy === "preview" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {busy === "preview" ? "Reading…" : "Preview events"}
-          </Button>
-        </div>
-      ) : (
+    <div className="space-y-4" aria-live="polite">
+      <p className={preview.found > 0 ? "text-base" : "text-base text-muted-foreground"}>
+        {preview.found > 0
+          ? previewSentence(preview.found, example)
+          : (preview.excluded ?? 0) > 0
+            ? "None of the events here are in your area."
+            : preview.error || previewSentence(0)}
+      </p>
+      {preview.found > 0 && hiddenSentence(preview.excluded) && <p className="text-sm text-muted-foreground">{hiddenSentence(preview.excluded)}</p>}
+      {usable && (
         <>
-          {preview.found > 0 && <p className="text-sm text-muted-foreground">{eventSourceKindLabel(preview.kind)}</p>}
-          <p className={preview.found > 0 ? "text-base" : "text-sm text-muted-foreground"}>
-            {preview.found > 0
-              ? previewSentence(preview.found, example)
-              : (preview.excluded ?? 0) > 0
-                ? "None of the events here are in your area."
-                : preview.error || previewSentence(0)}
-          </p>
-          {preview.found > 0 && hiddenSentence(preview.excluded) && <p className="text-sm text-muted-foreground">{hiddenSentence(preview.excluded)}</p>}
-          {usable && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="events-source-name" className="text-sm text-muted-foreground">Shown to readers as</Label>
-                <Input id="events-source-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
-              </div>
-              <Button onClick={save} disabled={busy !== null}>
-                {busy === "save" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
-              </Button>
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="events-source-name" className="text-sm">Name</Label>
+            <Input id="events-source-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+          </div>
+          <Button onClick={save} disabled={busy !== null}>
+            {busy === "save" && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+            Add
+          </Button>
         </>
       )}
     </div>
@@ -316,10 +314,10 @@ export function EventSourcePanel({ source, deck, onClose }: { source: EventSourc
 
             <PanelSection title="Publishing">
               <div className="flex items-start justify-between gap-4">
-                <Label htmlFor={`auto-${source.id}`} className="text-base font-normal leading-snug">
-                  Auto-publish
-                  <span className="block text-sm text-muted-foreground">{source.auto_publish ? "New events go straight to Live." : "New events wait for your OK on the Desk."}</span>
-                </Label>
+                <div className="flex items-start gap-1.5">
+                  <Label htmlFor={`auto-${source.id}`} className="text-base font-normal leading-snug">Auto-publish</Label>
+                  <InfoTip label="About auto-publish">{source.auto_publish ? "New events go straight to Live." : "New events wait for your OK on the Desk."}</InfoTip>
+                </div>
                 <Switch id={`auto-${source.id}`} checked={source.auto_publish} onCheckedChange={(on) => deck.setAutoPublish(source, on)} />
               </div>
             </PanelSection>
@@ -327,11 +325,11 @@ export function EventSourcePanel({ source, deck, onClose }: { source: EventSourc
             <PanelSection title="Settings">
               <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); await deck.saveEdit(source, name, url); }}>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`name-${source.id}`} className="text-sm text-muted-foreground">Shown to readers as</Label>
+                  <Label htmlFor={`name-${source.id}`} className="text-sm text-muted-foreground">Name</Label>
                   <Input id={`name-${source.id}`} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`url-${source.id}`} className="text-sm text-muted-foreground">Link we read</Label>
+                  <Label htmlFor={`url-${source.id}`} className="text-sm text-muted-foreground">Link</Label>
                   <Input id={`url-${source.id}`} inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} />
                 </div>
                 <Button type="submit" variant="outline" disabled={!changed || busy}>

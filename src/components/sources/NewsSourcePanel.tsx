@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { rhythmSentence, type HealthVerdict } from "@/lib/sourceHealth";
 import { SourceDots } from "./SourceDots";
 import { SourceIcon } from "./SourceCard";
-import { Figure, HealthLine, PanelSection } from "./SourcePanelParts";
+import { Figure, HealthLine, InfoTip, PanelSection } from "./SourcePanelParts";
 
 export interface NewsSourceView {
   id: string;
@@ -117,19 +117,17 @@ export function NewsSourcePanel({
 
             <PanelSection title="Settings">
               <div className="space-y-1.5">
-                <Label htmlFor="source-link" className="text-sm text-muted-foreground">Link we read</Label>
+                <Label htmlFor="source-link" className="text-sm text-muted-foreground">Link</Label>
                 <Input id="source-link" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/feed" />
               </div>
               <div className="flex items-start gap-3">
                 <Checkbox id="source-trust" checked={trust} onCheckedChange={(c) => setTrust(c === true)} className="mt-0.5" />
-                <Label htmlFor="source-trust" className="text-base font-normal leading-snug">
-                  Trust everything from here
-                  <span className="block text-sm text-muted-foreground">Skips the "is this about us?" check. Keep the time window short.</span>
-                </Label>
+                <Label htmlFor="source-trust" className="text-base font-normal leading-snug">Trust everything</Label>
+                <InfoTip label="About trust everything">Skips the relevance check. Keep the time window short.</InfoTip>
               </div>
               {trust && (
                 <Select value={String(trustDays)} onValueChange={(v) => setTrustDays(Number(v))}>
-                  <SelectTrigger aria-label="How far back to take trusted stories"><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label="Time window"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">Last 24 hours</SelectItem>
                     <SelectItem value="2">Last 48 hours</SelectItem>
