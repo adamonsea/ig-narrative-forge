@@ -32,6 +32,8 @@ interface TopicDashboardStats {
   articles: number;
   stories: number;
   sources: number;
+  /** What's-on sources; a feed can run on events alone. */
+  event_sources: number;
   pending_articles: number;
   processing_queue: number;
   ready_stories: number;
@@ -135,7 +137,7 @@ const TopicDashboard = () => {
   const [negativeKeywords, setNegativeKeywords] = useState<string[]>([]);
   const [competingRegions, setCompetingRegions] = useState<string[]>([]);
   const [stats, setStats] = useState<TopicDashboardStats>({
-    articles: 0, stories: 0, sources: 0, pending_articles: 0,
+    articles: 0, stories: 0, sources: 0, event_sources: 0, pending_articles: 0,
     processing_queue: 0, ready_stories: 0, simplified_stories_24h: 0,
     sentiment_cards: 0, liked_stories: 0, total_swipes: 0, shared_stories: 0
   });
@@ -259,6 +261,11 @@ const TopicDashboard = () => {
         .select('source_id', { count: 'exact' })
         .eq('topic_id', topicData.id)
         .eq('is_active', true);
+
+      const { count: eventSourcesCount } = await supabase
+        .from('event_sources')
+        .select('id', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id);
 
       const pendingArticlesRes = await supabase
         .from('topic_articles')
@@ -422,6 +429,7 @@ const TopicDashboard = () => {
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
         sources: sourcesCount || 0,
+        event_sources: eventSourcesCount || 0,
         pending_articles: pendingArticlesRes.count || 0,
         processing_queue: queueRes.count || 0,
         ready_stories: readyStoriesRes.count || 0,
@@ -656,7 +664,7 @@ const TopicDashboard = () => {
           {isNewFeed && !setupDismissed && (
             <FeedSetupGuide
               topic={topic as any}
-              sourceCount={stats.sources || 0}
+              sourceCount={(stats.sources || 0) + (stats.event_sources || 0)}
               negativeKeywords={negativeKeywords}
               competingRegions={competingRegions}
               onNegativeKeywordsChange={setNegativeKeywords}
