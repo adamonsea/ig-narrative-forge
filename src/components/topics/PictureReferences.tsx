@@ -349,7 +349,7 @@ export function PictureReferences({
           )}
           {placeCandidates.length > 0 && (
             <div className="space-y-1 rounded-md border p-2">
-              <p className="text-sm text-muted-foreground">Found automatically — tap the ones that look right</p>
+              <p className="text-sm text-muted-foreground">Tap the ones that look right</p>
               <div className="flex flex-wrap gap-2">
                 {placeCandidates.map((candidate) => (
                   <button
@@ -536,7 +536,7 @@ export function PictureReferences({
         })}
         {landmarks.length === 0 && (
           <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            No places yet. Add the venues and landmarks your feed writes about most — illustrated covers will then match the real buildings.
+            No places yet.
           </p>
         )}
       </div>
@@ -559,7 +559,7 @@ export function PictureReferences({
           <div className="mt-3 space-y-2">
             {suggestionsLoading && <p className="text-sm text-muted-foreground">Looking through your recent stories…</p>}
             {!suggestionsLoading && suggestions.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nothing new suggested right now — places your stories mention will appear here.</p>
+              <p className="text-sm text-muted-foreground">Nothing new.</p>
             )}
             {suggestions.map((suggestion) => (
               <div key={suggestion.value} className="flex items-start justify-between gap-3 rounded-md border p-2">

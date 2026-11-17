@@ -1,3 +1,4 @@
+import { InfoHint } from "@/components/ui/editorial";
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -279,15 +280,12 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
   return (
     <div className="space-y-6">
       <div className="space-y-6">
-        <p className="text-sm text-muted-foreground">
-          Customise how your feed appears to readers with a logo and custom subheader.
-        </p>
           {/* Logo Upload */}
           <div>
-            <Label className="text-base font-medium">Logo (Header Branding)</Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Upload a logo to replace your feed name. Recommended size: 200x60px, max 2MB
-            </p>
+            <div className="mb-3 flex items-center gap-1.5">
+              <Label className="text-base font-medium">Logo</Label>
+              <InfoHint label="About the logo">Replaces the feed name. About 200×60px, up to 2MB.</InfoHint>
+            </div>
             
             {logoPreview ? (
               <div className="relative inline-block">
@@ -301,6 +299,8 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                   size="sm"
                   className="absolute -top-2 -right-2 h-6 w-6 p-0"
                   onClick={removeLogo}
+                  aria-label="Remove logo"
+                  title="Remove logo"
                 >
                   <X className="w-3 h-3" />
                 </Button>
@@ -311,12 +311,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                 onClick={() => logoInputRef.current?.click()}
               >
                 <ImageIcon className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Click to upload logo or drag and drop
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  PNG, JPG, WebP, SVG up to 2MB
-                </p>
+                <p className="text-sm text-muted-foreground">Upload logo</p>
               </div>
             )}
             
@@ -331,10 +326,10 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
           {/* Icon Upload */}
           <div>
-            <Label className="text-base font-medium">App and browser icon</Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Upload an icon for browser favicon and mobile home screen. Recommended: 512x512px square, max 1MB
-            </p>
+            <div className="mb-3 flex items-center gap-1.5">
+              <Label className="text-base font-medium">App icon</Label>
+              <InfoHint label="About the app icon">Browser tab and phone home screen. Square, 512×512px, up to 1MB.</InfoHint>
+            </div>
             
             {iconPreview ? (
               <div className="relative inline-block">
@@ -348,6 +343,8 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                   size="sm"
                   className="absolute -top-2 -right-2 h-6 w-6 p-0"
                   onClick={removeIcon}
+                  aria-label="Remove icon"
+                  title="Remove icon"
                 >
                   <X className="w-3 h-3" />
                 </Button>
@@ -358,12 +355,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                 onClick={() => iconInputRef.current?.click()}
               >
                 <ImageIcon className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Click to upload app icon
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Square PNG, JPG, WebP up to 1MB
-                </p>
+                <p className="text-sm text-muted-foreground">Upload icon</p>
               </div>
             )}
             
@@ -381,9 +373,6 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
             <Label htmlFor="subheader" className="text-base font-medium">
               Subheader
             </Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Add a custom description that appears below your feed name or logo
-            </p>
             <Textarea
               id="subheader"
               placeholder="One line shown under your feed name"
@@ -393,19 +382,16 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
               rows={3}
             />
             <p className="text-sm text-muted-foreground mt-1">
-              {subheader.length}/200 characters
+              {subheader.length}/200
             </p>
           </div>
 
           {/* Illustration Color Personalization */}
           <div>
-            <Label htmlFor="illustrationColor" className="text-base font-medium">
-              Illustration colour
+            <Label htmlFor="illustrationColor" className="block text-base font-medium">
+              Picture colour
             </Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Choose one colour, a set that rotates, or let each picture pick its own.
-            </p>
-            <div className="mb-4 inline-flex rounded-lg border border-border p-1" role="radiogroup" aria-label="Colour mode">
+            <div className="mb-4 mt-3 inline-flex rounded-lg border border-border p-1" role="radiogroup" aria-label="Colour mode">
               {([
                 ['single', 'One colour'],
                 ['cycle', 'Cycle colours'],
@@ -424,12 +410,6 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
               ))}
             </div>
 
-            {colorMode === 'random' && (
-              <p className="text-sm text-muted-foreground">
-                Every new picture gets a fresh colour picked at random, so the feed never repeats itself.
-              </p>
-            )}
-
             {colorMode === 'single' && (
             <div className="flex items-center gap-4">
               <Input
@@ -445,9 +425,6 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
             {colorMode === 'cycle' && (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Pick two or more colours. New pictures take them in turn.
-                </p>
                 <div className="flex flex-wrap items-center gap-2">
                   {palette.map((c) => (
                     <button
@@ -475,7 +452,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
             {colorMode !== 'random' && (
             <div className="mt-4 flex flex-wrap gap-2">
-              <p className="text-sm text-muted-foreground w-full mb-1">Quick presets{colorMode === 'cycle' ? ' (tap to add or remove)' : ''}:</p>
+              <p className="text-sm text-muted-foreground w-full mb-1">Presets</p>
               {[
                 { name: 'Blue', value: '#3b82f6' },
                 { name: 'Green', value: '#22c55e' },
@@ -493,6 +470,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                   type="button"
                   onClick={() => colorMode === 'cycle' ? togglePalette(preset.value) : setIllustrationColor(preset.value)}
                   title={preset.name}
+                  aria-label={preset.name}
                   aria-pressed={active}
                 >
                   <div
@@ -531,19 +509,19 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
           {/* Save Button */}
           <Button 
+            variant="outline"
             onClick={handleSave} 
             disabled={saving || uploading}
-            className="w-full"
           >
             {uploading ? (
               <>
                 <Upload className="w-4 h-4 mr-2 animate-spin" />
-                Uploading Logo...
+                Uploading…
               </>
             ) : saving ? (
-              "Saving..."
+              "Saving…"
             ) : (
-              "Save Branding"
+              "Save"
             )}
           </Button>
       </div>

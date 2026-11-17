@@ -42,9 +42,9 @@ const getNotificationBadge = (type: string) => {
     case 'instant':
       return <Badge variant="default" className="text-sm">Instant</Badge>;
     case 'daily':
-      return <Badge variant="secondary" className="text-sm bg-blue-500/10 text-blue-600 border-blue-200">Daily</Badge>;
+      return <Badge variant="secondary" className="text-sm">Daily</Badge>;
     case 'weekly':
-      return <Badge variant="outline" className="text-sm bg-purple-500/10 text-purple-600 border-purple-200">Weekly</Badge>;
+      return <Badge variant="outline" className="text-sm">Weekly</Badge>;
     default:
       return <Badge variant="outline" className="text-sm">{type}</Badge>;
   }
@@ -226,40 +226,40 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Card className="bg-blue-500/5 border-blue-200/50">
+        <Card className="bg-muted/30">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-blue-600" />
+              <Mail className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Daily</span>
             </div>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.daily}</p>
+            <p className="text-2xl font-semibold mt-1">{stats.daily}</p>
           </CardContent>
         </Card>
-        <Card className="bg-purple-500/5 border-purple-200/50">
+        <Card className="bg-muted/30">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-purple-600" />
+              <Mail className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Weekly</span>
             </div>
-            <p className="text-2xl font-bold text-purple-600 mt-1">{stats.weekly}</p>
+            <p className="text-2xl font-semibold mt-1">{stats.weekly}</p>
           </CardContent>
         </Card>
-        <Card className="bg-emerald-500/5 border-emerald-200/50">
+        <Card className="bg-muted/30">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
-              <span className="text-sm text-muted-foreground">This Week</span>
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">This week</span>
             </div>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">+{stats.signupsWeek}</p>
+            <p className="text-2xl font-semibold text-mint-ink mt-1">+{stats.signupsWeek}</p>
           </CardContent>
         </Card>
-        <Card className="bg-amber-500/5 border-amber-200/50">
+        <Card className="bg-muted/30">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <LayoutGrid className="w-4 h-4 text-amber-600" />
+              <LayoutGrid className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">From widget</span>
             </div>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{stats.fromWidget}</p>
+            <p className="text-2xl font-semibold mt-1">{stats.fromWidget}</p>
           </CardContent>
         </Card>
         <Card className="bg-muted/30">
@@ -302,9 +302,6 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
             <Mail className="w-8 h-8 text-muted-foreground/60" />
           </div>
           <h3 className="text-lg font-medium mb-2">No email subscribers yet</h3>
-          <p className="text-sm text-muted-foreground max-w-md">
-            When users subscribe to daily or weekly briefing emails, they'll appear here.
-          </p>
         </div>
       ) : (
         <div className="rounded-lg border bg-background/50 overflow-hidden">
@@ -363,9 +360,9 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                   </TableCell>
                   <TableCell>
                     {sub.is_verified ? (
-                      <Badge variant="default" className="text-sm bg-emerald-500">Verified</Badge>
+                      <Badge variant="default" className="text-sm border-transparent bg-mint-soft text-mint-ink">Verified</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-sm text-amber-600 border-amber-300">Pending</Badge>
+                      <Badge variant="outline" className="text-sm border-transparent bg-attention-soft text-foreground">Pending</Badge>
                     )}
                   </TableCell>
                   <TableCell>

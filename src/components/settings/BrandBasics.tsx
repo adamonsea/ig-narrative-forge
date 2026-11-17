@@ -145,10 +145,10 @@ export function BrandBasics({
           {config.logo_url ? (
             <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-2">
               <img src={config.logo_url} alt="Current logo" className="h-10 max-w-[180px] object-contain" />
-              <Button variant="ghost" size="icon" onClick={removeLogo} aria-label="Remove logo"><X className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={removeLogo} aria-label="Remove logo" title="Remove logo"><X className="h-4 w-4" /></Button>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No logo — the feed name is shown instead.</p>
+            <p className="text-sm text-muted-foreground">No logo</p>
           )}
           <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading} className="gap-1.5">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}

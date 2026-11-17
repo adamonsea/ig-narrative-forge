@@ -271,7 +271,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
 
       {parents.length === 0 && !proposal && (
         <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No categories yet. Use Suggest categories to get a set that fits what this feed covers.
+          No categories yet.
         </p>
       )}
 

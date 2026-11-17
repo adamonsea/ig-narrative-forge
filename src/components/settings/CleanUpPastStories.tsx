@@ -77,7 +77,7 @@ export function CleanUpPastStories({ topicId, disabled }: { topicId: string; dis
               <div className="space-y-3">
                 {count > 0 ? (
                   <>
-                    <p className="text-sm">These published stories match Less of this. Removing them takes them out of the feed for good. Nothing has been removed yet.</p>
+                    <p className="text-sm">These published stories match Less of this. Removing takes them out of the feed for good.</p>
                     <ul className="max-h-64 divide-y overflow-y-auto rounded-md border">
                       {matches!.map((m) => (
                         <li key={m.story_id} className="p-2 text-sm">

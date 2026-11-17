@@ -236,7 +236,7 @@ export const ContentVoiceSettings = ({
                       size="icon"
                       variant="ghost"
                       className="h-7 w-7"
-                      aria-label="Edit example sentence"
+                      aria-label="Edit example sentence" title="Edit"
                       onClick={() => { setAdding(false); setEditingIndex(index); setDraft(example); }}
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -245,7 +245,7 @@ export const ContentVoiceSettings = ({
                       size="icon"
                       variant="ghost"
                       className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      aria-label="Delete example sentence"
+                      aria-label="Delete example sentence" title="Delete"
                       onClick={() => saveExamples(examples.filter((_, i) => i !== index))}
                     >
                       <X className="h-3.5 w-3.5" />

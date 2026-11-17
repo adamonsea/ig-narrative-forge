@@ -176,9 +176,6 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
         <CardContent className="py-8 text-center">
           <Globe className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">No widget embeds detected yet</p>
-          <p className="text-sm text-muted-foreground/70 mt-1">
-            Share your widget code with website owners to start tracking
-          </p>
         </CardContent>
       </Card>
     );
