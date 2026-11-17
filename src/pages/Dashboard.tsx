@@ -1,19 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Helmet } from "react-helmet-async";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TopicManager } from "@/components/TopicManager";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "@/components/AppLayout";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PlanStatus } from "@/components/billing/PlanStatus";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 
 const Dashboard = () => {
