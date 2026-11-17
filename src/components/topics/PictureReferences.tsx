@@ -348,8 +348,7 @@ export function PictureReferences({
             <p className="flex items-center gap-2 text-sm text-muted-foreground"><Sparkles className="h-3 w-3 animate-pulse" /> Looking for photos…</p>
           )}
           {placeCandidates.length > 0 && (
-            <div className="space-y-1 rounded-md border p-2">
-              <p className="text-sm text-muted-foreground">Tap the ones that look right</p>
+            <div className="space-y-2 rounded-lg border p-2">
               <div className="flex flex-wrap gap-2">
                 {placeCandidates.map((candidate) => (
                   <button
@@ -427,7 +426,7 @@ export function PictureReferences({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 id="picture-references-heading" className="flex items-center gap-1.5 text-base font-semibold">
+        <h3 id="picture-references-heading" className="flex items-center gap-2 text-lg font-semibold">
           Pictures
           <InfoHint label="About pictures">
             Choose how covers look, then add the places your feed writes about. Curatr writes each place's appearance
@@ -442,7 +441,7 @@ export function PictureReferences({
       </div>
 
       {onIllustrationStyleChange && (
-        <div className="space-y-1.5 max-w-sm">
+        <div className="space-y-2 max-w-sm">
           <Label htmlFor="visual-style">Visual style</Label>
           <Select
             value={illustrationStyle || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE}
@@ -562,7 +561,7 @@ export function PictureReferences({
               <p className="text-sm text-muted-foreground">Nothing new.</p>
             )}
             {suggestions.map((suggestion) => (
-              <div key={suggestion.value} className="flex items-start justify-between gap-3 rounded-md border p-2">
+              <div key={suggestion.value} className="flex items-start justify-between gap-3 rounded-lg border p-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{suggestion.value}</p>
                   <button
@@ -588,9 +587,6 @@ export function PictureReferences({
                 </div>
               </div>
             ))}
-            {suggestions.length > 0 && (
-              <p className="text-sm text-muted-foreground">Dismissed suggestions are never offered again.</p>
-            )}
           </div>
         )}
       </div>

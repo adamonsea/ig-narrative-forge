@@ -223,7 +223,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border p-4 space-y-3">
-        <p className="text-sm font-medium">Look back over…</p>
+        <p className="text-lg font-semibold">Look back over</p>
         <div className="flex flex-wrap gap-2">
           {PRESETS.map((p) => (
             <Button
@@ -239,7 +239,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           ))}
         </div>
         {(selectedCategories.length > 0 || selectedSources.length > 0) && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Covering{scopeLabel().replace(/^ · /, ' ')}.{' '}
             <button
               type="button"
@@ -255,12 +255,12 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
         )}
         <Disclosure label="Choose topics and sources">
           <div className="space-y-3 pt-1">
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Topics</p>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Topics</p>
               {categories.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No topics set up yet.</p>
+                <p className="text-sm text-muted-foreground">No topics set up yet.</p>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {categories.map((c) => (
                     <Button
                       key={c.id}
@@ -276,12 +276,12 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                 </div>
               )}
             </div>
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Sources</p>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Sources</p>
               {sources.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No sources yet.</p>
+                <p className="text-sm text-muted-foreground">No sources yet.</p>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {sources.map((s) => (
                     <Button
                       key={s.id}
@@ -298,11 +298,8 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
               )}
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-              <Label htmlFor="review-parliamentary" className="text-xs font-medium">
+              <Label htmlFor="review-parliamentary" className="text-sm font-medium">
                 Include Parliament coverage
-                <span className="block font-normal text-muted-foreground">
-                  Off by default so it doesn’t skew local comparisons.
-                </span>
               </Label>
               <Switch
                 id="review-parliamentary"
@@ -310,13 +307,12 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                 onCheckedChange={setIncludeParliamentary}
               />
             </div>
-            <p className="text-xs text-muted-foreground">Nothing selected means everything is included.</p>
           </div>
         </Disclosure>
         <Disclosure label="Pick exact dates">
           <div className="flex flex-wrap items-end gap-3 pt-1">
             <div className="space-y-1">
-              <Label htmlFor="review-start" className="text-xs">
+              <Label htmlFor="review-start" className="text-sm">
                 From
               </Label>
               <Input
@@ -328,7 +324,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="review-end" className="text-xs">
+              <Label htmlFor="review-end" className="text-sm">
                 To
               </Label>
               <Input
@@ -342,7 +338,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
           </div>
         </Disclosure>
         <div className="sticky bottom-24 z-10">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-sm backdrop-blur">
             <p className="text-sm text-muted-foreground">
               {periodSummary() ? (
                 <>
@@ -367,7 +363,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                 );
               }}
             >
-              {generating && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Generate review
             </Button>
           </div>
@@ -384,7 +380,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
               <Link to={`/feed/${topicSlug}/review/${r.slug}`} className="flex min-w-0 flex-1 items-center gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{r.label}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {r.period_start} → {r.period_end}
                   </p>
                 </div>
@@ -395,14 +391,14 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
                     aria-label={`Delete review ${r.label}`}
                     disabled={deletingId === r.id}
                   >
                     {deletingId === r.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     )}
                   </Button>
                 </AlertDialogTrigger>

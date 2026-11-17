@@ -179,7 +179,7 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
         {/* The dial */}
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <span className="flex items-center gap-1.5"><Label>How local?</Label><InfoHint label="About how local">{dial.blurb}</InfoHint></span>
+            <span className="flex items-center gap-2"><Label>How local?</Label><InfoHint label="About how local">{dial.blurb}</InfoHint></span>
             <span className="text-sm font-medium">{dial.label}</span>
           </div>
           <Slider
@@ -252,8 +252,8 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
 
         {/* Big story override */}
         <div className="flex items-start justify-between gap-4 border-t pt-4">
-          <div className="flex items-center gap-1.5">
-            <Label htmlFor="big-story-override">Let big stories through</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="big-story-override">Big stories</Label>
             <InfoHint label="About big stories">A major incident, a large sum of money or one of your named organisations can carry a story in from further away.</InfoHint>
           </div>
           <Switch id="big-story-override" checked={override} onCheckedChange={setOverride} />

@@ -69,7 +69,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Spinner**: "Finding sources…" (SourceFinder 129) and the sparkline loading (SourceStorySparkline 99).
 - **Space**: AddSourceSheet 4, SourceShelves 4, NewsSourcePanel 9, EventSources 9.
 
-## 4. Settings
+## 4. Settings (done 17 Nov; the AI-assistant connection, feed backups and email preview still open in a pop-up, waiting for the shared drawer. About page and donations keep their Save button — Adam to say whether auto-save replaces it)
 
 - **Size**:
   - Section and fold titles are 20px on phones (EditorialControlCenter 116, RememberedFold 75).
@@ -85,7 +85,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Saving**: About page and donations still use a Save button. An earlier ask was "auto-save everywhere"; which do you want to keep?
 - **Radius / Space**: branding 4 places, Onboarding 2, PictureReferences 2, ContentVoice notes box. Space: CategoriesPanel 6, PictureReferences 7, AiAssistantAccess 5, WidgetAnalytics 5, EditorialControlCenter 13 lines.
 
-## 5. Readership
+## 5. Readership (done 17 Nov)
 
 - **Size**: the weekly reads number uses the serif at 96–128px (ReadershipPanel 87); the best story is 72–96px, its title in serif (121–122); a 48px serif number (138); tiny chart text (107, 164, 169).
 - **Funnel**: tiny, uppercase, spaced-out heading, plus raw green, yellow, red and white (EngagementFunnel 64–171).
@@ -113,7 +113,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Spinner**: the dashboard and feed pages load with spinners (Dashboard 28, TopicDashboard 615).
 - **Modal**: feed backups, feed safety. Publishing a feed asks in a confirm box, and it isn't a destructive action (TopicDashboard 816).
 
-## 7. Reviews
+## 7. Reviews (done 17 Nov)
 
 - **Size**: tiny text in 10 places (PeriodReviewPanel 242–387).
 - **Words**: "Nothing selected means everything is included." (313).

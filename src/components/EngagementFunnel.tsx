@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Users, MousePointer, Layers, Share2, ExternalLink } from 'lucide-react';
+import { Users, MousePointer, Layers, Share2, ExternalLink } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { engagementColors } from '@/lib/designTokens';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface EngagementFunnelProps {
   topicId: string;
@@ -33,7 +33,7 @@ export const EngagementFunnel = ({ topicId }: EngagementFunnelProps) => {
       });
 
       if (error) throw error;
-      
+
       if (funnelData && funnelData.length > 0) {
         setData({
           visitors: Number(funnelData[0].visitors) || 0,
@@ -53,123 +53,78 @@ export const EngagementFunnel = ({ topicId }: EngagementFunnelProps) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-24">
-        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      <div className="space-y-3" aria-busy="true">
+        <Skeleton className="h-4 w-40" />
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex items-center gap-3">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-6 flex-1 rounded-full" />
+          </div>
+        ))}
       </div>
     );
   }
 
   if (!data || data.visitors === 0) {
-    return (
-      <div className="h-24 flex items-center justify-center text-xs text-muted-foreground">
-        No funnel data yet
-      </div>
-    );
+    return <p className="text-sm text-muted-foreground">No funnel data yet</p>;
   }
 
   const stages = [
-    { 
-      label: 'Visitors', 
-      value: data.visitors, 
-      color: engagementColors.visitors,
-      icon: Users,
-      tooltip: 'Unique visitors to your feed'
-    },
-    { 
-      label: 'Engaged', 
-      value: data.engaged, 
-      color: engagementColors.engaged,
-      icon: MousePointer,
-      tooltip: 'Visitors who swiped through stories'
-    },
-    { 
-      label: 'Completed', 
-      value: data.completed, 
-      color: engagementColors.completed,
-      icon: Layers,
-      tooltip: 'Visitors who read to final slide'
-    },
-    { 
-      label: 'Shared', 
-      value: data.shared, 
-      color: engagementColors.shares,
-      icon: Share2,
-      tooltip: 'Visitors who shared stories'
-    },
-    { 
-      label: 'Source', 
-      value: data.source_clicks, 
-      color: engagementColors.sourceClicks,
-      icon: ExternalLink,
-      tooltip: 'Visitors who clicked source links'
-    },
+    { label: 'Visitors', value: data.visitors, icon: Users, tooltip: 'Unique visitors to your feed' },
+    { label: 'Engaged', value: data.engaged, icon: MousePointer, tooltip: 'Visitors who swiped through stories' },
+    { label: 'Completed', value: data.completed, icon: Layers, tooltip: 'Visitors who read to final slide' },
+    { label: 'Shared', value: data.shared, icon: Share2, tooltip: 'Visitors who shared stories' },
+    { label: 'Source', value: data.source_clicks, icon: ExternalLink, tooltip: 'Visitors who clicked source links' },
   ];
 
   const maxValue = Math.max(...stages.map(s => s.value), 1);
 
   return (
     <TooltipProvider>
-      <div className="space-y-2">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Engagement Funnel (7 days)
-        </div>
-        
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Engagement funnel (7 days)</h3>
+
         <div className="space-y-2">
           {stages.map((stage, index) => {
             const widthPercent = Math.max((stage.value / maxValue) * 100, 8);
             const prevValue = index > 0 ? stages[index - 1].value : 0;
-            // Only show conversion if previous stage has data
             const hasConversion = index > 0 && prevValue > 0;
-            const conversionRate = hasConversion 
-              ? Math.round((stage.value / prevValue) * 100) 
+            const conversionRate = hasConversion
+              ? Math.round((stage.value / prevValue) * 100)
               : null;
             const Icon = stage.icon;
-            
+            const tone = conversionRate === null
+              ? 'text-muted-foreground'
+              : conversionRate >= 50 ? 'text-pop' : conversionRate >= 20 ? 'text-attention' : 'text-destructive-ink';
+
             return (
               <Tooltip key={stage.label}>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 cursor-help">
-                    <div className="w-16 flex items-center gap-1 text-xs text-muted-foreground">
-                      <Icon className="w-3 h-3" style={{ color: stage.color }} />
+                  <div className="flex items-center gap-3">
+                    <div className="w-24 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                       <span className="truncate">{stage.label}</span>
                     </div>
-                    <div className="flex-1 h-6 bg-muted/30 rounded-full overflow-hidden relative">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500 ease-out flex items-center justify-end pr-2"
-                        style={{ 
-                          width: `${widthPercent}%`,
-                          backgroundColor: stage.color,
-                          opacity: 0.85
-                        }}
+                    <div className="flex-1 h-6 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary flex items-center justify-end pr-2 transition-[width] duration-300 ease-out"
+                        style={{ width: `${widthPercent}%` }}
                       >
-                        <span className="text-xs font-bold text-white drop-shadow-sm">
+                        <span className="text-sm font-medium tabular-nums text-primary-foreground">
                           {stage.value}
                         </span>
                       </div>
                     </div>
-                    {index > 0 && (
-                      <div className="w-12 text-right">
-                        {hasConversion ? (
-                          <span className={`text-xs font-medium ${conversionRate! >= 50 ? 'text-green-500' : conversionRate! >= 20 ? 'text-yellow-500' : 'text-red-500'}`}>
-                            {conversionRate}%
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </div>
-                    )}
+                    <div className={`w-14 text-right text-sm font-medium tabular-nums ${tone}`}>
+                      {hasConversion ? `${conversionRate}%` : '—'}
+                    </div>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent className="max-w-xs text-sm">
                   <p>{stage.tooltip}</p>
                   {index > 0 && hasConversion && (
-                    <p className="text-muted-foreground text-xs mt-1">
-                      {conversionRate}% conversion from {stages[index - 1].label}
-                    </p>
-                  )}
-                  {index > 0 && !hasConversion && prevValue === 0 && (
-                    <p className="text-muted-foreground text-xs mt-1">
-                      No {stages[index - 1].label.toLowerCase()} data to compare
+                    <p className="text-muted-foreground mt-1">
+                      {conversionRate}% from {stages[index - 1].label}
                     </p>
                   )}
                 </TooltipContent>

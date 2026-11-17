@@ -122,7 +122,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
   };
 
   return (
-    <div className="space-y-5 py-7">
+    <div className="space-y-6 py-8">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Bot className="mt-0.5 h-4 w-4 text-muted-foreground" />
@@ -139,7 +139,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
       </div>
 
       {enabled && (
-        <div className="space-y-5 rounded-xl border border-border bg-muted/20 p-5">
+        <div className="space-y-6 rounded-xl border border-border bg-muted/20 p-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium text-muted-foreground">Who can connect</Label>
             <div className="flex flex-wrap gap-2">
@@ -183,14 +183,14 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-muted-foreground">Keys</Label>
                 <Button variant="outline" size="sm" onClick={createKey} disabled={creating}>
-                  {creating ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <KeyRound className="mr-2 h-3.5 w-3.5" />}
+                  {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
                   New key
                 </Button>
               </div>
 
               {newKey && (
                 <div className="rounded-lg border border-pop/40 bg-background p-3">
-                  <p className="mb-2 text-sm text-muted-foreground">Copy this now — it is shown once.</p>
+                  <p className="mb-2 text-sm text-muted-foreground">Shown once.</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 overflow-x-auto whitespace-nowrap text-sm">{newKey}</code>
                     <Button variant="outline" size="sm" onClick={() => copy(newKey, "key")}>
@@ -291,13 +291,13 @@ const SetupGuide = ({ tool, endpoint, topicName, needsKey }: SetupGuideProps) =>
         <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
           <Label className="text-sm font-medium text-muted-foreground">Address to paste</Label>
           <div className="flex items-center gap-2">
-            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-md border border-border bg-background px-3 py-2 text-sm">{endpoint}</code>
+            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-border bg-background px-3 py-2 text-sm">{endpoint}</code>
             <Button variant="outline" size="sm" onClick={copy}>
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
           {needsKey && (
-            <p className="text-sm text-muted-foreground">You'll also need a key from the Keys list below — create one if you haven't.</p>
+            <p className="text-sm text-muted-foreground">Needs a key.</p>
           )}
         </div>
 

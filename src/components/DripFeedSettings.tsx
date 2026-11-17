@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Loader2 } from "lucide-react";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,7 +29,7 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     drip_end_hour: 22,
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>(null);
   const { toast } = useToast();
   const loadedRef = useRef(false);
 
@@ -65,7 +65,7 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
 
   const saveConfig = useCallback(async (updates: Partial<DripFeedConfig>) => {
     if (!loadedRef.current) return;
-    setSaving(true);
+    setSaveState("saving");
     try {
       const { error } = await supabase
         .from('topics')
@@ -73,13 +73,12 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
         .eq('id', topicId);
 
       if (error) throw error;
-      toast({ title: 'Saved' });
+      setSaveState("saved");
       onUpdate?.();
     } catch (error) {
       console.error('Error saving drip feed settings:', error);
+      setSaveState("not-saved");
       toast({ title: 'Error', description: 'Failed to save', variant: 'destructive' });
-    } finally {
-      setSaving(false);
     }
   }, [topicId, toast, onUpdate]);
 
@@ -118,7 +117,7 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
       <div className="flex items-center justify-between">
         <Label className="text-sm">Release in batches</Label>
         <div className="flex items-center gap-2">
-          {saving && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+          <SaveIndicator state={saveState} />
           <Switch
             checked={config.drip_feed_enabled}
             onCheckedChange={(checked) => updateConfig('drip_feed_enabled', checked, true)}

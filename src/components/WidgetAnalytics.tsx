@@ -191,7 +191,7 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
               <Eye className="h-3.5 w-3.5" />
               <span className="text-sm font-medium">Impressions</span>
             </div>
-            <p className="text-xl font-bold">{totals.impressions.toLocaleString()}</p>
+            <p className="text-2xl font-semibold tabular-nums">{totals.impressions.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card className="bg-muted/30">
@@ -200,7 +200,7 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
               <MousePointer className="h-3.5 w-3.5" />
               <span className="text-sm font-medium">Clicks</span>
             </div>
-            <p className="text-xl font-bold">{totals.clicks.toLocaleString()}</p>
+            <p className="text-2xl font-semibold tabular-nums">{totals.clicks.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card className="bg-muted/30">
@@ -209,7 +209,7 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
               <Users className="h-3.5 w-3.5" />
               <span className="text-sm font-medium">Visitors</span>
             </div>
-            <p className="text-xl font-bold">{totals.unique_visitors.toLocaleString()}</p>
+            <p className="text-2xl font-semibold tabular-nums">{totals.unique_visitors.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>

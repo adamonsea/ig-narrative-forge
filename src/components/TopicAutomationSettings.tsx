@@ -171,8 +171,8 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
           const active = group.modes.includes(automationMode);
           const targetMode = group.modes[0];
           return (
-            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-md p-3 text-left transition-colors ${active ? 'border-purple-bright/50 bg-purple-soft/60' : 'hover:border-purple-bright/40'}`}>
-              <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-purple-bright" />}{group.label}</span>
+            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-lg p-3 text-left transition-colors ${active ? 'border-primary bg-primary text-primary-foreground' : ''}`}>
+              <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-primary-foreground" />}{group.label}</span>
             </Button>
           );
         })}
@@ -181,7 +181,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
       <Disclosure label="Fine-tune the details">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Label className="text-sm">Exact behaviour</Label>
               <InfoHint label="About this behaviour">{MODE_DESCRIPTIONS[automationMode]}</InfoHint>
             </div>

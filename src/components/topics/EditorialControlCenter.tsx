@@ -111,9 +111,9 @@ interface EditorialControlCenterProps {
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 space-y-6 border-t border-border pt-10 first:border-t-0 first:pt-0">
+    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 space-y-6 border-t border-border pt-8 first:border-t-0 first:pt-0">
       <header className="flex items-center gap-2">
-        <h2 id={`${id}-title`} className="text-xl font-semibold md:text-2xl">{title}</h2>
+        <h2 id={`${id}-title`} className="text-2xl font-semibold">{title}</h2>
         {description && <InfoHint label={`About ${title.toLowerCase()}`}>{description}</InfoHint>}
       </header>
       {children}
@@ -123,7 +123,7 @@ function Section({ id, title, description, children }: { id: string; title: stri
 
 function SubHeading({ id, children, hint }: { id?: string; children: React.ReactNode; hint?: string }) {
   return (
-    <h3 id={id} className="mb-4 flex items-center gap-1.5 text-base font-semibold">
+    <h3 id={id} className="mb-4 flex items-center gap-2 text-lg font-semibold">
       {children}
       {hint && <InfoHint label={`About ${String(children).toLowerCase()}`}>{hint}</InfoHint>}
     </h3>
@@ -172,9 +172,9 @@ export function EditorialControlCenter({
   const brandKey = JSON.stringify([topic.name, topic.illustration_primary_color, topic.branding_config]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-10">
+      <div className="mx-auto max-w-4xl space-y-12">
       {attention.length > 0 && (
-        <section className="border-l-2 border-destructive bg-destructive/5 px-5 py-4" aria-labelledby="attention-heading">
+        <section className="border-l-2 border-destructive bg-destructive-soft px-4 py-4" aria-labelledby="attention-heading">
           <div className="flex gap-3">
             <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
             <div>
@@ -195,7 +195,7 @@ export function EditorialControlCenter({
           onSaved={(values) => patch(values)}
         />
         <RememberedFold foldKey="brand-more" label="More options">
-          <div className="space-y-10">
+          <div className="space-y-12">
             <section>
               <SubHeading>Logo and colours</SubHeading>
               <TopicBrandingSettings key={brandKey} topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
@@ -236,7 +236,7 @@ export function EditorialControlCenter({
           }}
         />
         <RememberedFold foldKey="lookfor-more" label="More options">
-          <div className="space-y-10">
+          <div className="space-y-12">
             {topic.topic_type === "regional" && (
               <section aria-labelledby="news-values-heading">
                 <SubHeading id="news-values-heading">How local</SubHeading>
@@ -293,7 +293,7 @@ export function EditorialControlCenter({
       <Section id="settings-autopilot" title="Autopilot" description="How much happens without you. Per-source Auto-publish lives on each source.">
         <AutopilotBasics key={`ap-${topic.drip_feed_enabled}`} topicId={topic.id} onChanged={onUpdate} />
         <RememberedFold foldKey="autopilot-more" label="More options">
-          <div className="space-y-10">
+          <div className="space-y-12">
             <TopicAutomationSettings topicId={topic.id} />
             <section className="border-t border-border pt-8">
               <SubHeading>Release timing</SubHeading>
@@ -352,7 +352,7 @@ export function EditorialControlCenter({
                 onEnabledChange={(checked) => onChannelToggle("mcp_enabled", checked, "AI assistants")}
               />
             </div>
-            <div className="py-7"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
+            <div className="py-6"><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></div>
           </div>
         </RememberedFold>
       </Section>
@@ -365,7 +365,7 @@ export function EditorialControlCenter({
           label="Extras"
           description={`In-feed cards, quizzes${FEATURES.sentiment ? ", coverage mood" : ""}${FEATURES.communityDiscussion ? ", community discussion" : ""} and local reporting tools. All off unless you switch them on.`}
         >
-          <div className="space-y-10">
+          <div className="space-y-12">
             <section><SubHeading>Feed cards</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
             {FEATURES.sentiment && (
               <section className="border-t border-border pt-8"><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>
@@ -391,7 +391,7 @@ export function EditorialControlCenter({
 
 function ChannelRow({ icon: Icon, label, hint, status, checked, onCheckedChange }: { icon: typeof Mail; label: string; hint?: string; status?: string; checked: boolean; onCheckedChange?: (checked: boolean) => void }) {
   return (
-    <div className="flex items-center justify-between gap-5 py-5">
+    <div className="flex items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-3">
         <Icon className="h-4 w-4 text-muted-foreground" />
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">

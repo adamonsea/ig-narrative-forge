@@ -4,7 +4,9 @@ List: .lovable/reviews/workspace-rule-breaks.md. One group at a time; Adam picks
 - [x] Shared building blocks
 - [x] Desk
 - [x] Sources
-- [ ] Settings, Readership, Reviews (Adam to pick the order)
+- [x] Settings, Readership, Reviews — Adam skipped picking the order, so these three were done in that order
+- [ ] Open question: About page and donations still use a Save button; an earlier ask was "auto-save everywhere" — Adam to say which to keep
+- [ ] Parked or hidden panels still have tiny text (community discussion, email segments, mood keywords, MPs, trending review)
 
 # Sources as cards + Desk fixes (17 Nov 2026)
 - [x] Sources: News / Events shelves of cards (name, health colour, 7-day dots, one number); needs-attention pinned on top
