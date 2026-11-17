@@ -14,6 +14,7 @@ import {
   Text,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
+import { dailyEventsHeading, type DailyEmailEvent } from '../dailyEvents.ts'
 
 interface EmailStory {
   id: string;
@@ -36,6 +37,7 @@ interface DailyRoundupEmailProps {
   audioUrl?: string; // Audio briefing URL if available
   introHeading?: string; // Segment personalisation (partner site)
   introText?: string;
+  events?: DailyEmailEvent[]; // Events today/tomorrow (block omitted when empty)
 }
 
 export const DailyRoundupEmail = ({
@@ -51,6 +53,7 @@ export const DailyRoundupEmail = ({
   audioUrl,
   introHeading,
   introText,
+  events = [],
 }: DailyRoundupEmailProps) => (
   <Html style={html}>
     <Head>
@@ -126,6 +129,30 @@ export const DailyRoundupEmail = ({
           <Section style={emptySection}>
             <Text style={emptyText}>No stories for this day.</Text>
           </Section>
+        )}
+
+        {events.length > 0 && (
+          <>
+            <Hr style={hr} />
+            <Section style={eventsSection}>
+              <Text style={eventsHeading}>{dailyEventsHeading(events)}</Text>
+              {events.map((event) => (
+                <Section key={event.id} style={eventCard}>
+                  <Text style={eventMeta}>
+                    {event.date_label} • {event.time_label}
+                  </Text>
+                  {event.url ? (
+                    <Link href={event.url} target="_blank" style={eventTitleLink}>
+                      {event.title}
+                    </Link>
+                  ) : (
+                    <Text style={eventTitle}>{event.title}</Text>
+                  )}
+                  {event.location && <Text style={eventLocation}>{event.location}</Text>}
+                </Section>
+              ))}
+            </Section>
+          </>
         )}
 
         <Hr style={hr} />
@@ -377,4 +404,53 @@ const introTextStyle = {
   fontSize: '15px',
   lineHeight: '22px',
   margin: '0',
+}
+
+const eventsSection = {
+  padding: '8px 32px 16px',
+}
+
+const eventsHeading = {
+  color: '#111827',
+  fontSize: '13px',
+  fontWeight: '700',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase' as const,
+  margin: '0 0 12px',
+}
+
+const eventCard = {
+  borderLeft: '2px solid #e5e7eb',
+  padding: '0 0 0 12px',
+  margin: '0 0 14px',
+}
+
+const eventMeta = {
+  color: '#6b7280',
+  fontSize: '12px',
+  fontWeight: '600',
+  margin: '0 0 2px',
+}
+
+const eventTitle = {
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: '600',
+  lineHeight: '20px',
+  margin: '0',
+}
+
+const eventTitleLink = {
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: '600',
+  lineHeight: '20px',
+  textDecoration: 'none',
+  display: 'block',
+}
+
+const eventLocation = {
+  color: '#6b7280',
+  fontSize: '13px',
+  margin: '2px 0 0',
 }

@@ -5,6 +5,7 @@ import { Resend } from 'npm:resend@4.0.0';
 import { renderAsync } from 'npm:@react-email/components@0.0.22';
 import { DailyRoundupEmail } from './_templates/daily-roundup.tsx';
 import { WeeklyRoundupEmail } from './_templates/weekly-roundup.tsx';
+import { pickDailyEvents, londonToday, type WhatsOnRow } from './dailyEvents.ts';
 import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProAccess } from '../_shared/auth.ts';
 import { dedupeByEvent, EMAIL_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
 import { FEATURES } from '../_shared/parked-features.ts';
@@ -469,6 +470,18 @@ serve(async (req) => {
       console.log(`🎪 Found ${upcomingEvents.length} upcoming events for the weekly email`);
     }
 
+    // Daily emails: "What's on" for today and tomorrow only (UK dates).
+    // Same rows as the feed (get_topic_whats_on: published, started ones hidden, one per name).
+    if (notificationType === 'daily' && topic.events_enabled && (!segment || segment.include_events)) {
+      const { data: whatsOnRows, error: whatsOnError } = await supabase.rpc('get_topic_whats_on', { p_topic_id: topicId });
+      if (whatsOnError) {
+        console.error('Error fetching events for daily email (non-fatal):', whatsOnError);
+      } else {
+        upcomingEvents = pickDailyEvents((whatsOnRows || []) as WhatsOnRow[], londonToday());
+      }
+      console.log(`🎪 Found ${upcomingEvents.length} events today/tomorrow for the daily email`);
+    }
+
     // Prepare shared email template data
     const displayDate = dateEnd.toLocaleDateString('en-GB', { 
       weekday: 'long', 
@@ -518,6 +531,7 @@ serve(async (req) => {
             baseUrl: BASE_URL,
             isSlowNewsDay,
             audioUrl,
+            events: upcomingEvents,
             unsubscribeUrl,
             introHeading: segment?.intro_heading || undefined,
             introText: segment?.intro_text || undefined
