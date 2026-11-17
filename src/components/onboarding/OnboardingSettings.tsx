@@ -174,25 +174,13 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Onboarding & Welcome</CardTitle>
-        <CardDescription>
-          Configure how new visitors are welcomed to your feed
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Welcome Flash Card */}
+    <div className="space-y-6">
+        {/* Welcome card: hidden while reader welcome extras are paused (saved values are kept) */}
+        {READER_ONBOARDING_EXTRAS && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base font-medium">Welcome Card</Label>
-              <p className="text-sm text-muted-foreground">
-                Show a welcome modal to first-time visitors
-              </p>
-              {!READER_ONBOARDING_EXTRAS && (
-                <p className="text-xs text-muted-foreground/70 mt-0.5">Paused on public feeds.</p>
-              )}
+              <Label className="text-base font-medium">Welcome card</Label>
             </div>
             <Switch
               checked={welcomeEnabled}
@@ -214,7 +202,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
               </div>
 
               <div>
-                <Label htmlFor="welcomeCtaText">Button Text</Label>
+                <Label htmlFor="welcomeCtaText">Button text</Label>
                 <Input
                   id="welcomeCtaText"
                   value={welcomeCtaText}
@@ -225,12 +213,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
-                  <Label>Show "About this feed" link</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Requires About Page to be enabled
-                  </p>
-                </div>
+                <Label>About link</Label>
                 <Switch
                   checked={showAboutLink}
                   onCheckedChange={setShowAboutLink}
@@ -240,15 +223,13 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
             </div>
           )}
         </div>
+        )}
 
         {/* About Page */}
-        <div className="space-y-4 pt-4 border-t">
+        <div className={READER_ONBOARDING_EXTRAS ? "space-y-4 pt-4 border-t" : "space-y-4"}>
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base font-medium">About Page</Label>
-              <p className="text-sm text-muted-foreground">
-                Enable a dedicated page about your feed (shows ? icon in header)
-              </p>
+              <Label className="text-base font-medium">About page</Label>
             </div>
             <Switch
               checked={aboutPageEnabled}
@@ -260,10 +241,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
             <div className="space-y-4 pl-4 border-l-2 border-muted">
               {/* Image Upload */}
               <div>
-                <Label>About Page Photo</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Add an image to personalize your about page
-                </p>
+                <Label className="mb-2 block">Photo</Label>
                 
                 {aboutPhotoUrl ? (
                   <div className="relative w-full max-w-xs">
@@ -277,6 +255,8 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
                       size="icon"
                       className="absolute -top-2 -right-2 h-6 w-6"
                       onClick={handleRemoveImage}
+                      aria-label="Remove photo"
+                      title="Remove photo"
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -299,12 +279,12 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
                       {uploading ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Uploading...
+                          Uploading…
                         </>
                       ) : (
                         <>
                           <Upload className="h-4 w-4" />
-                          Upload Image
+                          Upload
                         </>
                       )}
                     </Button>
@@ -314,17 +294,17 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
 
               {/* About Content */}
               <div>
-                <Label htmlFor="aboutContent">About Page Content</Label>
+                <Label htmlFor="aboutContent">Text</Label>
                 <textarea
                   id="aboutContent"
                   value={aboutContent}
                   onChange={(e) => setAboutContent(e.target.value)}
                   placeholder="Tell visitors about your feed, what content they can expect, and who curates it..."
-                  className="w-full mt-1 p-3 border rounded-md min-h-[120px] text-sm resize-y bg-background"
+                  className="w-full mt-1 p-3 border rounded-md min-h-[120px] text-base resize-y bg-background"
                   maxLength={2000}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {aboutContent.length}/2000 characters
+                <p className="text-sm text-muted-foreground mt-1">
+                  {aboutContent.length}/2000
                 </p>
               </div>
             </div>
@@ -332,17 +312,16 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={saving} className="flex-1">
-            {saving ? "Saving..." : "Save Settings"}
+          <Button variant="outline" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : "Save"}
           </Button>
-          {welcomeEnabled && (
+          {READER_ONBOARDING_EXTRAS && welcomeEnabled && (
             <Button variant="outline" onClick={handlePreview} className="gap-2">
               <ExternalLink className="h-4 w-4" />
               Preview
             </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

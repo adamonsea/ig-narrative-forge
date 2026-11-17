@@ -72,7 +72,7 @@ export function RememberedFold({
       <Collapsible open={open} onOpenChange={toggle} className={className}>
         <div className="flex items-center justify-between gap-3 py-2">
           <div className="flex items-center gap-2">
-            <CollapsibleTrigger className="display-heading text-left text-xl md:text-2xl">{label}</CollapsibleTrigger>
+            <CollapsibleTrigger className="text-left text-xl font-semibold md:text-2xl">{label}</CollapsibleTrigger>
             {description && <InfoHint label={`About ${label.toLowerCase()}`}>{description}</InfoHint>}
           </div>
           <CollapsibleTrigger className="group rounded-md p-1" aria-label={open ? `Close ${label}` : `Open ${label}`}>

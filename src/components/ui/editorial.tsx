@@ -35,11 +35,11 @@ export function InfoHint({ label, children }: { label?: string; children: React.
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>{trigger}</PopoverTrigger>
           </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+          <TooltipContent side="top" className="max-w-xs text-sm leading-relaxed">
             {children}
           </TooltipContent>
         </Tooltip>
-        <PopoverContent side="top" className="max-w-xs text-xs leading-relaxed md:hidden">
+        <PopoverContent side="top" className="max-w-xs text-sm leading-relaxed md:hidden">
           {children}
         </PopoverContent>
       </Popover>

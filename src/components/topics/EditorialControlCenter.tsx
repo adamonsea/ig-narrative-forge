@@ -31,7 +31,7 @@ import { BrandBasics } from "@/components/settings/BrandBasics";
 import { LookForPanel } from "@/components/settings/LookForPanel";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
-import { FEATURES } from "@/lib/featureFlags";
+import { FEATURES, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
 
 export interface EditorialTopic {
   id: string;
@@ -113,7 +113,7 @@ function Section({ id, title, description, children }: { id: string; title: stri
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 space-y-6 border-t border-border pt-10 first:border-t-0 first:pt-0">
       <header className="flex items-center gap-2">
-        <h2 id={`${id}-title`} className="display-heading text-xl md:text-2xl">{title}</h2>
+        <h2 id={`${id}-title`} className="text-xl font-semibold md:text-2xl">{title}</h2>
         {description && <InfoHint label={`About ${title.toLowerCase()}`}>{description}</InfoHint>}
       </header>
       {children}
@@ -194,14 +194,14 @@ export function EditorialControlCenter({
           brandingConfig={topic.branding_config}
           onSaved={(values) => patch(values)}
         />
-        <RememberedFold foldKey="brand-more" label="More options: app icon, picture colours, welcome card, About page, voice and tone">
+        <RememberedFold foldKey="brand-more" label="More options">
           <div className="space-y-10">
             <section>
-              <SubHeading>Logo, icon and picture colours</SubHeading>
+              <SubHeading>Logo and colours</SubHeading>
               <TopicBrandingSettings key={brandKey} topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
             </section>
             <section className="border-t border-border pt-8">
-              <SubHeading>Welcome card and About page</SubHeading>
+              <SubHeading>{READER_ONBOARDING_EXTRAS ? "Welcome card and About page" : "About page"}</SubHeading>
               <OnboardingSettings topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
             </section>
             <section className="border-t border-border pt-8" aria-labelledby="voice-heading">
@@ -235,7 +235,7 @@ export function EditorialControlCenter({
             patch(values);
           }}
         />
-        <RememberedFold foldKey="lookfor-more" label="More options: how local, categories, picture references">
+        <RememberedFold foldKey="lookfor-more" label="More options">
           <div className="space-y-10">
             {topic.topic_type === "regional" && (
               <section aria-labelledby="news-values-heading">
@@ -292,7 +292,7 @@ export function EditorialControlCenter({
       {/* 3. AUTOPILOT */}
       <Section id="settings-autopilot" title="Autopilot" description="How much happens without you. Per-source Auto-publish lives on each source.">
         <AutopilotBasics key={`ap-${topic.drip_feed_enabled}`} topicId={topic.id} onChanged={onUpdate} />
-        <RememberedFold foldKey="autopilot-more" label="More options: exact behaviour, checking frequency, quality bars, release timing">
+        <RememberedFold foldKey="autopilot-more" label="More options">
           <div className="space-y-10">
             <TopicAutomationSettings topicId={topic.id} />
             <section className="border-t border-border pt-8">
@@ -316,17 +316,14 @@ export function EditorialControlCenter({
           onTopicPatch={(values) => patch(values)}
           onProRequired={onProRequired}
         />
-        <RememberedFold foldKey="share-more" label={`Advanced: subscribers${FEATURES.emailSegments ? ", email segments" : ""}${FEATURES.audioBriefings ? ", audio briefings" : ""}, widget builder, RSS, AI assistants, donations`}>
+        <RememberedFold foldKey="share-more" label="More options">
           <div className="divide-y divide-border border-y border-border">
-            <ChannelRow icon={Globe2} label="Public feed" status={topic.is_public ? "Visible to readers" : "Draft — not yet visible"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
+            <ChannelRow icon={Globe2} label="Public feed" status={topic.is_public ? "Live" : "Draft"} checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
             {topic.email_subscriptions_enabled && (
               <div className="space-y-8 py-6">
                 <NewsletterSignupsManager topicId={topic.id} />
                 {FEATURES.emailSegments && <div className="border-t border-border pt-6"><EmailSegmentsManager topicId={topic.id} /></div>}
               </div>
-            )}
-            {!topic.email_subscriptions_enabled && (
-              <div className="flex items-center gap-3 py-5 text-sm text-muted-foreground"><Mail className="h-4 w-4" />The subscriber list appears once email sign-ups are on.</div>
             )}
             {FEATURES.audioBriefings && (
               <>
@@ -338,7 +335,7 @@ export function EditorialControlCenter({
             {topic.public_widget_builder_enabled && (
               <div className="space-y-4 py-6">
                 <Button variant="outline" size="sm" asChild>
-                  <Link to={`/feed/${topic.slug}/widget`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Open the full widget builder</Link>
+                  <Link to={`/feed/${topic.slug}/widget`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Widget builder</Link>
                 </Button>
                 <WidgetAnalytics topicId={topic.id} onNewSiteDetected={(domain) => onToast("Widget now live on a new site", `Your widget is now live on ${domain}`)} />
               </div>
@@ -369,7 +366,7 @@ export function EditorialControlCenter({
           description={`In-feed cards, quizzes${FEATURES.sentiment ? ", coverage mood" : ""}${FEATURES.communityDiscussion ? ", community discussion" : ""} and local reporting tools. All off unless you switch them on.`}
         >
           <div className="space-y-10">
-            <section><SubHeading>In-feed cards and quizzes</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
+            <section><SubHeading>Feed cards</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
             {FEATURES.sentiment && (
               <section className="border-t border-border pt-8"><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>
             )}
@@ -400,7 +397,7 @@ function ChannelRow({ icon: Icon, label, hint, status, checked, onCheckedChange 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <Label className="text-sm">{label}</Label>
           {hint && <InfoHint label={`About ${label.toLowerCase()}`}>{hint}</InfoHint>}
-          {status && <span className="text-xs text-muted-foreground">{status}</span>}
+          {status && <span className="text-sm text-muted-foreground">{status}</span>}
         </div>
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
