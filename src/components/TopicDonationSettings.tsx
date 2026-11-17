@@ -204,7 +204,7 @@ export const TopicDonationSettings = ({
                             onChange={(e) => updateTier(index, "stripe_payment_link", e.target.value)}
                             placeholder="https://buy.stripe.com/..."
                           />
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-sm text-muted-foreground">
                             Create a subscription product in Stripe, then paste the Payment Link here
                           </p>
                         </div>

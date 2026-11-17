@@ -176,7 +176,7 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
         <CardContent className="py-8 text-center">
           <Globe className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">No widget embeds detected yet</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
+          <p className="text-sm text-muted-foreground/70 mt-1">
             Share your widget code with website owners to start tracking
           </p>
         </CardContent>
@@ -192,7 +192,7 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
           <CardContent className="py-3 px-4 text-center">
             <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
               <Eye className="h-3.5 w-3.5" />
-              <span className="text-xs font-medium">Impressions</span>
+              <span className="text-sm font-medium">Impressions</span>
             </div>
             <p className="text-xl font-bold">{totals.impressions.toLocaleString()}</p>
           </CardContent>
@@ -201,7 +201,7 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
           <CardContent className="py-3 px-4 text-center">
             <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
               <MousePointer className="h-3.5 w-3.5" />
-              <span className="text-xs font-medium">Clicks</span>
+              <span className="text-sm font-medium">Clicks</span>
             </div>
             <p className="text-xl font-bold">{totals.clicks.toLocaleString()}</p>
           </CardContent>
@@ -210,7 +210,7 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
           <CardContent className="py-3 px-4 text-center">
             <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
               <Users className="h-3.5 w-3.5" />
-              <span className="text-xs font-medium">Visitors</span>
+              <span className="text-sm font-medium">Visitors</span>
             </div>
             <p className="text-xl font-bold">{totals.unique_visitors.toLocaleString()}</p>
           </CardContent>
@@ -241,13 +241,13 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
                         <ExternalLink className="h-3 w-3 shrink-0" />
                       </a>
                       {newSites.has(site.domain) && (
-                        <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                        <Badge variant="default" className="text-sm px-1.5 py-0">
                           <Sparkles className="h-2.5 w-2.5 mr-0.5" />
                           NEW
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Eye className="h-3 w-3" />
                         {site.impressions.toLocaleString()}
@@ -266,10 +266,10 @@ export function WidgetAnalytics({ topicId, onNewSiteDetected }: WidgetAnalyticsP
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-[10px] text-muted-foreground/70">
+                    <div className="text-sm text-muted-foreground/70">
                       First: {format(new Date(site.first_seen), 'MMM d')}
                     </div>
-                    <div className="text-[10px] text-muted-foreground flex items-center justify-end gap-1">
+                    <div className="text-sm text-muted-foreground flex items-center justify-end gap-1">
                       <Clock className="h-2.5 w-2.5" />
                       {formatDistanceToNow(new Date(site.last_seen), { addSuffix: true })}
                     </div>

@@ -1,3 +1,4 @@
+import { InfoHint } from '@/components/ui/editorial';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -109,14 +110,8 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
   }
 
   return (
-    <Card className="p-6">
+    <div>
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold mb-1">Automated Insight Cards</h3>
-          <p className="text-sm text-muted-foreground">
-            Control which insight card types appear in your feed
-          </p>
-        </div>
 
         <div className="space-y-4">
           {/* Story Momentum - Free Feature */}
@@ -124,13 +119,10 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="story-momentum" className="font-medium">
-                  📈 Trending Stories
+                  Trending
                 </Label>
-                <Badge variant="secondary" className="text-xs">Free</Badge>
+                <InfoHint label="About trending">Shows most interacted-with stories in the last 24 hours</InfoHint>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Shows most interacted-with stories in the last 24 hours
-              </p>
             </div>
             <div className="flex items-center gap-2">
               {settings.story_momentum_enabled && (
@@ -138,6 +130,8 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
                   variant="ghost"
                   size="sm"
                   onClick={() => regenerateCard.mutate('story_momentum')}
+                  aria-label="Refresh trending card"
+                  title="Refresh"
                   disabled={regenerateCard.isPending}
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -158,13 +152,11 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="social-proof" className="font-medium">
-                  👥 Community Stats
+                  Community stats
                 </Label>
-                <Badge variant="default" className="text-xs">Premium</Badge>
+                <InfoHint label="About community stats">Shows reader counts, peak times, and community milestones</InfoHint>
+                <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Shows reader counts, peak times, and community milestones
-              </p>
             </div>
             <div className="flex items-center gap-2">
               {settings.social_proof_enabled && (
@@ -172,6 +164,8 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
                   variant="ghost"
                   size="sm"
                   onClick={() => regenerateCard.mutate('social_proof')}
+                  aria-label="Refresh community stats card"
+                  title="Refresh"
                   disabled={regenerateCard.isPending || !settings.is_premium_tier}
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -193,13 +187,11 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="play-mode" className="font-medium">
-                  🎮 Play Mode
+                  Play mode
                 </Label>
-                <Badge variant="default" className="text-xs">Premium</Badge>
+                <InfoHint label="About play mode">Swipe-based interface to discover stories across all feeds</InfoHint>
+                <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Swipe-based interface to discover stories across all feeds
-              </p>
             </div>
             <Switch
               id="play-mode"
@@ -217,13 +209,11 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="quiz-cards" className="font-medium">
-                    🧠 Quiz Cards
+                    Quiz cards
                   </Label>
-                  <Badge variant="default" className="text-xs">Premium</Badge>
+                <InfoHint label="About quiz cards">AI-generated quiz questions based on your feed content</InfoHint>
+                  <Badge variant="default" className="text-sm">Premium</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  AI-generated quiz questions based on your feed content
-                </p>
               </div>
               <Switch
                 id="quiz-cards"
@@ -245,7 +235,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
                 }}
                 className="w-full"
               >
-                Clear Quiz History
+                Clear quiz history
               </Button>
             )}
           </div>
@@ -255,13 +245,11 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="flashback" className="font-medium">
-                  📅 Flashback
+                  Flashback
                 </Label>
-                <Badge variant="default" className="text-xs">Premium</Badge>
+                <InfoHint label="About flashback">Shows what stories were popular 30 days ago</InfoHint>
+                <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Shows what stories were popular 30 days ago
-              </p>
             </div>
             <Switch
               id="flashback"
@@ -279,8 +267,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           ] as const).map(([key, label, desc]) => (
             <div key={key} className="flex items-center justify-between p-4 rounded-lg border">
               <div className="flex-1 space-y-1">
-                <Label htmlFor={key} className="font-medium">{label}</Label>
-                <p className="text-sm text-muted-foreground">{desc}</p>
+                <div className="flex items-center gap-2"><Label htmlFor={key} className="font-medium">{label}</Label><InfoHint label={`About ${label.toLowerCase()}`}>{desc}</InfoHint></div>
               </div>
               <Switch
                 id={key}
@@ -295,13 +282,11 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="sift-mode" className="font-medium">
-                  🗂️ Sift Mode
+                  Sift mode
                 </Label>
-                <Badge variant="default" className="text-xs">Premium</Badge>
+                <InfoHint label="About sift mode">Photo pile interface for browsing stories visually</InfoHint>
+                <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Photo pile interface for browsing stories visually
-              </p>
             </div>
             <Switch
               id="sift-mode"
@@ -316,13 +301,10 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
 
         {!settings.is_premium_tier && (
           <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border">
-            <p className="text-sm text-muted-foreground">
-              <strong>Upgrade to Premium</strong> to unlock Community Stats and Flashback cards.
-              These advanced insight types help build reader engagement and community.
-            </p>
+            <p className="text-sm text-muted-foreground">Premium cards need Pro.</p>
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 };

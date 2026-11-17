@@ -63,7 +63,7 @@ export const RegionalFeaturesSettings = ({
           placeholder="e.g., Hastings, Brighton, Lewes"
           className="max-w-md"
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {FEATURES.parliament ? "Used for parliamentary tracking and regional content filtering" : "Used to judge which stories are local"}
         </p>
       </div>
@@ -83,7 +83,7 @@ export const RegionalFeaturesSettings = ({
               <Building2 className="w-4 h-4" />
               Parliament: local MPs and debates
             </Label>
-            <p className="text-xs text-muted-foreground">Track local MPs and debates</p>
+            <p className="text-sm text-muted-foreground">Track local MPs and debates</p>
           </div>
           <Switch
             checked={parliamentaryEnabled}

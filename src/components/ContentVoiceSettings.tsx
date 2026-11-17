@@ -105,7 +105,7 @@ export const ContentVoiceSettings = ({
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-end text-xs text-muted-foreground" aria-live="polite">
+      <div className="flex justify-end text-sm text-muted-foreground" aria-live="polite">
         {saveState === 'saving' ? 'Saving' : saveState === 'error' ? 'Not saved' : 'Saved'}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

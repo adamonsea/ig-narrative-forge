@@ -207,7 +207,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
           <p className="text-sm font-medium">
             {classifiedCount} of {storyTotal ?? '—'} stories categorised
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {unclassified > 0 ? `${unclassified} still to classify` : 'Everything is up to date'}
           </p>
         </div>
@@ -248,7 +248,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                     <span className="font-medium">{c.name}</span>
                     {c.description && <span className="text-muted-foreground"> — {c.description}</span>}
                     {c.subcategories?.length ? (
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="block text-sm text-muted-foreground">
                         {c.subcategories.map((s: any) => s.name).join(', ')}
                       </span>
                     ) : null}
@@ -286,7 +286,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                 <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left">
                   <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-sm font-medium">{cat.name}</span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-sm">
                     {counts[cat.id] ?? 0}
                   </Badge>
                 </CollapsibleTrigger>
@@ -297,10 +297,10 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                 />
               </div>
               <CollapsibleContent className="border-t border-border p-3 space-y-3">
-                {cat.description && <p className="text-xs text-muted-foreground">{cat.description}</p>}
+                {cat.description && <p className="text-sm text-muted-foreground">{cat.description}</p>}
                 <div className={isLocal ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3 sm:max-w-[50%]'}>
                   {isLocal && <div className="space-y-1">
-                    <Label htmlFor={`radius-${cat.id}`} className="text-xs">
+                    <Label htmlFor={`radius-${cat.id}`} className="text-sm">
                       Radius (miles)
                     </Label>
                     <Input
@@ -318,7 +318,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                     />
                   </div>}
                   <div className="space-y-1">
-                    <Label htmlFor={`threshold-${cat.id}`} className="text-xs">
+                    <Label htmlFor={`threshold-${cat.id}`} className="text-sm">
                       Relevance threshold
                     </Label>
                     <Input
@@ -337,7 +337,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                   </div>
                 </div>
                 {subs.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Sub-categories: {subs.map((s) => s.name).join(', ')}
                   </p>
                 )}

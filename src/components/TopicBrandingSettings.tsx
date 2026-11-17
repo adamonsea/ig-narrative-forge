@@ -314,7 +314,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                 <p className="text-sm text-muted-foreground">
                   Click to upload logo or drag and drop
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   PNG, JPG, WebP, SVG up to 2MB
                 </p>
               </div>
@@ -361,7 +361,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
                 <p className="text-sm text-muted-foreground">
                   Click to upload app icon
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Square PNG, JPG, WebP up to 1MB
                 </p>
               </div>
@@ -392,7 +392,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
               maxLength={200}
               rows={3}
             />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {subheader.length}/200 characters
             </p>
           </div>
@@ -475,7 +475,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
 
             {colorMode !== 'random' && (
             <div className="mt-4 flex flex-wrap gap-2">
-              <p className="text-xs text-muted-foreground w-full mb-1">Quick presets{colorMode === 'cycle' ? ' (tap to add or remove)' : ''}:</p>
+              <p className="text-sm text-muted-foreground w-full mb-1">Quick presets{colorMode === 'cycle' ? ' (tap to add or remove)' : ''}:</p>
               {[
                 { name: 'Blue', value: '#3b82f6' },
                 { name: 'Green', value: '#22c55e' },

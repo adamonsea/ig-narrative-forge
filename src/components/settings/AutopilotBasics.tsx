@@ -121,12 +121,11 @@ export function AutopilotBasics({ topicId, onChanged }: { topicId: string; onCha
               )}
             >
               <span className="block text-sm font-medium">{PACE_LABELS[choice].label}</span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">{PACE_LABELS[choice].hint}</span>
             </button>
           ))}
         </div>
         {currentPace === null && (
-          <p className="text-xs text-muted-foreground">You have a custom pace. Change it under More options, or pick one above.</p>
+          <p className="text-sm text-muted-foreground">Custom pace</p>
         )}
       </div>
     </div>

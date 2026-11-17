@@ -119,7 +119,7 @@ export function LookForPanel({
     >
       {offered.length > 0 && (
         <div className="space-y-2 pt-1">
-          <p className="text-xs text-muted-foreground">Suggested from your recent stories</p>
+          <p className="text-sm text-muted-foreground">Suggested from your recent stories</p>
           <ul className="flex flex-wrap gap-2">
             {offered.map((s) => (
               <li key={s.value} className="inline-flex items-center rounded-full border border-dashed border-border text-sm text-muted-foreground">

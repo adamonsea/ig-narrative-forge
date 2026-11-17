@@ -82,7 +82,7 @@ export function CleanUpPastStories({ topicId, disabled }: { topicId: string; dis
                       {matches!.map((m) => (
                         <li key={m.story_id} className="p-2 text-sm">
                           <div className="line-clamp-1 font-medium text-foreground">{m.title}</div>
-                          <div className="mt-0.5 text-xs text-muted-foreground">Matches “{m.matched_keyword}” in the {m.field === "title" ? "headline" : "story"}</div>
+                          <div className="mt-0.5 text-sm text-muted-foreground">Matches “{m.matched_keyword}” in the {m.field === "title" ? "headline" : "story"}</div>
                         </li>
                       ))}
                     </ul>

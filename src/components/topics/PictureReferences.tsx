@@ -293,7 +293,7 @@ export function PictureReferences({
     return (
       <div className="space-y-3 pt-2">
         <div className="space-y-1">
-          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
             Appearance note
             <InfoHint label="About the appearance note">
               What this place actually looks like. Covers follow this note instead of guessing. Curatr drafts it —
@@ -301,7 +301,7 @@ export function PictureReferences({
             </InfoHint>
           </p>
           {describing === place && !draft ? (
-            <p className="flex items-center gap-2 text-xs text-muted-foreground"><Sparkles className="h-3 w-3 animate-pulse" /> Writing a description…</p>
+            <p className="flex items-center gap-2 text-sm text-muted-foreground"><Sparkles className="h-3 w-3 animate-pulse" /> Writing a description…</p>
           ) : (
             <Textarea
               value={draft}
@@ -316,7 +316,7 @@ export function PictureReferences({
         </div>
 
         <div className="space-y-2">
-          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
             Reference photos
             <InfoHint label="About reference photos">
               Up to {MAX_PHOTOS} photos, used so the architecture is right when a story is about this place.
@@ -345,11 +345,11 @@ export function PictureReferences({
             </div>
           )}
           {photoBusy === place && placeCandidates.length === 0 && (
-            <p className="flex items-center gap-2 text-xs text-muted-foreground"><Sparkles className="h-3 w-3 animate-pulse" /> Looking for photos…</p>
+            <p className="flex items-center gap-2 text-sm text-muted-foreground"><Sparkles className="h-3 w-3 animate-pulse" /> Looking for photos…</p>
           )}
           {placeCandidates.length > 0 && (
             <div className="space-y-1 rounded-md border p-2">
-              <p className="text-xs text-muted-foreground">Found automatically — tap the ones that look right</p>
+              <p className="text-sm text-muted-foreground">Found automatically — tap the ones that look right</p>
               <div className="flex flex-wrap gap-2">
                 {placeCandidates.map((candidate) => (
                   <button
@@ -371,7 +371,7 @@ export function PictureReferences({
               <ImageIcon className="h-3 w-3 mr-1" />
               {photoBusy === place ? 'Working…' : 'Find more photos'}
             </Button>
-            <label className="text-xs underline cursor-pointer">
+            <label className="text-sm underline cursor-pointer">
               Upload
               <input
                 type="file"
@@ -393,7 +393,7 @@ export function PictureReferences({
               value={photoLink[place] ?? ''}
               onChange={(e) => setPhotoLink((prev) => ({ ...prev, [place]: e.target.value }))}
               placeholder="Paste an image link…"
-              className="h-8 text-xs flex-1 min-w-[160px]"
+              className="h-8 text-sm flex-1 min-w-[160px]"
             />
             <Button
               size="sm"
@@ -477,7 +477,7 @@ export function PictureReferences({
       )}
 
       {pending.length > 0 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {pending.length === 1 ? '1 place is' : `${pending.length} places are`} awaiting confirmation.
         </p>
       )}
@@ -518,7 +518,7 @@ export function PictureReferences({
                   )}
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{place}</span>
-                    <span className="block text-xs text-muted-foreground">
+                    <span className="block text-sm text-muted-foreground">
                       {placeConfirmed
                         ? `${(photos[place] || []).length} ${((photos[place] || []).length === 1) ? 'photo' : 'photos'} · ready`
                         : 'Awaiting your confirmation'}
@@ -557,9 +557,9 @@ export function PictureReferences({
         </button>
         {suggestionsOpen && (
           <div className="mt-3 space-y-2">
-            {suggestionsLoading && <p className="text-xs text-muted-foreground">Looking through your recent stories…</p>}
+            {suggestionsLoading && <p className="text-sm text-muted-foreground">Looking through your recent stories…</p>}
             {!suggestionsLoading && suggestions.length === 0 && (
-              <p className="text-xs text-muted-foreground">Nothing new suggested right now — places your stories mention will appear here.</p>
+              <p className="text-sm text-muted-foreground">Nothing new suggested right now — places your stories mention will appear here.</p>
             )}
             {suggestions.map((suggestion) => (
               <div key={suggestion.value} className="flex items-start justify-between gap-3 rounded-md border p-2">
@@ -567,7 +567,7 @@ export function PictureReferences({
                   <p className="text-sm font-medium">{suggestion.value}</p>
                   <button
                     type="button"
-                    className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                    className="text-sm text-muted-foreground underline-offset-2 hover:underline"
                     onClick={() => setOpenSample(openSample === suggestion.value ? null : suggestion.value)}
                   >
                     Seen in {suggestion.count} recent {suggestion.count === 1 ? 'story' : 'stories'}
@@ -575,7 +575,7 @@ export function PictureReferences({
                   {openSample === suggestion.value && (
                     <ul className="mt-1 space-y-0.5">
                       {suggestion.sampleTitles.map((title) => (
-                        <li key={title} className="truncate text-xs text-muted-foreground">“{title}”</li>
+                        <li key={title} className="truncate text-sm text-muted-foreground">“{title}”</li>
                       ))}
                     </ul>
                   )}
@@ -589,7 +589,7 @@ export function PictureReferences({
               </div>
             ))}
             {suggestions.length > 0 && (
-              <p className="text-[11px] text-muted-foreground">Dismissed suggestions are never offered again.</p>
+              <p className="text-sm text-muted-foreground">Dismissed suggestions are never offered again.</p>
             )}
           </div>
         )}

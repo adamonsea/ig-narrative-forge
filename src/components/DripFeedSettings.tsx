@@ -132,7 +132,7 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm">Release interval</Label>
-              <span className="text-xs text-muted-foreground">{config.drip_release_interval_hours}h</span>
+              <span className="text-sm text-muted-foreground">{config.drip_release_interval_hours}h</span>
             </div>
             <Slider
               value={[config.drip_release_interval_hours]}
@@ -145,7 +145,7 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm">Stories per release</Label>
-              <span className="text-xs text-muted-foreground">{config.drip_stories_per_release}</span>
+              <span className="text-sm text-muted-foreground">{config.drip_stories_per_release}</span>
             </div>
             <Slider
               value={[config.drip_stories_per_release]}
@@ -159,28 +159,28 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
             <Label className="text-sm">Active hours (UTC)</Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Start</span>
+                <span className="text-sm text-muted-foreground">Start</span>
                 <Slider
                   value={[config.drip_start_hour]}
                   onValueChange={([v]) => updateConfig('drip_start_hour', Math.min(v, config.drip_end_hour - 1))}
                   min={0} max={23} step={1}
                 />
-                <div className="text-center text-xs font-medium">{formatTime(config.drip_start_hour)}</div>
+                <div className="text-center text-sm font-medium">{formatTime(config.drip_start_hour)}</div>
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">End</span>
+                <span className="text-sm text-muted-foreground">End</span>
                 <Slider
                   value={[config.drip_end_hour]}
                   onValueChange={([v]) => updateConfig('drip_end_hour', Math.max(v, config.drip_start_hour + 1))}
                   min={1} max={24} step={1}
                 />
-                <div className="text-center text-xs font-medium">{formatTime(config.drip_end_hour)}</div>
+                <div className="text-center text-sm font-medium">{formatTime(config.drip_end_hour)}</div>
               </div>
             </div>
           </div>
 
           {/* Preview */}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Up to {totalStories} stories across {slots} slots, {formatTime(config.drip_start_hour)}–{formatTime(config.drip_end_hour)}
           </p>
 

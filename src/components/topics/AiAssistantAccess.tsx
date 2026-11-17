@@ -128,7 +128,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
           <div>
             <div className="flex items-center gap-2">
               <Label className="text-sm font-medium">AI assistants</Label>
-              <Badge variant="secondary" className="text-[10px]">Pro</Badge>
+              <Badge variant="secondary" className="text-sm">Pro</Badge>
             </div>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
               Connect {topicName} to ChatGPT or Claude, so readers can ask questions and get answers straight from your published stories — never anyone else's.
@@ -143,13 +143,13 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                 <li key={title} className="flex items-start gap-2 rounded-lg border border-border bg-background/60 p-3">
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <div>
-                    <p className="text-xs font-medium">{title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{body}</p>
+                    <p className="text-sm font-medium">{title}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{body}</p>
                   </div>
                 </li>
               ))}
             </ul>
-            {saveError && <p className="mt-1 text-xs text-destructive">Not saved</p>}
+            {saveError && <p className="mt-1 text-sm text-destructive">Not saved</p>}
           </div>
         </div>
         <Switch checked={enabled} onCheckedChange={(checked) => persist({ mcp_enabled: checked })} />
@@ -158,7 +158,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
       {enabled && (
         <div className="space-y-5 rounded-xl border border-border bg-muted/20 p-5">
           <div className="space-y-2">
-            <Label className="text-xs font-medium uppercase text-muted-foreground">Who can connect</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Who can connect</Label>
             <div className="flex flex-wrap gap-2">
               {(["open", "key"] as const).map((option) => (
                 <button
@@ -174,7 +174,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {access === "open"
                 ? "Any assistant can read this feed, just like your public website."
                 : "Only people you give a key to can connect."}
@@ -182,9 +182,9 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-medium uppercase text-muted-foreground">Connection address</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Connection address</Label>
             <div className="flex items-center gap-2">
-              <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-border bg-background px-3 py-2 text-xs">{endpoint}</code>
+              <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-border bg-background px-3 py-2 text-sm">{endpoint}</code>
               <Button variant="outline" size="sm" onClick={() => copy(endpoint, "endpoint")}>
                 {copied === "endpoint" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
@@ -198,7 +198,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
           {access === "key" && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium uppercase text-muted-foreground">Keys</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Keys</Label>
                 <Button variant="outline" size="sm" onClick={createKey} disabled={creating}>
                   {creating ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <KeyRound className="mr-2 h-3.5 w-3.5" />}
                   New key
@@ -207,9 +207,9 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
 
               {newKey && (
                 <div className="rounded-lg border border-pop/40 bg-background p-3">
-                  <p className="mb-2 text-xs text-muted-foreground">Copy this now — it is shown once.</p>
+                  <p className="mb-2 text-sm text-muted-foreground">Copy this now — it is shown once.</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 overflow-x-auto whitespace-nowrap text-xs">{newKey}</code>
+                    <code className="flex-1 overflow-x-auto whitespace-nowrap text-sm">{newKey}</code>
                     <Button variant="outline" size="sm" onClick={() => copy(newKey, "key")}>
                       {copied === "key" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
@@ -218,11 +218,11 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
               )}
 
               {keys.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No keys yet.</p>
+                <p className="text-sm text-muted-foreground">No keys yet.</p>
               ) : (
                 <ul className="divide-y divide-border rounded-lg border border-border bg-background">
                   {keys.map((key) => (
-                    <li key={key.id} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
+                    <li key={key.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                       <span className="font-mono">{key.key_prefix}…</span>
                       <span className="text-muted-foreground">
                         {key.last_used_at ? `Last used ${new Date(key.last_used_at).toLocaleDateString()}` : "Never used"}
@@ -238,7 +238,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
           )}
 
           {usageCount !== null && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {usageCount === 0 ? "No assistant reads in the last 7 days." : `${usageCount} assistant read${usageCount === 1 ? "" : "s"} in the last 7 days.`}
             </p>
           )}
@@ -297,7 +297,7 @@ const SetupGuide = ({ tool, endpoint, topicName, needsKey }: SetupGuideProps) =>
         <ol className="space-y-3">
           {steps.map((step, index) => (
             <li key={step} className="flex items-start gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-medium text-background">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-medium text-background">
                 {index + 1}
               </span>
               <span className="pt-0.5 text-sm text-muted-foreground">{step}</span>
@@ -306,19 +306,19 @@ const SetupGuide = ({ tool, endpoint, topicName, needsKey }: SetupGuideProps) =>
         </ol>
 
         <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
-          <Label className="text-xs font-medium uppercase text-muted-foreground">Address to paste</Label>
+          <Label className="text-sm font-medium text-muted-foreground">Address to paste</Label>
           <div className="flex items-center gap-2">
-            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-md border border-border bg-background px-3 py-2 text-xs">{endpoint}</code>
+            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-md border border-border bg-background px-3 py-2 text-sm">{endpoint}</code>
             <Button variant="outline" size="sm" onClick={copy}>
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
           {needsKey && (
-            <p className="text-xs text-muted-foreground">You'll also need a key from the Keys list below — create one if you haven't.</p>
+            <p className="text-sm text-muted-foreground">You'll also need a key from the Keys list below — create one if you haven't.</p>
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Once connected, ask things like "What's new in {topicName} this week?" — answers come only from your published stories, with the original publication credited.
         </p>
       </DialogContent>

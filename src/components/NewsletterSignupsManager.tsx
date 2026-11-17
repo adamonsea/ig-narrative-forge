@@ -40,13 +40,13 @@ interface NewsletterSignupsManagerProps {
 const getNotificationBadge = (type: string) => {
   switch (type) {
     case 'instant':
-      return <Badge variant="default" className="text-xs">Instant</Badge>;
+      return <Badge variant="default" className="text-sm">Instant</Badge>;
     case 'daily':
-      return <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Daily</Badge>;
+      return <Badge variant="secondary" className="text-sm bg-blue-500/10 text-blue-600 border-blue-200">Daily</Badge>;
     case 'weekly':
-      return <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-200">Weekly</Badge>;
+      return <Badge variant="outline" className="text-sm bg-purple-500/10 text-purple-600 border-purple-200">Weekly</Badge>;
     default:
-      return <Badge variant="outline" className="text-xs">{type}</Badge>;
+      return <Badge variant="outline" className="text-sm">{type}</Badge>;
   }
 };
 
@@ -325,7 +325,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-primary uppercase">
+                        <span className="text-sm font-semibold text-primary">
                           {sub.first_name ? sub.first_name.charAt(0) : sub.email.charAt(0)}
                         </span>
                       </div>
@@ -333,7 +333,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                         {sub.first_name && (
                           <div className="font-medium text-sm">{sub.first_name}</div>
                         )}
-                        <div className={`truncate max-w-[180px] ${sub.first_name ? 'text-xs text-muted-foreground' : 'font-medium'}`}>
+                        <div className={`truncate max-w-[180px] ${sub.first_name ? 'text-sm text-muted-foreground' : 'font-medium'}`}>
                           {sub.email}
                         </div>
                       </div>
@@ -351,11 +351,11 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                   )}
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
-                      <Badge variant="outline" className="text-xs w-fit capitalize">
+                      <Badge variant="outline" className="text-sm w-fit capitalize">
                         {sub.signup_source === 'widget' ? 'Widget' : 'Feed'}
                       </Badge>
                       {sub.source_domain && (
-                        <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">
+                        <span className="text-sm text-muted-foreground truncate max-w-[140px]">
                           {sub.source_domain}
                         </span>
                       )}
@@ -363,9 +363,9 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                   </TableCell>
                   <TableCell>
                     {sub.is_verified ? (
-                      <Badge variant="default" className="text-xs bg-emerald-500">Verified</Badge>
+                      <Badge variant="default" className="text-sm bg-emerald-500">Verified</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">Pending</Badge>
+                      <Badge variant="outline" className="text-sm text-amber-600 border-amber-300">Pending</Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -375,7 +375,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
                         <div className="font-medium">
                           {format(new Date(sub.created_at), 'MMM d, yyyy')}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-sm text-muted-foreground">
                           {format(new Date(sub.created_at), 'HH:mm')}
                         </div>
                       </div>

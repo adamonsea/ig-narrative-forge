@@ -188,14 +188,14 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
             step={1}
             onValueChange={(v) => setStrength(v[0])}
           />
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <div className="flex justify-between text-sm text-muted-foreground">
             <span>{LOCALITY_DIAL[1].label}</span>
             <span>{LOCALITY_DIAL[5].label}</span>
           </div>
           <p className="text-sm text-muted-foreground">{dial.blurb}</p>
 
           {preview && (
-            <p className="text-xs text-muted-foreground border-t pt-3">
+            <p className="text-sm text-muted-foreground border-t pt-3">
               Of your last {preview.total} arrivals, <strong className="text-foreground">{preview.published}</strong>{' '}
               would publish on their own and {preview.review} would wait for you.
               {' '}({preview.tiers.home} named your town, {preview.tiers.nearby + preview.tiers.far} a
@@ -210,7 +210,7 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
             <MapPin className="w-3.5 h-3.5" />
             Neighbouring places
           </Label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Name the places next door. Tap one to switch it between near and further out —
             further out places need a bigger story to get in.
           </p>
@@ -258,7 +258,7 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
         <div className="flex items-start justify-between gap-4 border-t pt-4">
           <div className="space-y-1">
             <Label htmlFor="big-story-override">Let big stories through</Label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               A major incident, a large sum of money or one of your named organisations can carry a
               story in from further away.
             </p>

@@ -5,7 +5,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Disclosure, SaveIndicator, type SaveState } from '@/components/ui/editorial';
+import { Disclosure, InfoHint, SaveIndicator, type SaveState } from '@/components/ui/editorial';
 import { Check, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -157,13 +157,13 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
   };
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
+    return <div className="text-sm text-muted-foreground">Loading…</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <div><Label className="text-sm">Level of control</Label><p className="mt-1 text-xs text-muted-foreground">Choose the closest starting point, then refine it below.</p></div>
+        <Label className="text-sm">Level of control</Label>
         <SaveIndicator state={saveState} />
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
@@ -173,23 +173,17 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
           return (
             <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-md p-3 text-left transition-colors ${active ? 'border-purple-bright/50 bg-purple-soft/60' : 'hover:border-purple-bright/40'}`}>
               <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-purple-bright" />}{group.label}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">{group.summary}</span>
             </Button>
           );
         })}
       </div>
 
-      <div className="border-y border-border py-3">
-        <p className="text-sm font-medium">Current behaviour</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{MODE_DESCRIPTIONS[automationMode]}</p>
-      </div>
-
       <Disclosure label="Fine-tune the details">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <div>
+            <div className="flex items-center gap-1.5">
               <Label className="text-sm">Exact behaviour</Label>
-              <p className="mt-1 text-xs text-muted-foreground">{MODE_LABELS[automationMode]} — {MODE_DESCRIPTIONS[automationMode]}</p>
+              <InfoHint label="About this behaviour">{MODE_DESCRIPTIONS[automationMode]}</InfoHint>
             </div>
             <Select value={automationMode} onValueChange={(v) => handleModeChange(v as AutomationMode)}>
               <SelectTrigger className="w-[160px] shrink-0 text-sm" aria-label="Exact automation behaviour"><SelectValue /></SelectTrigger>
@@ -200,8 +194,8 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
           {(automationMode === 'auto_gather' || automationMode === 'holiday') && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Check for new stories every</Label>
-                <span className="text-xs text-muted-foreground">{scrapeFrequency}h</span>
+                <Label className="text-sm">Check every</Label>
+                <span className="text-sm text-muted-foreground">{scrapeFrequency}h</span>
               </div>
               <Slider
                 value={[scrapeFrequency]}
@@ -214,8 +208,8 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
           {(automationMode === 'auto_simplify' || automationMode === 'holiday') && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Quality a story needs to be prepared</Label>
-                <span className="text-xs text-muted-foreground">{qualityThreshold}%</span>
+                <Label className="text-sm">Story quality bar</Label>
+                <span className="text-sm text-muted-foreground">{qualityThreshold}%</span>
               </div>
               <Slider
                 value={[qualityThreshold]}
@@ -236,8 +230,8 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
               {(automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday)) && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm">Quality a story needs for artwork</Label>
-                    <span className="text-xs text-muted-foreground">{illustrationThreshold}%</span>
+                    <Label className="text-sm">Artwork quality bar</Label>
+                    <span className="text-sm text-muted-foreground">{illustrationThreshold}%</span>
                   </div>
                   <Slider
                     value={[illustrationThreshold]}
@@ -252,8 +246,8 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
       </Disclosure>
 
       {automationMode !== 'manual' && nextRunAt && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="h-4 w-4" />
           <span>
             Next run: {new Date(nextRunAt) > new Date()
               ? `in ${Math.round((new Date(nextRunAt).getTime() - Date.now()) / (1000 * 60 * 60))}h`
