@@ -1,12 +1,12 @@
 # Workspace rule breaks
 
-Checked against the knowledge rules and the new /design page. Nothing has been fixed. Counts are the lowest confirmed; a few legacy Sources screens that owners can't reach are left out.
+Checked against the knowledge rules and the /design page. **All groups done 17 Nov 2026** (parked or hidden panels left alone). Counts are the lowest confirmed; a few legacy Sources screens that owners can't reach are left out.
 
 Rule key: **Size** = text outside 32/24/18/16/14 or tiny text · **Caps** = uppercase or spaced-out labels · **Colour** = raw colours instead of the workspace palette · **Purple** = violet used as a button fill · **Words** = helper lines, Title Case, emoji, long labels · **Modal** = pop-up used for editing instead of the side drawer · **Spinner** = spinner where a skeleton belongs · **Motion** = movement other than live-pulse, flow-draw, settle-in · **Space / Radius** = off the 4–48 scale, or corners other than 8 / 12 / round
 
 ---
 
-## 1. Shared building blocks (done 17 Nov; health dots on tinted cards keep the darker green for contrast)
+## 1. Shared building blocks (done 17 Nov; health dots on tinted cards keep the darker green for contrast; one shared `WorkspaceDrawer` added and shown on /design; /design live-pulse shows white on the mint Live now bar and pop green elsewhere, as Adam chose)
 
 - **Desk motion doesn't match /design**: the Live now dot uses a white "ping", not `live-pulse`. The `live-pulse` style itself pulses violet (index.css 461).
 - **Health dots** use the dark green `mint-ink`, but the rules say `pop` (sources/SourceCard.tsx 18).
@@ -31,7 +31,7 @@ Rule key: **Size** = text outside 32/24/18/16/14 or tiny text · **Caps** = uppe
 - **No shared error state** exists yet ("one sentence + one fix"), so every screen does its own.
 
 ## 2. Desk — fixed 17 Nov 2026
-Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPanel, MultiTenantStoriesList, SlideEditor and ReelStudio are no longer shown on the Desk, so they were left alone.
+Shared drawer pass done 17 Nov: link editor, slide editor, animation instructions, Add story and Reel all open in `WorkspaceDrawer`. Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPanel and MultiTenantStoriesList are no longer shown on the Desk, so their colours and tiny text were left alone.
 
 - **Colour**:
   - The load-error banner is raw amber (UnifiedContentPipeline.tsx 363, 365).
@@ -56,7 +56,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Badge rows**: older approved cards show three badges (ApprovedStoriesPanel 608–623).
 - **Space**: StoryDrawer 10 lines, WaitingStoryDrawer 9, DeskEvents 13, StoryFilters 5. DeskCard actions use a 6px gap.
 
-## 3. Sources (done 17 Nov; the legacy edit-source pop-up is left for the shared drawer pass)
+## 3. Sources (done 17 Nov; edit-source and older-stories now open in the shared drawer — done)
 
 - **Size**:
   - Drawer and shelf titles are 20px: AddSourceSheet 70, NewsSourcePanel 67, EventSources 275, SourceShelves 36.
@@ -69,7 +69,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Spinner**: "Finding sources…" (SourceFinder 129) and the sparkline loading (SourceStorySparkline 99).
 - **Space**: AddSourceSheet 4, SourceShelves 4, NewsSourcePanel 9, EventSources 9.
 
-## 4. Settings (done 17 Nov; the AI-assistant connection, feed backups and email preview still open in a pop-up, waiting for the shared drawer. About page and donations keep their Save button — Adam to say whether auto-save replaces it)
+## 4. Settings (done 17 Nov; AI-assistant connection and email preview open in the shared drawer — done; About page and donations auto-save with the save dot, Save buttons removed — done; Categories shows one primary button at a time — done; tiny text in parked panels left alone)
 
 - **Size**:
   - Section and fold titles are 20px on phones (EditorialControlCenter 116, RememberedFold 75).
@@ -82,7 +82,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
   - Picture references: "Tap the ones that look right" and "Dismissed suggestions are never offered again." (PictureReferences 352, 592).
 - **Modal**: AI assistants connection (AiAssistantAccess 270), feed backups, email preview.
 - **Spinner / motion**: the release timing save spins (DripFeedSettings 121).
-- **Saving**: About page and donations still use a Save button. An earlier ask was "auto-save everywhere"; which do you want to keep?
+- **Saving**: done — About page and donations auto-save (Adam, 17 Nov).
 - **Radius / Space**: branding 4 places, Onboarding 2, PictureReferences 2, ContentVoice notes box. Space: CategoriesPanel 6, PictureReferences 7, AiAssistantAccess 5, WidgetAnalytics 5, EditorialControlCenter 13 lines.
 
 ## 5. Readership (done 17 Nov)
@@ -92,7 +92,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Spinner**: the funnel loads with a spinner (EngagementFunnel 57).
 - **Space**: 56px and 40px gaps (ReadershipPanel 83–84, 120).
 
-## 6. Dashboard and new-feed setup (done 17 Nov, except the backups and safety pop-ups, which wait for the shared drawer)
+## 6. Dashboard and new-feed setup (done 17 Nov; backups and feed safety open in the shared drawer — done)
 
 - **Size**:
   - The "Your feeds" heading is serif at 36px (Dashboard 55).
@@ -120,5 +120,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Space**: 5 lines.
 
 ---
+
+Not in this list and still open: the Widgets page (/dashboard/widgets) has tiny text in 17 places; it wasn't part of this audit.
 
 Already fine: delete confirmations use the confirm box (Reviews, Clean up, delete feed), which the rules allow.

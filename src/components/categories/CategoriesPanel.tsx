@@ -204,36 +204,36 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
         <div>
-          <p className="text-sm font-medium">
+          <p className="text-base font-medium">
             {classifiedCount} of {storyTotal ?? '—'} stories categorised
           </p>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="mt-1 text-sm text-muted-foreground">
             {unclassified > 0 ? `${unclassified} still to classify` : 'Everything is up to date'}
           </p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={runDiscovery} disabled={discovering}>
-            {discovering ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+            {discovering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
             Suggest categories
           </Button>
-          <Button size="sm" onClick={runClassification} disabled={classifying || parents.length === 0}>
-            {classifying ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+          <Button size="sm" variant={proposal?.categories?.length > 0 ? "outline" : "default"} onClick={runClassification} disabled={classifying || parents.length === 0}>
+            {classifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Classify stories
           </Button>
         </div>
       </div>
 
       {proposal?.categories?.length > 0 && (
-        <div className="rounded-xl border border-border p-4 space-y-2">
-          <p className="text-sm font-medium">Suggested categories for this feed</p>
+        <div className="rounded-xl border border-border p-4 space-y-3">
+          <p className="text-base font-medium">Suggested</p>
           <ul className="space-y-2">
             {proposal.categories.map((c: any) => {
               const id = `suggest-${c.slug}`;
               return (
-                <li key={c.slug} className="flex items-start gap-2.5 text-sm">
+                <li key={c.slug} className="flex items-start gap-3 text-base">
                   <Checkbox
                     id={id}
-                    className="mt-0.5"
+                    className="mt-1"
                     checked={selected.has(c.slug)}
                     onCheckedChange={(v) =>
                       setSelected((prev) => {
@@ -257,9 +257,9 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
               );
             })}
           </ul>
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 pt-2">
             <Button size="sm" onClick={addSelected} disabled={adding || selected.size === 0}>
-              {adding && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              {adding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add {selected.size} {selected.size === 1 ? 'category' : 'categories'}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setProposal(null)} disabled={adding}>
@@ -285,7 +285,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
               <div className="flex items-center justify-between gap-3 p-3">
                 <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left">
                   <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-medium">{cat.name}</span>
+                  <span className="text-base font-medium">{cat.name}</span>
                   <Badge variant="secondary" className="text-sm">
                     {counts[cat.id] ?? 0}
                   </Badge>

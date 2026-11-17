@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { WorkspaceDrawer } from '@/components/workspace/WorkspaceDrawer';
 import { InlineError } from '@/components/ui/editorial';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -184,24 +184,22 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
   };
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) reset();
-      }}
-    >
+    <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-2">
         <Plus className="w-4 h-4" />
         Story
       </Button>
 
-      <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle className="text-lg">Add a story</SheetTitle>
-          <SheetDescription className="sr-only">Paste text, add a link or upload a file.</SheetDescription>
-        </SheetHeader>
-
+      <WorkspaceDrawer
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) reset();
+        }}
+        title="Add a story"
+        srDescription="Paste text, add a link or upload a file."
+        size="xl"
+      >
         {error && <InlineError message={error} />}
 
         {!draft ? (
@@ -333,7 +331,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
             </div>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </WorkspaceDrawer>
+    </>
   );
 };

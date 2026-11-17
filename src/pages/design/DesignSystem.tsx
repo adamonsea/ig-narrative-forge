@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { InfoHint, InlineError, SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { RememberedFold } from "@/components/settings/RememberedFold";
@@ -241,7 +242,7 @@ export default function DesignSystem() {
               </section>
             </Spec>
             <div className="grid gap-6 md:grid-cols-2">
-              <Spec name="Side drawer">
+              <Spec name="Side drawer · WorkspaceDrawer, every editing view">
                 <Button variant="outline" onClick={() => setDrawer(true)}>Open drawer</Button>
               </Spec>
               <Spec name="RememberedFold">
@@ -290,9 +291,12 @@ export default function DesignSystem() {
           <Block id="motion" title="Motion">
             <div className="grid gap-6 md:grid-cols-3">
               <Spec name="live-pulse">
-                <div className="flex items-center gap-4">
-                  <span className="live-pulse h-3 w-3 rounded-full bg-pop" />
-                  <span className="text-sm text-muted-foreground">Anything live</span>
+                <div className="space-y-3">
+                  <div className="overflow-hidden rounded-xl"><LiveBar phone /></div>
+                  <div className="flex items-center gap-3">
+                    <span className="live-pulse h-3 w-3 rounded-full bg-pop" />
+                    <span className="text-sm text-muted-foreground">Elsewhere: pop green, never violet</span>
+                  </div>
                 </div>
               </Spec>
               <Spec name="flow-draw">
@@ -336,27 +340,28 @@ export default function DesignSystem() {
                   {phoneTab === "events" && <AttentionTag>1 to check</AttentionTag>}
                 </div>
               </Spec>
-              <Spec name="Bottom sheet">
+              <Spec name="Bottom sheet · the drawer on phones">
                 <Button variant="outline" onClick={() => setSheet(true)}>Open bottom sheet</Button>
               </Spec>
             </div>
           </Block>
         </div>
 
-        <Sheet open={drawer} onOpenChange={setDrawer}>
-          <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-xl">
-            <SheetHeader>
-              <SheetTitle className="text-lg font-semibold">{STORIES[0].title}</SheetTitle>
-              <SheetDescription className="text-sm">Eastbourne Herald · 2h ago</SheetDescription>
-            </SheetHeader>
-            <p className="text-base">Plans for a segregated cycle lane along Royal Parade will be redrawn after the consultation.</p>
-            <div className="flex items-center gap-2"><span className="text-sm font-medium">Tone</span><InfoHint label="About tone">How the story reads.</InfoHint></div>
-            <div className="mt-auto flex justify-between gap-2 border-t border-border pt-4">
+        <WorkspaceDrawer
+          open={drawer}
+          onOpenChange={setDrawer}
+          title={STORIES[0].title}
+          description="Eastbourne Herald · 2h ago"
+          footer={
+            <div className="flex w-full justify-between gap-2">
               <IconAction label="Archive"><Archive className="h-4 w-4" /></IconAction>
               <span className="flex gap-2"><Button variant="ghost">Skip</Button><Button><Check className="mr-1 h-4 w-4" />Publish</Button></span>
             </div>
-          </SheetContent>
-        </Sheet>
+          }
+        >
+          <p className="text-base">Plans for a segregated cycle lane along Royal Parade will be redrawn after the consultation.</p>
+          <div className="flex items-center gap-2"><span className="text-sm font-medium">Tone</span><InfoHint label="About tone">How the story reads.</InfoHint></div>
+        </WorkspaceDrawer>
         <Sheet open={sheet} onOpenChange={setSheet}>
           <SheetContent side="bottom" className="max-h-[85dvh] space-y-4 overflow-y-auto rounded-t-xl">
             <SheetHeader>

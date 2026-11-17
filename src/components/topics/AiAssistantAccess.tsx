@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { cn } from "@/lib/utils";
 
 const MCP_BASE = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/mcp-feed";
@@ -139,7 +139,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
       </div>
 
       {enabled && (
-        <div className="space-y-6 rounded-xl border border-border bg-muted/20 p-4">
+        <div className="space-y-6 rounded-xl border border-border bg-muted p-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium text-muted-foreground">Who can connect</Label>
             <div className="flex flex-wrap gap-2">
@@ -148,6 +148,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                   key={option}
                   type="button"
                   onClick={() => persist({ mcp_access: option })}
+                  aria-pressed={access === option}
                   className={cn(
                     "rounded-full border px-4 py-1.5 text-sm transition-colors",
                     access === option ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
@@ -157,18 +158,13 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                 </button>
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">
-              {access === "open"
-                ? "Any assistant can read this feed, just like your public website."
-                : "Only people you give a key to can connect."}
-            </p>
           </div>
 
           <div className="space-y-2">
             <Label className="text-sm font-medium text-muted-foreground">Connection address</Label>
             <div className="flex items-center gap-2">
               <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-border bg-background px-3 py-2 text-sm">{endpoint}</code>
-              <Button variant="outline" size="sm" onClick={() => copy(endpoint, "endpoint")}>
+              <Button variant="outline" size="icon" onClick={() => copy(endpoint, "endpoint")} aria-label="Copy address" title="Copy address">
                 {copied === "endpoint" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
@@ -193,7 +189,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                   <p className="mb-2 text-sm text-muted-foreground">Shown once.</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 overflow-x-auto whitespace-nowrap text-sm">{newKey}</code>
-                    <Button variant="outline" size="sm" onClick={() => copy(newKey, "key")}>
+                    <Button variant="outline" size="icon" onClick={() => copy(newKey, "key")} aria-label="Copy key" title="Copy key">
                       {copied === "key" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -210,8 +206,8 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                       <span className="text-muted-foreground">
                         {key.last_used_at ? `Last used ${new Date(key.last_used_at).toLocaleDateString()}` : "Never used"}
                       </span>
-                      <Button variant="ghost" size="sm" onClick={() => revokeKey(key.id)} aria-label="Revoke key">
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" onClick={() => revokeKey(key.id)} aria-label="Revoke key" title="Revoke key">
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </li>
                   ))}
@@ -240,6 +236,7 @@ interface SetupGuideProps {
 
 const SetupGuide = ({ tool, endpoint, topicName, needsKey }: SetupGuideProps) => {
   const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const steps =
     tool === "ChatGPT"
@@ -267,41 +264,31 @@ const SetupGuide = ({ tool, endpoint, topicName, needsKey }: SetupGuideProps) =>
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Add to {tool}</Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add {topicName} to {tool}</DialogTitle>
-          <DialogDescription>Six short steps. You only do this once.</DialogDescription>
-        </DialogHeader>
-
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>Add to {tool}</Button>
+      <WorkspaceDrawer open={open} onOpenChange={setOpen} title={`Add to ${tool}`} srDescription={`Connect ${topicName} to ${tool}`}>
         <ol className="space-y-3">
           {steps.map((step, index) => (
             <li key={step} className="flex items-start gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-medium text-background">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground tabular-nums">
                 {index + 1}
               </span>
-              <span className="pt-0.5 text-sm text-muted-foreground">{step}</span>
+              <span className="text-base">{step}</span>
             </li>
           ))}
         </ol>
 
-        <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
-          <Label className="text-sm font-medium text-muted-foreground">Address to paste</Label>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Address</Label>
           <div className="flex items-center gap-2">
-            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-border bg-background px-3 py-2 text-sm">{endpoint}</code>
-            <Button variant="outline" size="sm" onClick={copy}>
+            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-border bg-muted px-3 py-2 text-sm">{endpoint}</code>
+            <Button variant="outline" size="icon" onClick={copy} aria-label="Copy address" title="Copy address">
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
-          {needsKey && (
-            <p className="text-sm text-muted-foreground">Needs a key.</p>
-          )}
+          {needsKey && <p className="text-sm text-muted-foreground">Needs a key.</p>}
         </div>
-
-      </DialogContent>
-    </Dialog>
+      </WorkspaceDrawer>
+    </>
   );
 };

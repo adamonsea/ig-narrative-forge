@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { WorkspaceDrawer } from '@/components/workspace/WorkspaceDrawer';
+import { InfoHint } from '@/components/ui/editorial';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -1543,50 +1544,36 @@ export const UnifiedSourceManager = ({
         </div>
       )}
 
-      {/* Backfill Modal */}
-      <Dialog open={showBackfillModal} onOpenChange={(open) => { setShowBackfillModal(open); if (!open) setSourceToBackfill(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Gather older stories</DialogTitle>
-            <DialogDescription className="sr-only">Choose how far back to gather.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="backfill-age">How far back</Label>
-              <Select 
-                value={backfillMaxAgeDays.toString()} 
-                onValueChange={(v) => setBackfillMaxAgeDays(Number(v))}
-              >
-                <SelectTrigger id="backfill-age">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="30">Last 30 days</SelectItem>
-                  <SelectItem value="60">Last 60 days</SelectItem>
-                  <SelectItem value="100">Last 100 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowBackfillModal(false); setSourceToBackfill(null); }}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => handleBackfill(backfillMaxAgeDays, sourceToBackfill || undefined)}
-              disabled={gatheringAll}
-            >
-              {gatheringAll ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
+      {/* Gather older stories for one source */}
+      <WorkspaceDrawer
+        open={showBackfillModal}
+        onOpenChange={(open) => { setShowBackfillModal(open); if (!open) setSourceToBackfill(null); }}
+        title="Gather older stories"
+        srDescription="Choose how far back to gather."
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => { setShowBackfillModal(false); setSourceToBackfill(null); }}>Cancel</Button>
+            <Button onClick={() => handleBackfill(backfillMaxAgeDays, sourceToBackfill || undefined)} disabled={gatheringAll}>
+              <Download className="mr-2 h-4 w-4" />
               Gather
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <Label htmlFor="backfill-age" className="text-sm font-medium">How far back</Label>
+          <Select value={backfillMaxAgeDays.toString()} onValueChange={(v) => setBackfillMaxAgeDays(Number(v))}>
+            <SelectTrigger id="backfill-age"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="60">Last 60 days</SelectItem>
+              <SelectItem value="100">Last 100 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </WorkspaceDrawer>
 
       {/* Add source: link → kind → that kind's fields, with "Find sources" on step one */}
       {mode === 'topic' && topicId && (
@@ -1958,83 +1945,19 @@ export const UnifiedSourceManager = ({
       </div>
       )}
 
-      {/* Edit Source Settings Dialog */}
-      <Dialog open={!!editingSource} onOpenChange={(open) => !open && setEditingSource(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Source Settings</DialogTitle>
-            <DialogDescription>
-              Update settings for {editingSource?.source_name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="edit-feed-url">Feed URL</Label>
-              <Input
-                id="edit-feed-url"
-                value={editingFeedUrl}
-                onChange={(e) => setEditingFeedUrl(e.target.value)}
-                placeholder="https://example.com/feed"
-              />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="edit-trust-relevance"
-                  checked={editTrustContentRelevance}
-                  onCheckedChange={(checked) => setEditTrustContentRelevance(checked as boolean)}
-                />
-                <div className="space-y-1">
-                  <Label htmlFor="edit-trust-relevance" className="text-base font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Trust everything
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Takes everything from the page — keep the window short.
-                  </p>
-                </div>
-              </div>
-
-              {editTrustContentRelevance && (
-                <div className="ml-7 space-y-3">
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      Trusted sources take everything from the page — keep the window short.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <div>
-                    <Label htmlFor="edit-max-age">Maximum Content Age</Label>
-                    <Select
-                      value={editTrustedMaxAgeDays.toString()}
-                      onValueChange={(value) => setEditTrustedMaxAgeDays(parseInt(value))}
-                    >
-                      <SelectTrigger id="edit-max-age" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Last 24 hours</SelectItem>
-                        <SelectItem value="2">Last 48 hours</SelectItem>
-                        <SelectItem value="3">Last 3 days</SelectItem>
-                        <SelectItem value="7">Last 7 days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingSource(null)}>
-              Cancel
-            </Button>
-            <Button 
+      {/* Edit a source */}
+      <WorkspaceDrawer
+        open={!!editingSource}
+        onOpenChange={(open) => !open && setEditingSource(null)}
+        title={editingSource?.source_name || 'Source'}
+        srDescription="Edit this source"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setEditingSource(null)}>Cancel</Button>
+            <Button
               onClick={async () => {
                 if (editingSource && editingFeedUrl.trim()) {
-                  await handleUpdateSource(editingSource.id, { 
+                  await handleUpdateSource(editingSource.id, {
                     feed_url: editingFeedUrl.trim(),
                     scraping_config: {
                       ...editingSource.scraping_config,
@@ -2042,28 +1965,43 @@ export const UnifiedSourceManager = ({
                       trusted_max_age_days: editTrustedMaxAgeDays
                     }
                   });
-                  toast({
-                    title: 'Saved',
-                    description: `Settings for ${editingSource.source_name} have been updated`,
-                  });
                   setEditingSource(null);
                   loadSources();
                 }
               }}
               disabled={!editingFeedUrl.trim() || loading}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Save Changes'
-              )}
+              Save
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <Label htmlFor="edit-feed-url" className="text-sm font-medium">Link</Label>
+          <Input id="edit-feed-url" value={editingFeedUrl} onChange={(e) => setEditingFeedUrl(e.target.value)} placeholder="https://example.com/feed" />
+        </div>
+        <div className="flex items-start gap-3">
+          <Checkbox id="edit-trust-relevance" checked={editTrustContentRelevance} onCheckedChange={(checked) => setEditTrustContentRelevance(checked as boolean)} />
+          <Label htmlFor="edit-trust-relevance" className="flex items-center gap-2 text-base font-normal leading-none">
+            Trust everything
+            <InfoHint label="About trust everything">Takes everything from the page. Keep the window short.</InfoHint>
+          </Label>
+        </div>
+        {editTrustContentRelevance && (
+          <div className="space-y-2">
+            <Label htmlFor="edit-max-age" className="text-sm font-medium">How recent</Label>
+            <Select value={editTrustedMaxAgeDays.toString()} onValueChange={(value) => setEditTrustedMaxAgeDays(parseInt(value))}>
+              <SelectTrigger id="edit-max-age" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Last 24 hours</SelectItem>
+                <SelectItem value="2">Last 48 hours</SelectItem>
+                <SelectItem value="3">Last 3 days</SelectItem>
+                <SelectItem value="7">Last 7 days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </WorkspaceDrawer>
     </div>
   );
 };

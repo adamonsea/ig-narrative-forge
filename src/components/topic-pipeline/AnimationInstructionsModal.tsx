@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { WorkspaceDrawer } from '@/components/workspace/WorkspaceDrawer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Sparkles } from 'lucide-react';
@@ -94,12 +94,21 @@ export function AnimationInstructionsModal({
   if (!story) return null;
   
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="text-lg">Animate picture</SheetTitle>
-          <SheetDescription className="sr-only">Describe what should move in the picture.</SheetDescription>
-        </SheetHeader>
+    <WorkspaceDrawer
+      open={isOpen}
+      onOpenChange={(open) => !open && handleClose()}
+      title="Animate picture"
+      srDescription="Describe what should move in the picture."
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" onClick={handleClose} disabled={isAnimating}>Cancel</Button>
+          <Button onClick={handleGenerate} disabled={isAnimating || hasInsufficientCredits}>
+            {isAnimating ? "Animating" : "Animate"}
+          </Button>
+        </>
+      }
+    >
 
         {isAiGenerated && (
           <div className="space-y-2">
@@ -143,14 +152,6 @@ export function AnimationInstructionsModal({
             </span>
           )}
         </div>
-
-        <div className="mt-auto flex justify-end gap-2 border-t pt-4">
-          <Button variant="ghost" onClick={handleClose} disabled={isAnimating}>Cancel</Button>
-          <Button onClick={handleGenerate} disabled={isAnimating || hasInsufficientCredits}>
-            {isAnimating ? "Animating" : "Animate"}
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+    </WorkspaceDrawer>
   );
 }

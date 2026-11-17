@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { Users, Plus, Trash2, Eye, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -301,18 +301,19 @@ export const EmailSegmentsManager = ({ topicId }: EmailSegmentsManagerProps) => 
         Preview the standard briefing
       </Button>
 
-      <Dialog open={!!previewHtml} onOpenChange={(open) => !open && setPreviewHtml(null)}>
-        <DialogContent className="max-w-3xl h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Email preview — {previewLabel}</DialogTitle>
-          </DialogHeader>
-          <iframe
-            title={`Email preview for ${previewLabel}`}
-            srcDoc={previewHtml || ""}
-            className="flex-1 w-full rounded-lg border bg-white"
-          />
-        </DialogContent>
-      </Dialog>
+      <WorkspaceDrawer
+        open={!!previewHtml}
+        onOpenChange={(open) => !open && setPreviewHtml(null)}
+        title={previewLabel}
+        srDescription="Email preview"
+        size="xl"
+      >
+        <iframe
+          title={`Email preview for ${previewLabel}`}
+          srcDoc={previewHtml || ""}
+          className="h-[70dvh] w-full rounded-lg border border-border bg-background"
+        />
+      </WorkspaceDrawer>
     </div>
   );
 };

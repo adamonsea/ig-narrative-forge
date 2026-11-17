@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { SaveIndicator, type SaveState } from '@/components/ui/editorial';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, X, Loader2, ExternalLink } from 'lucide-react';
@@ -38,7 +38,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
   const [aboutPageEnabled, setAboutPageEnabled] = useState(config.about_page_enabled ?? false);
   const [aboutContent, setAboutContent] = useState(config.about_page_content || '');
   const [aboutPhotoUrl, setAboutPhotoUrl] = useState(config.about_page_photo_url || '');
-  const [saving, setSaving] = useState(false);
+  const [state, setState] = useState<SaveState>(null);
   const [uploading, setUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,11 +88,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         .getPublicUrl(filePath);
 
       setAboutPhotoUrl(publicUrl);
-      
-      toast({
-        title: "Image uploaded",
-        description: "Don't forget to save your settings"
-      });
+      await save({ about_page_photo_url: publicUrl });
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
@@ -111,6 +107,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
 
   const handleRemoveImage = () => {
     setAboutPhotoUrl('');
+    save({ about_page_photo_url: '' });
   };
 
   const handlePreview = () => {
@@ -130,46 +127,24 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
     window.open(`/feed/${slug}`, '_blank');
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    
+  /** Save as you go: merge into the stored branding settings so nothing else there is overwritten. */
+  const save = async (patch: Record<string, unknown>) => {
+    setState('saving');
     try {
-      const updatedConfig = {
-        ...config,
-        welcome_card_enabled: welcomeEnabled,
-        welcome_card_headline: welcomeHeadline,
-        welcome_card_cta_text: welcomeCtaText,
-        welcome_card_about_link: showAboutLink,
-        about_page_enabled: aboutPageEnabled,
-        about_page_content: aboutContent,
-        about_page_photo_url: aboutPhotoUrl,
-      };
-
+      const { data: row, error: readError } = await supabase.from('topics').select('branding_config').eq('id', topic.id).single();
+      if (readError) throw readError;
+      const merged = { ...((row?.branding_config as Record<string, unknown>) || {}), ...patch };
       const { error } = await supabase
         .from('topics')
-        .update({ 
-          branding_config: updatedConfig,
-          updated_at: new Date().toISOString()
-        })
+        .update({ branding_config: merged as never, updated_at: new Date().toISOString() })
         .eq('id', topic.id);
-
       if (error) throw error;
-
-      toast({
-        title: "Settings saved",
-        description: "Onboarding settings have been updated"
-      });
-
+      setState('saved');
       onUpdate();
+      window.setTimeout(() => setState(null), 2000);
     } catch (error) {
       console.error('Error saving onboarding settings:', error);
-      toast({
-        title: "Save failed",
-        description: "Failed to save onboarding settings",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
+      setState('not-saved');
     }
   };
 
@@ -184,7 +159,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
             </div>
             <Switch
               checked={welcomeEnabled}
-              onCheckedChange={setWelcomeEnabled}
+              onCheckedChange={(v) => { setWelcomeEnabled(v); save({ welcome_card_enabled: v }); }}
             />
           </div>
 
@@ -196,6 +171,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
                   id="welcomeHeadline"
                   value={welcomeHeadline}
                   onChange={(e) => setWelcomeHeadline(e.target.value)}
+                  onBlur={() => { if (welcomeHeadline !== (config.welcome_card_headline || '')) save({ welcome_card_headline: welcomeHeadline }); }}
                   placeholder={`Welcome to ${topic.name}`}
                   className="mt-1"
                 />
@@ -207,6 +183,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
                   id="welcomeCtaText"
                   value={welcomeCtaText}
                   onChange={(e) => setWelcomeCtaText(e.target.value)}
+                  onBlur={() => { if (welcomeCtaText !== (config.welcome_card_cta_text || '')) save({ welcome_card_cta_text: welcomeCtaText }); }}
                   placeholder="Start Reading"
                   className="mt-1"
                 />
@@ -216,7 +193,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
                 <Label>About link</Label>
                 <Switch
                   checked={showAboutLink}
-                  onCheckedChange={setShowAboutLink}
+                  onCheckedChange={(v) => { setShowAboutLink(v); save({ welcome_card_about_link: v }); }}
                   disabled={!aboutPageEnabled}
                 />
               </div>
@@ -228,37 +205,33 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         {/* About Page */}
         <div className={READER_ONBOARDING_EXTRAS ? "space-y-4 pt-4 border-t" : "space-y-4"}>
           <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">About page</Label>
-            </div>
+            <Label htmlFor="about-page-on" className="text-base font-medium">About page</Label>
+            <div className="flex items-center gap-3">
+            <SaveIndicator state={state} />
             <Switch
+              id="about-page-on"
               checked={aboutPageEnabled}
-              onCheckedChange={setAboutPageEnabled}
+              onCheckedChange={(v) => { setAboutPageEnabled(v); save({ about_page_enabled: v }); }}
             />
+            </div>
           </div>
 
           {aboutPageEnabled && (
             <div className="space-y-4 pl-4 border-l-2 border-muted">
               {/* Image Upload */}
               <div>
-                <Label className="mb-2 block">Photo</Label>
+                <Label className="mb-2 block text-sm font-medium">Photo</Label>
                 
                 {aboutPhotoUrl ? (
-                  <div className="relative w-full max-w-xs">
-                    <img 
-                      src={aboutPhotoUrl} 
-                      alt="About page preview" 
-                      className="w-full h-32 object-cover rounded-md border"
+                  <div className="w-full max-w-xs space-y-2">
+                    <img
+                      src={aboutPhotoUrl}
+                      alt="About page photo"
+                      className="h-32 w-full rounded-lg border border-border object-cover"
                     />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6"
-                      onClick={handleRemoveImage}
-                      aria-label="Remove photo"
-                      title="Remove photo"
-                    >
-                      <X className="h-3 w-3" />
+                    <Button variant="ghost" size="sm" onClick={handleRemoveImage} className="gap-2">
+                      <X className="h-4 w-4" aria-hidden="true" />
+                      Remove
                     </Button>
                   </div>
                 ) : (
@@ -299,8 +272,9 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
                   id="aboutContent"
                   value={aboutContent}
                   onChange={(e) => setAboutContent(e.target.value)}
-                  placeholder="Tell visitors about your feed, what content they can expect, and who curates it..."
-                  className="w-full mt-1 p-3 border rounded-md min-h-[120px] text-base resize-y bg-background"
+                  onBlur={() => { if (aboutContent !== (config.about_page_content || '')) save({ about_page_content: aboutContent }); }}
+                  placeholder="Who curates this feed and what readers can expect"
+                  className="mt-2 min-h-[120px] w-full resize-y rounded-lg border border-input bg-background p-3 text-base"
                   maxLength={2000}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
@@ -311,17 +285,12 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
           )}
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+        {READER_ONBOARDING_EXTRAS && welcomeEnabled && (
+          <Button variant="outline" onClick={handlePreview} className="gap-2">
+            <ExternalLink className="h-4 w-4" />
+            Preview
           </Button>
-          {READER_ONBOARDING_EXTRAS && welcomeEnabled && (
-            <Button variant="outline" onClick={handlePreview} className="gap-2">
-              <ExternalLink className="h-4 w-4" />
-              Preview
-            </Button>
-          )}
-        </div>
+        )}
     </div>
   );
 }

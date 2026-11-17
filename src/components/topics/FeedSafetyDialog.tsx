@@ -1,18 +1,9 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ShieldAlert } from "lucide-react";
+import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -68,7 +59,7 @@ export const FeedSafetyDialog = ({
 
       toast({
         title: "Feed archived",
-        description: `"${topicName}" was backed up and archived. You can restore it from the archive.`,
+        description: "Backed up. Restore it any time from Backups.",
       });
       reset();
       onOpenChange(false);
@@ -85,67 +76,43 @@ export const FeedSafetyDialog = ({
     }
   };
 
+  const close = (next: boolean) => {
+    if (!next) reset();
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog
+    <WorkspaceDrawer
       open={open}
-      onOpenChange={(next) => {
-        if (!next) reset();
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-destructive" aria-hidden="true" />
-            Archive "{topicName}"
-          </DialogTitle>
-          <DialogDescription>
-            This feed is protected against accidental removal. Confirm below to archive it.
-          </DialogDescription>
-        </DialogHeader>
-
-        <Alert>
-          <AlertDescription className="text-sm">
-            A full backup (settings, sources, keywords, subscribers and published story list) is
-            saved automatically before archiving, so the feed can be restored later.
-          </AlertDescription>
-        </Alert>
-
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-feed-name">
-              Type the feed name to confirm
-            </Label>
-            <Input
-              id="confirm-feed-name"
-              value={typed}
-              onChange={(e) => setTyped(e.target.value)}
-              placeholder={topicName}
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="flex items-start gap-2">
-            <Checkbox
-              id="ack-protection"
-              checked={acknowledged}
-              onCheckedChange={(v) => setAcknowledged(v === true)}
-            />
-            <Label htmlFor="ack-protection" className="text-sm font-normal leading-snug">
-              I understand this takes the feed offline for readers and removes it from my dashboard.
-            </Label>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={working}>
-            Cancel
-          </Button>
+      onOpenChange={close}
+      title={`Archive ${topicName}`}
+      srDescription="Back up and archive this feed"
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => close(false)} disabled={working}>Cancel</Button>
           <Button variant="destructive" onClick={handleArchive} disabled={!canArchive}>
-            {working ? "Backing up…" : "Back up & archive"}
+            {working ? "Backing up…" : "Back up and archive"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className="space-y-2">
+        <Label htmlFor="confirm-feed-name" className="text-sm font-medium">Type the feed name</Label>
+        <Input
+          id="confirm-feed-name"
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          placeholder={topicName}
+          autoComplete="off"
+        />
+      </div>
+      <div className="flex items-start gap-3">
+        <Checkbox id="ack-protection" checked={acknowledged} onCheckedChange={(v) => setAcknowledged(v === true)} />
+        <Label htmlFor="ack-protection" className="text-base font-normal leading-snug">
+          Readers lose this feed until I restore it
+        </Label>
+      </div>
+    </WorkspaceDrawer>
   );
 };

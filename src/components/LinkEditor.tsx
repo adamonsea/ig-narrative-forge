@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { WorkspaceDrawer } from '@/components/workspace/WorkspaceDrawer';
 import { Label } from '@/components/ui/label';
 import { Plus, X } from 'lucide-react';
 
@@ -84,16 +84,22 @@ export const LinkEditor: React.FC<LinkEditorProps> = ({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle className="text-lg">Links</SheetTitle>
-        </SheetHeader>
+    <WorkspaceDrawer
+      open={open}
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      title="Links"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave}>Save</Button>
+        </>
+      }
+    >
 
         <div className="space-y-2">
           <Label className="text-sm font-medium">Select words to link</Label>
           <div
-            className="cursor-text select-text rounded-lg border bg-muted/30 p-3 text-base leading-relaxed"
+            className="cursor-text select-text rounded-lg border border-border bg-muted p-3 text-base leading-relaxed"
             onMouseUp={handleTextSelection}
           >
             {content}
@@ -139,12 +145,6 @@ export const LinkEditor: React.FC<LinkEditorProps> = ({
             ))}
           </ul>
         )}
-
-        <div className="mt-auto flex justify-end gap-2 border-t pt-4">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save</Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+    </WorkspaceDrawer>
   );
 };

@@ -5,8 +5,8 @@ List: .lovable/reviews/workspace-rule-breaks.md. One group at a time; Adam picks
 - [x] Desk
 - [x] Sources
 - [x] Settings, Readership, Reviews — Adam skipped picking the order, so these three were done in that order
-- [ ] Open question: About page and donations still use a Save button; an earlier ask was "auto-save everywhere" — Adam to say which to keep
-- [ ] Parked or hidden panels still have tiny text (community discussion, email segments, mood keywords, MPs, trending review)
+- [x] About page and donations auto-save (Adam chose, 17 Nov)
+- [x] Parked or hidden panels keep their tiny text by choice (skipped, 17 Nov)
 
 # Sources as cards + Desk fixes (17 Nov 2026)
 - [x] Sources: News / Events shelves of cards (name, health colour, 7-day dots, one number); needs-attention pinned on top
@@ -173,3 +173,10 @@ Park six features + tidy keywords (13 November 2026)
 - [x] docs/parked-features.md: what each does, why parked, how to bring it back
 - [x] What we look for: one place for terms, case-insensitive, one list per term with "Moved from…" note, compact long lists with search, suggestions inline, Clean up past stories asks first
 - [x] Check Eastbourne feed + values after (signed-in Desk/Settings/setup screens not viewable from here)
+
+# Design unify sweep — finish (17 Nov 2026)
+- [x] Shared drawer (bottom sheet on phones, fade only); move AI-assistant connection, feed backups, feed safety, email preview, legacy edit-source, link editor, slide editor, animation instructions, Add story into it
+- [x] About page and donations: auto-save with save dot, no Save buttons
+- [x] Categories: one primary button
+- [x] /design live-pulse: white on mint in the Live now bar; pop green elsewhere
+- [x] Other owner-visible open items in the review file

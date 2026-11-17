@@ -1,14 +1,7 @@
 import { useMemo, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { RotateCcw, Film, Coins, Lock, Sparkles, Loader2, Images } from 'lucide-react';
+import { WorkspaceDrawer } from '@/components/workspace/WorkspaceDrawer';
+import { RotateCcw, Film, Lock, Images } from 'lucide-react';
 import { useCredits } from '@/hooks/useCredits';
 import { CREDIT_COSTS } from '@/lib/creditService';
 import { StoryReelPreview } from './StoryReelPreview';
@@ -120,109 +113,46 @@ export const ReelStudioModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Film className="w-4 h-4" />
-            Reel Studio
-          </DialogTitle>
-          <DialogDescription>
-            A short 9:16 teaser — headline, one key detail, then a link to the
-            full story on your feed. Preview is free; the high-res MP4 costs
-            credits.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-6 md:grid-cols-[260px_1fr]">
-          {/* Preview */}
-          <div className="mx-auto w-[240px]">
-            <StoryReelPreview content={content} playKey={playKey} />
-            <div className="mt-3 flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setPlayKey((k) => k + 1)}
-              >
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Replay
-              </Button>
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex flex-col gap-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Teaser beats</p>
-              <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Headline</li>
-                <li>Key detail</li>
-                <li>Read more on your feed</li>
-              </ol>
-            </div>
-
-            <div className="rounded-lg border p-3 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1 text-muted-foreground">
-                  <Coins className="w-3 h-3" /> Render cost
-                </span>
-                <Badge variant="secondary">{REEL_COST} credits</Badge>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Your balance</span>
-                <span className={hasEnough ? '' : 'text-destructive'}>
-                  {balance} credits
-                </span>
-              </div>
-            </div>
-
-            {!featureUnlocked ? (
-              <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground flex items-start gap-2">
-                <Lock className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>
-                  Reel export is a premium feature. Upgrade your plan to render
-                  and download MP4 reels.
-                </span>
-              </div>
-            ) : (
-              <Button disabled={!hasEnough || rendering} className="w-full" onClick={handleRender}>
-                {rendering ? (
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4 mr-1" />
-                )}
-                {rendering ? 'Rendering…' : 'Render & Download'}
-              </Button>
-            )}
-
-            {featureUnlocked && !hasEnough && (
-              <p className="text-xs text-destructive">
-                You need {REEL_COST} credits to render this reel.
-              </p>
-            )}
-
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleExportSlides}
-              disabled={exportingSlides}
-            >
-              {exportingSlides ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <Images className="w-4 h-4 mr-1" />
-              )}
-              {exportingSlides ? 'Exporting…' : 'Download static slides (3 PNGs)'}
-            </Button>
-
-            <p className="text-xs text-muted-foreground">
-              Renders a 9:16 teaser video in your browser and downloads it. Takes
-              about 13 seconds to capture the full animation.
-            </p>
-          </div>
+    <WorkspaceDrawer open={open} onOpenChange={onOpenChange} title="Reel" srDescription="A short 9:16 teaser of this story." size="xl">
+      <div className="grid gap-6 md:grid-cols-[240px_1fr]">
+        <div className="mx-auto w-[240px] space-y-3">
+          <StoryReelPreview content={content} playKey={playKey} />
+          <Button size="sm" variant="outline" className="w-full" onClick={() => setPlayKey((k) => k + 1)}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Replay
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div className="flex flex-col gap-4">
+          <div className="space-y-2 rounded-xl border border-border p-4 text-base">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Video</span>
+              <span className="tabular-nums">{REEL_COST} credits</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Balance</span>
+              <span className={hasEnough ? 'tabular-nums' : 'tabular-nums text-destructive'}>{balance} credits</span>
+            </div>
+          </div>
+
+          {!featureUnlocked ? (
+            <p className="flex items-center gap-2 text-base text-muted-foreground">
+              <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Video download is on Pro.
+            </p>
+          ) : (
+            <Button disabled={!hasEnough || rendering} className="w-full" onClick={handleRender}>
+              <Film className="mr-2 h-4 w-4" />
+              {rendering ? 'Rendering' : 'Download video'}
+            </Button>
+          )}
+
+          <Button variant="outline" className="w-full" onClick={handleExportSlides} disabled={exportingSlides}>
+            <Images className="mr-2 h-4 w-4" />
+            {exportingSlides ? 'Exporting' : 'Download 3 pictures'}
+          </Button>
+        </div>
+      </div>
+    </WorkspaceDrawer>
   );
 };

@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { Download, RotateCcw, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +43,7 @@ export const FeedBackupsDialog = ({
   const [backups, setBackups] = useState<BackupRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<BackupRow | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -85,8 +81,7 @@ export const FeedBackupsDialog = ({
         p_reason: "manual",
       });
       if (error) throw error;
-      toast({ title: "Backup saved", description: `Snapshot of "${topicName}" stored.` });
-      await load();
+            await load();
     } catch (error: any) {
       toast({
         title: "Backup failed",
@@ -99,14 +94,6 @@ export const FeedBackupsDialog = ({
   };
 
   const restore = async (backup: BackupRow) => {
-    if (
-      !confirm(
-        `Restore "${backup.topic_name}" from the backup taken on ${new Date(
-          backup.created_at
-        ).toLocaleString()}? Settings, sources and subscribers will be restored and the feed un-archived.`
-      )
-    )
-      return;
     setBusyId(backup.id);
     try {
       const { data, error } = await supabase.rpc("restore_topic_from_backup", {
@@ -145,79 +132,68 @@ export const FeedBackupsDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Backups — {topicName}</DialogTitle>
-          <DialogDescription>
-            Snapshots are taken nightly, before archiving and on demand. Restoring brings back
-            settings, sources, keywords and subscribers.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex justify-end">
-          <Button size="sm" variant="outline" onClick={createBackup} disabled={busyId === "new"}>
-            <Save className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
-            {busyId === "new" ? "Saving…" : "Back up now"}
-          </Button>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Spinner size="lg" />
-          </div>
-        ) : backups.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">
-            No backups yet — take one now.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {backups.map((b) => {
-              const counts = b.snapshot?.counts || {};
-              return (
-                <li
-                  key={b.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border p-3"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {new Date(b.created_at).toLocaleString()}
-                      </span>
-                      <Badge variant="secondary">
-                        {reasonLabel[b.reason] || b.reason}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {counts.sources ?? 0} sources · {counts.articles ?? 0} articles ·{" "}
-                      {counts.subscribers ?? 0} subscribers
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => download(b)}
-                      aria-label="Download backup as JSON"
-                    >
-                      <Download className="w-3.5 h-3.5" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => restore(b)}
-                      disabled={busyId === b.id}
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
-                      {busyId === b.id ? "Restoring…" : "Restore"}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </DialogContent>
-    </Dialog>
+    <WorkspaceDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Backups"
+      srDescription={`Backups of ${topicName}`}
+      footer={
+        <Button variant="outline" onClick={createBackup} disabled={busyId === "new"}>
+          <Save className="mr-2 h-4 w-4" aria-hidden="true" />
+          Back up now
+        </Button>
+      }
+    >
+      {loading ? (
+        <ul className="space-y-2" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <li key={i} className="space-y-2 rounded-xl border border-border p-4">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-56" />
+            </li>
+          ))}
+        </ul>
+      ) : backups.length === 0 ? (
+        <p className="text-base text-muted-foreground">No backups yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {backups.map((b) => {
+            const counts = b.snapshot?.counts || {};
+            return (
+              <li key={b.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-4">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-base font-medium">{new Date(b.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {reasonLabel[b.reason] || b.reason} · {counts.sources ?? 0} sources · {counts.subscribers ?? 0} subscribers
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" variant="ghost" onClick={() => download(b)} aria-label="Download">
+                        <Download className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Download</TooltipContent>
+                  </Tooltip>
+                  <Button size="sm" variant="outline" onClick={() => setRestoreTarget(b)} disabled={busyId === b.id}>
+                    <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Restore
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <ConfirmationDialog
+        isOpen={!!restoreTarget}
+        onClose={() => setRestoreTarget(null)}
+        onConfirm={() => { if (restoreTarget) restore(restoreTarget); }}
+        title="Restore this backup?"
+        description={restoreTarget ? `Settings, sources and subscribers go back to ${new Date(restoreTarget.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}.` : ""}
+        confirmText="Restore"
+      />
+    </WorkspaceDrawer>
   );
 };
