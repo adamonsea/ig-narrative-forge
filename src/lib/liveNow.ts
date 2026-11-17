@@ -44,3 +44,22 @@ export function splitLiveNow<T extends LiveNowStory>(stories: T[], now: number =
   held.sort((a, b) => b.created_at.localeCompare(a.created_at));
   return { live, held };
 }
+
+/** Written-but-not-live stories older than this are stale: news has moved on. */
+export const STALE_HELD_DAYS = 7;
+
+/**
+ * Stale stories in "Written, not in the feed": written over STALE_HELD_DAYS ago and not
+ * scheduled for later. The Desk offers to archive them in one go (archive, never delete).
+ */
+export function staleHeld<T extends LiveNowStory & { scheduled_publish_at?: string | null }>(
+  held: T[],
+  now: number = Date.now(),
+  days: number = STALE_HELD_DAYS,
+): T[] {
+  const cutoff = now - days * 86_400_000;
+  return held.filter((s) => {
+    if (new Date(s.created_at).getTime() >= cutoff) return false;
+    return !(s.scheduled_publish_at && new Date(s.scheduled_publish_at).getTime() > now);
+  });
+}

@@ -1,3 +1,4 @@
+import { isLiveStory } from '../_shared/illustration-gate.ts';
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { stripGeneratedAttribution } from '../_shared/attribution-guard.ts';
@@ -1398,6 +1399,9 @@ Return in JSON format:
 
     // Store or update the story idempotently with multi-tenant support
     let storyId: string | null = null;
+    // Status the story was saved with; paid pictures wait until it's actually live.
+    let savedStatus = '';
+    let savedPublished = false;
 
     // Try to find existing story for this article (check both article_id and topic_article_id)
     let existingStory: any = null;
@@ -1459,6 +1463,8 @@ Return in JSON format:
         isPublished = true;
         console.log(`🚀 Auto-simplify enabled, no drip feed - story will be published immediately`);
       }
+      savedStatus = storyStatus;
+      savedPublished = isPublished;
       
       // Update story with multi-tenant linkage
       const updateData: any = { 
@@ -1523,6 +1529,8 @@ Return in JSON format:
         isPublished = true;
         console.log(`🚀 Auto-simplify enabled, no drip feed - creating story as published`);
       }
+      savedStatus = storyStatus;
+      savedPublished = isPublished;
       
       // Create new story with full multi-tenant support
       const insertData: any = {
@@ -1692,10 +1700,13 @@ Return in JSON format:
 
 
 
-    // Trigger carousel image generation (non-blocking) using direct fetch with service role
-    // Only generate if the user opted in (generateIllustration flag, defaults to true)
+    // Trigger carousel image generation (non-blocking) using direct fetch with service role.
+    // Only for stories that went live: drafts and ready (drip) stories get their picture
+    // when they're published (Desk publish / publish-ready-stories), never before.
     if (generateIllustration === false) {
       console.log('⏭️ Skipping illustration generation - user opted out');
+    } else if (!isLiveStory({ status: savedStatus, is_published: savedPublished })) {
+      console.log(`⏭️ Skipping illustration - story saved as '${savedStatus}', picture waits until it's published`);
     } else if (brandSafePictures) {
       console.log('⏭️ Skipping illustration generation - brand-safe feed keeps the source picture');
     } else {

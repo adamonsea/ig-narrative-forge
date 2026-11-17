@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { storySimilarity, PUBLISH_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
+import { needsPublishIllustration, PUBLISH_ILLUSTRATION_MODEL } from '../_shared/illustration-gate.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -256,7 +257,7 @@ serve(async (req) => {
         is_published: true
       })
       .in('id', storiesToPublish)
-      .select('id, title');
+      .select('id, title, status, is_published, cover_illustration_url');
 
     if (updateError) {
       console.error('Error updating ready stories:', updateError);
@@ -265,6 +266,22 @@ serve(async (req) => {
 
     const updatedCount = updatedStories?.length || 0;
     console.log(`✅ Successfully published ${updatedCount} ready stories`);
+
+    // Pictures are paid for only once a story is live: draw them now for any that have none.
+    const needPictures = (updatedStories || []).filter((s: any) => needsPublishIllustration(s));
+    if (needPictures.length > 0) {
+      console.log(`🎨 Drawing pictures for ${needPictures.length} newly published stories`);
+      const drawAll = Promise.allSettled(needPictures.map((s: any) =>
+        fetch(`${supabaseUrl}/functions/v1/story-illustrator`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}` },
+          body: JSON.stringify({ storyId: s.id, model: PUBLISH_ILLUSTRATION_MODEL, isAutomated: true }),
+        }).then(async (r) => { if (!r.ok) console.error('Picture on publish failed:', s.id, r.status, await r.text()); })
+      ));
+      // Don't hold the publish response for image generation.
+      const runtime = (globalThis as any).EdgeRuntime;
+      if (runtime?.waitUntil) runtime.waitUntil(drawAll); else await drawAll;
+    }
     
     if (dripQueuedStories.length > 0) {
       console.log(`💧 ${dripQueuedStories.length} stories remain in drip queue`);

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
+import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
 import { edgeErrorMessage } from "@/lib/edgeError";
 import { ImageModel } from "@/components/ImageModelSelector";
 import { AnimationInstructionsModal } from "@/components/topic-pipeline/AnimationInstructionsModal";
@@ -116,6 +117,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       if (!data) throw new Error('No story was updated. Check topic ownership and access.');
       toast({ title: 'Published Immediately', description: `"${title}" is now live.` });
       onRefresh();
+      // Live now, so draw its picture if it has none; refresh again when it lands.
+      void illustrateOnPublish(storyId).then(onRefresh);
     } catch (e: any) {
       console.error('Error publishing story:', e);
       const detail = e?.message || 'Could not publish story';

@@ -21,7 +21,8 @@ import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
 import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
-import { splitLiveNow } from "@/lib/liveNow";
+import { splitLiveNow, staleHeld } from "@/lib/liveNow";
+import { ToastAction } from "@/components/ui/toast";
 
 interface Topic {
   id: string;
@@ -59,6 +60,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const { toast } = useToast();
 
   const [runningPublishMigration, setRunningPublishMigration] = useState(false);
+  const [archivingStale, setArchivingStale] = useState(false);
   // Phones show one area at a time, opening on Live now.
   const [mobileArea, setMobileArea] = useState<DeskArea>('live');
   // Re-check the clock every minute so started events leave the Event pool on their own.
@@ -247,6 +249,46 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
+  /** Archive every stale story in "Written, not in the feed" at once; Undo puts each back as it was. */
+  const handleArchiveStale = async (items: { id: string; status: string; is_published: boolean }[]) => {
+    if (items.length === 0 || archivingStale) return;
+    setArchivingStale(true);
+    try {
+      const ids = items.map(s => s.id);
+      const { error } = await supabase
+        .from('stories')
+        .update({ status: 'archived', is_published: false, updated_at: new Date().toISOString() })
+        .in('id', ids);
+      if (error) throw error;
+      const restore = async () => {
+        const groups = new Map<string, string[]>();
+        for (const s of items) {
+          const key = `${s.status}|${s.is_published}`;
+          groups.set(key, [...(groups.get(key) ?? []), s.id]);
+        }
+        try {
+          for (const [key, groupIds] of groups) {
+            const [status, pub] = key.split('|');
+            await supabase.from('stories').update({ status, is_published: pub === 'true' }).in('id', groupIds);
+          }
+        } finally {
+          refreshContent();
+        }
+      };
+      toast({
+        description: `Archived ${ids.length} ${ids.length === 1 ? 'story' : 'stories'}`,
+        duration: 3000,
+        action: <ToastAction altText="Undo" onClick={restore}>Undo</ToastAction>,
+      });
+      refreshContent();
+    } catch (error) {
+      console.error('Error archiving stale stories:', error);
+      toast({ title: "Couldn't archive", description: "Try again.", variant: "destructive" });
+    } finally {
+      setArchivingStale(false);
+    }
+  };
+
   const handleViewStory = (story: any) => {
     if (story.id && topicSlug) {
       window.open(`/feed/${topicSlug}/story/${story.id}`, '_blank');
@@ -285,6 +327,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   // Live now = exactly the feed (same stories, same order); written-but-not-live waits in the Story pool.
   const { live: liveStories, held: heldStories } = splitLiveNow(stories);
   const visibleIdsKey = [...liveStories, ...heldStories].map(s => s.id).join(',');
+  const staleStories = staleHeld(heldStories as any[]);
   const setPulseIds = pulseCtx?.setStoryIds;
   useEffect(() => {
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
@@ -400,6 +443,13 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
           {heldStories.length > 0 && (
             <RememberedFold foldKey="desk-written-not-live" label={`Written, not in the feed · ${heldStories.length}`} contentClassName="pt-2">
+              {staleStories.length > 0 && (
+                <div className="mb-2 flex justify-end">
+                  <Button size="sm" variant="ghost" disabled={archivingStale} onClick={() => handleArchiveStale(staleStories)}>
+                    Archive {staleStories.length} over a week old
+                  </Button>
+                </div>
+              )}
               <PublishedStoriesList
                 stories={heldStories}
                 onArchive={handleArchiveStory}

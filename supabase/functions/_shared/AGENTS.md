@@ -1,0 +1,1 @@
+- AI pictures are drawn automatically only once a story is live (`needsPublishIllustration` in `supabase/functions/_shared/illustration-gate.ts`, used by the writer, drip publisher and Desk Publish); drafts never cost credits.

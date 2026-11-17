@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
 import { MultiTenantArticle } from "./useMultiTenantTopicPipeline";
 
 /**
@@ -571,6 +572,9 @@ export const useMultiTenantActions = () => {
         }
 
         console.log('✅ Multi-tenant story published immediately', updatedRow);
+
+        // It's live now, so it can have its picture (only if it has none yet).
+        void illustrateOnPublish(storyId);
 
         // Send push notifications to subscribers if topic is provided
         if (topicId) {
