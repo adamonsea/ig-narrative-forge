@@ -27,13 +27,13 @@ export interface SourceShelvesProps {
   onRemove: (s: NewsSourceView) => Promise<void> | void;
   onSave: (s: NewsSourceView, settings: NewsSourceSettings) => Promise<void> | void;
   onTest: (s: NewsSourceView) => void;
-  onBackfill: (s: NewsSourceView) => void;
+  onBackfill: (s: NewsSourceView, days: number) => Promise<void> | void;
 }
 
 function Shelf({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section aria-labelledby={id} className="space-y-3">
-      <h3 id={id} className="text-xl font-semibold">{title}</h3>
+      <h3 id={id} className="text-lg font-semibold">{title}</h3>
       {children}
     </section>
   );
@@ -90,7 +90,7 @@ export function SourceShelves(p: SourceShelvesProps) {
   const archivedCount = archivedNews.length + archivedEvents.length;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <Shelf id="shelf-news" title="News">
         {activeNews.length === 0 ? (
           <p className="rounded-xl border border-dashed p-6 text-center text-base text-muted-foreground">
@@ -107,7 +107,7 @@ export function SourceShelves(p: SourceShelvesProps) {
                   onOpen={() => setOpenNews(c.source.id)}
                   action={
                     <Button size="sm" variant="outline" onClick={() => p.onGather(c.source)} disabled={busy || !c.source.feed_url} aria-label={`Gather from ${c.name} now`}>
-                      {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="mr-1.5 h-4 w-4" aria-hidden="true" />}
+                      {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="mr-2 h-4 w-4" aria-hidden="true" />}
                       {busy ? "Gathering…" : "Gather"}
                     </Button>
                   } />
@@ -129,7 +129,7 @@ export function SourceShelves(p: SourceShelvesProps) {
                   dots={s.dots} figure={s.upcoming} figureLabel="coming up" busy={busy} onOpen={() => setOpenEvent(s.id)}
                   action={
                     <Button size="sm" variant="outline" onClick={() => deck.gather(s)} disabled={busy} aria-label={`Gather from ${s.name} now`}>
-                      <RefreshCw className={`mr-1.5 h-4 w-4 ${busy ? "animate-spin" : ""}`} aria-hidden="true" />{busy ? "Checking…" : "Gather"}
+                      <RefreshCw className={`mr-2 h-4 w-4 ${busy ? "animate-spin" : ""}`} aria-hidden="true" />{busy ? "Checking…" : "Gather"}
                     </Button>
                   } />
               );
@@ -165,7 +165,7 @@ export function SourceShelves(p: SourceShelvesProps) {
         gathering={Boolean(newsOpen && p.gatheringId === newsOpen.source.id)} testing={Boolean(newsOpen && p.testingId === newsOpen.source.id)}
         onClose={() => setOpenNews(null)}
         onGather={() => newsOpen && p.onGather(newsOpen.source)}
-        onBackfill={() => { if (newsOpen) { p.onBackfill(newsOpen.source); setOpenNews(null); } }}
+        onBackfill={(days) => { if (newsOpen) { p.onBackfill(newsOpen.source, days); setOpenNews(null); } }}
         onArchive={() => newsOpen && p.onArchive(newsOpen.source)}
         onRestore={() => newsOpen && p.onRestore(newsOpen.source)}
         onRemove={async () => { if (newsOpen) { await p.onRemove(newsOpen.source); } }}
@@ -185,7 +185,7 @@ function ArchivedRow({ name, domain, kind, label, onOpen, onRestore }: { name: s
         <span className="block truncate text-base font-medium text-muted-foreground hover:text-foreground hover:underline">{name}</span>
         <span className="block truncate text-sm text-muted-foreground">{label} · {domain}</span>
       </button>
-      <Button size="sm" variant="outline" onClick={onRestore}><RotateCcw className="mr-1.5 h-4 w-4" aria-hidden="true" />Restore</Button>
+      <Button size="sm" variant="outline" onClick={onRestore}><RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />Restore</Button>
     </li>
   );
 }

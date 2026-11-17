@@ -27,7 +27,7 @@ export const CooldownMinimal = ({
   
   if (!effectiveLastScrape || !scrapeFrequencyHours) {
     return (
-      <Badge variant="outline" className="gap-1 text-xs font-normal">
+      <Badge variant="outline" className="gap-1 text-sm font-normal">
         <CheckCircle className="w-3 h-3" />
         Ready
       </Badge>
@@ -41,7 +41,7 @@ export const CooldownMinimal = ({
   
   if (!isOnCooldown) {
     return (
-      <Badge variant="outline" className="gap-1 text-xs font-normal">
+      <Badge variant="outline" className="gap-1 text-sm font-normal">
         <CheckCircle className="w-3 h-3" />
         Ready
       </Badge>
@@ -52,7 +52,7 @@ export const CooldownMinimal = ({
   const hoursRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60));
   
   return (
-    <Badge variant="secondary" className="gap-1 text-xs font-normal">
+    <Badge variant="secondary" className="gap-1 text-sm font-normal">
       <Clock className="w-3 h-3" />
       {hoursRemaining}h
     </Badge>

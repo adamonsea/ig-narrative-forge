@@ -80,12 +80,12 @@ export const SourceHealthIndicator = ({
 
   return (
     <TooltipProvider>
-      <div className={cn("relative rounded-md p-3", getRedWashClass())}>
+      <div className={cn("relative rounded-lg p-3", getRedWashClass())}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant={getBadgeVariant()} className="flex items-center gap-1.5">
+                <Badge variant={getBadgeVariant()} className="flex items-center gap-2">
                   {getIcon()}
                   <span>{getStatusText()}</span>
                 </Badge>
@@ -100,13 +100,13 @@ export const SourceHealthIndicator = ({
                       <p>Last failure: {formatLastFailure(lastFailureAt)}</p>
                     )}
                     {lastFailureReason && (
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-sm text-muted-foreground mt-2">
                         Reason: {lastFailureReason}
                       </p>
                     )}
                     {!isActive && (
-                      <p className="text-xs text-destructive mt-2">
-                        ⚠️ Auto-disabled after 3 consecutive failures
+                      <p className="text-sm text-destructive mt-2">
+                        Auto-disabled after 3 consecutive failures
                       </p>
                     )}
                   </div>
@@ -122,7 +122,7 @@ export const SourceHealthIndicator = ({
                 size="sm"
                 onClick={onTest}
                 disabled={testing}
-                className="h-7"
+                
               >
                 {testing ? (
                   <>
@@ -131,7 +131,7 @@ export const SourceHealthIndicator = ({
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="w-3 h-3 mr-1" />
+                    <RefreshCw className="w-3 h-3 mr-2" />
                     Test
                   </>
                 )}
@@ -143,7 +143,7 @@ export const SourceHealthIndicator = ({
                 variant="outline"
                 size="sm"
                 onClick={onReactivate}
-                className="h-7"
+                
               >
                 Reactivate
               </Button>

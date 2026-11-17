@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -125,8 +126,17 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
 
   if (loading) {
     return (
-      <div className="flex items-center gap-3 py-10 text-base text-muted-foreground" aria-live="polite">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />Finding sources…
+      <div className="space-y-2" role="status" aria-label="Finding sources">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-3 rounded-xl border bg-card p-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-2/5" />
+              <Skeleton className="h-3 w-3/5" />
+            </div>
+            <Skeleton className="h-8 w-16 shrink-0 rounded-lg" />
+            <Skeleton className="h-11 w-11 shrink-0 rounded-lg" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -146,11 +156,11 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
                   <p className="truncate text-sm text-muted-foreground">{domain}</p>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => add(s)} disabled={busy}>
-                  {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="mr-1 h-4 w-4" aria-hidden="true" />}Add
+                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="mr-2 h-4 w-4" aria-hidden="true" />}Add
                 </Button>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" aria-label={`Dismiss ${s.source_name}`}
+                    <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Dismiss ${s.source_name}`}
                       onClick={() => setSuggestions((prev) => prev.filter((x) => x.url !== s.url))} disabled={busy}>
                       <X className="h-4 w-4" aria-hidden="true" />
                     </Button>

@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -105,9 +106,14 @@ export function EventSourceAddPanel({ topicId, url, onSaved }: { topicId: string
 
   if (!preview) {
     return (
-      <p className="flex items-center gap-2 text-base text-muted-foreground" aria-live="polite">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />Reading…
-      </p>
+      <div className="space-y-3" aria-live="polite" role="status" aria-label="Reading this page">
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-2/5" />
+        <div className="space-y-2 pt-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </div>
+      </div>
     );
   }
 
@@ -123,7 +129,7 @@ export function EventSourceAddPanel({ topicId, url, onSaved }: { topicId: string
       {preview.found > 0 && hiddenSentence(preview.excluded) && <p className="text-sm text-muted-foreground">{hiddenSentence(preview.excluded)}</p>}
       {usable && (
         <>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="events-source-name" className="text-sm">Name</Label>
             <Input id="events-source-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
           </div>
@@ -272,7 +278,7 @@ export function EventSourcePanel({ source, deck, onClose }: { source: EventSourc
               <div className="flex items-center gap-3">
                 <SourceIcon domain={host(source.url)} kind="events" size="lg" />
                 <div className="min-w-0">
-                  <SheetTitle className="truncate text-xl leading-snug">{source.name}</SheetTitle>
+                  <SheetTitle className="truncate text-lg leading-snug">{source.name}</SheetTitle>
                   <SheetDescription asChild>
                     <p className="truncate text-sm text-muted-foreground">
                       {eventSourceKindLabel(source.kind)} ·{" "}
@@ -286,10 +292,10 @@ export function EventSourcePanel({ source, deck, onClose }: { source: EventSourc
               {archived ? <p className="rounded-lg bg-muted p-3 text-base">Archived. It isn't checked until you restore it.</p> : <HealthLine verdict={source.verdict} />}
               <div className="flex flex-wrap gap-2">
                 {archived ? (
-                  <Button onClick={() => deck.restore(source)} disabled={busy}><RotateCcw className="mr-1.5 h-4 w-4" aria-hidden="true" />Restore</Button>
+                  <Button onClick={() => deck.restore(source)} disabled={busy}><RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />Restore</Button>
                 ) : (
                   <Button onClick={() => deck.gather(source)} disabled={busy}>
-                    <RefreshCw className={`mr-1.5 h-4 w-4 ${busy ? "animate-spin" : ""}`} aria-hidden="true" />{busy ? "Checking…" : "Gather now"}
+                    <RefreshCw className={`mr-2 h-4 w-4 ${busy ? "animate-spin" : ""}`} aria-hidden="true" />{busy ? "Checking…" : "Gather now"}
                   </Button>
                 )}
               </div>
@@ -314,7 +320,7 @@ export function EventSourcePanel({ source, deck, onClose }: { source: EventSourc
 
             <PanelSection title="Publishing">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-1.5">
+                <div className="flex items-start gap-2">
                   <Label htmlFor={`auto-${source.id}`} className="text-base font-normal leading-snug">Auto-publish</Label>
                   <InfoTip label="About auto-publish">{source.auto_publish ? "New events go straight to Live." : "New events wait for your OK on the Desk."}</InfoTip>
                 </div>
@@ -324,26 +330,26 @@ export function EventSourcePanel({ source, deck, onClose }: { source: EventSourc
 
             <PanelSection title="Settings">
               <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); await deck.saveEdit(source, name, url); }}>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor={`name-${source.id}`} className="text-sm text-muted-foreground">Name</Label>
                   <Input id={`name-${source.id}`} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor={`url-${source.id}`} className="text-sm text-muted-foreground">Link</Label>
                   <Input id={`url-${source.id}`} inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} />
                 </div>
                 <Button type="submit" variant="outline" disabled={!changed || busy}>
-                  {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}Save changes
+                  {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}Save changes
                 </Button>
               </form>
             </PanelSection>
 
             <PanelSection title="More">
               <div className="flex flex-wrap gap-2">
-                {!archived && <Button variant="outline" onClick={() => deck.archive(source)} disabled={busy}><Archive className="mr-1.5 h-4 w-4" aria-hidden="true" />Archive</Button>}
+                {!archived && <Button variant="outline" onClick={() => deck.archive(source)} disabled={busy}><Archive className="mr-2 h-4 w-4" aria-hidden="true" />Archive</Button>}
                 <Button variant="ghost" className="text-muted-foreground hover:text-destructive" disabled={busy}
                   onClick={async () => { if (await deck.remove(source)) onClose(); }}>
-                  <Trash2 className="mr-1.5 h-4 w-4" aria-hidden="true" />Remove
+                  <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />Remove
                 </Button>
               </div>
             </PanelSection>

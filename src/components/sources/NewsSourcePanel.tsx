@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Archive, Download, ExternalLink, Loader2, Play, RotateCcw, Trash2, Wifi } from "lucide-react";
+import { Archive, ExternalLink, Loader2, Play, RotateCcw, Trash2, Wifi } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { rhythmSentence, type HealthVerdict } from "@/lib/sourceHealth";
 import { SourceDots } from "./SourceDots";
 import { SourceIcon } from "./SourceCard";
-import { Figure, HealthLine, InfoTip, PanelSection } from "./SourcePanelParts";
+import { Figure, BackfillFold, HealthLine, InfoTip, PanelSection } from "./SourcePanelParts";
 
 export interface NewsSourceView {
   id: string;
@@ -34,7 +34,7 @@ export function NewsSourcePanel({
   source, verdict, dots, gap, lastArrivalAt, gathering, testing, onClose, onGather, onBackfill, onArchive, onRestore, onRemove, onSave, onTest,
 }: {
   source: NewsSourceView | null; verdict: HealthVerdict | null; dots: number[]; gap: number | null; lastArrivalAt: string | null;
-  gathering: boolean; testing: boolean; onClose: () => void; onGather: () => void; onBackfill: () => void;
+  gathering: boolean; testing: boolean; onClose: () => void; onGather: () => void; onBackfill: (days: number) => Promise<void> | void;
   onArchive: () => void; onRestore: () => void; onRemove: () => void; onSave: (s: NewsSourceSettings) => Promise<void> | void; onTest: () => void;
 }) {
   const [url, setUrl] = useState("");
@@ -64,7 +64,7 @@ export function NewsSourcePanel({
               <div className="flex items-center gap-3">
                 <SourceIcon domain={source.canonical_domain || ""} size="lg" />
                 <div className="min-w-0">
-                  <SheetTitle className="truncate text-xl leading-snug">{source.source_name}</SheetTitle>
+                  <SheetTitle className="truncate text-lg leading-snug">{source.source_name}</SheetTitle>
                   <SheetDescription asChild>
                     <p className="truncate text-sm text-muted-foreground">
                       {source.feed_url ? (
@@ -79,16 +79,16 @@ export function NewsSourcePanel({
               {archived ? <p className="rounded-lg bg-muted p-3 text-base">Archived. Nothing is gathered from here until you restore it.</p> : <HealthLine verdict={verdict} />}
               <div className="flex flex-wrap gap-2">
                 {archived ? (
-                  <Button onClick={onRestore}><RotateCcw className="mr-1.5 h-4 w-4" aria-hidden="true" />Restore</Button>
+                  <Button onClick={onRestore}><RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />Restore</Button>
                 ) : (
                   <Button onClick={onGather} disabled={gathering || !source.feed_url}>
-                    {gathering ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="mr-1.5 h-4 w-4" aria-hidden="true" />}
+                    {gathering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="mr-2 h-4 w-4" aria-hidden="true" />}
                     {gathering ? "Gathering…" : "Gather now"}
                   </Button>
                 )}
                 {!archived && verdict.health === "failing" && (Number(source.consecutive_failures) || 0) > 0 && (
                   <Button variant="outline" onClick={onTest} disabled={testing}>
-                    {testing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Wifi className="mr-1.5 h-4 w-4" aria-hidden="true" />}Test the link
+                    {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Wifi className="mr-2 h-4 w-4" aria-hidden="true" />}Test the link
                   </Button>
                 )}
               </div>
@@ -116,7 +116,7 @@ export function NewsSourcePanel({
             )}
 
             <PanelSection title="Settings">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="source-link" className="text-sm text-muted-foreground">Link</Label>
                 <Input id="source-link" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/feed" />
               </div>
@@ -138,15 +138,15 @@ export function NewsSourcePanel({
               )}
               <Button variant="outline" disabled={!changed || !url.trim() || saving}
                 onClick={async () => { setSaving(true); try { await onSave({ feed_url: url.trim(), trust, trustDays }); } finally { setSaving(false); } }}>
-                {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}Save changes
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}Save changes
               </Button>
             </PanelSection>
 
             <PanelSection title="More">
               <div className="flex flex-wrap gap-2">
-                {!archived && <Button variant="outline" onClick={onBackfill}><Download className="mr-1.5 h-4 w-4" aria-hidden="true" />Gather older stories</Button>}
-                {!archived && <Button variant="outline" onClick={onArchive}><Archive className="mr-1.5 h-4 w-4" aria-hidden="true" />Archive</Button>}
-                <Button variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={onRemove}><Trash2 className="mr-1.5 h-4 w-4" aria-hidden="true" />Remove from this feed</Button>
+                {!archived && <BackfillFold onRun={onBackfill} />}
+                {!archived && <Button variant="outline" onClick={onArchive}><Archive className="mr-2 h-4 w-4" aria-hidden="true" />Archive</Button>}
+                <Button variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={onRemove}><Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />Remove from this feed</Button>
               </div>
             </PanelSection>
           </>

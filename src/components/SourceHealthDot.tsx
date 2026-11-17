@@ -1,4 +1,5 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HEALTH_DOT } from "@/components/sources/SourceCard";
 
 interface SourceHealthDotProps {
   isActive: boolean;
@@ -25,8 +26,7 @@ export const SourceHealthDot = ({
   const getHealthStatus = () => {
     if (!isActive) {
       return {
-        color: "bg-muted",
-        icon: "⚪",
+        color: HEALTH_DOT.new,
         label: "Disabled",
         description: "Source is currently disabled"
       };
@@ -34,8 +34,7 @@ export const SourceHealthDot = ({
     
     if (consecutiveFailures >= 3 || isBlacklisted) {
       return {
-        color: "bg-destructive",
-        icon: "🔴",
+        color: HEALTH_DOT.failing,
         label: "Connection Issues",
         description: lastFailureReason || `${consecutiveFailures} consecutive failures`
       };
@@ -43,8 +42,7 @@ export const SourceHealthDot = ({
     
     if (!lastStoryDate) {
       return {
-        color: "bg-muted",
-        icon: "⚪",
+        color: HEALTH_DOT.new,
         label: "No Stories Yet",
         description: "No stories have been published from this source"
       };
@@ -56,8 +54,7 @@ export const SourceHealthDot = ({
     
     if (daysSinceLastStory > 7) {
       return {
-        color: "bg-yellow-500",
-        icon: "🟡",
+        color: HEALTH_DOT.quiet,
         label: "Stale",
         description: `Last story published ${daysSinceLastStory} days ago`
       };
@@ -66,8 +63,7 @@ export const SourceHealthDot = ({
     // Check if articles are gathering but not publishing
     if (storiesGathered7d > 0 && storiesPublished7d === 0) {
       return {
-        color: "bg-yellow-500",
-        icon: "🟡",
+        color: HEALTH_DOT.quiet,
         label: "Gathering Only",
         description: `${storiesGathered7d} articles gathered but not published in last 7 days`
       };
@@ -75,16 +71,14 @@ export const SourceHealthDot = ({
     
     if (storiesPublished7d === 0 && storiesGathered7d === 0) {
       return {
-        color: "bg-yellow-500",
-        icon: "🟡",
+        color: HEALTH_DOT.quiet,
         label: "No Activity",
         description: "No articles gathered or published in last 7 days"
       };
     }
     
     return {
-      color: "bg-green-500",
-      icon: "🟢",
+      color: HEALTH_DOT.healthy,
       label: "Healthy",
       description: `${storiesGathered7d} gathered • ${storiesPublished7d} published (7d)`
     };
@@ -97,16 +91,16 @@ export const SourceHealthDot = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <div 
-            className={`w-3 h-3 rounded-full ${status.color} cursor-help transition-transform hover:scale-110`}
+            className={`h-3 w-3 rounded-full ${status.color} cursor-help transition-transform hover:scale-110`}
             aria-label={status.label}
           />
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1">
-            <p className="font-semibold text-sm">{status.icon} {status.label}</p>
-            <p className="text-xs text-muted-foreground">{status.description}</p>
+            <p className="text-sm font-semibold">{status.label}</p>
+            <p className="text-sm text-muted-foreground">{status.description}</p>
             {totalFailures > 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Total failures: {totalFailures}
               </p>
             )}

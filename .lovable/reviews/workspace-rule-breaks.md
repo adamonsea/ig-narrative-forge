@@ -56,7 +56,7 @@ Remaining by choice: in-button spinners while an action runs; ApprovedStoriesPan
 - **Badge rows**: older approved cards show three badges (ApprovedStoriesPanel 608–623).
 - **Space**: StoryDrawer 10 lines, WaitingStoryDrawer 9, DeskEvents 13, StoryFilters 5. DeskCard actions use a 6px gap.
 
-## 3. Sources
+## 3. Sources (done 17 Nov; the legacy edit-source pop-up is left for the shared drawer pass)
 
 - **Size**:
   - Drawer and shelf titles are 20px: AddSourceSheet 70, NewsSourcePanel 67, EventSources 275, SourceShelves 36.

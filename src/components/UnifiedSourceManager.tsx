@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AddSourceSheet, type NewNewsSource } from '@/components/sources/AddSourceSheet';
 import { SourceShelves } from '@/components/sources/SourceShelves';
+import { BackfillFold } from '@/components/sources/SourcePanelParts';
 import { detectSourceKind, isEventsSourceKind } from '@/lib/whatsOn';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,16 +37,10 @@ import {
   Sparkles
 } from 'lucide-react';
 import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
-import { StatusIndicator } from '@/components/StatusIndicator';
-import { GatheringProgressIndicator } from '@/components/GatheringProgressIndicator';
-import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
 import { SourceHealthIndicator } from '@/components/SourceHealthIndicator';
-import { SourceStorySparkline } from '@/components/SourceStorySparkline';
 import { SourceHealthDot } from '@/components/SourceHealthDot';
-import { LiveStoriesCount } from '@/components/LiveStoriesCount';
 import { CooldownMinimal } from '@/components/CooldownMinimal';
 import { SourceActionsMenu } from '@/components/SourceActionsMenu';
-import { AverageDailyStoriesBadge } from '@/components/ui/average-daily-stories-badge';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
@@ -922,7 +917,7 @@ export const UnifiedSourceManager = ({
     } else {
       // For global/region mode, permanent deletion with strong warnings
       const articleCount = source?.stories_published_total || 0;
-      const confirmMessage = `⚠️ PERMANENTLY DELETE "${sourceName}"?\n\nThis source has ${articleCount} articles.\nThis action CANNOT be undone.\n\nType DELETE to confirm:`;
+      const confirmMessage = `Delete "${sourceName}"? This cannot be undone. It has ${articleCount} articles.\n\nType DELETE to confirm:`;
       
       const userInput = window.prompt(confirmMessage);
       if (userInput !== 'DELETE') {
@@ -1307,34 +1302,6 @@ export const UnifiedSourceManager = ({
     }
   };
 
-  const getSourceHealthBadge = (source: ContentSource) => {
-    if (!source.is_active) {
-      return <Badge variant="secondary" className="text-xs">🔴 Disabled</Badge>;
-    }
-    
-    if (hasConnectionIssues(source)) {
-      return <Badge variant="destructive" className="text-xs">🔴 Connection Issues</Badge>;
-    }
-    
-    if (!source.last_story_date) {
-      return <Badge variant="outline" className="text-xs">⚪ No Stories Yet</Badge>;
-    }
-    
-    const daysSinceLastStory = Math.floor(
-      (Date.now() - new Date(source.last_story_date).getTime()) / (1000 * 60 * 60 * 24)
-    );
-    
-    if (daysSinceLastStory > 7) {
-      return <Badge variant="outline" className="text-xs">🟡 Stale ({daysSinceLastStory}d)</Badge>;
-    }
-    
-    if ((source.stories_published_7d || 0) === 0) {
-      return <Badge variant="outline" className="text-xs">🟡 No Recent Stories</Badge>;
-    }
-    
-    return <Badge variant="default" className="text-xs">🟢 Healthy</Badge>;
-  };
-
   const hasConnectionIssues = (source: ContentSource) => {
     // Check for consecutive failures
     return (source.consecutive_failures || 0) >= 3 || source.is_blacklisted || !source.is_active;
@@ -1510,17 +1477,17 @@ export const UnifiedSourceManager = ({
       {/* Header: one line — title left, Gather all + Add source right */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-2xl font-bold">{getDisplayTitle()}</h2>
+          <h2 className="text-2xl font-semibold">{getDisplayTitle()}</h2>
           {mode !== 'topic' && displayDescription && (
             <p className="text-muted-foreground">{displayDescription}</p>
           )}
           {mode === 'global' && (
-            <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+            <p className="text-sm font-medium text-attention-foreground">
               Only showing sources actively linked to topics. Use "Clean Legacy Sources" to remove orphaned sources.
             </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-2">
           {mode === 'topic' && topicId && sources.some(s => s.is_active) && (
             <div className="flex items-center gap-1">
               {lastGatheredLabel && !gatheringAll && (
@@ -1541,7 +1508,7 @@ export const UnifiedSourceManager = ({
                     onClick={handleGatherAllSimple}
                     disabled={gatheringAll}
                     aria-label="Gather all now"
-                    className="h-9 w-9 disabled:opacity-100"
+                    className="disabled:opacity-100"
                   >
                     <RefreshCw className={`h-4 w-4 ${gatheringAll ? 'animate-spin' : ''}`} />
                   </Button>
@@ -1562,8 +1529,8 @@ export const UnifiedSourceManager = ({
               {isLoading ? 'Cleaning...' : 'Clean Legacy Sources'}
             </Button>
           )}
-          <Button onClick={() => setShowAddForm(true)} size="sm" variant="outline" className="h-8 px-2.5">
-            <Plus className="h-4 w-4 mr-1" />
+          <Button onClick={() => setShowAddForm(true)} size="sm" variant="outline">
+            <Plus className="h-4 w-4 mr-2" />
             Add source
           </Button>
         </div>
@@ -1571,11 +1538,8 @@ export const UnifiedSourceManager = ({
 
       {/* Contextual Backfill Prompt - for new topics with few articles */}
       {mode === 'topic' && topicId && articleCount < 10 && sources.length > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-muted p-4">
-          <span className="text-base">Gather older stories?</span>
-          <Button size="sm" variant="outline" className="shrink-0" onClick={() => setShowBackfillModal(true)}>
-            <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />Gather
-          </Button>
+        <div className="rounded-xl bg-muted p-4">
+          <BackfillFold onRun={(days) => handleBackfill(days)} />
         </div>
       )}
 
@@ -1689,24 +1653,24 @@ export const UnifiedSourceManager = ({
                     )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isEventsLink ? 'Events source: what comes through goes to your Desk.' : 'Works with any website - RSS feeds, news sites, or regular web pages'}
-                </p>
+                {isEventsLink && (
+                  <p className="mt-2 text-sm text-muted-foreground">What comes through goes to your Desk.</p>
+                )}
               </div>
             </div>
 
             {!isEventsLink && (<>
             {/* Validation Results */}
             {validationResult && (
-              <Alert className={validationResult.success ? "" : "border-orange-500"}>
+              <Alert className={validationResult.success ? "" : "border-attention"}>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="space-y-2">
                     <p className="font-medium">
-                      {validationResult.success ? "✅ Source validated successfully" : "⚠️ Source validation issues found"}
+                      {validationResult.success ? "Source looks good" : "Source needs a look"}
                     </p>
                     {validationResult.error && (
-                      <p className="text-sm text-red-600">{validationResult.error}</p>
+                      <p className="text-sm text-destructive">{validationResult.error}</p>
                     )}
                     {validationResult.warnings.length > 0 && (
                       <div className="text-sm">
@@ -1720,8 +1684,9 @@ export const UnifiedSourceManager = ({
                     )}
                     {validationResult.scraperTest && (
                       <p className="text-sm">
-                        Test scraping: {validationResult.scraperTest.success ? "✅" : "❌"} 
-                        {validationResult.scraperTest.articlesFound} articles found
+                        {validationResult.scraperTest.success
+                          ? `Test: ${validationResult.scraperTest.articlesFound} articles found`
+                          : "Test: nothing found"}
                       </p>
                     )}
                   </div>
@@ -1773,7 +1738,7 @@ export const UnifiedSourceManager = ({
                 htmlFor="trust-relevance"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
-                🔓 Bypass keyword filtering (trusted source)
+                Trust everything
               </label>
             </div>
             
@@ -1794,8 +1759,8 @@ export const UnifiedSourceManager = ({
                     <SelectItem value="7">Last 7 days</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-yellow-600 dark:text-yellow-500">
-                  ⚠️ Trusted sources process ALL content from index pages - keep date range tight to manage volume and costs
+                <p className="text-sm text-attention-foreground">
+                  Trusted sources take everything from the page — keep the window short.
                 </p>
               </div>
             )}
@@ -1816,7 +1781,7 @@ export const UnifiedSourceManager = ({
                 ) : (
                   <>
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Source
+                    Add source
                   </>
                 )}
               </Button>
@@ -1844,7 +1809,7 @@ export const UnifiedSourceManager = ({
             scraping_config: { ...(s.scraping_config || {}), trust_content_relevance: v.trust, trusted_max_age_days: v.trustDays },
           })}
           onTest={(s) => handleTestSource(s as ContentSource)}
-          onBackfill={(s) => { setSourceToBackfill(s.id); setShowBackfillModal(true); }}
+          onBackfill={(s, days) => handleBackfill(days, s.id)}
         />
       )}
 
@@ -1870,7 +1835,7 @@ export const UnifiedSourceManager = ({
                   />
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-sm sm:text-base truncate">{source.source_name}</h3>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">
                       <Globe className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{source.canonical_domain}</span>
                     </div>
@@ -1882,8 +1847,8 @@ export const UnifiedSourceManager = ({
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
                   {/* Trusted badge - only show if set */}
                   {source.scraping_config?.trust_content_relevance && (
-                    <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400 text-xs">
-                      🔓 {source.scraping_config.trusted_max_age_days || 1}d
+                    <Badge variant="outline" className="text-sm">
+                      Trusted · {source.scraping_config.trusted_max_age_days || 1}d
                     </Badge>
                   )}
 
@@ -1973,8 +1938,8 @@ export const UnifiedSourceManager = ({
               )}
 
               {source.last_error && (source.consecutive_failures || 0) < 3 && (
-                <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                  <p className="text-sm text-red-700 dark:text-red-400">
+                <div className="mt-3 p-3 bg-destructive/5 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
                     <strong>Last Error:</strong> {source.last_error}
                   </p>
                 </div>
@@ -1985,7 +1950,6 @@ export const UnifiedSourceManager = ({
 
         {sources.length === 0 && !loading && (
           <div className="text-center py-12">
-            <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
               No sources configured yet. Add your first source above.
             </p>
@@ -2024,11 +1988,11 @@ export const UnifiedSourceManager = ({
                   onCheckedChange={(checked) => setEditTrustContentRelevance(checked as boolean)}
                 />
                 <div className="space-y-1">
-                  <Label htmlFor="edit-trust-relevance" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Bypass keyword filtering (Trusted Source)
+                  <Label htmlFor="edit-trust-relevance" className="text-base font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Trust everything
                   </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Process ALL content from this source without keyword matching
+                  <p className="text-sm text-muted-foreground">
+                    Takes everything from the page — keep the window short.
                   </p>
                 </div>
               </div>
@@ -2038,7 +2002,7 @@ export const UnifiedSourceManager = ({
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                      ⚠️ Trusted sources process ALL content - keep date range tight
+                      Trusted sources take everything from the page — keep the window short.
                     </AlertDescription>
                   </Alert>
                   
@@ -2058,9 +2022,6 @@ export const UnifiedSourceManager = ({
                         <SelectItem value="7">Last 7 days</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Only articles published within this timeframe will be processed
-                    </p>
                   </div>
                 </div>
               )}

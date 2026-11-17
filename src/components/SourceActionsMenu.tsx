@@ -6,7 +6,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, ExternalLink, Settings, Trash2, AlertTriangle } from "lucide-react";
+import { MoreVertical, ExternalLink, Settings, Trash2, Archive } from "lucide-react";
 
 interface SourceActionsMenuProps {
   sourceId: string;
@@ -32,8 +32,7 @@ export const SourceActionsMenu = ({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
+          size="icon"
           disabled={disabled}
         >
           <MoreVertical className="h-4 w-4" />
@@ -52,14 +51,14 @@ export const SourceActionsMenu = ({
         
         <DropdownMenuItem onClick={onEdit}>
           <Settings className="mr-2 h-4 w-4" />
-          Edit Settings
+          Edit
         </DropdownMenuItem>
         
         <DropdownMenuSeparator />
         
-        <DropdownMenuItem onClick={() => onToggle(!isActive)} className="text-orange-600 dark:text-orange-400">
-          <AlertTriangle className="mr-2 h-4 w-4" />
-          {isActive ? "Disable Source" : "Enable Source"}
+        <DropdownMenuItem onClick={() => onToggle(!isActive)}>
+          <Archive className="mr-2 h-4 w-4" />
+          {isActive ? "Archive" : "Restore"}
         </DropdownMenuItem>
         
         <DropdownMenuSeparator />

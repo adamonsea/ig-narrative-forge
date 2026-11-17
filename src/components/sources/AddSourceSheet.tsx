@@ -67,14 +67,14 @@ export function AddSourceSheet({
               <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />Back
             </Button>
           )}
-          <SheetTitle className="text-xl">{step === 'find' ? 'Find sources' : 'Add source'}</SheetTitle>
+          <SheetTitle className="text-lg">{step === 'find' ? 'Find sources' : 'Add source'}</SheetTitle>
           <SheetDescription className="sr-only">Paste a link to a news site, feed or what's-on page.</SheetDescription>
         </SheetHeader>
 
         <div className="space-y-5 px-6 pb-8">
           {step === 'link' && (
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); next(); }}>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="add-source-link" className="text-sm">Link</Label>
                 <Input id="add-source-link" inputMode="url" autoFocus value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
               </div>
@@ -101,12 +101,12 @@ export function AddSourceSheet({
 
               {step === 'news' ? (
                 <div className="space-y-4">
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="add-source-name" className="text-sm">Name</Label>
                     <Input id="add-source-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <Label htmlFor="add-source-trust" className="text-base font-normal">Trust everything</Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
