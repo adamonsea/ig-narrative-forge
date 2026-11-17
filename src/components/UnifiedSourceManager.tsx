@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,7 +29,6 @@ import {
   Play,
   RefreshCw,
   RotateCw,
-  Eye,
   XCircle,
   Loader2,
   ExternalLink,
@@ -152,7 +152,8 @@ export const UnifiedSourceManager = ({
   const [gatheringAll, setGatheringAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [testingSource, setTestingSource] = useState<string | null>(null);
-  const [showDisabled, setShowDisabled] = useState(false);
+  const [lastGatherAllAt, setLastGatherAllAt] = useState<number | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [showBackfillModal, setShowBackfillModal] = useState(false);
   const [backfillMaxAgeDays, setBackfillMaxAgeDays] = useState(30);
@@ -1116,6 +1117,12 @@ export const UnifiedSourceManager = ({
     }
   };
 
+  // Re-render the "12m ago" label every 30s
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   // Simple Gather All with sensible defaults (7 days, no force rescrape)
   const handleGatherAllSimple = async () => {
     if (!topicId) return;
@@ -1150,6 +1157,8 @@ export const UnifiedSourceManager = ({
 
       if (error) throw error;
 
+      setLastGatherAllAt(Date.now());
+      setNowTick(Date.now());
       toast({
         title: 'Gathering Complete',
         description: 'Content has been gathered from all sources',
@@ -1470,7 +1479,7 @@ export const UnifiedSourceManager = ({
 
   const getDisplayTitle = () => {
     if (title) return title;
-    if (mode === 'topic' && currentTopic) return `${currentTopic.name} Sources`;
+    if (mode === 'topic') return 'Sources';
     if (mode === 'region' && region) return `${region} Sources`;
     return 'Content Sources';
   };
@@ -1483,13 +1492,23 @@ export const UnifiedSourceManager = ({
 
   const displayDescription = getDisplayDescription();
 
+  // "12m ago": the latest of this session's Gather all and the sources' own last read
+  const lastGatheredAt = Math.max(
+    lastGatherAllAt ?? 0,
+    ...sources
+      .filter(s => s.is_active && s.last_scraped_at)
+      .map(s => new Date(s.last_scraped_at as string).getTime())
+      .filter(t => Number.isFinite(t)),
+  );
+  const lastGatheredLabel = lastGatheredAt > 0 ? formatAgo(nowTick - lastGatheredAt) : null;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+      {/* Header: one line — title left, Gather all + Add source right */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold">{getDisplayTitle()}</h2>
-          {displayDescription && (
+          {mode !== 'topic' && displayDescription && (
             <p className="text-muted-foreground">{displayDescription}</p>
           )}
           {mode === 'global' && (
@@ -1498,21 +1517,35 @@ export const UnifiedSourceManager = ({
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {/* Gather All button - only for topic mode */}
-          {mode === 'topic' && topicId && sources.filter(s => s.is_active).length > 0 && (
-            <Button
-              onClick={handleGatherAllSimple}
-              disabled={gatheringAll}
-              className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white"
-            >
-              {gatheringAll ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {mode === 'topic' && topicId && sources.some(s => s.is_active) && (
+            <div className="flex items-center gap-1">
+              {lastGatheredLabel && !gatheringAll && (
+                <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
+                  {lastGatheredLabel}
+                  {lastGatheredLabel !== 'now' && <span className="hidden sm:inline"> ago</span>}
+                </span>
               )}
-              {gatheringAll ? 'Gathering...' : 'Gather All'}
-            </Button>
+              {gatheringAll && (
+                <span className="hidden text-sm text-muted-foreground sm:inline">Gathering…</span>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleGatherAllSimple}
+                    disabled={gatheringAll}
+                    aria-label="Gather all now"
+                    className="h-9 w-9 disabled:opacity-100"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${gatheringAll ? 'animate-spin' : ''}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Gather all now</TooltipContent>
+              </Tooltip>
+            </div>
           )}
           {mode === 'global' && (
             <Button
@@ -1526,29 +1559,9 @@ export const UnifiedSourceManager = ({
               {isLoading ? 'Cleaning...' : 'Clean Legacy Sources'}
             </Button>
           )}
-          {mode === 'topic' && topicId && topicName && (
-            <Button
-              onClick={() => setShowDiscoveryModal(true)}
-              variant="outline"
-              size="sm"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              AI Discover
-            </Button>
-          )}
-          {mode !== 'topic' && (
-            <Button
-              onClick={() => setShowDisabled(!showDisabled)}
-              variant="outline"
-              size="sm"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              {showDisabled ? 'Hide' : 'Show'} Disabled
-            </Button>
-          )}
-          <Button onClick={() => setShowAddForm(true)} size="sm">
-            <Plus className="w-4 w-4 mr-2" />
-            Add Source
+          <Button onClick={() => setShowAddForm(true)} size="sm" variant="outline" className="h-8 px-2.5">
+            <Plus className="h-4 w-4 mr-1" />
+            Add source
           </Button>
         </div>
       </div>
@@ -1654,6 +1667,19 @@ export const UnifiedSourceManager = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {mode === 'topic' && topicId && topicName && (
+              <button
+                type="button"
+                onClick={() => setShowDiscoveryModal(true)}
+                className="flex w-full items-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:bg-muted"
+              >
+                <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0">
+                  <span className="block font-medium">Find sources for me</span>
+                  <span className="block text-sm text-muted-foreground">We'll suggest sites that fit this feed. You pick which to add.</span>
+                </span>
+              </button>
+            )}
             <div className={`grid grid-cols-1 gap-4 ${isEventsLink ? "" : "md:grid-cols-2"}`}>
               <div className={isEventsLink ? "hidden" : ""}>
                 <Label htmlFor="source-name">Source Name *</Label>
@@ -1861,7 +1887,7 @@ export const UnifiedSourceManager = ({
       {/* Sources List (global/region modes) */}
       {mode !== 'topic' && (
       <div className="grid gap-4">
-        {sources.filter(s => showDisabled || s.is_active).map((source) => (
+        {sources.filter(s => s.is_active).map((source) => (
           <Card key={source.id}>
             <CardContent className="p-4 sm:p-6">
               {/* Desktop: Single-row layout */}
@@ -2116,3 +2142,13 @@ export const UnifiedSourceManager = ({
     </div>
   );
 };
+
+/** Compact "12m" style age for the Sources header ("ago" is added beside it on wider screens). */
+function formatAgo(ms: number): string {
+  const mins = Math.floor(Math.max(0, ms) / 60_000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
