@@ -1344,6 +1344,8 @@ const TopicFeed = () => {
                 <p className="text-lg text-muted-foreground">No stories match your selected filters</p>
                 <p className="text-sm text-muted-foreground">Try adjusting your keyword or source selections</p>
               </>
+            ) : topic?.feed_lead === 'events' ? (
+              <p className="text-lg text-muted-foreground">No events coming up</p>
             ) : (
               <>
                 <p className="text-lg text-muted-foreground">No stories available yet</p>
