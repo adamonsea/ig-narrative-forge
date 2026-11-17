@@ -57,7 +57,7 @@ export function NewsSourcePanel({
 
   return (
     <Sheet open={Boolean(source)} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="right" onOpenAutoFocus={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).focus(); }} className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-xl">
+      <SheetContent side="panel" onOpenAutoFocus={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).focus(); }} className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-xl">
         {source && verdict && (
           <>
             <SheetHeader className="space-y-4 p-6 pr-12 text-left">

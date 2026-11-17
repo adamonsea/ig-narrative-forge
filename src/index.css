@@ -251,6 +251,8 @@ All colors MUST be HSL.
     --ring: 270 65% 58%;
 
     --radius: 0.5rem;
+    /* Behind pop-ups and drawers: navy ink, never raw black */
+    --overlay: 214 50% 9%;
 
     /* Feed-specific dark theme variables */
     --feed-background: 210 11% 15%;
@@ -294,6 +296,7 @@ All colors MUST be HSL.
   .dark {
     /* Quiet editorial workspace — dark theme */
     --background: 214 45% 8%;
+    --overlay: 214 60% 3%;
     --foreground: 210 25% 96%;
 
     --card: 214 40% 10%;
@@ -435,7 +438,7 @@ All colors MUST be HSL.
 
   /* Quiet persistent save indicator */
   .save-indicator {
-    @apply inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-opacity duration-200;
+    @apply inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-opacity duration-200;
   }
 
   /* Slim violet marker used by active navigation */
@@ -458,14 +461,20 @@ All colors MUST be HSL.
   animation-duration: 1300ms;
 }
 
+/* Anything live: a ring in pop green by default; .live-pulse-light on the bright mint bar */
 @keyframes live-pulse {
-  0% { box-shadow: 0 0 0 0 hsl(var(--purple-bright) / 0.45); }
-  70% { box-shadow: 0 0 0 6px hsl(var(--purple-bright) / 0); }
-  100% { box-shadow: 0 0 0 0 hsl(var(--purple-bright) / 0); }
+  0% { box-shadow: 0 0 0 0 hsl(var(--pulse-colour) / 0.55); }
+  70% { box-shadow: 0 0 0 6px hsl(var(--pulse-colour) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--pulse-colour) / 0); }
 }
 
 .live-pulse {
+  --pulse-colour: var(--pop);
   animation: live-pulse 2.2s ease-out infinite;
+}
+
+.live-pulse.live-pulse-light {
+  --pulse-colour: var(--mint-foreground);
 }
 
 /* A newly arrived or newly live card settles in rather than popping */

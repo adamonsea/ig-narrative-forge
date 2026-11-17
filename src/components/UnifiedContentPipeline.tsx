@@ -474,10 +474,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         {/* ===== Live now: exactly what readers see, in feed order ===== */}
         <section className={areaClass('live')} aria-labelledby="desk-live">
           <div className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 bg-mint px-2 py-2 lg:-mx-4 lg:-mt-4 lg:rounded-t-xl lg:px-4">
-            <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint-foreground opacity-70 motion-reduce:animate-none" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-mint-foreground" />
-            </span>
+            <span className="live-pulse live-pulse-light h-2.5 w-2.5 shrink-0 rounded-full bg-mint-foreground" aria-hidden="true" />
             <h3 id="desk-live" className="text-lg font-semibold text-pop-foreground">Live now</h3>
             <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
             {queueItems.length > 0 && (

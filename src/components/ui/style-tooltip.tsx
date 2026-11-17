@@ -77,10 +77,10 @@ export const StyleTooltip: React.FC<StyleTooltipProps> = ({ styleChoices, classN
               if (!value) return null;
               return (
                 <div key={key} className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-muted-foreground font-medium">
+                  <span className="text-sm text-muted-foreground font-medium">
                     {getStyleLabel(key)}:
                   </span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary">
                     {getStyleDisplayName(key, value)}
                   </Badge>
                 </div>

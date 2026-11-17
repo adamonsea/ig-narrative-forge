@@ -36,4 +36,5 @@
 - New feeds start from one sentence (`suggest-feed-setup` rules + `src/lib/feedSetup.ts`); fandom feeds set `brand_safe_pictures` (no drawn characters/logos). Feed terms are edited only in `LookForPanel` via `src/lib/termLists.ts` (case-insensitive, one list per term).
 - Autopilot = automation_mode 'holiday' + `auto_simplify_enabled=true`; turning it off never clears that flag (hand-written stories use it).
 - Desk story cards use `DeskCard` (quiet at rest, ≤2 actions on hover/tap, drawer for the rest).
+- Workspace drawers use `SheetContent side="panel"` (right panel on wide screens, bottom sheet on phones) and errors use `InlineError` in `ui/editorial.tsx`; one drawer and one error state everywhere.
 - Admin-only `/design` (`src/pages/design/DesignSystem.tsx`) renders the workspace system from Desk parts; add new UI there first.

@@ -6,7 +6,7 @@ Rule key: **Size** = text outside 32/24/18/16/14 or tiny text · **Caps** = uppe
 
 ---
 
-## 1. Shared building blocks (fixing these fixes many screens at once)
+## 1. Shared building blocks (done 17 Nov; health dots on tinted cards keep the darker green for contrast)
 
 - **Desk motion doesn't match /design**: the Live now dot uses a white "ping", not `live-pulse`. The `live-pulse` style itself pulses violet (index.css 461).
 - **Health dots** use the dark green `mint-ink`, but the rules say `pop` (sources/SourceCard.tsx 18).

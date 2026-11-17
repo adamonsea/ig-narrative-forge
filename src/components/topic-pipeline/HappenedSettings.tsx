@@ -16,7 +16,7 @@ export function HappenedSettings({ topicId, onChanged }: { topicId: string; onCh
           <Settings2 className="h-4 w-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full space-y-6 overflow-y-auto sm:max-w-md" onOpenAutoFocus={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).focus(); }}>
+      <SheetContent side="panel" className="w-full space-y-6 overflow-y-auto sm:max-w-md" onOpenAutoFocus={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).focus(); }}>
         <SheetHeader className="text-left">
           <SheetTitle className="text-xl">News</SheetTitle>
         </SheetHeader>

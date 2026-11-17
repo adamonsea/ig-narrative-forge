@@ -72,14 +72,14 @@ export function RememberedFold({
       <Collapsible open={open} onOpenChange={toggle} className={className}>
         <div className="flex items-center justify-between gap-3 py-2">
           <div className="flex items-center gap-2">
-            <CollapsibleTrigger className="text-left text-xl font-semibold md:text-2xl">{label}</CollapsibleTrigger>
+            <CollapsibleTrigger className="text-left text-2xl font-semibold">{label}</CollapsibleTrigger>
             {description && <InfoHint label={`About ${label.toLowerCase()}`}>{description}</InfoHint>}
           </div>
           <CollapsibleTrigger className="group rounded-md p-1" aria-label={open ? `Close ${label}` : `Open ${label}`}>
             <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
         </div>
-        <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
+        <CollapsibleContent className="animate-in fade-in-0 duration-200">
           <div className="pt-6">{children}</div>
         </CollapsibleContent>
       </Collapsible>
@@ -94,7 +94,7 @@ export function RememberedFold({
         <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
         {label}
       </CollapsibleTrigger>
-      <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
+      <CollapsibleContent className="animate-in fade-in-0 duration-200">
         <div className={contentClassName}>{children}</div>
       </CollapsibleContent>
     </Collapsible>

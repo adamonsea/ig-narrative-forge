@@ -117,7 +117,7 @@ export function DeskCard({
         </div>
       </div>
       <div
-        className="desk-card-actions [&_button]:h-8"
+        className="desk-card-actions [&_button]:h-9"
         onClick={(e) => e.stopPropagation()}
       >
         {actions}
@@ -132,7 +132,7 @@ export function DeskBadge({ children, tone = "muted" }: { children: ReactNode; t
     muted: "bg-muted text-muted-foreground",
     primary: "bg-primary/10 text-primary",
     pop: "text-pop",
-    warning: "bg-accent text-accent-foreground",
+    warning: "bg-attention-soft text-attention-foreground",
     destructive: "bg-destructive/10 text-destructive",
   };
   return <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm font-medium", tones[tone])}>{children}</span>;

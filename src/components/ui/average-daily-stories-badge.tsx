@@ -19,7 +19,7 @@ export const AverageDailyStoriesBadge = ({ average, todayCount }: AverageDailySt
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="outline" className="gap-1 text-xs font-normal border-emerald-500 text-emerald-600 dark:text-emerald-400">
+          <Badge variant="outline" className="gap-1 font-normal border-pop/40 text-mint-ink">
             <TrendingUp className="w-3 h-3" />
             {showTodayCount ? `${todayCount} new today` : `Av. ${roundedAverage}/day`}
           </Badge>

@@ -240,7 +240,7 @@ export const FeedBuildProgress = ({
               {phase.status === 'done' ? (
                 <Check className="w-4 h-4 text-accent-foreground" />
               ) : phase.status === 'active' ? (
-                <span className="live-pulse h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                <span className="live-pulse h-2 w-2 rounded-full bg-pop" aria-hidden="true" />
               ) : (
                 <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
               )}

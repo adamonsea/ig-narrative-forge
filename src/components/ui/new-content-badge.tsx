@@ -16,14 +16,13 @@ export const NewContentBadge = ({ show, count, onDismiss, className }: NewConten
     <Badge
       variant="default"
       className={cn(
-        "animate-pulse bg-primary text-primary-foreground gap-1.5 cursor-pointer hover:animate-none transition-all",
-        "shadow-lg shadow-primary/20",
-        className
+        "settle-in bg-primary text-primary-foreground gap-1.5 cursor-pointer transition-colors",
+                className
       )}
       onClick={onDismiss}
     >
       <Sparkles className="h-3 w-3" />
-      <span className="text-xs font-medium">
+      <span className="text-sm font-medium">
         {count !== undefined ? `${count} new` : 'New'}
       </span>
     </Badge>

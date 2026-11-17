@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { Archive, ArrowLeft, ArrowRight, Eye, Check, RefreshCw, Plus, AlertCircle } from "lucide-react";
+import { Archive, ArrowLeft, ArrowRight, Eye, Check, RefreshCw, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { InfoHint, SaveIndicator, type SaveState } from "@/components/ui/editorial";
+import { InfoHint, InlineError, SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { RememberedFold } from "@/components/settings/RememberedFold";
 import { DeskCard, DeskBadge, MetaLine } from "@/components/topic-pipeline/DeskCard";
 import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
@@ -83,10 +83,7 @@ function IconAction({ label, children, onClick }: { label: string; children: Rea
 function LiveBar({ phone }: { phone?: boolean }) {
   return (
     <div className={cn("flex min-h-10 items-center gap-2 bg-mint px-4 py-2", !phone && "rounded-t-xl")}>
-      <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint-foreground opacity-70 motion-reduce:animate-none" />
-        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-mint-foreground" />
-      </span>
+      <span className="live-pulse live-pulse-light h-2.5 w-2.5 shrink-0 rounded-full bg-mint-foreground" aria-hidden="true" />
       <h3 className="text-lg font-semibold text-pop-foreground">Live now</h3>
     </div>
   );
@@ -279,10 +276,7 @@ export default function DesignSystem() {
                 </div>
               </Spec>
               <Spec name="Error · one sentence, one fix">
-                <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/35 bg-destructive-soft p-3 text-base text-destructive-ink">
-                  <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4 shrink-0" />Couldn't read this source.</span>
-                  <Button size="sm" variant="outline">Try again</Button>
-                </div>
+                <InlineError message="Couldn't read this source." actionLabel="Try again" onAction={() => {}} />
               </Spec>
               <Spec name="Empty · one line, one action">
                 <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-border p-4">
@@ -297,7 +291,7 @@ export default function DesignSystem() {
             <div className="grid gap-6 md:grid-cols-3">
               <Spec name="live-pulse">
                 <div className="flex items-center gap-4">
-                  <span className="live-pulse h-3 w-3 rounded-full bg-purple-bright" />
+                  <span className="live-pulse h-3 w-3 rounded-full bg-pop" />
                   <span className="text-sm text-muted-foreground">Anything live</span>
                 </div>
               </Spec>
@@ -350,7 +344,7 @@ export default function DesignSystem() {
         </div>
 
         <Sheet open={drawer} onOpenChange={setDrawer}>
-          <SheetContent side="right" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-xl">
+          <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-xl">
             <SheetHeader>
               <SheetTitle className="text-lg font-semibold">{STORIES[0].title}</SheetTitle>
               <SheetDescription className="text-sm">Eastbourne Herald · 2h ago</SheetDescription>

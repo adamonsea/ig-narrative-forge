@@ -10,12 +10,7 @@ export function ReadingNow() {
   if (!ctx?.pulse) return null;
   return (
     <span className="inline-flex items-center gap-2 text-sm text-muted-foreground tabular-nums" aria-live="polite">
-      <span className="relative flex h-2 w-2" aria-hidden>
-        {n > 0 && (
-          <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping motion-reduce:animate-none" />
-        )}
-        <span className={`relative inline-flex h-2 w-2 rounded-full ${n > 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
-      </span>
+      <span className={`h-2 w-2 shrink-0 rounded-full ${n > 0 ? "live-pulse bg-pop" : "bg-muted-foreground/40"}`} aria-hidden />
       {n} reading now
     </span>
   );

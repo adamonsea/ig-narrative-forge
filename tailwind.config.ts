@@ -84,6 +84,7 @@ export default {
 					ink: 'hsl(var(--mint-ink))',
 					foreground: 'hsl(var(--mint-foreground))'
 				},
+				overlay: 'hsl(var(--overlay))',
 				attention: {
 					DEFAULT: 'hsl(var(--attention))',
 					soft: 'hsl(var(--attention-soft))',

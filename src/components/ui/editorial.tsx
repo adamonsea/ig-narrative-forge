@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, Info } from "lucide-react";
+import { AlertCircle, ChevronDown, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -69,7 +70,7 @@ export function SectionHeader({
   return (
     <div id={id} className={cn("scroll-mt-24", className)}>
       <div className="flex items-start justify-between gap-4">
-        <h2 className="display-heading text-2xl md:text-[1.75rem] leading-snug">{title}</h2>
+        <h2 className="text-2xl font-semibold leading-snug">{title}</h2>
         {actions && <div className="flex items-center gap-2 flex-shrink-0 pt-1">{actions}</div>}
       </div>
       {description && <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{description}</p>}
@@ -84,7 +85,7 @@ export function SaveIndicator({ state, className }: { state: SaveState; classNam
   return (
     <span className={cn("save-indicator", className)} aria-live="polite">
       {state === "saving" && (
-        <span className="h-3 w-3 rounded-full border border-muted-foreground/40 border-t-muted-foreground animate-spin" />
+        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
       )}
       {state === "saved" && <span className="h-1.5 w-1.5 rounded-full bg-pop" />}
       {state === "not-saved" && <span className="h-1.5 w-1.5 rounded-full bg-destructive" />}
@@ -111,7 +112,7 @@ export function Disclosure({
         <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
         {label}
       </CollapsibleTrigger>
-      <CollapsibleContent className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
+      <CollapsibleContent className="animate-in fade-in-0 duration-200">
         <div className="pt-3">{children}</div>
       </CollapsibleContent>
     </Collapsible>
@@ -133,7 +134,7 @@ export function StatusPill({
     <Comp
       {...(onToggle ? { onClick: onToggle, type: "button" as const } : {})}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors",
         live
           ? "bg-mint-soft text-foreground hover:bg-mint-soft/70"
           : "bg-muted text-muted-foreground hover:bg-muted/70",
@@ -162,9 +163,40 @@ export function PageState({
 }) {
   return (
     <div className={cn("py-16 text-center max-w-md mx-auto", className)}>
-      <h3 className="display-heading text-2xl mb-2">{title}</h3>
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
       {description && <p className="text-sm text-muted-foreground mb-5">{description}</p>}
       {action}
+    </div>
+  );
+}
+
+/** The one error state: inline, destructive-soft, one plain sentence and one fix. */
+export function InlineError({
+  message,
+  actionLabel,
+  onAction,
+  className,
+}: {
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-lg border border-destructive/35 bg-destructive-soft p-3 text-base text-destructive-ink",
+        className
+      )}
+    >
+      <span className="flex items-center gap-2">
+        <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {message}
+      </span>
+      {actionLabel && onAction && (
+        <Button size="sm" variant="outline" onClick={onAction}>{actionLabel}</Button>
+      )}
     </div>
   );
 }

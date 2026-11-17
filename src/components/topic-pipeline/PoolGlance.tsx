@@ -104,10 +104,10 @@ export function useAutopilotOn(topicId: string) {
 export function AutopilotPill({ className }: { className?: string }) {
   return (
     <span
-      className={cn("inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary", className)}
-      title="Autopilot is on: new stories are written and published for you"
+      className={cn("inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-sm font-medium leading-none text-primary", className)}
+      title="Autopilot on"
     >
-      <Plane className="h-3 w-3" aria-hidden="true" />Autopilot
+      <Plane className="h-3.5 w-3.5" aria-hidden="true" />Autopilot
     </span>
   );
 }
