@@ -21,6 +21,7 @@ import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
 
 import AdminPanel from "./pages/AdminPanel";
+const DesignSystem = lazy(() => import("./pages/design/DesignSystem"));
 import AICostDashboardPage from "./pages/AICostDashboard";
 import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
@@ -113,6 +114,7 @@ const App = () => {
                 <Route path="/dashboard/widgets" element={<WidgetsPage />} />
                 <Route path="/dashboard/widgets/test" element={<WidgetTestPage />} />
                 <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/design" element={<Suspense fallback={null}><DesignSystem /></Suspense>} />
                 <Route path="/admin/ai-costs" element={<AICostDashboardPage />} />
                 
                 {/* Redirect old URL patterns to new universal URLs */}
