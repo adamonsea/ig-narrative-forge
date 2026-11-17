@@ -18,7 +18,7 @@ export function HappenedSettings({ topicId, onChanged }: { topicId: string; onCh
       </SheetTrigger>
       <SheetContent side="panel" className="w-full space-y-6 overflow-y-auto sm:max-w-md" onOpenAutoFocus={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).focus(); }}>
         <SheetHeader className="text-left">
-          <SheetTitle className="text-xl">News</SheetTitle>
+          <SheetTitle className="text-lg">News</SheetTitle>
         </SheetHeader>
         {open && <AutopilotBasics topicId={topicId} onChanged={onChanged} />}
         <Button variant="outline" asChild onClick={() => setOpen(false)}>

@@ -1,16 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { ANIMATION_CREDIT_COSTS } from '@/lib/billing';
 
 export type AnimationQuality = 'standard' | 'fast';
@@ -102,93 +94,63 @@ export function AnimationInstructionsModal({
   if (!story) return null;
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Animate Illustration</DialogTitle>
-          <DialogDescription className="sr-only">
-            Configure animation settings for your story illustration
-          </DialogDescription>
-        </DialogHeader>
-        
-        {/* Guidance Header - only show when no AI suggestions */}
-        {!isAiGenerated && (
-          <div className="text-center pb-3 border-b">
-            <p className="text-sm text-muted-foreground">
-              Guide motion, not meaning.
+    <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle className="text-lg">Animate picture</SheetTitle>
+          <SheetDescription className="sr-only">Describe what should move in the picture.</SheetDescription>
+        </SheetHeader>
+
+        {isAiGenerated && (
+          <div className="space-y-2">
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              Suggested
             </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  aria-pressed={customPrompt === suggestion}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className={`rounded-full border px-3 py-1 text-sm transition-colors ${customPrompt === suggestion ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-        
-        <div className="space-y-4 py-2">
-          {/* AI Suggestions with sparkle indicator */}
-          {isAiGenerated && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>AI-suggested for this image</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((suggestion) => (
-                  <Badge
-                    key={suggestion}
-                    variant={customPrompt === suggestion ? 'default' : 'outline'}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => handleSuggestionClick(suggestion)}
-                  >
-                    {suggestion}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Custom Instructions */}
-          <div className="space-y-1.5">
-            <Textarea
-              placeholder='Describe what should move...'
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              maxLength={200}
-              className="min-h-[70px] resize-none text-sm"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              {/* Only show "Leave empty for auto" when there are no AI suggestions */}
-              <span>{!customPrompt && !isAiGenerated && 'Leave empty for auto'}</span>
-              <span>{customPrompt.length}/200</span>
-            </div>
-          </div>
-          
-          {/* Cost display */}
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Cost: {ANIMATION_CREDITS} credits</span>
-            {!isAdmin && creditBalance !== undefined && (
-              <span className={`text-xs ${hasInsufficientCredits ? 'text-destructive' : 'text-muted-foreground'}`}>
-                Balance: {creditBalance}
-              </span>
-            )}
-          </div>
+
+        <div className="space-y-2">
+          <Textarea
+            placeholder={isAiGenerated ? "What should move?" : "What should move? Leave empty for auto"}
+            aria-label="What should move"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            maxLength={200}
+            className="min-h-[72px] resize-none text-base"
+          />
+          <p className="text-right text-sm text-muted-foreground tabular-nums">{customPrompt.length}/200</p>
         </div>
-        
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleClose} disabled={isAnimating}>
-            Cancel
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{ANIMATION_CREDITS} credits</span>
+          {!isAdmin && creditBalance !== undefined && (
+            <span className={hasInsufficientCredits ? "text-destructive" : "text-muted-foreground"}>
+              {creditBalance} left
+            </span>
+          )}
+        </div>
+
+        <div className="mt-auto flex justify-end gap-2 border-t pt-4">
+          <Button variant="ghost" onClick={handleClose} disabled={isAnimating}>Cancel</Button>
+          <Button onClick={handleGenerate} disabled={isAnimating || hasInsufficientCredits}>
+            {isAnimating ? "Animating" : "Animate"}
           </Button>
-          <Button
-            onClick={handleGenerate}
-            disabled={isAnimating || hasInsufficientCredits}
-          >
-            {isAnimating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Animating...
-              </>
-            ) : (
-              '🎬 Animate'
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

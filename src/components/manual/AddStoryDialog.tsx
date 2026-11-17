@@ -1,13 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { InlineError } from '@/components/ui/editorial';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Upload, Plus, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Upload, Plus, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { edgeErrorMessage } from '@/lib/edgeError';
@@ -184,7 +184,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
   };
 
   return (
-    <Dialog
+    <Sheet
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
@@ -196,20 +196,13 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
         Story
       </Button>
 
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add a story</DialogTitle>
-          <DialogDescription>
-            Paste text, drop in a link, or upload a file. You'll be able to check the details before it goes to arrivals.
-          </DialogDescription>
-        </DialogHeader>
+      <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="text-lg">Add a story</SheetTitle>
+          <SheetDescription className="sr-only">Paste text, add a link or upload a file.</SheetDescription>
+        </SheetHeader>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {error && <InlineError message={error} />}
 
         {!draft ? (
           <Tabs value={mode} onValueChange={(v) => { setMode(v as Mode); setError(null); }}>
@@ -220,23 +213,22 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
             </TabsList>
 
             <TabsContent value="paste" className="space-y-3 pt-4">
-              <Label htmlFor="paste-text">Article text</Label>
+              <Label htmlFor="paste-text">Text</Label>
               <Textarea
                 id="paste-text"
                 value={pasteText}
                 onChange={(e) => setPasteText(e.target.value)}
-                placeholder="Paste the headline and article text here…"
+                placeholder="Headline and story text"
                 className="min-h-[220px]"
                 disabled={busy}
               />
               <Button onClick={handlePaste} disabled={busy || pasteText.trim().length < 50} className="w-full">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {busy ? status || 'Working…' : 'Continue'}
               </Button>
             </TabsContent>
 
             <TabsContent value="link" className="space-y-3 pt-4">
-              <Label htmlFor="link-url">Article URL</Label>
+              <Label htmlFor="link-url">Link</Label>
               <Input
                 id="link-url"
                 value={linkUrl}
@@ -245,8 +237,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
                 disabled={busy}
               />
               <Button onClick={handleLink} disabled={busy || !linkUrl.trim()} className="w-full">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {busy ? status || 'Working…' : 'Fetch article'}
+                {busy ? status || 'Working…' : 'Fetch'}
               </Button>
             </TabsContent>
 
@@ -259,13 +250,9 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
               >
                 <input {...getInputProps()} />
                 <div className="flex flex-col items-center gap-2">
-                  {busy ? (
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  ) : (
-                    <Upload className="w-8 h-8 text-muted-foreground" />
-                  )}
-                  <p className="font-medium text-sm">{busy ? status || 'Working…' : 'Drag & drop a file, or click to select'}</p>
-                  <p className="text-sm text-muted-foreground">Screenshots, PDFs, Word documents or text files • Max 20MB</p>
+                  <Upload className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
+                  <p className="font-medium text-base">{busy ? status || 'Working…' : 'Drop a file or click'}</p>
+                  <p className="text-sm text-muted-foreground">Picture, PDF, Word or text · 20MB</p>
                 </div>
               </div>
             </TabsContent>
@@ -327,9 +314,9 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
                 id="draft-body"
                 value={draft.body}
                 onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                className="min-h-[260px] font-mono text-xs"
+                className="min-h-[260px] text-base"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {draft.body.trim().split(/\s+/).filter(Boolean).length} words
               </p>
             </div>
@@ -340,13 +327,13 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
                 Back
               </Button>
               <Button onClick={handleCommit} disabled={busy || draft.body.trim().length < 50} className="gap-2">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                {busy ? status || 'Working…' : 'Add to arrivals'}
+                <Plus className="w-4 h-4" aria-hidden="true" />
+                {busy ? status || 'Working…' : 'Add to Story pool'}
               </Button>
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };

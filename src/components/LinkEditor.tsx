@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
-import { ExternalLink, Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 interface Link {
   start: number;
@@ -84,104 +84,67 @@ export const LinkEditor: React.FC<LinkEditorProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ExternalLink className="h-5 w-5" />
-            Manage Links
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6">
-          {/* Content Preview with Selection Instructions */}
-          <div>
-            <Label className="text-sm font-medium">Content</Label>
-            <div 
-              className="mt-2 p-3 border rounded-lg bg-muted/30 text-sm leading-relaxed cursor-text select-text"
-              onMouseUp={handleTextSelection}
-            >
-              {content}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Select text above to create a link
-            </p>
-          </div>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="panel" className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle className="text-lg">Links</SheetTitle>
+        </SheetHeader>
 
-          {/* Add Link Form */}
-          <div className="space-y-4 p-4 border rounded-lg bg-background">
-            <h4 className="font-medium text-sm">Add New Link</h4>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="linkText" className="text-xs">Link Text</Label>
-                <Input
-                  id="linkText"
-                  value={linkText}
-                  onChange={(e) => setLinkText(e.target.value)}
-                  placeholder="Text to display"
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div>
-                <Label htmlFor="linkUrl" className="text-xs">URL</Label>
-                <Input
-                  id="linkUrl"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="h-8 text-sm"
-                />
-              </div>
-            </div>
-            
-            <Button 
-              size="sm" 
-              onClick={addLink}
-              disabled={!linkText.trim() || !linkUrl.trim()}
-              className="h-8"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add Link
-            </Button>
-          </div>
-
-          {/* Existing Links */}
-          {links.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Current Links ({links.length})</Label>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {links.map((link, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 border rounded text-sm">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium">{link.text}</span>
-                      <span className="text-muted-foreground text-xs ml-2">→ {link.url}</span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => removeLink(index)}
-                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              Save Links
-            </Button>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Select words to link</Label>
+          <div
+            className="cursor-text select-text rounded-lg border bg-muted/30 p-3 text-base leading-relaxed"
+            onMouseUp={handleTextSelection}
+          >
+            {content}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="linkText" className="text-sm">Words</Label>
+            <Input id="linkText" value={linkText} onChange={(e) => setLinkText(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="linkUrl" className="text-sm">Address</Label>
+            <Input id="linkUrl" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://" />
+          </div>
+        </div>
+        <div>
+          <Button variant="outline" size="sm" onClick={addLink} disabled={!linkText.trim() || !linkUrl.trim()}>
+            <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
+            Add
+          </Button>
+        </div>
+
+        {links.length > 0 && (
+          <ul className="space-y-2">
+            {links.map((link, index) => (
+              <li key={index} className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-base">
+                <div className="min-w-0 flex-1 truncate">
+                  <span className="font-medium">{link.text}</span>
+                  <span className="ml-2 text-sm text-muted-foreground">{link.url}</span>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => removeLink(index)}
+                  aria-label={`Remove link ${link.text}`}
+                  title="Remove link"
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-auto flex justify-end gap-2 border-t pt-4">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave}>Save</Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };

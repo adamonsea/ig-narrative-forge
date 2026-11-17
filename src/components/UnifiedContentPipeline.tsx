@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, Mail, Check, CalendarDays, ArrowRight, ArrowLeft } from "lucide-react";
+import { AlertCircle, Mail, Check, ArrowRight, ArrowLeft } from "lucide-react";
+import { InlineError } from "@/components/ui/editorial";
 import { RememberedFold } from "@/components/settings/RememberedFold";
 import { AutopilotPill, EventHorizonGlance, PublishedGlance, useAutopilotOn } from "@/components/topic-pipeline/PoolGlance";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,9 +12,7 @@ import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMult
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 
-import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
-import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 import { useTopicPulse } from "@/hooks/useTopicPulse";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
 import { useEventDesk, useEventDeskActions } from "@/hooks/useWhatsOnEvents";
@@ -349,7 +348,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         refreshContent();
       }
     } catch (error) {
-      toast({ title: "Recovery Failed", description: error instanceof Error ? error.message : "Failed to recover stuck items", variant: "destructive" });
+      toast({ title: "Couldn't recover stuck stories", description: error instanceof Error ? error.message : undefined, variant: "destructive" });
     }
   };
 
@@ -357,20 +356,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     <div className="space-y-4">
       {/* Quiet inline load-error banner with retry — replaces the old per-refresh error toasts */}
       {loadError && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center justify-between gap-3 rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm"
-        >
-          <span className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
-            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {loadError}
-          </span>
-          <Button size="sm" variant="outline" className="h-8 text-sm" onClick={() => refreshContent()}>
-            <RefreshCw className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
-            Retry
-          </Button>
-        </div>
+        <InlineError message={loadError} actionLabel="Retry" onAction={() => refreshContent()} />
       )}
 
       {/* Phones: one simple three-way switch, opening on Live now */}
@@ -478,14 +464,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <h3 id="desk-live" className="text-lg font-semibold text-pop-foreground">Live now</h3>
             <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
             {queueItems.length > 0 && (
-              <span className="inline-flex items-center gap-1 text-sm text-pop-foreground animate-fade-in">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />{queueItems.length} being written
+              <span className="inline-flex items-center gap-2 text-sm text-pop-foreground animate-fade-in">
+                <span className="live-pulse live-pulse-light h-2 w-2 rounded-full bg-pop-foreground/60" aria-hidden="true" />{queueItems.length} being written
               </span>
             )}
             {stuckCount > 0 && (
               <Button size="sm" variant="outline" onClick={recoverStuck}
-                className="ml-auto h-8 border-destructive/50 text-sm text-destructive hover:bg-destructive/10">
-                <AlertCircle className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                className="ml-auto border-destructive/50 text-destructive hover:bg-destructive/10">
+                <AlertCircle className="mr-1 h-4 w-4" aria-hidden="true" />
                 Recover {stuckCount} stuck
               </Button>
             )}
@@ -497,11 +483,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 <LiveWhatsOnRow first events={eventDesk.live} today={today} showInFeed={eventDesk.showInFeed} liveMore={eventDesk.liveMore}
                   onToggleShow={eventActions.setShowInFeed} onRemove={(e) => eventActions.removeFromLive(e)} />
               )}
-              <div className="py-8 text-center text-muted-foreground">
-                <CheckCircle className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                <p className="text-base">Nothing live yet</p>
-                <p className="mt-2 text-sm">Stories you publish appear here while they are written.</p>
-              </div>
+              <p className="py-8 text-center text-base text-muted-foreground">Nothing live yet</p>
             </div>
           ) : (
             <PublishedStoriesList

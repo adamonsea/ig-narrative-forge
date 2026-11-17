@@ -21,7 +21,7 @@ function DateTile({ date, size = "lg" }: { date: string; size?: "lg" | "sm" }) {
       className={`flex shrink-0 flex-col items-center justify-center rounded-lg border border-border bg-background leading-none ${size === "lg" ? "h-16 w-16" : "h-12 w-12"}`}
       aria-hidden="true"
     >
-      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{b.weekday}</span>
+      <span className="text-sm font-medium text-muted-foreground">{b.weekday}</span>
       <span className={`mt-1 font-bold tabular-nums ${size === "lg" ? "text-2xl" : "text-lg"}`}>{b.day}</span>
     </div>
   );
@@ -241,7 +241,7 @@ function EventDetailSheet({ item, today, actions, onClose }: { item: DetailItem 
                   <p className="text-muted-foreground">{countdown(item.start_date, today)}</p>
                 </div>
               </div>
-              <SheetTitle className="text-xl leading-snug">{item.title}</SheetTitle>
+              <SheetTitle className="text-lg leading-snug">{item.title}</SheetTitle>
               <SheetDescription asChild>
                 <div>
                   {item.state === "live" && (

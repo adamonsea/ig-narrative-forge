@@ -144,15 +144,13 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
     frequencyHours === 1 ? "every hour" : `every ${frequencyHours} hours`;
 
   return (
-    <div className="rounded-xl border bg-card/60 px-6 py-10 text-center">
-      <p className="section-label text-muted-foreground">
+    <div className="rounded-xl border bg-card/60 px-6 py-8 text-center">
+      <p className="text-sm text-muted-foreground">
         {isAutomatic ? "Next sweep" : "Gathering by hand"}
       </p>
 
       <p
-        className={`mt-3 display-heading text-5xl tabular-nums leading-none md:text-6xl ${
-          imminent ? "live-pulse" : ""
-        }`}
+        className="mt-2 text-2xl font-semibold tabular-nums leading-tight text-foreground"
       >
         {isAutomatic
           ? remaining === null || imminent

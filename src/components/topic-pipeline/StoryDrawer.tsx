@@ -172,7 +172,7 @@ export function StoryDrawer({
                 {isDraft && <DeskBadge>Draft</DeskBadge>}
                 {story.is_parliamentary && <DeskBadge>Parliament</DeskBadge>}
               </div>
-              <SheetTitle className="text-xl leading-snug">{title}</SheetTitle>
+              <SheetTitle className="text-lg leading-snug">{title}</SheetTitle>
               <SheetDescription asChild>
                 <div className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                   <MetaLine parts={[

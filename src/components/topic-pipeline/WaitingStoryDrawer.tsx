@@ -3,6 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Copy, ExternalLink, ImageIcon, Loader2, MoreHorizontal, PlayCircle, Shield, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -84,7 +85,7 @@ export function WaitingStoryDrawer({
                 <img src={article.image_url} alt="" referrerPolicy="no-referrer" className="aspect-video w-full rounded-lg border border-border bg-muted object-cover"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
               )}
-              <SheetTitle className="text-xl leading-snug">
+              <SheetTitle className="text-lg leading-snug">
                 <span dangerouslySetInnerHTML={{ __html: highlightContentWithContext(article.title, terms) }} />
               </SheetTitle>
               <SheetDescription asChild>
@@ -165,7 +166,7 @@ export function WaitingStoryDrawer({
             <section className="space-y-3 border-t border-border px-6 py-5">
               <h3 className="text-sm font-medium text-muted-foreground">Original</h3>
               {loadingBody && !body ? (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading the article…</p>
+                <div className="space-y-2" aria-label="Loading the original" role="status"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-4/5" /></div>
               ) : body ? (
                 <div className="whitespace-pre-wrap text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: highlightContentWithContext(body, terms) }} />
               ) : (

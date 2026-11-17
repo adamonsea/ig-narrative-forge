@@ -1,3 +1,10 @@
+# Workspace design-rule fixes (17 Nov 2026)
+List: .lovable/reviews/workspace-rule-breaks.md. One group at a time; Adam picks the order.
+- [x] Dashboard and new-feed setup
+- [x] Shared building blocks
+- [ ] Desk (in progress)
+- [ ] Sources, Settings, Readership, Reviews (Adam to pick the order)
+
 # Sources as cards + Desk fixes (17 Nov 2026)
 - [x] Sources: News / Events shelves of cards (name, health colour, 7-day dots, one number); needs-attention pinned on top
 - [x] Sources: one Gather (no separate force rescrape); click card opens Desk-style side panel with everything else

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileText, RefreshCw, CheckCircle, Loader2, Copy, MoreHorizontal } from "lucide-react";
+import { RefreshCw, Loader2, Copy, MoreHorizontal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -261,44 +261,14 @@ export default function MultiTenantArticlesList({
     );
   };
 
-  // Success message for bulk delete
-  if (bulkDeleteCount !== null && articles.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mb-4">
-          <CheckCircle className="w-8 h-8 text-green-600" />
-        </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">
-          Articles Deleted Successfully
-        </h3>
-        <p className="text-muted-foreground mb-6 max-w-md">
-          {bulkDeleteCount} article{bulkDeleteCount !== 1 ? 's' : ''} deleted successfully.
-        </p>
-        <Button onClick={onRefresh} variant="outline" className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Gather More Content
-        </Button>
-      </div>
-    );
-  }
-
-  // Empty state
+  // Bulk delete done, or nothing waiting: one short line and one action
   if (articles.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-          <FileText className="w-8 h-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">
-          No Articles Available
-        </h3>
-        <p className="text-muted-foreground mb-6 max-w-md">
-          No new articles have been discovered yet.
+      <div className="flex flex-col items-center gap-3 py-8 text-center">
+        <p className="text-base text-muted-foreground">
+          {bulkDeleteCount !== null ? `${bulkDeleteCount} deleted` : "Nothing waiting"}
         </p>
-        <Button onClick={onRefresh} variant="outline" className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
+        <Button onClick={onRefresh} variant="outline" size="sm">Refresh</Button>
       </div>
     );
   }
@@ -378,19 +348,16 @@ export default function MultiTenantArticlesList({
           <Button 
             onClick={onLoadMore} 
             variant="outline" 
-            className="w-full gap-2 text-sm"
+            className="w-full gap-2"
             disabled={loadingMore}
           >
             {loadingMore ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading...
-              </>
+              <>Loading</>
             ) : (
               <>
                 <RefreshCw className="w-4 h-4" />
-                Load More {totalArticlesCount !== null && articles.length < totalArticlesCount 
-                  ? `(${totalArticlesCount - articles.length} remaining)` 
+                Load more {totalArticlesCount !== null && articles.length < totalArticlesCount 
+                  ? `(${totalArticlesCount - articles.length} left)` 
                   : ''}
               </>
             )}

@@ -331,13 +331,13 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
       {/* Being written, or failed: slim rows with cancel */}
       {processingItems.length > 0 && (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {processingItems.map((item) => {
             const failed = item.status === 'failed';
             return (
               <li key={item.id} className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2">
                 {item.status === 'processing' ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-hidden="true" />
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true"><span className="live-pulse h-2 w-2 rounded-full bg-pop" /></span>
                 ) : failed ? (
                   <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
                 ) : (
@@ -456,7 +456,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         <div className="flex justify-center pt-2">
           <Button variant="outline" size="sm" onClick={onLoadMorePublished} disabled={loadingMorePublished}>
             {loadingMorePublished ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading older stories…</>
+              <>Loading</>
             ) : (
               'Load older stories'
             )}

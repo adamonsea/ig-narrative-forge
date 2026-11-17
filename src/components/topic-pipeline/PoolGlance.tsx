@@ -13,9 +13,9 @@ export function GlanceTiles({ items }: { items: GlanceItem[] }) {
     <dl className="grid grid-cols-3 gap-2">
       {items.map((it) => (
         <div key={it.label} className="rounded-lg bg-background/70 px-3 py-2">
-          <dd className="text-xl font-semibold tabular-nums text-foreground">{it.value === null ? "–" : it.value.toLocaleString()}</dd>
+          <dd className="text-lg font-semibold tabular-nums text-foreground">{it.value === null ? "–" : it.value.toLocaleString()}</dd>
           <dt className="text-sm text-muted-foreground">{it.label}</dt>
-          {it.note && <p className="text-xs text-muted-foreground">{it.note}</p>}
+          {it.note && <p className="text-sm text-muted-foreground">{it.note}</p>}
         </div>
       ))}
     </dl>

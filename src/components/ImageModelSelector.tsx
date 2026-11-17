@@ -140,7 +140,7 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
 
   if (isGenerating) {
     return (
-      <Badge variant="secondary" className="h-8 px-3 bg-blue-100 text-blue-800 flex items-center gap-1">
+      <Badge variant="secondary" className="h-9 px-3 bg-muted text-foreground flex items-center gap-1">
         <Loader2 className="w-3 h-3 animate-spin" />
         Generating...
       </Badge>
@@ -167,15 +167,15 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">{styleLabel} style • {availableModels.length + (ENABLE_MIDJOURNEY ? midjourneyModels.length : 0)} options</p>
+            <p className="text-sm">{styleLabel} style • {availableModels.length + (ENABLE_MIDJOURNEY ? midjourneyModels.length : 0)} options</p>
           </TooltipContent>
         </Tooltip>
         <DropdownMenuContent 
           align="end" 
-          className="w-80 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border shadow-lg z-50"
+          className="w-80 bg-popover text-popover-foreground border shadow-lg z-50"
           sideOffset={5}
         >
-          <div className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">Style for this story</div>
+          <div className="px-3 pt-2 pb-1 text-sm font-medium text-muted-foreground">Style for this story</div>
           <div className="flex flex-wrap gap-1 px-3 pb-2 border-b">
             {(Object.values(ILLUSTRATION_STYLES) as IllustrationStyle[]).map((s) => (
               <button
@@ -183,29 +183,29 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
                 type="button"
                 aria-pressed={chosenStyle === s}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setChosenStyle(s); }}
-                className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${chosenStyle === s ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                className={`rounded-full border px-2 py-0.5 text-sm transition-colors ${chosenStyle === s ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/50'}`}
               >
                 {ILLUSTRATION_STYLE_LABELS[s].replace(/ \(.*\)$/, '')}{s === illustrationStyle ? ' · feed' : ''}
               </button>
             ))}
           </div>
-          <div className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 border-b">
+          <div className="px-3 py-2 text-sm text-muted-foreground border-b">
             {chosenStyle === ILLUSTRATION_STYLES.SATIRICAL ? 'Sunburst medium' : 'OpenAI GPT Image 2'} • {styleLabel}
           </div>
           {availableModels.map((model) => (
             <DropdownMenuItem
               key={model.id}
               onClick={() => onModelSelect(model, chosenStyle)}
-              className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 flex-col items-start"
+              className="p-3 cursor-pointer hover:bg-muted focus:bg-muted flex-col items-start"
             >
               <div className="flex w-full items-center justify-between mb-1">
-                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{model.name}</span>
-                <span className="text-xs font-semibold text-primary">
+                <span className="font-medium text-sm text-foreground">{model.name}</span>
+                <span className="text-sm font-semibold text-primary">
                   {model.credits} credits
                 </span>
               </div>
               {model.description && (
-                <span className="text-xs text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-muted-foreground">
                   {model.description}
                 </span>
               )}
@@ -216,7 +216,7 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
           {ENABLE_MIDJOURNEY && (
             <>
               <DropdownMenuSeparator />
-              <div className="px-3 py-2 text-xs text-amber-600 dark:text-amber-400 border-b flex items-center gap-1">
+              <div className="px-3 py-2 text-sm text-attention-foreground border-b flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 MidJourney (Experimental)
               </div>
@@ -224,34 +224,34 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
                 <DropdownMenuItem
                   key={model.id}
                   onClick={() => onModelSelect(model)}
-                  className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 flex-col items-start"
+                  className="p-3 cursor-pointer hover:bg-muted focus:bg-muted flex-col items-start"
                 >
                   <div className="flex w-full items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{model.name}</span>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 text-amber-600 border-amber-300">
+                      <span className="font-medium text-sm text-foreground">{model.name}</span>
+                      <Badge variant="outline" className="text-attention-foreground border-attention/40">
                         Beta
                       </Badge>
                     </div>
-                    <span className="text-xs font-semibold text-primary">
+                    <span className="text-sm font-semibold text-primary">
                       {model.credits} credits
                     </span>
                   </div>
                   {model.description && (
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                    <span className="text-sm text-muted-foreground">
                       {model.description}
                     </span>
                   )}
                 </DropdownMenuItem>
               ))}
-              <div className="px-3 py-2 text-xs text-muted-foreground border-t">
+              <div className="px-3 py-2 text-sm text-muted-foreground border-t">
                 ⚠️ MidJourney takes 30s-3min to generate
               </div>
             </>
           )}
           
           {illustrationStyle === ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC && (
-            <div className="px-3 py-2 text-xs text-muted-foreground border-t">
+            <div className="px-3 py-2 text-sm text-muted-foreground border-t">
               💡 Both tiers use professional photography AI models
             </div>
           )}
