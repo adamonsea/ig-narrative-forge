@@ -128,6 +128,12 @@ export function shopEvents(data: Record<string, unknown>, origin: string, today:
   return out.sort((a, b) => (a.start_date + (a.start_time ?? '')).localeCompare(b.start_date + (b.start_time ?? '')));
 }
 
+/** True when the page has an events list at all (even an empty one), so /browse needn't be tried. */
+export function hasEventLists(data: Record<string, unknown>): boolean {
+  const props = (data as { props?: { blocks?: { block?: { matching_events?: unknown } }[]; events?: unknown } }).props;
+  return Boolean(props?.events) || (props?.blocks ?? []).some((b) => b?.block?.matching_events);
+}
+
 /** The next page of the same shop's listings, if the page has one. */
 export function nextShopPage(data: Record<string, unknown>, origin: string): string | null {
   for (const list of eventLists((data as { props?: unknown }).props)) {
@@ -175,15 +181,17 @@ export const ticketShopReader: EventReader = {
     const today = londonToday();
     let name = fallbackName;
     let reached = false;
+    let listed = false;
     // The shop's home page lists its events; some shops only list them on /browse
     for (const start of [`${origin}/`, `${origin}/browse`]) {
+      if (listed) break; // the home page had its list, just nothing upcoming
       const events: ReaderEvent[] = [];
       let next: string | null = start;
       for (let page = 0; next && page < MAX_PAGES; page++) {
         const data = await fetchShopPage(next);
         if (!data) break;
         reached = true;
-        if (page === 0) name = shopName(data, origin);
+        if (page === 0) { name = shopName(data, origin); listed = start.endsWith('/') && hasEventLists(data); }
         for (const e of shopEvents(data, origin, today)) if (!events.some((x) => x.key === e.key)) events.push(e);
         next = nextShopPage(data, origin);
       }

@@ -12,6 +12,8 @@ import { EventSourceAddPanel } from '@/components/events/EventSources';
 import { detectSourceKind, isEventsSourceKind } from '@/lib/whatsOn';
 import { SourceIcon } from './SourceCard';
 import { SourceFinder, type SourceFinderProps } from './SourceFinder';
+import { ShopSuggestions } from './ShopSuggestions';
+import { isOrganiserShop, ticketPlatformOf } from '@/lib/ticketPlatforms';
 import { addSourceNameFromLink, addSourceHost } from '@/lib/addSource';
 
 export interface NewNewsSource { name: string; url: string; trust: boolean; trustDays: number }
@@ -45,6 +47,8 @@ export function AddSourceSheet({
   }, [open]);
 
   const host = addSourceHost(url);
+  const platform = step === 'events' ? ticketPlatformOf(url) : null;
+  const organiser = platform ? isOrganiserShop(url) : false;
   const next = () => {
     if (!host) return;
     setName(addSourceNameFromLink(url));
@@ -134,8 +138,15 @@ export function AddSourceSheet({
                     {adding && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}Add
                   </Button>
                 </div>
+              ) : platform && !organiser ? (
+                // The platform's own site: list its organisers for this feed, one tap each
+                <ShopSuggestions topicId={topicId} platformUrl={url} onAdded={onEventsSaved}
+                  emptyText={`No organisers found for this feed. Paste an organiser's page, like grovetheatre.${platform.domain}.`} />
               ) : (
-                <EventSourceAddPanel topicId={topicId} url={url} onSaved={() => { onEventsSaved(); onOpenChange(false); }} />
+                <div className="space-y-6">
+                  <EventSourceAddPanel topicId={topicId} url={url} onSaved={() => { onEventsSaved(); onOpenChange(false); }} />
+                  {platform && <ShopSuggestions topicId={topicId} platformUrl={url} title={`More on ${platform.label}`} onAdded={onEventsSaved} />}
+                </div>
               )}
             </>
           )}

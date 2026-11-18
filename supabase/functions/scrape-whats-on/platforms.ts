@@ -27,6 +27,12 @@ function hostOf(raw: string): string | null {
   }
 }
 
+/** The ticketing platform a link is on (its own site or an organiser's shop), or null. */
+export function platformOf(raw: string): TicketPlatform | null {
+  const host = hostOf(raw);
+  return host ? platformFor(host) : null;
+}
+
 function platformFor(host: string): TicketPlatform | null {
   return TICKET_PLATFORMS.find((p) => host === p.domain || host.endsWith(`.${p.domain}`)) ?? null;
 }
@@ -63,9 +69,9 @@ export function organiserShops(urls: string[]): string[] {
   return out;
 }
 
-/** Search queries that find organiser shops for a place or subject. */
-export function discoveryQueries(term: string): string[] {
+/** Search queries that find organiser shops for a place or subject (all platforms, or just one). */
+export function discoveryQueries(term: string, platforms: TicketPlatform[] = TICKET_PLATFORMS): string[] {
   const t = term.replace(/["']/g, ' ').replace(/\s+/g, ' ').trim();
   if (!t) return [];
-  return TICKET_PLATFORMS.map((p) => `site:${p.domain} ${t}`);
+  return platforms.map((p) => `site:${p.domain} ${t}`);
 }

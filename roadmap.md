@@ -2,6 +2,7 @@
 - [x] Organiser ticket shops (e.g. grovetheatre.onlineticketseller.com) read as event sources: dates, times, venue, link, picture
 - [x] Pasting onlineticketseller.com itself gets a plain nudge to paste an organiser's page
 - [x] Find sources also suggests organiser shops with upcoming events in the feed's area
+- [x] Pasting the platform's site lists its organisers for this feed, one tap to add each; an organiser's page also shows "More on Online Ticket Seller"
 
 # Reader feed switch (18 Nov 2026)
 - [x] Events | All | News pill at the top of feeds with both; Events pages events 20 at a time; News drops event cards

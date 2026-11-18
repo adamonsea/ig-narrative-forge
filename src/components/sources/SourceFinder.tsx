@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { callReader } from '@/components/events/EventSources';
+import { ShopSuggestions } from './ShopSuggestions';
 
 interface SourceSuggestion {
   url: string;
@@ -30,18 +29,12 @@ export interface SourceFinderProps {
   onEventsAdded?: () => void;
 }
 
-/** An organiser's ticket shop with upcoming events for this feed (scrape-whats-on `discover`). */
-interface ShopSuggestion { url: string; name: string; found: number }
-
 const BLOCKED = ['facebook.com', 'twitter.com', 'instagram.com', 'tiktok.com', 'reddit.com', 'pinterest.com', 'linkedin.com',
   'blogspot', 'tumblr', 'medium.com', 'youtube.com', 'vimeo.com'];
 
 /** "Find sources" step of Add source: AI suggestions, tap one to add it to this feed. */
 export function SourceFinder({ topicId, topicName, description = '', keywords, topicType, region, onSourceAdded, onEventsAdded }: SourceFinderProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [shops, setShops] = useState<ShopSuggestion[]>([]);
-  const [shopsLoading, setShopsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<SourceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
@@ -60,31 +53,8 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
     return urls;
   };
 
-  const findShops = async () => {
-    setShopsLoading(true);
-    const res = await callReader({ action: 'discover', topicId });
-    setShops(res.failed ? [] : ((res.data?.suggestions || []) as ShopSuggestion[]));
-    setShopsLoading(false);
-  };
-
-  const addShop = async (shop: ShopSuggestion) => {
-    setAdding(shop.url);
-    const res = await callReader({ action: 'save', topicId, url: shop.url, name: shop.name, kind: 'ticket_shop' });
-    setAdding(null);
-    if (res.failed || !res.data?.success) {
-      toast({ title: "Couldn't add", description: res.message || res.data?.error || 'Try again.', variant: 'destructive' });
-      return;
-    }
-    setShops((prev) => prev.filter((x) => x.url !== shop.url));
-    setAdded((n) => n + 1);
-    toast({ title: 'Added', description: shop.name });
-    queryClient.invalidateQueries({ queryKey: ['event-desk', topicId] });
-    onEventsAdded?.();
-  };
-
   const find = async () => {
     if (!topicName.trim()) return;
-    findShops();
     setLoading(true);
     try {
       const [existing, res] = await Promise.all([
@@ -176,7 +146,7 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
 
   return (
     <div className="space-y-4" aria-live="polite">
-      {suggestions.length > 0 || shops.length > 0 || shopsLoading ? (
+      {suggestions.length > 0 ? (
         <ul className="space-y-2">
           {suggestions.map((s) => {
             const busy = adding === s.url;
@@ -203,42 +173,11 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
               </li>
             );
           })}
-          {shops.map((shop) => {
-            const busy = adding === shop.url;
-            return (
-              <li key={shop.url} className={cn('flex items-center gap-3 rounded-xl border bg-card p-3', busy && 'opacity-60')}>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-medium">{shop.name}</p>
-                  <p className="truncate text-sm text-muted-foreground">{new URL(shop.url).hostname} · {shop.found} {shop.found === 1 ? 'event' : 'events'}</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => addShop(shop)} disabled={busy}>
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="mr-2 h-4 w-4" aria-hidden="true" />}Add
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Dismiss ${shop.name}`}
-                      onClick={() => setShops((prev) => prev.filter((x) => x.url !== shop.url))} disabled={busy}>
-                      <X className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Dismiss</TooltipContent>
-                </Tooltip>
-              </li>
-            );
-          })}
-          {shopsLoading && (
-            <li className="flex items-center gap-3 rounded-xl border bg-card p-3" role="status" aria-label="Finding event sources">
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-4 w-2/5" />
-                <Skeleton className="h-3 w-3/5" />
-              </div>
-              <Skeleton className="h-8 w-16 shrink-0 rounded-lg" />
-            </li>
-          )}
         </ul>
       ) : (
         <p className="text-base text-muted-foreground">{added > 0 ? `${added} added.` : 'No new sources found.'}</p>
       )}
+      <ShopSuggestions topicId={topicId} onAdded={onEventsAdded} />
       <Button variant="ghost" size="sm" onClick={find}>Find more</Button>
     </div>
   );

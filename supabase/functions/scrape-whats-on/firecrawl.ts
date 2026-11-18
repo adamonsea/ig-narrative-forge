@@ -29,9 +29,9 @@ export async function firecrawlRawHtml(url: string, timeoutMs = 45000, retried =
       method: 'POST', headers: ep.headers, signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({ url, formats: ['rawHtml'], onlyMainContent: false }),
     });
-    // Per-minute limit: wait as asked (up to 15s) and try once more
+    // Per-minute limit: wait as asked (up to 30s) and try once more
     if (res.status === 429 && !retried) {
-      const wait = Math.min(15, Number((await res.json().catch(() => ({})))?.retry_after_seconds) || 6);
+      const wait = Math.min(30, Number((await res.json().catch(() => ({})))?.retry_after_seconds) || 6);
       await new Promise((r) => setTimeout(r, wait * 1000));
       return firecrawlRawHtml(url, timeoutMs, true);
     }
@@ -65,6 +65,28 @@ export async function firecrawlSearch(query: string, limit = 20): Promise<string
     return Array.isArray(web) ? web.map((r) => r?.url).filter((u): u is string => typeof u === 'string') : [];
   } catch (e) {
     console.warn('firecrawl search error', e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
+/** Every address Firecrawl can find on a site, subdomains included (no page content). */
+export async function firecrawlMap(url: string, limit = 5000): Promise<string[]> {
+  const ep = endpoint();
+  if (!ep) return [];
+  try {
+    const res = await fetch(`${ep.base}/map`, {
+      method: 'POST', headers: ep.headers, signal: AbortSignal.timeout(30000),
+      body: JSON.stringify({ url, includeSubdomains: true, limit }),
+    });
+    if (!res.ok) {
+      console.warn(`firecrawl map failed [${res.status}]: ${(await res.text()).slice(0, 300)}`);
+      return [];
+    }
+    const data = await res.json();
+    const links = (data?.links ?? []) as ({ url?: string } | string)[];
+    return links.map((l) => typeof l === 'string' ? l : l?.url).filter((u): u is string => typeof u === 'string');
+  } catch (e) {
+    console.warn('firecrawl map error', e instanceof Error ? e.message : e);
     return [];
   }
 }

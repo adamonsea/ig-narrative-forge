@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1';
-import { nextShopPage, shopEvents, shopName, shopPageData, stripSid } from './ticketShop.ts';
+import { hasEventLists, nextShopPage, shopEvents, shopName, shopPageData, stripSid } from './ticketShop.ts';
 
 const ORIGIN = 'https://grovetheatre.onlineticketseller.com';
 const ev = (over: Record<string, unknown>) => ({
@@ -54,4 +54,9 @@ Deno.test('follows the next page only on the same shop', () => {
   assertEquals(nextShopPage(shopPageData(page([ev({})], 'https://evil.example/?page=2'))!, ORIGIN), null);
   assertEquals(nextShopPage(shopPageData(page([ev({})]))!, ORIGIN), null);
   assertEquals(stripSid('http://x.example/a?sid=1&b=2'), 'https://x.example/a?b=2');
+});
+
+Deno.test('an empty listing still counts as the shop\'s list, so /browse is skipped', () => {
+  assertEquals(hasEventLists(shopPageData(page([]))!), true);
+  assertEquals(hasEventLists({ props: { blocks: [{ block: { title: 'Subscribe' } }] } }), false);
 });
