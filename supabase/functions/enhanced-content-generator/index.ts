@@ -1,3 +1,4 @@
+import { headlinePlaceEditRule, headlinePlaceRule } from './headlinePlace.ts';
 import { isLiveStory } from '../_shared/illustration-gate.ts';
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -390,7 +391,9 @@ ${samples.map((s: string, i: number) => `--- sample ${i + 1} ---\n${s}`).join('\
     publicationName: string,
     templateGuidance?: string,
     supabase?: any,
-    houseStyleGuidance?: string
+    houseStyleGuidance?: string,
+    placeRule = '',
+    placeEditRule = ''
   ): Promise<SlideContent[]> {
     try {
       // Fetch recent similar stories for context
@@ -574,8 +577,8 @@ SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY - THE HEADLINE):
 - Write it as a crisp news headline, not a conversational sentence: active voice, present tense, a concrete subject and a strong verb. Cut articles, "has been", "is set to" and filler.
   ✅ "Tree crushes car in church car park" (7 words)
   ❌ "A large tree has crushed a car in an Eastbourne church car park" (13 words)
-- Readers already know which place this feed covers. Do NOT add the town, city or area name unless it is needed to tell places apart (e.g. a story about a neighbouring town).
-- Focus on what makes this genuinely matter to local readers
+${placeRule ? `${placeRule}
+` : ''}- Focus on what makes this genuinely matter to local readers
 - Use the strongest claim that the article content fully supports
 - Prioritize: local impact > surprising facts > genuine consequences > human interest
 - When formal: Lead with authoritative findings ("Council reveals...", "Data shows...")  
@@ -955,8 +958,8 @@ HARD RULES:
 - Do not introduce any name, figure or place that is not already in the slides or the article below.
 - Keep exactly ${normalized.length} slides, in the same order, covering the same points.
 - Slide 1: crisp news headline, 5-8 words ideal, 10 words maximum. Other slides: 40 words maximum.
-- Slide 1 only: you may drop the feed's own town or area name if the headline reads fine without it.
-- Keep attribution rules: opinions and claims stay attributed to whoever said them.
+${placeEditRule ? `${placeEditRule}
+` : ''}- Keep attribution rules: opinions and claims stay attributed to whoever said them.
 - NEVER name the publication, website, domain or author.
 - Keep the visualPrompt and altText fields; update altText only if the content changed meaningfully.
 - If a slide already reads naturally, leave it exactly as it is.
@@ -1189,11 +1192,13 @@ Return in JSON format:
     let autoSimplifyEnabled = false; // Controls whether stories skip editorial review
     let houseStyleGuidance = '';
     let brandSafePictures = false; // brand/character/fandom feed: keep the source's own picture
+    let placeRule = ''; // local feeds: leave the feed's own town out of headlines, name other places
+    let placeEditRule = '';
     
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples, family_safe, brand_safe_pictures')
+        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples, family_safe, brand_safe_pictures, topic_type, region')
         .eq('id', article.topic_id)
         .maybeSingle();
 
@@ -1230,6 +1235,8 @@ Return in JSON format:
         dripFeedEnabled = topicData.drip_feed_enabled || false;
         autoSimplifyEnabled = topicData.auto_simplify_enabled || false;
         brandSafePictures = (topicData as any).brand_safe_pictures === true;
+        placeRule = headlinePlaceRule((topicData as any).topic_type, (topicData as any).region);
+        placeEditRule = headlinePlaceEditRule((topicData as any).topic_type, (topicData as any).region);
 
         const notes = (topicData.house_style_notes || '').trim();
         const examples = (topicData.house_style_examples || '').trim();
@@ -1368,7 +1375,9 @@ Return in JSON format:
         publicationName,
         templateGuidance,
         supabase,
-        houseStyleGuidance
+        houseStyleGuidance,
+        placeRule,
+        placeEditRule
       );
 
       console.log(`✅ Generated ${slides.length}/${targetSlideCount} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
