@@ -33,11 +33,12 @@ export function venueClicksLine(clicks: number | null | undefined): string | nul
 }
 
 /** Kinds of events source (event_sources.kind). New kinds only need a label here and a reader on the server. */
-export type EventSourceKind = "whats_on_page" | "calendar_feed";
+export type EventSourceKind = "whats_on_page" | "calendar_feed" | "ticket_shop";
 
 const KIND_LABELS: Record<EventSourceKind, string> = {
   whats_on_page: "What's-on page",
   calendar_feed: "Calendar feed",
+  ticket_shop: "Ticket shop",
 };
 
 export const eventSourceKindLabel = (kind: string | null | undefined): string =>
@@ -45,7 +46,7 @@ export const eventSourceKindLabel = (kind: string | null | undefined): string =>
 
 export type SourceKind = "rss" | "website" | EventSourceKind;
 
-const LISTINGS_HOSTS = /(^|\.)(eventbrite\.|ticketsource\.|skiddle\.com|ents24\.com|wegottickets\.com|seetickets\.|allevents\.in|designmynight\.com|billetto\.|fatsoma\.com|dice\.fm|meetup\.com)/;
+const LISTINGS_HOSTS = /(^|\.)(eventbrite\.|ticketsource\.|skiddle\.com|ents24\.com|wegottickets\.com|seetickets\.|allevents\.in|designmynight\.com|billetto\.|fatsoma\.com|dice\.fm|meetup\.com|onlineticketseller\.com)/;
 
 /** What kind of source a pasted link is, so the owner never has to choose. */
 export function detectSourceKind(raw: string): SourceKind {
@@ -64,7 +65,7 @@ export function detectSourceKind(raw: string): SourceKind {
 }
 
 export const isEventsSourceKind = (kind: SourceKind): kind is EventSourceKind =>
-  kind === "whats_on_page" || kind === "calendar_feed";
+  kind === "whats_on_page" || kind === "calendar_feed" || kind === "ticket_shop";
 
 /**
  * Events switch (collect + weekly email) and "Show in the feed" (only meaningful while

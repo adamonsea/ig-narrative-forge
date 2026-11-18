@@ -41,6 +41,8 @@ describe("events sources", () => {
     expect(detectSourceKind("https://www.example.es/agenda/")).toBe("whats_on_page");
     expect(detectSourceKind("https://www.example.pt/eventos")).toBe("whats_on_page");
     expect(detectSourceKind("https://www.publico.pt/")).toBe("website");
+    expect(detectSourceKind("https://grovetheatre.onlineticketseller.com/")).toBe("whats_on_page");
+    expect(isEventsSourceKind("ticket_shop")).toBe(true);
     expect(isEventsSourceKind("rss")).toBe(false);
     expect(isEventsSourceKind("calendar_feed")).toBe(true);
   });

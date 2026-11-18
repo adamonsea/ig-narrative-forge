@@ -4,7 +4,7 @@
  * EventReader and registering it in readers/index.ts — storage, status, refresh,
  * edit and removal are shared and need no changes.
  */
-export type EventSourceKind = 'whats_on_page' | 'calendar_feed';
+export type EventSourceKind = 'whats_on_page' | 'calendar_feed' | 'ticket_shop';
 
 export interface ReaderEvent {
   /** Stable identity of this event within its source (used for upserts and sticky removals). */

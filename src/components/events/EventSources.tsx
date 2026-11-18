@@ -47,7 +47,7 @@ export const withScheme = (raw: string) => {
   return t && !/^(https?|webcal):\/\//i.test(t) ? `https://${t}` : t.replace(/^webcal:\/\//i, "https://");
 };
 
-async function callReader(body: Record<string, unknown>) {
+export async function callReader(body: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke("scrape-whats-on", { body });
   if (error) {
     let details: any = null;

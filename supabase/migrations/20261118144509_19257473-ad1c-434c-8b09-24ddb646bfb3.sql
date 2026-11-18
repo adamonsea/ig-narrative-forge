@@ -1,0 +1,2 @@
+ALTER TABLE public.event_sources DROP CONSTRAINT IF EXISTS event_sources_kind_check;
+ALTER TABLE public.event_sources ADD CONSTRAINT event_sources_kind_check CHECK (kind = ANY (ARRAY['whats_on_page'::text, 'calendar_feed'::text, 'ticket_shop'::text]));

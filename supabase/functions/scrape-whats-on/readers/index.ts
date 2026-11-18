@@ -7,16 +7,18 @@
 import type { EventReader, EventSourceKind } from './types.ts';
 import { calendarFeedReader } from './calendarFeed.ts';
 import { whatsOnPageReader } from './whatsOnPage.ts';
+import { ticketShopReader } from './ticketShop.ts';
 
 export type { EventReader, EventSourceKind, ReaderEvent, ReaderResult } from './types.ts';
 
 export const READERS: Record<EventSourceKind, EventReader> = {
   calendar_feed: calendarFeedReader,
   whats_on_page: whatsOnPageReader,
+  ticket_shop: ticketShopReader,
 };
 
 /** Most specific first; the what's-on page reader is the catch-all. */
-const DETECT_ORDER: EventSourceKind[] = ['calendar_feed', 'whats_on_page'];
+const DETECT_ORDER: EventSourceKind[] = ['ticket_shop', 'calendar_feed', 'whats_on_page'];
 
 export const isEventSourceKind = (k: unknown): k is EventSourceKind =>
   typeof k === 'string' && Object.prototype.hasOwnProperty.call(READERS, k);

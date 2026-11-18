@@ -14,6 +14,7 @@ import { cleanupPhotos, removePhotosOf, savePhotos } from './eventPhotos.ts';
  *   { action: 'update', sourceId, name?, url? }            owner: rename and/or change the address
  *   { action: 'refresh', sourceId }                        owner: re-check one source
  *   { action: 'remove', sourceId }                         owner: remove a source and its upcoming events
+ *   { action: 'discover', topicId }                        owner: organiser ticket shops for this feed (platforms.ts), each read once
  *   { action: 'suggest', topicId, title, date, time?, venue, url, visitorId, website? }  anyone: a reader's event suggestion (Waiting only)
  *   {} or { action: 'refresh_all' }                        daily job (EVENTS_CRON_TOKEN / service role):
  *                                                          one request per source, then { action: 'photos' },
@@ -37,6 +38,8 @@ import { listingUrlOk, suggestionDateOk, suggestionStatus, SUGGEST_PER_FEED_PER_
 import { detectKind, isEventSourceKind, readerFor, type EventReader, type ReaderEvent, type ReaderResult } from './readers/index.ts';
 import { buildPlaceProfile, hasLocalEvidence, judgeEvents, type PlaceProfile, type Verdict } from './locality.ts';
 import { baseEventScore, combineRelevance, isOutOfArea, placeEvent } from './relevance.ts';
+import { discoveryQueries, organiserShops, platformRootNudge, ticketShopOrigin } from './platforms.ts';
+import { firecrawlAvailable, firecrawlSearch } from './firecrawl.ts';
 import type { TopicConfig } from '../_shared/hybrid-content-scoring.ts';
 
 const json = (body: unknown, status = 200) =>
@@ -51,6 +54,7 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('photos') }),
   z.object({ action: z.literal('remove'), sourceId: z.string().uuid() }),
   z.object({ action: z.literal('refresh_all') }),
+  z.object({ action: z.literal('discover'), topicId: z.string().uuid() }),
   z.object({
     action: z.literal('suggest'), topicId: z.string().uuid(),
     title: z.string().trim().min(3).max(160), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -331,6 +335,36 @@ const summarise = (kind: string, r: ReaderResult, verdicts: Verdict[] = []) => {
   };
 };
 
+// ---------- finding organiser ticket shops ----------
+
+const DISCOVER_MAX = 5;
+
+/** Organiser shops on ticketing platforms that have upcoming events for this feed (out-of-area ones left out). */
+async function discoverShops(supabase: Db, profiles: Profiles, topicId: string) {
+  if (!firecrawlAvailable()) return [];
+  const { data: topic } = await supabase.from('topics').select('name, region, topic_type').eq('id', topicId).maybeSingle();
+  if (!topic) return [];
+  const term = topic.topic_type === 'regional' && topic.region ? topic.region : topic.name;
+  const links = (await Promise.all(discoveryQueries(term || '').map((q) => firecrawlSearch(q, 20)))).flat();
+  const { data: existing } = await supabase.from('event_sources').select('url').eq('topic_id', topicId);
+  const have = new Set((existing || []).map((r: { url: string }) => ticketShopOrigin(r.url)).filter(Boolean));
+  const candidates = organiserShops(links).filter((o) => !have.has(o)).slice(0, DISCOVER_MAX);
+  const reader = readerFor('ticket_shop');
+  // Two at a time: shops behind a bot check are read through Firecrawl, which has a per-minute limit
+  const found: ({ url: string; name: string; found: number; example: unknown } | null)[] = [];
+  for (const pair of chunks(candidates, 2)) found.push(...await Promise.all(pair.map(async (origin) => {
+    const result = await readSafely(reader, origin, hostOf(origin));
+    if (!result.events.length) return null;
+    const { verdicts } = await judgeAndScore(supabase, profiles, topicId, result.events, origin, result.name);
+    const s = summarise('ticket_shop', result, verdicts);
+    // Local feeds: at least one kept event must name somewhere in the feed's area
+    const { profile } = await topicContextFor(supabase, profiles, topicId);
+    if (profile && !result.events.some((e, i) => !isOutOfArea(verdicts[i]) && hasLocalEvidence(e, profile))) return null;
+    return s.found > 0 ? { url: origin, name: s.name, found: s.found, example: s.examples[0] ?? null } : null;
+  })));
+  return found.filter((f): f is NonNullable<typeof f> => f !== null).sort((a, b) => b.found - a.found);
+}
+
 // ---------- handler ----------
 
 // ---------- reader suggestions ----------
@@ -441,11 +475,22 @@ Deno.serve(async (req) => {
     const user = isSystem ? null : await getUser(req);
     if (!isSystem && !user) return json({ error: 'Please sign in' }, 401);
 
+    if (body.action === 'discover') {
+      if (!isSystem && !(await userOwnsTopic(supabase, user!.id, body.topicId))) return json({ error: 'Not your feed' }, 403);
+      return json({ success: true, suggestions: await discoverShops(supabase, profiles, body.topicId) });
+    }
+
     if (body.action === 'preview' || body.action === 'save') {
       if (!isSystem && !(await userOwnsTopic(supabase, user!.id, body.topicId))) return json({ error: 'Not your feed' }, 403);
-      const url = body.url.trim();
-      if (!isPublicHttpUrl(url)) return json({ success: false, kind: 'whats_on_page', found: 0, error: 'That address can’t be read.', examples: [] }, body.action === 'save' ? 422 : 200);
-      const kind = body.action === 'save' && isEventSourceKind(body.kind) ? body.kind : await detectKind(url);
+      const pasted = body.url.trim();
+      const nudge = platformRootNudge(pasted);
+      if (nudge) return json({ success: false, kind: 'whats_on_page', found: 0, error: nudge, examples: [] }, body.action === 'save' ? 422 : 200);
+      if (!isPublicHttpUrl(pasted)) return json({ success: false, kind: 'whats_on_page', found: 0, error: 'That address can’t be read.', examples: [] }, body.action === 'save' ? 422 : 200);
+      const detected = body.action === 'save' && isEventSourceKind(body.kind) ? body.kind : await detectKind(pasted);
+      // A ticket shop is stored by its home address, whichever of its pages was pasted
+      const shop = ticketShopOrigin(pasted);
+      const kind = shop ? 'ticket_shop' : detected;
+      const url = shop ?? pasted;
       const reader = readerFor(kind);
       const result = await readSafely(reader, url, hostOf(url));
       const { verdicts, scores } = await judgeAndScore(supabase, profiles, body.topicId, result.events, url, ("name" in body ? body.name : undefined) || result.name);
@@ -478,7 +523,10 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === 'update') {
-      const newUrl = body.url?.trim();
+      const typed = body.url?.trim();
+      const nudge = typed ? platformRootNudge(typed) : null;
+      if (nudge) return json({ error: nudge }, 422);
+      const newUrl = typed ? (ticketShopOrigin(typed) ?? typed) : typed;
       if (newUrl && newUrl !== source.url) {
         if (!isPublicHttpUrl(newUrl)) return json({ error: 'That address can’t be read.' }, 422);
         const { data: clash } = await supabase.from('event_sources').select('id').eq('topic_id', source.topic_id).eq('url', newUrl).neq('id', source.id).maybeSingle();

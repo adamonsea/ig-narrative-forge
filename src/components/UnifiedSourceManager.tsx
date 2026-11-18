@@ -1589,6 +1589,7 @@ export const UnifiedSourceManager = ({
             topicType: topicType || 'keyword',
             region,
             onSourceAdded: () => { loadSources(); onSourcesChange(); },
+            onEventsAdded: () => setEventSourcesReload((n) => n + 1),
           } : null}
           onAddNews={(v) => handleAddSource(v)}
           onEventsSaved={() => setEventSourcesReload((n) => n + 1)}
