@@ -288,6 +288,14 @@ All colors MUST be HSL.
     --purple-dark: 270 65% 40%;
     --purple-soft: 270 70% 96%;
 
+    /* Shop window (marketing pages) — fixed dark-ink brand, never flips with theme */
+    --shop-ink: 214 50% 9%;
+    --shop-ink-deep: 214 50% 7%;
+    --shop-mint: 155 100% 67%;
+    --shop-mint-hover: 155 100% 60%;
+    --shop-violet: 270 100% 68%;
+    --shop-violet-deep: 270 80% 25%;
+
     /* Favicon / source-icon chip: stays light so site icons keep their own colours */
     --chip: 0 0% 100%;
     --chip-border: 214 18% 88%;

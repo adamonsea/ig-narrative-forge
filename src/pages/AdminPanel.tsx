@@ -26,7 +26,7 @@ export default function AdminPanel() {
   // The role arrives just after sign-in; wait for it so admins aren't bounced to the dashboard
   if (loading || (user && userRole === null)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -37,7 +37,7 @@ export default function AdminPanel() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto py-8 space-y-8">
           <h1 className="display-heading text-3xl text-foreground">Admin</h1>
 

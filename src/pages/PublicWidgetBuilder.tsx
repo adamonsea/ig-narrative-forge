@@ -382,7 +382,7 @@ export default function PublicWidgetBuilder() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-dvh bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
@@ -390,7 +390,7 @@ export default function PublicWidgetBuilder() {
 
   if (notFound || !topic) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-4">
         <Helmet>
           <title>Widget Builder Not Available</title>
         </Helmet>
@@ -415,7 +415,7 @@ export default function PublicWidgetBuilder() {
   const logoUrl = topic.branding_config?.logo_url;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <Helmet>
         <title>Embed {topic.name} Widget | Curatr</title>
         <meta name="description" content={`Add ${topic.name} headlines to your website with an embeddable widget`} />

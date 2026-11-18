@@ -90,6 +90,14 @@ export default {
 					soft: 'hsl(var(--attention-soft))',
 					foreground: 'hsl(var(--attention-foreground))'
 				},
+				shop: {
+					ink: 'hsl(var(--shop-ink))',
+					'ink-deep': 'hsl(var(--shop-ink-deep))',
+					mint: 'hsl(var(--shop-mint))',
+					'mint-hover': 'hsl(var(--shop-mint-hover))',
+					violet: 'hsl(var(--shop-violet))',
+					'violet-deep': 'hsl(var(--shop-violet-deep))'
+				},
 				purple: {
 					bright: 'hsl(var(--purple-bright))',
 					dark: 'hsl(var(--purple-dark))',

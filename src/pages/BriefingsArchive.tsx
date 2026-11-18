@@ -195,7 +195,7 @@ export default function BriefingsArchive() {
 
   if (loading) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           <Skeleton className="w-32 h-10 mb-6" />
           <Skeleton className="w-64 h-8 mb-4" />
@@ -211,7 +211,7 @@ export default function BriefingsArchive() {
 
   if (!topic) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
@@ -233,7 +233,7 @@ export default function BriefingsArchive() {
   }
 
   return (
-    <div className="min-h-screen feed-background">
+    <div className="min-h-dvh feed-background">
       <BriefingsArchiveSEO
         topicName={topic.name}
         topicSlug={slug || ''}

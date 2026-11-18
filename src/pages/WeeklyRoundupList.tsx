@@ -423,7 +423,7 @@ export default function WeeklyRoundupList() {
 
   if (loading || (!roundup && briefingEvents.loading)) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           <Skeleton className="w-32 h-10 mb-6" />
           <Skeleton className="w-64 h-8 mb-4" />
@@ -439,7 +439,7 @@ export default function WeeklyRoundupList() {
 
   if (!topic || !weekMonday || !weekEndParam || (!roundup && briefingEvents.events.length === 0)) {
     return (
-      <div className="min-h-screen feed-background">
+      <div className="min-h-dvh feed-background">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
@@ -490,7 +490,7 @@ export default function WeeklyRoundupList() {
   ) : null;
 
   return (
-    <div className="min-h-screen feed-background">
+    <div className="min-h-dvh feed-background">
       {roundup && (
         <RoundupSEO
           roundup={roundup}

@@ -201,7 +201,7 @@ const TopicArchive = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-8">
           <Skeleton className="w-32 h-10 mb-8" />
           <Skeleton className="w-64 h-12 mb-4" />
@@ -218,7 +218,7 @@ const TopicArchive = () => {
 
   if (!topic) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold">Archive Not Found</h1>
@@ -232,7 +232,7 @@ const TopicArchive = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       {/* SEO Meta Tags & Structured Data */}
       <TopicArchiveSEO
         topicName={topic.name}

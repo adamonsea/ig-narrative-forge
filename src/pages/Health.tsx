@@ -326,7 +326,7 @@ export default function Health() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <div className="container max-w-4xl mx-auto py-12 px-4">
         {/* Header */}
         <div className="text-center mb-8">

@@ -209,7 +209,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-dvh bg-background flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -236,7 +236,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
   let splitIndex = 0;
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-clip bg-[hsl(214,50%,9%)]">
+    <div className="relative isolate min-h-dvh overflow-x-clip bg-[hsl(214,50%,9%)]">
       <Helmet>
         <title>{config.title}</title>
         <meta name="description" content={config.description} />

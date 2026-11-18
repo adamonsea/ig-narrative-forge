@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 
 const Privacy = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-dvh bg-background">
       <Helmet>
         <title>Privacy Policy — Curatr</title>
         <meta name="description" content="How Curatr collects, uses, and protects your personal data under UK GDPR and the Data Protection Act 2018." />
@@ -193,7 +193,7 @@ const Privacy = () => {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

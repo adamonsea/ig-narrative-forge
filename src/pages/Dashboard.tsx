@@ -23,7 +23,7 @@ const Dashboard = () => {
   // Show loading spinner while auth initializes
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center min-h-[60vh]">
             <div className="w-full max-w-3xl space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-40 w-full rounded-xl" /></div>
@@ -48,7 +48,7 @@ const Dashboard = () => {
         <meta property="og:description" content="Manage your curated news feeds, sources, and editorial pipeline from your Curatr dashboard." />
         <meta property="og:url" content="https://curatr.pro/dashboard" />
       </Helmet>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-6">

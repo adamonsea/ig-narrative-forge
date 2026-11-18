@@ -44,7 +44,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-dvh w-full">
         <AppSidebar />
         
         <div className="flex flex-col flex-1 w-full">

@@ -192,7 +192,7 @@ const StoryPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-1 md:px-4 py-8">
           <div className="mb-6">
             <Skeleton className="w-32 h-10" />
@@ -208,7 +208,7 @@ const StoryPage = () => {
 
   if (!story || !topic) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-dvh bg-background flex items-center justify-center">
         <div className="container mx-auto px-4 py-8 max-w-md animate-fade-in">
           <div className="text-center space-y-6">
             {/* Archive icon */}
@@ -247,7 +247,7 @@ const StoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen feed-background">
+    <div className="min-h-dvh feed-background">
       {/* SEO Meta Tags */}
       <StoryPageSEO
         story={story}

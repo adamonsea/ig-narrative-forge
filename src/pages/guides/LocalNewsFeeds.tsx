@@ -111,7 +111,7 @@ export default function LocalNewsFeedsGuide() {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(214,50%,9%)]">
+    <div className="min-h-dvh bg-[hsl(214,50%,9%)]">
       <Helmet>
         <title>How to Build & Monetize a Niche Local News Feed Using AI — Curatr</title>
         <meta

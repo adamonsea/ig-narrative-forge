@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 
 const Terms = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-dvh bg-background">
       <Helmet>
         <title>Terms and Conditions — Curatr</title>
         <meta name="description" content="The terms governing your use of Curatr.pro, our content curation and distribution platform operated from the United Kingdom." />
@@ -160,7 +160,7 @@ const Terms = () => {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

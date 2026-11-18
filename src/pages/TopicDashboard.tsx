@@ -606,7 +606,7 @@ const TopicDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-8 flex items-center justify-center h-64">
           <div className="w-full space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-64 w-full rounded-xl" /></div>
         </div>
@@ -616,7 +616,7 @@ const TopicDashboard = () => {
 
   if (!topic) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-8 text-center space-y-4">
           <h1 className="font-display text-[32px] leading-tight font-normal">Feed not found</h1>
           <p className="text-muted-foreground">This feed doesn't exist or you don't have access.</p>
@@ -634,7 +634,7 @@ const TopicDashboard = () => {
     <AppLayout>
       <TopicPulseProvider topicId={topic.id}>
       <DeskLookTracker active={activeTab === "feed"} />
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-6">
 
           {/* Simplified Header — name + toggle + view feed icon */}

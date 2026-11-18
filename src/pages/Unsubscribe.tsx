@@ -39,7 +39,7 @@ const Unsubscribe = () => {
   const config = STATUS_CONFIG[displayStatus as Exclude<UnsubStatus, 'loading'>];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-dvh flex items-center justify-center bg-background p-4">
       <Card className="max-w-md w-full">
         <CardContent className="pt-8 pb-8 text-center space-y-3">
           <div className="text-5xl">{config.icon}</div>

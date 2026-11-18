@@ -68,7 +68,7 @@ export class SystemErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="min-h-dvh p-6 flex items-center justify-center">
           <Card className="max-w-2xl w-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">

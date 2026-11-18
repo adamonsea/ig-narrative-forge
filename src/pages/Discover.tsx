@@ -16,7 +16,7 @@ const Discover = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <Helmet>
         <title>Discover Feeds | Curatr</title>
         <meta name="description" content="Browse curated news feeds on local news, niche topics, and more. Find the feed that matters to you." />

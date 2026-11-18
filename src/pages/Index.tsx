@@ -25,7 +25,7 @@ const HEADING = 'font-display tracking-tight leading-[1.05] text-white text-[cla
 const BODY = 'text-[1.25rem] md:text-[1.5rem] leading-relaxed text-white/80 [text-wrap:pretty]';
 
 const SceneFallback = () => (
-  <div className="aspect-video w-full rounded-[2rem] border border-white/10 bg-[hsl(214,50%,7%)]" />
+  <div className="aspect-video w-full rounded-[2rem] border border-white/10 bg-shop-ink-deep" />
 );
 
 const Scene = ({ id, label }: { id: HomeSceneId; label: string }) => (
@@ -175,7 +175,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-dvh bg-background flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -184,7 +184,7 @@ const Index = () => {
   const startHref = user ? '/dashboard' : '/auth';
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-clip bg-[hsl(214,50%,9%)]">
+    <div className="relative isolate min-h-dvh overflow-x-clip bg-shop-ink">
       <Helmet>
         <title>Curatr: The newsroom that runs itself</title>
         <meta name="description" content="Build and publish your own news feed on any place or subject. Curatr finds, writes, illustrates and publishes the stories, and you stay the editor." />
@@ -199,9 +199,9 @@ const Index = () => {
 
       {/* Background gradients */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[hsl(270,80%,25%)] rounded-full blur-[150px] opacity-20" />
-        <div className="absolute bottom-1/4 left-1/3 w-[500px] h-[500px] bg-[hsl(270,100%,68%)] rounded-full blur-[180px] opacity-10" />
-        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-[hsl(155,100%,67%)] rounded-full blur-[160px] opacity-5" />
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-shop-violet-deep rounded-full blur-[150px] opacity-20" />
+        <div className="absolute bottom-1/4 left-1/3 w-[500px] h-[500px] bg-shop-violet rounded-full blur-[180px] opacity-10" />
+        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-shop-mint rounded-full blur-[160px] opacity-5" />
       </div>
 
       <div className="relative z-10">
@@ -216,11 +216,11 @@ const Index = () => {
                 Pricing
               </Link>
               {user ? (
-                <Button asChild size="lg" className="rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
+                <Button asChild size="lg" className="rounded-full bg-shop-mint text-shop-ink hover:bg-shop-mint-hover">
                   <Link to="/dashboard">Dashboard</Link>
                 </Button>
               ) : (
-                <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30">
+                <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-shop-violet/20 border border-shop-violet/30">
                   <Link to="/auth">Sign in</Link>
                 </Button>
               )}
@@ -231,7 +231,7 @@ const Index = () => {
               <Button
                 asChild
                 size="sm"
-                className="rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
+                className="rounded-full bg-shop-mint text-shop-ink hover:bg-shop-mint-hover"
               >
                 <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
               </Button>
@@ -244,7 +244,7 @@ const Index = () => {
                   <Menu className="h-5 w-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[78%] max-w-xs bg-[hsl(214,50%,9%)] border-white/10 text-white">
+              <SheetContent side="right" className="w-[78%] max-w-xs bg-shop-ink border-white/10 text-white">
                 <nav className="mt-10 flex flex-col gap-2">
                   {[
                     { to: '/features', label: 'Features' },
@@ -285,9 +285,9 @@ const Index = () => {
                   onClick={() => setExplainerOpen(true)}
                   className="group flex items-center gap-3 text-white/80 transition-all hover:text-white"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 transition-all group-hover:border-[hsl(155,100%,67%)] group-hover:bg-[hsl(155,100%,67%)]/10">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 transition-all group-hover:border-shop-mint group-hover:bg-shop-mint/10">
                     <Play
-                      className="ml-0.5 h-4 w-4 fill-current text-white transition-colors group-hover:text-[hsl(155,100%,67%)]"
+                      className="ml-0.5 h-4 w-4 fill-current text-white transition-colors group-hover:text-shop-mint"
                       aria-hidden="true"
                     />
                   </span>
@@ -297,9 +297,9 @@ const Index = () => {
                   to="/feed/eastbourne"
                   className="group flex items-center gap-3 text-white/80 transition-all hover:text-white"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 transition-all group-hover:border-[hsl(270,100%,68%)] group-hover:bg-[hsl(270,100%,68%)]/10">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 transition-all group-hover:border-shop-violet group-hover:bg-shop-violet/10">
                     <ArrowRight
-                      className="h-4 w-4 text-white transition-colors group-hover:text-[hsl(270,100%,68%)]"
+                      className="h-4 w-4 text-white transition-colors group-hover:text-shop-violet"
                       aria-hidden="true"
                     />
                   </span>
@@ -406,10 +406,10 @@ const Index = () => {
               <motion.div {...hoverLift} className="mt-10 inline-block md:mt-12">
                 <Link
                   to="/feed/eastbourne"
-                  className="group inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-lg font-medium text-white transition-colors hover:border-[hsl(155,100%,67%)]/60 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(155,100%,67%)]"
+                  className="group inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-lg font-medium text-white transition-colors hover:border-shop-mint/60 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-shop-mint"
                 >
                   See the Eastbourne feed
-                  <ArrowRight className="h-5 w-5 text-[hsl(155,100%,67%)] transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  <ArrowRight className="h-5 w-5 text-shop-mint transition-transform group-hover:translate-x-1" aria-hidden="true" />
                 </Link>
               </motion.div>
             </SectionCopy>
@@ -428,7 +428,7 @@ const Index = () => {
             </div>
             <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <motion.div {...hoverLift}>
-                <Button asChild size="lg" className="h-14 rounded-full bg-[hsl(155,100%,67%)] px-10 text-lg font-semibold text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
+                <Button asChild size="lg" className="h-14 rounded-full bg-shop-mint px-10 text-lg font-semibold text-shop-ink hover:bg-shop-mint-hover">
                   <Link to={startHref}>Start free</Link>
                 </Button>
               </motion.div>
@@ -447,7 +447,7 @@ const Index = () => {
             endCta={
               <Button
                 asChild
-                className="rounded-full bg-[hsl(155,100%,67%)] px-6 text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
+                className="rounded-full bg-shop-mint px-6 text-shop-ink hover:bg-shop-mint-hover"
               >
                 <Link to={startHref}>Start free</Link>
               </Button>

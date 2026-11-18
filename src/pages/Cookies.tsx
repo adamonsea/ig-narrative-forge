@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 
 const Cookies = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-dvh bg-background">
       <Helmet>
         <title>Cookie Policy — Curatr</title>
         <meta name="description" content="Which cookies Curatr uses, why we use them, and how you can control them in your browser." />
@@ -161,7 +161,7 @@ const Cookies = () => {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

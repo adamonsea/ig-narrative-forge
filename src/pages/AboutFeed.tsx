@@ -55,7 +55,7 @@ const AboutFeed = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-900">
+      <div className="min-h-dvh bg-zinc-900">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
           <Skeleton className="h-8 w-32 mb-8 bg-zinc-800" />
           <Skeleton className="h-16 w-full mb-4 bg-zinc-800" />
@@ -67,7 +67,7 @@ const AboutFeed = () => {
 
   if (!topic || !topic.branding_config?.about_page_enabled) {
     return (
-      <div className="min-h-screen bg-zinc-900 text-zinc-100">
+      <div className="min-h-dvh bg-zinc-900 text-zinc-100">
         <div className="container mx-auto px-4 py-8 max-w-2xl text-center">
           <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
           <p className="text-zinc-400 mb-6">
@@ -94,7 +94,7 @@ const AboutFeed = () => {
   const aboutUrl = `https://curatr.pro/feed/${slug}/about`;
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-zinc-100">
+    <div className="min-h-dvh bg-zinc-900 text-zinc-100">
       <Helmet>
         <title>{aboutTitle}</title>
         <meta name="description" content={aboutDesc} />
