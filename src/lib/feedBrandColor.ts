@@ -105,6 +105,26 @@ export function buttonTone(fill: RGB, mode: 'light' | 'dark' = 'light'): { fill:
   return { fill: adjustUntil(fill, white, 4.5, [0, 0, 0]), onFill: white };
 }
 
+/** Date block (feed fill) must stand at least this far from the illustration band behind it. */
+export const ILLUSTRATION_DATE_CONTRAST = 2;
+
+/**
+ * Pale tint of the feed colour for the event-card illustration band, so the
+ * date block (the full feed fill) reads clearly on top of it. Starts at 40%
+ * colour and gets paler until the fill reaches ILLUSTRATION_DATE_CONTRAST;
+ * very pale feed colours get a slightly deeper band instead.
+ */
+export function eventIllustrationTint(input: string | null | undefined): RGB {
+  const fill = feedBrandPalette(input).light.fill;
+  const white: RGB = [255, 255, 255];
+  let out = mix(white, fill, 0.4);
+  for (let t = 0.4; t >= 0.1 && contrast(out, fill) < ILLUSTRATION_DATE_CONTRAST; t -= 0.02) out = mix(white, fill, t);
+  // Very pale feed colours (pale yellow, near white) can't sit on anything paler:
+  // deepen the band a little instead so the date block still stands out.
+  for (let t = 0.05; t <= 1.0001 && contrast(out, fill) < ILLUSTRATION_DATE_CONTRAST; t += 0.05) out = mix(fill, FEED_TEXT_DARK, t);
+  return out;
+}
+
 export interface FeedBrandPalette {
   light: BrandTone;
   dark: BrandTone;

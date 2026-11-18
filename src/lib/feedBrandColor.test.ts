@@ -7,6 +7,8 @@ import {
   FEED_CARD_LIGHT,
   FEED_CARD_DARK,
   FEED_TEXT_DARK,
+  eventIllustrationTint,
+  ILLUSTRATION_DATE_CONTRAST,
 } from './feedBrandColor';
 
 const SAMPLES = [
@@ -68,5 +70,15 @@ describe('sign-up card surface stands apart from story cards and stays readable'
         expect(contrast(t.text, t.field)).toBeGreaterThanOrEqual(4.5);
       });
     }
+  }
+});
+
+describe('eventIllustrationTint', () => {
+  for (const c of SAMPLES) {
+    it(`date block stands out from the illustration band for ${c}`, () => {
+      const fill = feedBrandPalette(c).light.fill;
+      const tint = eventIllustrationTint(c);
+      expect(contrast(tint, fill)).toBeGreaterThanOrEqual(ILLUSTRATION_DATE_CONTRAST);
+    });
   }
 });

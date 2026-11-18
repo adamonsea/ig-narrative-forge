@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, useState, type ComponentType } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
-import { feedBrandPalette, toCss } from "@/lib/feedBrandColor";
+import { eventIllustrationTint, feedBrandPalette, toCss } from "@/lib/feedBrandColor";
 import { recordEventClick } from "@/lib/eventClicks";
 import { EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
 import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
@@ -44,7 +44,8 @@ interface EventCardProps {
 
 /**
  * One event, two slides, built like the feed's story card so swiping is identical.
- * Slide 1: full-bleed category illustration in the feed colour (top third), the
+ * Slide 1: full-bleed category illustration in a pale feed tint (top third) with a
+ * small category pill, the
  * date block across its angled seam, then title and venue.
  * Slide 2: day (and time), venue, price (only when known), up to four lines of
  * description. Both slides are top-aligned; the one link sits below both.
@@ -60,7 +61,6 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
     return () => io.disconnect();
   }, []);
 
-  const palette = feedBrandPalette(brandColor);
   const category = isEventCategory(e.event_type) ? e.event_type : "other";
   const b = dateBlock(e.start_date);
   const time = eventTime(e.start_time);
@@ -72,7 +72,14 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
   const first = (
     <div key="date" className="flex h-full flex-col">
       <div className="relative h-[184px] shrink-0">
-        <Illustration category={category} color={toCss(palette.light.fill)} animate={inView} />
+        <Illustration category={category} color={toCss(eventIllustrationTint(brandColor))} animate={inView} />
+        <div className="absolute left-0 right-0 top-4 px-5 md:px-8" aria-hidden="true">
+          <div className="mx-auto w-full max-w-xl">
+            <span className="inline-flex rounded-full bg-[hsl(var(--feed-card))] px-3 py-1 text-sm font-semibold text-[hsl(var(--feed-card-foreground))] shadow-sm">
+              {EVENT_CATEGORY_LABELS[category]}
+            </span>
+          </div>
+        </div>
         <div className="absolute bottom-0 left-0 right-0 px-5 md:px-8">
           <div className="mx-auto w-full max-w-xl">
             <EventDateBlock ymd={e.start_date} className="translate-y-1/2 shadow-md ring-4 ring-[hsl(var(--feed-card))]" />
