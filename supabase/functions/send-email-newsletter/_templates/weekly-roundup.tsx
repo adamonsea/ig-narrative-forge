@@ -14,6 +14,8 @@ import {
   Text,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
+import { EventCards } from './event-cards.tsx'
+import type { EmailBrand, RichEmailEvent } from '../emailEvents.ts'
 
 interface EmailStory {
   id: string;
@@ -46,6 +48,8 @@ interface WeeklyRoundupEmailProps {
   totalStoryCount?: number; // Total stories in the week (not just email preview)
   events?: EmailEvent[]; // Upcoming local events (omitted when empty)
   eventsFirst?: boolean; // Events-led feed (or no news): events before stories
+  richEvents?: RichEmailEvent[]; // Events-focused emails: picture-led cards (same events as `events`)
+  brand?: EmailBrand;
   introHeading?: string; // Segment personalisation (partner site)
   introText?: string;
 }
@@ -64,6 +68,8 @@ export const WeeklyRoundupEmail = ({
   totalStoryCount,
   events = [],
   eventsFirst = false,
+  richEvents,
+  brand,
   introHeading,
   introText,
 }: WeeklyRoundupEmailProps) => {
@@ -105,7 +111,12 @@ export const WeeklyRoundupEmail = ({
 
 
 
-        {eventsFirst && events.length > 0 && renderEvents(events, 'The week ahead', true, stories.length > 0)}
+        {eventsFirst && events.length > 0 && (richEvents && brand
+          ? <>
+              <EventCards events={richEvents} heading={'The week ahead'} brand={brand} />
+              {stories.length > 0 && <Hr style={hr} />}
+            </>
+          : renderEvents(events, 'The week ahead', true, stories.length > 0))}
 
         {stories.length > 0 ? (
           <Section style={storiesSection}>
@@ -152,7 +163,7 @@ export const WeeklyRoundupEmail = ({
               🎧 Listen
             </Link>
           )}
-          <Link href={`${baseUrl}/feed/${topicSlug}/weekly/${weekStartParam}`} target="_blank" style={ctaButtonPrimary}>
+          <Link href={`${baseUrl}/feed/${topicSlug}/weekly/${weekStartParam}`} target="_blank" style={brand ? { ...ctaButtonPrimary, backgroundColor: brand.fill, color: brand.onFill } : ctaButtonPrimary}>
             View Weekly Briefing →
           </Link>
           <Link href={`${baseUrl}/feed/${topicSlug}`} target="_blank" style={ctaButtonSecondary}>

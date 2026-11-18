@@ -1,3 +1,7 @@
+# Briefings: What's on first + event emails (18 Nov 2026)
+- [x] Daily and weekly briefing pages in the feed put What's on at the top when there are events (emails unchanged for news feeds)
+- [x] Events-focused emails: picture-led cards, listing photo or category illustration in the feed's colour, category, when, where/price, short description, one button
+
 # Repeat stories and Skip (18 Nov 2026)
 - [x] Skip / Archive on the Desk failed: stories couldn't be set to archived. Fixed
 - [x] Waiting or queued stories that repeat one already live show "Already live"; "Skip N repeats" when there are 2+

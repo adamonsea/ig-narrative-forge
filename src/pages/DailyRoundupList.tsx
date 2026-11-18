@@ -447,7 +447,8 @@ export default function DailyRoundupList() {
 
   const formattedDate = format(parseISO(dayParam), 'EEE MMM d');
   const hasEvents = briefingEvents.events.length > 0;
-  const eventsFirst = hasEvents && (topic.feed_lead === 'events' || stories.length === 0);
+  // What's on leads every briefing page when there are events (emails keep their own order).
+  const eventsFirst = hasEvents;
   const eventsCard = hasEvents ? (
     <div className="w-full max-w-2xl">
       <WhatsOnCard

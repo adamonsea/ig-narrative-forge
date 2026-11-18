@@ -7,6 +7,7 @@ import { DailyRoundupEmail } from './_templates/daily-roundup.tsx';
 import { WeeklyRoundupEmail } from './_templates/weekly-roundup.tsx';
 import { pickDailyEvents, londonToday, dailyEventsHeading, type WhatsOnRow } from './dailyEvents.ts';
 import { briefingWindow, pickBriefingEvents } from '../_shared/briefingEvents.ts';
+import { emailBrand, enrichEmailEvents, type EventDetails, type RichEmailEvent } from './emailEvents.ts';
 import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProAccess } from '../_shared/auth.ts';
 import { dedupeByEvent, EMAIL_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
 import { FEATURES } from '../_shared/parked-features.ts';
@@ -137,7 +138,7 @@ serve(async (req) => {
     // Get topic details
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, slug, branding_config, events_enabled, feed_lead, created_by, email_subscriptions_enabled')
+      .select('id, name, slug, branding_config, illustration_primary_color, event_currency, events_enabled, feed_lead, created_by, email_subscriptions_enabled')
       .eq('id', topicId)
       .single();
 
@@ -470,6 +471,23 @@ serve(async (req) => {
     // Events-led feeds (or no news) put the events first
     const eventsFirst = upcomingEvents.length > 0 && ((topic as { feed_lead?: string }).feed_lead === 'events' || stories.length === 0);
 
+    // Events-focused emails get picture-led cards: listing photo, or the category illustration in the feed's colour.
+    let richEvents: RichEmailEvent[] | undefined;
+    const brand = emailBrand(branding.primary_color || (topic as { illustration_primary_color?: string }).illustration_primary_color);
+    if (eventsFirst) {
+      const { data: details, error: detailsError } = await supabase
+        .from('events')
+        .select('id, description, event_type, price, is_free, image_path, image_hidden, source_name')
+        .in('id', upcomingEvents.map((e) => e.id));
+      if (detailsError) {
+        console.error('Event details for email cards (non-fatal, plain list used):', detailsError);
+      } else {
+        richEvents = enrichEmailEvents(upcomingEvents, (details || []) as EventDetails[], {
+          supabaseUrl, origin: BASE_URL, currency: (topic as { event_currency?: string }).event_currency,
+        });
+      }
+    }
+
     // Prepare shared email template data
     const displayDate = dateEnd.toLocaleDateString('en-GB', { 
       weekday: 'long', 
@@ -521,6 +539,8 @@ serve(async (req) => {
             audioUrl,
             events: upcomingEvents,
             eventsFirst,
+            richEvents,
+            brand,
             unsubscribeUrl,
             introHeading: segment?.intro_heading || undefined,
             introText: segment?.intro_text || undefined
@@ -544,6 +564,8 @@ serve(async (req) => {
             totalStoryCount,
             events: upcomingEvents,
             eventsFirst,
+            richEvents,
+            brand,
             unsubscribeUrl,
             introHeading: segment?.intro_heading || undefined,
             introText: segment?.intro_text || undefined
