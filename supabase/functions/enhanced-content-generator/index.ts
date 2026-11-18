@@ -1476,6 +1476,8 @@ Return in JSON format:
         audience_expertise: topicExpertise,
         slide_type: finalSlideType,
         quality_score: article.content_quality_score,
+        // Remember the owner's "make picture" choice for when the story goes live.
+        skip_auto_illustration: generateIllustration === false,
         updated_at: new Date().toISOString()
       };
       
@@ -1542,6 +1544,7 @@ Return in JSON format:
         audience_expertise: topicExpertise,
         slide_type: finalSlideType,
         quality_score: article.content_quality_score,
+        skip_auto_illustration: generateIllustration === false,
         cover_illustration_url: article.image_url || null,
         // Attribution must come from the real article, not the topic's source list
         publication_name: (() => {

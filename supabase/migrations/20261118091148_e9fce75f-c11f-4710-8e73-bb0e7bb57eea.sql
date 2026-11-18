@@ -1,0 +1,2 @@
+ALTER TABLE public.stories ADD COLUMN IF NOT EXISTS skip_auto_illustration boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.stories.skip_auto_illustration IS 'Owner turned off "make picture" for this story; automatic pictures (on publish, autopilot) skip it. Manual drawing still allowed.';

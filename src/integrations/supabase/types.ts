@@ -3644,6 +3644,7 @@ export type Database = {
           selected_cover_id: string | null
           shared_content_id: string | null
           simplified_at: string | null
+          skip_auto_illustration: boolean
           slide_type: string | null
           slug: string | null
           status: string
@@ -3687,6 +3688,7 @@ export type Database = {
           selected_cover_id?: string | null
           shared_content_id?: string | null
           simplified_at?: string | null
+          skip_auto_illustration?: boolean
           slide_type?: string | null
           slug?: string | null
           status?: string
@@ -3730,6 +3732,7 @@ export type Database = {
           selected_cover_id?: string | null
           shared_content_id?: string | null
           simplified_at?: string | null
+          skip_auto_illustration?: boolean
           slide_type?: string | null
           slug?: string | null
           status?: string

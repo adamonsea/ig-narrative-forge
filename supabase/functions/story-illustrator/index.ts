@@ -1,4 +1,5 @@
 import { pickIllustrationColor } from '../_shared/illustration-color.ts'
+import { feedAllowsAutoPictures } from '../_shared/illustration-gate.ts'
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
@@ -440,6 +441,26 @@ serve(async (req) => {
     // victims have lifelong anonymity and an invented figure could be read as
     // the victim. Manual illustration is still allowed for editorial judgement.
     if (isAutomated) {
+      // Owner's "no picture" choices win over every automatic picture (publish, autopilot).
+      let autoSettings: { automation_mode?: string | null; auto_illustrate_in_holiday?: boolean | null } | null = null
+      if (topicId) {
+        const { data } = await supabase
+          .from('topic_automation_settings')
+          .select('automation_mode, auto_illustrate_in_holiday')
+          .eq('topic_id', topicId)
+          .maybeSingle()
+        autoSettings = data
+      }
+      const ownerSaidNo = (story as any).skip_auto_illustration === true
+      if (ownerSaidNo || !feedAllowsAutoPictures(autoSettings)) {
+        const reason = ownerSaidNo ? 'owner_opted_out' : 'autopilot_pictures_off'
+        console.log(`Skipping automated illustration for story ${storyId}: ${reason}`)
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, reason, message: 'Automatic picture skipped: the owner turned pictures off.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       const check = checkAnonymity(
         (story as any).title,
         (story as any).summary,

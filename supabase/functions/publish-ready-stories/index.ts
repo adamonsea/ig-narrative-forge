@@ -257,7 +257,7 @@ serve(async (req) => {
         is_published: true
       })
       .in('id', storiesToPublish)
-      .select('id, title, status, is_published, cover_illustration_url');
+      .select('id, title, status, is_published, cover_illustration_url, skip_auto_illustration');
 
     if (updateError) {
       console.error('Error updating ready stories:', updateError);
