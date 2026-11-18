@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS description_edited boolean NOT NULL DEFAULT false;

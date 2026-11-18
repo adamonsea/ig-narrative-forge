@@ -1334,6 +1334,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          description_edited: boolean
           end_date: string | null
           end_time: string | null
           event_source_id: string | null
@@ -1369,6 +1370,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          description_edited?: boolean
           end_date?: string | null
           end_time?: string | null
           event_source_id?: string | null
@@ -1404,6 +1406,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          description_edited?: boolean
           end_date?: string | null
           end_time?: string | null
           event_source_id?: string | null

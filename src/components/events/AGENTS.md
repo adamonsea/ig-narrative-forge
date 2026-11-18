@@ -1,0 +1,3 @@
+# Event card rules
+- Event descriptions on reader cards and social assets go through `completeDescription()` (`supabase/functions/_shared/eventDescription.ts`: whole sentences up to a limit, else whole word + ellipsis, never rewritten); owner edits set `events.description_edited` and `scrape-whats-on` keeps that text on every gather; one rule keeps every surface complete and owner wording safe.
+- Event social assets (9:16 still, 6s motion, caption) come only from `src/components/events/social/` (canvas drawing of the individual card parts, caption from `eventCaption.ts`), opened from the Desk event drawer's Social pack; a future automation hand-off should reuse these, not draw its own.

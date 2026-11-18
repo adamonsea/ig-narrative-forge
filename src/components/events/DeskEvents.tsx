@@ -15,6 +15,9 @@ import type { DeskEvent } from "@/hooks/useWhatsOnEvents";
 import { EventCategoryIcon, EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
 import { useEventCategories, useEventCategoryActions } from "@/hooks/useEventCategories";
 import { DeskBadge, DeskCard, MetaLine } from "@/components/topic-pipeline/DeskCard";
+import { Textarea } from "@/components/ui/textarea";
+import { InlineError } from "@/components/ui/editorial";
+import { EventSocialPack } from "@/components/events/social/EventSocialPack";
 
 /** Day and number, the event's at-a-glance date. */
 function DateTile({ date, size = "lg", category }: { date: string; size?: "lg" | "sm"; category?: string | null }) {
@@ -249,6 +252,40 @@ interface EventDetailRow {
   price: string | null;
   image_path?: string | null;
   image_hidden?: boolean | null;
+  description_edited?: boolean | null;
+}
+
+/** The owner's own wording for an event; it sticks when the source is gathered again. */
+function DescriptionEditor({ eventId, detail, topicId }: { eventId: string; detail: EventDetailRow; topicId?: string }) {
+  const queryClient = useQueryClient();
+  const [text, setText] = useState(detail.description ?? "");
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const save = async (value: string | null, edited: boolean) => {
+    setState("saving");
+    const { error } = await supabase.from("events").update({ description: value, description_edited: edited } as never).eq("id", eventId);
+    if (error) { setState("error"); return; }
+    queryClient.setQueryData(["event-detail", eventId], (d: EventDetailRow | null | undefined) => (d ? { ...d, description: value, description_edited: edited } : d));
+    queryClient.invalidateQueries({ queryKey: ["events-feed", topicId] });
+    setState("saved");
+  };
+  const onBlur = () => {
+    const value = text.trim();
+    if (value === (detail.description ?? "").trim()) return;
+    void save(value || null, true);
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={`desc-${eventId}`} className="text-sm text-muted-foreground">Description</Label>
+        <span className="text-sm text-muted-foreground" aria-live="polite">{state === "saving" ? "Saving…" : state === "saved" ? "Saved" : ""}</span>
+      </div>
+      <Textarea id={`desc-${eventId}`} value={text} onChange={(e) => { setText(e.target.value); setState("idle"); }} onBlur={onBlur} rows={6} className="text-base leading-relaxed" />
+      {state === "error" && <InlineError message="Couldn't save the description." actionLabel="Try again" onAction={onBlur} />}
+      {detail.description_edited && (
+        <Button variant="ghost" size="sm" className="px-0 text-muted-foreground" onClick={() => void save(detail.description, false)}>Use listing text</Button>
+      )}
+    </div>
+  );
 }
 
 /** The full listing for one event, with the actions that fit where it is. */
@@ -260,7 +297,7 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
     enabled: Boolean(item?.id),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("events").select("description, end_date, end_time, price, is_free, event_type, image_path, image_hidden").eq("id", item!.id).maybeSingle();
+      const { data, error } = await supabase.from("events").select("description, description_edited, end_date, end_time, price, is_free, event_type, image_path, image_hidden").eq("id", item!.id).maybeSingle();
       if (error) throw error;
       return (data ?? null) as EventDetailRow | null;
     },
@@ -362,9 +399,16 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
                   <div className="h-4 w-full animate-pulse rounded bg-muted" />
                   <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
                 </div>
-              ) : detail?.description ? (
-                <p className="whitespace-pre-line leading-relaxed text-foreground">{detail.description}</p>
+              ) : detail ? (
+                <DescriptionEditor key={item.id} eventId={item.id} detail={detail} topicId={topicId} />
               ) : null}
+              {detail && (
+                <EventSocialPack topicId={topicId} event={{
+                  title: item.title, start_date: item.start_date, start_time: item.start_time, location: item.location,
+                  price: detail.price, is_free: detail.is_free, description: detail.description,
+                  event_type: detail.event_type ?? item.event_type, image_path: detail.image_hidden ? null : detail.image_path,
+                }} />
+              )}
               {item.source_url && (
                 <Button asChild variant="outline" className="w-full justify-center">
                   <a href={item.source_url} target="_blank" rel="noopener noreferrer">

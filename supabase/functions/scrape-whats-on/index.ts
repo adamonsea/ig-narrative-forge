@@ -139,9 +139,9 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const ids = events.map((e) => reader.externalId(source.id, e.key));
 
   // What the owner has already decided: removals and restores stick.
-  const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null }>();
+  const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null; description: string | null; description_edited: boolean }>();
   for (const part of chunks(ids, 150)) {
-    const { data } = await supabase.from('events').select('id, external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked, image_source_url, image_path')
+    const { data } = await supabase.from('events').select('id, external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked, image_source_url, image_path, description, description_edited')
       .eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
     for (const r of data || []) existing.set(r.external_id, r);
   }
@@ -185,7 +185,9 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       source_api: reader.sourceApi,
       external_id: id,
       title: e.title,
-      description: e.description ?? null,
+      // The owner's own wording sticks; otherwise the listing's
+      description: prev?.description_edited ? prev.description : e.description ?? null,
+      description_edited: Boolean(prev?.description_edited),
       start_date: e.start_date,
       start_time: e.start_time,
       end_time: e.end_time ?? null,

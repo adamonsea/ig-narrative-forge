@@ -8,6 +8,7 @@ import { EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/Even
 import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
 import { dateBlock, eventTime, priceLine, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 import { eventPhotoUrl } from "@/lib/eventPhotos";
+import { completeDescription } from "@/lib/eventDescription";
 
 function brandVars(color?: string | null) {
   const p = feedBrandPalette(color);
@@ -66,8 +67,8 @@ export function EventPhotoBand({ src, fallback }: { src: string; fallback: React
  * Slide 1: the listing's photo when Curatr has a stored copy, otherwise the full-bleed
  * category illustration in a pale feed tint (top third), with a small category pill, the
  * date block across its angled seam, then title and venue.
- * Slide 2: day (and time), venue, price (only when known), up to four lines of
- * description. Both slides are top-aligned; the one link sits below both.
+ * Slide 2: day (and time), venue, price (only when known), and the description cut to
+ * whole sentences by completeDescription(). Both slides are top-aligned; the one link sits below both.
  */
 function EventCardView({ event: e, brandColor, isOwner = false, currency = null, Illustration = EventCategoryIllustration }: EventCardProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -128,7 +129,7 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
         <ul className="space-y-2 font-lexend text-2xl font-semibold leading-snug md:text-3xl">
           {facts.map((f) => <li key={f}>{f}</li>)}
         </ul>
-        {e.description && <p className="line-clamp-4 text-lg opacity-75 md:text-xl">{e.description}</p>}
+        {completeDescription(e.description) && <p className="text-lg opacity-75 md:text-xl">{completeDescription(e.description)}</p>}
       </div>
     </div>
   );
