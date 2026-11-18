@@ -11,6 +11,7 @@ import { StoryStructuredData } from "@/components/seo/StoryStructuredData";
 import { StoryRatingCard } from "@/components/swipe-mode/StoryRatingCard";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { startStoryPageDwell } from "@/lib/storyPageDwell";
+import { resolveStoryCoverStyle } from "@/lib/storyCoverStyle";
 
 interface Story {
   id: string;
@@ -67,7 +68,7 @@ const StoryPage = () => {
         const [topicResult, storyResult] = await Promise.all([
           supabase
             .from('topics')
-            .select('id, name, slug, topic_type, branding_config, illustration_primary_color')
+            .select('id, name, slug, topic_type, branding_config, illustration_primary_color, story_cover_style')
             .eq('slug', slug.toLowerCase())
             .eq('is_public', true)
             .eq('is_active', true)
@@ -286,6 +287,7 @@ const StoryPage = () => {
           storyIndex={0}
           topicName={topic.name}
           brandColor={(topic.branding_config as any)?.primary_color || (topic as any).illustration_primary_color}
+          coverStyle={resolveStoryCoverStyle((topic as any).story_cover_style)}
         />
         
         {/* Story Rating Stats - links to Play Mode */}

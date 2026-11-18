@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
 import { whatsOnPositions, eventCardMode, eventsLedRun, newsSlotsWithin } from "@/lib/feedCardPositions";
+import { resolveStoryCoverStyle } from "@/lib/storyCoverStyle";
 import { WhatsOnCard } from "@/components/events/WhatsOnCard";
 import { EventCard } from "@/components/events/EventCard";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
@@ -683,6 +684,7 @@ const TopicFeed = () => {
               topicName={topic?.name}
               topicSlug={slug}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
+              coverStyle={resolveStoryCoverStyle(topic?.story_cover_style)}
               onStorySwipe={handleStorySwipe}
               onStoryScrolledPast={handleStoryScrolledPast}
               onMoreLikeThis={FEED_FILTERS_ENABLED ? handleMoreLikeThis : undefined}

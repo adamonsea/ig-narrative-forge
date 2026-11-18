@@ -5379,6 +5379,7 @@ export type Database = {
           region: string | null
           rss_enabled: boolean | null
           slug: string | null
+          story_cover_style: string
           topic_type: string
           updated_at: string | null
           weekly_email_enabled: boolean
@@ -5456,6 +5457,7 @@ export type Database = {
           region?: string | null
           rss_enabled?: boolean | null
           slug?: string | null
+          story_cover_style?: string
           topic_type?: string
           updated_at?: string | null
           weekly_email_enabled?: boolean
@@ -5533,6 +5535,7 @@ export type Database = {
           region?: string | null
           rss_enabled?: boolean | null
           slug?: string | null
+          story_cover_style?: string
           topic_type?: string
           updated_at?: string | null
           weekly_email_enabled?: boolean

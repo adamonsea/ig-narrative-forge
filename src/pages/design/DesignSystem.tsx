@@ -2,7 +2,7 @@ import { EventCategoryIcon, EVENT_CATEGORY_LABELS, type EventCategory } from "@/
 import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
 import { EventCard, EventDateBlock } from "@/components/events/EventCard";
 import { useState, type ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Archive, ArrowLeft, ArrowRight, Eye, Check, RefreshCw, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -132,6 +132,10 @@ export default function DesignSystem() {
           <header className="space-y-2">
             <h1 className="font-display text-[2rem] leading-tight">Workspace design system</h1>
             <p className="text-base text-muted-foreground">Everything the curator tool may use. Built from the Desk.</p>
+            <nav className="flex flex-wrap gap-x-6 gap-y-1 pt-1 text-base" aria-label="Design comparisons">
+              <Link to="/design/event-cards" className="underline underline-offset-4 hover:text-foreground">Event cards: A or B</Link>
+              <Link to="/design/story-covers" className="underline underline-offset-4 hover:text-foreground">Story covers: split or full bleed</Link>
+            </nav>
           </header>
 
           <Block id="colour" title="Colour">
