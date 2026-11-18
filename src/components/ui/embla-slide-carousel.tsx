@@ -187,7 +187,7 @@ export function EmblaSlideCarousel({
           {slides.map((slide, i) => (
             <div
               key={i}
-              className="flex-[0_0_100%] min-w-0 h-full embla-slide-contained"
+              className="flex-[0_0_100%] min-w-0 embla-slide-contained"
               role="group"
               aria-roledescription="slide"
               aria-label={`Slide ${i + 1} of ${count}`}
