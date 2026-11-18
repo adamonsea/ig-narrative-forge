@@ -20,10 +20,11 @@ import { SiteStatsPanel } from '@/components/admin/SiteStatsPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminPanel() {
-  const { user, loading, isAdmin, isProductOwner } = useAuth();
+  const { user, userRole, loading, isAdmin, isProductOwner } = useAuth();
   usePageFavicon();
 
-  if (loading) {
+  // The role arrives just after sign-in; wait for it so admins aren't bounced to the dashboard
+  if (loading || (user && userRole === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Spinner size="lg" />
@@ -61,6 +62,14 @@ export default function AdminPanel() {
                 </Link>
               </p>
               <SourceCleanup />
+            </div>
+          </section>
+
+          <section>
+            <SectionLabel>Design</SectionLabel>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-base">
+              <Link to="/design" className="underline underline-offset-4 hover:text-foreground">Design system</Link>
+              <Link to="/design/event-cards" className="underline underline-offset-4 hover:text-foreground">Event cards: A or B</Link>
             </div>
           </section>
 

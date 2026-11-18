@@ -109,7 +109,7 @@ function SampleCard({ i, open }: { i: number; open?: () => void }) {
 }
 
 export default function DesignSystem() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, userRole, loading, isAdmin } = useAuth();
   const { toast } = useToast();
   const [drawer, setDrawer] = useState(false);
   const [sheet, setSheet] = useState(false);
@@ -118,7 +118,8 @@ export default function DesignSystem() {
   const [settleKey, setSettleKey] = useState(0);
   const [phoneTab, setPhoneTab] = useState<"pool" | "live" | "events">("live");
 
-  if (loading) return <main className="min-h-dvh bg-background p-8"><Skeleton className="h-8 w-48" /></main>;
+  // The role arrives just after sign-in; wait for it so admins aren't bounced to the dashboard
+  if (loading || (user && userRole === null)) return <main className="min-h-dvh bg-background p-8"><Skeleton className="h-8 w-48" /></main>;
   if (!user) return <Navigate to="/auth" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
