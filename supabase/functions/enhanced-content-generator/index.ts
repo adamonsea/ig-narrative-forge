@@ -436,7 +436,7 @@ REQUIREMENTS:
 - Writing style: ${getGuidance(writingStyleGuidance, writingStyle, `Match the ${writingStyle} style.`)}
 - Audience expertise: ${getGuidance(expertiseGuidance, expertise, `Write for a ${expertise} reader.`)}
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
-- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 8 words ideal, 15 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
+- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 5-8 words ideal, 10 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
 - Make it shareable and engaging for web readers
 - Include alt text for accessibility
@@ -570,12 +570,16 @@ ATTRIBUTION REQUIREMENTS:
 
 SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY - THE HEADLINE):
 - Extract the single most compelling TRUE fact/angle from the article content
-- IDEAL: 8 words, MAXIMUM: 15 words, single sentence
+- IDEAL: 5-8 words, MAXIMUM: 10 words. Count them. (Only the rhyming-couplet tone is exempt.)
+- Write it as a crisp news headline, not a conversational sentence: active voice, present tense, a concrete subject and a strong verb. Cut articles, "has been", "is set to" and filler.
+  ✅ "Tree crushes car in church car park" (7 words)
+  ❌ "A large tree has crushed a car in an Eastbourne church car park" (13 words)
+- Readers already know which place this feed covers. Do NOT add the town, city or area name unless it is needed to tell places apart (e.g. a story about a neighbouring town).
 - Focus on what makes this genuinely matter to local readers
 - Use the strongest claim that the article content fully supports
 - Prioritize: local impact > surprising facts > genuine consequences > human interest
 - When formal: Lead with authoritative findings ("Council reveals...", "Data shows...")  
-- When conversational: Lead with local relevance ("Local residents face...", "New changes mean...")
+- When conversational: Lead with the people affected ("Residents face...", "Drivers lose...")
 - NEVER oversell - the content must fully deliver on the hook's promise
 - Test: "Does this accurately represent the most important aspect of this story?"
 
@@ -584,7 +588,7 @@ OUTPUT FORMAT (JSON):
   "slides": [
     {
       "slideNumber": 1,
-      "content": "Extract most compelling TRUE local angle (IDEAL: 8 words, MAX: 15 words, single sentence)",
+      "content": "Extract most compelling TRUE local angle (crisp headline, IDEAL: 5-8 words, MAX: 10 words)",
       "visualPrompt": "Description for visual/image",
       "altText": "Accessibility description"
     }
@@ -806,7 +810,7 @@ You previously returned only ${normalized.length} slides. Re-output the full car
 
 Constraints:
 - Exactly ${slideCount} slides.
-- Slide 1: 8 words ideal, 15 words max.
+- Slide 1: crisp headline, 5-8 words ideal, 10 words max.
 - Slides 2-${slideCount}: max 30-40 words each.
 - NEVER name the publication, domain or author in any slide (no "Source: ...", no "Read more at ...", no bylines).
 - Do not invent facts; if missing, say "Not specified in source".
@@ -950,7 +954,8 @@ HARD RULES:
 - Facts, names, numbers, dates, places and quotes are FROZEN. Do not add, remove or alter a single one.
 - Do not introduce any name, figure or place that is not already in the slides or the article below.
 - Keep exactly ${normalized.length} slides, in the same order, covering the same points.
-- Slide 1: 8 words ideal, 15 words maximum. Other slides: 40 words maximum.
+- Slide 1: crisp news headline, 5-8 words ideal, 10 words maximum. Other slides: 40 words maximum.
+- Slide 1 only: you may drop the feed's own town or area name if the headline reads fine without it.
 - Keep attribution rules: opinions and claims stay attributed to whoever said them.
 - NEVER name the publication, website, domain or author.
 - Keep the visualPrompt and altText fields; update altText only if the content changed meaningfully.
@@ -984,7 +989,7 @@ Return valid JSON only: { "slides": [ { "slideNumber": 1, "content": "...", "vis
 
           const sameShape = rewritten.length === normalized.length;
           const withinLimits = sameShape && rewritten.every((s, i) =>
-            wordCount(s.content || '') <= (i === 0 ? 18 : 45) && (s.content || '').trim().length > 0
+            wordCount(s.content || '') <= (i === 0 ? (tone === 'rhyming_couplet' ? 30 : 10) : 45) && (s.content || '').trim().length > 0
           );
           const noNewFacts = sameShape && rewritten.every((s) =>
             factTokens(s.content || '').every((tok) => {
