@@ -91,7 +91,7 @@ export const searchSchema = z.object({
       (query) => !/[<>\"'&]/.test(query),
       'Search query contains invalid characters'
     ),
-  filters: z.record(z.any()).optional().default({}),
+  filters: z.record(z.string(), z.any()).optional().default({}),
 });
 
 export type NewsletterFormData = z.infer<typeof newsletterSchema>;
