@@ -1,4 +1,5 @@
 import { priceFacts, shortDescription } from '../_shared/eventCategories.ts';
+import { IMAGE_KEYS, imageAddress } from './eventImage.ts';
 /**
  * What's-on page reader: pure helpers (no network, no database) so every rule
  * can be tested. Data contract is deliberately tiny — title, start date/time,
@@ -32,12 +33,17 @@ export interface WhatsOnEvent {
   is_free?: boolean | null;
   /** The source's own category or schema.org type, for categorizeEvent(). */
   hint?: string | null;
+  /** The listing's own picture (https), when it gives one; checked again before use. */
+  image?: string | null;
 }
 
 export type WhatsOnMethod = 'jsonld' | 'ical' | 'json' | 'text';
 // 'json' covers both advertised JSON feeds and the page's own calendar data (see pageData.ts).
 
 const LONDON = 'Europe/London';
+
+/** Only listings with a picture carry the field. */
+const withImage = (image: string | null) => (image ? { image } : {});
 
 function hintText(...vals: unknown[]): string | null {
   const out: string[] = [];
@@ -378,6 +384,7 @@ export function extractJsonLdEvents(html: string, pageUrl: string): WhatsOnEvent
           description: shortDescription(typeof o.description === 'string' ? decodeEntities(o.description) : null),
           ...priceFacts(o.offers, o.isAccessibleForFree),
           hint: hintText(o['@type'], o.keywords, o.genre, o.about),
+          ...withImage(imageAddress(o.image, pageUrl)),
         });
       }
     }
@@ -555,6 +562,7 @@ function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: s
     description: shortDescription(((d) => (typeof d === 'string' ? decodeEntities(d) : Array.isArray(d) ? decodeEntities(d.filter((x) => typeof x === 'string').join(' ')) : null))(pick(o, ['description', 'excerpt.rendered', 'excerpt', 'details', 'content.rendered']))),
     ...priceFacts(o.offers, o.is_free ?? o.isAccessibleForFree ?? (o.price_cat === 'free' ? true : undefined), o.cost ?? (typeof o.price === 'string' || typeof o.price === 'number' ? String(o.price) : undefined) ?? listedPriceValue(o.price_val)),
     hint: hintText(o.categories, o.categories_name_list, o.category, o.subject, o.tags, o.tags_name_list, o.genre),
+    ...withImage(imageAddress(pick(o, IMAGE_KEYS), feedUrl)),
   };
 }
 

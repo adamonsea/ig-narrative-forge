@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { eventCardMode, type EventCardMode, type FeedLead } from "@/lib/feedCardPositions";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { CURRENCY_SYMBOL, FEED_CURRENCIES, isFeedCurrency, type FeedCurrency } from "@/lib/currency";
 
 interface Props {
@@ -10,6 +12,8 @@ interface Props {
   lead: string | null | undefined;
   cards: string | null | undefined;
   currency?: string | null;
+  /** Show listing photos on individual cards (on unless turned off). */
+  photos?: boolean | null;
   onSaved: (values: Record<string, unknown>) => void;
 }
 
@@ -30,8 +34,8 @@ function Choice<T extends string>({ id, label, value, options, onChange }: { id:
   );
 }
 
-/** "Lead with: News | Events", "Event cards: Grouped | Individual" and the event price currency. Auto-saves. */
-export function FeedLeadSettings({ topicId, lead, cards, currency, onSaved }: Props) {
+/** "Lead with: News | Events", "Event cards: Grouped | Individual", the event price currency and event photos. Auto-saves. */
+export function FeedLeadSettings({ topicId, lead, cards, currency, photos, onSaved }: Props) {
   const [state, setState] = useState<SaveState>(null);
   const currentLead: FeedLead = lead === "events" ? "events" : "news";
   const currentCards = eventCardMode(currentLead, cards);
@@ -68,6 +72,12 @@ export function FeedLeadSettings({ topicId, lead, cards, currency, onSaved }: Pr
         <Choice id="event-currency" label="Currency" value={isFeedCurrency(currency) ? currency : null}
           options={FEED_CURRENCIES.map((c) => [c, CURRENCY_SYMBOL[c]] as [FeedCurrency, string])}
           onChange={(v: FeedCurrency) => { if (v !== currency) void save({ event_currency: v }); }} />
+      )}
+      {currentCards === "individual" && (
+        <div className="flex items-center justify-between gap-4 sm:max-w-sm">
+          <Label htmlFor="event-photos" className="text-sm font-medium">Event photos</Label>
+          <Switch id="event-photos" checked={photos !== false} onCheckedChange={(on) => void save({ event_photos_enabled: on })} />
+        </div>
       )}
     </div>
   );

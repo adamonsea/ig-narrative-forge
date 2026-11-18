@@ -1,6 +1,8 @@
 import { categorizeEvent } from '../_shared/eventCategories.ts';
 import { currencyFromUrls } from '../_shared/currency.ts';
 import { checkOtherCategories, inBackground } from './categoryCheck.ts';
+import { placeholderImages } from './eventImage.ts';
+import { cleanupPhotos, removePhotosOf, savePhotos } from './eventPhotos.ts';
 /**
  * scrape-whats-on — every kind of events source for a feed (event_sources).
  * The right reader is picked by the source's kind (see readers/index.ts); a
@@ -13,7 +15,10 @@ import { checkOtherCategories, inBackground } from './categoryCheck.ts';
  *   { action: 'refresh', sourceId }                        owner: re-check one source
  *   { action: 'remove', sourceId }                         owner: remove a source and its upcoming events
  *   { action: 'suggest', topicId, title, date, time?, venue, url, visitorId, website? }  anyone: a reader's event suggestion (Waiting only)
- *   {} or { action: 'refresh_all' }                        daily job (EVENTS_CRON_TOKEN / service role)
+ *   {} or { action: 'refresh_all' }                        daily job (EVENTS_CRON_TOKEN / service role):
+ *                                                          one request per source, then { action: 'photos' },
+ *                                                          so no single run hits the CPU limit
+ *   { action: 'photos' }                                   system only: delete past/gone photos, save new ones
  *
  * Stores facts and the link only: title, start date/time, venue, source URL, source name.
  * Every event goes through the Desk, like news: each one gets a local-relevance score
@@ -42,7 +47,8 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('preview'), topicId: z.string().uuid(), url: Url }),
   z.object({ action: z.literal('save'), topicId: z.string().uuid(), url: Url, name: z.string().trim().max(120).optional(), kind: z.string().max(40).optional() }),
   z.object({ action: z.literal('update'), sourceId: z.string().uuid(), url: Url.optional(), name: z.string().trim().min(1).max(120).optional() }),
-  z.object({ action: z.literal('refresh'), sourceId: z.string().uuid() }),
+  z.object({ action: z.literal('refresh'), sourceId: z.string().uuid(), quiet: z.boolean().optional() }),
+  z.object({ action: z.literal('photos') }),
   z.object({ action: z.literal('remove'), sourceId: z.string().uuid() }),
   z.object({ action: z.literal('refresh_all') }),
   z.object({
@@ -128,9 +134,9 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const ids = events.map((e) => reader.externalId(source.id, e.key));
 
   // What the owner has already decided: removals and restores stick.
-  const existing = new Map<string, { status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean }>();
+  const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null }>();
   for (const part of chunks(ids, 150)) {
-    const { data } = await supabase.from('events').select('external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked')
+    const { data } = await supabase.from('events').select('id, external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked, image_source_url, image_path')
       .eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
     for (const r of data || []) existing.set(r.external_id, r);
   }
@@ -153,6 +159,9 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   // Venue pages often vanish once a show starts: for events in the next two days,
   // check the link and fall back to the source's listings page if it's gone.
   const dead = await deadLinks(events.filter((e) => e.url && e.url !== source.url && e.start_date <= addDays(londonToday(), 1)).map((e) => e.url!));
+
+  // The same picture on many events is a logo or "no image" tile, not a photo
+  const placeholders = placeholderImages(events.map((e) => e.image));
 
   const rows = events.map((e, i) => {
     const id = ids[i];
@@ -192,6 +201,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       kept_by_owner: kept,
       area_confirmed: areaConfirmed,
       relevance_score: score,
+      image_source_url: e.image && !placeholders.has(e.image) ? e.image : null,
       updated_at: now,
     };
   });
@@ -199,6 +209,17 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const unique = [...new Map(rows.map((r) => [r.external_id, r])).values()];
   const { error } = await supabase.from('events').upsert(unique, { onConflict: 'topic_id,source_api,external_id' });
   if (error) throw new Error(error.message);
+  // A listing that changed (or dropped) its picture: the old copy goes, the new one is saved next
+  const changed = unique.flatMap((r) => {
+    const prev = existing.get(r.external_id);
+    return prev && (prev.image_source_url ?? null) !== r.image_source_url ? [prev] : [];
+  });
+  if (changed.length) {
+    await removePhotosOf(supabase, changed);
+    for (const part of chunks(changed.map((p) => p.id), 150)) {
+      await supabase.from('events').update({ image_path: null, image_status: null }).in('id', part);
+    }
+  }
   // A feed without a currency yet takes it from its sources' country (.pt → €, .co.uk → £)
   const currency = currencyFromUrls([source.url, ...unique.slice(0, 20).map((r) => r.source_url)]) ?? 'GBP';
   await supabase.from('topics').update({ event_currency: currency }).eq('id', source.topic_id).is('event_currency', null);
@@ -206,6 +227,10 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   inBackground(checkOtherCategories(supabase, source.topic_id, source.id));
   // Drop upcoming events from this source that it no longer lists
   const keep = unique.map((r) => `"${String(r.external_id).replace(/"/g, '')}"`).join(',');
+  const { data: dropped } = await supabase.from('events').select('image_path')
+    .eq('event_source_id', source.id).gte('start_date', londonToday())
+    .not('external_id', 'in', `(${keep})`).not('image_path', 'is', null);
+  await removePhotosOf(supabase, dropped);
   await supabase.from('events').delete()
     .eq('event_source_id', source.id).gte('start_date', londonToday())
     .not('external_id', 'in', `(${keep})`);
@@ -235,6 +260,9 @@ async function filterStored(supabase: Db, source: Source, profile: PlaceProfile 
 
 async function deleteUpcoming(supabase: Db, source: Source) {
   const today = londonToday();
+  const { data: withPhotos } = await supabase.from('events').select('image_path')
+    .eq('event_source_id', source.id).gte('start_date', today).not('image_path', 'is', null);
+  await removePhotosOf(supabase, withPhotos);
   await supabase.from('events').delete().eq('event_source_id', source.id).gte('start_date', today);
   // Rows written before events were linked to a source
   if (source.kind === 'whats_on_page') {
@@ -260,7 +288,11 @@ async function mirrorLegacyCalendarUrl(supabase: Db, source: Source, newUrl: str
   }
 }
 
-async function checkSource(supabase: Db, profiles: Profiles, source: Source) {
+/** Save this source's new photos after the response (the daily run does all feeds at once instead). */
+const photosLater = (supabase: Db, sourceId: string) =>
+  inBackground(savePhotos(supabase, { sourceId }).catch((e) => console.warn('event photos failed:', e instanceof Error ? e.message : e)));
+
+async function checkSource(supabase: Db, profiles: Profiles, source: Source, photos = true) {
   const reader = readerFor(source.kind);
   const result = await readSafely(reader, source.url, source.name);
   const profile = await placeProfileFor(supabase, profiles, source.topic_id);
@@ -268,8 +300,10 @@ async function checkSource(supabase: Db, profiles: Profiles, source: Source) {
   const excluded = verdicts.filter(isOutOfArea).length;
   let storeError: string | null = null;
   try {
-    if (result.events.length) await storeEvents(supabase, reader, source, result.events, verdicts, scores);
-    else await filterStored(supabase, source, profile);
+    if (result.events.length) {
+      await storeEvents(supabase, reader, source, result.events, verdicts, scores);
+      if (photos) photosLater(supabase, source.id);
+    } else await filterStored(supabase, source, profile);
   } catch (e) { storeError = e instanceof Error ? e.message : 'Store failed'; }
   const empty = result.events.length === 0;
   await supabase.from('event_sources').update({
@@ -367,12 +401,38 @@ Deno.serve(async (req) => {
 
     if (body.action === 'refresh_all') {
       if (!isSystem) return json({ error: 'Unauthorized' }, 401);
-      const { data: sources, error } = await supabase.from('event_sources').select('*').eq('is_active', true).order('last_checked_at', { ascending: true, nullsFirst: true }).limit(60);
+      const { data: sources, error } = await supabase.from('event_sources').select('id').eq('is_active', true).order('last_checked_at', { ascending: true, nullsFirst: true }).limit(60);
       if (error) throw error;
-      const results = [];
-      for (const s of sources || []) results.push(await checkSource(supabase, profiles, s));
-      console.log(`refresh_all: ${results.length} sources`, JSON.stringify(results));
-      return json({ success: true, results });
+      // Each source is read in its own request (its own CPU budget); photos run last, also on their own
+      const self = `${Deno.env.get('SUPABASE_URL')}/functions/v1/scrape-whats-on`;
+      const call = (payload: Record<string, unknown>) => fetch(self, {
+        method: 'POST', headers: { Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      }).then(async (r) => ({ ok: r.ok, status: r.status, body: await r.text().catch(() => '') })).catch((e) => ({ ok: false, status: 0, body: String(e) }));
+      const ids = (sources || []).map((s: { id: string }) => s.id);
+      inBackground((async () => {
+        const failed: string[] = [];
+        for (let i = 0; i < ids.length; i += 2) {
+          const out = await Promise.all(ids.slice(i, i + 2).map((id: string) => call({ action: 'refresh', sourceId: id, quiet: true })));
+          out.forEach((o, j) => { if (!o.ok) failed.push(`${ids[i + j]}:${o.status}`); });
+        }
+        console.log(`refresh_all: ${ids.length} sources, ${failed.length} failed`, failed.join(' '));
+        const photos = await call({ action: 'photos' });
+        console.log('refresh_all photos:', photos.status, photos.body.slice(0, 300));
+      })());
+      return json({ success: true, queued: ids.length });
+    }
+
+    if (body.action === 'photos') {
+      if (!isSystem) return json({ error: 'Unauthorized' }, 401);
+      // Delete what's past or gone (every feed with photos or event sources), then save new ones
+      const [{ data: withPhotos }, { data: withSources }] = await Promise.all([
+        supabase.from('events').select('topic_id').not('image_path', 'is', null).limit(5000),
+        supabase.from('event_sources').select('topic_id').limit(1000),
+      ]);
+      const topicIds = [...(withSources || []), ...(withPhotos || [])].map((r: { topic_id: string }) => r.topic_id);
+      const removed = await cleanupPhotos(supabase, topicIds);
+      const saved = await savePhotos(supabase, { limit: 60 });
+      return json({ success: true, removed, saved });
     }
 
     if (body.action === 'suggest') return await suggestEvent(supabase, profiles, req, body);
@@ -401,6 +461,7 @@ Deno.serve(async (req) => {
       }, { onConflict: 'topic_id,url' }).select('*').single();
       if (error) throw error;
       await storeEvents(supabase, reader, source, result.events, verdicts, scores);
+      photosLater(supabase, source.id);
       return json({ success: true, ...summary, name, sourceId: source.id, autoPublish: Boolean(source.auto_publish) });
     }
 
@@ -435,6 +496,7 @@ Deno.serve(async (req) => {
           last_event_count: result.events.length, consecutive_empty_checks: 0, last_error: null, updated_at: new Date().toISOString(),
         }).eq('id', source.id);
         await storeEvents(supabase, reader, updated, result.events, verdicts, scores);
+        photosLater(supabase, source.id);
         return json({ success: true, ...summarise(kind, result, verdicts), name: updated.name });
       }
       if (body.name && body.name !== source.name) {
@@ -445,7 +507,9 @@ Deno.serve(async (req) => {
       return json({ success: true, name: body.name ?? source.name });
     }
 
-    return json({ success: true, ...(await checkSource(supabase, profiles, source)) });
+    // The daily run saves photos once at the end instead of per source
+    const quiet = isSystem && 'quiet' in body && body.quiet === true;
+    return json({ success: true, ...(await checkSource(supabase, profiles, source, !quiet)) });
   } catch (error) {
     console.error('scrape-whats-on failed:', error instanceof Error ? error.message : error);
     return json({ error: 'Something went wrong reading that address.' }, 500);

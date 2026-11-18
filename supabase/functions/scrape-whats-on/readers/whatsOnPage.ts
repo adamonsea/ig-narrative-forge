@@ -29,6 +29,7 @@ export const whatsOnPageReader: EventReader = {
       price: e.price ?? null,
       is_free: e.is_free ?? null,
       hint: e.hint ?? null,
+      image: e.image ?? null,
     })));
     return { events, method: r.method, name: r.name, error: r.error ?? null };
   },

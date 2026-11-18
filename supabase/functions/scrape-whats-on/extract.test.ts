@@ -151,3 +151,14 @@ Deno.test('Agenda LX serialised price values are read as the listing wrote them'
   assertEquals(events[0].price, '12');
   assertEquals(events[0].is_free, false);
 });
+
+Deno.test('listing pictures are picked up from JSON-LD and JSON feeds', () => {
+  const html = `<script type="application/ld+json">{"@type":"MusicEvent","name":"Fado night","startDate":"2026-12-01T21:00","image":["/img/fado.jpg"]}</script>`;
+  assertEquals(extractJsonLdEvents(html, 'https://venue.pt/agenda')[0].image, 'https://venue.pt/img/fado.jpg');
+  const feed = { events: [
+    { title: 'Bike tour', start_date: '2026-12-02', featured_media_large: 'https://www.agendalx.pt/content/uploads/bike.jpg' },
+    { title: 'Talk', start_date: '2026-12-03' },
+  ] };
+  const got = parseJsonFeed(feed, 'https://www.agendalx.pt/');
+  assertEquals(got.map((e) => e.image ?? null), ['https://www.agendalx.pt/content/uploads/bike.jpg', null]);
+});

@@ -7,6 +7,7 @@ import { recordEventClick } from "@/lib/eventClicks";
 import { EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
 import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
 import { dateBlock, eventTime, priceLine, type WhatsOnFeedEvent } from "@/lib/whatsOn";
+import { eventPhotoUrl } from "@/lib/eventPhotos";
 
 function brandVars(color?: string | null) {
   const p = feedBrandPalette(color);
@@ -42,10 +43,28 @@ interface EventCardProps {
   Illustration?: ComponentType<{ category?: string | null; color: string; animate?: boolean }>;
 }
 
+/** Same angled seam as the illustrations, so the date block sits across it either way. */
+const SEAM = { clipPath: "polygon(0 0, 100% 0, 100% 78%, 0 100%)" } as const;
+
+/**
+ * The listing's own photo (Curatr's stored copy) with a soft fade where the date block
+ * sits; if it can't load, the category illustration takes its place.
+ */
+export function EventPhotoBand({ src, fallback }: { src: string; fallback: React.ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-[hsl(var(--feed-card-foreground)/0.06)]" style={SEAM}>
+      <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[hsl(var(--feed-card)/0.55)] to-transparent" aria-hidden="true" />
+    </div>
+  );
+}
+
 /**
  * One event, two slides, built like the feed's story card so swiping is identical.
- * Slide 1: full-bleed category illustration in a pale feed tint (top third) with a
- * small category pill, the
+ * Slide 1: the listing's photo when Curatr has a stored copy, otherwise the full-bleed
+ * category illustration in a pale feed tint (top third), with a small category pill, the
  * date block across its angled seam, then title and venue.
  * Slide 2: day (and time), venue, price (only when known), up to four lines of
  * description. Both slides are top-aligned; the one link sits below both.
@@ -72,7 +91,11 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
   const first = (
     <div key="date" className="flex h-full flex-col">
       <div className="relative h-[184px] shrink-0">
-        <Illustration category={category} color={toCss(eventIllustrationTint(brandColor))} animate={inView} />
+        {(() => {
+          const art = <Illustration category={category} color={toCss(eventIllustrationTint(brandColor))} animate={inView} />;
+          const photo = eventPhotoUrl(e.image_path);
+          return photo ? <EventPhotoBand src={photo} fallback={art} /> : art;
+        })()}
         <div className="absolute left-0 right-0 top-4 px-5 md:px-8" aria-hidden="true">
           <div className="mx-auto w-full max-w-xl">
             <span className="inline-flex rounded-full bg-[hsl(var(--feed-card))] px-3 py-1 text-sm font-semibold text-[hsl(var(--feed-card-foreground))] shadow-sm">

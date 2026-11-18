@@ -29,6 +29,8 @@ export interface ReaderEvent {
   is_free?: boolean | null;
   /** The source's own category label, for categorizeEvent(). */
   hint?: string | null;
+  /** The listing's own picture (https); saved as a shrunk copy only if it passes eventImage.ts. */
+  image?: string | null;
 }
 
 export interface ReaderResult {

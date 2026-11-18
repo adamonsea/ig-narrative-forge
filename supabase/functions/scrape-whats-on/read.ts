@@ -55,7 +55,7 @@ async function fetchText(
 }
 
 const robotsCache = new Map<string, string | null>();
-async function allowedByRobots(url: string): Promise<boolean> {
+export async function allowedByRobots(url: string): Promise<boolean> {
   const origin = new URL(url).origin;
   if (!robotsCache.has(origin)) {
     try {

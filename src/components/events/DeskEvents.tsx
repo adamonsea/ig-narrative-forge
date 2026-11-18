@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { CalendarDays, Check, ChevronDown, Clock, ExternalLink, MapPin, Settings2, Ticket, UserRound, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { eventPhotoUrl } from "@/lib/eventPhotos";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -246,6 +247,8 @@ interface EventDetailRow {
   is_free?: boolean | null;
   event_type?: string | null;
   price: string | null;
+  image_path?: string | null;
+  image_hidden?: boolean | null;
 }
 
 /** The full listing for one event, with the actions that fit where it is. */
@@ -257,12 +260,22 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
     enabled: Boolean(item?.id),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("events").select("description, end_date, end_time, price, is_free, event_type").eq("id", item!.id).maybeSingle();
+      const { data, error } = await supabase.from("events").select("description, end_date, end_time, price, is_free, event_type, image_path, image_hidden").eq("id", item!.id).maybeSingle();
       if (error) throw error;
       return (data ?? null) as EventDetailRow | null;
     },
   });
   const done = (fn: () => void) => { fn(); onClose(); };
+  const queryClient = useQueryClient();
+  const photo = detail && !detail.image_hidden ? eventPhotoUrl(detail.image_path) : null;
+  // Swap the listing photo for the illustration (or back); sticks for this event name
+  const setPhoto = async (show: boolean) => {
+    if (!item) return;
+    queryClient.setQueryData(["event-detail", item.id], (d: EventDetailRow | null | undefined) => (d ? { ...d, image_hidden: !show } : d));
+    const { error } = await (supabase.rpc as any)("set_topic_event_visibility", { p_event_id: item.id, p_action: show ? "show_photo" : "hide_photo" });
+    if (error) queryClient.invalidateQueries({ queryKey: ["event-detail", item.id] });
+    queryClient.invalidateQueries({ queryKey: ["events-feed", topicId] });
+  };
   const b = item ? dateBadge(item.start_date) : null;
   const ends = detail?.end_date && item && detail.end_date !== item.start_date
     ? `Until ${dayLabel(detail.end_date)}`
@@ -302,6 +315,15 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
             </SheetHeader>
 
             <div className="flex-1 space-y-6 p-6 text-base">
+              {photo && (
+                <div className="space-y-2">
+                  <img src={photo} alt="" className="aspect-[2/1] w-full rounded-xl object-cover" />
+                  <Button variant="ghost" size="sm" className="px-0 text-muted-foreground" onClick={() => void setPhoto(false)}>Use illustration</Button>
+                </div>
+              )}
+              {detail?.image_hidden && (
+                <Button variant="ghost" size="sm" className="px-0 text-muted-foreground" onClick={() => void setPhoto(true)}>Use photo</Button>
+              )}
               {item.state === "live" && liveAreaFlag(item.exclusion_reason, item.area_confirmed) && (
                 <p className="rounded-lg bg-attention-soft p-3 text-muted-foreground">{leftOutExplanation("excluded", item.exclusion_reason)}</p>
               )}

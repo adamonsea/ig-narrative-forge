@@ -88,6 +88,8 @@ export interface WhatsOnFeedEvent {
   price?: string | null;
   is_free?: boolean | null;
   description?: string | null;
+  /** Curatr's stored copy of the listing photo (topic-assets path); individual cards only. */
+  image_path?: string | null;
 }
 
 const DAY = 86_400_000;

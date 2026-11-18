@@ -188,3 +188,10 @@ Park six features + tidy keywords (13 November 2026)
 - [x] Events-led feeds page 20 at a time (news paging rules); smooth swiping
 - [x] Events-led feeds: extra cards count positions against events
 - [x] Widgets page: 17 tiny-text spots to the type scale
+
+# Event photos on cards (18 Nov 2026)
+- [x] Collect listing pictures (JSON-LD, JSON feeds incl. Agenda LX); skip placeholders
+- [x] Save checked, resized copies in topic-assets; never hotlink
+- [x] Delete after the event, when hidden/removed/changed, orphan sweep — in the twice-daily gather
+- [x] Individual cards show the photo, illustration fallback; grouped cards/email unchanged
+- [x] Desk "Use illustration" / "Use photo"; Feed Settings "Event photos" switch
