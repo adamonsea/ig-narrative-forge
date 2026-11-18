@@ -6073,6 +6073,159 @@ export type Database = {
           variant: string
         }[]
       }
+      _impl_add_source_to_topic: {
+        Args: {
+          p_source_config?: Json
+          p_source_id: string
+          p_topic_id: string
+        }
+        Returns: boolean
+      }
+      _impl_approve_article_for_generation: {
+        Args: { article_uuid: string }
+        Returns: boolean
+      }
+      _impl_delete_story_cascade: {
+        Args: { p_story_id: string }
+        Returns: Json
+      }
+      _impl_get_admin_topic_stories: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+          p_topic_id: string
+        }
+        Returns: {
+          animated_illustration_url: string
+          animation_suggestions: string[]
+          article_author: string
+          article_id: string
+          article_published_at: string
+          article_title: string
+          article_url: string
+          audience_expertise: string
+          cover_illustration_prompt: string
+          cover_illustration_url: string
+          created_at: string
+          id: string
+          illustration_generated_at: string
+          is_published: boolean
+          scheduled_publish_at: string
+          shared_content_id: string
+          slide_count: number
+          slide_type: string
+          status: string
+          story_type: string
+          title: string
+          tone: string
+          topic_article_id: string
+          updated_at: string
+          writing_style: string
+        }[]
+      }
+      _impl_get_stories_unified:
+        | {
+            Args: { p_topic_id?: string }
+            Returns: {
+              article_id: string
+              audience_expertise: string
+              author: string
+              cover_illustration_prompt: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              illustration_generated_at: string
+              is_published: boolean
+              shared_content_id: string
+              slides: Json
+              slides_count: number
+              slidetype: string
+              source_type: string
+              source_url: string
+              status: string
+              title: string
+              tone: string
+              topic_article_id: string
+              updated_at: string
+              word_count: number
+              writing_style: string
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_offset?: number
+              p_status?: string
+              p_topic_id: string
+            }
+            Returns: {
+              article_id: string
+              author: string
+              cover_illustration_prompt: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              is_published: boolean
+              publication_name: string
+              quality_score: number
+              shared_content_id: string
+              slides: Json
+              source_url: string
+              status: string
+              title: string
+              topic_article_id: string
+              updated_at: string
+              word_count: number
+            }[]
+          }
+      _impl_get_topic_articles_multi_tenant: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+          p_topic_id: string
+        }
+        Returns: {
+          author: string
+          body: string
+          canonical_url: string
+          content_checksum: string
+          content_quality_score: number
+          created_at: string
+          id: string
+          image_url: string
+          import_metadata: Json
+          keyword_matches: string[]
+          language: string
+          last_seen_at: string
+          normalized_url: string
+          originality_confidence: number
+          processing_status: string
+          published_at: string
+          regional_relevance_score: number
+          shared_content_id: string
+          source_domain: string
+          source_id: string
+          title: string
+          topic_id: string
+          updated_at: string
+          url: string
+          word_count: number
+        }[]
+      }
+      _impl_migrate_articles_to_multi_tenant: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      _impl_remove_source_from_topic: {
+        Args: { p_source_id: string; p_topic_id: string }
+        Returns: boolean
+      }
+      _impl_rescore_articles_for_topic: {
+        Args: { p_topic_id: string }
+        Returns: undefined
+      }
       _impl_source_health_stats: {
         Args: { p_topic_id: string }
         Returns: {
@@ -6212,6 +6365,7 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: boolean
       }
+      can_manage_topic: { Args: { p_topic_id: string }; Returns: boolean }
       can_view_topic_stats: { Args: { p_topic_id: string }; Returns: boolean }
       can_view_user_stats: { Args: { p_user_id: string }; Returns: boolean }
       check_newsletter_signup_rate_limit: {
@@ -7134,6 +7288,7 @@ export type Database = {
         Returns: undefined
       }
       is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
+      is_internal_or_admin: { Args: never; Returns: boolean }
       is_story_published: { Args: { p_story_id: string }; Returns: boolean }
       is_story_visible: { Args: { story_updated_at: string }; Returns: boolean }
       is_test_visitor: { Args: { p_visitor_id: string }; Returns: boolean }
