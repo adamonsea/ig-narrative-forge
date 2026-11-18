@@ -75,3 +75,15 @@ export function discoveryQueries(term: string, platforms: TicketPlatform[] = TIC
   if (!t) return [];
   return platforms.map((p) => `site:${p.domain} ${t}`);
 }
+
+/**
+ * Organiser shops to offer, best guess first, none left out for where they are: shops a
+ * search for the feed's place or subject turned up come first (in search order), then
+ * every other shop the platform links to, by address. The owner knows which are local.
+ */
+export function rankOrganisers(searchLinks: string[], platformLinks: string[], skip: Iterable<string> = [], max = 40): { url: string; searched: boolean }[] {
+  const leave = new Set(skip);
+  const searched = organiserShops(searchLinks).filter((o) => !leave.has(o));
+  const rest = organiserShops(platformLinks).filter((o) => !leave.has(o) && !searched.includes(o)).sort();
+  return [...searched.map((url) => ({ url, searched: true })), ...rest.map((url) => ({ url, searched: false }))].slice(0, max);
+}

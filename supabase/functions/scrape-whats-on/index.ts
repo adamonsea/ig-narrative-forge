@@ -14,8 +14,8 @@ import { cleanupPhotos, removePhotosOf, savePhotos } from './eventPhotos.ts';
  *   { action: 'update', sourceId, name?, url? }            owner: rename and/or change the address
  *   { action: 'refresh', sourceId }                        owner: re-check one source
  *   { action: 'remove', sourceId }                         owner: remove a source and its upcoming events
- *   { action: 'discover', topicId, url? }                  owner: organiser ticket shops for this feed (platforms.ts), each read once;
- *                                                          with a platform link, only that platform's shops
+ *   { action: 'discover', topicId, url? }                  owner: organiser ticket shop addresses for this feed (platforms.ts), unread
+ *                                                          and never filtered by place; with a platform link, every shop on it
  *   { action: 'suggest', topicId, title, date, time?, venue, url, visitorId, website? }  anyone: a reader's event suggestion (Waiting only)
  *   {} or { action: 'refresh_all' }                        daily job (EVENTS_CRON_TOKEN / service role):
  *                                                          one request per source, then { action: 'photos' },
@@ -39,7 +39,7 @@ import { listingUrlOk, suggestionDateOk, suggestionStatus, SUGGEST_PER_FEED_PER_
 import { detectKind, isEventSourceKind, readerFor, type EventReader, type ReaderEvent, type ReaderResult } from './readers/index.ts';
 import { buildPlaceProfile, hasLocalEvidence, judgeEvents, type PlaceProfile, type Verdict } from './locality.ts';
 import { baseEventScore, combineRelevance, isOutOfArea, placeEvent } from './relevance.ts';
-import { discoveryQueries, organiserShops, platformOf, platformRootNudge, TICKET_PLATFORMS, ticketShopOrigin } from './platforms.ts';
+import { discoveryQueries, platformOf, rankOrganisers, platformRootNudge, TICKET_PLATFORMS, ticketShopOrigin } from './platforms.ts';
 import { firecrawlAvailable, firecrawlMap, firecrawlSearch } from './firecrawl.ts';
 import type { TopicConfig } from '../_shared/hybrid-content-scoring.ts';
 
@@ -322,6 +322,15 @@ async function checkSource(supabase: Db, profiles: Profiles, source: Source, pho
   return { sourceId: source.id, name: source.name, kind: reader.kind, found: result.events.length - excluded, excluded, method: result.method, error: result.error ?? storeError };
 }
 
+/** The value that turns up most often (first wins a tie), or null. */
+function mostCommon(values: (string | null | undefined)[]): string | null {
+  const counts = new Map<string, number>();
+  for (const v of values) if (v?.trim()) counts.set(v.trim(), (counts.get(v.trim()) ?? 0) + 1);
+  let best: string | null = null;
+  for (const [v, n] of counts) if (best === null || n > counts.get(best)!) best = v;
+  return best;
+}
+
 /** found = events that reach the Desk; excluded = clearly out of area (straight to Hidden). */
 const summarise = (kind: string, r: ReaderResult, verdicts: Verdict[] = []) => {
   const kept = r.events.filter((_, i) => !verdicts[i] || !isOutOfArea(verdicts[i]));
@@ -332,46 +341,43 @@ const summarise = (kind: string, r: ReaderResult, verdicts: Verdict[] = []) => {
     method: r.method,
     name: r.name,
     error: r.error ?? null,
+    venue: mostCommon(r.events.map((e) => e.venue)),
     examples: kept.slice(0, 3).map((e) => ({ title: e.title, start_date: e.start_date, start_time: e.start_time, venue: e.venue })),
   };
 };
 
 // ---------- finding organiser ticket shops ----------
 
-const DISCOVER_MAX = 6;
-const DISCOVER_MAX_PASTED = 8;
+const DISCOVER_MAX = 12;
+const DISCOVER_MAX_PASTED = 40;
 
-/** Organiser shops on ticketing platforms that have upcoming events for this feed (out-of-area ones left out). */
-async function discoverShops(supabase: Db, profiles: Profiles, topicId: string, url?: string) {
+/**
+ * Organiser shops on ticketing platforms for this feed, as a list of addresses (nothing read
+ * here, nothing left out for its location): the Add source sheet previews each one so the
+ * owner sees its name, venue and events and picks the local ones. With a platform link, every
+ * shop on that platform; otherwise only shops a search for the feed's place or subject finds.
+ */
+async function discoverShops(supabase: Db, topicId: string, url?: string) {
   if (!firecrawlAvailable()) return [];
   const { data: topic } = await supabase.from('topics').select('name, region, topic_type').eq('id', topicId).maybeSingle();
   if (!topic) return [];
   const term = topic.topic_type === 'regional' && topic.region ? topic.region : topic.name;
   const pasted = url ? platformOf(url) : null;
   const platforms = pasted ? [pasted] : TICKET_PLATFORMS;
-  // Search the web for the feed's place or subject, and list every shop the platform's own site links to
-  const links = (await Promise.all([
-    ...discoveryQueries(term || '', platforms).map((q) => firecrawlSearch(q, 20)),
-    ...platforms.map((p) => firecrawlMap(`https://www.${p.domain}`)),
-  ])).flat();
-  const { data: existing } = await supabase.from('event_sources').select('url').eq('topic_id', topicId);
-  const have = new Set((existing || []).map((r: { url: string }) => ticketShopOrigin(r.url)).filter(Boolean));
+  const [searchLinks, platformLinks] = await Promise.all([
+    Promise.all(discoveryQueries(term || '', platforms).map((q) => firecrawlSearch(q, 20))).then((l) => l.flat()),
+    pasted ? Promise.all(platforms.map((p) => firecrawlMap(`https://www.${p.domain}`))).then((l) => l.flat()) : Promise.resolve([] as string[]),
+  ]);
+  const { data: existing } = await supabase.from('event_sources').select('url, name').eq('topic_id', topicId);
+  const mine = new Map<string, string>();
+  for (const r of (existing || []) as { url: string; name: string }[]) { const o = ticketShopOrigin(r.url); if (o) mine.set(o, r.name); }
   const own = url ? ticketShopOrigin(url) : null;
-  const candidates = organiserShops(links).filter((o) => !have.has(o) && o !== own).slice(0, pasted ? DISCOVER_MAX_PASTED : DISCOVER_MAX);
-  const reader = readerFor('ticket_shop');
-  // Two at a time: shops behind a bot check are read through Firecrawl, which has a per-minute limit
-  const found: ({ url: string; name: string; found: number; example: unknown } | null)[] = [];
-  for (const pair of chunks(candidates, 2)) found.push(...await Promise.all(pair.map(async (origin) => {
-    const result = await readSafely(reader, origin, hostOf(origin));
-    if (!result.events.length) return null;
-    const { verdicts } = await judgeAndScore(supabase, profiles, topicId, result.events, origin, result.name);
-    const s = summarise('ticket_shop', result, verdicts);
-    // Local feeds: at least one kept event must name somewhere in the feed's area
-    const { profile } = await topicContextFor(supabase, profiles, topicId);
-    if (profile && !result.events.some((e, i) => !isOutOfArea(verdicts[i]) && hasLocalEvidence(e, profile))) return null;
-    return s.found > 0 ? { url: origin, name: s.name, found: s.found, example: s.examples[0] ?? null } : null;
-  })));
-  return found.filter((f): f is NonNullable<typeof f> => f !== null).sort((a, b) => b.found - a.found);
+  const ranked = rankOrganisers(searchLinks, platformLinks, own ? [own] : [], (pasted ? DISCOVER_MAX_PASTED : DISCOVER_MAX) + mine.size);
+  // Ones this feed already has are listed last as added, so nothing looks missing
+  return [
+    ...ranked.filter((o) => !mine.has(o.url)).map((o) => ({ url: o.url, name: hostOf(o.url).split('.')[0], added: false })),
+    ...ranked.filter((o) => mine.has(o.url)).map((o) => ({ url: o.url, name: mine.get(o.url)!, added: true })),
+  ];
 }
 
 // ---------- handler ----------
@@ -486,7 +492,7 @@ Deno.serve(async (req) => {
 
     if (body.action === 'discover') {
       if (!isSystem && !(await userOwnsTopic(supabase, user!.id, body.topicId))) return json({ error: 'Not your feed' }, 403);
-      return json({ success: true, suggestions: await discoverShops(supabase, profiles, body.topicId, body.url) });
+      return json({ success: true, suggestions: await discoverShops(supabase, body.topicId, body.url) });
     }
 
     if (body.action === 'preview' || body.action === 'save') {

@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1';
-import { discoveryQueries, organiserShops, platformRootNudge, ticketShopOrigin } from './platforms.ts';
+import { discoveryQueries, organiserShops, platformRootNudge, rankOrganisers, ticketShopOrigin } from './platforms.ts';
 
 Deno.test('an organiser subdomain is a ticket shop, stored by its home address', () => {
   assertEquals(ticketShopOrigin('https://grovetheatre.onlineticketseller.com/events/163117?sid=abc'), 'https://grovetheatre.onlineticketseller.com');
@@ -30,4 +30,19 @@ Deno.test('search results become unique organiser shops', () => {
   ]), ['https://grovetheatre.onlineticketseller.com', 'https://etfc.onlineticketseller.com']);
   assertEquals(discoveryQueries('Eastbourne'), ['site:onlineticketseller.com Eastbourne']);
   assertEquals(discoveryQueries('  '), []);
+});
+
+Deno.test('every organiser is offered, whether or not it names the place; search hits first', () => {
+  const search = ['https://etfc.onlineticketseller.com/events/9', 'https://www.onlineticketseller.com/events/1'];
+  const platform = [
+    'https://winterland.onlineticketseller.com/',
+    'https://grovetheatre.onlineticketseller.com/events/163117',
+    'https://etfc.onlineticketseller.com/',
+    'https://eastbournemusicfest.onlineticketseller.com/',
+  ];
+  assertEquals(rankOrganisers(search, platform, ['https://eastbournemusicfest.onlineticketseller.com']), [
+    { url: 'https://etfc.onlineticketseller.com', searched: true },
+    { url: 'https://grovetheatre.onlineticketseller.com', searched: false },
+    { url: 'https://winterland.onlineticketseller.com', searched: false },
+  ]);
 });
