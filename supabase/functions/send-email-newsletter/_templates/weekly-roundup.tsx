@@ -45,6 +45,7 @@ interface WeeklyRoundupEmailProps {
   audioUrl?: string; // Audio briefing URL if available
   totalStoryCount?: number; // Total stories in the week (not just email preview)
   events?: EmailEvent[]; // Upcoming local events (omitted when empty)
+  eventsFirst?: boolean; // Events-led feed (or no news): events before stories
   introHeading?: string; // Segment personalisation (partner site)
   introText?: string;
 }
@@ -62,6 +63,7 @@ export const WeeklyRoundupEmail = ({
   audioUrl,
   totalStoryCount,
   events = [],
+  eventsFirst = false,
   introHeading,
   introText,
 }: WeeklyRoundupEmailProps) => {
@@ -80,7 +82,7 @@ export const WeeklyRoundupEmail = ({
         `}
       </style>
     </Head>
-    <Preview>{topicName} Weekly Briefing • {displayStoryCount} stories</Preview>
+    <Preview>{topicName} Weekly Briefing • {displayStoryCount > 0 ? `${displayStoryCount} stories` : "The week ahead"}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
@@ -89,7 +91,7 @@ export const WeeklyRoundupEmail = ({
           ) : (
             <Heading style={h1}>{topicName}</Heading>
           )}
-          <Text style={subtitle}>Weekly Briefing • {weekStart} – {weekEnd} • {displayStoryCount} stories</Text>
+          <Text style={subtitle}>Weekly Briefing • {weekStart} – {weekEnd}{displayStoryCount > 0 ? ` • ${displayStoryCount} stories` : ""}</Text>
         </Section>
 
         <Hr style={hr} />
@@ -102,6 +104,8 @@ export const WeeklyRoundupEmail = ({
         )}
 
 
+
+        {eventsFirst && events.length > 0 && renderEvents(events, 'The week ahead', true, stories.length > 0)}
 
         {stories.length > 0 ? (
           <Section style={storiesSection}>
@@ -131,35 +135,13 @@ export const WeeklyRoundupEmail = ({
               </Link>
             ))}
           </Section>
-        ) : (
+        ) : events.length === 0 ? (
           <Section style={emptySection}>
             <Text style={emptyText}>No stories for this week.</Text>
           </Section>
-        )}
+        ) : null}
 
-        {events.length > 0 && (
-          <>
-            <Hr style={hr} />
-            <Section style={eventsSection}>
-              <Text style={eventsHeading}>What's on this week</Text>
-              {events.map((event) => (
-                <Section key={event.id} style={eventCard}>
-                  <Text style={eventMeta}>
-                    {event.date_label} • {event.time_label}
-                  </Text>
-                  {event.url ? (
-                    <Link href={event.url} target="_blank" style={eventTitleLink}>
-                      {event.title}
-                    </Link>
-                  ) : (
-                    <Text style={eventTitle}>{event.title}</Text>
-                  )}
-                  {event.location && <Text style={eventLocation}>{event.location}</Text>}
-                </Section>
-              ))}
-            </Section>
-          </>
-        )}
+        {!eventsFirst && events.length > 0 && renderEvents(events, 'The week ahead', false)}
 
         <Hr style={hr} />
 
@@ -198,6 +180,32 @@ export default WeeklyRoundupEmail
 const html = {
   backgroundColor: '#ffffff',
 }
+
+/** The events part: before the stories (events-led feeds, or no news) or after them. */
+const renderEvents = (events: EmailEvent[], heading: string, first: boolean, ruleAfter = first) => (
+  <>
+    {!first && <Hr style={hr} />}
+      <Section style={eventsSection}>
+        <Text style={eventsHeading}>{heading}</Text>
+        {events.map((event) => (
+          <Section key={event.id} style={eventCard}>
+            <Text style={eventMeta}>
+              {event.date_label} • {event.time_label}
+            </Text>
+            {event.url ? (
+              <Link href={event.url} target="_blank" style={eventTitleLink}>
+                {event.title}
+              </Link>
+            ) : (
+              <Text style={eventTitle}>{event.title}</Text>
+            )}
+            {event.location && <Text style={eventLocation}>{event.location}</Text>}
+          </Section>
+        ))}
+      </Section>
+    {ruleAfter && <Hr style={hr} />}
+  </>
+);
 
 const main = {
   backgroundColor: '#ffffff',

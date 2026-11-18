@@ -1,3 +1,8 @@
+# Events in briefings (18 Nov 2026)
+- [x] Daily briefing page: the day's news + events today & tomorrow; weekly: the week's news + the week ahead
+- [x] Events-led or news-less feeds (Lisbon) get a briefing with events first; old briefings show no events
+- [x] Weekly email uses the same week-ahead rule; events-led emails put events first; empty sends skipped
+
 # Workspace design-rule fixes (17 Nov 2026)
 List: .lovable/reviews/workspace-rule-breaks.md. One group at a time; Adam picks the order.
 - [x] Dashboard and new-feed setup

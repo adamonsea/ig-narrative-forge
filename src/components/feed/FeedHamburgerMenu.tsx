@@ -60,13 +60,13 @@ export const FeedHamburgerMenu = ({
       icon: Calendar,
       label: 'Daily Briefing',
       action: 'link' as const,
-      href: `/feed/${slug}/daily/${latestDaily || 'latest'}`,
+      href: `/feed/${slug}/daily/latest`,
     },
     {
       icon: CalendarDays,
       label: 'Weekly Briefing',
       action: 'link' as const,
-      href: `/feed/${slug}/weekly/${latestWeekly || 'latest'}`,
+      href: `/feed/${slug}/weekly/latest`,
     },
     {
       icon: Archive,

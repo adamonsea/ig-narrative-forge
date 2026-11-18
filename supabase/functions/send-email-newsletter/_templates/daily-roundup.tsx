@@ -38,6 +38,7 @@ interface DailyRoundupEmailProps {
   introHeading?: string; // Segment personalisation (partner site)
   introText?: string;
   events?: DailyEmailEvent[]; // Events today/tomorrow (block omitted when empty)
+  eventsFirst?: boolean; // Events-led feed (or no news): events before stories
 }
 
 export const DailyRoundupEmail = ({
@@ -54,6 +55,7 @@ export const DailyRoundupEmail = ({
   introHeading,
   introText,
   events = [],
+  eventsFirst = false,
 }: DailyRoundupEmailProps) => (
   <Html style={html}>
     <Head>
@@ -66,7 +68,7 @@ export const DailyRoundupEmail = ({
         `}
       </style>
     </Head>
-    <Preview>{topicName} Daily Briefing • {stories.length} stories</Preview>
+    <Preview>{topicName} Daily Briefing • {stories.length > 0 ? `${stories.length} stories` : dailyEventsHeading(events)}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
@@ -97,6 +99,8 @@ export const DailyRoundupEmail = ({
           </Section>
         )}
 
+        {eventsFirst && events.length > 0 && renderEvents(events, dailyEventsHeading(events), true, stories.length > 0)}
+
         {stories.length > 0 ? (
           <Section style={storiesSection}>
             {stories.map((story) => (
@@ -125,35 +129,13 @@ export const DailyRoundupEmail = ({
               </Link>
             ))}
           </Section>
-        ) : (
+        ) : events.length === 0 ? (
           <Section style={emptySection}>
             <Text style={emptyText}>No stories for this day.</Text>
           </Section>
-        )}
+        ) : null}
 
-        {events.length > 0 && (
-          <>
-            <Hr style={hr} />
-            <Section style={eventsSection}>
-              <Text style={eventsHeading}>{dailyEventsHeading(events)}</Text>
-              {events.map((event) => (
-                <Section key={event.id} style={eventCard}>
-                  <Text style={eventMeta}>
-                    {event.date_label} • {event.time_label}
-                  </Text>
-                  {event.url ? (
-                    <Link href={event.url} target="_blank" style={eventTitleLink}>
-                      {event.title}
-                    </Link>
-                  ) : (
-                    <Text style={eventTitle}>{event.title}</Text>
-                  )}
-                  {event.location && <Text style={eventLocation}>{event.location}</Text>}
-                </Section>
-              ))}
-            </Section>
-          </>
-        )}
+        {!eventsFirst && events.length > 0 && renderEvents(events, dailyEventsHeading(events), false)}
 
         <Hr style={hr} />
 
@@ -190,6 +172,32 @@ export default DailyRoundupEmail
 const html = {
   backgroundColor: '#ffffff',
 }
+
+/** The events part: before the stories (events-led feeds, or no news) or after them. */
+const renderEvents = (events: DailyEmailEvent[], heading: string, first: boolean, ruleAfter = first) => (
+  <>
+    {!first && <Hr style={hr} />}
+      <Section style={eventsSection}>
+        <Text style={eventsHeading}>{heading}</Text>
+        {events.map((event) => (
+          <Section key={event.id} style={eventCard}>
+            <Text style={eventMeta}>
+              {event.date_label} • {event.time_label}
+            </Text>
+            {event.url ? (
+              <Link href={event.url} target="_blank" style={eventTitleLink}>
+                {event.title}
+              </Link>
+            ) : (
+              <Text style={eventTitle}>{event.title}</Text>
+            )}
+            {event.location && <Text style={eventLocation}>{event.location}</Text>}
+          </Section>
+        ))}
+      </Section>
+    {ruleAfter && <Hr style={hr} />}
+  </>
+);
 
 const main = {
   backgroundColor: '#ffffff',

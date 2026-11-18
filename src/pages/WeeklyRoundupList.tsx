@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, startOfWeek } from "date-fns";
+import { format, parseISO, startOfWeek, addDays } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, Share2, LayoutList, Sparkles } from "lucide-react";
@@ -14,6 +14,10 @@ import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { buildShareUrl } from "@/lib/urlUtils";
 import { AudioBriefingPlayer } from "@/components/AudioBriefingPlayer";
 import { FEATURES } from "@/lib/featureFlags";
+import { WhatsOnCard } from "@/components/events/WhatsOnCard";
+import { useBriefingEvents, fetchFeedEventSettings } from "@/hooks/useBriefingEvents";
+import { useAuth } from "@/hooks/useAuth";
+import { londonToday } from "@/lib/whatsOn";
 
 interface Topic {
   id: string;
@@ -23,6 +27,10 @@ interface Topic {
   keywords?: string[];
   landmarks?: string[];
   organizations?: string[];
+  events_enabled?: boolean | null;
+  feed_lead?: string | null;
+  illustration_primary_color?: string | null;
+  created_by?: string | null;
 }
 
 interface Roundup {
@@ -61,6 +69,7 @@ export default function WeeklyRoundupList() {
   const { slug, weekStart } = useParams<{ slug: string; weekStart: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [roundup, setRoundup] = useState<Roundup | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
@@ -88,7 +97,7 @@ export default function WeeklyRoundupList() {
         // Fetch topic
         const { data: topicData, error: topicError } = await supabase
           .from('topics')
-          .select('id, name, slug, branding_config, keywords, landmarks, organizations')
+          .select('id, name, slug, branding_config, keywords, landmarks, organizations, events_enabled, feed_lead, illustration_primary_color, created_by')
           .eq('slug', slug)
           .eq('is_public', true)
           .eq('is_active', true)
@@ -131,6 +140,14 @@ export default function WeeklyRoundupList() {
           if (latestError) {
             console.error('Latest roundup fetch error:', latestError);
             setLoading(false);
+            return;
+          }
+
+          // Events look ahead: events-led feeds (and feeds with events but no news yet) open this week's briefing
+          const { eventsInFeed } = await fetchFeedEventSettings(topicData as Topic);
+          if (eventsInFeed && ((topicData as Topic).feed_lead === 'events' || !latestRoundup)) {
+            const thisWeek = format(startOfWeek(parseISO(londonToday()), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            navigate(`/feed/${slug}/weekly/${thisWeek}`, { replace: true });
             return;
           }
 
@@ -364,6 +381,16 @@ export default function WeeklyRoundupList() {
     });
   }, [stories, selectedKeywords, selectedLocations, selectedSources]);
 
+  // What's coming up (the week ahead) — shown while this briefing is current
+  const weekMonday = roundup
+    ? parseISO(format(parseISO(roundup.period_start), 'yyyy-MM-dd'))
+    : weekStart && weekStart !== 'latest' && !Number.isNaN(parseISO(weekStart).getTime())
+      ? startOfWeek(parseISO(weekStart), { weekStartsOn: 1 }) : null;
+  const weekEndParam = roundup
+    ? format(parseISO(roundup.period_end), 'yyyy-MM-dd')
+    : weekMonday ? format(addDays(weekMonday, 6), 'yyyy-MM-dd') : null;
+  const briefingEvents = useBriefingEvents(topic, 'weekly', weekEndParam);
+
   const toggleKeyword = (keyword: string) => {
     setSelectedKeywords(prev =>
       prev.includes(keyword)
@@ -394,7 +421,7 @@ export default function WeeklyRoundupList() {
     setSelectedSources([]);
   };
 
-  if (loading) {
+  if (loading || (!roundup && briefingEvents.loading)) {
     return (
       <div className="min-h-screen feed-background">
         <div className="container mx-auto px-4 py-8">
@@ -410,7 +437,7 @@ export default function WeeklyRoundupList() {
     );
   }
 
-  if (!roundup || !topic) {
+  if (!topic || !weekMonday || !weekEndParam || (!roundup && briefingEvents.events.length === 0)) {
     return (
       <div className="min-h-screen feed-background">
         <div className="container mx-auto px-4 py-8">
@@ -433,8 +460,8 @@ export default function WeeklyRoundupList() {
     );
   }
 
-  const startDate = parseISO(roundup.period_start);
-  const endDate = parseISO(roundup.period_end);
+  const startDate = weekMonday;
+  const endDate = parseISO(weekEndParam);
   const startDay = format(startDate, 'd');
   const endDay = format(endDate, 'd');
   const startMonth = format(startDate, 'MMM');
@@ -447,14 +474,30 @@ export default function WeeklyRoundupList() {
     ? `${startMonth} ${startDay}-${endDay} (${startDayOfWeek}-${endDayOfWeek})`
     : `${startMonth} ${startDay} - ${endMonth} ${endDay} (${startDayOfWeek}-${endDayOfWeek})`;
   const hasActiveFilters = selectedKeywords.length > 0 || selectedLocations.length > 0 || selectedSources.length > 0;
+  const hasEvents = briefingEvents.events.length > 0;
+  const eventsFirst = hasEvents && (topic.feed_lead === 'events' || stories.length === 0);
+  const eventsCard = hasEvents ? (
+    <div className="w-full max-w-2xl">
+      <WhatsOnCard
+        events={briefingEvents.events}
+        label={briefingEvents.label}
+        today={briefingEvents.today}
+        brandColor={topic.branding_config?.primary_color || topic.illustration_primary_color}
+        isOwner={!!user && topic.created_by === user.id}
+        suggestTopicId={briefingEvents.readerSuggestions ? topic.id : null}
+      />
+    </div>
+  ) : null;
 
   return (
     <div className="min-h-screen feed-background">
-      <RoundupSEO
-        roundup={roundup}
-        topicName={topic.name}
-        topicSlug={slug || ''}
-      />
+      {roundup && (
+        <RoundupSEO
+          roundup={roundup}
+          topicName={topic.name}
+          topicSlug={slug || ''}
+        />
+      )}
 
       {/* Header */}
       <div className="bg-background border-b border-border sticky top-0 z-40">
@@ -482,7 +525,7 @@ export default function WeeklyRoundupList() {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              {siftEnabled && (
+              {siftEnabled && stories.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -494,7 +537,7 @@ export default function WeeklyRoundupList() {
                   </Link>
                 </Button>
               )}
-              <Button
+              {stories.length > 0 && <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsModalOpen(true)}
@@ -507,7 +550,7 @@ export default function WeeklyRoundupList() {
                     {filteredStories.length}
                   </span>
                 )}
-              </Button>
+              </Button>}
             </div>
           </div>
           
@@ -525,7 +568,7 @@ export default function WeeklyRoundupList() {
                 if (navigator.share) {
                   navigator.share({
                     title: shareText,
-                    text: `${shareText} - ${filteredStories.length} ${filteredStories.length === 1 ? 'story' : 'stories'}`,
+                    text: filteredStories.length > 0 ? `${shareText} - ${filteredStories.length} ${filteredStories.length === 1 ? 'story' : 'stories'}` : shareText,
                     url: shareUrl
                   }).catch(() => {});
                 } else {
@@ -538,11 +581,11 @@ export default function WeeklyRoundupList() {
               }}
             >
               <Share2 className="w-4 h-4 mr-2" />
-              Share {filteredStories.length} {filteredStories.length === 1 ? 'story' : 'stories'}
+              {filteredStories.length > 0 ? `Share ${filteredStories.length} ${filteredStories.length === 1 ? 'story' : 'stories'}` : 'Share'}
             </Button>
             
             {/* Audio Player */}
-            {FEATURES.audioBriefings && roundup.audio_url && (
+            {FEATURES.audioBriefings && roundup?.audio_url && (
               <AudioBriefingPlayer
                 audioUrl={roundup.audio_url}
                 title={`${topic.name} Weekly Briefing`}
@@ -573,8 +616,9 @@ export default function WeeklyRoundupList() {
 
       {/* Story list */}
       <div className="container mx-auto px-4 py-8">
+        {eventsFirst && <div className="flex flex-col items-center mb-8">{eventsCard}</div>}
         {filteredStories.length === 0 ? (
-          <div className="text-center py-12">
+          hasEvents && !hasActiveFilters ? null : <div className="text-center py-12">
             <p className="text-muted-foreground">
               {hasActiveFilters 
                 ? "No stories match your filters. Try adjusting them."
@@ -594,6 +638,7 @@ export default function WeeklyRoundupList() {
                 />
               </div>
             ))}
+            {!eventsFirst && eventsCard}
           </div>
         )}
       </div>

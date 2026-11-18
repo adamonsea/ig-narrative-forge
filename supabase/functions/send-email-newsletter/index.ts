@@ -5,7 +5,8 @@ import { Resend } from 'npm:resend@4.0.0';
 import { renderAsync } from 'npm:@react-email/components@0.0.22';
 import { DailyRoundupEmail } from './_templates/daily-roundup.tsx';
 import { WeeklyRoundupEmail } from './_templates/weekly-roundup.tsx';
-import { pickDailyEvents, londonToday, type WhatsOnRow } from './dailyEvents.ts';
+import { pickDailyEvents, londonToday, dailyEventsHeading, type WhatsOnRow } from './dailyEvents.ts';
+import { briefingWindow, pickBriefingEvents } from '../_shared/briefingEvents.ts';
 import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProAccess } from '../_shared/auth.ts';
 import { dedupeByEvent, EMAIL_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
 import { FEATURES } from '../_shared/parked-features.ts';
@@ -136,7 +137,7 @@ serve(async (req) => {
     // Get topic details
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, slug, branding_config, events_enabled, created_by, email_subscriptions_enabled')
+      .select('id, name, slug, branding_config, events_enabled, feed_lead, created_by, email_subscriptions_enabled')
       .eq('id', topicId)
       .single();
 
@@ -424,50 +425,27 @@ serve(async (req) => {
     console.log(`📬 Sending to ${recipients.length} recipients`);
 
 
-    // Upcoming events for weekly emails ("What's on this week")
-    // Only included when the topic has events enabled and there are events in the next 7 days.
+    // Weekly emails: "The week ahead" — next 7 days from today, same rows and rules as the
+    // feed's weekly briefing (get_topic_whats_on → pickBriefingEvents).
     let upcomingEvents: EmailEvent[] = [];
     if (notificationType === 'weekly' && topic.events_enabled && (!segment || segment.include_events)) {
-      const eventsFrom = new Date();
-      eventsFrom.setUTCHours(0, 0, 0, 0);
-      const eventsTo = new Date(eventsFrom);
-      eventsTo.setUTCDate(eventsTo.getUTCDate() + 7);
-
-      const { data: eventRows, error: eventsError } = await supabase
-        .from('events')
-        .select('id, title, start_date, start_time, end_time, location, source_url, source_name')
-        .eq('topic_id', topicId)
-        .eq('status', 'published')
-        .gte('start_date', eventsFrom.toISOString().slice(0, 10))
-        .lte('start_date', eventsTo.toISOString().slice(0, 10))
-        .order('start_date', { ascending: true })
-        .order('start_time', { ascending: true, nullsFirst: true })
-        .limit(6);
-
+      const { data: weekRows, error: eventsError } = await supabase.rpc('get_topic_whats_on', { p_topic_id: topicId });
       if (eventsError) {
         console.error('Error fetching events (non-fatal):', eventsError);
       } else {
-        upcomingEvents = (eventRows || []).map((e) => {
-          const day = new Date(`${e.start_date}T12:00:00Z`).toLocaleDateString('en-GB', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            timeZone: 'UTC',
-          });
-          const start = e.start_time ? e.start_time.slice(0, 5) : null;
-          const end = e.end_time ? e.end_time.slice(0, 5) : null;
-          const time = start ? (end ? `${start}–${end}` : start) : 'All day';
-          return {
-            id: e.id,
-            title: e.title,
-            date_label: day,
-            time_label: time,
-            location: e.location || e.source_name || null,
-            url: e.source_url || null,
-          };
-        });
+        const today = londonToday();
+        upcomingEvents = pickBriefingEvents((weekRows || []) as WhatsOnRow[], briefingWindow('weekly', today, today), 6).map((e) => ({
+          id: e.id,
+          title: e.title,
+          date_label: new Date(`${e.start_date}T12:00:00Z`).toLocaleDateString('en-GB', {
+            weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+          }),
+          time_label: e.start_time ? e.start_time.slice(0, 5) : 'All day',
+          location: e.location || e.source_name || null,
+          url: e.source_url || null,
+        }));
       }
-      console.log(`🎪 Found ${upcomingEvents.length} upcoming events for the weekly email`);
+      console.log(`🎪 Found ${upcomingEvents.length} events in the week ahead for the weekly email`);
     }
 
     // Daily emails: "What's on" for today and tomorrow only (UK dates).
@@ -481,6 +459,16 @@ serve(async (req) => {
       }
       console.log(`🎪 Found ${upcomingEvents.length} events today/tomorrow for the daily email`);
     }
+
+    // Nothing to say: no stories and no events → send nothing rather than an empty email
+    if (stories.length === 0 && upcomingEvents.length === 0 && !previewOnly) {
+      console.log('📭 No stories or events — skipping send');
+      return new Response(JSON.stringify({ success: true, message: 'Nothing to send', emails_sent: 0 }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Events-led feeds (or no news) put the events first
+    const eventsFirst = upcomingEvents.length > 0 && ((topic as { feed_lead?: string }).feed_lead === 'events' || stories.length === 0);
 
     // Prepare shared email template data
     const displayDate = dateEnd.toLocaleDateString('en-GB', { 
@@ -532,6 +520,7 @@ serve(async (req) => {
             isSlowNewsDay,
             audioUrl,
             events: upcomingEvents,
+            eventsFirst,
             unsubscribeUrl,
             introHeading: segment?.intro_heading || undefined,
             introText: segment?.intro_text || undefined
@@ -554,6 +543,7 @@ serve(async (req) => {
             audioUrl,
             totalStoryCount,
             events: upcomingEvents,
+            eventsFirst,
             unsubscribeUrl,
             introHeading: segment?.intro_heading || undefined,
             introText: segment?.intro_text || undefined
@@ -597,7 +587,12 @@ serve(async (req) => {
         const firstName = recipient.name?.split(' ')[0];
         
         let subject: string;
-        if (notificationType === 'daily') {
+        if (storyCount === 0) {
+          // Events only: name what's coming up
+          subject = notificationType === 'daily'
+            ? `${dailyEventsHeading(upcomingEvents as Parameters<typeof dailyEventsHeading>[0])} · ${topic.name}`
+            : `The week ahead · ${topic.name}`;
+        } else if (notificationType === 'daily') {
           if (firstName) {
             subject = `Hey ${firstName}, ${storyCount} ${storyCount === 1 ? 'story' : 'stories'} from ${topic.name}`;
           } else {
