@@ -1,3 +1,9 @@
+# Repeat stories and Skip (18 Nov 2026)
+- [x] Skip / Archive on the Desk failed: stories couldn't be set to archived. Fixed
+- [x] Waiting or queued stories that repeat one already live show "Already live"; "Skip N repeats" when there are 2+
+- [x] Publisher records which live story a held repeat matched
+- [x] Writer checks waiting and queued stories too, not just live ones
+
 # Ticket shop events (18 Nov 2026)
 - [x] Organiser ticket shops (e.g. grovetheatre.onlineticketseller.com) read as event sources: dates, times, venue, link, picture
 - [x] Pasting onlineticketseller.com itself gets a plain nudge to paste an organiser's page

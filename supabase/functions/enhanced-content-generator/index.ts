@@ -238,7 +238,9 @@ serve(async (req) => {
         `)
         .eq('topic_articles.topic_id', topicId)
         .gte('created_at', cutoffDate.toISOString())
-        .eq('is_published', true)
+        // Live, queued and waiting stories all count: two sources reporting the same
+        // news minutes apart must not both be written as new stories.
+        .in('status', ['draft', 'ready', 'published'])
         .order('created_at', { ascending: false })
         .limit(15);
         

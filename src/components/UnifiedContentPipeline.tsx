@@ -337,7 +337,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
   const staleStories = staleHeld(otherHeld);
   const liveTitles = liveStories.map((s: any) => s.title || '');
-  const repeatIds = new Set(storiesToCheck.filter((s: any) => isRepeatOfLive(s.title || '', liveTitles)).map((s: any) => s.id));
+  const repeatIds = new Set([...storiesToCheck, ...queuedStories].filter((s: any) => isRepeatOfLive(s.title || '', liveTitles)).map((s: any) => s.id));
+  const repeatsToCheck = storiesToCheck.filter((s: any) => repeatIds.has(s.id));
   const setPulseIds = pulseCtx?.setStoryIds;
   useEffect(() => {
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
@@ -452,6 +453,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <h4 id="stories-to-check" className="flex items-center gap-2 text-base font-semibold text-attention-foreground">
                 <span className="h-2 w-2 rounded-full bg-attention" aria-hidden="true" />
                 {storiesToCheck.length === 1 ? "1 story needs your OK" : `${storiesToCheck.length} stories need your OK`}
+                {repeatsToCheck.length > 1 && (
+                  <Button size="sm" variant="outline" className="ml-auto" onClick={() => archiveWithUndo(repeatsToCheck, true)}>
+                    Skip {repeatsToCheck.length} repeats
+                  </Button>
+                )}
               </h4>
               <PublishedStoriesList
                 toCheck
@@ -476,6 +482,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           {queuedStories.length > 0 && (
             <RememberedFold foldKey="desk-queued" label={`Queued · ${queuedStories.length}`} contentClassName="pt-2">
               <PublishedStoriesList
+                repeatIds={repeatIds}
                 stories={queuedStories}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
