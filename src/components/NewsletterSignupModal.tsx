@@ -66,58 +66,49 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
     setIsSubmitting(true);
 
     try {
-      // Handle push notification subscription first if enabled
-      if (enablePushNotifications && isPushSupported) {
-        const pushSuccess = await subscribeToPush('weekly');
-        if (!pushSuccess) {
-          setIsSubmitting(false);
-          return;
+      // Email first: always saved through the sign-up service, whatever else is ticked
+      const { data, error } = await supabase.functions.invoke('secure-newsletter-signup', {
+        body: {
+          email: email.trim(),
+          name: name.trim() || undefined,
+          topicId: topicId,
+          notificationType: selectedFrequency,
         }
-      } else {
-        // Regular email-only signup
-        const { data, error } = await supabase.functions.invoke('secure-newsletter-signup', {
-          body: {
-            email: email.trim(),
-            name: name.trim() || undefined,
-            topicId: topicId
-          }
-        });
+      });
 
-        if (error) {
-          throw error;
-        }
+      if (error) {
+        throw error;
+      }
 
-        if (data?.error) {
-          if (data.rateLimited) {
-            toast({
-              title: "Too many attempts",
-              description: "Please wait before trying again. This helps prevent spam.",
-              variant: "destructive"
-            });
-          } else if (data.alreadySubscribed) {
-            toast({
-              title: "Already subscribed",
-              description: "You're already subscribed to notifications for this topic!",
-              variant: "default"
-            });
-          } else {
-            toast({
-              title: "Error",
-              description: data.error,
-              variant: "destructive"
-            });
-          }
-          setIsSubmitting(false);
-          return;
-        } else if (data?.success) {
+      if (data?.error) {
+        if (data.rateLimited) {
           toast({
-            title: "Subscribed successfully!",
-            description: data.message,
-            variant: "default"
+            title: "Too many attempts",
+            description: "Please wait before trying again. This helps prevent spam.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: data.error,
+            variant: "destructive"
           });
         }
+        setIsSubmitting(false);
+        return;
       }
-      
+
+      if (data?.alreadySubscribed) {
+        toast({ title: "Already subscribed", description: "You're already subscribed to this feed." });
+      } else if (data?.success) {
+        toast({ title: "Check your email", description: data.message });
+      }
+
+      // Browser notifications are an extra: if they fail, the email sign-up still stands
+      if (enablePushNotifications && isPushSupported) {
+        await subscribeToPush(selectedFrequency === 'daily' ? 'daily' : 'weekly');
+      }
+
       // Reset form and close
       setEmail('');
       setName('');

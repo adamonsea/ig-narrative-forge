@@ -607,3 +607,6 @@ verify_jwt = false
 
 [functions.suggest-feed-setup]
 verify_jwt = false
+
+[functions.save-push-subscription]
+verify_jwt = false

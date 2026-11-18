@@ -180,15 +180,11 @@ export const usePushSubscription = (topicId?: string) => {
       // Save subscription to database
       const subscriptionData = JSON.parse(JSON.stringify(subscription));
       
-      const { error } = await supabase
-        .from('topic_newsletter_signups')
-        .insert({
-          topic_id: topicId,
-          push_subscription: subscriptionData,
-          notification_type: notificationType,
-          frequency: notificationType, // Keep for compatibility
-          is_active: true
-        });
+      // Readers can't write signups directly; the public save-push-subscription function validates and saves
+      const { data: saved, error: invokeError } = await supabase.functions.invoke('save-push-subscription', {
+        body: { topicId, notificationType, subscription: subscriptionData },
+      });
+      const error = invokeError || (saved?.success ? null : new Error(saved?.error || 'Could not save'));
 
       if (error) {
         console.error('Error saving push subscription:', error);
