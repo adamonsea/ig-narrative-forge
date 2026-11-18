@@ -1341,6 +1341,10 @@ export type Database = {
           exclusion_reason: string | null
           external_id: string | null
           id: string
+          image_hidden: boolean
+          image_path: string | null
+          image_source_url: string | null
+          image_status: string | null
           is_free: boolean | null
           kept_by_owner: boolean
           location: string | null
@@ -1372,6 +1376,10 @@ export type Database = {
           exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          image_hidden?: boolean
+          image_path?: string | null
+          image_source_url?: string | null
+          image_status?: string | null
           is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
@@ -1403,6 +1411,10 @@ export type Database = {
           exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          image_hidden?: boolean
+          image_path?: string | null
+          image_source_url?: string | null
+          image_status?: string | null
           is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
@@ -5327,6 +5339,7 @@ export type Database = {
           email_subscriptions_enabled: boolean | null
           event_cards: string | null
           event_currency: string | null
+          event_photos_enabled: boolean
           event_source_url: string | null
           events_enabled: boolean | null
           events_last_checked_at: string | null
@@ -5403,6 +5416,7 @@ export type Database = {
           email_subscriptions_enabled?: boolean | null
           event_cards?: string | null
           event_currency?: string | null
+          event_photos_enabled?: boolean
           event_source_url?: string | null
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
@@ -5479,6 +5493,7 @@ export type Database = {
           email_subscriptions_enabled?: boolean | null
           event_cards?: string | null
           event_currency?: string | null
+          event_photos_enabled?: boolean
           event_source_url?: string | null
           events_enabled?: boolean | null
           events_last_checked_at?: string | null
@@ -6860,6 +6875,7 @@ export type Database = {
           description: string
           event_type: string
           id: string
+          image_path: string
           is_free: boolean
           location: string
           price: string
