@@ -1,6 +1,6 @@
 // @ts-nocheck -- run with: bun test ./src/lib/liveNow.test.ts
 import { describe, expect, it } from "bun:test";
-import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld } from "./liveNow";
+import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld, withJustPublished } from "./liveNow";
 
 const NOW = Date.parse("2026-11-17T09:00:00Z");
 const base = { is_published: true, topic_article_id: "ta", article_published_at: null };
@@ -75,5 +75,24 @@ describe("repeats of live stories", () => {
   });
   it("a different story about pupils is not a repeat", () => {
     expect(isRepeatOfLive("Pupils in Eastbourne school turn £10 into £4,000 for foodbank", live)).toBe(false);
+  });
+});
+
+describe("Publishing from the Desk", () => {
+  it("moves a just-published draft into Live now before the next load", () => {
+    const stories = [
+      { ...base, id: "live", status: "published", created_at: "2026-11-17T08:00:00Z" },
+      { ...base, id: "ok", status: "draft", is_published: false, created_at: "2026-11-17T07:00:00Z" },
+      { ...base, id: "queued", status: "ready", is_published: false, scheduled_publish_at: "2026-11-17T18:00:00Z", created_at: "2026-11-17T06:00:00Z" },
+    ];
+    const { live, held } = splitLiveNow(withJustPublished(stories, new Set(["ok", "queued"])), NOW);
+    expect(live.map((s) => s.id)).toEqual(["live", "ok", "queued"]);
+    expect(held).toEqual([]);
+  });
+
+  it("leaves everything else as it was", () => {
+    const stories = [{ ...base, id: "ok", status: "draft", is_published: false, created_at: "2026-11-17T07:00:00Z" }];
+    expect(withJustPublished(stories, new Set())).toBe(stories);
+    expect(splitLiveNow(withJustPublished(stories, new Set(["other"])), NOW).live).toEqual([]);
   });
 });

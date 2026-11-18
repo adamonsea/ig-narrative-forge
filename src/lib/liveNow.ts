@@ -45,6 +45,20 @@ export function splitLiveNow<T extends LiveNowStory>(stories: T[], now: number =
   return { live, held };
 }
 
+/**
+ * Stories the owner has just published from the Desk show in Live now straight away,
+ * before the next load confirms it: same feed rules, treated as published and unscheduled.
+ */
+export function withJustPublished<T extends LiveNowStory & { scheduled_publish_at?: string | null }>(
+  stories: T[],
+  justPublished: ReadonlySet<string>,
+): T[] {
+  if (justPublished.size === 0) return stories;
+  return stories.map((s) =>
+    justPublished.has(s.id) ? { ...s, status: "published", is_published: true, scheduled_publish_at: null } : s,
+  );
+}
+
 /** Written-but-not-live stories older than this are stale: news has moved on. */
 export const STALE_HELD_DAYS = 7;
 

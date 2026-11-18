@@ -45,11 +45,12 @@ interface DeskCardProps {
   /** Something under the quiet line, e.g. the similar-reports fold. */
   footer?: ReactNode;
   className?: string;
+  id?: string;
 }
 
 /** A calm Desk card: at rest a thumbnail, headline and one quiet line; actions on hover; click to open. */
 export function DeskCard({
-  title, thumbnailUrl, thumbClassName, thumbTitle, badges, meta, actions, keepActions, pinActions, onOpen, visual, faded, leading, footer, className,
+  title, thumbnailUrl, thumbClassName, thumbTitle, badges, meta, actions, keepActions, pinActions, onOpen, visual, faded, leading, footer, className, id,
 }: DeskCardProps) {
   const [revealed, setRevealed] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -64,6 +65,7 @@ export function DeskCard({
 
   return (
     <div
+      id={id}
       tabIndex={-1}
       data-revealed={revealed || keepActions ? "true" : "false"}
       onBlur={(e) => {

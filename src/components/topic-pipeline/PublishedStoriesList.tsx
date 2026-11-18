@@ -51,6 +51,10 @@ interface PublishedStoriesListProps {
   onSkip?: (story: PublishedStory) => void;
   /** Ids of waiting stories that repeat one already live. */
   repeatIds?: Set<string>;
+  /** Publishing handled by the Desk, so the story moves into Live now at once. */
+  onPublishNow?: (storyId: string, title: string) => Promise<void>;
+  /** Just-published stories still getting their picture: shown faded until it lands. */
+  settlingIds?: Set<string>;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -77,6 +81,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   toCheck = false,
   onSkip,
   repeatIds,
+  onPublishNow,
+  settlingIds,
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -107,6 +113,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
   const handlePublishNow = async (storyId: string, title: string) => {
     setPublishingNow(prev => new Set(prev.add(storyId)));
+    if (onPublishNow) {
+      try {
+        await onPublishNow(storyId, title);
+      } finally {
+        setPublishingNow(prev => { const n = new Set(prev); n.delete(storyId); return n; });
+      }
+      return;
+    }
     try {
       const publishedAt = new Date().toISOString();
       const { data, error } = await supabase
@@ -386,12 +400,15 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         const reads = storyReads?.[story.id] ?? 0;
         const readingNow = readingNowIds.includes(story.id);
         const publishing = publishingNow.has(story.id);
+        const settling = Boolean(settlingIds?.has(story.id));
 
         const feedPosition = feedPositions.get(story.id);
         const afterNode = feedPosition !== undefined && renderAfterFeedPosition ? renderAfterFeedPosition(feedPosition) : null;
         return (
           <React.Fragment key={story.id}>
             <DeskCard
+              id={feedOrder ? `live-story-${story.id}` : undefined}
+              className={settling ? 'settle-in opacity-60' : undefined}
               title={storyTitle}
               thumbnailUrl={story.cover_illustration_url ? (optimizeImageUrl(story.cover_illustration_url, { width: 128, height: 128, quality: 70 }) || story.cover_illustration_url) : null}
               thumbClassName={readingNow ? 'reading-ring' : undefined}
@@ -401,6 +418,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               pinActions={toCheck}
               badges={
                 <>
+                  {settling && (
+                    <DeskBadge>
+                      <span className="live-pulse h-2 w-2 rounded-full bg-pop" aria-hidden="true" />Adding picture
+                    </DeskBadge>
+                  )}
                   {risingStoryId === story.id && <DeskBadge tone="pop">↑ Rising</DeskBadge>}
                   {isScheduled && <DeskBadge><Clock className="h-3.5 w-3.5" aria-hidden="true" />{format(new Date(story.scheduled_publish_at!), 'd MMM, HH:mm')}</DeskBadge>}
                   {isReady && <DeskBadge tone="primary">Ready</DeskBadge>}

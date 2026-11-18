@@ -21,7 +21,8 @@ import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
 import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
-import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld } from "@/lib/liveNow";
+import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld, withJustPublished } from "@/lib/liveNow";
+import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
 import { ToastAction } from "@/components/ui/toast";
 
 interface Topic {
@@ -112,6 +113,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const pulseCtx = useTopicPulse();
   const pulse = pulseCtx?.pulse;
   const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
+  // Published from the Desk: in Live now at once (until a load confirms it), faded while its picture is drawn.
+  const [justPublished, setJustPublished] = useState<Set<string>>(new Set());
+  const [settlingIds, setSettlingIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (justPublished.size === 0) return;
+    const confirmed = stories.filter(s => justPublished.has(s.id) && s.is_published && s.status === 'published').map(s => s.id);
+    if (confirmed.length === 0) return;
+    setJustPublished(prev => { const n = new Set(prev); confirmed.forEach(id => n.delete(id)); return n; });
+  }, [stories, justPublished]);
 
   useEffect(() => {
     const loadTopics = async () => {
@@ -295,6 +305,52 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
+  const publishNow = async (storyId: string, title: string) => {
+    const drop = (setter: typeof setSettlingIds) => setter(prev => { const n = new Set(prev); n.delete(storyId); return n; });
+    setJustPublished(prev => new Set(prev).add(storyId));
+    setSettlingIds(prev => new Set(prev).add(storyId));
+    // Bring it into view where it now sits in Live now (desktop shows all three columns).
+    window.setTimeout(() => {
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById(`live-story-${storyId}`)?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+    }, 60);
+    try {
+      const publishedAt = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('stories')
+        .update({ scheduled_publish_at: null, status: 'published', is_published: true, published_at: publishedAt, updated_at: publishedAt })
+        .eq('id', storyId)
+        .select('id')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('No story was updated.');
+    } catch (e: any) {
+      console.error('Error publishing story:', e);
+      drop(setJustPublished);
+      drop(setSettlingIds);
+      toast({
+        title: "Couldn't publish",
+        description: e?.code === '57014' ? 'The database timed out. Refresh to check.' : 'Try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    // On phones Live now is another tab, so say so (with a way there).
+    if (!window.matchMedia?.('(min-width: 1024px)').matches) {
+      toast({
+        description: `"${title}" is live`,
+        duration: 3000,
+        action: <ToastAction altText="View in Live now" onClick={() => setMobileArea('live')}>View</ToastAction>,
+      });
+    }
+    refreshContent();
+    // Draw its picture if it has none; the card stays faded until that's done.
+    void illustrateOnPublish(storyId).finally(() => {
+      drop(setSettlingIds);
+      refreshContent();
+    });
+  };
+
   const handleViewStory = (story: any) => {
     if (story.id && topicSlug) {
       window.open(`/feed/${topicSlug}/story/${story.id}`, '_blank');
@@ -331,7 +387,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   }
 
   // Live now = exactly the feed (same stories, same order); written-but-not-live waits in the Story pool.
-  const { live: liveStories, held: heldStories } = splitLiveNow(stories);
+  const { live: liveStories, held: heldStories } = splitLiveNow(withJustPublished(stories as any[], justPublished));
   const visibleIdsKey = [...liveStories, ...heldStories].map(s => s.id).join(',');
   // Drafts nothing will publish on its own wait for a one-click OK; queued ones go out by themselves.
   const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
@@ -464,6 +520,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 repeatIds={repeatIds}
                 stories={storiesToCheck}
                 onSkip={(s) => archiveWithUndo([s], true)}
+                onPublishNow={publishNow}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
                 onDelete={handleMultiTenantRejectStory}
@@ -484,6 +541,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <PublishedStoriesList
                 repeatIds={repeatIds}
                 stories={queuedStories}
+                onPublishNow={publishNow}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
                 onDelete={handleMultiTenantRejectStory}
@@ -506,6 +564,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               )}
               <PublishedStoriesList
                 stories={otherHeld}
+                onPublishNow={publishNow}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
                 onDelete={handleMultiTenantRejectStory}
@@ -593,6 +652,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <PublishedStoriesList
               feedOrder
               stories={liveStories}
+              settlingIds={settlingIds}
               processingItems={queueItems}
               onArchive={handleArchiveStory}
               onReturnToReview={handleMultiTenantRejectStory}

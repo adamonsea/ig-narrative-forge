@@ -1,2 +1,3 @@
 # Desk rules
 - The Desk's Live now list takes membership and order from `splitLiveNow()` in `src/lib/liveNow.ts` (same rules and display-date order as the public feed); written-but-not-live stories are split by `groupHeld()` into amber "needs your OK" (fresh drafts nothing will publish on its own), "Queued" (ready or scheduled) and the rest, so Live now matches what readers see and the owner sees what's waiting on them.
+- Publishing from the Desk goes through the pipeline's `publishNow`: the story joins Live now at once via `withJustPublished()` (same feed rules) and stays faded with "Adding picture" until `illustrateOnPublish` finishes; the owner sees the result of their OK immediately, in its true feed position.
