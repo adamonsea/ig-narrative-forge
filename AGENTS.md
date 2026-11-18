@@ -40,3 +40,4 @@
 - Editing opens in `WorkspaceDrawer` (src/components/workspace); deletes use confirm boxes; errors `InlineError`.
 - Marketing colours: `shop-*` tokens only.
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
+- The public feed's Events | All | News switch shows only when `showFeedViewToggle` in `src/lib/feedView.ts` says both exist; it filters cards already loaded (Events pages `get_topic_events_feed` as individual cards), never changes stored data or positions.

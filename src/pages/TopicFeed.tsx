@@ -11,6 +11,8 @@ import { whatsOnPositions, eventCardMode, eventsLedRun, newsSlotsWithin } from "
 import { resolveStoryCoverStyle } from "@/lib/storyCoverStyle";
 import { WhatsOnCard } from "@/components/events/WhatsOnCard";
 import { EventCard } from "@/components/events/EventCard";
+import { FeedViewToggle } from "@/components/feed/FeedViewToggle";
+import { effectiveFeedView, showFeedViewToggle, viewShowsEvents, type FeedView } from "@/lib/feedView";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
 import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
@@ -339,13 +341,22 @@ const TopicFeed = () => {
   const eventsLed = topic?.feed_lead === 'events' && eventsInFeed;
   const individualCards = eventsInFeed && eventCardMode(topic?.feed_lead, topic?.event_cards) === 'individual';
   const { data: whatsOnEvents } = useWhatsOnEvents(topic?.id, eventsInFeed && !individualCards);
-  const { events: feedEventsRaw, isLoading: eventsLoading, hasMore: eventsHasMore, loadingMore: eventsLoadingMore, loadMore: loadMoreEvents } = useEventsFeed(topic?.id, individualCards);
+  // Reader switch (Events | All | News): only when the feed has both to show
+  const [chosenView, setChosenView] = useState<FeedView>('all');
+  const { events: feedEventsRaw, isLoading: eventsLoading, hasMore: eventsHasMore, loadingMore: eventsLoadingMore, loadMore: loadMoreEvents } = useEventsFeed(topic?.id, individualCards || (eventsInFeed && chosenView === 'events'));
   const eventCurrency = (topic as any)?.event_currency ?? null;
   const whatsOnToday = londonToday();
   const whatsOnClock = londonTime().slice(0, 4); // re-group every 10 minutes
   const whatsOn = useMemo(() => whatsOnSets(whatsOnEvents ?? [], whatsOnToday, londonTime()), [whatsOnEvents, whatsOnToday, whatsOnClock]);
   const feedEvents = useMemo(() => individualEvents(feedEventsRaw ?? [], whatsOnToday, londonTime()), [feedEventsRaw, whatsOnToday, whatsOnClock]);
   const feedBrand = topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color;
+  const viewToggleShown = showFeedViewToggle(
+    eventsInFeed,
+    individualCards ? feedEvents.length : whatsOn.length,
+    filteredContent.filter((item) => item.type === 'story').length,
+  );
+  const feedView = effectiveFeedView(chosenView, viewToggleShown);
+  const eventsInView = viewShowsEvents(feedView);
   const renderEventCard = (e: (typeof feedEvents)[number]) => (
     <div key={`event-${e.id}`} className="w-full max-w-2xl">
       <EventCard event={e} brandColor={feedBrand} isOwner={isOwnFeed} currency={eventCurrency} />
@@ -579,6 +590,17 @@ const TopicFeed = () => {
     }, { rootMargin: isMobile ? '1200px' : '800px' });
     eventsObserverRef.current.observe(node);
   }, [filteredContent, feedEvents.length, hasMore, loading, loadingMore, eventsLoadingMore, eventsHasMore, loadMore, loadMoreEvents, isMobile]);
+
+  // Events view: the next 20 events as the reader nears the end
+  const eventsOnlyObserverRef = useRef<IntersectionObserver | null>(null);
+  const eventsOnlySentinelRef = useCallback((node: HTMLDivElement | null) => {
+    eventsOnlyObserverRef.current?.disconnect();
+    if (!node) return;
+    eventsOnlyObserverRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && eventsHasMore && !eventsLoadingMore) void loadMoreEvents();
+    }, { rootMargin: isMobile ? '1200px' : '800px' });
+    eventsOnlyObserverRef.current.observe(node);
+  }, [eventsHasMore, eventsLoadingMore, loadMoreEvents, isMobile]);
   
 
   useEffect(() => {
@@ -786,11 +808,11 @@ const TopicFeed = () => {
 
       // What's on: after story 1, then at least 15 stories apart, never beside another extra card
       // News-led with individual cards: one event at each What's on position
-      if (isStory && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
+      if (eventsInView && isStory && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
         items.push(renderEventCard(feedEvents[whatsOnPositions(storyIndex).indexOf(storyIndex) % feedEvents.length]));
       }
 
-      if (isStory && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
+      if (eventsInView && isStory && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
             <WhatsOnCard
@@ -879,7 +901,7 @@ const TopicFeed = () => {
     };
 
     // Events-led: events are the run of cards; news and extras slot in counted against events
-    if (eventsLed && individualCards) {
+    if (eventsLed && individualCards && feedView === 'all') {
       const stories = displayableContent.filter((item) => item.type === 'story');
       const run: React.ReactNode[] = [];
       eventsLedRun(feedEvents.length, stories.length, !eventsHasMore).forEach((item, k) => {
@@ -905,7 +927,8 @@ const TopicFeed = () => {
     quizQuestions, quizCardsEnabled, quizVisitorId, user?.id, markAsAnswered,
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
     hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed,
-    eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand, eventsHasMore, eventCurrency
+    eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand, eventsHasMore, eventCurrency,
+    feedView, eventsInView
   ]);
 
   if (loading) {
@@ -1322,8 +1345,22 @@ const TopicFeed = () => {
           />
         )}
 
+        {viewToggleShown && (
+          <FeedViewToggle value={chosenView} onChange={setChosenView} brandColor={feedBrand} />
+        )}
+
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
-        {!loading && eventsLed && individualCards && (feedEvents.length > 0 || eventsLoading) ? (
+        {!loading && feedView === 'events' ? (
+          <div className="space-y-6 md:space-y-8 flex flex-col items-center">
+            {feedEvents.map(renderEventCard)}
+            {eventsHasMore && <div ref={eventsOnlySentinelRef} className="h-px w-full" aria-hidden="true" />}
+            {(eventsLoading || eventsLoadingMore) && (
+              <div className="w-full max-w-2xl space-y-8">
+                {[...Array(2)].map((_, i) => <Skeleton key={i} className="w-full h-96 rounded-lg" />)}
+              </div>
+            )}
+          </div>
+        ) : !loading && feedView === 'all' && eventsLed && individualCards && (feedEvents.length > 0 || eventsLoading) ? (
           <div className="space-y-6 md:space-y-8 flex flex-col items-center">
             {feedItems}
             {(eventsHasMore || hasMore) && <div ref={eventsSentinelRef} className="h-px w-full" aria-hidden="true" />}

@@ -1,6 +1,9 @@
+# Reader feed switch (18 Nov 2026)
+- [x] Events | All | News pill at the top of feeds with both; Events pages events 20 at a time; News drops event cards
+
 # Story cover styles (18 Nov 2026)
 - [x] Admin-only /design/story-covers: real Eastbourne stories, Split (now) beside Full bleed
-- [ ] Owner switch in Feed Settings (Split / Full bleed) — waits on Adam reviewing the comparison
+- [x] Owner switch in Feed Settings (Split / Full bleed)
 
 # Events in briefings (18 Nov 2026)
 - [x] Daily briefing page: the day's news + events today & tomorrow; weekly: the week's news + the week ahead
