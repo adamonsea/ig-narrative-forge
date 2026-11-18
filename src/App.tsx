@@ -24,6 +24,7 @@ import Cookies from "./pages/Cookies";
 import AdminPanel from "./pages/AdminPanel";
 const DesignSystem = lazy(() => import("./pages/design/DesignSystem"));
 const EventCardsCompare = lazy(() => import("./pages/design/EventCardsCompare"));
+const StoryCoversCompare = lazy(() => import("./pages/design/StoryCoversCompare"));
 import AICostDashboardPage from "./pages/AICostDashboard";
 import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
@@ -119,6 +120,7 @@ const App = () => {
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/design" element={<Suspense fallback={null}><DesignSystem /></Suspense>} />
                 <Route path="/design/event-cards" element={<Suspense fallback={null}><EventCardsCompare /></Suspense>} />
+                <Route path="/design/story-covers" element={<Suspense fallback={null}><StoryCoversCompare /></Suspense>} />
                 <Route path="/admin/ai-costs" element={<AICostDashboardPage />} />
                 
                 {/* Redirect old URL patterns to new universal URLs */}

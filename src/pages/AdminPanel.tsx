@@ -70,6 +70,7 @@ export default function AdminPanel() {
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-base">
               <Link to="/design" className="underline underline-offset-4 hover:text-foreground">Design system</Link>
               <Link to="/design/event-cards" className="underline underline-offset-4 hover:text-foreground">Event cards: A or B</Link>
+              <Link to="/design/story-covers" className="underline underline-offset-4 hover:text-foreground">Story covers</Link>
             </div>
           </section>
 

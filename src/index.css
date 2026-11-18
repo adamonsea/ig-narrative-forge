@@ -260,6 +260,9 @@ All colors MUST be HSL.
     --feed-card-foreground: 146 41% 7%;
     --feed-card-header: 210 7% 97%;
     --feed-header-background: 0 0% 100%;
+    /* Full-bleed story cover: dark scrim and white headline over the picture (same in light and dark) */
+    --feed-cover-ink: 214 50% 6%;
+    --feed-cover-text: 0 0% 100%;
 
     --sidebar-background: 150 20% 98%;
     --sidebar-foreground: 214 50% 9%;
@@ -340,6 +343,9 @@ All colors MUST be HSL.
     --feed-card-foreground: 210 40% 98%;
     --feed-card-header: 146 30% 15%;
     --feed-header-background: 0 0% 100%;
+    /* Full-bleed story cover: dark scrim and white headline over the picture (same in light and dark) */
+    --feed-cover-ink: 214 50% 6%;
+    --feed-cover-text: 0 0% 100%;
 
     --sidebar-background: 214 45% 7%;
     --sidebar-foreground: 210 25% 96%;

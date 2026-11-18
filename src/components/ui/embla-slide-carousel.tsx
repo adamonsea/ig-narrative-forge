@@ -19,6 +19,8 @@ export type EmblaSlideCarouselProps = {
   autoSlideInterval?: number;
   /** Optional image URLs for pre-decoding adjacent slides */
   slideImageUrls?: (string | null | undefined)[];
+  /** Light dots while the first slide is showing (full-bleed picture cover) */
+  lightDotsOnFirst?: boolean;
 };
 
 export function EmblaSlideCarousel({
@@ -35,6 +37,7 @@ export function EmblaSlideCarousel({
   autoSlide = false,
   autoSlideInterval = 5000,
   slideImageUrls = [],
+  lightDotsOnFirst = false,
 }: EmblaSlideCarouselProps) {
   const count = slides.length;
   const [selectedIndex, setSelectedIndex] = useState(
@@ -204,10 +207,12 @@ export function EmblaSlideCarousel({
                 key={i}
                 aria-label={`Go to slide ${i + 1}`}
                 onClick={() => goTo(i)}
-                className={`h-1.5 w-1.5 rounded-full pointer-events-auto ${
-                  i === selectedIndex
-                    ? "bg-primary"
-                    : "bg-muted-foreground/25"
+                className={`h-1.5 w-1.5 rounded-full pointer-events-auto transition-colors ${
+                  lightDotsOnFirst && selectedIndex === 0
+                    ? i === selectedIndex ? "bg-feed-cover-text" : "bg-feed-cover-text/40"
+                    : i === selectedIndex
+                      ? "bg-primary"
+                      : "bg-muted-foreground/25"
                 }`}
               />
             ))}

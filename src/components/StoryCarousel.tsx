@@ -122,6 +122,8 @@ interface StoryCarouselProps {
   };
   /** Callback to update batch counts after reaction */
   onReactionCountsChange?: (storyId: string, counts: { thumbsUp: number; thumbsDown: number; userReaction: 'like' | 'discard' | null }) => void;
+  /** First-slide cover: 'split' (picture above headline, default) or 'full-bleed' (picture behind a white headline). Slides 2+ are the same in both. */
+  coverStyle?: 'split' | 'full-bleed';
 }
 
 export default function StoryCarousel({ 
@@ -138,7 +140,8 @@ export default function StoryCarousel({
   onMoreLikeThis,
   onPrefetchFilter,
   prefetchedReactionCounts,
-  onReactionCountsChange
+  onReactionCountsChange,
+  coverStyle = 'split'
 }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
@@ -543,6 +546,36 @@ export default function StoryCarousel({
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;
     const overflows = index > 0 && !!fit?.overflow.includes(index - 1);
+    const coverSrc = hasImage
+      ? optimizeImageUrl(story.cover_illustration_url!, { width: 800, height: 600, quality: 85 }) || story.cover_illustration_url!
+      : '';
+
+    if (hasImage && coverStyle === 'full-bleed') {
+      // Full-bleed cover: the picture sets the mood behind the headline, which leads.
+      return (
+        // Not positioned: the picture fills the whole slide box (the slide wrapper contains it), however tall the card grows.
+        <div key={slide.id} className="h-full min-h-[32rem] w-full overflow-hidden bg-feed-cover-ink md:min-h-[36rem]">
+          {story.animated_illustration_url && isFastConnection ? (
+            <video autoPlay loop muted playsInline poster={story.cover_illustration_url} preload="none"
+              className="absolute inset-0 h-full w-full object-cover object-center brightness-90 saturate-[0.9]" aria-hidden="true">
+              <source src={story.animated_illustration_url} type="video/mp4" />
+            </video>
+          ) : (
+            <img src={coverSrc} alt="" loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover object-center brightness-90 saturate-[0.9]" />
+          )}
+          <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,hsl(var(--feed-cover-ink)/0.94)_0%,hsl(var(--feed-cover-ink)/0.78)_30%,hsl(var(--feed-cover-ink)/0.2)_65%,hsl(var(--feed-cover-ink)/0.25)_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 px-5 pb-12 pt-6 md:px-8 md:pb-14">
+            <div className={`w-full max-w-xl leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty text-feed-cover-text [text-shadow:0_1px_16px_hsl(var(--feed-cover-ink)/0.55)]`}>
+              <div dangerouslySetInnerHTML={createSafeHTML(
+                sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+                true
+              )} />
+            </div>
+          </div>
+        </div>
+      );
+    }
     
     return (
       <div key={slide.id} className="h-full w-full">
@@ -623,7 +656,7 @@ export default function StoryCarousel({
         )}
       </div>
     );
-  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001')]);
+  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001'), coverStyle]);
 
   const slidesForEmbla = slideComponents.length
     ? slideComponents
@@ -693,6 +726,7 @@ export default function StoryCarousel({
               initialIndex={currentSlideIndex}
               showDots={slidesForEmbla.length > 1}
               dotStyle="instagram"
+              lightDotsOnFirst={coverStyle === 'full-bleed' && !!story.cover_illustration_url}
               onSlideChange={setCurrentSlideIndex}
               ariaLabel={`${story.title} story slides`}
               storyId={story.id}

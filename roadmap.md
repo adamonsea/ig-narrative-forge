@@ -1,3 +1,7 @@
+# Story cover styles (18 Nov 2026)
+- [x] Admin-only /design/story-covers: real Eastbourne stories, Split (now) beside Full bleed
+- [ ] Owner switch in Feed Settings (Split / Full bleed) — waits on Adam reviewing the comparison
+
 # Events in briefings (18 Nov 2026)
 - [x] Daily briefing page: the day's news + events today & tomorrow; weekly: the week's news + the week ahead
 - [x] Events-led or news-less feeds (Lisbon) get a briefing with events first; old briefings show no events
