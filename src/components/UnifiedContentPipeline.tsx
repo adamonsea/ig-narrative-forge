@@ -21,7 +21,7 @@ import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
 import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
-import { groupHeld, splitLiveNow, staleHeld } from "@/lib/liveNow";
+import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld } from "@/lib/liveNow";
 import { ToastAction } from "@/components/ui/toast";
 
 interface Topic {
@@ -336,6 +336,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   // Drafts nothing will publish on its own wait for a one-click OK; queued ones go out by themselves.
   const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
   const staleStories = staleHeld(otherHeld);
+  const liveTitles = liveStories.map((s: any) => s.title || '');
+  const repeatIds = new Set(storiesToCheck.filter((s: any) => isRepeatOfLive(s.title || '', liveTitles)).map((s: any) => s.id));
   const setPulseIds = pulseCtx?.setStoryIds;
   useEffect(() => {
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
@@ -453,6 +455,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               </h4>
               <PublishedStoriesList
                 toCheck
+                repeatIds={repeatIds}
                 stories={storiesToCheck}
                 onSkip={(s) => archiveWithUndo([s], true)}
                 onArchive={handleArchiveStory}

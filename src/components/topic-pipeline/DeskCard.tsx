@@ -32,6 +32,8 @@ interface DeskCardProps {
   actions: ReactNode;
   /** Keep the actions showing (e.g. while one is running). */
   keepActions?: boolean;
+  /** Actions always showing on their own row (items waiting on the owner). */
+  pinActions?: boolean;
   /** Click to open the item (e.g. its drawer). Without it the card only reveals its actions. */
   onOpen?: () => void;
   /** Replaces the thumbnail, e.g. an event's date tile. */
@@ -47,7 +49,7 @@ interface DeskCardProps {
 
 /** A calm Desk card: at rest a thumbnail, headline and one quiet line; actions on hover; click to open. */
 export function DeskCard({
-  title, thumbnailUrl, thumbClassName, thumbTitle, badges, meta, actions, keepActions, onOpen, visual, faded, leading, footer, className,
+  title, thumbnailUrl, thumbClassName, thumbTitle, badges, meta, actions, keepActions, pinActions, onOpen, visual, faded, leading, footer, className,
 }: DeskCardProps) {
   const [revealed, setRevealed] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -70,6 +72,7 @@ export function DeskCard({
       className={cn(
         "desk-card group relative rounded-xl border border-border bg-card outline-none transition-[box-shadow,opacity] duration-200 hover:shadow-md",
         faded && "opacity-60 hover:opacity-100 focus-within:opacity-100",
+        pinActions && "desk-card-pinned",
         className,
       )}
     >

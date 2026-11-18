@@ -88,3 +88,18 @@ export function groupHeld<T extends LiveNowStory & { scheduled_publish_at?: stri
   }
   return { toCheck, queued, other };
 }
+
+const words = (t: string) => new Set(t.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2));
+
+/** True when a held story's headline is (nearly) the same as one already live: a repeat, safe to Skip. */
+export function isRepeatOfLive(title: string, liveTitles: string[], threshold = 0.8): boolean {
+  const a = words(title);
+  if (a.size === 0) return false;
+  return liveTitles.some((t) => {
+    const b = words(t);
+    if (b.size === 0) return false;
+    let shared = 0;
+    for (const w of a) if (b.has(w)) shared++;
+    return shared / (a.size + b.size - shared) >= threshold;
+  });
+}

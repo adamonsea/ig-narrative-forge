@@ -76,7 +76,7 @@ serve(async (req) => {
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
     const { data: recentPublished } = await supabase
       .from('stories')
-      .select('title, topic_article_id')
+      .select('id, title, topic_article_id')
       .eq('status', 'published')
       .gte('created_at', since)
       .not('topic_article_id', 'is', null);

@@ -1,6 +1,6 @@
 // @ts-nocheck -- run with: bun test ./src/lib/liveNow.test.ts
 import { describe, expect, it } from "bun:test";
-import { groupHeld, splitLiveNow, staleHeld } from "./liveNow";
+import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld } from "./liveNow";
 
 const NOW = Date.parse("2026-11-17T09:00:00Z");
 const base = { is_published: true, topic_article_id: "ta", article_published_at: null };
@@ -65,5 +65,15 @@ describe("Story pool groups", () => {
     const g = groupHeld([s("d", "draft", "2026-11-09T08:00:00Z")], NOW);
     expect(g.toCheck).toEqual([]);
     expect(g.other.map((x) => x.id)).toEqual(["d"]);
+  });
+});
+
+describe("repeats of live stories", () => {
+  const live = ["Eastbourne primary pupils get hands-on introduction to careers in construction"];
+  it("the same headline counts as a repeat", () => {
+    expect(isRepeatOfLive("Eastbourne primary pupils get hands-on introduction to careers in construction", live)).toBe(true);
+  });
+  it("a different story about pupils is not a repeat", () => {
+    expect(isRepeatOfLive("Pupils in Eastbourne school turn £10 into £4,000 for foodbank", live)).toBe(false);
   });
 });

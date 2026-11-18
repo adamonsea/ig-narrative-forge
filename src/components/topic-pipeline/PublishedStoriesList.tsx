@@ -49,6 +49,8 @@ interface PublishedStoriesListProps {
   /** Drafts waiting for the owner's OK: Publish and Skip always showing, no filters or pages. */
   toCheck?: boolean;
   onSkip?: (story: PublishedStory) => void;
+  /** Ids of waiting stories that repeat one already live. */
+  repeatIds?: Set<string>;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -74,6 +76,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   feedOrder = false,
   toCheck = false,
   onSkip,
+  repeatIds,
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -394,13 +397,15 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               thumbClassName={readingNow ? 'reading-ring' : undefined}
               thumbTitle={readingNow ? 'Being read now' : undefined}
               onOpen={() => setOpenStoryId(story.id)}
-              keepActions={publishing || toCheck}
+              keepActions={publishing}
+              pinActions={toCheck}
               badges={
                 <>
                   {risingStoryId === story.id && <DeskBadge tone="pop">↑ Rising</DeskBadge>}
                   {isScheduled && <DeskBadge><Clock className="h-3.5 w-3.5" aria-hidden="true" />{format(new Date(story.scheduled_publish_at!), 'd MMM, HH:mm')}</DeskBadge>}
                   {isReady && <DeskBadge tone="primary">Ready</DeskBadge>}
                   {isDraft && !toCheck && <DeskBadge>Draft</DeskBadge>}
+                  {repeatIds?.has(story.id) && <DeskBadge tone="warning">Already live</DeskBadge>}
                 </>
               }
               meta={

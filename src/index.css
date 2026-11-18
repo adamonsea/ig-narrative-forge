@@ -557,6 +557,10 @@ All colors MUST be HSL.
   .desk-card[data-revealed="true"] .desk-card-actions { display: flex; }
 }
 @media (prefers-reduced-motion: reduce) { .desk-card .desk-card-actions { transition: none; } }
+/* Cards waiting on the owner keep their two actions on their own row, never over the text. */
+.desk-card.desk-card-pinned .desk-card-actions {
+  position: static; display: flex; opacity: 1; pointer-events: auto; background: none; padding: 0 0.75rem 0.75rem;
+}
 
 /* Event category icons (src/components/events/EventCategoryIcon.tsx) — supplied, do not restyle */
 .ec-icon { --ec-accent: hsl(var(--pop)); }
