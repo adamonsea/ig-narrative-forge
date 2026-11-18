@@ -11,6 +11,7 @@ import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { useSiteVisitorTracking } from "@/hooks/useSiteVisitorTracking";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LocalNewsFeedsGuide from "./pages/guides/LocalNewsFeeds";
 import Features from "./pages/Features";
@@ -109,6 +110,7 @@ const App = () => {
                 <Route path="/health" element={<Health />} />
                 <Route path="/explainer-export" element={<ExplainerExport />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/waitlist/welcome" element={<WaitlistWelcome />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />

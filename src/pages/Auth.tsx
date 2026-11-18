@@ -21,7 +21,7 @@ const safeRedirect = () => {
 };
 
 const Auth = () => {
-  const [mode, setMode] = useState<'signup' | 'signin'>('signup');
+  const [mode, setMode] = useState<'signup' | 'signin' | 'reset'>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -56,6 +56,14 @@ const Auth = () => {
     setError(null);
 
     try {
+      if (mode === 'reset') {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (resetError) throw resetError;
+        setCheckEmail(true);
+        return;
+      }
       if (mode === 'signup') {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -109,7 +117,7 @@ const Auth = () => {
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden p-4" style={{ backgroundColor: INK }}>
       <Helmet>
-        <title>{mode === 'signup' ? 'Create your workspace | Curatr' : 'Sign in | Curatr'}</title>
+        <title>{mode === 'signup' ? 'Create your workspace | Curatr' : mode === 'reset' ? 'Reset your password | Curatr' : 'Sign in | Curatr'}</title>
         <meta name="description" content="Create a Curatr workspace or sign in to build and curate your own niche news feeds." />
         <link rel="canonical" href={`${typeof window !== 'undefined' ? window.location.origin : ''}/auth`} />
       </Helmet>
@@ -134,8 +142,12 @@ const Auth = () => {
             <MailCheck className="mx-auto h-9 w-9" style={{ color: MINT }} />
             <h1 className="font-display text-3xl italic tracking-tight text-white">Check your email</h1>
             <p className="text-base leading-relaxed text-[hsl(214,20%,70%)]">
-              We've sent a confirmation link to <strong className="text-white">{email}</strong>. Open it and your
-              workspace will be ready.
+              {mode === 'reset' ? (
+                <>We've sent a reset link to <strong className="text-white">{email}</strong>. Open it to choose a new password.</>
+              ) : (
+                <>We've sent a confirmation link to <strong className="text-white">{email}</strong>. Open it and your
+                workspace will be ready.</>
+              )}
             </p>
           </div>
         ) : (
@@ -145,12 +157,15 @@ const Auth = () => {
                 <CuratrLogo className="justify-center text-xl text-white" iconClassName="text-[#AD5CFF]" />
               </Link>
               <h1 className="font-display mt-6 text-4xl italic tracking-tight text-white">
-                {mode === 'signup' ? 'Create your workspace' : 'Welcome back'}
+                {mode === 'signup' ? 'Create your workspace' : mode === 'reset' ? 'Reset your password' : 'Welcome back'}
               </h1>
-              <p className="mt-3 text-sm text-[hsl(214,20%,70%)]">Free to create and curate.</p>
+              <p className="mt-3 text-sm text-[hsl(214,20%,70%)]">
+                {mode === 'reset' ? "We'll email you a reset link." : 'Free to create and curate.'}
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {mode !== 'reset' && (
               <Button
                 type="button"
                 variant="outline"
@@ -166,12 +181,15 @@ const Auth = () => {
                 </svg>
                 Continue with Google
               </Button>
+              )}
 
+              {mode !== 'reset' && (
               <div className="flex items-center gap-4">
                 <div className="h-px flex-1 bg-white/10" />
                 <span className="text-xs uppercase tracking-wider text-white/30">or</span>
                 <div className="h-px flex-1 bg-white/10" />
               </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="auth-email" className="ml-4 text-xs font-medium uppercase tracking-wider text-white/40">
@@ -188,10 +206,25 @@ const Auth = () => {
                   required
                 />
               </div>
+              {mode !== 'reset' && (
               <div className="space-y-2">
-                <Label htmlFor="auth-password" className="ml-4 text-xs font-medium uppercase tracking-wider text-white/40">
-                  Password
-                </Label>
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="auth-password" className="ml-4 text-xs font-medium uppercase tracking-wider text-white/40">
+                    Password
+                  </Label>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null);
+                        setMode('reset');
+                      }}
+                      className="mr-4 text-xs text-[hsl(214,20%,70%)] transition-colors hover:text-white"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
                 <Input
                   id="auth-password"
                   type="password"
@@ -204,6 +237,7 @@ const Auth = () => {
                   required
                 />
               </div>
+              )}
 
               {error && <p className="text-sm text-red-300">{error}</p>}
 
@@ -214,7 +248,7 @@ const Auth = () => {
                 disabled={loading}
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" style={{ color: INK }} />}
-                {mode === 'signup' ? 'Create account' : 'Sign in'}
+                {mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Sign in'}
               </Button>
 
               <button
@@ -225,9 +259,9 @@ const Auth = () => {
                 }}
                 className="mx-auto block text-sm text-[hsl(214,20%,70%)] transition-colors hover:text-white"
               >
-                {mode === 'signup' ? 'Already have an account? ' : 'New to Curatr? '}
+                {mode === 'signup' ? 'Already have an account? ' : mode === 'reset' ? 'Remembered it? ' : 'New to Curatr? '}
                 <span className="font-medium text-white underline decoration-white/20 underline-offset-4 hover:decoration-[hsl(155,100%,67%)]">
-                  {mode === 'signup' ? 'Sign in' : 'Create an account'}
+                  {mode === 'signup' ? 'Sign in' : mode === 'reset' ? 'Sign in' : 'Create an account'}
                 </span>
               </button>
             </form>
