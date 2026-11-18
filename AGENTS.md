@@ -38,5 +38,5 @@
 - Autopilot = automation_mode 'holiday' + `auto_simplify_enabled=true`; turning it off never clears that flag (hand-written stories use it).
 - Desk story cards use `DeskCard` (quiet at rest, ≤2 actions, drawer for more).
 - Editing opens in `WorkspaceDrawer` (src/components/workspace); deletes use confirm boxes; errors `InlineError`.
-- Shop-window (marketing) colours use the fixed `shop-*` tokens in `src/index.css`/Tailwind, never raw hsl; they never flip with the workspace theme.
+- Marketing colours: fixed `shop-*` tokens only; never theme-flipped.
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
