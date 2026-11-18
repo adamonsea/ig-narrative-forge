@@ -21,7 +21,7 @@ import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
 import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
-import { splitLiveNow, staleHeld } from "@/lib/liveNow";
+import { groupHeld, splitLiveNow, staleHeld } from "@/lib/liveNow";
 import { ToastAction } from "@/components/ui/toast";
 
 interface Topic {
@@ -249,10 +249,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
-  /** Archive every stale story in "Written, not in the feed" at once; Undo puts each back as it was. */
-  const handleArchiveStale = async (items: { id: string; status: string; is_published: boolean }[]) => {
-    if (items.length === 0 || archivingStale) return;
-    setArchivingStale(true);
+  /** Archive stories (Skip, or every stale one at once); Undo puts each back as it was. */
+  const archiveWithUndo = async (items: { id: string; status: string; is_published: boolean }[], skipped = false) => {
     try {
       const ids = items.map(s => s.id);
       const { error } = await supabase
@@ -276,14 +274,22 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         }
       };
       toast({
-        description: `Archived ${ids.length} ${ids.length === 1 ? 'story' : 'stories'}`,
+        description: skipped ? 'Skipped' : `Archived ${ids.length} ${ids.length === 1 ? 'story' : 'stories'}`,
         duration: 3000,
         action: <ToastAction altText="Undo" onClick={restore}>Undo</ToastAction>,
       });
       refreshContent();
     } catch (error) {
-      console.error('Error archiving stale stories:', error);
-      toast({ title: "Couldn't archive", description: "Try again.", variant: "destructive" });
+      console.error('Error archiving stories:', error);
+      toast({ title: skipped ? "Couldn't skip" : "Couldn't archive", description: "Try again.", variant: "destructive" });
+    }
+  };
+
+  const handleArchiveStale = async (items: { id: string; status: string; is_published: boolean }[]) => {
+    if (items.length === 0 || archivingStale) return;
+    setArchivingStale(true);
+    try {
+      await archiveWithUndo(items);
     } finally {
       setArchivingStale(false);
     }
@@ -327,7 +333,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   // Live now = exactly the feed (same stories, same order); written-but-not-live waits in the Story pool.
   const { live: liveStories, held: heldStories } = splitLiveNow(stories);
   const visibleIdsKey = [...liveStories, ...heldStories].map(s => s.id).join(',');
-  const staleStories = staleHeld(heldStories as any[]);
+  // Drafts nothing will publish on its own wait for a one-click OK; queued ones go out by themselves.
+  const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
+  const staleStories = staleHeld(otherHeld);
   const setPulseIds = pulseCtx?.setStoryIds;
   useEffect(() => {
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
@@ -429,6 +437,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           <div className="flex min-h-10 items-center gap-2 border-b pb-2">
             <h3 id="desk-happened" className="text-lg font-semibold text-foreground">Story pool</h3>
             {autopilot.on && <AutopilotPill />}
+            {storiesToCheck.length > 0 && <AttentionTag>{storiesToCheck.length} to check</AttentionTag>}
             {newsCount > 0 && <span className="text-base text-muted-foreground tabular-nums">{newsCount} new</span>}
             <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
             <div className="ml-auto flex items-center gap-1">
@@ -436,13 +445,48 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <ArrowRight className="hidden h-4 w-4 text-muted-foreground/70 lg:block" aria-hidden="true" />
             </div>
           </div>
+          {storiesToCheck.length > 0 && (
+            <section aria-labelledby="stories-to-check" className="space-y-2 rounded-xl border border-attention/50 bg-attention-soft p-3">
+              <h4 id="stories-to-check" className="flex items-center gap-2 text-base font-semibold text-attention-foreground">
+                <span className="h-2 w-2 rounded-full bg-attention" aria-hidden="true" />
+                {storiesToCheck.length === 1 ? "1 story needs your OK" : `${storiesToCheck.length} stories need your OK`}
+              </h4>
+              <PublishedStoriesList
+                toCheck
+                stories={storiesToCheck}
+                onSkip={(s) => archiveWithUndo([s], true)}
+                onArchive={handleArchiveStory}
+                onReturnToReview={handleMultiTenantRejectStory}
+                onDelete={handleMultiTenantRejectStory}
+                onViewStory={handleViewStory}
+                onRefresh={refreshContent}
+                topicSlug={topicSlug}
+                topicId={selectedTopicId}
+              />
+            </section>
+          )}
           {selectedTopicId && (
             <RememberedFold foldKey="desk-story-glance" label="Published" contentClassName="pt-2">
               <PublishedGlance topicId={selectedTopicId} />
             </RememberedFold>
           )}
-          {heldStories.length > 0 && (
-            <RememberedFold foldKey="desk-written-not-live" label={`Written, not in the feed · ${heldStories.length}`} contentClassName="pt-2">
+          {queuedStories.length > 0 && (
+            <RememberedFold foldKey="desk-queued" label={`Queued · ${queuedStories.length}`} contentClassName="pt-2">
+              <PublishedStoriesList
+                stories={queuedStories}
+                onArchive={handleArchiveStory}
+                onReturnToReview={handleMultiTenantRejectStory}
+                onDelete={handleMultiTenantRejectStory}
+                onViewStory={handleViewStory}
+                onRefresh={refreshContent}
+                loading={loading}
+                topicSlug={topicSlug}
+                topicId={selectedTopicId}
+              />
+            </RememberedFold>
+          )}
+          {otherHeld.length > 0 && (
+            <RememberedFold foldKey="desk-written-not-live" label={`Written, not in the feed · ${otherHeld.length}`} contentClassName="pt-2">
               {staleStories.length > 0 && (
                 <div className="mb-2 flex justify-end">
                   <Button size="sm" variant="ghost" disabled={archivingStale} onClick={() => handleArchiveStale(staleStories)}>
@@ -451,7 +495,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 </div>
               )}
               <PublishedStoriesList
-                stories={heldStories}
+                stories={otherHeld}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
                 onDelete={handleMultiTenantRejectStory}

@@ -1,6 +1,6 @@
 // @ts-nocheck -- run with: bun test ./src/lib/liveNow.test.ts
 import { describe, expect, it } from "bun:test";
-import { splitLiveNow, staleHeld } from "./liveNow";
+import { groupHeld, splitLiveNow, staleHeld } from "./liveNow";
 
 const NOW = Date.parse("2026-11-17T09:00:00Z");
 const base = { is_published: true, topic_article_id: "ta", article_published_at: null };
@@ -45,5 +45,25 @@ describe("stale written stories", () => {
   });
   it("an old story scheduled for later is not stale", () => {
     expect(staleHeld([held("c", "2026-10-28T09:00:00Z", { status: "ready", scheduled_publish_at: "2026-11-18T09:00:00Z" })], NOW)).toEqual([]);
+  });
+});
+
+describe("Story pool groups", () => {
+  const s = (id, status, created_at, extra = {}) => ({ ...base, id, status, is_published: false, created_at, ...extra });
+  it("a draft from 2 days ago needs the owner's OK", () => {
+    expect(groupHeld([s("a", "draft", "2026-11-15T09:00:00Z")], NOW).toCheck.map((x) => x.id)).toEqual(["a"]);
+  });
+  it("a draft whose release time has passed still needs the owner's OK", () => {
+    expect(groupHeld([s("b", "draft", "2026-11-16T09:00:00Z", { scheduled_publish_at: "2026-11-17T06:00:00Z" })], NOW).toCheck.map((x) => x.id)).toEqual(["b"]);
+  });
+  it("a ready story is queued, not waiting for an OK", () => {
+    const g = groupHeld([s("c", "ready", "2026-11-17T08:00:00Z", { scheduled_publish_at: "2026-11-17T18:00:00Z" })], NOW);
+    expect(g.queued.map((x) => x.id)).toEqual(["c"]);
+    expect(g.toCheck).toEqual([]);
+  });
+  it("a draft over a week old is not asked about", () => {
+    const g = groupHeld([s("d", "draft", "2026-11-09T08:00:00Z")], NOW);
+    expect(g.toCheck).toEqual([]);
+    expect(g.other.map((x) => x.id)).toEqual(["d"]);
   });
 });

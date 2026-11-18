@@ -213,3 +213,9 @@ Park six features + tidy keywords (13 November 2026)
 - [x] Delete after the event, when hidden/removed/changed, orphan sweep — in the twice-daily gather
 - [x] Individual cards show the photo, illustration fallback; grouped cards/email unchanged
 - [x] Desk "Use illustration" / "Use photo"; Feed Settings "Event photos" switch
+
+# Story pool clarity (18 Nov 2026)
+- [x] Drafts needing the owner's OK pinned in amber with Publish / Skip; drawer for more
+- [x] Queued (drip) stories in their own "Queued" fold
+- [x] Delete Eastbourne drafts over a week old
+- [x] Delete drafts over a week old on Adam's other feeds

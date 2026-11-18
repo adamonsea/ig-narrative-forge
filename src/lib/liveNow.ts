@@ -63,3 +63,28 @@ export function staleHeld<T extends LiveNowStory & { scheduled_publish_at?: stri
     return !(s.scheduled_publish_at && new Date(s.scheduled_publish_at).getTime() > now);
   });
 }
+
+/**
+ * Story pool groups for written-but-not-live stories:
+ * - toCheck: drafts written in the last STALE_HELD_DAYS that nothing will publish on its own,
+ *   pinned in amber for the owner's one-click Publish or Skip;
+ * - queued: ready, or scheduled for later, so the drip (or its time) will publish it;
+ * - other: everything else (mostly stale drafts, offered for archiving in one go).
+ */
+export function groupHeld<T extends LiveNowStory & { scheduled_publish_at?: string | null }>(
+  held: T[],
+  now: number = Date.now(),
+  days: number = STALE_HELD_DAYS,
+): { toCheck: T[]; queued: T[]; other: T[] } {
+  const cutoff = now - days * 86_400_000;
+  const toCheck: T[] = [];
+  const queued: T[] = [];
+  const other: T[] = [];
+  for (const s of held) {
+    const future = Boolean(s.scheduled_publish_at && new Date(s.scheduled_publish_at).getTime() > now);
+    if (s.status === "ready" || future) queued.push(s);
+    else if (s.status === "draft" && new Date(s.created_at).getTime() >= cutoff) toCheck.push(s);
+    else other.push(s);
+  }
+  return { toCheck, queued, other };
+}

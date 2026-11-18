@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, X } from "lucide-react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
@@ -46,6 +46,9 @@ interface PublishedStoriesListProps {
   renderAfterFeedPosition?: (position: number) => React.ReactNode;
   /** Stories arrive already in the public feed's order and are all in the feed (Live now). */
   feedOrder?: boolean;
+  /** Drafts waiting for the owner's OK: Publish and Skip always showing, no filters or pages. */
+  toCheck?: boolean;
+  onSkip?: (story: PublishedStory) => void;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -68,7 +71,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   risingStoryId = null,
   readingNowIds = [],
   renderAfterFeedPosition,
-  feedOrder = false
+  feedOrder = false,
+  toCheck = false,
+  onSkip,
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -174,11 +179,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   }, [stories]);
 
   const paginatedStories = useMemo(() => {
+    if (toCheck) return filteredStories;
     const startIndex = (currentPage - 1) * pageSize;
     return filteredStories.slice(startIndex, startIndex + pageSize);
-  }, [filteredStories, currentPage, pageSize]);
+  }, [filteredStories, currentPage, pageSize, toCheck]);
 
-  const totalPages = Math.ceil(filteredStories.length / pageSize);
+  const totalPages = toCheck ? 1 : Math.ceil(filteredStories.length / pageSize);
 
   useEffect(() => {
     if (topicId) {
@@ -314,7 +320,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   return (
     <div className="space-y-3">
       {/* One quiet row: page indicator and one filter button */}
-      <div className="flex items-center justify-end gap-2">
+      {!toCheck && <div className="flex items-center justify-end gap-2">
         {totalPages > 1 && <span className="text-sm text-muted-foreground tabular-nums">Page {currentPage} of {totalPages}</span>}
         <StoryFilters
           storyFilter={storyFilter}
@@ -330,7 +336,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           onRefresh={onRefresh}
           loading={loading}
         />
-      </div>
+      </div>}
 
       {/* Being written, or failed: slim rows with cancel */}
       {processingItems.length > 0 && (
@@ -388,13 +394,13 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               thumbClassName={readingNow ? 'reading-ring' : undefined}
               thumbTitle={readingNow ? 'Being read now' : undefined}
               onOpen={() => setOpenStoryId(story.id)}
-              keepActions={publishing}
+              keepActions={publishing || toCheck}
               badges={
                 <>
                   {risingStoryId === story.id && <DeskBadge tone="pop">↑ Rising</DeskBadge>}
                   {isScheduled && <DeskBadge><Clock className="h-3.5 w-3.5" aria-hidden="true" />{format(new Date(story.scheduled_publish_at!), 'd MMM, HH:mm')}</DeskBadge>}
                   {isReady && <DeskBadge tone="primary">Ready</DeskBadge>}
-                  {isDraft && <DeskBadge>Draft</DeskBadge>}
+                  {isDraft && !toCheck && <DeskBadge>Draft</DeskBadge>}
                 </>
               }
               meta={
@@ -404,7 +410,17 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   isLive && reads > 0 ? <span className="tabular-nums" title="Reads in the last 7 days">{reads} {reads === 1 ? 'read' : 'reads'}</span> : null,
                 ]} />
               }
-              actions={isLive ? (
+              actions={toCheck ? (
+                <>
+                  <Button size="sm" onClick={() => handlePublishNow(story.id, storyTitle)} disabled={publishing}>
+                    {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                    Publish
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => onSkip?.(story)} disabled={publishing}>
+                    <X className="mr-2 h-4 w-4" />Skip
+                  </Button>
+                </>
+              ) : isLive ? (
                 <>
                   <Button size="sm" variant="outline" onClick={() => setOpenStoryId(story.id)}>Open</Button>
                   <Button size="sm" variant="ghost" onClick={() => onReturnToReview(story.id)}>Unpublish</Button>
