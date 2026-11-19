@@ -335,8 +335,51 @@ export function deepInkFor(hex: string): string {
   return `#${to(f(0))}${to(f(8))}${to(f(4))}`;
 }
 
-const deepInkRule = (ink: string, accent: string) => `
-DARK INK (CRITICAL): Never use pure black. Every dark area, outline and shadow is printed in a deep shade of the accent's own hue, about ${ink} (dark navy for blue, dark plum/burgundy for red/pink, deep forest for green). Mid tones are lighter tints of ${accent}. The image must read light and airy overall, like a two-ink riso print, not heavy or murky.
+function hueOf(hex: string): { h: number; s: number } | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  const l = (max + min) / 2;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  return { h: (h * 60 + 360) % 360, s };
+}
+
+/** Warm foil for cool feeds, cool foil for warm feeds (Jon McNaught-style temperature contrast). */
+export const WARM_FOIL = '#C8766A'; // chalky terracotta
+export const COOL_FOIL = '#7C94AC'; // dusty slate blue
+
+/** Third, complementary ink: one quiet contrasting colour used on one or two focal shapes. */
+export function foilInkFor(hex: string): string {
+  const c = hueOf(hex);
+  if (!c || c.s < 0.12) return WARM_FOIL; // greys and unknowns read best against warm terracotta
+  // Greens, teals, blues and violets are cool → warm foil. Reds, pinks, oranges, yellows are warm → cool foil.
+  return c.h >= 90 && c.h < 290 ? WARM_FOIL : COOL_FOIL;
+}
+
+/** Paper colour for every drawn style: clean white, never cream or yellowed. */
+export const PAPER_WHITE = '#FFFFFF';
+
+/** No frames on any picture: the image runs to every edge. */
+export const NO_FRAME_RULE =
+  'FULL BLEED: the picture runs edge to edge. No border, frame, outline box, margin, mat, vignette, torn or deckled paper edge, drop shadow, mockup or picture-within-a-picture.';
+
+/** Paper must be clean white — models drift to cream/yellow "vintage" paper otherwise. */
+export const WHITE_PAPER_RULE =
+  `PAPER: clean bright white (${PAPER_WHITE}, at most a barely-warm #FAFAF8). Never cream, ivory, beige, yellowed, tea-stained, parchment or aged paper. White areas must read as pure white.`;
+
+const deepInkRule = (ink: string, accent: string, foil: string) => `
+INKS (CRITICAL) — three inks printed on white paper, each with one job:
+- Deep ink ${ink}: outlines, shadows and the darkest masses (about 25–30% of the picture). A deep shade of the accent's own hue (dark navy for blue, dark plum/burgundy for red/pink, deep forest for green). Never pure black.
+- Accent ${accent} and its lighter tints: the main colour (about 25–30%).
+- Foil ${foil}: one quiet complementary colour on just ONE or TWO focal shapes (a road, a roof, one vehicle, one coat) — about 10–15%. It warms or cools the scene; it is never scattered.
+- White paper shows through for the rest (about 30–40%).
+No fourth colour, no blends between inks, no gradients. The image must read light and airy overall, like a riso print, not heavy or murky.
+${WHITE_PAPER_RULE}
+${NO_FRAME_RULE}
 `;
 
 export type IllustrativePromptVariant = 'current' | 'handmade';
@@ -356,7 +399,8 @@ export function buildIllustrativePrompt(
     ? 'warm expressions, engaged demeanor'
     : 'neutral expressions, professional demeanor';
   const ink = deepInkFor(primaryColor);
-  const inkRule = deepInkRule(ink, primaryColor);
+  const foil = foilInkFor(primaryColor);
+  const inkRule = deepInkRule(ink, primaryColor, foil);
 
   // Only add regional guidance if the subject actually mentions local/place elements
   // This prevents e.g. zoo stories getting seaside backgrounds
@@ -404,7 +448,7 @@ Express it through the big shapes that make it recognisable, stylized to match t
   if (variant === 'handmade') {
     return `HAND-MADE SCREEN PRINT for ${publicationName || 'local news publication'}. Subject: ${subject}
 
-This must look like a limited-edition screen print sold in a gallery shop — cut by hand, printed in three inks on paper. Restraint is the whole point: when in doubt, remove detail.
+This must look like a limited-edition screen print sold in a gallery shop — cut by hand, printed in three inks on clean white paper. Restraint is the whole point: when in doubt, remove detail.
 
 DETAIL BUDGET (the most important rule):
 - Build the ENTIRE picture from roughly 8 to 15 large flat shapes. Count them.
@@ -413,9 +457,9 @@ DETAIL BUDGET (the most important rule):
 - Under-detailed is correct. Over-detailed is a failure.
 
 INK LIMIT:
-- Exactly three inks: deep ink (${ink}, a dark shade of the accent hue — never black), paper white, and one accent colour (${primaryColor}).
-- Flat fills only. NO shading, NO gradients, NO blended or mixed tones, NO third mixed hue.
-- Overlap of accent and deep ink may darken, as real ink does — nothing else.
+- Exactly three inks on white paper: deep ink (${ink}, a dark shade of the accent hue — never black), the accent (${primaryColor}), and a small complementary foil (${foil}) on one or two shapes only.
+- Flat fills only. NO shading, NO gradients, NO blended or mixed tones, NO fourth hue.
+- Overlap of inks may darken, as real ink does — nothing else.
 
 SHAPE LANGUAGE:
 - Hand-cut edges: slightly irregular, like lino or a cut paper stencil. Never vector-smooth.
@@ -423,7 +467,7 @@ SHAPE LANGUAGE:
 - Backgrounds as silhouette masses — a whole stand of trees as one shape, a crowd as one shape, water as repeating white flecks, foliage as a repeated cut mark.
 ${placeGuidance}${locationAccuracy}${inkRule}
 TEXTURE (only from the printing, never from drawing):
-- Paper grain across the whole sheet, visible speckle in flat areas.
+- Fine paper grain across the whole sheet, visible speckle in flat areas — the paper itself stays white, never cream.
 - Slight registration shift between inks, a little ink starvation at edges.
 - Texture must NEVER come from extra lines, hatching, stippling as drawing, or added small marks.
 
@@ -439,6 +483,8 @@ FORBIDDEN:
 ❌ Gradients, airbrush, soft shadows, glow, depth-of-field
 ❌ Photorealism, 3D rendering, digital polish
 ❌ More than three inks
+❌ Cream, ivory, beige or yellowed paper
+❌ Borders, frames, margins or vignettes
 ❌ Small background details, clutter, crowds of tiny objects
 ❌ Text, logos, speech bubbles, graphic design furniture
 ❌ Pure black or heavy near-black areas
@@ -452,8 +498,8 @@ BENCHMARK: A mid-century screen-printed travel or public-information poster, rep
 CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
 - FLAT COLOR FILLS with visible print texture and grain (like risograph or screen print)
 - Clean DEEP-INK OUTLINES (${ink}) defining shapes (hand-drawn quality, not digital vector)
-- LIMITED PALETTE: deep ink ${ink} (never pure black), paper white, accent color (${primaryColor}) and its lighter tints - printed ink aesthetic
-- PAPER TEXTURE visible throughout (like printed on newsprint or art paper)
+- LIMITED PALETTE: deep ink ${ink} (never pure black), accent color (${primaryColor}) and its lighter tints, a small complementary foil ${foil} on one or two shapes, on clean white paper - printed ink aesthetic
+- Fine PAPER TEXTURE visible throughout, but the paper stays white (never newsprint-yellow or cream)
 - Slight registration shifts and imperfections (authentic print quality)
 ${placeGuidance}${locationAccuracy}${inkRule}
 COMPOSITION STYLE - Jon McNaught / Edward Hopper Influence:
@@ -471,7 +517,7 @@ PRINT TEXTURE REQUIREMENTS (CRITICAL):
 - Visible grain structure like risograph or linocut
 - Ink texture with slight imperfections and variations
 - Hand-crafted feel, NOT smooth digital rendering
-- Paper substrate visible in lighter areas
+- White paper visible in lighter areas
 
 TECHNICAL EXECUTION:
 - Bold confident linework (hand-drawn quality)
@@ -485,6 +531,8 @@ FORBIDDEN ELEMENTS:
 ❌ Photorealistic rendering or CGI aesthetics
 ❌ Text, speech bubbles, or graphic design elements
 ❌ Pure black or heavy near-black areas
+❌ Cream, ivory, beige or yellowed paper
+❌ Borders, frames, margins or vignettes
 ❌ Childish cartoon style
 
 QUALITY BENCHMARK: Think mid-century editorial illustration meets contemporary screen print art - authentic, textured, print-made aesthetic suitable for serious editorial publication.`;
@@ -710,7 +758,7 @@ THE SCENE (draw exactly this — the absurd element must be unmistakable and cen
 ${scene}
 
 STYLE — British satirical ink cartoon:
-- Pen and ink with loose watercolour wash, on off-white paper
+- Pen and ink with loose watercolour wash, on clean white paper (never cream or yellowed)
 - Confident, scratchy hand-drawn linework with cross-hatching for shade
 - Exaggerated caricature proportions: big heads, expressive hands, telling body language
 - Muted, slightly dingy palette — tobacco browns, slate greys, washed-out blues, one small spot of stronger colour for emphasis
@@ -723,6 +771,7 @@ COMPOSITION:
 
 FORBIDDEN:
 ❌ Any text, captions, speech bubbles, labels or signage with words
+❌ Borders, frames, panel outlines or margins — the drawing runs edge to edge
 ❌ Photorealism, 3D rendering, smooth digital vector look
 ❌ Cute or childish cartoon style
 ❌ Gore, cruelty toward victims, or mockery of the powerless

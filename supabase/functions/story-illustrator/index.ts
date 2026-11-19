@@ -8,7 +8,7 @@ import {
   extractSubjectMatter,
   extractLocationDetails,
   matchPlaceName,
-  buildIllustrativePrompt, deepInkFor, 
+  buildIllustrativePrompt, deepInkFor, foilInkFor, NO_FRAME_RULE, WHITE_PAPER_RULE,
   buildPhotographicPrompt,
   generateSatiricalGag,
   buildSatiricalPrompt,
@@ -770,22 +770,23 @@ serve(async (req) => {
         `Original editorial cartoon illustrating: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `Hand-drawn comic linework with confident ink outlines, exaggerated but warm character expressions, ` +
         `bright flat colour fills, simple staging, generous negative space, 3:2 landscape. ` +
-        `No text, letters, numbers or captions. No photographic realism, no 3D rendering, no copied characters or named artist styles.`,
+        `No text, letters, numbers or captions. No photographic realism, no 3D rendering, no copied characters or named artist styles. ` +
+        `${WHITE_PAPER_RULE} ${NO_FRAME_RULE}`,
       bw_editorial_photo:
         `Aged black-and-white editorial news photograph of: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `Authentic mid-century press photography: silver-gelatin tonal range, visible film grain, slight print wear, ` +
         `natural available light, candid documentary framing, 35mm perspective, 3:2 landscape. ` +
-        `Strictly monochrome — no colour anywhere. No text, watermarks or borders. No illustration, no CGI.`,
+        `Strictly monochrome — no colour anywhere. No text or watermarks. No illustration, no CGI. ${NO_FRAME_RULE}`,
       anime:
         `Original editorial anime scene depicting: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `Modern cel-shaded anime aesthetic: clean linework, expressive faces, saturated skies, painterly backgrounds, ` +
         `cinematic wide framing, 3:2 landscape. ` +
-        `No text or subtitles. Do not copy any named studio, franchise or existing character. No photographic realism.`,
+        `No text or subtitles. Do not copy any named studio, franchise or existing character. No photographic realism. ${NO_FRAME_RULE}`,
       illustrated_icon:
         `Bold minimal spot illustration for: ${subjectMatter}. Story: "${promptTitle}".${placeLine} ` +
         `One single clear visual idea, thick uniform strokes, simple geometric shapes, two or three flat colours ` +
-        `(${primaryColor} as the accent) on a plain light background, large amounts of empty space, centred, 3:2 landscape. ` +
-        `No text, no shading, no gradients, no scenery clutter, no photographic detail.`,
+        `(${primaryColor} as the accent) on a clean white background, large amounts of empty space, centred, 3:2 landscape. ` +
+        `No text, no shading, no gradients, no scenery clutter, no photographic detail. ${WHITE_PAPER_RULE} ${NO_FRAME_RULE}`,
     }
 
     // Satirical: an LLM writes the joke first, then the artist draws it.
@@ -928,12 +929,12 @@ serve(async (req) => {
       
       // FLUX-specific prompt with quantified constraints and explicit bans
       const fluxPrompt = `MANDATORY STYLE RULES (FLUX MUST FOLLOW):
-1. COLORS: Deep ink (${deepInkFor(primaryColor)}, dark shade of the accent hue, never pure black) + Primary Accent (${primaryColor}) ONLY - no orange, no gray fills, no other colors
+1. COLORS: Deep ink (${deepInkFor(primaryColor)}, dark shade of the accent hue, never pure black) + Primary Accent (${primaryColor}) + one small foil (${foilInkFor(primaryColor)}) on ONE shape only - no gray fills, no other colors
 2. ACCENT LIMIT: Apply primary color to EXACTLY 2-3 small objects maximum (one window, one door, one sign) - NOT on multiple storefronts
 3. LINE WORK: Thick outer contours ONLY - NO window panes, NO brick texture, NO roof tiles, NO interior architectural detail
 4. SHADOWS: Solid deep-ink fills ONLY - NO crosshatching, NO halftone dots, NO texture patterns
 5. ROADS: Solid white ONLY - NO perspective lines, NO road markings, NO surface texture
-6. COMPOSITION: Edge-to-edge with white background - NO text anywhere
+6. COMPOSITION: Edge-to-edge on a pure white background (never cream or yellowed) - NO border or frame - NO text anywhere
 
 SUBJECT: ${subjectMatter}
 
@@ -955,7 +956,8 @@ WHAT TO AVOID (CRITICAL):
 ❌ Brick/tile texture patterns
 ❌ Perspective construction lines on roads
 ❌ Interior architectural details (molding, frames, panels)
-❌ Pure black, or any color other than the deep ink and ${primaryColor}
+❌ Pure black, or any color other than the deep ink, ${primaryColor} and the one foil shape
+❌ Cream or yellowed background, borders, frames or margins
 
 Style benchmark: Think flat vector illustration with maximum 30 line strokes total.
 
@@ -1266,7 +1268,7 @@ ${TRADEMARK_RULE}`;
           }
 
           // FLUX-specific prompt (simplified for reliability)
-          const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${promptTitle}". Style: Clean editorial illustration with bold outlines in ${deepInkFor(primaryColor)} (a dark shade of the accent, never pure black) and ${primaryColor} accent color. Tone: ${storyTone}. No text. ${TRADEMARK_RULE}`;
+          const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${promptTitle}". Style: Clean editorial illustration with bold outlines in ${deepInkFor(primaryColor)} (a dark shade of the accent, never pure black) and ${primaryColor} accent color, with one small ${foilInkFor(primaryColor)} shape, on a pure white background. Tone: ${storyTone}. No text. No border or frame. ${TRADEMARK_RULE}`;
 
           const fluxResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
             method: 'POST',

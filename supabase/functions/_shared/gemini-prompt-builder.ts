@@ -110,11 +110,11 @@ export function buildGeminiIllustrativePrompt(params: GeminiPromptParams): strin
   
   return `[SUBJECT]: ${subject}. Scene from story "${storyTitle}" for ${publicationName || 'a news publication'}: ${sceneExcerpt}
 
-[COMPOSITION]: Modernist editorial cover. 3:2 landscape format. Large simple shapes with 60% negative space (cream paper showing). 1-3 main visual elements maximum. Architectural, clean arrangement.
+[COMPOSITION]: Modernist editorial cover. 3:2 landscape format. Large simple shapes with 60% negative space (clean white paper showing, never cream). 1-3 main visual elements maximum. Architectural, clean arrangement.
 
 [LIGHTING/CAMERA]: Flat poster-style lighting. No photographic shadows or realistic depth. Even illumination like a printed poster.
 
-[STYLE/REFERENCES]: In the style of mid-century screen printing and risograph art—visible paper texture grain, hand-printed aesthetic with slight ink irregularities. Think Jon McNaught, Paul Rand, or Saul Bass editorial illustration. Limited ink palette: cream/off-white paper background, bold black outlines around all shapes, and ${primaryColor} as the single accent color used sparingly. Human figures simplified to basic geometric forms (circles for heads, rectangles for bodies). ${expressionGuidance}.${locationSection}
+[STYLE/REFERENCES]: In the style of mid-century screen printing and risograph art—visible paper texture grain, hand-printed aesthetic with slight ink irregularities. Think Jon McNaught, Paul Rand, or Saul Bass editorial illustration. Limited ink palette: clean white paper background (never cream or yellowed), no border or frame, bold deep-ink outlines in a dark shade of the accent (never black), and ${primaryColor} as the single accent color used sparingly. Human figures simplified to basic geometric forms (circles for heads, rectangles for bodies). ${expressionGuidance}.${locationSection}
 
 [CONSTRAINTS/EXCLUSIONS]: No gradients or shading—only completely flat solid color fills. No 3D effects or realistic rendering. No smooth digital vector look—must have hand-printed texture. No text, letters, numbers, words, or labels anywhere. No more than 3-4 total colors. No detailed facial features. Avoid visual clutter—keep it minimal and iconic.`;
 }
