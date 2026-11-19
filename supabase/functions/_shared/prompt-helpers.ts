@@ -451,35 +451,35 @@ Express it through the big shapes that make it recognisable, stylized to match t
     : '';
 
   if (variant === 'quick') {
-    const quickInkRule = inkRule.replace('outlines, shadows and the darkest masses', 'a few solid dark shapes and hard-edged shadow shapes (never outlines)');
-    return `SIMPLE CUT-PAPER ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
+    const quickInkRule = inkRule.replace('outlines, shadows and the darkest masses', 'a few bold outlines on key shapes, hard-edged shadow shapes and the darkest masses');
+    return `SIMPLE SCREEN-PRINT ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
 
-Make it look like a bold, simple poster made from a handful of flat cut-paper shapes. Simplicity is the whole job: when in doubt, leave it out.
+Make it look like a bold, simple screen-print poster: flat shapes, a few confident lines, and just enough detail to tell the story. Simple, but still a finished illustration.
 
 SHAPES (most important):
-- The whole picture is 6 to 12 big flat shapes. One clear subject, one simple background. Nothing else.
-- Nothing smaller than a fist at the picture's scale. Delete anything smaller.
-- Shapes are defined by flat colour meeting colour, like cut paper. NO outlines and NO contour lines around shapes.
-- If a line is truly needed it is one thick confident stroke — never thin, never sketchy, never repeated.
+- The picture is built from about 12 to 20 flat shapes. One clear subject, a middle ground and a simple background.
+- Keep 2 or 3 telling details that explain the story (a bus stop sign, a shop awning, a row of windows as simple blocks). Drop everything else.
+- Nothing smaller than a hand at the picture's scale.
+- Mostly colour meeting colour. Bold, even-weight outlines are allowed on the main shapes — never thin, sketchy, broken or repeated lines.
 
 PEOPLE:
-- Faceless. Heads are plain flat shapes with NO eyes, NO nose, NO mouth, NO eyebrows, NO wrinkles, NO hair strands.
-- Prefer figures seen from behind, in profile silhouette, or small in the scene.
-- Bodies are simple blocks of colour: no fingers, no folds, no clothing detail.
+- Minimal faces: a hair shape and at most a single nose or jaw line. NO eyes, NO mouths, NO eyebrows, NO wrinkles, NO hair strands.
+- Figures can face any way; side and three-quarter views read well.
+- Bodies are simple flat shapes with one or two clothing cues (a coat collar, a scarf, a hi-vis vest). Hands as simple mitten shapes, no fingers.
 - Mood (${expressionGuidance}) comes from posture and composition only.
 
 BACKGROUND:
-- Buildings, trees, crowds and water are each ONE solid silhouette shape. No windows grids, bricks, tiles, leaves, signs or street furniture.
-- Large areas of plain white paper are good.
+- Buildings, trees and crowds are big simple masses; windows as a few flat blocks at most. No bricks, tiles, individual leaves or fussy street furniture.
+- Generous areas of plain white paper.
 ${placeGuidance}${locationAccuracy ? `\nPLACE: suggest "${locationHint}" only through its overall silhouette — one recognisable outline shape, no architectural detail.\n` : ''}${quickInkRule}
 TEXTURE: only a light, even print grain inside the flat colours. Never drawn texture.
 
 COMPOSITION: bold, graphic, reads instantly at thumbnail size. Landscape 3:2.
 
 FORBIDDEN:
-❌ Facial features of any kind
+❌ Eyes, mouths, expressions or any facial rendering
 ❌ Fine lines, thin outlines, hatching, stippling, scribbles, pen or pencil work
-❌ Small details, clutter, patterns, tiny objects, background crowds of figures
+❌ Clutter, patterns, tiny objects, background crowds of small figures
 ❌ Gradients, soft shading, shadows with soft edges, 3D, photorealism
 ❌ Pure black or heavy near-black areas
 ❌ Cream, ivory, beige or yellowed paper
@@ -487,7 +487,7 @@ FORBIDDEN:
 ❌ Text, logos, speech bubbles
 ❌ Childish cartoon style
 
-BENCHMARK: a confident mid-century cut-paper poster — a few big flat shapes, nothing fussy.`;
+BENCHMARK: a confident mid-century screen-print poster — flat, graphic and clear, with a little detail where the story needs it.`;
   }
 
   if (variant === 'handmade') {
