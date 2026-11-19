@@ -6,7 +6,6 @@ import { ReadingNow, MilestoneNote, DeskLookTracker } from "@/components/pulse/P
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { AppLayout } from "@/components/AppLayout";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { AddStoryDialog } from "@/components/manual/AddStoryDialog";
@@ -20,7 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
-import { ExternalLink, Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { LiveFeedControl } from "@/components/feed/LiveFeedControl";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
@@ -558,7 +558,7 @@ const TopicDashboard = () => {
     }
   };
 
-  // The Live/Draft switch is on screen and one tap undoes it, so no confirm box and no toast on success
+  // Going live is one tap; going offline is confirmed inside LiveFeedControl. No toast on success.
   const handlePublishToggle = async (newState: boolean) => {
     if (!topic) return;
     try {
@@ -637,27 +637,17 @@ const TopicDashboard = () => {
       <div className="min-h-dvh bg-background">
         <div className="container mx-auto px-4 py-6">
 
-          {/* Simplified Header — name + toggle + view feed icon */}
-          <div className="flex items-center justify-between mb-6">
+          {/* Header — feed name left; reading now + live status right */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <h1 className="font-display text-[32px] leading-tight font-normal">{topic.name}</h1>
             <div className="flex items-center gap-3">
-              <h1 className="font-display text-[32px] leading-tight font-normal">{topic.name}</h1>
-              <span className="flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1">
-                <span className="text-sm text-muted-foreground" id="publish-toggle-label">{topic.is_public ? "Live" : "Draft"}</span>
-                <Switch
-                  id="publish-toggle"
-                  aria-labelledby="publish-toggle-label"
-                  checked={topic.is_public}
-                  onCheckedChange={handlePublishToggle}
-                />
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-            <ReadingNow />
-            <Button variant="ghost" size="icon" asChild>
-              <Link to={`/feed/${topic.slug}`} target="_blank" aria-label="Open feed" title="Open feed">
-                <ExternalLink className="w-4 h-4" />
-              </Link>
-            </Button>
+              <ReadingNow />
+              <LiveFeedControl
+                isLive={topic.is_public}
+                feedName={topic.name}
+                feedPath={`/feed/${topic.slug}`}
+                onChange={handlePublishToggle}
+              />
             </div>
           </div>
 

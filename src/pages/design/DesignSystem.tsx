@@ -18,6 +18,7 @@ import { DeskCard, DeskBadge, MetaLine } from "@/components/topic-pipeline/DeskC
 import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
 import { AttentionTag } from "@/components/events/DeskEvents";
 import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
+import { LiveFeedControl } from "@/components/feed/LiveFeedControl";
 
 /**
  * /design — the workspace design system, rendered from the parts the Desk already uses.
@@ -201,6 +202,10 @@ export default function DesignSystem() {
               <Button variant="outline">Gather</Button>
               <Button variant="ghost">Skip</Button>
               <IconAction label="Gather all now"><RefreshCw className="h-4 w-4" /></IconAction>
+            </div>
+            <div className="flex flex-wrap items-center gap-8">
+              <LiveFeedControl isLive feedName="Eastbourne" feedPath="/feed/eastbourne" onChange={() => {}} />
+              <LiveFeedControl isLive={false} feedName="Eastbourne" feedPath="/feed/eastbourne" onChange={() => {}} />
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <AutopilotPill />
