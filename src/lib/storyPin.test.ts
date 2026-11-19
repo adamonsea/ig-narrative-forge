@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/storyPin.test.ts
+// run with: bun test ./src/lib/storyPin.test.ts
 import { describe, expect, it } from "bun:test";
 import { PIN_LENGTHS, activePinId, pinLeadsEmail, pinTimeLeft, withPinnedFirst } from "./storyPin";
 

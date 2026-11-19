@@ -4,8 +4,8 @@ export interface FeedBlueprint {
   feed_title: string;
   purpose: string;
   sample_story_hooks: string[];
-  keywords?: string[];
-  suggested_sources?: string[];
+  keywords?: string[] | undefined;
+  suggested_sources?: string[] | undefined;
 }
 
 export interface PendingBlueprint {

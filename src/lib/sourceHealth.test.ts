@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/sourceHealth.test.ts
+// run with: bun test ./src/lib/sourceHealth.test.ts
 import { describe, expect, it } from "bun:test";
 import { attentionOrder, eventSourceHealth, newsSourceHealth, typicalGapDays } from "./sourceHealth";
 

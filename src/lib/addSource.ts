@@ -19,5 +19,5 @@ export function addSourceNameFromLink(raw: string): string {
   const parts = host.split('.');
   const generic = new Set(['co', 'com', 'org', 'net', 'gov', 'ac', 'uk', 'io', 'news', 'info']);
   const label = parts.find((p, i) => i < parts.length - 1 && !generic.has(p) && !['feeds', 'rss', 'news', 'm'].includes(p)) || parts[0];
-  return label.split(/[-_]/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return label!.split(/[-_]/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }

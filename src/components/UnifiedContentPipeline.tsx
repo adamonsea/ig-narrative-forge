@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,19 +33,19 @@ interface Topic {
   name: string;
   topic_type: 'regional' | 'keyword';
   is_active: boolean;
-  keywords?: string[];
-  landmarks?: string[];
-  organizations?: string[];
-  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
-  default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
-  auto_simplify_enabled?: boolean;
-  automation_quality_threshold?: number;
+  keywords?: string[] | undefined;
+  landmarks?: string[] | undefined;
+  organizations?: string[] | undefined;
+  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined;
+  default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined;
+  auto_simplify_enabled?: boolean | undefined;
+  automation_quality_threshold?: number | undefined;
 }
 
 type DeskArea = 'happened' | 'live' | 'coming';
 
 interface UnifiedContentPipelineProps {
-  selectedTopicId?: string;
+  selectedTopicId?: string | undefined;
 }
 
 export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ selectedTopicId: propTopicId }) => {
@@ -148,14 +149,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           .order('name');
 
         if (error) throw error;
-        setTopics((data || []).map(topic => ({
+        setTopics(((data || []).map(topic => ({
           ...topic,
           topic_type: topic.topic_type as 'regional' | 'keyword',
           default_writing_style: topic.default_writing_style as 'journalistic' | 'educational' | 'listicle' | 'story_driven'
-        })));
+        }))) as unknown as Topic[]);
 
         if (data && data.length > 0 && !selectedTopicId && !propTopicId) {
-          setSelectedTopicId(data[0].id);
+          setSelectedTopicId(data[0]!.id);
         }
       } catch (error) {
         console.error('Error loading topics:', error);
@@ -183,7 +184,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           .eq('id', selectedTopicId)
           .single();
         if (error) throw error;
-        if (data) setTopicSlug(data.slug);
+        if (data) setTopicSlug(data.slug!);
       } catch (error) {
         console.error('Error loading topic slug:', error);
       }
@@ -301,7 +302,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         try {
           for (const [key, groupIds] of groups) {
             const [status, pub] = key.split('|');
-            await supabase.from('stories').update({ status, is_published: pub === 'true' }).in('id', groupIds);
+            await supabase.from('stories').update({ ...opt("status", status), is_published: pub === 'true' }).in('id', groupIds);
           }
         } finally {
           setSkipped(ids, false);
@@ -475,7 +476,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     mobileArea === area ? 'block' : 'hidden lg:block',
     area === 'live' ? 'bg-mint-soft lg:rounded-xl lg:border lg:p-4 lg:shadow-sm' : 'lg:rounded-xl lg:border lg:border-border/60 lg:bg-muted/40 lg:p-3',
   );
-  const areaTabs: { key: DeskArea; label: string; count?: number }[] = [
+  const areaTabs: { key: DeskArea; label: string; count?: number | undefined }[] = [
     { key: 'happened', label: 'Story pool', count: newsCount },
     { key: 'live', label: 'Live now' },
     { key: 'coming', label: 'Event pool', count: eventsToCheck.length },
@@ -714,14 +715,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               loading={loading}
               topicSlug={topicSlug}
               topicId={selectedTopicId}
-              storyReads={pulse?.story_reads}
+              {...opt("storyReads", pulse?.story_reads)}
               risingStoryId={pulse?.rising_story_id ?? null}
-              readingNowIds={pulse?.reading_now_story_ids}
+              {...opt("readingNowIds", pulse?.reading_now_story_ids)}
               totalPublishedCount={totalPublishedCount}
               hasMorePublished={hasMorePublished}
               loadingMorePublished={loadingMorePublished}
               onLoadMorePublished={loadMorePublished}
-              renderAfterFeedPosition={renderWhatsOnAfter}
+              {...opt("renderAfterFeedPosition", renderWhatsOnAfter)}
             />
           )}
           <p className="flex items-center gap-1.5 pt-1 text-sm text-muted-foreground">
@@ -737,8 +738,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             {eventsToCheck.length > 0 && <AttentionTag>{eventsToCheck.length} to check</AttentionTag>}
             <div className="ml-auto">
               <EventsSettings on={eventsOn} disabled={!eventDesk} onChange={eventActions.setEventsOn}
-                showInFeed={eventDesk?.showInFeed} onShowInFeedChange={eventActions.setShowInFeed}
-                suggestOn={eventDesk?.readerSuggestions} onSuggestChange={eventActions.setReaderSuggestions} />
+                {...opt("showInFeed", eventDesk?.showInFeed)} onShowInFeedChange={eventActions.setShowInFeed}
+                {...opt("suggestOn", eventDesk?.readerSuggestions)} onSuggestChange={eventActions.setReaderSuggestions} />
             </div>
           </div>
           {eventsOn && (

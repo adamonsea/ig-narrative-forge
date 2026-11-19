@@ -71,7 +71,7 @@ export const useStoriesReactionsBatch = (storyIds: string[], topicId: string) =>
         const { data, error } = await supabase.rpc('get_story_reaction_counts_batch', {
           p_story_ids: newStoryIds,
           p_visitor_id: visitorId,
-          p_user_id: userId,
+          p_user_id: userId!,
         });
 
         if (error) {

@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/illustrationGate.test.ts
+// run with: bun test ./src/lib/illustrationGate.test.ts
 import { describe, expect, it } from "bun:test";
 import { feedAllowsAutoPictures, isLiveStory, needsPublishIllustration } from "../../supabase/functions/_shared/illustration-gate.ts";
 

@@ -13,15 +13,15 @@ interface OnboardingSettingsProps {
   topic: {
     id: string;
     name: string;
-    slug?: string;
+    slug?: string | undefined;
     branding_config?: {
-      welcome_card_enabled?: boolean;
-      welcome_card_headline?: string;
-      welcome_card_cta_text?: string;
-      welcome_card_about_link?: boolean;
-      about_page_enabled?: boolean;
-      about_page_content?: string;
-      about_page_photo_url?: string;
+      welcome_card_enabled?: boolean | undefined;
+      welcome_card_headline?: string | undefined;
+      welcome_card_cta_text?: string | undefined;
+      welcome_card_about_link?: boolean | undefined;
+      about_page_enabled?: boolean | undefined;
+      about_page_content?: string | undefined;
+      about_page_photo_url?: string | undefined;
       [key: string]: any;
     };
   };

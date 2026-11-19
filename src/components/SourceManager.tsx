@@ -108,7 +108,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       });
       setShowAddForm(false);
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding source:', error);
       toast({
         title: 'Error',
@@ -136,7 +136,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       });
 
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating source:', error);
       toast({
         title: 'Error',
@@ -212,7 +212,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       });
 
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting source:', error);
       toast({
         title: 'Error',
@@ -298,7 +298,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       }
 
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gathering error:', error);
       toast({
         title: 'Gathering Failed',
@@ -351,7 +351,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
           } else {
             failedSources++;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Failed to scrape ${source.source_name}:`, error);
           failedSources++;
         }
@@ -366,7 +366,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       });
 
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Bulk content gathering error:', error);
       toast({
         title: 'Bulk Gathering Failed',

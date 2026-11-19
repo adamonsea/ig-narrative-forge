@@ -42,7 +42,7 @@ export function QueueManager() {
     setIsRetriggering(true);
     try {
       const payload: Record<string, unknown> = { manual: true };
-      if (selectedRegion && selectedRegion !== 'all') payload.region = selectedRegion;
+      if (selectedRegion && selectedRegion !== 'all') payload['region'] = selectedRegion;
 
       const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories', {
         body: payload,
@@ -85,7 +85,7 @@ export function QueueManager() {
       };
 
       setStats(newStats);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load queue stats:', error);
       toast({
         title: "Error",
@@ -118,7 +118,7 @@ export function QueueManager() {
 
       // Reload stats after processing
       setTimeout(loadStats, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to process queue:', error);
       toast({
         title: "Error",
@@ -152,7 +152,7 @@ export function QueueManager() {
       });
 
       loadStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to reset jobs:', error);
       toast({
         title: "Error",

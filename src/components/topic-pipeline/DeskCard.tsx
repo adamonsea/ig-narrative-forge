@@ -22,31 +22,31 @@ export function MetaLine({ parts }: { parts: ReactNode[] }) {
 
 interface DeskCardProps {
   title: string;
-  thumbnailUrl?: string | null;
-  thumbClassName?: string;
-  thumbTitle?: string;
+  thumbnailUrl?: string | null | undefined;
+  thumbClassName?: string | undefined;
+  thumbTitle?: string | undefined;
   /** Badges that are true right now (Rising, Scheduled, Ready…), shown before the quiet line. */
-  badges?: ReactNode;
+  badges?: ReactNode | undefined;
   /** The one quiet line under the headline. */
   meta: ReactNode;
   /** At most two actions, shown on hover (or on the first tap on touch screens). */
   actions: ReactNode;
   /** Keep the actions showing (e.g. while one is running). */
-  keepActions?: boolean;
+  keepActions?: boolean | undefined;
   /** Actions always showing on their own row (items waiting on the owner). */
-  pinActions?: boolean;
+  pinActions?: boolean | undefined;
   /** Click to open the item (e.g. its drawer). Without it the card only reveals its actions. */
   onOpen?: () => void;
   /** Replaces the thumbnail, e.g. an event's date tile. */
-  visual?: ReactNode;
+  visual?: ReactNode | undefined;
   /** Faded, for items that rank below the rest. */
-  faded?: boolean;
+  faded?: boolean | undefined;
   /** Something before the thumbnail, e.g. a selection tick box. */
-  leading?: ReactNode;
+  leading?: ReactNode | undefined;
   /** Something under the quiet line, e.g. the similar-reports fold. */
-  footer?: ReactNode;
-  className?: string;
-  id?: string;
+  footer?: ReactNode | undefined;
+  className?: string | undefined;
+  id?: string | undefined;
 }
 
 /** A calm Desk card: at rest a thumbnail, headline and one quiet line; actions on hover; click to open. */
@@ -149,7 +149,7 @@ export function DeskBadge({ children, tone = "muted" }: { children: ReactNode; t
  * (first in the row, gap after it) so it is fast to reach but hard to hit by mistake.
  * Undo comes from the toast the handler shows.
  */
-export function SpikeButton({ label = "Skip", onClick, disabled }: { label?: string; onClick: () => void; disabled?: boolean }) {
+export function SpikeButton({ label = "Skip", onClick, disabled }: { label?: string | undefined; onClick: () => void; disabled?: boolean | undefined }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -173,7 +173,7 @@ export function SpikeButton({ label = "Skip", onClick, disabled }: { label?: str
  * kept apart from the spike (opposing actions never sit together). One click pins for
  * 24 hours; on a pinned story it unpins. Longer pin lengths live in the story drawer.
  */
-export function PinButton({ pinned = false, onClick, disabled, busy }: { pinned?: boolean; onClick: () => void; disabled?: boolean; busy?: boolean }) {
+export function PinButton({ pinned = false, onClick, disabled, busy }: { pinned?: boolean | undefined; onClick: () => void; disabled?: boolean | undefined; busy?: boolean | undefined }) {
   const label = pinned ? "Unpin" : "Pin to top for 24 hours";
   return (
     <Tooltip>

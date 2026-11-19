@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link } from "@/lib/router-compat";
 import { LogOut } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";

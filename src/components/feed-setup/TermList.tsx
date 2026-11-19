@@ -24,16 +24,16 @@ export function TermList({
   children,
 }: {
   label: string;
-  hint?: string;
+  hint?: string | undefined;
   terms: string[];
   onAdd: (term: string) => void;
   onRemove: (term: string) => void;
-  tone?: "more" | "less";
-  placeholder?: string;
+  tone?: "more" | "less" | undefined;
+  placeholder?: string | undefined;
   /** A short, temporary note under the input, e.g. "“pier” moved from Less of this". */
-  notice?: string | null;
-  headerAction?: React.ReactNode;
-  children?: React.ReactNode;
+  notice?: string | null | undefined;
+  headerAction?: React.ReactNode | undefined;
+  children?: React.ReactNode | undefined;
 }) {
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");

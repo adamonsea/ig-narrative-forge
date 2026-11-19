@@ -1,5 +1,6 @@
+import { opt } from "@/lib/optionalProps";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "@/lib/router-compat";
 import { Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -20,7 +21,7 @@ export function HappenedSettings({ topicId, onChanged }: { topicId: string; onCh
         <SheetHeader className="text-left">
           <SheetTitle className="text-lg">News</SheetTitle>
         </SheetHeader>
-        {open && <AutopilotBasics topicId={topicId} onChanged={onChanged} />}
+        {open && <AutopilotBasics topicId={topicId} {...opt("onChanged", onChanged)} />}
         <Button variant="outline" asChild onClick={() => setOpen(false)}>
           <Link to={`${pathname}?tab=settings&section=automation`}>All news settings</Link>
         </Button>

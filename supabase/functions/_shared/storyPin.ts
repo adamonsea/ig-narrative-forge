@@ -38,7 +38,7 @@ export function withPinnedFirst<T extends { id: string }>(items: T[], pinnedId: 
   if (!pinnedId) return items;
   const i = items.findIndex((x) => x.id === pinnedId);
   if (i <= 0) return items;
-  return [items[i], ...items.slice(0, i), ...items.slice(i + 1)];
+  return [items[i]!, ...items.slice(0, i), ...items.slice(i + 1)];
 }
 
 /**

@@ -72,7 +72,7 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
           return d.toISOString().split('T')[0] === dateStr;
         }).length;
 
-        dailyData.push({ date: dateStr, gathered: dayGathered, published: 0, displayDate });
+        dailyData.push({ date: dateStr ?? '', gathered: dayGathered, published: 0, displayDate });
       }
 
       const gathered = thisWeekGathered.length;

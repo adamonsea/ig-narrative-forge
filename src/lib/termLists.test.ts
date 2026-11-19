@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/termLists.test.ts
+// run with: bun test ./src/lib/termLists.test.ts
 import { describe, expect, test } from "bun:test";
 import { addToList, dedupeTerms, removeTerm, visibleTerms, freshSuggestions } from "./termLists";
 

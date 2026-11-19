@@ -14,14 +14,14 @@ interface ScrapeResult {
   sourceId: string;
   sourceName: string;
   success: boolean;
-  articlesFound?: number;
-  articlesScraped?: number;
-  articlesStored?: number;  // Actually stored articles
-  rejectedLowRelevance?: number;
-  rejectedLowQuality?: number;
-  rejectedCompeting?: number;
-  method?: string;
-  error?: string;
+  articlesFound?: number | undefined;
+  articlesScraped?: number | undefined;
+  articlesStored?: number | undefined;  // Actually stored articles
+  rejectedLowRelevance?: number | undefined;
+  rejectedLowQuality?: number | undefined;
+  rejectedCompeting?: number | undefined;
+  method?: string | undefined;
+  error?: string | undefined;
 }
 
 interface UniversalScrapeResponse {
@@ -32,7 +32,7 @@ interface UniversalScrapeResponse {
   successfulSources: number;
   totalArticles: number;
   results: ScrapeResult[];
-  error?: string;
+  error?: string | undefined;
 }
 
 interface UniversalTopicScraperProps {
@@ -117,7 +117,7 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
         variant: hasNewContent ? "success" : "muted",
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Universal scraping error:', error);
       console.error('Scraping error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -164,7 +164,7 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
         description: `Processed ${data.topicsProcessed} topics, scraped ${data.totalArticles} articles`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Automation test error:', error);
       toast({
         title: "Automation Test Failed",

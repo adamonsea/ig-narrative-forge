@@ -13,7 +13,7 @@ interface BuildPhase {
 interface StoryPreview {
   id: string;
   title: string;
-  source_name?: string;
+  source_name?: string | undefined;
 }
 
 interface FeedBuildProgressProps {
@@ -22,7 +22,7 @@ interface FeedBuildProgressProps {
   topicName: string;
   sourceIds: string[];
   /** Shown when only some of the chosen sources could be connected. */
-  connectedNote?: string;
+  connectedNote?: string | undefined;
   onComplete: (stories: StoryPreview[]) => void;
   onError: (error: string) => void;
 }

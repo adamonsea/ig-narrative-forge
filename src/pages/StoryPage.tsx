@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "@/lib/router-compat";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,10 +30,10 @@ interface Story {
   article: {
     source_url: string;
     region: string;
-    published_at?: string;
+    published_at?: string | undefined;
   };
-  canonicalStoryId?: string; // The original story ID for duplicate content
-  canonicalTopicSlug?: string; // The topic slug of the original story
+  canonicalStoryId?: string | undefined; // The original story ID for duplicate content
+  canonicalTopicSlug?: string | undefined; // The topic slug of the original story
 }
 
 interface Topic {
@@ -42,9 +42,9 @@ interface Topic {
   slug: string;
   topic_type: 'regional' | 'keyword';
   branding_config?: {
-    logo_url?: string;
-    icon_url?: string;
-    subheader?: string;
+    logo_url?: string | undefined;
+    icon_url?: string | undefined;
+    subheader?: string | undefined;
   };
 }
 

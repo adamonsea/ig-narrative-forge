@@ -25,7 +25,7 @@ export function SiteStatsPanel() {
 
   const excludeLink = `${window.location.origin}/?exclude_me=1`;
 
-  const Row = ({ label, value, note }: { label: string; value: number | string; note?: string }) => (
+  const Row = ({ label, value, note }: { label: string; value: number | string; note?: string | undefined }) => (
     <div className="flex items-baseline justify-between border-b border-border py-3">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-right">

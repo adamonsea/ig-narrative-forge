@@ -19,8 +19,8 @@ import { CheckCircle, AlertCircle, Lightbulb, DollarSign, Zap } from 'lucide-rea
 
 interface PromptOptimizerProps {
   onOptimizedPrompt?: (prompt: string, provider: 'openai' | 'deepseek') => void;
-  initialPrompt?: string;
-  className?: string;
+  initialPrompt?: string | undefined;
+  className?: string | undefined;
 }
 
 export const PromptOptimizer: React.FC<PromptOptimizerProps> = ({ 

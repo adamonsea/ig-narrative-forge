@@ -1,15 +1,15 @@
-// @ts-nocheck -- run with: bun test ./src/lib/feedSetup.test.ts
+// run with: bun test ./src/lib/feedSetup.test.ts
 import { describe, expect, test } from "bun:test";
 import { slugify, nameCandidate, addTerm, draftFromSuggestion, topicInsertFromDraft, automationFromDraft } from "./feedSetup";
 import { FEATURES } from "./featureFlags";
 
 const pokemon = {
-  name: "Pokémon Pulse", topic_type: "keyword", region: null, description: "Pokémon news.",
+  name: "Pokémon Pulse", topic_type: "keyword" as "keyword" | "regional", region: null, description: "Pokémon news.",
   keywords: ["pokémon"], negative_keywords: ["pokemon go plus"], colour: "#E3350D",
   illustration_style: "illustrated_icon", welcome: "Pokémon news, every day.", brand_or_fandom: true, family_safe: true,
 };
 const eastbourne = {
-  ...pokemon, name: "Eastbourne Today", topic_type: "regional", region: "Eastbourne",
+  ...pokemon, name: "Eastbourne Today", topic_type: "regional" as "keyword" | "regional", region: "Eastbourne",
   illustration_style: "editorial_illustrative", brand_or_fandom: false, family_safe: false,
 };
 

@@ -4,8 +4,8 @@ import { CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
 
 interface StatusIndicatorProps {
   status: 'success' | 'pending' | 'error' | 'warning';
-  text?: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  text?: string | undefined;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | undefined;
 }
 
 export function StatusIndicator({ status, text, size = 'md' }: StatusIndicatorProps) {

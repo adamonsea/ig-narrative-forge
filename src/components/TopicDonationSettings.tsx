@@ -29,7 +29,7 @@ export const TopicDonationSettings = ({ topicId, donationEnabled, donationConfig
   const [state, setState] = useState<SaveState>(null);
   const lastSaved = useRef(JSON.stringify({ enabled: donationEnabled, buttonText: donationConfig.button_text, tiers: publishableTiers(donationConfig.tiers || []) }));
 
-  const save = async (next: { enabled?: boolean; buttonText?: string; tiers?: DonationTier[] } = {}) => {
+  const save = async (next: { enabled?: boolean | undefined; buttonText?: string | undefined; tiers?: DonationTier[] | undefined } = {}) => {
     const e = next.enabled ?? enabled;
     const b = (next.buttonText ?? buttonText).trim() || "Support this feed";
     const t = publishableTiers(next.tiers ?? tiers);

@@ -10,7 +10,7 @@ interface EndOfFeedFlowProps {
   topicName: string;
   topicId: string;
   topicSlug: string;
-  topicIcon?: string;
+  topicIcon?: string | undefined;
 }
 
 export const EndOfFeedFlow = ({ topicName, topicId, topicSlug, topicIcon }: EndOfFeedFlowProps) => {

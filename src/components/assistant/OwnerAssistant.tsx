@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { ArrowUp, HelpCircle, Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,15 @@ interface Action {
 interface Nudge {
   title: string;
   body: string;
-  destination?: string;
+  destination?: string | undefined;
 }
 
 interface Turn {
   role: "user" | "assistant";
   content: string;
-  steps?: string[];
-  actions?: Action[];
-  nudge?: Nudge | null;
+  steps?: string[] | undefined;
+  actions?: Action[] | undefined;
+  nudge?: Nudge | null | undefined;
 }
 
 const OPENING_PILLS = [

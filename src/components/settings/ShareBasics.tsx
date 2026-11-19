@@ -48,8 +48,8 @@ export function ShareBasics({
       if (!widgetEnabled) {
         // The widget only shows headlines once it is switched on for this feed.
         const { data, error } = await supabase.rpc("set_topic_distribution" as never, { p_topic_id: topicId, p_field: "public_widget_builder_enabled", p_enabled: true } as never);
-        if ((data as { error?: string } | null)?.error === "pro_required") { onProRequired?.(); return; }
-        if (error || (data as { success?: boolean } | null)?.success === false) throw new Error(error?.message || "The widget could not be switched on");
+        if ((data as { error?: string | undefined } | null)?.error === "pro_required") { onProRequired?.(); return; }
+        if (error || (data as { success?: boolean | undefined } | null)?.success === false) throw new Error(error?.message || "The widget could not be switched on");
         onTopicPatch({ public_widget_builder_enabled: true });
       }
       await navigator.clipboard.writeText(defaultWidgetCode(slug, window.location.origin));

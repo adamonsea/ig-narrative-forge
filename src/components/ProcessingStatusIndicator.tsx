@@ -5,14 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface ProcessingStatusIndicatorProps {
   sourceId: string;
-  className?: string;
+  className?: string | undefined;
 }
 
 interface GatheringStatus {
   isActive: boolean;
-  startTime?: number;
-  estimatedDuration?: number;
-  progress?: number;
+  startTime?: number | undefined;
+  estimatedDuration?: number | undefined;
+  progress?: number | undefined;
 }
 
 export function ProcessingStatusIndicator({ sourceId, className }: ProcessingStatusIndicatorProps) {
@@ -73,7 +73,7 @@ export function ProcessingStatusIndicator({ sourceId, className }: ProcessingSta
 
       if (activeJobs && activeJobs.length > 0) {
         const job = activeJobs[0];
-        const startTime = job.started_at ? new Date(job.started_at).getTime() : new Date(job.created_at).getTime();
+        const startTime = job!.started_at ? new Date(job!.started_at).getTime() : new Date(job!.created_at).getTime();
         
         setStatus({
           isActive: true,

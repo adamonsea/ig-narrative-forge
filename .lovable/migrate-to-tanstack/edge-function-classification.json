@@ -1,0 +1,1132 @@
+{
+ "functions": [
+  {
+   "name": "admin-vouchers",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "ai-scraper-recovery",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "analytics-dashboard",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "animate-illustration",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-cleanup-duplicates",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-deactivate-failing-sources",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-detect-regional-mps",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-generate-topic-keywords",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-illustrate-stories",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-populate-regional-keywords",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-recover-stuck-stories",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "auto-simplify-queue",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "automated-roundup-notifier",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "automated-scheduler",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "backfill-discarded-articles",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "backfill-keyword-analytics",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "backfill-parliamentary-metadata",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "backfill-sentiment-card-sources",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "backfill-sentiment-tracking",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "backfill-story-linkage",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "backup-topics",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "beautiful-soup-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "bulk-cleanup-articles",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "charge-studio-action",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "check-subscription",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "classify-stories",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "clean-slate-migration",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "cleanup-invalid-parliamentary-mentions",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "cleanup-misplaced-articles",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "cleanup-offtracking-parliamentary-votes",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "cleanup-parliamentary-test-data",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "cleanup-stale-source-errors",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "cleanup-temp-uploads",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "clear-old-events",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "clear-sentiment-keywords",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "clear-swipe-history",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "content-extractor",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "content-extractor-multi-tenant",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "content-quality-analyzer",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "coverage-suggestions",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "create-checkout",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "customer-portal",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "daily-content-monitor",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "deactivate-sources",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "dedupe-topic-stories",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "delete-cover-option",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "delete-story-animation",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "delete-story-cascade",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "delete-story-illustration",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "detect-orphaned-stories",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "discover-article-urls",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "discover-taxonomy",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "drip-feed-scheduler",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "duplicate-cleanup",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "duplicate-detector",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "duplicate-prevention-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "emergency-scrape-fix",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "emergency-scrape-test",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "emergency-source-fix",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "enhanced-content-generator",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "enhanced-source-validator",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "error-logger",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "expire-stale-arrivals",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "extract-content-from-upload",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "feed-ideas",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "feed-lead-nudge",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "fetch-current-mps",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "firecrawl-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "fix-future-dated-article",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "fix-source-urls",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "fix-topic-keywords",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-audio-briefing",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-daily-roundup",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-og-image",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-period-review",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-quiz-questions",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-sentiment-card",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-social-proof-cards",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-story-momentum-cards",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "generate-weekly-roundup",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "health-check",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "hybrid-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "illustration-batch-poller",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "image-model-bench",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "ingest-chamber-events",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "insight-card-scheduler",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "intelligent-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "job-processor",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "keyword-rescan-trigger",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "landmark-photos",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "manual-topic-scrape",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "mark-article-discarded",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "mcp-entitlements-admin",
+   "classification": "MCP server",
+   "signal": "MCP handler, fixed public URL",
+   "outcome": "left"
+  },
+  {
+   "name": "mcp-feed",
+   "classification": "MCP server",
+   "signal": "MCP handler, fixed public URL",
+   "outcome": "left"
+  },
+  {
+   "name": "midjourney-image-generator",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "multi-tenant-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "newsquest-arc-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "openai-usage-tracker",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "optimize-branding-image",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "optimize-existing-images",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "owner-assistant",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "phase2-verification",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "pipeline-cleanup",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "platform-outage-alert",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "promote-topic-article",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "publish-ready-stories",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "purge-negative-keyword-stories",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "queue-alert-monitor",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "queue-processor",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "r",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "re-extract-articles",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "reactivate-and-test-source",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "reactivate-eastbourne-sources",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "reactivate-sources",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "recover-orphaned-urls",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "reddit-community-processor",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "reddit-community-scheduler",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "redeem-voucher",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "resend-webhook",
+   "classification": "webhook receiver",
+   "signal": "verifies external signature / fixed URL",
+   "outcome": "left"
+  },
+  {
+   "name": "reset-stuck-processing",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "reset-swipe-history",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "reset-topic-swipes",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "rss-feed",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "save-push-subscription",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "schedule-insight-cards",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "schedule-recovery",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "scrape-monitor",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "scrape-whats-on",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "screenshot-ai-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "search-console-sync",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "secure-newsletter-signup",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "select-story-cover",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "send-confirmation-email",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "send-email-newsletter",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "send-story-notification",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "sentiment-card-scheduler",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "sentiment-detector",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "sentiment-history-snapshot",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "seo-page",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "share-page",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "shorten-url",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "sitemap-xml",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "social-media-publisher",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "source-cleanup",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "source-health-alerts",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "source-health-monitor",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "source-link-validator",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "story-illustrator",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "submit-quiz-response",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "suggest-content-sources",
+   "classification": "internal-only",
+   "signal": "called from 4 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "suggest-feed-setup",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "suggest-keywords",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "suggest-regional-elements",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "suggest-regional-keywords",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "sync-topic-source-feed-urls",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "test-beautiful-soup",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "test-content-generator",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "test-image-generator",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "test-processing-pipeline",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "test-scraper-fix",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "test-screenshot-minimal",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "topic-automation-monitor",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "topic-aware-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "topic-manifest",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "track-engagement-metric",
+   "classification": "internal-only",
+   "signal": "called from 12 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "uk-parliament-collector",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "unified-scraper",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "universal-platform-fix",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "universal-scraper",
+   "classification": "internal-only",
+   "signal": "called from 3 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "universal-topic-automation",
+   "classification": "cron target",
+   "signal": "called from scheduled jobs in supabase/migrations",
+   "outcome": "left"
+  },
+  {
+   "name": "universal-topic-scraper",
+   "classification": "internal-only",
+   "signal": "called from 7 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "unsubscribe-newsletter",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "update-source-feed-url",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "update-source-metrics",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "update-topic-keywords",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "validate-and-fix-sources",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "validate-content-source",
+   "classification": "internal-only",
+   "signal": "called from 2 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "validate-parliamentary-completeness",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "verify-subscription",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "waitlist-digest",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "waitlist-email-preview",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "waitlist-followup",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "waitlist-questionnaire",
+   "classification": "internal-only",
+   "signal": "called from 1 place(s) in src/; needs secrets and service-role key that live only in the user-managed backend",
+   "outcome": "left"
+  },
+  {
+   "name": "waitlist-send-confirmations",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "waitlist-signup",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "widget-analytics",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "widget-avatar-upload",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  },
+  {
+   "name": "widget-feed-data",
+   "classification": "unknown",
+   "signal": "no call sites in src/ (called by other functions, jobs or outside services)",
+   "outcome": "left"
+  }
+ ]
+}

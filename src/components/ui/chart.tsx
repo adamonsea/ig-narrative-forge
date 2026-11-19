@@ -8,11 +8,11 @@ const THEMES = { light: "", dark: ".dark" } as const
 
 export type ChartConfig = {
   [k in string]: {
-    label?: React.ReactNode
-    icon?: React.ComponentType
+    label?: React.ReactNode | undefined
+    icon?: React.ComponentType | undefined
   } & (
-    | { color?: string; theme?: never }
-    | { color?: never; theme: Record<keyof typeof THEMES, string> }
+    | { color?: string | undefined; theme?: never | undefined }
+    | { color?: never | undefined; theme: Record<keyof typeof THEMES, string> }
   )
 }
 
@@ -104,11 +104,11 @@ const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
     React.ComponentProps<"div"> & {
-      hideLabel?: boolean
-      hideIndicator?: boolean
-      indicator?: "line" | "dot" | "dashed"
-      nameKey?: string
-      labelKey?: string
+      hideLabel?: boolean | undefined
+      hideIndicator?: boolean | undefined
+      indicator?: "line" | "dot" | "dashed" | undefined
+      nameKey?: string | undefined
+      labelKey?: string | undefined
     }
 >(
   (props, ref) => {
@@ -181,7 +181,7 @@ const ChartTooltipContent = React.forwardRef<
       >
         {!nestLabel ? tooltipLabel : null}
         <div className="grid gap-1.5">
-          {payload.map((item, index) => {
+          {payload.map((item: any, index: number) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
             const indicatorColor = color || item.payload.fill || item.color
@@ -204,7 +204,7 @@ const ChartTooltipContent = React.forwardRef<
                       !hideIndicator && (
                         <div
                           className={cn(
-                            "shrink-0 rounded-[2px] border-[--color-border] bg-[--color-bg]",
+                            "shrink-0 rounded-[2px] border-[var(--color-border)] bg-[var(--color-bg)]",
                             {
                               "h-2.5 w-2.5": indicator === "dot",
                               "w-1": indicator === "line",
@@ -257,10 +257,10 @@ const ChartLegend = RechartsPrimitive.Legend
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
-      payload?: any[]
-      verticalAlign?: "top" | "bottom" | "middle"
-      hideIcon?: boolean
-      nameKey?: string
+      payload?: any[] | undefined
+      verticalAlign?: "top" | "bottom" | "middle" | undefined
+      hideIcon?: boolean | undefined
+      nameKey?: string | undefined
     }
 >(
   (

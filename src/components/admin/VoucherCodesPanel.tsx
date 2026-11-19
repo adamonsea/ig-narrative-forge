@@ -35,7 +35,7 @@ interface Voucher {
 
 const describe = (v: Voucher) => {
   if (v.kind === 'free_access') {
-    const plan = v.plan ? v.plan[0].toUpperCase() + v.plan.slice(1) : 'Pro';
+    const plan = v.plan ? v.plan[0]!.toUpperCase() + v.plan.slice(1) : 'Pro';
     return `${plan} free for ${v.free_months ?? 1} month${(v.free_months ?? 1) === 1 ? '' : 's'}`;
   }
   const off = v.percent_off

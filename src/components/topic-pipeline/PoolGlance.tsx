@@ -5,7 +5,7 @@ import { publishedCounts, type PublishedCounts } from "@/lib/deskActivity";
 import { hasStarted, horizonBuckets, londonTime, londonToday, onePerTitle } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 
-export interface GlanceItem { label: string; value: number | null; note?: string }
+export interface GlanceItem { label: string; value: number | null; note?: string | undefined }
 
 /** Three quiet figures side by side: today / this week / this month. */
 export function GlanceTiles({ items }: { items: GlanceItem[] }) {
@@ -65,8 +65,8 @@ export function EventHorizonGlance({ topicId, waiting }: { topicId: string; wait
     let alive = true;
     (async () => {
       const today = londonToday();
-      const [y, m, d] = today.split("-").map(Number);
-      const last = new Date(Date.UTC(y, m - 1, d + 29)).toISOString().slice(0, 10);
+      const [y, m, d] = today.split("-").map(Number) as [number, number, number];
+      const last = new Date(Date.UTC(y, m! - 1, d! + 29)).toISOString().slice(0, 10);
       const { data } = await supabase
         .from("events")
         .select("title, start_date, start_time")
@@ -101,7 +101,7 @@ export function useAutopilotOn(topicId: string) {
   return { on, refresh: load };
 }
 
-export function AutopilotPill({ className }: { className?: string }) {
+export function AutopilotPill({ className }: { className?: string | undefined }) {
   return (
     <span
       className={cn("inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-sm font-medium leading-none text-primary", className)}

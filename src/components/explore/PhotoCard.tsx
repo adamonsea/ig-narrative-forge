@@ -21,11 +21,11 @@ interface PhotoCardProps {
   story: Story;
   position: CardPosition;
   index: number;
-  cardWidth?: number;
+  cardWidth?: number | undefined;
   totalCards: number;
   isAnimating: boolean;
-  isHolding?: boolean;
-  loadPriority?: 'eager' | 'lazy';
+  isHolding?: boolean | undefined;
+  loadPriority?: 'eager' | 'lazy' | undefined;
   onDragStart: () => void;
   onDragEnd: (x: number, y: number) => void;
   onLongPress: () => void;
@@ -138,7 +138,7 @@ const PhotoCardComponent = ({
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     isCurrentInteractionTouch.current = true;
     const touch = e.touches[0];
-    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    touchStartPos.current = { x: touch!.clientX, y: touch!.clientY };
     hasMoved.current = false;
     
     pressTimer.current = setTimeout(() => {
@@ -153,8 +153,8 @@ const PhotoCardComponent = ({
   // Touch move - cancel long press if moved
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
-    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
-    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
+    const dx = Math.abs(touch!.clientX - touchStartPos.current.x);
+    const dy = Math.abs(touch!.clientY - touchStartPos.current.y);
     
     if (dx > 10 || dy > 10) {
       hasMoved.current = true;

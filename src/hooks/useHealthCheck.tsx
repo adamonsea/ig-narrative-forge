@@ -9,12 +9,12 @@ interface HealthCheckResult {
   auth: boolean;
   latency: number | null;
   lastChecked: Date | null;
-  error?: string;
+  error?: string | undefined;
 }
 
 export function useHealthCheck(options?: { 
-  autoCheck?: boolean; 
-  intervalMs?: number;
+  autoCheck?: boolean | undefined; 
+  intervalMs?: number | undefined;
 }) {
   const { autoCheck = false, intervalMs = 60000 } = options || {};
   
@@ -97,6 +97,7 @@ export function useHealthCheck(options?: {
       const interval = setInterval(checkHealth, intervalMs);
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [autoCheck, intervalMs, checkHealth]);
 
   return {

@@ -1,5 +1,5 @@
 import { Gamepad2, Layers, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/lib/router-compat';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,12 +9,12 @@ import {
 
 interface PlayModeMenuProps {
   slug: string;
-  showPulse?: boolean;
-  showLabel?: boolean;
-  className?: string;
-  siftEnabled?: boolean;
+  showPulse?: boolean | undefined;
+  showLabel?: boolean | undefined;
+  className?: string | undefined;
+  siftEnabled?: boolean | undefined;
   /** When true, hides the menu entirely (for when feature is explicitly disabled) */
-  hidden?: boolean;
+  hidden?: boolean | undefined;
 }
 
 export const PlayModeMenu = ({ 

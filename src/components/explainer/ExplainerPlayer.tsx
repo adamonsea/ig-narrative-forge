@@ -13,17 +13,17 @@ const TICK = 50;
 
 interface ExplainerPlayerProps {
   /** Fallback presenter clip used for any scene without its own clip. */
-  avatarSrc?: string;
+  avatarSrc?: string | undefined;
   onClose?: () => void;
   onFinished?: () => void;
   /** Rendered on the end card, e.g. a "Join the waitlist" button. */
-  endCta?: React.ReactNode;
+  endCta?: React.ReactNode | undefined;
   /**
    * Offline export mode: hides player chrome and the presenter bubble, mutes
    * cues, and runs on a pure clock so a headless renderer can capture clean
    * frames. The presenter clip is composited back in by the render script.
    */
-  renderMode?: boolean;
+  renderMode?: boolean | undefined;
 }
 
 export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, renderMode = false }: ExplainerPlayerProps) => {
@@ -40,9 +40,9 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const scene = TIMELINE[index];
-  const avatarClipSrc = renderMode ? undefined : (scene.avatarClip ?? clipForScene(scene.id) ?? avatarSrc);
+  const avatarClipSrc = renderMode ? undefined : (scene!.avatarClip ?? clipForScene(scene!.id) ?? avatarSrc);
   const hasClip = !!avatarClipSrc;
-  const beatMs = sceneDuration(scene);
+  const beatMs = sceneDuration(scene!);
 
   const cue = useCallback((name: CueName) => playCue(name, muted || renderMode), [muted, renderMode]);
   const tap = useCallback((ms: number) => haptic(ms, !prefersReduced), [prefersReduced]);
@@ -73,7 +73,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
     // Failsafe: if the clip never reports playback, start the clock anyway.
     const id = window.setTimeout(() => setClipRolling(true), 2500);
     return () => window.clearTimeout(id);
-  }, [scene.id, hasClip]);
+  }, [scene!.id, hasClip]);
 
   useEffect(() => {
     if (!playing || finished || !clipRolling) return;
@@ -118,7 +118,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
   const filmPosRef = useRef(0);
   filmPosRef.current = filmPosMs;
 
-  useEffect(() => { setSpeaking(false); }, [scene.id]);
+  useEffect(() => { setSpeaking(false); }, [scene!.id]);
 
   // Homepage film play counting (started / halfway / finished).
   useEffect(() => { if (!renderMode) void recordFilmMilestone('started'); }, [renderMode]);
@@ -185,7 +185,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
     return finished ? 100 : ((before + elapsed) / TOTAL_MS) * 100;
   }, [index, elapsed, finished]);
 
-  const SceneComponent = scene.Component;
+  const SceneComponent = scene!.Component;
   const avatarClip = avatarClipSrc;
 
   return (
@@ -196,7 +196,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
         <AnimatePresence mode="wait">
           {!finished ? (
             <motion.div
-              key={scene.id}
+              key={scene!.id}
               className="absolute inset-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -232,7 +232,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
         {/* Presenter slot — one clip per scene, restarted on scene change */}
         {avatarClip && !finished && (
           <video
-            key={scene.id}
+            key={scene!.id}
             ref={videoRef}
             src={avatarClip}
             autoPlay
@@ -268,9 +268,9 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
       {/* Caption */}
       <div className="px-[max(1rem,4vw)] pb-2">
         <AnimatePresence mode="wait">
-          {!finished && scene.caption && (
+          {!finished && scene!.caption && (
             <motion.p
-              key={`cap-${scene.id}`}
+              key={`cap-${scene!.id}`}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -278,7 +278,7 @@ export const ExplainerPlayer = ({ avatarSrc, onClose, onFinished, endCta, render
               className="mx-auto max-w-[46ch] text-center font-display text-[clamp(1.05rem,3.6vw,2.1rem)] leading-snug text-white"
               aria-live="polite"
             >
-              {scene.caption}
+              {scene!.caption}
             </motion.p>
           )}
         </AnimatePresence>

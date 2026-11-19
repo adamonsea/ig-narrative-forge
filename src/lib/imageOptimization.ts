@@ -18,10 +18,10 @@ export function coverPixelWidth(cssWidth: number, maxWidth = 1280): number {
 }
 
 interface ImageOptimizationOptions {
-  width?: number;
-  height?: number;
-  quality?: number;
-  format?: 'webp' | 'origin';
+  width?: number | undefined;
+  height?: number | undefined;
+  quality?: number | undefined;
+  format?: 'webp' | 'origin' | undefined;
 }
 
 /**

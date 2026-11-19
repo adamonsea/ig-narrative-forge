@@ -20,7 +20,7 @@ type DemoStep = 'topic' | 'source' | 'style' | 'build' | 'feed';
 const STEP_ORDER: DemoStep[] = ['topic', 'source', 'style', 'build', 'feed'];
 
 interface DemoFlowProps {
-  isOverlay?: boolean;
+  isOverlay?: boolean | undefined;
 }
 
 export const DemoFlow = ({ isOverlay = false }: DemoFlowProps) => {
@@ -49,7 +49,7 @@ export const DemoFlow = ({ isOverlay = false }: DemoFlowProps) => {
   const goNext = () => {
     const nextIndex = stepIndex + 1;
     if (nextIndex < STEP_ORDER.length) {
-      setStep(STEP_ORDER[nextIndex]);
+      setStep(STEP_ORDER[nextIndex]!);
     }
   };
 

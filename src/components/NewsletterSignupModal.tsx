@@ -22,7 +22,7 @@ interface NewsletterSignupModalProps {
   onClose: () => void;
   topicName: string;
   topicId: string;
-  defaultFrequency?: SubscriptionFrequency;
+  defaultFrequency?: SubscriptionFrequency | undefined;
 }
 
 const frequencyLabels: Record<SubscriptionFrequency, string> = {

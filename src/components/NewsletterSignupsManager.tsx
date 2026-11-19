@@ -34,7 +34,7 @@ interface SubscriberStats {
 }
 
 interface NewsletterSignupsManagerProps {
-  topicId?: string;
+  topicId?: string | undefined;
 }
 
 const getNotificationBadge = (type: string) => {

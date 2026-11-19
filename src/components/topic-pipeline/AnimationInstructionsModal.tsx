@@ -12,19 +12,19 @@ interface AnimationInstructionsModalProps {
   onClose: () => void;
   story: {
     id: string;
-    headline?: string;
-    title?: string;
-    cover_illustration_url?: string | null;
-    cover_illustration_prompt?: string | null;
-    tone?: string | null;
-    animation_suggestions?: string[] | null;
+    headline?: string | undefined;
+    title?: string | undefined;
+    cover_illustration_url?: string | null | undefined;
+    cover_illustration_prompt?: string | null | undefined;
+    tone?: string | null | undefined;
+    animation_suggestions?: string[] | null | undefined;
   } | null;
   onAnimate: (params: {
     quality: AnimationQuality;
-    customPrompt?: string;
+    customPrompt?: string | undefined;
   }) => Promise<void>;
   isAnimating: boolean;
-  creditBalance?: number;
+  creditBalance?: number | undefined;
   isAdmin: boolean;
 }
 

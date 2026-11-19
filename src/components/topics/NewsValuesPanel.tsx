@@ -22,13 +22,13 @@ import {
 
 interface NewsValuesPanelProps {
   topicId: string;
-  region?: string | null;
-  landmarks?: string[] | null;
-  postcodes?: string[] | null;
-  organizations?: string[] | null;
-  localityStrength?: number | null;
-  nearbyPlaces?: unknown;
-  bigStoryOverride?: boolean | null;
+  region?: string | null | undefined;
+  landmarks?: string[] | null | undefined;
+  postcodes?: string[] | null | undefined;
+  organizations?: string[] | null | undefined;
+  localityStrength?: number | null | undefined;
+  nearbyPlaces?: unknown | undefined;
+  bigStoryOverride?: boolean | null | undefined;
   onChange?: (values: { locality_strength: number; nearby_places: NearbyPlace[]; big_story_override: boolean }) => void;
 }
 
@@ -187,18 +187,18 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
             min={1}
             max={5}
             step={1}
-            onValueChange={(v) => setStrength(v[0])}
+            onValueChange={(v) => setStrength(v[0]!)}
           />
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{LOCALITY_DIAL[1].label}</span>
-            <span>{LOCALITY_DIAL[5].label}</span>
+            <span>{LOCALITY_DIAL[1]!.label}</span>
+            <span>{LOCALITY_DIAL[5]!.label}</span>
           </div>
           {preview && (
             <p className="text-sm text-muted-foreground border-t pt-3">
               Of your last {preview.total} arrivals, <strong className="text-foreground">{preview.published}</strong>{' '}
               would publish on their own and {preview.review} would wait for you.
-              {' '}({preview.tiers.home} named your town, {preview.tiers.nearby + preview.tiers.far} a
-              neighbouring place, {preview.tiers.nowhere} named nowhere.)
+              {' '}({preview.tiers['home']} named your town, {preview.tiers['nearby']! + preview.tiers['far']!} a
+              neighbouring place, {preview.tiers['nowhere']} named nowhere.)
             </p>
           )}
         </div>

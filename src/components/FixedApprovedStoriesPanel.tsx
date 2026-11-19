@@ -33,7 +33,7 @@ interface Slide {
   id: string;
   slide_number: number;
   content: string;
-  visual_prompt?: string | null;
+  visual_prompt?: string | null | undefined;
   alt_text: string | null;
   word_count: number;
   story_id: string;
@@ -42,11 +42,11 @@ interface Slide {
 interface StoryArticle {
   id: string;
   title: string;
-  author?: string;
+  author?: string | undefined;
   source_url: string;
-  region?: string;
-  published_at?: string | null;
-  word_count?: number | null;
+  region?: string | undefined;
+  published_at?: string | null | undefined;
+  word_count?: number | null | undefined;
 }
 
 interface CarouselExport {
@@ -55,15 +55,15 @@ interface CarouselExport {
   status: string;
   export_formats: any;
   file_paths: any;
-  zip_url?: string | null;
-  error_message?: string | null;
+  zip_url?: string | null | undefined;
+  error_message?: string | null | undefined;
   created_at: string;
   updated_at: string;
 }
 
 interface CarouselStatus {
   status: 'none' | 'generating' | 'completed' | 'failed';
-  export?: CarouselExport;
+  export?: CarouselExport | undefined;
 }
 
 interface Story {
@@ -71,22 +71,22 @@ interface Story {
   title: string;
   status: string;
   article_id: string;
-  author?: string;
-  publication_name?: string;
+  author?: string | undefined;
+  publication_name?: string | undefined;
   created_at: string;
   slides: Slide[];
-  article?: StoryArticle;
-  content_generation_queue?: any;
-  scheduled_publish_at?: string | null;
-  drip_queued_at?: string | null;
+  article?: StoryArticle | undefined;
+  content_generation_queue?: any | undefined;
+  scheduled_publish_at?: string | null | undefined;
+  drip_queued_at?: string | null | undefined;
   // Lifecycle tracking
-  simplified_at?: string | null;
-  illustration_generated_at?: string | null;
-  animation_generated_at?: string | null;
-  is_auto_gathered?: boolean;
-  is_auto_simplified?: boolean;
-  is_auto_illustrated?: boolean;
-  is_auto_animated?: boolean;
+  simplified_at?: string | null | undefined;
+  illustration_generated_at?: string | null | undefined;
+  animation_generated_at?: string | null | undefined;
+  is_auto_gathered?: boolean | undefined;
+  is_auto_simplified?: boolean | undefined;
+  is_auto_illustrated?: boolean | undefined;
+  is_auto_animated?: boolean | undefined;
 }
 
 export const FixedApprovedStoriesPanel = () => {
@@ -172,7 +172,7 @@ export const FixedApprovedStoriesPanel = () => {
       }));
       
       console.log('✅ Stories with slides:', enrichedStories.length, enrichedStories);
-      setApprovedStories(enrichedStories);
+      setApprovedStories((enrichedStories) as unknown as Story[]);
 
       // Load carousel statuses for all approved stories
       if (enrichedStories.length > 0) {

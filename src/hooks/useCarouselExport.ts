@@ -16,13 +16,13 @@ interface Story {
   id: string;
   title: string;
   slides: Slide[];
-  author?: string | null;
-  publication_name?: string | null;
+  author?: string | null | undefined;
+  publication_name?: string | null | undefined;
   article?: {
     source_url: string;
-    region?: string;
-    published_at?: string | null;
-  };
+    region?: string | undefined;
+    published_at?: string | null | undefined;
+  } | undefined;
 }
 
 interface ExportState {
@@ -33,7 +33,7 @@ interface ExportState {
 }
 
 interface ExportOptions {
-  storyUrl?: string | null;
+  storyUrl?: string | null | undefined;
 }
 
 const buildCaption = (story: Story, topicName: string, storyUrl?: string | null): string => {
@@ -66,7 +66,7 @@ export const useCarouselExport = () => {
 
   const exportStory = useCallback(async (
     story: Story,
-    SlideRenderer: React.FC<{ story: Story; slideIndex: number; topicName: string; aspect?: SlideAspect }>,
+    SlideRenderer: React.FC<{ story: Story; slideIndex: number; topicName: string; aspect?: SlideAspect | undefined }>,
     topicName: string = 'News',
     options: ExportOptions = {}
   ) => {

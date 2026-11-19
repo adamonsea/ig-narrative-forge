@@ -28,7 +28,7 @@ interface VotingRecord {
   national_relevance_score: number;
   local_impact_summary: string;
   is_major_vote: boolean;
-  vote_context?: string | null;
+  vote_context?: string | null | undefined;
 }
 
 interface VotingRecordPanelProps {

@@ -66,7 +66,7 @@ export const AnalyticsDashboard = () => {
       } else {
         throw new Error(data.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading analytics:', error);
       toast({
         title: "Error loading analytics",

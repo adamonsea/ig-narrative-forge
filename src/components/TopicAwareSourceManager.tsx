@@ -1,14 +1,14 @@
 import { UnifiedSourceManager } from "./UnifiedSourceManager";
 
 interface TopicAwareSourceManagerProps {
-  selectedTopicId?: string;
+  selectedTopicId?: string | undefined;
   onSourcesChange: () => void;
-  topicName?: string;
-  description?: string;
-  keywords?: string[];
-  topicType?: 'regional' | 'keyword';
-  region?: string;
-  articleCount?: number;
+  topicName?: string | undefined;
+  description?: string | undefined;
+  keywords?: string[] | undefined;
+  topicType?: 'regional' | 'keyword' | undefined;
+  region?: string | undefined;
+  articleCount?: number | undefined;
 }
 
 export const TopicAwareSourceManager = ({ 

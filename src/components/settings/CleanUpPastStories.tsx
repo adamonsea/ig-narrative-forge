@@ -25,7 +25,7 @@ interface Match {
  * published story that matches Less of this. Stories are only removed after
  * the owner confirms in the dialog.
  */
-export function CleanUpPastStories({ topicId, disabled }: { topicId: string; disabled?: boolean }) {
+export function CleanUpPastStories({ topicId, disabled }: { topicId: string; disabled?: boolean | undefined }) {
   const { toast } = useToast();
   const [scanning, setScanning] = useState(false);
   const [removing, setRemoving] = useState(false);

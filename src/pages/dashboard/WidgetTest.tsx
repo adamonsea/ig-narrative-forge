@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useTopics } from "@/hooks/useTopics";
@@ -16,15 +16,15 @@ const SUPABASE_URL = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1";
 interface WidgetData {
   feed?: {
     name: string;
-    logo_url?: string;
-    brand_color?: string;
-  };
+    logo_url?: string | undefined;
+    brand_color?: string | undefined;
+  } | undefined;
   stories?: Array<{
     id: string;
     title: string;
     published_at: string;
   }>;
-  error?: string;
+  error?: string | undefined;
 }
 
 export default function WidgetTest() {
@@ -46,7 +46,7 @@ export default function WidgetTest() {
   // Set default feed when topics load
   useEffect(() => {
     if (topics && topics.length > 0 && !selectedFeed) {
-      setSelectedFeed(topics[0].slug);
+      setSelectedFeed(topics[0]!.slug);
     }
   }, [topics, selectedFeed]);
 

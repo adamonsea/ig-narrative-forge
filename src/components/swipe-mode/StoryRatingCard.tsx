@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { supabase } from '@/integrations/supabase/client';
 import { Heart, ThumbsDown, Gamepad2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 interface StoryRatingCardProps {
   storyId: string;
-  topicSlug?: string;
+  topicSlug?: string | undefined;
 }
 
 interface SwipeStats {

@@ -36,19 +36,19 @@ export class CreditService {
 
   static async generateStoryIllustration(
     storyId: string, 
-    model?: string,
-    styleOverride?: string
+    model?: string | undefined,
+    styleOverride?: string | undefined
   ): Promise<{
     success: boolean;
-    illustration_url?: string;
-    error?: string;
-    credits_used?: number;
-    new_balance?: number;
-    used_fallback?: boolean;
-    fallback_reason?: string;
-    fallback_model?: string;
-    satirical_declined?: boolean;
-    gag?: { gag?: string | null; scene?: string | null } | null;
+    illustration_url?: string | undefined;
+    error?: string | undefined;
+    credits_used?: number | undefined;
+    new_balance?: number | undefined;
+    used_fallback?: boolean | undefined;
+    fallback_reason?: string | undefined;
+    fallback_model?: string | undefined;
+    satirical_declined?: boolean | undefined;
+    gag?: ({ gag?: string | null | undefined; scene?: string | null | undefined } | null) | undefined;
   }> {
     try {
       const { data, error } = await supabase.functions.invoke('story-illustrator', {

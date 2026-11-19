@@ -101,7 +101,7 @@ function PosterPreview({ event, look }: { event: SocialEvent; look: RenderOpts }
 }
 
 /** Poster preview, image and video downloads, and a caption to edit and copy. */
-export function EventSocialPack({ event, topicId }: { event: SocialEvent; topicId?: string }) {
+export function EventSocialPack({ event, topicId }: { event: SocialEvent; topicId?: string | undefined }) {
   const { data: look } = useFeedLook(topicId);
   const { toast } = useToast();
   const [busy, setBusy] = useState<"image" | "video" | null>(null);

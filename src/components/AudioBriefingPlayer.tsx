@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 
 interface AudioBriefingPlayerProps {
   audioUrl: string;
-  title?: string;
-  compact?: boolean;
-  className?: string;
+  title?: string | undefined;
+  compact?: boolean | undefined;
+  className?: string | undefined;
 }
 
 export function AudioBriefingPlayer({ 
@@ -91,7 +91,7 @@ export function AudioBriefingPlayer({
     const audio = audioRef.current;
     if (!audio || !duration) return;
     
-    const newTime = (value[0] / 100) * duration;
+    const newTime = (value[0]! / 100) * duration;
     audio.currentTime = newTime;
     setCurrentTime(newTime);
   };

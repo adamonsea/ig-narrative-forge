@@ -15,9 +15,9 @@ interface ConfirmationDialogProps {
   onConfirm: () => void;
   title: string;
   description: string;
-  confirmText?: string;
-  cancelText?: string;
-  variant?: "default" | "destructive";
+  confirmText?: string | undefined;
+  cancelText?: string | undefined;
+  variant?: "default" | "destructive" | undefined;
 }
 
 export const ConfirmationDialog = ({

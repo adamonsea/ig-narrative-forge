@@ -63,7 +63,7 @@ export const SatiricalBenchPanel: React.FC = () => {
   const step = (dir: number) => {
     if (!viewable.length) return;
     const i = viewable.findIndex(r => r.id === expanded);
-    setExpanded(viewable[(i + dir + viewable.length) % viewable.length].id);
+    setExpanded(viewable[(i + dir + viewable.length) % viewable.length]!.id);
   };
   useEffect(() => {
     if (!expanded) return;

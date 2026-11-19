@@ -7,17 +7,17 @@ import { optimizeImageUrl } from "@/lib/imageOptimization";
 import { venueClicksLine } from "@/lib/whatsOn";
 import { feedSignal, type FeedSignal } from "@/lib/readerStats";
 
-interface TopStory { id: string; title: string; reads: number; image?: string | null; seen?: number | null; stop_rate?: number | null; swipe_rate?: number | null }
+interface TopStory { id: string; title: string; reads: number; image?: string | null | undefined; seen?: number | null | undefined; stop_rate?: number | null | undefined; swipe_rate?: number | null | undefined }
 interface Readership {
   reads_week: number;
   reads_prev_week: number;
   readers_week: number;
-  daily?: { day: string; reads: number }[];
+  daily?: { day: string; reads: number }[] | undefined;
   top_stories: TopStory[];
-  dropoff?: Dropoff | null;
-  top_stopper?: TopStopper | null;
-  event_clicks_week?: number | null;
-  feed_signal?: FeedSignal | null;
+  dropoff?: Dropoff | null | undefined;
+  top_stopper?: TopStopper | null | undefined;
+  event_clicks_week?: number | null | undefined;
+  feed_signal?: FeedSignal | null | undefined;
 }
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
@@ -33,7 +33,7 @@ function Signal({ story, className }: { story: TopStory; className: string }) {
   );
 }
 
-function Count({ value, className }: { value: number; className?: string }) {
+function Count({ value, className }: { value: number; className?: string | undefined }) {
   const v = useCountUp(value);
   return <span className={`tabular-nums ${className ?? ""}`}>{fmt(v)}</span>;
 }
@@ -53,7 +53,7 @@ function Art({ story, width, className }: { story: TopStory; width: number; clas
   );
 }
 
-export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topicSlug?: string }) => {
+export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topicSlug?: string | undefined }) => {
   const [data, setData] = useState<Readership | null>(null);
 
   useEffect(() => {

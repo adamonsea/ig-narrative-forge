@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/pulse.test.ts
+// run with: bun test ./src/lib/pulse.test.ts
 import { describe, it, expect } from "bun:test";
 import { pickMilestone } from "./pulse";
 

@@ -11,9 +11,9 @@ interface InlineEmailSignupCardProps {
   topicName: string;
   topicSlug: string;
   /** Feed's square icon (preferred) or logo */
-  topicLogoUrl?: string;
+  topicLogoUrl?: string | undefined;
   /** Feed's configured colour (hex or HSL) */
-  brandColor?: string | null;
+  brandColor?: string | null | undefined;
 }
 
 type FrequencyOption = 'daily' | 'weekly' | 'both';

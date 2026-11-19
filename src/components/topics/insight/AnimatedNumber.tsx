@@ -24,8 +24,8 @@ export function AnimatedNumber({
   format,
 }: {
   value: number;
-  duration?: number;
-  className?: string;
+  duration?: number | undefined;
+  className?: string | undefined;
   format?: (n: number) => string;
 }) {
   const reduced = useReducedMotion();

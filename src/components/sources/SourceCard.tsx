@@ -79,7 +79,7 @@ export function SourceFigures({ figures }: { figures: SourceFigure[] }) {
  */
 export function SourceCard({ name, domain, kind, health, healthLabel, dots, figures, action, busy, onOpen }: {
   name: string; domain: string; kind: "news" | "events"; health: SourceHealth; healthLabel: string;
-  dots: number[]; figures: SourceFigure[]; action?: ReactNode; busy?: boolean; onOpen: () => void;
+  dots: number[]; figures: SourceFigure[]; action?: ReactNode | undefined; busy?: boolean | undefined; onOpen: () => void;
 }) {
   const flagged = health === "failing" || health === "quiet";
   return (

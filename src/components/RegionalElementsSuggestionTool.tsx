@@ -29,14 +29,14 @@ interface RegionalElementSuggestionMemory {
 interface RegionalElementsSuggestionToolProps {
   topicName: string;
   region: string;
-  description?: string;
-  keywords?: string[];
+  description?: string | undefined;
+  keywords?: string[] | undefined;
   elementType: 'landmarks' | 'postcodes' | 'organizations';
   existingElements: string[];
   onElementAdd: (element: string) => void;
-  existingLandmarks?: string[];
-  existingPostcodes?: string[];
-  existingOrganizations?: string[];
+  existingLandmarks?: string[] | undefined;
+  existingPostcodes?: string[] | undefined;
+  existingOrganizations?: string[] | undefined;
 }
 
 const getElementIcon = (type: string) => {

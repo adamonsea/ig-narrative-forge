@@ -18,7 +18,7 @@ const getCtx = (): AudioContext | null => {
 
 const tone = (
   ac: AudioContext,
-  { freq, dur, type = 'sine', gain = 0.06, slideTo }: { freq: number; dur: number; type?: OscillatorType; gain?: number; slideTo?: number },
+  { freq, dur, type = 'sine', gain = 0.06, slideTo }: { freq: number; dur: number; type?: OscillatorType | undefined; gain?: number | undefined; slideTo?: number | undefined },
 ) => {
   const osc = ac.createOscillator();
   const amp = ac.createGain();
@@ -34,7 +34,7 @@ const tone = (
   osc.stop(now + dur + 0.02);
 };
 
-const noise = (ac: AudioContext, { dur, gain = 0.03, cutoff = 1800 }: { dur: number; gain?: number; cutoff?: number }) => {
+const noise = (ac: AudioContext, { dur, gain = 0.03, cutoff = 1800 }: { dur: number; gain?: number | undefined; cutoff?: number | undefined }) => {
   const frames = Math.floor(ac.sampleRate * dur);
   const buffer = ac.createBuffer(1, frames, ac.sampleRate);
   const data = buffer.getChannelData(0);

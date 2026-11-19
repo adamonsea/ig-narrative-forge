@@ -1,5 +1,6 @@
+import { opt } from "@/lib/optionalProps";
 import React, { Suspense } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "@/lib/router-compat";
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { format } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
@@ -43,7 +44,7 @@ import { NotificationPreferencesModal } from "@/components/NotificationPreferenc
 import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
 import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
 import { useStoryViewTracker } from "@/hooks/useStoryViewTracker";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAutomatedInsightCards";
 import { useQuizCards } from "@/hooks/useQuizCards";
@@ -567,7 +568,7 @@ const TopicFeed = () => {
     const rootMargin = isMobile ? '400px' : '100px';
     
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
+      if (entries[0]!.isIntersecting && hasMore) {
         loadMore();
       }
     }, {
@@ -588,7 +589,7 @@ const TopicFeed = () => {
     const storiesLoaded = filteredContent.filter((item) => item.type === 'story').length;
     const needNews = hasMore && storiesLoaded < newsSlotsWithin(feedEvents.length);
     eventsObserverRef.current = new IntersectionObserver((entries) => {
-      if (!entries[0].isIntersecting || loading || loadingMore || eventsLoadingMore) return;
+      if (!entries[0]!.isIntersecting || loading || loadingMore || eventsLoadingMore) return;
       if (needNews) loadMore();
       else if (eventsHasMore) void loadMoreEvents();
       else if (hasMore) loadMore();
@@ -602,7 +603,7 @@ const TopicFeed = () => {
     eventsOnlyObserverRef.current?.disconnect();
     if (!node) return;
     eventsOnlyObserverRef.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && eventsHasMore && !eventsLoadingMore) void loadMoreEvents();
+      if (entries[0]!.isIntersecting && eventsHasMore && !eventsLoadingMore) void loadMoreEvents();
     }, { rootMargin: isMobile ? '1200px' : '800px' });
     eventsOnlyObserverRef.current.observe(node);
   }, [eventsHasMore, eventsLoadingMore, loadMoreEvents, isMobile]);
@@ -706,18 +707,18 @@ const TopicFeed = () => {
             <StoryCarousel 
               story={story} 
               storyUrl={storyShareUrl}
-              topicId={topic?.id}
+              {...opt("topicId", topic?.id)}
               storyIndex={index}
-              topicName={topic?.name}
+              {...opt("topicName", topic?.name)}
               topicSlug={slug}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               coverStyle={resolveStoryCoverStyle(topic?.story_cover_style)}
               pinned={story.id === pinnedId}
               onStorySwipe={handleStorySwipe}
               onStoryScrolledPast={handleStoryScrolledPast}
-              onMoreLikeThis={FEED_FILTERS_ENABLED ? handleMoreLikeThis : undefined}
-              onPrefetchFilter={FEED_FILTERS_ENABLED ? handlePrefetchFilter : undefined}
-              prefetchedReactionCounts={reactionCountsMap.get(story.id)}
+              {...opt("onMoreLikeThis", FEED_FILTERS_ENABLED ? handleMoreLikeThis : undefined)}
+              {...opt("onPrefetchFilter", FEED_FILTERS_ENABLED ? handlePrefetchFilter : undefined)}
+              {...opt("prefetchedReactionCounts", reactionCountsMap.get(story.id))}
               onReactionCountsChange={updateReactionCounts}
             />
           </div>
@@ -800,30 +801,30 @@ const TopicFeed = () => {
         const insightCard = insightCards[cardIndex];
         
         items.push(
-          <div key={`insight-${insightCard.id}-${index}`} className="w-full max-w-2xl">
+          <div key={`insight-${insightCard!.id}-${index}`} className="w-full max-w-2xl">
             <Suspense fallback={<Skeleton className="w-full h-48 rounded-lg" />}>
               <AutomatedInsightCard 
-                card={insightCard} 
+                card={insightCard!} 
                 topicSlug={slug}
               />
             </Suspense>
           </div>
         );
-        trackInsightCardDisplay(insightCard.id);
+        trackInsightCardDisplay(insightCard!.id);
       }
 
       // What's on: after story 1, then at least 15 stories apart, never beside another extra card
       // News-led with individual cards: one event at each What's on position
       if (eventsInView && isStory && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
-        items.push(renderEventCard(feedEvents[whatsOnPositions(storyIndex).indexOf(storyIndex) % feedEvents.length]));
+        items.push(renderEventCard((feedEvents[whatsOnPositions(storyIndex).indexOf(storyIndex) % feedEvents.length])!));
       }
 
       if (eventsInView && isStory && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
         items.push(
           <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
             <WhatsOnCard
-              events={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length].events}
-              label={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length].label}
+              events={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length]!.events}
+              label={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length]!.label}
               today={whatsOnToday}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               isOwner={isOwnFeed}
@@ -916,8 +917,8 @@ const TopicFeed = () => {
       const run: React.ReactNode[] = [];
       if (pinnedItem) run.push(...renderStory(pinnedItem.data, 1, -1, false));
       eventsLedRun(feedEvents.length, stories.length, !eventsHasMore).forEach((item, k) => {
-        if (item.kind === 'event') run.push(renderEventCard(feedEvents[item.index]));
-        else run.push(...renderStory(stories[item.index].data, item.index + 1 + offset, k, false));
+        if (item.kind === 'event') run.push(renderEventCard(feedEvents[item.index]!));
+        else run.push(...renderStory(stories[item.index]!.data, item.index + 1 + offset, k, false));
         if (item.extrasAt !== null) run.push(...renderExtras(item.extrasAt, k, false));
       });
       return run;
@@ -1080,8 +1081,8 @@ const TopicFeed = () => {
                 <FeedHamburgerMenu
                   slug={slug!}
                   aboutPageEnabled={(topic.branding_config as any)?.about_page_enabled}
-                  latestDaily={latestDaily}
-                  latestWeekly={latestWeekly}
+                  latestDaily={latestDaily!}
+                  latestWeekly={latestWeekly!}
                   showFilters={FEED_FILTERS_ENABLED}
                   hasActiveFilters={hasActiveFilters}
                   onOpenFilters={() => setIsModalOpen(true)}
@@ -1092,10 +1093,10 @@ const TopicFeed = () => {
                 />
 
                 {/* Donation Button - Icon Only */}
-                {topic.donation_enabled && topic.donation_config?.tiers?.length > 0 && (
+                {topic.donation_enabled && topic.donation_config?.tiers?.length! > 0 && (
                   <DonationButton
                     onClick={() => setShowDonationModal(true)}
-                    buttonText={topic.donation_config.button_text || "Support"}
+                    buttonText={topic.donation_config!.button_text || "Support"}
                     topicId={topic.id}
                     visitorId={visitorId}
                     iconOnly
@@ -1228,8 +1229,8 @@ const TopicFeed = () => {
               <FeedHamburgerMenu
                 slug={slug!}
                 aboutPageEnabled={(topic.branding_config as any)?.about_page_enabled}
-                latestDaily={latestDaily}
-                latestWeekly={latestWeekly}
+                latestDaily={latestDaily!}
+                latestWeekly={latestWeekly!}
                 showFilters={FEED_FILTERS_ENABLED}
                 hasActiveFilters={hasActiveFilters}
                 onOpenFilters={() => setIsModalOpen(true)}
@@ -1382,7 +1383,7 @@ const TopicFeed = () => {
             )}
             {!eventsLoading && !eventsHasMore && !hasMore && !eventsLoadingMore && !loadingMore && topic && (
               <div className="pt-8">
-                <EndOfFeedCTA topicName={topic.name} topicId={topic.id} topicSlug={topic.slug}
+                <EndOfFeedCTA topicName={topic.name} topicId={topic.id} topicSlug={topic.slug!}
                   topicIcon={topic.branding_config?.icon_url || topic.branding_config?.logo_url} />
               </div>
             )}
@@ -1441,7 +1442,7 @@ const TopicFeed = () => {
                 <EndOfFeedCTA 
                   topicName={topic.name} 
                   topicId={topic.id}
-                  topicSlug={topic.slug}
+                  topicSlug={topic.slug!}
                   topicIcon={topic.branding_config?.icon_url || topic.branding_config?.logo_url}
                 />
               </div>

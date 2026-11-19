@@ -11,9 +11,9 @@ interface Props {
   topicId: string;
   lead: string | null | undefined;
   cards: string | null | undefined;
-  currency?: string | null;
+  currency?: string | null | undefined;
   /** Show listing photos on individual cards (on unless turned off). */
-  photos?: boolean | null;
+  photos?: boolean | null | undefined;
   onSaved: (values: Record<string, unknown>) => void;
 }
 

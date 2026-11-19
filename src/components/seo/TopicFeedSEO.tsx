@@ -3,17 +3,17 @@ import { Helmet } from 'react-helmet-async';
 interface StoryForSEO {
   id: string;
   title: string;
-  created_at?: string;
+  created_at?: string | undefined;
 }
 
 interface TopicFeedSEOProps {
   topicName: string;
-  topicDescription?: string;
+  topicDescription?: string | undefined;
   topicSlug: string;
-  topicType?: string;
-  region?: string;
-  logoUrl?: string;
-  stories?: StoryForSEO[];
+  topicType?: string | undefined;
+  region?: string | undefined;
+  logoUrl?: string | undefined;
+  stories?: StoryForSEO[] | undefined;
 }
 
 export const TopicFeedSEO = ({

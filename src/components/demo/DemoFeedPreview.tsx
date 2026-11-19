@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowRight } from 'lucide-react';
@@ -8,9 +8,9 @@ import { ArrowRight } from 'lucide-react';
 interface DemoStory {
   id: string;
   title: string;
-  cover_illustration_url?: string;
+  cover_illustration_url?: string | undefined;
   created_at: string;
-  publication_name?: string;
+  publication_name?: string | undefined;
   slideCount: number;
 }
 

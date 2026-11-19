@@ -14,7 +14,7 @@ interface BrokerRequest {
   requestId: string;
   projectId: string;
   key: string;
-  value?: string;
+  value?: string | undefined;
 }
 
 interface BrokerReply {

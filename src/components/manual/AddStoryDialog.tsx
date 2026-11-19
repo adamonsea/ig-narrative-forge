@@ -18,7 +18,7 @@ export interface StoryDraft {
   publication: string;
   publishedAt: string;
   body: string;
-  sourceUrl?: string;
+  sourceUrl?: string | undefined;
 }
 
 interface AddStoryDialogProps {

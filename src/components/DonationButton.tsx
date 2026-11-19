@@ -8,7 +8,7 @@ interface DonationButtonProps {
   buttonText: string;
   topicId: string;
   visitorId: string;
-  iconOnly?: boolean;
+  iconOnly?: boolean | undefined;
 }
 
 export const DonationButton = ({ onClick, buttonText, topicId, visitorId, iconOnly = false }: DonationButtonProps) => {

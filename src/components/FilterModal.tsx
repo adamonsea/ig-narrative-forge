@@ -40,11 +40,11 @@ interface FilterModalProps {
   availableKeywords: KeywordCount[];
   selectedKeywords: string[];
   onKeywordToggle: (keyword: string) => void;
-  availableLandmarks?: KeywordCount[];
-  selectedLandmarks?: string[];
+  availableLandmarks?: KeywordCount[] | undefined;
+  selectedLandmarks?: string[] | undefined;
   onLandmarkToggle?: (landmark: string) => void;
-  availableOrganizations?: KeywordCount[];
-  selectedOrganizations?: string[];
+  availableOrganizations?: KeywordCount[] | undefined;
+  selectedOrganizations?: string[] | undefined;
   onOrganizationToggle?: (organization: string) => void;
   availableSources: SourceCount[];
   selectedSources: string[];

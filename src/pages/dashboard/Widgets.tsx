@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { Helmet } from "react-helmet-async";
 import { Copy, Check, ExternalLink, Code2, Eye, Upload, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -83,7 +83,7 @@ export default function Widgets() {
   // Set default feed when topics load
   useEffect(() => {
     if (topics && topics.length > 0 && !config.feed) {
-      setConfig(prev => ({ ...prev, feed: topics[0].slug }));
+      setConfig(prev => ({ ...prev, feed: topics[0]!.slug }));
     }
   }, [topics, config.feed]);
 
@@ -333,7 +333,7 @@ export default function Widgets() {
                 </div>
                 <Slider
                   value={[config.max]}
-                  onValueChange={([value]) => setConfig(prev => ({ ...prev, max: value }))}
+                  onValueChange={([value]) => setConfig(prev => ({ ...prev, max: value ?? prev.max }))}
                   min={3}
                   max={10}
                   step={1}
@@ -693,9 +693,9 @@ function WidgetPreview({
   data: any; 
   theme: "light" | "dark"; 
   accent: string;
-  customTitle?: string;
-  customAvatar?: string;
-  showSubscribe?: boolean;
+  customTitle?: string | undefined;
+  customAvatar?: string | undefined;
+  showSubscribe?: boolean | undefined;
 }) {
   if (!data?.feed || !data?.stories) {
     return <div className="text-center py-4 text-muted-foreground">No data</div>;

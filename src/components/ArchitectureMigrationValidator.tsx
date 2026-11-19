@@ -11,8 +11,8 @@ import { CheckCircle, XCircle, AlertTriangle, RefreshCw, TrendingUp, Shield } fr
 interface ValidationResult {
   test: string;
   status: 'pending' | 'running' | 'passed' | 'failed';
-  message?: string;
-  details?: any;
+  message?: string | undefined;
+  details?: any | undefined;
 }
 
 interface ComparisonMetrics {
@@ -24,8 +24,8 @@ interface ComparisonMetrics {
 }
 
 interface ArchitectureMigrationValidatorProps {
-  topicId?: string;
-  topicName?: string;
+  topicId?: string | undefined;
+  topicName?: string | undefined;
 }
 
 export const ArchitectureMigrationValidator = ({ topicId, topicName }: ArchitectureMigrationValidatorProps) => {
@@ -40,7 +40,7 @@ export const ArchitectureMigrationValidator = ({ topicId, topicName }: Architect
   ]);
   const { toast } = useToast();
 
-  const updateResult = (index: number, status: ValidationResult['status'], message?: string, details?: any) => {
+  const updateResult = (index: number, status: ValidationResult['status'], message?: string | undefined, details?: any) => {
     setResults(prev => prev.map((result, i) => 
       i === index ? { ...result, status, message, details } : result
     ));

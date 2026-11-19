@@ -12,16 +12,16 @@ interface ContentSource {
   articles_scraped: number | null;
   last_scraped_at: string | null;
   success_rate: number | null;
-  success_count?: number;
-  failure_count?: number;
-  last_error?: string | null;
+  success_count?: number | undefined;
+  failure_count?: number | undefined;
+  last_error?: string | null | undefined;
 }
 
 interface EnhancedSourceStatusBadgeProps {
   source: ContentSource;
-  automationLastError?: string | null;
-  size?: 'sm' | 'md';
-  isGathering?: boolean; // New prop to show processing animation
+  automationLastError?: string | null | undefined;
+  size?: 'sm' | 'md' | undefined;
+  isGathering?: boolean | undefined; // New prop to show processing animation
 }
 
 export function EnhancedSourceStatusBadge({ 

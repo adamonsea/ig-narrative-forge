@@ -13,7 +13,7 @@ interface Suggestion {
   sampleTitles: string[];
 }
 
-type LookForPatch = { keywords?: string[]; negative_keywords?: string[]; coverage_setup_state?: Record<string, any> };
+type LookForPatch = { keywords?: string[] | undefined; negative_keywords?: string[] | undefined; coverage_setup_state?: Record<string, any> | undefined };
 
 const LABEL: Record<ListName, string> = { more: "More of this", less: "Less of this" };
 
@@ -34,9 +34,9 @@ export function LookForPanel({
   topicId: string;
   keywords: string[];
   negativeKeywords: string[];
-  setupState?: Record<string, any>;
+  setupState?: Record<string, any> | undefined;
   /** The setup guide shows one list per step. */
-  show?: "both" | "more" | "less";
+  show?: "both" | "more" | "less" | undefined;
   onChange: (patch: LookForPatch) => void;
 }) {
   const { toast } = useToast();
@@ -44,7 +44,7 @@ export function LookForPanel({
   const [notice, setNotice] = useState<{ list: ListName; text: string } | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const noticeTimer = useRef<number | undefined>(undefined);
-  const dismissed: Record<string, boolean> = setupState?.dismissedSuggestions || {};
+  const dismissed: Record<string, boolean> = setupState?.['dismissedSuggestions'] || {};
 
   useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
 

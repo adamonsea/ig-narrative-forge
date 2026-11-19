@@ -57,10 +57,10 @@ export const createScraperRequestBody = (
   topicType: 'regional' | 'keyword',
   feedUrl: string,
   options: {
-    topicId?: string;
-    sourceId?: string;
-    region?: string;
-    forceRescrape?: boolean;
+    topicId?: string | undefined;
+    sourceId?: string | undefined;
+    region?: string | undefined;
+    forceRescrape?: boolean | undefined;
   }
 ) => {
   // Unified strategy: Universal scraper expects a simple body with topicId

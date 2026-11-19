@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from '@/lib/router-compat';
 import { AppLayout } from '@/components/AppLayout';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { QueueManager } from '@/components/QueueManager';

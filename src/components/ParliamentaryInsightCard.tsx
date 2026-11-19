@@ -8,7 +8,7 @@ import { ParliamentaryVote } from '@/hooks/useParliamentaryInsightCards';
 
 interface ParliamentaryInsightCardProps {
   votes: ParliamentaryVote[];
-  topicSlug?: string;
+  topicSlug?: string | undefined;
 }
 
 const getPartyColor = (party: string | null): string => {
@@ -55,8 +55,8 @@ export const ParliamentaryInsightCard = ({ votes, topicSlug }: ParliamentaryInsi
   };
 
   const handleShare = async () => {
-    const text = `${vote.mp_name} voted ${vote.vote_direction?.toUpperCase()} on: ${vote.vote_title}`;
-    const url = vote.vote_url || '';
+    const text = `${vote!.mp_name} voted ${vote!.vote_direction?.toUpperCase()} on: ${vote!.vote_title}`;
+    const url = vote!.vote_url || '';
     
     try {
       if (navigator.share) {
@@ -75,22 +75,22 @@ export const ParliamentaryInsightCard = ({ votes, topicSlug }: ParliamentaryInsi
         return (
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className={`w-2 h-12 rounded-full ${getPartyColor(vote.party)}`} />
+              <div className={`w-2 h-12 rounded-full ${getPartyColor(vote!.party)}`} />
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground truncate">{vote.mp_name || 'MP'}</h3>
-                <p className="text-sm text-muted-foreground">{vote.party} · {vote.constituency}</p>
+                <h3 className="font-semibold text-foreground truncate">{vote!.mp_name || 'MP'}</h3>
+                <p className="text-sm text-muted-foreground">{vote!.party} · {vote!.constituency}</p>
               </div>
               <div className="flex items-center gap-2">
-                {getVoteIcon(vote.vote_direction)}
-                <span className="text-sm font-medium uppercase">{vote.vote_direction || 'Unknown'}</span>
+                {getVoteIcon(vote!.vote_direction)}
+                <span className="text-sm font-medium uppercase">{vote!.vote_direction || 'Unknown'}</span>
               </div>
             </div>
             <h4 className="font-medium text-foreground leading-snug line-clamp-3">
-              {vote.vote_title || 'Parliamentary Vote'}
+              {vote!.vote_title || 'Parliamentary Vote'}
             </h4>
-            {vote.vote_date && (
+            {vote!.vote_date && (
               <p className="text-xs text-muted-foreground">
-                {format(new Date(vote.vote_date), 'MMMM d, yyyy')}
+                {format(new Date(vote!.vote_date), 'MMMM d, yyyy')}
               </p>
             )}
           </div>
@@ -104,15 +104,15 @@ export const ParliamentaryInsightCard = ({ votes, topicSlug }: ParliamentaryInsi
               Vote Outcome
             </p>
             <div className="text-4xl font-bold">
-              {vote.vote_outcome === 'Passed' || vote.vote_outcome === 'passed'
+              {vote!.vote_outcome === 'Passed' || vote!.vote_outcome === 'passed'
                 ? <span className="text-green-600 dark:text-green-400">PASSED</span>
                 : <span className="text-red-600 dark:text-red-400">REJECTED</span>
               }
             </div>
             <div className="text-lg text-muted-foreground">
-              Ayes {vote.aye_count ?? 0} · Noes {vote.no_count ?? 0}
+              Ayes {vote!.aye_count ?? 0} · Noes {vote!.no_count ?? 0}
             </div>
-            {vote.is_rebellion && (
+            {vote!.is_rebellion && (
               <Badge variant="destructive" className="text-xs">
                 🔥 Against party whip
               </Badge>
@@ -124,18 +124,18 @@ export const ParliamentaryInsightCard = ({ votes, topicSlug }: ParliamentaryInsi
       case 2:
         return (
           <div className="space-y-4">
-            {vote.local_impact_summary && (
+            {vote!.local_impact_summary && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">Why it matters</p>
                 <p className="text-sm text-foreground leading-relaxed">
-                  {vote.local_impact_summary}
+                  {vote!.local_impact_summary}
                 </p>
               </div>
             )}
             <div className="flex items-center gap-3">
-              {vote.vote_url && (
+              {vote!.vote_url && (
                 <a
-                  href={vote.vote_url}
+                  href={vote!.vote_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-sm text-primary hover:underline"

@@ -12,12 +12,12 @@ interface Story {
   id: string;
   title: string;
   slides: Slide[];
-  author?: string | null;
-  publication_name?: string | null;
+  author?: string | null | undefined;
+  publication_name?: string | null | undefined;
   article?: {
     source_url: string;
-    region?: string;
-    published_at?: string | null;
+    region?: string | undefined;
+    published_at?: string | null | undefined;
   };
 }
 
@@ -32,7 +32,7 @@ interface ExportableSlideRendererProps {
   story: Story;
   slideIndex: number;
   topicName: string;
-  aspect?: SlideAspect;
+  aspect?: SlideAspect | undefined;
 }
 
 /**
@@ -76,7 +76,7 @@ export const ExportableSlideRenderer: React.FC<ExportableSlideRendererProps> = (
   const bylineText = buildReporterByline(story.author)
     || (publicationLabel ? `Source: ${publicationLabel}` : '');
 
-  const textStyles = getTextStyles(currentSlide.content, isFirstSlide);
+  const textStyles = getTextStyles(currentSlide!.content, isFirstSlide);
 
   return (
     <div 
@@ -127,7 +127,7 @@ export const ExportableSlideRenderer: React.FC<ExportableSlideRendererProps> = (
           color: '#111827',
           ...textStyles
         }}>
-          {currentSlide.content}
+          {currentSlide!.content}
         </div>
       </div>
 

@@ -10,7 +10,7 @@ export interface HeadlineFeature {
   script: string;
   animation: FeatureAnimationName;
   /** Path to an avatar clip once produced */
-  clip?: string;
+  clip?: string | undefined;
 }
 
 export interface DepthFeature {

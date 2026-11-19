@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 
 interface OriginalityIndicatorProps {
   confidence: number;
-  className?: string;
+  className?: string | undefined;
 }
 
 export const OriginalityIndicator: React.FC<OriginalityIndicatorProps> = ({ 

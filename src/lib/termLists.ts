@@ -56,7 +56,7 @@ export const COLLAPSE_AFTER = 12;
 export const COLLAPSED_SHOWS = 10;
 
 /** Which terms to show: everything for short lists, the first 10 for long ones, or every match while searching. */
-export function visibleTerms(list: string[], opts: { query?: string; showAll?: boolean } = {}): { shown: string[]; hidden: number; collapsible: boolean } {
+export function visibleTerms(list: string[], opts: { query?: string | undefined; showAll?: boolean | undefined } = {}): { shown: string[]; hidden: number; collapsible: boolean } {
   const terms = dedupeTerms(list);
   const collapsible = terms.length > COLLAPSE_AFTER;
   const q = normaliseTerm(opts.query ?? "");

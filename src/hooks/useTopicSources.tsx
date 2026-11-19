@@ -1,3 +1,4 @@
+import { definedOnly } from "@/lib/optionalProps";
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -225,7 +226,7 @@ export const useTopicSources = () => {
         .order('source_name');
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as ContentSource[];
     } catch (error) {
       console.error('Error getting available sources:', error);
       toast({
@@ -247,19 +248,19 @@ export const useTopicSources = () => {
       source_name: string;
       feed_url: string;
       canonical_domain: string;
-      credibility_score?: number;
-      content_type?: string;
-      region?: string;
+      credibility_score?: number | undefined;
+      content_type?: string | undefined;
+      region?: string | undefined;
     },
-    topicId?: string
-  ): Promise<{ success: boolean; sourceId?: string }> => {
+    topicId?: string | undefined
+  ): Promise<{ success: boolean; sourceId?: string | undefined }> => {
     try {
       setLoading(true);
       
       // Create the source with topic_id set
       const { data: newSource, error: createError } = await supabase
         .from('content_sources')
-        .insert({
+        .insert(definedOnly({
           ...sourceData,
           // Do not set topic_id here; link via topic_sources junction to avoid unique constraints
           credibility_score: sourceData.credibility_score || 70,
@@ -267,7 +268,7 @@ export const useTopicSources = () => {
           is_active: true,
           is_whitelisted: true,
           is_blacklisted: false
-        })
+        }))
         .select('id')
         .single();
 

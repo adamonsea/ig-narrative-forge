@@ -4,8 +4,8 @@ import { londonToday } from "./whatsOn";
 export interface PublishedCounts { today: number; week: number; month: number }
 
 const dayNumber = (ymd: string) => {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return Math.round(Date.UTC(y, m - 1, d) / 86_400_000);
+  const [y, m, d] = ymd.split("-").map(Number) as [number, number, number];
+  return Math.round(Date.UTC(y, m! - 1, d) / 86_400_000);
 };
 
 /**

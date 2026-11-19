@@ -10,8 +10,8 @@ interface CollapsibleSubscribersCardProps {
   installsTotal: number | null;
   registrantsThisWeek: number | null;
   registrantsTotal: number | null;
-  emailSubscribers?: number;
-  pushSubscribers?: number; // deprecated but kept for backwards compat
+  emailSubscribers?: number | undefined;
+  pushSubscribers?: number | undefined; // deprecated but kept for backwards compat
 }
 
 export const CollapsibleSubscribersCard = ({

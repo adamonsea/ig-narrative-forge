@@ -11,13 +11,13 @@ import { CheckCircle, XCircle, AlertTriangle, Database, Link2, ArrowRightLeft } 
 interface ValidationResult {
   test: string;
   status: 'pending' | 'running' | 'passed' | 'failed';
-  message?: string;
-  details?: any;
+  message?: string | undefined;
+  details?: any | undefined;
 }
 
 interface JunctionTableValidatorProps {
-  topicId?: string;
-  topicName?: string;
+  topicId?: string | undefined;
+  topicName?: string | undefined;
 }
 
 export const JunctionTableValidator = ({ topicId, topicName }: JunctionTableValidatorProps) => {
@@ -31,7 +31,7 @@ export const JunctionTableValidator = ({ topicId, topicName }: JunctionTableVali
   ]);
   const { toast } = useToast();
 
-  const updateResult = (index: number, status: ValidationResult['status'], message?: string, details?: any) => {
+  const updateResult = (index: number, status: ValidationResult['status'], message?: string | undefined, details?: any) => {
     setResults(prev => prev.map((result, i) => 
       i === index ? { ...result, status, message, details } : result
     ));

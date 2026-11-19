@@ -8,14 +8,14 @@ import type { ReactionCounts } from '@/hooks/useStoriesReactionsBatch';
 interface StoryReactionBarProps {
   storyId: string;
   topicId: string;
-  className?: string;
+  className?: string | undefined;
   onMoreLikeThis?: (storyId: string) => void;
   /** Pre-fetched counts from batch hook - skips individual fetch if provided */
-  prefetchedCounts?: ReactionCounts;
+  prefetchedCounts?: ReactionCounts | undefined;
   /** Callback to update batch counts after reaction */
   onCountsChange?: (storyId: string, counts: ReactionCounts) => void;
   /** Position in feed - used to scale displayed engagement numbers */
-  storyIndex?: number;
+  storyIndex?: number | undefined;
 }
 
 // Generate a deterministic "random" number from a string seed

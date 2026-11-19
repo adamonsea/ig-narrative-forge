@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 
 interface PeriodReviewPanelProps {
   topicId: string;
@@ -51,7 +51,7 @@ const PRESETS = [
 interface OptionRow {
   id: string;
   name: string;
-  ids?: string[];
+  ids?: string[] | undefined;
 }
 
 export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps) => {
@@ -141,7 +141,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
 
   const scopeSuffix = () => {
     const parts: string[] = [];
-    if (selectedCategories.length) parts.push(`c${selectedCategories.length}-${selectedCategories[0].slice(0, 6)}`);
+    if (selectedCategories.length) parts.push(`c${selectedCategories.length}-${selectedCategories[0]!.slice(0, 6)}`);
     if (selectedSources.length)
       parts.push(
         `s${selectedSources.length}-${(selectedSourceNames()[0] ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 6)}`

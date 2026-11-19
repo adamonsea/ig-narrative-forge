@@ -43,8 +43,8 @@ export const getSourceDomain = (sourceUrl?: string | null): string | null => {
  * meaningful, otherwise the hostname of the article we link to.
  */
 export const getPublicationLabel = (
-  publicationName?: string | null,
-  sourceUrl?: string | null
+  publicationName?: string | null | undefined,
+  sourceUrl?: string | null | undefined
 ): string | null => clean(publicationName) || getSourceDomain(sourceUrl);
 
 /**
@@ -52,9 +52,9 @@ export const getPublicationLabel = (
  * Returns null when neither field is trustworthy.
  */
 export const buildBylineLine = (
-  author?: string | null,
-  publicationName?: string | null,
-  sourceUrl?: string | null
+  author?: string | null | undefined,
+  publicationName?: string | null | undefined,
+  sourceUrl?: string | null | undefined
 ): string | null => {
   const writer = clean(author);
   const publication = getPublicationLabel(publicationName, sourceUrl);

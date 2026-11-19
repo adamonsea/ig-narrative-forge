@@ -115,15 +115,15 @@ export const WaitlistPanel = () => {
         new Date(e.created_at).toISOString(),
         r?.completed_at ? new Date(r.completed_at).toISOString() : '',
         r ? (r.wants_early_access ? 'yes' : 'no') : '',
-        asList(a.feed_kind).join('; '),
-        a.feed_name ?? '',
-        a.audience ?? '',
-        a.today ?? '',
-        asList(a.resonated).join('; '),
-        asList(a.blockers).join('; '),
-        a.blockers_detail ?? '',
-        a.price_band ?? '',
-        a.wishlist ?? '',
+        asList(a['feed_kind']).join('; '),
+        a['feed_name'] ?? '',
+        a['audience'] ?? '',
+        a['today'] ?? '',
+        asList(a['resonated']).join('; '),
+        asList(a['blockers']).join('; '),
+        a['blockers_detail'] ?? '',
+        a['price_band'] ?? '',
+        a['wishlist'] ?? '',
       ].map(esc).join(',');
     });
     const blob = new Blob([[header.join(','), ...rows].join('\n')], { type: 'text/csv' });
@@ -233,13 +233,13 @@ export const WaitlistPanel = () => {
                 {r && (
                   <dl className="mt-3 grid gap-x-6 gap-y-1.5 border-t border-border pt-3 text-sm sm:grid-cols-2">
                     {[
-                      ['Feed', [...asList(a.feed_kind), a.feed_name].filter(Boolean).join(' · ')],
-                      ['Audience', a.audience],
-                      ['Today', a.today],
-                      ['Resonated', asList(a.resonated).join(', ')],
-                      ['Blockers', [asList(a.blockers).join(', '), a.blockers_detail].filter(Boolean).join(' — ')],
-                      ['Worth', a.price_band],
-                      ['Wishlist', a.wishlist],
+                      ['Feed', [...asList(a['feed_kind']), a['feed_name']].filter(Boolean).join(' · ')],
+                      ['Audience', a['audience']],
+                      ['Today', a['today']],
+                      ['Resonated', asList(a['resonated']).join(', ')],
+                      ['Blockers', [asList(a['blockers']).join(', '), a['blockers_detail']].filter(Boolean).join(' — ')],
+                      ['Worth', a['price_band']],
+                      ['Wishlist', a['wishlist']],
                     ]
                       .filter(([, v]) => !!v)
                       .map(([label, v]) => (

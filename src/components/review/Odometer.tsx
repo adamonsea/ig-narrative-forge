@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -16,8 +17,8 @@ export const Odometer = ({
   onLanded,
 }: {
   value: number;
-  duration?: number;
-  className?: string;
+  duration?: number | undefined;
+  className?: string | undefined;
   onLanded?: () => void;
 }) => {
   const ref = useRef<HTMLSpanElement>(null);
@@ -58,7 +59,7 @@ export const Odometer = ({
           key={i}
           className="inline-block"
           initial={reduce ? false : { opacity: 0, y: '0.35em' }}
-          animate={inView ? { opacity: 1, y: 0 } : undefined}
+          {...opt("animate", inView ? { opacity: 1, y: 0 } : undefined)}
           transition={{ duration: reduce ? 0 : 0.55, delay: reduce ? 0 : i * 0.07, ease: [0.19, 1, 0.22, 1] }}
         >
           {g}

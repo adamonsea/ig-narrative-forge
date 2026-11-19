@@ -32,12 +32,12 @@ export function RememberedFold({
 }: {
   foldKey: string;
   label: string;
-  description?: string;
+  description?: string | undefined;
   children: React.ReactNode;
-  className?: string;
+  className?: string | undefined;
   /** Spacing above the opened content (inline variant). */
-  contentClassName?: string;
-  variant?: "inline" | "section";
+  contentClassName?: string | undefined;
+  variant?: "inline" | "section" | undefined;
 }) {
   const { user } = useAuth();
   const key = storageKey(user?.id, foldKey);

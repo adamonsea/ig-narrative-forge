@@ -18,12 +18,12 @@ interface SentimentHistory {
   neutral_mentions: number;
   sentiment_ratio: number;
   source_count: number;
-  sentiment_direction?: string;
+  sentiment_direction?: string | undefined;
 }
 
 interface TrendsChartProps {
   topicId: string;
-  keywords: Array<{ id: string; keyword_phrase: string; sentiment_direction?: string }>;
+  keywords: Array<{ id: string; keyword_phrase: string; sentiment_direction?: string | undefined }>;
 }
 
 export const SentimentTrendsChart = ({ topicId, keywords }: TrendsChartProps) => {
@@ -34,8 +34,8 @@ export const SentimentTrendsChart = ({ topicId, keywords }: TrendsChartProps) =>
 
   useEffect(() => {
     if (keywords.length > 0 && !selectedKeyword) {
-      setSelectedKeyword(keywords[0].keyword_phrase);
-      setSelectedDirection(keywords[0].sentiment_direction || '');
+      setSelectedKeyword(keywords[0]!.keyword_phrase);
+      setSelectedDirection(keywords[0]!.sentiment_direction || '');
     }
   }, [keywords, selectedKeyword]);
 
@@ -94,16 +94,16 @@ export const SentimentTrendsChart = ({ topicId, keywords }: TrendsChartProps) =>
     const recent = chartData[chartData.length - 1];
     const previous = chartData[chartData.length - 2];
     
-    const recentSentiment = recent.negative > recent.positive ? 'negative' : 'positive';
-    const previousSentiment = previous.negative > previous.positive ? 'negative' : 'positive';
+    const recentSentiment = recent!.negative > recent!.positive ? 'negative' : 'positive';
+    const previousSentiment = previous!.negative > previous!.positive ? 'negative' : 'positive';
     
     if (recentSentiment === previousSentiment) {
       const recentRatio = recentSentiment === 'negative' 
-        ? recent.negative / recent.total 
-        : recent.positive / recent.total;
+        ? recent!.negative / recent!.total 
+        : recent!.positive / recent!.total;
       const previousRatio = previousSentiment === 'negative'
-        ? previous.negative / previous.total
-        : previous.positive / previous.total;
+        ? previous!.negative / previous!.total
+        : previous!.positive / previous!.total;
       
       if (recentRatio > previousRatio) {
         return recentSentiment === 'negative' ? 'worsening' : 'improving';

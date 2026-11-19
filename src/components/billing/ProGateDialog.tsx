@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/lib/router-compat';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BILLING_COPY } from '@/lib/billing';
@@ -6,7 +6,7 @@ import { BILLING_COPY } from '@/lib/billing';
 interface ProGateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  returnTo?: string;
+  returnTo?: string | undefined;
 }
 
 export function ProGateDialog({ open, onOpenChange, returnTo }: ProGateDialogProps) {

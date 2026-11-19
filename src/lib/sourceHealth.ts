@@ -30,16 +30,16 @@ const londonDay = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { t
 export function typicalGapDays(arrivalDays: string[]): number | null {
   const days = [...new Set(arrivalDays.map((d) => d.slice(0, 10)))].sort();
   if (days.length < 3) return null;
-  const gaps = days.slice(1).map((d, i) => daysBetween(days[i], d)).sort((a, b) => a - b);
+  const gaps = days.slice(1).map((d, i) => daysBetween(days[i]!, d)).sort((a, b) => a - b);
   const mid = Math.floor(gaps.length / 2);
-  return gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
+  return (gaps.length % 2 ? gaps[mid] : (gaps[mid - 1]! + gaps[mid]!) / 2)!;
 }
 
 export interface NewsHealthInput {
-  consecutiveFailures?: number | null;
+  consecutiveFailures?: number | null | undefined;
   arrivalDays: string[];
-  lastArrivalAt?: string | null;
-  addedAt?: string | null;
+  lastArrivalAt?: string | null | undefined;
+  addedAt?: string | null | undefined;
   today: string; // YYYY-MM-DD, London
 }
 
@@ -89,8 +89,8 @@ export function newsSourceHealth(i: NewsHealthInput): HealthVerdict {
 }
 
 export interface EventsHealthInput {
-  consecutiveEmptyChecks?: number | null;
-  lastCheckedAt?: string | null;
+  consecutiveEmptyChecks?: number | null | undefined;
+  lastCheckedAt?: string | null | undefined;
   upcoming: number;
 }
 

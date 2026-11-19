@@ -17,7 +17,7 @@ interface Topic {
   slug: string;
   topic_type: 'regional' | 'keyword';
   keywords: string[];
-  region?: string;
+  region?: string | undefined;
   is_public: boolean;
   is_active: boolean;
   created_by: string;

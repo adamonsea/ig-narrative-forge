@@ -14,8 +14,8 @@ export interface LiveNowStory {
   status: string;
   is_published: boolean;
   created_at: string;
-  topic_article_id?: string | null;
-  article_published_at?: string | null;
+  topic_article_id?: string | null | undefined;
+  article_published_at?: string | null | undefined;
 }
 
 const WRITTEN = new Set(["draft", "ready", "published"]);
@@ -49,7 +49,7 @@ export function splitLiveNow<T extends LiveNowStory>(stories: T[], now: number =
  * Stories the owner has just published from the Desk show in Live now straight away,
  * before the next load confirms it: same feed rules, treated as published and unscheduled.
  */
-export function withJustPublished<T extends LiveNowStory & { scheduled_publish_at?: string | null }>(
+export function withJustPublished<T extends LiveNowStory & { scheduled_publish_at?: string | null | undefined }>(
   stories: T[],
   justPublished: ReadonlySet<string>,
 ): T[] {
@@ -66,7 +66,7 @@ export const STALE_HELD_DAYS = 7;
  * Stale stories in "Written, not in the feed": written over STALE_HELD_DAYS ago and not
  * scheduled for later. The Desk offers to archive them in one go (archive, never delete).
  */
-export function staleHeld<T extends LiveNowStory & { scheduled_publish_at?: string | null }>(
+export function staleHeld<T extends LiveNowStory & { scheduled_publish_at?: string | null | undefined }>(
   held: T[],
   now: number = Date.now(),
   days: number = STALE_HELD_DAYS,
@@ -85,7 +85,7 @@ export function staleHeld<T extends LiveNowStory & { scheduled_publish_at?: stri
  * - queued: ready, or scheduled for later, so the drip (or its time) will publish it;
  * - other: everything else (mostly stale drafts, offered for archiving in one go).
  */
-export function groupHeld<T extends LiveNowStory & { scheduled_publish_at?: string | null }>(
+export function groupHeld<T extends LiveNowStory & { scheduled_publish_at?: string | null | undefined }>(
   held: T[],
   now: number = Date.now(),
   days: number = STALE_HELD_DAYS,
@@ -113,7 +113,7 @@ function similarity(a: Set<string>, b: Set<string>): number {
 }
 
 /** The live story a held story's headline (nearly) repeats, the closest one first; null when none. */
-export function findLiveRepeat<T extends { title?: string | null }>(title: string, live: T[], threshold = 0.8): T | null {
+export function findLiveRepeat<T extends { title?: string | null | undefined }>(title: string, live: T[], threshold = 0.8): T | null {
   const a = words(title);
   let best: T | null = null;
   let bestScore = threshold;

@@ -321,7 +321,7 @@ export const NEWS_IN_EVENTS: SequenceCardPosition = {
 /** How many events come before news story n (1-based) in an events-led feed. */
 export function eventsBeforeNews(storyNumber: number, rule: SequenceCardPosition = NEWS_IN_EVENTS): number {
   if (storyNumber <= 0) return 0;
-  if (storyNumber <= rule.leading.length) return rule.leading[storyNumber - 1];
+  if (storyNumber <= rule.leading.length) return (rule.leading[storyNumber - 1])!;
   return rule.offset + (storyNumber - rule.leading.length - 1) * rule.interval;
 }
 

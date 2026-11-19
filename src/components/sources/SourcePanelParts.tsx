@@ -60,7 +60,7 @@ export function InfoTip({ label, children }: { label: string; children: ReactNod
  */
 export function BackfillFold({ onRun, trigger = "Gather older stories" }: {
   onRun: (days: number) => Promise<void> | void;
-  trigger?: string;
+  trigger?: string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const [days, setDays] = useState(7);

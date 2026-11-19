@@ -108,7 +108,7 @@ export interface PromptStripResult {
 export const stripReaderPrompts = (
   content: string,
   appealContext: string = content,
-  opts: { closingQuestion?: boolean; sourceDomain?: string | null } = {}
+  opts: { closingQuestion?: boolean | undefined; sourceDomain?: string | null | undefined } = {}
 ): PromptStripResult => {
   const { closingQuestion = true } = opts;
   const sourceDomain = normaliseDomain(opts.sourceDomain);
@@ -134,8 +134,8 @@ export const stripReaderPrompts = (
   if (closingQuestion && kept.length) {
     const last = kept[kept.length - 1];
     const before = kept.slice(0, -1).join(' ');
-    if (isClosingQuestion(last, before, appealContext)) {
-      removed.push(last);
+    if (isClosingQuestion(last!, before, appealContext)) {
+      removed.push(last!);
       kept.pop();
     }
   }
@@ -148,7 +148,7 @@ export const isEmptySlideText = (text: string | null | undefined): boolean =>
 
 export interface PreparedSlide {
   content: string;
-  links?: unknown[];
+  links?: unknown[] | undefined;
 }
 
 /**
@@ -160,14 +160,14 @@ export interface PreparedSlide {
 export function prepareStorySlides<T extends PreparedSlide>(
   slides: T[],
   preClean: (text: string) => string = (t) => t,
-  opts: { sourceDomain?: string | null } = {}
+  opts: { sourceDomain?: string | null | undefined } = {}
 ): { slides: T[]; dropped: number; removed: string[] } {
   const out = [...slides];
   const removedAll: string[] = [];
   let dropped = 0;
   while (out.length > 1) {
     const last = out[out.length - 1];
-    const original = last.content || '';
+    const original = last!.content || '';
     const pre = preClean(original);
     // Closing questions only on the story's real last slide, never on a body
     // slide that became last because the closing slide was dropped.
@@ -188,7 +188,7 @@ export function prepareStorySlides<T extends PreparedSlide>(
     }
     if (text !== original) {
       // Stored link offsets no longer line up with the cleaned text.
-      out[out.length - 1] = { ...last, content: text, links: [] };
+      out[out.length - 1] = { ...last, content: text, links: [] } as unknown as T;
     }
     break;
   }

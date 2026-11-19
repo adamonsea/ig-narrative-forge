@@ -85,7 +85,7 @@ export function useStoryFontSize(key: string, blocks: string[], ref: RefObject<H
     const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
+      const { width, height } = entry!.contentRect;
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => {
         const w = Math.round(width), h = Math.round(height);

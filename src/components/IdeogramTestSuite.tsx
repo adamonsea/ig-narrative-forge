@@ -47,17 +47,17 @@ interface Slide {
   id: string;
   slide_number: number;
   content: string;
-  visual_prompt?: string;
+  visual_prompt?: string | undefined;
   visuals: Visual[];
 }
 
 interface Visual {
   id: string;
-  image_url?: string;
-  image_data?: string;
-  alt_text?: string;
-  style_preset?: string;
-  generation_prompt?: string;
+  image_url?: string | undefined;
+  image_data?: string | undefined;
+  alt_text?: string | undefined;
+  style_preset?: string | undefined;
+  generation_prompt?: string | undefined;
 }
 
 interface TestResult {
@@ -70,15 +70,15 @@ interface TestResult {
   estimated_cost: number;
   style_reference_used: boolean;
   success: boolean;
-  error_message?: string;
+  error_message?: string | undefined;
   created_at: string;
-  visual_id?: string;
+  visual_id?: string | undefined;
   visual?: {
     id: string;
-    image_data?: string;
-    image_url?: string;
-    alt_text?: string;
-    style_preset?: string;
+    image_data?: string | undefined;
+    image_url?: string | undefined;
+    alt_text?: string | undefined;
+    style_preset?: string | undefined;
   };
 }
 
@@ -147,8 +147,8 @@ export default function IdeogramTestSuite() {
         .limit(10);
 
       if (error) throw error;
-      setStories(storiesData || []);
-    } catch (error) {
+      setStories((storiesData || []) as unknown as Story[]);
+    } catch (error: any) {
       console.error('Error loading stories:', error);
       toast.error('Failed to load stories');
     }
@@ -172,8 +172,8 @@ export default function IdeogramTestSuite() {
         .limit(50);
 
       if (error) throw error;
-      setTestResults(data || []);
-    } catch (error) {
+      setTestResults((data || []) as unknown as TestResult[]);
+    } catch (error: any) {
       console.error('Error loading test results:', error);
     }
   };
@@ -216,7 +216,7 @@ export default function IdeogramTestSuite() {
         
         finalStyleReferenceUrl = urlData.publicUrl;
         console.log('Style reference uploaded:', finalStyleReferenceUrl);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to upload style reference:', error);
         // Continue without style reference
       }
@@ -261,7 +261,7 @@ export default function IdeogramTestSuite() {
     loadTestResults();
       
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`${apiProvider} test failed:`, error);
       
       // Enhanced error message with more details
@@ -293,7 +293,7 @@ export default function IdeogramTestSuite() {
         toast.error('Some comparison tests failed - check individual results');
       }
       
-    } catch (error) {
+    } catch (error: any) {
       toast.error('Comparison test failed');
     } finally {
       setIsRunning(false);
@@ -322,7 +322,7 @@ export default function IdeogramTestSuite() {
 
       const successCount = results.length;
       toast.success(`Story test complete! ${successCount}/${completedSlides} slides generated successfully. Total cost: $${totalCost.toFixed(4)}`);
-    } catch (error) {
+    } catch (error: any) {
       toast.error('Story test failed');
     } finally {
       setIsRunning(false);
@@ -362,7 +362,7 @@ export default function IdeogramTestSuite() {
       // Refresh data
       await Promise.all([loadStories(), loadTestResults()]);
       toast.success('Visual deleted successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting visual:', error);
       toast.error('Failed to delete visual');
     } finally {
@@ -392,7 +392,7 @@ export default function IdeogramTestSuite() {
       // Refresh data
       await Promise.all([loadStories(), loadTestResults()]);
       toast.success('All slide visuals deleted successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting slide visuals:', error);
       toast.error('Failed to delete visuals');
     }
@@ -444,7 +444,7 @@ export default function IdeogramTestSuite() {
       // Refresh data
       await Promise.all([loadStories(), loadTestResults()]);
       toast.success('Test result archived and image deleted');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error archiving test result:', error);
       toast.error('Failed to archive test result');
     }
@@ -487,7 +487,7 @@ export default function IdeogramTestSuite() {
       // Refresh data
       await Promise.all([loadStories(), loadTestResults()]);
       toast.success(`All ${testResults.length} test results archived and images deleted`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error archiving all tests:', error);
       toast.error('Failed to archive all tests');
     }
@@ -502,16 +502,16 @@ export default function IdeogramTestSuite() {
     testResults.forEach(result => {
       if (result.api_provider && stats[result.api_provider]) {
         const stat = stats[result.api_provider];
-        stat.count++;
-        stat.totalCost += result.estimated_cost || 0;
-        stat.totalTime += result.generation_time_ms || 0;
-        if (result.success) stat.successes++;
+        stat!.count++;
+        stat!.totalCost += result.estimated_cost || 0;
+        stat!.totalTime += result.generation_time_ms || 0;
+        if (result.success) stat!.successes++;
       }
     });
 
     return Object.entries(stats).map(([provider, stat]) => ({
       provider,
-      name: providerCosts[provider]?.name || provider,
+      name: providerCosts[provider as keyof typeof providerCosts]?.name || provider,
       ...stat,
       avgCost: stat.count > 0 ? stat.totalCost / stat.count : 0,
       avgTime: stat.count > 0 ? stat.totalTime / stat.count : 0,
@@ -632,7 +632,7 @@ export default function IdeogramTestSuite() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(story.article.source_url, '_blank');
+                              window.open(story.article!.source_url, '_blank');
                             }}
                             title="View original article"
                           >
@@ -654,17 +654,17 @@ export default function IdeogramTestSuite() {
               <CardDescription>Test different providers on the first slide for quick comparison</CardDescription>
             </CardHeader>
             <CardContent>
-              {stories.length > 0 && stories[0].slides.length > 0 && (
+              {stories.length > 0 && stories[0]!.slides.length > 0 && (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Testing: "{stories[0].slides[0].content.substring(0, 60)}..."
+                    Testing: "{stories[0]!.slides[0]!.content.substring(0, 60)}..."
                   </p>
                   
                   <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
                     {Object.entries(providerCosts).map(([provider, info]) => (
                       <Button
                         key={provider}
-                        onClick={() => runSingleSlideTest(stories[0].slides[0], provider as any)}
+                        onClick={() => runSingleSlideTest(stories[0]!.slides[0]!, provider as any)}
                         disabled={isRunning}
                         variant="outline"
                         className="flex flex-col items-center p-3 h-auto text-xs relative"
@@ -847,12 +847,12 @@ export default function IdeogramTestSuite() {
                                     alt={result.visual.alt_text || 'Generated image'}
                                     className="w-40 h-40 object-cover rounded border cursor-pointer hover:scale-105 transition-transform"
                                     onClick={() => {
-                                      const imgSrc = result.visual.image_data 
-                                        ? `data:image/jpeg;base64,${result.visual.image_data}` 
-                                        : result.visual.image_url;
+                                      const imgSrc = result.visual!.image_data 
+                                        ? `data:image/jpeg;base64,${result.visual!.image_data}` 
+                                        : result.visual!.image_url;
                                       setSelectedImageModal({
-                                        src: imgSrc,
-                                        alt: result.visual.alt_text || 'Generated image',
+                                        src: imgSrc!,
+                                        alt: result.visual!.alt_text || 'Generated image',
                                         provider: providerCosts[result.api_provider as keyof typeof providerCosts]?.name || result.api_provider.toUpperCase()
                                       });
                                     }}

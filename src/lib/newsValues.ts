@@ -12,13 +12,13 @@ export interface NearbyPlace {
 }
 
 export interface NewsValuesConfig {
-  region?: string | null;
-  landmarks?: string[] | null;
-  postcodes?: string[] | null;
-  organizations?: string[] | null;
-  nearby_places?: NearbyPlace[] | null;
-  locality_strength?: number | null;
-  big_story_override?: boolean | null;
+  region?: string | null | undefined;
+  landmarks?: string[] | null | undefined;
+  postcodes?: string[] | null | undefined;
+  organizations?: string[] | null | undefined;
+  nearby_places?: NearbyPlace[] | null | undefined;
+  locality_strength?: number | null | undefined;
+  big_story_override?: boolean | null | undefined;
 }
 
 export interface DialSettings {
@@ -81,7 +81,7 @@ export const LOCALITY_DIAL: Record<number, DialSettings> = {
 
 export function getDial(strength?: number | null): DialSettings {
   const step = Math.min(5, Math.max(1, Math.round(strength ?? 3)));
-  return LOCALITY_DIAL[step];
+  return LOCALITY_DIAL[step]!;
 }
 
 export function parseNearbyPlaces(value: unknown): NearbyPlace[] {
@@ -89,9 +89,9 @@ export function parseNearbyPlaces(value: unknown): NearbyPlace[] {
   return value
     .map((entry) => {
       if (typeof entry === 'string') return { name: entry, tier: 'far' as const };
-      const name = (entry as { name?: unknown })?.name;
+      const name = (entry as { name?: unknown | undefined })?.name;
       if (typeof name !== 'string' || !name.trim()) return null;
-      const tier = (entry as { tier?: unknown })?.tier === 'near' ? 'near' : 'far';
+      const tier = (entry as { tier?: unknown | undefined })?.tier === 'near' ? 'near' : 'far';
       return { name: name.trim(), tier } as NearbyPlace;
     })
     .filter((p): p is NearbyPlace => !!p);
@@ -217,7 +217,7 @@ export function applyNewsValues(
   title: string,
   body: string,
   config: NewsValuesConfig,
-  place?: PlaceDecision
+  place?: PlaceDecision | undefined
 ): NewsValueDecision {
   const dial = getDial(config.locality_strength);
   const decision = place ?? detectPlaceTier(title, body, config);

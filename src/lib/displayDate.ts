@@ -9,8 +9,8 @@
 const RECENT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 export const getDisplayDate = (
-  createdAt?: string | null,
-  originalPublishedAt?: string | null
+  createdAt?: string | null | undefined,
+  originalPublishedAt?: string | null | undefined
 ): string => {
   const created = createdAt || new Date().toISOString();
   if (!originalPublishedAt) return created;

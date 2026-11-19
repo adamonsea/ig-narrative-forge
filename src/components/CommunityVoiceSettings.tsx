@@ -12,15 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 
 interface CommunityVoiceSettingsProps {
   topicId: string;
-  enabled?: boolean;
-  pulseFrequency?: number;
+  enabled?: boolean | undefined;
+  pulseFrequency?: number | undefined;
   config?: {
-    subreddits?: string[];
-    processing_frequency_hours?: number;
-    last_processed?: string;
+    subreddits?: string[] | undefined;
+    processing_frequency_hours?: number | undefined;
+    last_processed?: string | undefined;
   };
-  topicType?: string;
-  region?: string;
+  topicType?: string | undefined;
+  region?: string | undefined;
   onUpdate?: () => void;
 }
 
@@ -201,7 +201,7 @@ export const CommunityVoiceSettings = ({
               <Label className="text-xs">Show pulse every {pulseFrequency} stories</Label>
               <Slider
                 value={[pulseFrequency]}
-                onValueChange={([v]) => setPulseFrequency(v)}
+                onValueChange={([v]) => setPulseFrequency(v!)}
                 max={20}
                 min={4}
                 step={2}

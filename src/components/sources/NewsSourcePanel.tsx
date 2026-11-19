@@ -19,12 +19,12 @@ export interface NewsSourceView {
   canonical_domain: string | null;
   is_active: boolean | null;
   last_scraped_at: string | null;
-  consecutive_failures?: number;
-  last_failure_reason?: string | null;
-  last_error?: string | null;
-  stories_published_7d?: number;
-  stories_published_total?: number;
-  scraping_config?: any;
+  consecutive_failures?: number | undefined;
+  last_failure_reason?: string | null | undefined;
+  last_error?: string | null | undefined;
+  stories_published_7d?: number | undefined;
+  stories_published_total?: number | undefined;
+  scraping_config?: any | undefined;
 }
 
 export interface NewsSourceSettings { feed_url: string; trust: boolean; trustDays: number }

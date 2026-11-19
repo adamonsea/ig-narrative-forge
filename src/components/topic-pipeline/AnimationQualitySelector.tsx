@@ -7,7 +7,7 @@ export type AnimationQuality = 'standard' | 'fast';
 interface AnimationQualitySelectorProps {
   onAnimate: (quality?: AnimationQuality) => void;
   isAnimating: boolean;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 }
 
 export function AnimationQualitySelector({

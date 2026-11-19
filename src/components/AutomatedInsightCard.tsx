@@ -1,12 +1,12 @@
 import { Card } from '@/components/ui/card';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { AutomatedInsightCard as InsightCardType } from '@/hooks/useAutomatedInsightCards';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/lib/router-compat';
 import { useMemo } from 'react';
 
 interface AutomatedInsightCardProps {
   card: InsightCardType;
-  topicSlug?: string;
+  topicSlug?: string | undefined;
 }
 
 export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardProps) => {
@@ -15,8 +15,8 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
   // Handle story navigation from card metadata
   const handleSlideClick = (slideIndex: number) => {
     const slide = card.slides[slideIndex];
-    if (slide?.metadata?.storyId && topicSlug) {
-      navigate(`/feed/${topicSlug}/story/${slide.metadata.storyId}`);
+    if (slide?.metadata?.['storyId'] && topicSlug) {
+      navigate(`/feed/${topicSlug}/story/${slide!.metadata!['storyId']}`);
     }
   };
 

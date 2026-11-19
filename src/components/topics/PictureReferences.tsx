@@ -13,11 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface LandmarkPhoto {
   url: string;
-  credit?: string;
+  credit?: string | undefined;
 }
 
 export interface PlaceSetupState {
-  status?: 'suggested' | 'confirmed';
+  status?: 'suggested' | 'confirmed' | undefined;
 }
 
 interface PhotoCandidate {
@@ -34,21 +34,21 @@ export interface PlaceSuggestion {
 }
 
 export interface PictureReferencesPatch {
-  landmarks?: string[];
-  landmark_descriptions?: Record<string, string>;
-  landmark_reference_images?: Record<string, LandmarkPhoto[]>;
-  landmark_setup_state?: Record<string, any>;
+  landmarks?: string[] | undefined;
+  landmark_descriptions?: Record<string, string> | undefined;
+  landmark_reference_images?: Record<string, LandmarkPhoto[]> | undefined;
+  landmark_setup_state?: Record<string, any> | undefined;
 }
 
 interface PictureReferencesProps {
   topicId: string;
   topicName: string;
-  region?: string;
+  region?: string | undefined;
   landmarks: string[];
   descriptions: Record<string, string>;
   photos: Record<string, LandmarkPhoto[]>;
   setupState: Record<string, PlaceSetupState>;
-  illustrationStyle?: IllustrationStyle;
+  illustrationStyle?: IllustrationStyle | undefined;
   onIllustrationStyleChange?: (style: IllustrationStyle) => void;
   onChange: (patch: PictureReferencesPatch) => void;
 }
@@ -193,7 +193,7 @@ export function PictureReferences({
     await persist({ landmark_descriptions: next });
   };
 
-  const importPhoto = async (place: string, payload: { sourceUrl?: string; credit?: string; fileBase64?: string; contentType?: string }) => {
+  const importPhoto = async (place: string, payload: { sourceUrl?: string | undefined; credit?: string | undefined; fileBase64?: string | undefined; contentType?: string | undefined }) => {
     const current = photos[place] || [];
     if (current.length >= MAX_PHOTOS) {
       toast({ title: "Three photos is the limit", description: "Remove one first" });

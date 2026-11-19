@@ -14,15 +14,15 @@ interface CleanupResult {
     operation: string;
     result: {
       success: boolean;
-      orphaned_sources_removed?: number;
-      duplicate_sources_consolidated?: number;
-      duplicates_removed?: number;
+      orphaned_sources_removed?: number | undefined;
+      duplicate_sources_consolidated?: number | undefined;
+      duplicates_removed?: number | undefined;
       message: string;
     };
   }>;
-  final_source_count?: number;
-  summary?: string;
-  error?: string;
+  final_source_count?: number | undefined;
+  summary?: string | undefined;
+  error?: string | undefined;
 }
 
 export const SourceCleanup = () => {

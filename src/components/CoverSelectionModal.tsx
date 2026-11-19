@@ -19,8 +19,8 @@ import {
 interface CoverOption {
   id: string;
   cover_url: string;
-  generation_prompt?: string;
-  model_used?: string;
+  generation_prompt?: string | undefined;
+  model_used?: string | undefined;
   generated_at: string;
 }
 
@@ -30,7 +30,7 @@ interface CoverSelectionModalProps {
   storyId: string;
   storyTitle: string;
   coverOptions: CoverOption[];
-  selectedCoverId?: string;
+  selectedCoverId?: string | undefined;
   onCoverUpdated: () => void;
 }
 

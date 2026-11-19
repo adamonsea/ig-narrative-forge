@@ -20,9 +20,9 @@ function Panel({
   className,
 }: {
   title: string;
-  hint?: string;
+  hint?: string | undefined;
   children: React.ReactNode;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <section className={cn("min-w-0", className)}>
@@ -39,7 +39,7 @@ function Quiet({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>;
 }
 
-function Bar({ value, max, muted }: { value: number; max: number; muted?: boolean }) {
+function Bar({ value, max, muted }: { value: number; max: number; muted?: boolean | undefined }) {
   const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return (
     <span className="block h-1.5 rounded-full bg-muted overflow-hidden">

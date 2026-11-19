@@ -26,7 +26,7 @@ interface Props {
   topicName: string;
   enabled: boolean;
   access: "open" | "key";
-  onChange: (patch: { mcp_enabled?: boolean; mcp_access?: "open" | "key" }) => void;
+  onChange: (patch: { mcp_enabled?: boolean | undefined; mcp_access?: "open" | "key" }) => void;
   onEnabledChange?: (enabled: boolean) => void;
 }
 
@@ -74,7 +74,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
       .then(({ count }) => setUsageCount(count ?? 0));
   }, [enabled, loadKeys, topicSlug]);
 
-  const persist = async (patch: { mcp_enabled?: boolean; mcp_access?: "open" | "key" }) => {
+  const persist = async (patch: { mcp_enabled?: boolean | undefined; mcp_access?: "open" | "key" }) => {
     onChange(patch);
     setSaveError(false);
     if (typeof patch.mcp_enabled === 'boolean') {

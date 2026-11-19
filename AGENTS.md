@@ -42,3 +42,5 @@
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
 - Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
+- The app runs on TanStack Start (server-rendered); feed and story link previews come only from route `loader` + `head()` via `src/lib/shareMeta.ts` (public topic/story fields, canonical `https://curatr.pro/...`); crawlers read the first HTML, so previews must never depend on client code.
+- Optional props/fields that may be undefined are passed with `opt()`/`definedOnly()` from `src/lib/optionalProps.ts`; keeps `exactOptionalPropertyTypes` strict without changing what React or the database receives.

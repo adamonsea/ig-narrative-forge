@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from '@/lib/router-compat';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -148,8 +148,8 @@ export default function ExplorePile() {
           p_topic_id: topic.id,
           p_limit: 150,
           p_offset: 0,
-          p_keyword_filters: null,
-          p_source_filters: null
+          p_keyword_filters: null!,
+          p_source_filters: null!
         });
 
       console.log('[Explore] RPC response:', { 

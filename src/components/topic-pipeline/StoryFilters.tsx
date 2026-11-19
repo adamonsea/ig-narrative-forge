@@ -19,7 +19,7 @@ interface StoryFiltersProps {
   sortMode: StorySort;
   onSortMode: (s: StorySort) => void;
   onRefresh: () => void;
-  loading?: boolean;
+  loading?: boolean | undefined;
 }
 
 /** One filter button: story type, source, sort and refresh in a small popover. */

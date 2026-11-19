@@ -1,5 +1,6 @@
+import { opt } from "@/lib/optionalProps";
 import { useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "@/lib/router-compat";
 import { CircleAlert, ExternalLink, Globe2, Mail, Mic2, Rss, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,49 +43,49 @@ export interface EditorialTopic {
   slug: string;
   topic_type: "regional" | "keyword";
   keywords: string[];
-  region?: string;
-  landmarks?: string[];
-  landmark_descriptions?: Record<string, string>;
-  landmark_reference_images?: Record<string, { url: string; credit?: string }[]>;
-  landmark_setup_state?: Record<string, any>;
-  coverage_setup_state?: Record<string, any>;
-  postcodes?: string[];
-  organizations?: string[];
-  audience_expertise?: "beginner" | "intermediate" | "expert";
-  default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet";
-  default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven";
-  illustration_style?: IllustrationStyle;
-  illustration_primary_color?: string;
-  house_style_notes?: string | null;
-  house_style_examples?: string | null;
-  locality_strength?: number;
-  nearby_places?: unknown;
-  big_story_override?: boolean;
-  community_intelligence_enabled?: boolean;
-  community_pulse_frequency?: number;
-  community_config?: { subreddits?: string[]; last_processed?: string; processing_frequency_hours?: number };
-  parliamentary_tracking_enabled?: boolean;
-  events_enabled?: boolean;
-  feed_lead?: string | null;
-  event_cards?: string | null;
-  event_currency?: string | null;
-  event_photos_enabled?: boolean | null;
-  story_cover_style?: string | null;
-  use_publisher_photos?: boolean | null;
-  event_source_url?: string;
-  branding_config?: unknown;
-  donation_enabled?: boolean;
-  donation_config?: unknown;
-  drip_feed_enabled?: boolean;
-  public_widget_builder_enabled?: boolean;
-  rss_enabled?: boolean;
-  mcp_enabled?: boolean;
-  mcp_access?: "open" | "key";
-  email_subscriptions_enabled?: boolean;
-  audio_briefings_daily_enabled?: boolean;
-  audio_briefings_weekly_enabled?: boolean;
-  family_safe?: boolean;
-  weekly_email_enabled?: boolean;
+  region?: string | undefined;
+  landmarks?: string[] | undefined;
+  landmark_descriptions?: Record<string, string> | undefined;
+  landmark_reference_images?: (Record<string, { url: string; credit?: string | undefined }[]>) | undefined;
+  landmark_setup_state?: Record<string, any> | undefined;
+  coverage_setup_state?: Record<string, any> | undefined;
+  postcodes?: string[] | undefined;
+  organizations?: string[] | undefined;
+  audience_expertise?: "beginner" | "intermediate" | "expert" | undefined;
+  default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet" | undefined;
+  default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven" | undefined;
+  illustration_style?: IllustrationStyle | undefined;
+  illustration_primary_color?: string | undefined;
+  house_style_notes?: string | null | undefined;
+  house_style_examples?: string | null | undefined;
+  locality_strength?: number | undefined;
+  nearby_places?: unknown | undefined;
+  big_story_override?: boolean | undefined;
+  community_intelligence_enabled?: boolean | undefined;
+  community_pulse_frequency?: number | undefined;
+  community_config?: ({ subreddits?: string[] | undefined; last_processed?: string | undefined; processing_frequency_hours?: number | undefined }) | undefined;
+  parliamentary_tracking_enabled?: boolean | undefined;
+  events_enabled?: boolean | undefined;
+  feed_lead?: string | null | undefined;
+  event_cards?: string | null | undefined;
+  event_currency?: string | null | undefined;
+  event_photos_enabled?: boolean | null | undefined;
+  story_cover_style?: string | null | undefined;
+  use_publisher_photos?: boolean | null | undefined;
+  event_source_url?: string | undefined;
+  branding_config?: unknown | undefined;
+  donation_enabled?: boolean | undefined;
+  donation_config?: unknown | undefined;
+  drip_feed_enabled?: boolean | undefined;
+  public_widget_builder_enabled?: boolean | undefined;
+  rss_enabled?: boolean | undefined;
+  mcp_enabled?: boolean | undefined;
+  mcp_access?: "open" | "key" | undefined;
+  email_subscriptions_enabled?: boolean | undefined;
+  audio_briefings_daily_enabled?: boolean | undefined;
+  audio_briefings_weekly_enabled?: boolean | undefined;
+  family_safe?: boolean | undefined;
+  weekly_email_enabled?: boolean | undefined;
   is_public: boolean;
 }
 
@@ -93,7 +94,7 @@ interface EditorialStats {
   processing_queue: number;
   ready_stories: number;
   simplified_stories_24h: number;
-  email_subscribers_total?: number;
+  email_subscribers_total?: number | undefined;
 }
 
 /** Old ?section= links (help answers, bookmarks) → the section and fold that now hold them. */
@@ -118,7 +119,7 @@ interface EditorialControlCenterProps {
   onProRequired?: () => void;
 }
 
-function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
+function Section({ id, title, description, children }: { id: string; title: string; description?: string | undefined; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 space-y-6 border-t border-border pt-8 first:border-t-0 first:pt-0">
       <header className="flex items-center gap-2">
@@ -130,7 +131,7 @@ function Section({ id, title, description, children }: { id: string; title: stri
   );
 }
 
-function SubHeading({ id, children, hint }: { id?: string; children: React.ReactNode; hint?: string }) {
+function SubHeading({ id, children, hint }: { id?: string | undefined; children: React.ReactNode; hint?: string | undefined }) {
   return (
     <h3 id={id} className="mb-4 flex items-center gap-2 text-lg font-semibold">
       {children}
@@ -326,7 +327,7 @@ export function EditorialControlCenter({
           subscriberCount={stats.email_subscribers_total || 0}
           onChannelToggle={onChannelToggle}
           onTopicPatch={(values) => patch(values)}
-          onProRequired={onProRequired}
+          {...opt("onProRequired", onProRequired)}
         />
         <RememberedFold foldKey="share-more" label="More options">
           <div className="divide-y divide-border border-y border-border">
@@ -385,7 +386,7 @@ export function EditorialControlCenter({
             {FEATURES.communityDiscussion && (
               <section className="border-t border-border pt-8">
                 <SubHeading hint="Follow what people are saying online without changing the feed's writing voice.">Community discussion</SubHeading>
-                <CommunityVoiceSettings topicId={topic.id} enabled={topic.community_intelligence_enabled} pulseFrequency={topic.community_pulse_frequency} config={topic.community_config} topicType={topic.topic_type} region={topic.region} onUpdate={onUpdate} />
+                <CommunityVoiceSettings topicId={topic.id} {...opt("enabled", topic.community_intelligence_enabled)} {...opt("pulseFrequency", topic.community_pulse_frequency)} {...opt("config", topic.community_config)} topicType={topic.topic_type} {...opt("region", topic.region)} onUpdate={onUpdate} />
               </section>
             )}
             {topic.topic_type === "regional" && (
@@ -401,7 +402,7 @@ export function EditorialControlCenter({
   );
 }
 
-function ChannelRow({ icon: Icon, label, hint, status, checked, onCheckedChange }: { icon: typeof Mail; label: string; hint?: string; status?: string; checked: boolean; onCheckedChange?: (checked: boolean) => void }) {
+function ChannelRow({ icon: Icon, label, hint, status, checked, onCheckedChange }: { icon: typeof Mail; label: string; hint?: string | undefined; status?: string | undefined; checked: boolean; onCheckedChange?: (checked: boolean) => void }) {
   return (
     <div className="flex items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-3">

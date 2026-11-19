@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { motion, useReducedMotion } from 'framer-motion';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 
@@ -10,7 +11,7 @@ export const SlideBackdrop = ({
   inverted = false,
 }: {
   images: string[];
-  inverted?: boolean;
+  inverted?: boolean | undefined;
 }) => {
   const reduce = useReducedMotion();
   const tiles = images.slice(0, 24);
@@ -20,7 +21,7 @@ export const SlideBackdrop = ({
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <motion.div
         className="absolute -inset-[8%] grid grid-cols-4 gap-1 sm:grid-cols-6"
-        initial={reduce ? undefined : { scale: 1.08, opacity: 0 }}
+        {...opt("initial", reduce ? undefined : { scale: 1.08, opacity: 0 })}
         animate={reduce ? { opacity: 0.45 } : { scale: 1, opacity: 0.45 }}
         transition={{ duration: reduce ? 0 : 2.4, ease: [0.16, 1, 0.3, 1] }}
       >

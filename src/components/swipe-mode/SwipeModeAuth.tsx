@@ -12,7 +12,7 @@ interface SwipeModeAuthProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   topicSlug: string;
-  variant?: AuthVariant;
+  variant?: AuthVariant | undefined;
 }
 
 const VARIANT_SUBTITLES: Record<AuthVariant, string> = {

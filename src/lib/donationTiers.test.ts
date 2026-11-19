@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/donationTiers.test.ts
+// run with: bun test ./src/lib/donationTiers.test.ts
 import { describe, expect, it } from "bun:test";
 import { publishableTiers } from "./donationTiers";
 

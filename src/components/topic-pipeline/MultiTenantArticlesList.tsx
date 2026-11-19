@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -19,32 +20,32 @@ interface MultiTenantArticlesListProps {
   deletingArticles: Set<string>;
   animatingArticles: Set<string>;
   
-  defaultSlideQuantity?: 'short' | 'tabloid' | 'indepth' | 'extensive';
-  defaultTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
-  defaultWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
+  defaultSlideQuantity?: 'short' | 'tabloid' | 'indepth' | 'extensive' | undefined;
+  defaultTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined;
+  defaultWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined;
   
-  slideQuantityOverrides?: Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>;
-  toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet'>;  
-  writingStyleOverrides?: Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven'>;
+  slideQuantityOverrides?: Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'> | undefined;
+  toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined> | undefined;  
+  writingStyleOverrides?: Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined> | undefined;
   
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
   onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => void;
   onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   
   /** The feed's region, landmarks, keywords and organisations, highlighted in the drawer's article preview. */
-  highlightTerms?: HighlightTerms;
+  highlightTerms?: HighlightTerms | undefined;
   onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven', generateIllustration?: boolean) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete?: (articleIds: string[]) => void;
   onPromote?: (articleId: string) => void;
-  topicId?: string;
+  topicId?: string | undefined;
   onRefresh?: () => void;
-  duplicateMap?: Map<string, DuplicateInfo>;
+  duplicateMap?: Map<string, DuplicateInfo> | undefined;
   
-  hasMoreArticles?: boolean;
-  totalArticlesCount?: number | null;
-  loadingMore?: boolean;
+  hasMoreArticles?: boolean | undefined;
+  totalArticlesCount?: number | null | undefined;
+  loadingMore?: boolean | undefined;
   onLoadMore?: () => void;
 }
 
@@ -371,7 +372,7 @@ export default function MultiTenantArticlesList({
             article={a}
             open={!!a}
             onOpenChange={(o) => !o && setOpenArticleId(null)}
-            dupInfo={a ? duplicateMap?.get(a.id) : undefined}
+            {...opt("dupInfo", a ? duplicateMap?.get(a.id) : undefined)}
             slideType={a ? slideTypeFor(a) : defaultSlideQuantity}
             tone={(a && toneOverrides[a.id]) || defaultTone}
             writingStyle={(a && writingStyleOverrides[a.id]) || defaultWritingStyle}
@@ -380,7 +381,7 @@ export default function MultiTenantArticlesList({
             onWritingStyle={(v) => a && onWritingStyleOverrideChange(a.id, v)}
             makePicture={a ? illustrationOverrides[a.id] ?? true : true}
             onMakePicture={(on) => a && setIllustrationOverrides((prev) => ({ ...prev, [a.id]: on }))}
-            highlightTerms={highlightTerms}
+            {...opt("highlightTerms", highlightTerms)}
             isProcessing={a ? processingArticle === a.id : false}
             isDeleting={a ? deletingArticles.has(a.id) : false}
             onPublish={() => {
@@ -388,7 +389,7 @@ export default function MultiTenantArticlesList({
               if (publishArticle(a, slideTypeFor(a), toneOverrides[a.id] || defaultTone, writingStyleOverrides[a.id] || defaultWritingStyle)) setOpenArticleId(null);
             }}
             onSkip={() => { if (a) { onDelete(a.id, a.title); setOpenArticleId(null); } }}
-            onSuppress={onDiscardAndSuppress && topicId && a ? () => { onDiscardAndSuppress(a.id, topicId, a.url, a.title); setOpenArticleId(null); } : undefined}
+            {...opt("onSuppress", onDiscardAndSuppress && topicId && a ? () => { onDiscardAndSuppress(a.id, topicId, a.url, a.title); setOpenArticleId(null); } : undefined)}
           />
         );
       })()}

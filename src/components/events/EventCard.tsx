@@ -22,7 +22,7 @@ const ACCENT = "text-[color:var(--ev-accent)] dark:text-[color:var(--ev-accent-d
 const PILL = `inline-flex items-center gap-1.5 min-h-11 px-5 py-2 text-sm font-semibold whitespace-nowrap rounded-full transition-opacity hover:opacity-90 ${FILL}`;
 
 /** The large sentence-case date block (Thu / 19 / Nov). Shown on /design. */
-export function EventDateBlock({ ymd, className = "" }: { ymd: string; className?: string }) {
+export function EventDateBlock({ ymd, className = "" }: { ymd: string; className?: string | undefined }) {
   const b = dateBlock(ymd);
   return (
     <div className={`w-[120px] rounded-2xl py-4 text-center font-lexend leading-none ${FILL} ${className}`} aria-hidden="true">
@@ -35,13 +35,13 @@ export function EventDateBlock({ ymd, className = "" }: { ymd: string; className
 
 interface EventCardProps {
   event: WhatsOnFeedEvent;
-  brandColor?: string | null;
+  brandColor?: string | null | undefined;
   /** The feed's owner: their clicks don't count as sending readers. */
-  isOwner?: boolean;
+  isOwner?: boolean | undefined;
   /** The feed's currency (GBP / EUR / USD) for bare listing prices; unknown hides them. */
-  currency?: string | null;
+  currency?: string | null | undefined;
   /** Illustration set for the top band; the live feed always uses the default (set A). */
-  Illustration?: ComponentType<{ category?: string | null; color: string; animate?: boolean }>;
+  Illustration?: (ComponentType<{ category?: string | null | undefined; color: string; animate?: boolean | undefined }>) | undefined;
 }
 
 /** Same angled seam as the illustrations, so the date block sits across it either way. */
@@ -76,7 +76,7 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.6 });
+    const io = new IntersectionObserver(([entry]) => setInView(entry!.isIntersecting), { threshold: 0.6 });
     io.observe(el);
     return () => io.disconnect();
   }, []);

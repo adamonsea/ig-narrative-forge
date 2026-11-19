@@ -38,11 +38,11 @@ export const AutomationStatusCard = ({ topicId }: AutomationStatusCardProps) => 
 
       if (error) throw error;
 
-      setSettings(data || {
+      setSettings((data || {
         automation_mode: 'manual',
         auto_simplify_enabled: false,
         quality_threshold: 60
-      });
+      }) as unknown as AutomationSettings | null);
     } catch (error) {
       console.error('Error loading automation settings:', error);
     } finally {

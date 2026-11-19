@@ -37,13 +37,13 @@ interface Article {
   word_count: number | null;
   reading_time_minutes: number | null;
   source_url: string;
-  canonical_url?: string | null;
+  canonical_url?: string | null | undefined;
   region: string | null;
   summary: string | null;
   body: string | null;
   created_at: string;
-  source_name?: string;
-  source_domain?: string;
+  source_name?: string | undefined;
+  source_domain?: string | undefined;
 }
 
 interface ArticleListProps {

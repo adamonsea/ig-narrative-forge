@@ -27,7 +27,7 @@ interface TopicScheduleData {
     source_name: string;
     feed_url: string;
     is_active: boolean;
-    last_scraped_at?: string;
+    last_scraped_at?: string | undefined;
     articles_scraped: number;
     success_rate: number;
     credibility_score: number;

@@ -394,7 +394,7 @@ export const CommunityPulseReview = ({ topicId }: CommunityPulseReviewProps) => 
                 {totalKeywords} keywords across {totalSets} sets
               </Badge>
               <Badge variant="outline">
-                Last updated: {new Date(keywords[0]?.updated_at).toLocaleDateString()}
+                Last updated: {new Date(keywords[0]?.updated_at ?? '').toLocaleDateString()}
               </Badge>
             </div>
           )}

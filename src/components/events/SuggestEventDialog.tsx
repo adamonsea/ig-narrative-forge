@@ -9,13 +9,13 @@ import { getVisitorId } from "@/lib/visitorIdentity";
 import { londonToday } from "@/lib/whatsOn";
 
 const addMonths = (ymd: string, n: number) => {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1 + n, d)).toISOString().slice(0, 10);
+  const [y, m, d] = ymd.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m! - 1 + n, d)).toISOString().slice(0, 10);
 };
 
 async function errorText(error: unknown): Promise<string> {
   try {
-    const res = (error as { context?: Response }).context;
+    const res = (error as { context?: Response | undefined }).context;
     const body = res ? await res.json() : null;
     if (body?.error && typeof body.error === "string") return body.error;
   } catch { /* fall through */ }
@@ -23,7 +23,7 @@ async function errorText(error: unknown): Promise<string> {
 }
 
 /** Reader's "+ Add an event": four fields, a required listing link, and the editor checks it first. */
-export function SuggestEventButton({ topicId, className }: { topicId: string; className?: string }) {
+export function SuggestEventButton({ topicId, className }: { topicId: string; className?: string | undefined }) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);

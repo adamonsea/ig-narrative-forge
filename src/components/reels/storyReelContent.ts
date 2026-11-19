@@ -29,7 +29,7 @@ export interface ReelTeaserContent {
   /** Feed / topic brand name */
   brandName: string;
   /** Optional background image (cover illustration) */
-  backgroundImage?: string | null;
+  backgroundImage?: string | null | undefined;
 }
 
 interface StorySlideLike {
@@ -39,8 +39,8 @@ interface StorySlideLike {
 
 interface StoryLike {
   title: string;
-  slides?: StorySlideLike[] | null;
-  cover_illustration_url?: string | null;
+  slides?: StorySlideLike[] | null | undefined;
+  cover_illustration_url?: string | null | undefined;
 }
 
 function trimToLength(text: string, max: number): string {

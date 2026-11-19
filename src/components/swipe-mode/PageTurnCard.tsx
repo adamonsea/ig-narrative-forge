@@ -1,3 +1,5 @@
+import type { MotionStyle } from "framer-motion";
+import { opt } from "@/lib/optionalProps";
 import { useRef, useMemo, memo } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -25,7 +27,7 @@ interface Story {
   created_at: string;
   article: {
     source_url: string;
-    published_at?: string | null;
+    published_at?: string | null | undefined;
   } | null;
   slides?: Array<{
     slide_number: number;
@@ -37,8 +39,8 @@ interface PageTurnCardProps {
   story: Story;
   onSwipe: (direction: 'like' | 'discard') => void;
   onTap: () => void;
-  exitDirection?: 'left' | 'right' | null;
-  style?: React.CSSProperties;
+  exitDirection?: 'left' | 'right' | null | undefined;
+  style?: React.CSSProperties | undefined;
 }
 
 // Simplified torn edge - less complex for better performance
@@ -124,7 +126,7 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
     <motion.div
       key={story.id}
       layout={false}
-      style={{
+      style={({
         x,
         rotateZ,
         cursor: 'grab',
@@ -132,7 +134,7 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         transform: 'translateZ(0)',
         backfaceVisibility: 'hidden',
         ...style
-      }}
+      }) as MotionStyle}
       drag="x"
       dragConstraints={{ left: -300, right: 300 }}
       dragElastic={animationPresets.dragElastic}
@@ -154,16 +156,14 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         opacity: 1,
         transition: { type: "spring", ...animationPresets.spring }
       }}
-      exit={
-        exitDirection
+      {...opt("exit", exitDirection
           ? {
               x: (exitDirection === 'left' ? -1 : 1) * 1200,
               rotate: (exitDirection === 'left' ? -1 : 1) * 18,
               opacity: 0,
-              transition: { duration: 0.28, ease: [0.32, 0.72, 0, 1] }
+              transition: { duration: 0.28, ease: [0.32, 0.72, 0, 1] as [number, number, number, number] }
             }
-          : undefined
-      }
+          : undefined)}
       className="absolute inset-0 touch-none"
     >
 

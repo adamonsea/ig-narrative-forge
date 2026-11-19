@@ -5,9 +5,9 @@ import { editorialEase } from './ReviewChapter';
 
 export interface GridStory {
   id: string;
-  slug?: string | null;
+  slug?: string | null | undefined;
   title: string;
-  cover_illustration_url?: string | null;
+  cover_illustration_url?: string | null | undefined;
 }
 
 const Card = ({ story, index }: { story: GridStory; index: number }) => {
@@ -57,7 +57,7 @@ const Card = ({ story, index }: { story: GridStory; index: number }) => {
  * Even grid of story covers for one beat. Every card is the same size with its
  * headline always visible, so the set is readable and clickable at any width.
  */
-export const StoryImageGrid = ({ stories }: { stories: GridStory[]; feedSlug?: string }) => {
+export const StoryImageGrid = ({ stories }: { stories: GridStory[]; feedSlug?: string | undefined }) => {
   if (stories.length === 0) return null;
   const items = stories.slice(0, 6);
 

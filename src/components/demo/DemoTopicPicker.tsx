@@ -3,7 +3,7 @@ import { DEMO_TOPICS, type DemoTopic } from '@/lib/demoConfig';
 
 interface DemoTopicPickerProps {
   onSelect: (topic: DemoTopic) => void;
-  selected?: string | null;
+  selected?: string | null | undefined;
 }
 
 export const DemoTopicPicker = ({ onSelect, selected }: DemoTopicPickerProps) => {

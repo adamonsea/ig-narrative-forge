@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/imageOptimization.test.ts
+// run with: bun test ./src/lib/imageOptimization.test.ts
 import { describe, it, expect } from 'bun:test';
 import { optimizeImageUrl, coverPixelWidth } from './imageOptimization';
 

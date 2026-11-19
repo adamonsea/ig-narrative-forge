@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/ticketPlatforms.test.ts
+// run with: bun test ./src/lib/ticketPlatforms.test.ts
 import { describe, expect, it } from "bun:test";
 import { isOrganiserShop, ticketPlatformOf } from "./ticketPlatforms";
 

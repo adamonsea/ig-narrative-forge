@@ -8,7 +8,7 @@ import type { EventCategory } from "./EventCategoryIcon";
  * theme colour (`color`) with white and ink tints over it, a printed grain texture,
  * and an angled bottom edge (the date card sits across that seam).
  * One slow drift when `animate` is true (card in view); still under reduced motion.
- * Styles and keyframes live once in src/index.css (.ec-ill …).
+ * Styles and keyframes live once in src/styles.css (.ec-ill …).
  */
 
 const L = (o: number) => ({ fill: "#fff", fillOpacity: o });
@@ -139,7 +139,7 @@ const ART: Record<EventCategory, Art> = {
         {[
           [60, 40, 7], [140, 24, 5], [250, 30, 6], [190, 70, 4], [96, 96, 4], [370, 110, 5],
         ].map(([x, y, s], i) => (
-          <path key={i} d={`M${x} ${y - s * 2}L${x + s * 0.5} ${y - s * 0.5}L${x + s * 2} ${y}L${x + s * 0.5} ${y + s * 0.5}L${x} ${y + s * 2}L${x - s * 0.5} ${y + s * 0.5}L${x - s * 2} ${y}L${x - s * 0.5} ${y - s * 0.5}z`} {...L(0.8)} />
+          <path key={i} d={`M${x} ${y! - s! * 2}L${x! + s! * 0.5} ${y! - s! * 0.5}L${x! + s! * 2} ${y}L${x! + s! * 0.5} ${y! + s! * 0.5}L${x} ${y! + s! * 2}L${x! - s! * 0.5} ${y! + s! * 0.5}L${x! - s! * 2} ${y}L${x! - s! * 0.5} ${y! - s! * 0.5}z`} {...L(0.8)} />
         ))}
       </g>
     </>
@@ -158,7 +158,7 @@ const ART: Record<EventCategory, Art> = {
       <path d="M-10 26 Q100 58 200 34 T410 30" {...SL(0.6, 2)} />
       <g className="ill-twinkle">
         {[30, 80, 130, 180, 230, 280, 330, 380].map((x, i) => (
-          <circle key={x} cx={x} cy={[34, 44, 45, 39, 34, 32, 31, 30][i] + 8} r="5" {...L(0.85)} />
+          <circle key={x} cx={x} cy={[34, 44, 45, 39, 34, 32, 31, 30][i]! + 8} r="5" {...L(0.85)} />
         ))}
       </g>
       <g transform="rotate(-6 200 100)">
@@ -223,14 +223,14 @@ const ART: Record<EventCategory, Art> = {
 };
 
 interface EventCategoryIllustrationProps {
-  category?: string | null;
+  category?: string | null | undefined;
   /** Feed theme colour (any CSS colour), e.g. from feedBrandPalette(). */
   color: string;
   /** Slow drift; pass true only for the card in view. */
-  animate?: boolean;
+  animate?: boolean | undefined;
   /** Cut the bottom edge at an angle (default on). */
-  angled?: boolean;
-  className?: string;
+  angled?: boolean | undefined;
+  className?: string | undefined;
 }
 
 export function EventCategoryIllustration({ category, color, animate = false, angled = true, className }: EventCategoryIllustrationProps) {

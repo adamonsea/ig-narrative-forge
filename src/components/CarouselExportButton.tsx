@@ -6,8 +6,8 @@ interface CarouselExportButtonProps {
   isExporting: boolean;
   progress: number;
   onClick: () => void;
-  size?: 'sm' | 'default' | 'lg';
-  variant?: 'default' | 'outline' | 'secondary' | 'ghost';
+  size?: 'sm' | 'default' | 'lg' | undefined;
+  variant?: 'default' | 'outline' | 'secondary' | 'ghost' | undefined;
 }
 
 export const CarouselExportButton: React.FC<CarouselExportButtonProps> = ({

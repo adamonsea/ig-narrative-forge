@@ -9,7 +9,7 @@ import heroNewsroomBusyFilm from '@/assets/newsroom-busy-slow.mp4.asset.json';
 // A backdrop item is a still, a film, or a still that comes to life: the busy
 // newsroom film opens on the exact frame of its photo, so the photo holds for
 // a moment and then starts moving with no visible cut.
-type HeroItem = { key: string; still?: string; film?: string };
+type HeroItem = { key: string; still?: string | undefined; film?: string | undefined };
 
 const HERO_ITEMS: HeroItem[] = [
   { key: 'hero', still: heroNewsroom.url },
@@ -32,7 +32,7 @@ const HeroNewsroomBackground = ({ reduce }: { reduce: boolean }) => {
     const arr = [...HERO_ITEMS];
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+      [arr[i], arr[j]] = [arr[j]!, arr[i]!];
     }
     return arr;
   }, []);
@@ -49,15 +49,15 @@ const HeroNewsroomBackground = ({ reduce }: { reduce: boolean }) => {
   useEffect(() => {
     if (reduce) return;
     const item = order[current];
-    if (item.still) setVisible(current);
-    if (!item.film) {
+    if (item!.still) setVisible(current);
+    if (!item!.film) {
       const t = window.setTimeout(advance, STILL_MS);
       return () => window.clearTimeout(t);
     }
 
-    const v = videoRefs.current[item.key];
+    const v = videoRefs.current[item!.key];
     if (!v) return;
-    setPlaying((p) => ({ ...p, [item.key]: false }));
+    setPlaying((p) => ({ ...p, [item!.key]: false }));
     v.pause();
     v.currentTime = 0;
 
@@ -71,12 +71,12 @@ const HeroNewsroomBackground = ({ reduce }: { reduce: boolean }) => {
     // Film can't play: a photo stays up for its usual time, otherwise skip.
     const fallback = () => {
       if (done) return;
-      if (item.still) timers.push(window.setTimeout(finish, STILL_MS - STILL_HOLD_MS));
+      if (item!.still) timers.push(window.setTimeout(finish, STILL_MS - STILL_HOLD_MS));
       else finish();
     };
     const onPlaying = () => {
       setVisible(current);
-      setPlaying((p) => ({ ...p, [item.key]: true }));
+      setPlaying((p) => ({ ...p, [item!.key]: true }));
     };
     const onTime = () => {
       if (v.duration && v.currentTime >= v.duration - FADE_MS / 1000) finish();
@@ -94,13 +94,14 @@ const HeroNewsroomBackground = ({ reduce }: { reduce: boolean }) => {
       }, VIDEO_WAIT_MS);
       timers.push(wait);
       v.addEventListener('canplay', onReady, { once: true });
+      return undefined;
     };
 
     v.addEventListener('playing', onPlaying);
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('ended', finish);
     v.addEventListener('error', fallback);
-    timers.push(window.setTimeout(start, item.still ? STILL_HOLD_MS : 0));
+    timers.push(window.setTimeout(start, item!.still ? STILL_HOLD_MS : 0));
 
     // The outgoing film keeps playing underneath the crossfade.
     return () => {

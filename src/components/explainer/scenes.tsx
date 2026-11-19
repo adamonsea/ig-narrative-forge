@@ -15,15 +15,15 @@ export interface SceneProps {
  */
 export interface SceneContent {
   /** Five source pills around the article counter. */
-  sources?: readonly string[];
+  sources?: readonly string[] | undefined;
   /** Three kept stories in the filter scene (otherwise plain bars). */
-  keptHeadlines?: readonly string[];
+  keptHeadlines?: readonly string[] | undefined;
   /** Headline typed onto the illustrated story card. */
-  headline?: string;
+  headline?: string | undefined;
   /** Story titles on the editor rows (otherwise plain bars). */
-  editorRows?: { published: string; spiked: string; edited: string };
+  editorRows?: { published: string; spiked: string; edited: string } | undefined;
   /** Exactly six destination pills, clockwise from the top. */
-  destinations?: readonly string[];
+  destinations?: readonly string[] | undefined;
 }
 
 export const SceneContentContext = createContext<SceneContent>({});
@@ -110,9 +110,9 @@ const Chunk = ({
   className = '',
   style,
 }: {
-  children?: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
+  children?: React.ReactNode | undefined;
+  className?: string | undefined;
+  style?: React.CSSProperties | undefined;
 }) => (
   <div
     className={`rounded-[calc(var(--u)*2)] border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] ${className}`}
@@ -122,7 +122,7 @@ const Chunk = ({
   </div>
 );
 
-const Bars = ({ count = 3 }: { count?: number }) => (
+const Bars = ({ count = 3 }: { count?: number | undefined }) => (
   <div className="space-y-[calc(var(--u)*1)]">
     {Array.from({ length: count }).map((_, i) => (
       <div
@@ -561,7 +561,7 @@ export const ScenePublish = ({ reduced, cue, tap }: SceneProps) => {
             className="absolute left-1/2 top-1/2 w-[min(calc(var(--u)*30),42vw)] truncate rounded-full border-[calc(var(--u)*0.4)] border-white/25 bg-white/[0.08] px-[calc(var(--u)*2)] py-[calc(var(--u)*2)] text-center text-[calc(var(--u)*2.2)] font-medium text-white/90"
             style={{ translate: '-50% -50%' }}
             initial={{ x: 0, y: 0, opacity: 0, scale: 0.5 }}
-            animate={{ x: spots[i].x, y: spots[i].y, opacity: 1, scale: 1 }}
+            animate={{ x: spots[i]!.x, y: spots[i]!.y, opacity: 1, scale: 1 }}
             transition={{
               duration: reduced ? 0.3 : 0.7,
               delay: reduced ? 0 : 0.6 + i * 0.5,
@@ -588,13 +588,13 @@ export const SceneEditor = ({ reduced, cue, tap }: SceneProps) => {
     [900, () => { setApproved(true); cue('land'); tap(12); }],
     [2100, () => { setSwiped(true); cue('whoosh'); }],
   ]);
-  const Title = ({ text }: { text?: string }) =>
+  const Title = ({ text }: { text?: string | undefined }) =>
     text ? (
       <div className="line-clamp-2 text-[calc(var(--u)*2.2)] font-medium leading-tight text-white/90">{text}</div>
     ) : (
       <div className="h-[calc(var(--u)*1.8)] w-3/4 rounded-full bg-white/30" />
     );
-  const Row = ({ label, title, children }: { label: string; title?: string; children?: React.ReactNode }) => (
+  const Row = ({ label, title, children }: { label: string; title?: string | undefined; children?: React.ReactNode | undefined }) => (
     <Chunk className="flex items-center gap-[calc(var(--u)*2.5)] p-[calc(var(--u)*2.6)]">
       <div className="min-w-0 flex-1 space-y-[calc(var(--u)*1.2)]">
         <Title text={title} />

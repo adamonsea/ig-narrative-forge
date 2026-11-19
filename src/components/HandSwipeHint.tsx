@@ -11,7 +11,7 @@ export const shouldShowSwipeHint = (previousVisits: number) => previousVisits < 
 
 interface HandSwipeHintProps {
   topicSlug: string;
-  forceShow?: boolean;
+  forceShow?: boolean | undefined;
   onComplete?: () => void;
 }
 
@@ -57,6 +57,7 @@ export const HandSwipeHint = ({ topicSlug, forceShow = false, onComplete }: Hand
         clearTimeout(hideTimer);
       };
     }
+    return undefined;
   }, [topicSlug, forceShow, onComplete]);
 
   return (

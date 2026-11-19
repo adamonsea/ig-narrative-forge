@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { motion } from 'framer-motion';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils';
@@ -8,7 +9,7 @@ import { cn } from '@/lib/utils';
  */
 
 /** Radar sweep with sites pinging in — used while sources are being discovered. */
-export const SourceScanLoop = ({ className }: { className?: string }) => {
+export const SourceScanLoop = ({ className }: { className?: string | undefined }) => {
   const reduced = useReducedMotion();
   const pings = [
     { x: '18%', y: '30%', delay: 0 },
@@ -70,11 +71,9 @@ export const SourceScanLoop = ({ className }: { className?: string }) => {
               ? { opacity: 0.6 }
               : { opacity: [0, 1, 1, 0], scale: [0.4, 1.2, 1, 0.6] }
           }
-          transition={
-            reduced
+          {...opt("transition", reduced
               ? undefined
-              : { duration: 3, delay: p.delay, repeat: Infinity, ease: 'easeInOut' }
-          }
+              : { duration: 3, delay: p.delay, repeat: Infinity, ease: 'easeInOut' as const })}
         />
       ))}
     </div>
@@ -82,7 +81,7 @@ export const SourceScanLoop = ({ className }: { className?: string }) => {
 };
 
 /** Paper clippings dropping onto a stack — used while the feed is being built. */
-export const ClippingStackLoop = ({ className }: { className?: string }) => {
+export const ClippingStackLoop = ({ className }: { className?: string | undefined }) => {
   const reduced = useReducedMotion();
   const cards = [0, 1, 2];
 
@@ -116,11 +115,9 @@ export const ClippingStackLoop = ({ className }: { className?: string }) => {
                   opacity: [0, 1, 1, 0],
                 }
           }
-          transition={
-            reduced
+          {...opt("transition", reduced
               ? undefined
-              : { duration: 3.6, delay: i * 1.2, repeat: Infinity, ease: 'easeOut' }
-          }
+              : { duration: 3.6, delay: i * 1.2, repeat: Infinity, ease: 'easeOut' as const })}
         >
           <div className="h-2 w-4/5 rounded-sm bg-foreground/70 mb-1.5" />
           <div className="h-1.5 w-full rounded-sm bg-muted-foreground/30 mb-1" />
@@ -132,7 +129,7 @@ export const ClippingStackLoop = ({ className }: { className?: string }) => {
 };
 
 /** Three soft pulsing dots — for small inline waits. */
-export const PulsingDots = ({ className }: { className?: string }) => {
+export const PulsingDots = ({ className }: { className?: string | undefined }) => {
   const reduced = useReducedMotion();
   return (
     <div className={cn('flex items-center gap-1.5', className)} aria-hidden="true">
@@ -141,11 +138,9 @@ export const PulsingDots = ({ className }: { className?: string }) => {
           key={i}
           className="w-2 h-2 rounded-full bg-primary"
           animate={reduced ? { opacity: 0.5 } : { opacity: [0.25, 1, 0.25], y: [0, -3, 0] }}
-          transition={
-            reduced
+          {...opt("transition", reduced
               ? undefined
-              : { duration: 1.1, delay: i * 0.15, repeat: Infinity, ease: 'easeInOut' }
-          }
+              : { duration: 1.1, delay: i * 0.15, repeat: Infinity, ease: 'easeInOut' as const })}
         />
       ))}
     </div>
@@ -153,7 +148,7 @@ export const PulsingDots = ({ className }: { className?: string }) => {
 };
 
 /** Skeleton pills that shimmer where source chips will appear. */
-export const SourceChipSkeletons = ({ count = 6 }: { count?: number }) => {
+export const SourceChipSkeletons = ({ count = 6 }: { count?: number | undefined }) => {
   const reduced = useReducedMotion();
   const widths = [96, 132, 78, 148, 110, 88, 124, 92];
   return (
@@ -164,11 +159,9 @@ export const SourceChipSkeletons = ({ count = 6 }: { count?: number }) => {
           className="h-10 rounded-full bg-muted"
           style={{ width: widths[i % widths.length] }}
           animate={reduced ? { opacity: 0.6 } : { opacity: [0.35, 0.75, 0.35] }}
-          transition={
-            reduced
+          {...opt("transition", reduced
               ? undefined
-              : { duration: 1.6, delay: i * 0.12, repeat: Infinity, ease: 'easeInOut' }
-          }
+              : { duration: 1.6, delay: i * 0.12, repeat: Infinity, ease: 'easeInOut' as const })}
         />
       ))}
     </div>

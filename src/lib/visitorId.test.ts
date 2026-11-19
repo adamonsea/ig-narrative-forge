@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/visitorId.test.ts
+// run with: bun test ./src/lib/visitorId.test.ts
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { getVisitorId } from './visitorId';
 import { getVisitorId as getTrackingId } from './visitorIdentity';

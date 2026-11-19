@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, Columns2, Pin } from "lucide-react";
@@ -22,46 +23,46 @@ import { DuplicateCompareDrawer } from "./DuplicateCompareDrawer";
 import { StoryFilters, type StorySort, type StoryTypeFilter } from "./StoryFilters";
 
 /** Best-effort source label for a story. */
-const storySourceLabel = (s: { publication_name?: string | null; source_url?: string | null }): string =>
+const storySourceLabel = (s: { publication_name?: string | null | undefined; source_url?: string | null | undefined }): string =>
   resolvePublicationName(s.publication_name, s.source_url) || 'Unknown source';
 
 interface PublishedStoriesListProps {
   stories: PublishedStory[];
-  processingItems?: MultiTenantQueueItem[];
+  processingItems?: MultiTenantQueueItem[] | undefined;
   onArchive: (storyId: string, title: string) => void;
   onReturnToReview: (storyId: string) => void;
   onDelete: (storyId: string, title: string) => void;
   onViewStory: (story: PublishedStory) => void;
   onCancelProcessing?: (queueId: string) => void;
   onRefresh: () => void;
-  loading?: boolean;
-  topicSlug?: string;
-  topicId?: string;
-  totalPublishedCount?: number | null;
-  hasMorePublished?: boolean;
-  loadingMorePublished?: boolean;
+  loading?: boolean | undefined;
+  topicSlug?: string | undefined;
+  topicId?: string | undefined;
+  totalPublishedCount?: number | null | undefined;
+  hasMorePublished?: boolean | undefined;
+  loadingMorePublished?: boolean | undefined;
   onLoadMorePublished?: () => void;
-  storyReads?: Record<string, number>;
-  risingStoryId?: string | null;
-  readingNowIds?: string[];
+  storyReads?: Record<string, number> | undefined;
+  risingStoryId?: string | null | undefined;
+  readingNowIds?: string[] | undefined;
   /** Something readers see after the story at this feed position (1 = after the first live story). */
   renderAfterFeedPosition?: (position: number) => React.ReactNode;
   /** Stories arrive already in the public feed's order and are all in the feed (Live now). */
-  feedOrder?: boolean;
+  feedOrder?: boolean | undefined;
   /** Drafts waiting for the owner's OK: Publish and Skip always showing, no filters or pages. */
-  toCheck?: boolean;
+  toCheck?: boolean | undefined;
   onSkip?: (story: PublishedStory) => void;
   /** Waiting stories that repeat one already live, mapped to that live story. */
-  repeatOf?: Map<string, PublishedStory>;
+  repeatOf?: Map<string, PublishedStory> | undefined;
   /** Publishing handled by the Desk, so the story moves into Live now at once. */
   onPublishNow?: (storyId: string, title: string) => Promise<void>;
   /** Just-published stories still getting their picture: shown faded until it lands. */
-  settlingIds?: Set<string>;
+  settlingIds?: Set<string> | undefined;
   /** Stories the owner just published or skipped: they play their leave motion before going. */
-  leavingIds?: Map<string, 'publish' | 'skip'>;
+  leavingIds?: Map<string, 'publish' | 'skip'> | undefined;
   /** The feed's pinned story (Live now only): shown first with its time left. */
-  pinnedId?: string | null;
-  pinnedUntil?: string | null;
+  pinnedId?: string | null | undefined;
+  pinnedUntil?: string | null | undefined;
   /** Pin a live story for a number of hours, or unpin with (null, 0). */
   onPin?: (storyId: string | null, hours: number) => Promise<void>;
 }
@@ -532,7 +533,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) showPages.add(i);
             const sortedPages = Array.from(showPages).sort((a, b) => a - b);
             sortedPages.forEach((page, idx) => {
-              if (idx > 0 && page - sortedPages[idx - 1] > 1) pages.push('ellipsis');
+              if (idx > 0 && page - sortedPages[idx - 1]! > 1) pages.push('ellipsis');
               pages.push(page);
             });
             return pages.map((item, idx) =>
@@ -565,7 +566,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         waiting={compareStory}
         live={compareStory ? repeatOf?.get(compareStory.id) ?? null : null}
         onOpenChange={(o) => !o && setCompareId(null)}
-        onSkip={onSkip}
+        {...opt("onSkip", onSkip)}
         onPublish={async (s) => { await handlePublishNow(s.id, s.title || s.headline || 'Untitled'); setCompareId(null); }}
         publishing={compareStory ? publishingNow.has(compareStory.id) : false}
       />
@@ -575,7 +576,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         open={!!openStory}
         onOpenChange={(o) => !o && setOpenStoryId(null)}
         sourceLabel={openStory ? storySourceLabel(openStory) : ''}
-        topicSlug={topicSlug}
+        {...opt("topicSlug", topicSlug)}
         illustrationStyle={illustrationStyle}
         generating={openStory ? generatingIllustrations.has(openStory.id) : false}
         animating={openStory ? animatingVideos.has(openStory.id) : false}
@@ -593,7 +594,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         onRefresh={onRefresh}
         pinnedUntil={openStory && openStory.id === pinnedId ? pinnedUntil : null}
         otherPinned={Boolean(pinnedId && openStory && openStory.id !== pinnedId)}
-        onPin={onPin && feedOrder ? (hours) => openStory ? onPin(hours > 0 ? openStory.id : null, hours) : Promise.resolve() : undefined}
+        {...opt("onPin", onPin && feedOrder ? (hours: number) => openStory ? onPin(hours > 0 ? openStory.id : null, hours) : Promise.resolve() : undefined)}
       />
 
       <AnimationInstructionsModal

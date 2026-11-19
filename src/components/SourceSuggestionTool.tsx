@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,8 +21,8 @@ interface SourceSuggestionToolProps {
   description: string;
   keywords: string;
   topicType: 'regional' | 'keyword';
-  region?: string;
-  topicId?: string; // Will be provided after topic creation
+  region?: string | undefined;
+  topicId?: string | undefined; // Will be provided after topic creation
 }
 
 export const SourceSuggestionTool = ({ 
@@ -94,14 +95,14 @@ export const SourceSuggestionTool = ({
     }
   };
 
-  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string}> => {
+  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string | undefined}> => {
     const domain = new URL(suggestion.url).hostname.replace('www.', '');
     
     // Check if source already exists for this topic directly
     const { data: existingSource } = await supabase
       .from('content_sources')
       .select('id, source_name, feed_url')
-      .eq('topic_id', topicId)
+      .eq('topic_id', topicId!)
       .or(`feed_url.eq.${suggestion.url},canonical_domain.eq.${domain}`)
       .maybeSingle();
 
@@ -217,8 +218,8 @@ export const SourceSuggestionTool = ({
           credibility_score: Math.round(suggestion.confidence_score * 0.8),
           is_active: true,
           source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
-          region: topicType === 'regional' ? region : null,
-          topic_id: topicId
+          ...opt("region", topicType === 'regional' ? region : null),
+          ...opt("topic_id", topicId)
         })
         .select('id')
         .single();

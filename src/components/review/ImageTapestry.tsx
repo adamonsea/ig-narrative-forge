@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { motion, useReducedMotion } from 'framer-motion';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useStoryPreview } from './StoryPreview';
@@ -18,7 +19,7 @@ export const ImageTapestry = ({
   feedSlug,
 }: {
   covers: TapestryCover[];
-  feedSlug?: string;
+  feedSlug?: string | undefined;
 }) => {
   const reduce = useReducedMotion();
   const { open: openPreview } = useStoryPreview();
@@ -37,7 +38,7 @@ export const ImageTapestry = ({
         {tiles.map((c, i) => (
           <motion.div
             key={c.id}
-            initial={reduce ? undefined : { opacity: 0, scale: 0.94 }}
+            {...opt("initial", reduce ? undefined : { opacity: 0, scale: 0.94 })}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, margin: '-30px' }}
             transition={{

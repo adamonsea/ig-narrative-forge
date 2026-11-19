@@ -13,9 +13,9 @@ import { getVariantConfig } from '@/lib/abTesting';
 interface SubscribeMenuProps {
   topicName: string;
   topicId: string;
-  showLabel?: boolean;
-  showPulse?: boolean;
-  className?: string;
+  showLabel?: boolean | undefined;
+  showPulse?: boolean | undefined;
+  className?: string | undefined;
 }
 
 export const SubscribeMenu = ({

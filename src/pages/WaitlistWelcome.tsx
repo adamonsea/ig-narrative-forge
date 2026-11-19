@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link } from '@/lib/router-compat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,8 @@ import { Check } from 'lucide-react';
 import { ExplainerOverlay } from '@/components/explainer/ExplainerOverlay';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
 
-const FN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/waitlist-questionnaire`;
-const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+const FN_URL = `https://${import.meta.env['VITE_SUPABASE_PROJECT_ID']}.supabase.co/functions/v1/waitlist-questionnaire`;
+const ANON = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] as string;
 
 type Answers = {
   feed_kind: string[];
@@ -109,7 +109,7 @@ const STATEMENTS: string[] = [
   'Last one — it helps us know where to spend our time.',
 ];
 
-const Typewriter = ({ text, instant, onDone }: { text: string; instant?: boolean; onDone?: () => void }) => {
+const Typewriter = ({ text, instant, onDone }: { text: string; instant?: boolean | undefined; onDone?: () => void }) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -127,7 +127,7 @@ const Typewriter = ({ text, instant, onDone }: { text: string; instant?: boolean
     }
     const char = text[count];
     // reading-speed cadence, with a natural pause on punctuation
-    const delay = /[.,—?!]/.test(char) ? 220 : 34;
+    const delay = /[.,—?!]/.test(char!) ? 220 : 34;
     const t = window.setTimeout(() => setCount((c) => c + 1), delay);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -257,7 +257,7 @@ export default function WaitlistWelcome() {
   const toggle = (
     key: 'feed_kind' | 'resonated' | 'blockers' | 'audience' | 'today',
     value: string,
-    max?: number
+    max?: number | undefined
   ) => {
     setAnswers((a) => {
       const current = a[key];
@@ -320,7 +320,7 @@ export default function WaitlistWelcome() {
     );
   }
 
-  const Brand = ({ className = '' }: { className?: string }) => (
+  const Brand = ({ className = '' }: { className?: string | undefined }) => (
     <CuratrLogo className={`text-2xl text-foreground sm:text-3xl ${className}`} />
   );
 
@@ -380,7 +380,7 @@ export default function WaitlistWelcome() {
     children,
   }: {
     question: string;
-    hint?: string;
+    hint?: string | undefined;
     children: React.ReactNode;
   }) => (
     <motion.div
@@ -431,7 +431,7 @@ export default function WaitlistWelcome() {
                 </p>
               )}
               <p className="text-[clamp(1.75rem,5vw,3.75rem)] font-display font-light leading-[1.15] tracking-tight text-foreground">
-                <Typewriter text={STATEMENTS[step]} instant={skipTyping} onDone={() => setTyped(true)} />
+                <Typewriter text={STATEMENTS[step]!} instant={skipTyping} onDone={() => setTyped(true)} />
               </p>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -502,7 +502,7 @@ export default function WaitlistWelcome() {
                   onClick={() => toggle('feed_kind', o)}
                 />
               ))}
-              {showDetail.feed_name ? (
+              {showDetail['feed_name'] ? (
                 <Input
                   autoFocus
                   placeholder="Name it, if you like — e.g. Eastbourne"
@@ -628,7 +628,7 @@ export default function WaitlistWelcome() {
                   onClick={() => toggle('blockers', o)}
                 />
               ))}
-              {showDetail.blockers ? (
+              {showDetail['blockers'] ? (
                 <Textarea
                   autoFocus
                   rows={3}

@@ -35,7 +35,7 @@ export function startStoryPageDwell(storyId: string, topicId: string): () => voi
       p_visitor_id: getVisitorId('visitor'),
       p_interaction_type: 'page_dwell',
       p_user_agent: navigator.userAgent,
-      p_referrer: document.referrer || null,
+      p_referrer: (document.referrer || null)!,
     }).then(() => {}, () => {});
   };
 

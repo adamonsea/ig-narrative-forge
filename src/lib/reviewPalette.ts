@@ -21,7 +21,7 @@ export const baseHueFor = (seed: string | undefined): number =>
   hashString(seed && seed.length > 0 ? seed : 'curatr') % 360;
 
 export const hueForIndex = (baseHue: number, index: number): number =>
-  (baseHue + RAMP[index % RAMP.length] + 360) % 360;
+  (baseHue + RAMP[index % RAMP.length]! + 360) % 360;
 
 export interface SlideSkin {
   /** CSS custom properties to spread onto the slide element. */

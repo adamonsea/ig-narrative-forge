@@ -23,12 +23,12 @@ interface WhatsOnCardProps {
   events: WhatsOnFeedEvent[];
   today: string;
   /** Which set this is: "Today", "This week" or "Later this month". */
-  label?: string;
-  brandColor?: string | null;
+  label?: string | undefined;
+  brandColor?: string | null | undefined;
   /** The feed's owner: their clicks don't count as sending readers. */
-  isOwner?: boolean;
+  isOwner?: boolean | undefined;
   /** Set when the feed lets readers suggest events: shows "+ Add an event" on the cover and last slide. */
-  suggestTopicId?: string | null;
+  suggestTopicId?: string | null | undefined;
 }
 
 /**
@@ -49,11 +49,11 @@ export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor,
         {fan.map((e, i) => {
           const b = dateBadge(e.start_date);
           const pos = fan.length === 1 ? 1 : fan.length === 2 ? [0.5, 1.5][i] : i;
-          const rot = [-9, 2, 11][Math.round(pos)];
-          const x = (pos - 1) * 88;
+          const rot = [-9, 2, 11][Math.round(pos!)];
+          const x = (pos! - 1) * 88;
           return (
             <div key={e.id} className="absolute w-[104px] rounded-2xl bg-[hsl(var(--feed-card))] py-3 text-center font-lexend leading-none text-[hsl(var(--feed-card-foreground))] shadow-xl"
-              style={{ transform: `translateX(${x}px) rotate(${rot}deg)`, zIndex: 3 - Math.abs(Math.round(pos) - 1) }}>
+              style={{ transform: `translateX(${x}px) rotate(${rot}deg)`, zIndex: 3 - Math.abs(Math.round(pos!) - 1) }}>
               <div className={`text-xs font-semibold tracking-[0.1em] ${ACCENT}`}>{b.weekday}</div>
               <div className="my-1 text-5xl font-bold">{b.day}</div>
               <div className="text-xs font-semibold tracking-[0.1em] opacity-70">{b.month}</div>

@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link } from '@/lib/router-compat';
 import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,12 +12,12 @@ interface Topic {
   description: string | null;
   topic_type: string;
   branding_config?: {
-    logo_url?: string;
-    icon_url?: string;
-    subheader?: string;
-    about_page_enabled?: boolean;
-    about_page_content?: string;
-    about_page_photo_url?: string;
+    logo_url?: string | undefined;
+    icon_url?: string | undefined;
+    subheader?: string | undefined;
+    about_page_enabled?: boolean | undefined;
+    about_page_content?: string | undefined;
+    about_page_photo_url?: string | undefined;
   };
 }
 

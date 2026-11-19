@@ -20,7 +20,7 @@ interface NotificationPreferencesModalProps {
   onClose: () => void;
   topicName: string;
   topicId: string;
-  isFirstTimePrompt?: boolean;
+  isFirstTimePrompt?: boolean | undefined;
 }
 
 type NotificationType = 'daily' | 'weekly';

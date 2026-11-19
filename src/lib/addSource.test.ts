@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/addSource.test.ts
+// run with: bun test ./src/lib/addSource.test.ts
 import { describe, expect, it } from 'bun:test';
 import { addSourceHost, addSourceNameFromLink } from './addSource';
 import { detectSourceKind, isEventsSourceKind } from './whatsOn';

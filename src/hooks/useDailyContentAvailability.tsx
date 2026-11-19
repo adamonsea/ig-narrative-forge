@@ -25,7 +25,7 @@ export function useDailyContentAvailability(topicId: string) {
         .from('daily_content_availability')
         .select('*')
         .eq('topic_id', topicId)
-        .eq('check_date', new Date().toISOString().split('T')[0]) // Today's date
+        .eq('check_date', (new Date().toISOString().split('T')[0])!) // Today's date
         .order('created_at', { ascending: false });
 
       if (error) {

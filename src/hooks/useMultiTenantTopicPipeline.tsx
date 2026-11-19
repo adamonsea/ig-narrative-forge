@@ -21,49 +21,49 @@ export interface MultiTenantArticle {
   url: string;
   normalized_url: string;
   title: string;
-  body?: string;
-  author?: string;
-  image_url?: string;
-  canonical_url?: string;
-  content_checksum?: string;
-  published_at?: string;
+  body?: string | undefined;
+  author?: string | undefined;
+  image_url?: string | undefined;
+  canonical_url?: string | undefined;
+  content_checksum?: string | undefined;
+  published_at?: string | undefined;
   word_count: number;
   language: string;
-  source_domain?: string;
+  source_domain?: string | undefined;
   last_seen_at: string;
-  is_snippet?: boolean;
-  article_type?: 'legacy' | 'multi_tenant';
+  is_snippet?: boolean | undefined;
+  article_type?: 'legacy' | 'multi_tenant' | undefined;
 }
 
 export interface MultiTenantQueueItem {
   id: string;
-  article_id?: string | null;
-  topic_article_id?: string | null;
-  shared_content_id?: string | null;
+  article_id?: string | null | undefined;
+  topic_article_id?: string | null | undefined;
+  shared_content_id?: string | null | undefined;
   status: string;
   created_at: string;
-  started_at?: string;
-  completed_at?: string;
+  started_at?: string | undefined;
+  completed_at?: string | undefined;
   attempts: number;
   max_attempts: number;
-  error_message?: string;
+  error_message?: string | undefined;
   result_data: any;
   slidetype: string;
   tone: string;
   audience_expertise: string;
   ai_provider: string;
   writing_style: string;
-  title?: string;
-  article_title?: string;
-  article_url?: string;
+  title?: string | undefined;
+  article_title?: string | undefined;
+  article_url?: string | undefined;
 }
 
 export interface MultiTenantStory {
   id: string;
-  article_id?: string | null;
-  topic_article_id?: string | null;
+  article_id?: string | null | undefined;
+  topic_article_id?: string | null | undefined;
   headline: string;
-  summary?: string;
+  summary?: string | undefined;
   status: string;
   is_published: boolean;
   created_at: string;
@@ -71,37 +71,37 @@ export interface MultiTenantStory {
   slides: any[];
   article_title: string;
   story_type: 'legacy' | 'multi_tenant';
-  title?: string;
-  url?: string;
-  author?: string;
-  publication_name?: string | null;
-  word_count?: number;
-  cover_illustration_url?: string;
-  cover_illustration_prompt?: string;
-  illustration_generated_at?: string;
-  animated_illustration_url?: string;
-  animation_suggestions?: string[] | null;
-  slidetype?: string;
-  tone?: string;
-  writing_style?: string;
-  audience_expertise?: string;
-  is_teaser?: boolean;
-  is_parliamentary?: boolean;
-  scheduled_publish_at?: string | null;
-  duplicate_of_story_id?: string | null;
-  duplicate_similarity?: number | null;
+  title?: string | undefined;
+  url?: string | undefined;
+  author?: string | undefined;
+  publication_name?: string | null | undefined;
+  word_count?: number | undefined;
+  cover_illustration_url?: string | undefined;
+  cover_illustration_prompt?: string | undefined;
+  illustration_generated_at?: string | undefined;
+  animated_illustration_url?: string | undefined;
+  animation_suggestions?: string[] | null | undefined;
+  slidetype?: string | undefined;
+  tone?: string | undefined;
+  writing_style?: string | undefined;
+  audience_expertise?: string | undefined;
+  is_teaser?: boolean | undefined;
+  is_parliamentary?: boolean | undefined;
+  scheduled_publish_at?: string | null | undefined;
+  duplicate_of_story_id?: string | null | undefined;
+  duplicate_similarity?: number | null | undefined;
   /** The original article's publication time; with created_at it decides the feed's display date. */
-  article_published_at?: string | null;
+  article_published_at?: string | null | undefined;
 }
 
 export interface MultiTenantStats {
   articles: number;
   queueItems: number;
   stories: number;
-  totalArticles?: number;
-  pendingArticles?: number;
-  processingQueue?: number;
-  readyStories?: number;
+  totalArticles?: number | undefined;
+  pendingArticles?: number | undefined;
+  processingQueue?: number | undefined;
+  readyStories?: number | undefined;
 }
 
 const ARTICLES_PAGE_SIZE = 50;
@@ -219,7 +219,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Use pagination - first page loads with reset
       const multiTenantArticlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
         p_topic_id: selectedTopicId,
-        p_status: null, // Get all statuses to filter out processed ones
+        p_status: null!, // Get all statuses to filter out processed ones
         p_limit: ARTICLES_PAGE_SIZE,
         p_offset: 0 // Always start from first page on initial load
       });
@@ -523,13 +523,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       // Published pagination bookkeeping — the tab shows the newest page and
       // can pull older pages on demand.
-      const publishedRowCount = perStatusResults[STATUSES.indexOf('published')].data?.length || 0;
+      const publishedRowCount = perStatusResults[STATUSES.indexOf('published')]!.data?.length || 0;
       setPublishedLoadedCount(publishedRowCount);
       setHasMorePublished(publishedRowCount >= PUBLISHED_PAGE_SIZE);
 
       console.log('📊 Admin stories query results:', {
         byStatus: Object.fromEntries(
-          STATUSES.map((s, i) => [s, perStatusResults[i].data?.length || 0])
+          STATUSES.map((s, i) => [s, perStatusResults[i]!.data?.length || 0])
         ),
         error: failedStatus?.error
       });
@@ -1067,7 +1067,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       );
     });
     try {
-      await approveMultiTenantStory(storyId, selectedTopicId);
+      await approveMultiTenantStory(storyId, selectedTopicId!);
     } catch (error) {
       if (snapshot) {
         setStories(prev => prev.map(s => (s.id === storyId ? snapshot! : s)));
@@ -1154,8 +1154,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
   // Smart topic ownership checker with caching
   const isTopicArticleForSelectedTopic = useCallback(async (
-    topicArticleId?: string | null,
-    sharedContentId?: string | null
+    topicArticleId?: string | null | undefined,
+    sharedContentId?: string | null | undefined
   ) => {
     if (!selectedTopicId) return false;
 
@@ -1461,7 +1461,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       const result = await supabase.rpc('get_topic_articles_multi_tenant', {
         p_topic_id: selectedTopicId,
-        p_status: null,
+        p_status: null!,
         p_limit: ARTICLES_PAGE_SIZE,
         p_offset: offset
       });

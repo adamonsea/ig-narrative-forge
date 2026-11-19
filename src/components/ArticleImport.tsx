@@ -101,7 +101,7 @@ export const ArticleImport = ({ onImportComplete }: ArticleImportProps) => {
       });
 
       onImportComplete();
-    } catch (error) {
+    } catch (error: any) {
       console.error('RSS import error:', error);
       toast({
         title: 'Import Failed',
@@ -173,7 +173,7 @@ export const ArticleImport = ({ onImportComplete }: ArticleImportProps) => {
       });
 
       onImportComplete();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Manual import error:', error);
       toast({
         title: 'Import Failed',

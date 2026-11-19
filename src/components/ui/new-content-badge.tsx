@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 
 interface NewContentBadgeProps {
   show: boolean;
-  count?: number;
+  count?: number | undefined;
   onDismiss?: () => void;
-  className?: string;
+  className?: string | undefined;
 }
 
 export const NewContentBadge = ({ show, count, onDismiss, className }: NewContentBadgeProps) => {

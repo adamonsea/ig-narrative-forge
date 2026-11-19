@@ -29,9 +29,9 @@ interface CreateTopicDialogProps {
   onOpenChange: (open: boolean) => void;
   onTopicCreated: (topicSlug: string) => void;
   /** Pre-fills the first answer (e.g. a blueprint chosen on the homepage). */
-  initialName?: string;
+  initialName?: string | undefined;
   /** Pre-fills the words to look for. */
-  initialKeywords?: string[];
+  initialKeywords?: string[] | undefined;
 }
 
 type Step = "about" | "name" | "thinking" | "sources" | "preview" | "building" | "done";

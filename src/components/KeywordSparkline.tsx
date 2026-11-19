@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface KeywordSparklineProps {
   topicId: string;
   keyword: string;
-  sentimentDirection?: string;
+  sentimentDirection?: string | undefined;
 }
 
 interface HistoryPoint {
@@ -53,8 +53,8 @@ export const KeywordSparkline = ({ topicId, keyword, sentimentDirection }: Keywo
 
   const trend = useMemo(() => {
     if (data.length < 2) return null;
-    const recent = data[data.length - 1].mentions;
-    const previous = data[data.length - 2].mentions;
+    const recent = data[data.length - 1]!.mentions;
+    const previous = data[data.length - 2]!.mentions;
     const change = previous > 0 ? ((recent - previous) / previous) * 100 : 0;
     
     if (change > 20) return 'up';

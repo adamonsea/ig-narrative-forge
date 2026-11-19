@@ -40,7 +40,7 @@ export function likelyAutomatedRise(visitsDaily: number[] | null | undefined, re
 export const FEED_SIGNAL_MIN_READERS = 3;
 export const FEED_SIGNAL_MIN_HEADLINES = 20;
 
-export interface FeedSignal { readers?: number | null; headlines?: number | null; stop_rate?: number | null; swipe_rate?: number | null }
+export interface FeedSignal { readers?: number | null | undefined; headlines?: number | null | undefined; stop_rate?: number | null | undefined; swipe_rate?: number | null | undefined }
 
 export function feedSignal(s: FeedSignal | null | undefined): { stopped: number; swiped: number; readers: number } | null {
   if (!s) return null;

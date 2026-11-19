@@ -17,8 +17,8 @@ const MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
 const getMilestoneData = (readerCount: number) => {
   const nextMilestone = MILESTONES.find(m => m > readerCount) || MILESTONES[MILESTONES.length - 1];
   const prevMilestone = [...MILESTONES].reverse().find(m => m <= readerCount) || 0;
-  const progress = ((readerCount - prevMilestone) / (nextMilestone - prevMilestone)) * 100;
-  const remaining = nextMilestone - readerCount;
+  const progress = ((readerCount - prevMilestone) / (nextMilestone! - prevMilestone)) * 100;
+  const remaining = nextMilestone! - readerCount;
   
   return { nextMilestone, prevMilestone, progress, remaining };
 };
@@ -166,7 +166,7 @@ export function AudienceProgressCard({ topicId }: AudienceProgressCardProps) {
   }
 
   const { nextMilestone, prevMilestone, progress, remaining } = getMilestoneData(metrics.uniqueReaders);
-  const tierInfo = getTierInfo(metrics.uniqueReaders, remaining, nextMilestone);
+  const tierInfo = getTierInfo(metrics.uniqueReaders, remaining, nextMilestone!);
   
 
   return (

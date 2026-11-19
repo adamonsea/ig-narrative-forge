@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,7 +48,7 @@ export const useArticleActions = () => {
           normalized_url: articleUrl.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, ''),
           url: articleUrl,
           title: articleTitle,
-          discarded_by: (await supabase.auth.getUser()).data.user?.id,
+          ...opt("discarded_by", (await supabase.auth.getUser()).data.user?.id),
           discarded_reason: 'user_suppress'
         });
 

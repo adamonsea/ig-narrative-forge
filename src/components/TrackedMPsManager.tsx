@@ -36,7 +36,7 @@ interface MPOption {
 
 interface TrackedMPsManagerProps {
   topicId: string;
-  region?: string;
+  region?: string | undefined;
 }
 
 export const TrackedMPsManager = ({ topicId, region }: TrackedMPsManagerProps) => {
@@ -59,7 +59,7 @@ export const TrackedMPsManager = ({ topicId, region }: TrackedMPsManagerProps) =
         .order('mp_name', { ascending: true });
 
       if (error) throw error;
-      setTrackedMPs(data || []);
+      setTrackedMPs((data || []) as unknown as TrackedMP[]);
     } catch (error: any) {
       console.error('Error loading tracked MPs:', error);
       toast({
@@ -106,8 +106,8 @@ export const TrackedMPsManager = ({ topicId, region }: TrackedMPsManagerProps) =
       // Group by MP name and get most recent
       const lastCollections = new Map<string, string>();
       data?.forEach(pm => {
-        if (!lastCollections.has(pm.mp_name)) {
-          lastCollections.set(pm.mp_name, pm.created_at);
+        if (!lastCollections.has(pm.mp_name!)) {
+          lastCollections.set(pm.mp_name!, pm.created_at ?? '');
         }
       });
 

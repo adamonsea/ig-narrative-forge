@@ -29,22 +29,22 @@ export interface HighlightStats {
   top_weekday: number | null;
   top_weekday_share: number | null;
   // Google Search (final days only; optional until data arrives)
-  search_impressions_week?: number;
-  search_clicks_week?: number;
-  search_impressions_prev?: number;
-  search_impressions_total?: number;
-  search_weeks?: number;
-  search_best_prior_week?: number;
-  top_search_story_id?: string | null;
-  top_search_story_title?: string | null;
-  top_search_story_clicks?: number;
+  search_impressions_week?: number | undefined;
+  search_clicks_week?: number | undefined;
+  search_impressions_prev?: number | undefined;
+  search_impressions_total?: number | undefined;
+  search_weeks?: number | undefined;
+  search_best_prior_week?: number | undefined;
+  top_search_story_id?: string | null | undefined;
+  top_search_story_title?: string | null | undefined;
+  top_search_story_clicks?: number | undefined;
   // Headline stop rate (7 days, stories with 30+ outside readers; median_stop_rate = what its feed spots usually get)
-  top_stop_story_id?: string | null;
-  top_stop_story_title?: string | null;
-  top_stop_rate?: number | null;
-  top_stop_seen?: number;
-  median_stop_rate?: number | null;
-  stop_qualifying_stories?: number;
+  top_stop_story_id?: string | null | undefined;
+  top_stop_story_title?: string | null | undefined;
+  top_stop_rate?: number | null | undefined;
+  top_stop_seen?: number | undefined;
+  median_stop_rate?: number | null | undefined;
+  stop_qualifying_stories?: number | undefined;
 }
 
 export type HighlightKind =
@@ -54,10 +54,10 @@ export type HighlightKind =
   | "eye_catching"
   | "fallback_reads_total" | "fallback_subscribers" | "fallback_loyal" | "fallback_published";
 
-export interface Highlight { kind: HighlightKind; text: string; score: number; milestoneKey?: string }
+export interface Highlight { kind: HighlightKind; text: string; score: number; milestoneKey?: string | undefined }
 
 export type NudgeKind = "share_story" | "embed" | "subscribe_prompt" | "weekday" | "share_feed";
-export interface Nudge { kind: NudgeKind; text: string; storyId?: string; storyTitle?: string }
+export interface Nudge { kind: NudgeKind; text: string; storyId?: string | undefined; storyTitle?: string | undefined }
 
 const MILESTONES = [1000, 500, 250, 100, 50];
 const READ_MILESTONES = [10000, 1000];
@@ -101,7 +101,7 @@ export function candidates(s: HighlightStats, feedName: string, today = new Date
     // 4. growth streak
     let streak = 0;
     for (let i = weeks.length - 1; i > 0; i--) {
-      if (weeks[i] >= 20 && weeks[i - 1] >= 20 && weeks[i] > weeks[i - 1]) streak++; else break;
+      if (weeks[i]! >= 20 && weeks[i - 1]! >= 20 && weeks[i]! > weeks[i - 1]!) streak++; else break;
     }
     if (streak >= 3 && cur === s.reads_week) {
       out.push({ kind: "streak", score: 75 + 3 * (streak - 3), text: `Reads up ${streak} weeks in a row` });

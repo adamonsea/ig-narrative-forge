@@ -12,7 +12,7 @@ import newsroomBusy from '@/assets/newsroom-busy.webp.asset.json';
 export const NewsroomBand = ({
   overlayClass = 'bg-[hsl(270,100%,68%)] mix-blend-multiply',
 }: {
-  overlayClass?: string;
+  overlayClass?: string | undefined;
 } = {}) => (
   <div
     aria-hidden

@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/storyCoverStyle.test.ts
+// run with: bun test ./src/lib/storyCoverStyle.test.ts
 import { describe, expect, it } from "bun:test";
 import { resolveStoryCoverStyle, STORY_COVER_LABELS, STORY_COVER_STYLES } from "./storyCoverStyle";
 

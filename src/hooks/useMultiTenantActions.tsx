@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -76,7 +77,7 @@ export const useMultiTenantActions = () => {
       const { data: existingQueueEntries, error: checkError } = await supabase
         .from('content_generation_queue')
         .select('id, status')
-        .eq('shared_content_id', article.shared_content_id)
+        .eq('shared_content_id', article.shared_content_id!)
         .order('created_at', { ascending: false });
 
       if (checkError) {
@@ -136,8 +137,8 @@ export const useMultiTenantActions = () => {
               body: article.body || 'Multi-tenant bridge article',
               source_url: article.url,
               canonical_url: article.url,
-              author: article.author,
-              published_at: article.published_at,
+              ...opt("author", article.author),
+              ...opt("published_at", article.published_at),
               processing_status: 'processed',
               content_quality_score: article.content_quality_score,
               regional_relevance_score: article.regional_relevance_score,

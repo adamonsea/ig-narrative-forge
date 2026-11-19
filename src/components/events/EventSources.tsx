@@ -32,7 +32,7 @@ interface EventSource {
 interface Preview {
   kind: string;
   found: number;
-  excluded?: number;
+  excluded?: number | undefined;
   name: string;
   error: string | null;
   examples: { title: string; start_date: string }[];
@@ -177,7 +177,7 @@ export function useEventSourcesDeck(topicId: string | undefined, reloadKey = 0) 
       const d = new Date(e.created_at).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
       const idx = days.indexOf(d);
       if (idx < 0) continue;
-      (perDay[e.event_source_id] ??= Array(7).fill(0))[idx] += 1;
+      (perDay[e.event_source_id] ??= Array(7).fill(0))[idx]! += 1;
     }
     setSources(((rows as unknown as EventSource[]) ?? []).map((s) => ({
       ...s,
@@ -211,9 +211,9 @@ export function useEventSourcesDeck(topicId: string | undefined, reloadKey = 0) 
   const saveEdit = async (s: EventSource, name: string, url: string) => {
     const newUrl = withScheme(url);
     const body: Record<string, unknown> = { action: "update", sourceId: s.id };
-    if (name.trim() && name.trim() !== s.name) body.name = name.trim();
-    if (newUrl && newUrl !== s.url) body.url = newUrl;
-    if (!body.name && !body.url) return true;
+    if (name.trim() && name.trim() !== s.name) body['name'] = name.trim();
+    if (newUrl && newUrl !== s.url) body['url'] = newUrl;
+    if (!body['name'] && !body['url']) return true;
     setBusy(s.id);
     const res = await callReader(body);
     setBusy(null);
@@ -221,7 +221,7 @@ export function useEventSourcesDeck(topicId: string | undefined, reloadKey = 0) 
       toast({ title: "Couldn't save changes", description: res.message, variant: "destructive" });
       return false;
     }
-    toast({ title: "Saved", description: body.url ? previewSentence(res.data?.found ?? 0) : undefined });
+    toast({ title: "Saved", description: body['url'] ? previewSentence(res.data?.found ?? 0) : undefined });
     changed();
     return true;
   };

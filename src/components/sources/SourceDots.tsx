@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Last 7 days (oldest → today), up to 3 dots a day: at a glance, is this tap running? */
-export function SourceDots({ counts, size = "sm", className, dotClass = "bg-pop", emptyClass = "border border-muted-foreground/75 bg-transparent" }: { counts: number[]; size?: "sm" | "lg"; className?: string; dotClass?: string; emptyClass?: string }) {
+export function SourceDots({ counts, size = "sm", className, dotClass = "bg-pop", emptyClass = "border border-muted-foreground/75 bg-transparent" }: { counts: number[]; size?: "sm" | "lg"; className?: string | undefined; dotClass?: string | undefined; emptyClass?: string | undefined }) {
   const days = counts.length ? counts : Array(7).fill(0);
   const total = days.reduce((a, b) => a + b, 0);
   const dot = size === "lg" ? "h-2.5 w-2.5" : "h-1.5 w-1.5";

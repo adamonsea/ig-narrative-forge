@@ -73,7 +73,7 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
       setIsActive(settings?.is_active ?? true);
 
       if (runs && runs.length > 0) {
-        const latest = new Date(runs[0].finished_at as string).getTime();
+        const latest = new Date(runs[0]!.finished_at as string).getTime();
         const inSweep = runs.filter(
           (r: any) => latest - new Date(r.finished_at).getTime() <= SWEEP_WINDOW_MS
         );
@@ -82,7 +82,7 @@ export const NextGatherPanel: React.FC<Props> = ({ topicId }) => {
           const name = r.content_sources?.source_name || "Unknown source";
           byName.set(name, (byName.get(name) || 0) + (r.articles_stored || 0));
         });
-        setSweepAt(runs[0].finished_at as string);
+        setSweepAt(runs[0]!.finished_at as string);
         setSources(
           Array.from(byName.entries())
             .map(([name, stored]) => ({ name, stored }))

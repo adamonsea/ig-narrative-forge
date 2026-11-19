@@ -20,7 +20,7 @@ import { InlineError } from "@/components/ui/editorial";
 import { EventSocialPack } from "@/components/events/social/EventSocialPack";
 
 /** Day and number, the event's at-a-glance date. */
-function DateTile({ date, size = "lg", category }: { date: string; size?: "lg" | "sm"; category?: string | null }) {
+function DateTile({ date, size = "lg", category }: { date: string; size?: "lg" | "sm"; category?: string | null | undefined }) {
   const b = dateBadge(date);
   return (
     <div
@@ -38,7 +38,7 @@ function DateTile({ date, size = "lg", category }: { date: string; size?: "lg" |
   );
 }
 
-type ComingUpItem = (WhatsOnFeedEvent & { exclusion_reason?: string | null; area_confirmed?: boolean; state: "live" }) | (DeskEvent & { state: "waiting" });
+type ComingUpItem = (WhatsOnFeedEvent & { exclusion_reason?: string | null | undefined; area_confirmed?: boolean | undefined; state: "live" }) | (DeskEvent & { state: "waiting" });
 type DetailItem = ComingUpItem | (DeskEvent & { state: "left_out" });
 
 interface EventActions {
@@ -247,16 +247,16 @@ interface EventDetailRow {
   description: string | null;
   end_date: string | null;
   end_time: string | null;
-  is_free?: boolean | null;
-  event_type?: string | null;
+  is_free?: boolean | null | undefined;
+  event_type?: string | null | undefined;
   price: string | null;
-  image_path?: string | null;
-  image_hidden?: boolean | null;
-  description_edited?: boolean | null;
+  image_path?: string | null | undefined;
+  image_hidden?: boolean | null | undefined;
+  description_edited?: boolean | null | undefined;
 }
 
 /** The owner's own wording for an event; it sticks when the source is gathered again. */
-function DescriptionEditor({ eventId, detail, topicId }: { eventId: string; detail: EventDetailRow; topicId?: string }) {
+function DescriptionEditor({ eventId, detail, topicId }: { eventId: string; detail: EventDetailRow; topicId?: string | undefined }) {
   const queryClient = useQueryClient();
   const [text, setText] = useState(detail.description ?? "");
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -289,7 +289,7 @@ function DescriptionEditor({ eventId, detail, topicId }: { eventId: string; deta
 }
 
 /** The full listing for one event, with the actions that fit where it is. */
-function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: DetailItem | null; today: string; actions: EventActions; onClose: () => void; topicId?: string }) {
+function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: DetailItem | null; today: string; actions: EventActions; onClose: () => void; topicId?: string | undefined }) {
   const { data: cats } = useEventCategories(topicId);
   const { setCategory } = useEventCategoryActions(topicId);
   const { data: detail, isLoading } = useQuery({
@@ -451,7 +451,7 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
  * with a switch to see the ones that didn't make the cut. Click any event for its details.
  */
 export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions, topicId }: {
-  toCheck?: DeskEvent[]; upcoming: ComingUpItem[]; leftOut: DeskEvent[]; today: string; actions: EventActions; topicId?: string;
+  toCheck?: DeskEvent[] | undefined; upcoming: ComingUpItem[]; leftOut: DeskEvent[]; today: string; actions: EventActions; topicId?: string | undefined;
 }) {
   const [view, setView] = useState<"upcoming" | "left_out">("upcoming");
   const [shown, setShown] = useState(PAGE);
@@ -565,7 +565,7 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
 
 /** The Event pool's settings: events on/off, reader suggestions and show in the feed. */
 export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestChange, showInFeed, onShowInFeedChange }: {
-  on: boolean; onChange: (on: boolean) => void; disabled?: boolean;
+  on: boolean; onChange: (on: boolean) => void; disabled?: boolean | undefined;
   suggestOn?: boolean; onSuggestChange?: (on: boolean) => void;
   showInFeed?: boolean; onShowInFeedChange?: (on: boolean) => void;
 }) {
@@ -599,7 +599,7 @@ export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestCha
 }
 
 /** When events are off, the Event pool is one slim card. */
-export function EventsOffCard({ onSwitchOn, disabled }: { onSwitchOn: () => void; disabled?: boolean }) {
+export function EventsOffCard({ onSwitchOn, disabled }: { onSwitchOn: () => void; disabled?: boolean | undefined }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-4">
       <CalendarDays className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />

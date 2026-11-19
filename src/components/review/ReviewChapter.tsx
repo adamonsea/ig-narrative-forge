@@ -11,8 +11,8 @@ export const ReviewChapter = ({
   tone = 'default',
 }: {
   children: ReactNode;
-  className?: string;
-  tone?: 'default' | 'inverted' | 'accent';
+  className?: string | undefined;
+  tone?: 'default' | 'inverted' | 'accent' | undefined;
 }) => (
   <section
     className={cn(
@@ -33,8 +33,8 @@ export const Reveal = ({
   className,
 }: {
   children: ReactNode;
-  delay?: number;
-  className?: string;
+  delay?: number | undefined;
+  className?: string | undefined;
 }) => {
   const reduce = useReducedMotion();
   return (
@@ -57,8 +57,8 @@ export const CountUp = ({
   className,
 }: {
   value: number;
-  duration?: number;
-  className?: string;
+  duration?: number | undefined;
+  className?: string | undefined;
 }) => {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: '-40px' });
@@ -92,7 +92,7 @@ export const CountUp = ({
 };
 
 /** Horizontal bar that grows from zero on scroll. */
-export const GrowBar = ({ ratio, className }: { ratio: number; className?: string }) => {
+export const GrowBar = ({ ratio, className }: { ratio: number; className?: string | undefined }) => {
   const reduce = useReducedMotion();
   return (
     <div className={cn('h-2 rounded-full bg-muted overflow-hidden', className)}>

@@ -1,5 +1,6 @@
+import { opt } from "@/lib/optionalProps";
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from '@/lib/router-compat';
 import { supabase } from '@/integrations/supabase/client';
 import { applyExcludeLink, isExcludedBrowser } from '@/lib/filmPlays';
 import { getVisitorId, getCachedCountry, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
@@ -42,25 +43,25 @@ const classifyPage = (path: string): PageClassification => {
   // Play mode: /play/:topicSlug (with optional trailing segments)
   const playMatch = path.match(/^\/play\/([^/]+)/);
   if (playMatch) {
-    return { pageType: 'play', topicSlug: playMatch[1] };
+    return { pageType: 'play', topicSlug: playMatch[1]! };
   }
   
   // Story page: /feed/:topicSlug/story/:storyId
   const storyMatch = path.match(/^\/feed\/([^/]+)\/story\/[^/]+/);
   if (storyMatch) {
-    return { pageType: 'story', topicSlug: storyMatch[1] };
+    return { pageType: 'story', topicSlug: storyMatch[1]! };
   }
   
   // Feed sub-routes: /feed/:topicSlug/(about|archive|daily|weekly|widget|briefings)
   const feedSubRouteMatch = path.match(/^\/feed\/([^/]+)\/(about|archive|daily|weekly|widget|briefings)/);
   if (feedSubRouteMatch) {
-    return { pageType: 'feed', topicSlug: feedSubRouteMatch[1] };
+    return { pageType: 'feed', topicSlug: feedSubRouteMatch[1]! };
   }
   
   // Feed page: /feed/:topicSlug (base feed URL)
   const feedMatch = path.match(/^\/feed\/([^/]+)/);
   if (feedMatch) {
-    return { pageType: 'feed', topicSlug: feedMatch[1] };
+    return { pageType: 'feed', topicSlug: feedMatch[1]! };
   }
   
   // Default to other
@@ -109,7 +110,7 @@ export const useSiteVisitorTracking = () => {
             topic_id: topicId,
             user_agent: navigator.userAgent,
             referrer: document.referrer || null,
-            visit_date: today,
+            ...opt("visit_date", today),
             country_code: countryCode
           });
       } catch (error) {

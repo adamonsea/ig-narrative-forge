@@ -18,19 +18,19 @@ export interface FeedSetupGuideTopic {
   id: string;
   name: string;
   slug: string;
-  description?: string;
+  description?: string | undefined;
   topic_type: "regional" | "keyword";
-  keywords?: string[];
-  region?: string;
-  landmarks?: string[];
-  postcodes?: string[];
-  organizations?: string[];
-  default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet";
-  default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven";
-  illustration_style?: IllustrationStyle;
-  audience_expertise?: "beginner" | "intermediate" | "expert";
-  house_style_notes?: string | null;
-  house_style_examples?: string | null;
+  keywords?: string[] | undefined;
+  region?: string | undefined;
+  landmarks?: string[] | undefined;
+  postcodes?: string[] | undefined;
+  organizations?: string[] | undefined;
+  default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet" | undefined;
+  default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven" | undefined;
+  illustration_style?: IllustrationStyle | undefined;
+  audience_expertise?: "beginner" | "intermediate" | "expert" | undefined;
+  house_style_notes?: string | null | undefined;
+  house_style_examples?: string | null | undefined;
 }
 
 interface FeedSetupGuideProps {
@@ -175,9 +175,9 @@ export const FeedSetupGuide = ({
         <p className="text-sm text-muted-foreground">Set up {topic.name}</p>
         <div className="flex items-center gap-1.5">
           <h2 id="setup-step-title" className="text-2xl font-semibold text-foreground">
-            {current.title}
+            {current!.title}
           </h2>
-          <InfoHint label="Why this step">{current.why}</InfoHint>
+          <InfoHint label="Why this step">{current!.why}</InfoHint>
         </div>
       </header>
 

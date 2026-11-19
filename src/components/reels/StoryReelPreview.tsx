@@ -7,7 +7,7 @@ interface StoryReelPreviewProps {
   /** Bumping this key restarts playback from the first beat. */
   playKey: number;
   onComplete?: () => void;
-  className?: string;
+  className?: string | undefined;
 }
 
 type Beat = 'headline' | 'detail' | 'cta';

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { format } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,14 +13,14 @@ interface Story {
   created_at: string;
   article: {
     source_url: string;
-    published_at?: string;
+    published_at?: string | undefined;
   };
 }
 
 interface StoryCardProps {
   story: Story;
   topicSlug: string;
-  index?: number;
+  index?: number | undefined;
 }
 
 export const StoryCard = ({ story, topicSlug, index = 0 }: StoryCardProps) => {

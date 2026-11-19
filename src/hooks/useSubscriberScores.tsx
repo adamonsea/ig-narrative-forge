@@ -7,7 +7,7 @@ interface SubscriberScore {
   likeCount: number;
   bestStreak: number;
   sessionsPlayed: number;
-  rank?: number;
+  rank?: number | undefined;
 }
 
 export const useSubscriberScores = (topicId: string | null) => {

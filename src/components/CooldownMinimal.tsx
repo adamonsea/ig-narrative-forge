@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 interface CooldownMinimalProps {
   lastScrapedAt: string | null;
   scrapeFrequencyHours: number | null;
-  topicLastRunAt?: string | null;
+  topicLastRunAt?: string | null | undefined;
 }
 
 export const CooldownMinimal = ({

@@ -18,8 +18,8 @@ export interface ImageModel {
   name: string;
   credits: number;
   provider: string;
-  description?: string;
-  experimental?: boolean;
+  description?: string | undefined;
+  experimental?: boolean | undefined;
 }
 
 // Illustrative models (editorial cartoon style) - GPT Image 2
@@ -108,12 +108,12 @@ export const satiricalModel: ImageModel = {
 interface ImageModelSelectorProps {
   /** style is the per-story choice (defaults to the feed's style) */
   onModelSelect: (model: ImageModel, style?: IllustrationStyle) => void;
-  isGenerating?: boolean;
-  hasExistingImage?: boolean;
-  disabled?: boolean;
-  size?: 'sm' | 'default';
-  variant?: 'default' | 'outline' | 'secondary' | 'destructive' | 'ghost' | 'link';
-  illustrationStyle?: IllustrationStyle;
+  isGenerating?: boolean | undefined;
+  hasExistingImage?: boolean | undefined;
+  disabled?: boolean | undefined;
+  size?: 'sm' | 'default' | undefined;
+  variant?: 'default' | 'outline' | 'secondary' | 'destructive' | 'ghost' | 'link' | undefined;
+  illustrationStyle?: IllustrationStyle | undefined;
 }
 
 export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({

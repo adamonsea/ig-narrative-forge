@@ -13,9 +13,9 @@ export interface HouseStylePreset {
 export const CUSTOM_HOUSE_STYLE = 'custom';
 
 interface HouseStyleContext {
-  name?: string;
-  topicType?: 'regional' | 'keyword' | string;
-  region?: string | null;
+  name?: string | undefined;
+  topicType?: 'regional' | 'keyword' | string | undefined;
+  region?: string | null | undefined;
 }
 
 export function getHouseStylePresets({ name, topicType, region }: HouseStyleContext): HouseStylePreset[] {

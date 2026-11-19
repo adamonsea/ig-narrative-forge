@@ -11,7 +11,7 @@ import { TrackedMPsManager } from './TrackedMPsManager';
 
 interface ParliamentaryAutomationSettingsProps {
   topicId: string;
-  region?: string;
+  region?: string | undefined;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
 }

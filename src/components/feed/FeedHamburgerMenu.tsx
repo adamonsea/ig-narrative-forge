@@ -1,21 +1,21 @@
 import { useState } from 'react';
 import { Menu, X, HelpCircle, Filter, Calendar, CalendarDays, Archive } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FEED_FILTERS_ENABLED } from '@/lib/featureFlags';
 
 interface FeedHamburgerMenuProps {
   slug: string;
-  aboutPageEnabled?: boolean;
-  latestDaily?: string;
-  latestWeekly?: string;
-  showFilters?: boolean;
-  hasActiveFilters?: boolean;
+  aboutPageEnabled?: boolean | undefined;
+  latestDaily?: string | undefined;
+  latestWeekly?: string | undefined;
+  showFilters?: boolean | undefined;
+  hasActiveFilters?: boolean | undefined;
   onOpenFilters: () => void;
   onClearFilters?: () => void;
-  filterOptionsReady?: boolean;
-  loading?: boolean;
-  contentLength?: number;
+  filterOptionsReady?: boolean | undefined;
+  loading?: boolean | undefined;
+  contentLength?: number | undefined;
 }
 
 export const FeedHamburgerMenu = ({

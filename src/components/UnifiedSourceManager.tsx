@@ -1,3 +1,4 @@
+import { definedOnly } from "@/lib/optionalProps";
 import { useState, useEffect } from 'react';
 import { AddSourceSheet, type NewNewsSource } from '@/components/sources/AddSourceSheet';
 import { SourceShelves } from '@/components/sources/SourceShelves';
@@ -57,18 +58,18 @@ interface ContentSource {
   scrape_frequency_hours: number | null;
   last_scraped_at: string | null;
   topic_id: string | null;
-  scraping_config?: any | null;
-  is_gathering?: boolean;
-  stories_published_7d?: number;
-  stories_gathered_7d?: number;
-  stories_published_total?: number;
-  last_story_date?: string | null;
-  consecutive_failures?: number;
-  total_failures?: number;
-  last_failure_at?: string | null;
-  last_failure_reason?: string | null;
-  last_error?: string | null;
-  avg_daily_stories?: number;
+  scraping_config?: any | null | undefined;
+  is_gathering?: boolean | undefined;
+  stories_published_7d?: number | undefined;
+  stories_gathered_7d?: number | undefined;
+  stories_published_total?: number | undefined;
+  last_story_date?: string | null | undefined;
+  consecutive_failures?: number | undefined;
+  total_failures?: number | undefined;
+  last_failure_at?: string | null | undefined;
+  last_failure_reason?: string | null | undefined;
+  last_error?: string | null | undefined;
+  avg_daily_stories?: number | undefined;
 }
 
 interface Topic {
@@ -76,46 +77,46 @@ interface Topic {
   name: string;
   topic_type: 'regional' | 'keyword';
   is_active: boolean;
-  region?: string;
+  region?: string | undefined;
 }
 
 interface ValidationResult {
   success: boolean;
   isAccessible: boolean;
-  isValidRSS?: boolean;
-  contentType?: string;
-  hasRecentContent?: boolean;
-  articleCount?: number;
-  error?: string;
+  isValidRSS?: boolean | undefined;
+  contentType?: string | undefined;
+  hasRecentContent?: boolean | undefined;
+  articleCount?: number | undefined;
+  error?: string | undefined;
   warnings: string[];
   scraperTest?: {
     success: boolean;
     articlesFound: number;
-    error?: string;
+    error?: string | undefined;
   };
   arcInfo?: {
     arcCompatible: boolean;
-    arcSite?: string;
-    sectionPath?: string;
-    articlesFound?: number;
-    testSuccess?: boolean;
+    arcSite?: string | undefined;
+    sectionPath?: string | undefined;
+    articlesFound?: number | undefined;
+    testSuccess?: boolean | undefined;
   };
 }
 
 interface UnifiedSourceManagerProps {
   mode: 'global' | 'topic' | 'region';
-  topicId?: string;
-  region?: string;
+  topicId?: string | undefined;
+  region?: string | undefined;
   onSourcesChange: () => void;
-  showAddForm?: boolean;
-  title?: string;
-  description?: string;
+  showAddForm?: boolean | undefined;
+  title?: string | undefined;
+  description?: string | undefined;
   // For AI source discovery
-  topicName?: string;
-  keywords?: string[];
-  topicType?: 'regional' | 'keyword';
+  topicName?: string | undefined;
+  keywords?: string[] | undefined;
+  topicType?: 'regional' | 'keyword' | undefined;
   // Stats for contextual prompts
-  articleCount?: number;
+  articleCount?: number | undefined;
 }
 
 export const UnifiedSourceManager = ({ 
@@ -173,7 +174,7 @@ export const UnifiedSourceManager = ({
 
       if (error) throw error;
       
-      const result = data as { success: boolean; message?: string; error?: string };
+      const result = data as { success: boolean; message?: string | undefined; error?: string | undefined };
       
       if (result.success) {
         toast({
@@ -231,12 +232,12 @@ export const UnifiedSourceManager = ({
       if (error) throw error;
       
       if (data) {
-        setCurrentTopic({
+        setCurrentTopic(({
           ...data,
           topic_type: data.topic_type as 'regional' | 'keyword'
-        });
+        }) as unknown as Topic | null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading topic info:', error);
     }
   };
@@ -366,7 +367,7 @@ export const UnifiedSourceManager = ({
         // Build merged list keyed by source id. Start with basic (to keep correct feed_url),
         // then overlay stats to add metrics without overriding feed_url.
         const mergedMap = new Map<string, ContentSource>();
-        for (const b of basicTransformed) mergedMap.set(b.id, b);
+        for (const b of basicTransformed) mergedMap.set(b.id, b as ContentSource);
         for (const s of transformedSources) {
           const existing = mergedMap.get(s.id);
           mergedMap.set(s.id, {
@@ -398,14 +399,14 @@ export const UnifiedSourceManager = ({
           const firstArticleDate = new Map<string, Date>();
           
           (gatheredData || []).forEach((article) => {
-            const count = gatheredCounts.get(article.source_id) || 0;
-            gatheredCounts.set(article.source_id, count + 1);
+            const count = gatheredCounts.get(article.source_id!) || 0;
+            gatheredCounts.set(article.source_id!, count + 1);
             
             // Track first (earliest) article date for this source
             const articleDate = new Date(article.created_at);
-            const existing = firstArticleDate.get(article.source_id);
+            const existing = firstArticleDate.get(article.source_id!);
             if (!existing || articleDate < existing) {
-              firstArticleDate.set(article.source_id, articleDate);
+              firstArticleDate.set(article.source_id!, articleDate);
             }
           });
           
@@ -453,7 +454,7 @@ export const UnifiedSourceManager = ({
             }
             return (a.source_name || '').localeCompare(b.source_name || '');
           });
-          setSources(sorted);
+          setSources((sorted) as unknown as ContentSource[]);
         } else {
           // For region mode, use original approach (legacy sources not linked to topics)
           let query = supabase.from('content_sources').select('*');
@@ -471,10 +472,10 @@ export const UnifiedSourceManager = ({
             }
             return (a.source_name || '').localeCompare(b.source_name || '');
           });
-          setSources(sorted);
+          setSources((sorted) as unknown as ContentSource[]);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading sources:', error);
       toast({
         title: 'Something went wrong',
@@ -522,7 +523,7 @@ export const UnifiedSourceManager = ({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Validation error:', error);
       toast({
         title: "Couldn't check the link",
@@ -545,7 +546,7 @@ export const UnifiedSourceManager = ({
       try {
         new URL(normalizedUrl);
         return normalizedUrl;
-      } catch (error) {
+      } catch (error: any) {
         throw new Error(`Invalid URL format: ${normalizedUrl}`);
       }
     }
@@ -555,7 +556,7 @@ export const UnifiedSourceManager = ({
     try {
       new URL(normalizedUrl);
       return normalizedUrl;
-    } catch (error) {
+    } catch (error: any) {
       const httpUrl = 'http://' + url.trim();
       try {
         new URL(httpUrl);
@@ -724,7 +725,7 @@ export const UnifiedSourceManager = ({
 
           const { data: newSourceData, error: createError } = await supabase
             .from('content_sources')
-            .insert(sourceData)
+            .insert(definedOnly(sourceData))
             .select('id')
             .single();
 
@@ -822,7 +823,7 @@ export const UnifiedSourceManager = ({
       await loadSources();
       onSourcesChange();
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding source:', error);
       toast({
         title: 'Something went wrong',
@@ -894,7 +895,7 @@ export const UnifiedSourceManager = ({
 
       loadSources();
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating source:', error);
       toast({
         title: 'Something went wrong',
@@ -994,7 +995,7 @@ export const UnifiedSourceManager = ({
     }
   };
 
-  const handleScrapeSource = async (source: ContentSource, options?: { forceRescrape?: boolean }) => {
+  const handleScrapeSource = async (source: ContentSource, options?: { forceRescrape?: boolean | undefined }) => {
     if (!source.feed_url) {
       toast({
         title: 'Something went wrong',
@@ -1026,7 +1027,7 @@ export const UnifiedSourceManager = ({
         requestBody = createScraperRequestBody(
           currentTopic.topic_type,
           source.feed_url,
-          { topicId, sourceId: source.id, region: currentTopic.region || source.region, forceRescrape: options?.forceRescrape || false }
+          { topicId, sourceId: source.id, region: (currentTopic.region || source.region)!, forceRescrape: options?.forceRescrape || false }
         );
         
         console.log(`🔧 Scraper routing decision for ${source.source_name}:`);
@@ -1102,7 +1103,7 @@ export const UnifiedSourceManager = ({
 
       loadSources();
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Content gathering error:', error);
       toast({
         title: "Couldn't gather",
@@ -1259,7 +1260,7 @@ export const UnifiedSourceManager = ({
             requestBody = createScraperRequestBody(
               currentTopic.topic_type,
               source.feed_url!,
-              { topicId, sourceId: source.id, region: currentTopic.region || source.region }
+              { topicId, sourceId: source.id, region: (currentTopic.region || source.region)! }
             );
           }
 
@@ -1275,7 +1276,7 @@ export const UnifiedSourceManager = ({
           } else {
             failedSources++;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Failed to scrape ${source.source_name}:`, error);
           failedSources++;
         }
@@ -1291,7 +1292,7 @@ export const UnifiedSourceManager = ({
 
       loadSources();
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Bulk content gathering error:', error);
       toast({
         title: "Couldn't gather",
@@ -1345,7 +1346,7 @@ export const UnifiedSourceManager = ({
         
         loadSources();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Source test failed:', error);
     } finally {
       setTestingSource(null);
@@ -1393,7 +1394,7 @@ export const UnifiedSourceManager = ({
         setSourceToBackfill(sourceId);
         setShowBackfillModal(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to reactivate source:', error);
       toast({
         title: 'Something went wrong',
@@ -1436,7 +1437,7 @@ export const UnifiedSourceManager = ({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Something went wrong',
         description: 'Failed to check for new content',

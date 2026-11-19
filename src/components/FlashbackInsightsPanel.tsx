@@ -6,20 +6,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar, Clock, TrendingUp, ExternalLink, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, parseISO } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 
 interface FlashbackInsightsPanelProps {
   topicId: string;
-  topicSlug?: string;
+  topicSlug?: string | undefined;
 }
 
 interface FlashbackStory {
   id: string;
   title: string;
   created_at: string;
-  cover_illustration_url?: string;
-  views?: number;
-  shares?: number;
+  cover_illustration_url?: string | null | undefined;
+  views?: number | undefined;
+  shares?: number | undefined;
 }
 
 interface FlashbackData {

@@ -70,11 +70,11 @@ export const SimpleTextSlideRenderer: React.FC<SimpleTextSlideRendererProps> = (
         }}
         className={`${
           isFirstSlide 
-            ? `${getTextSize(currentSlide.content, true)} font-bold uppercase` 
-            : `${getTextSize(currentSlide.content, false)} font-light`
+            ? `${getTextSize(currentSlide!.content, true)} font-bold uppercase` 
+            : `${getTextSize(currentSlide!.content, false)} font-light`
         }`}
       >
-        {currentSlide.content}
+        {currentSlide!.content}
       </div>
     </div>
   );

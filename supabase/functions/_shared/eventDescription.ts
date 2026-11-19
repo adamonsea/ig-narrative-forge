@@ -15,11 +15,11 @@ function sentenceEnds(text: string): number[] {
   const ends: number[] = [];
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
-    if (!".!?…".includes(ch)) continue;
+    if (!".!?…".includes(ch!)) continue;
     let j = i + 1;
-    while (j < text.length && `"'”’)]`.includes(text[j])) j++;
+    while (j < text.length && `"'”’)]`.includes(text[j]!)) j++;
     if (j >= text.length) { ends.push(j); continue; }
-    if (!/\s/.test(text[j])) continue;
+    if (!/\s/.test(text[j]!)) continue;
     const next = text.slice(j).trimStart()[0] ?? "";
     if (!/[\p{Lu}\p{N}"'“‘(¡¿]/u.test(next)) continue;
     if (ch === ".") {

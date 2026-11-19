@@ -18,13 +18,13 @@ interface KeywordInsight {
   message: string;
   severity: 'info' | 'warning' | 'success';
   data: {
-    change?: number;
-    previousValue?: number;
-    currentValue?: number;
-    daysInactive?: number;
-    milestone?: number;
+    change?: number | undefined;
+    previousValue?: number | undefined;
+    currentValue?: number | undefined;
+    daysInactive?: number | undefined;
+    milestone?: number | undefined;
   };
-  dismissed?: boolean;
+  dismissed?: boolean | undefined;
 }
 
 export const AutoKeywordInsights = ({ topicId }: AutoKeywordInsightsProps) => {

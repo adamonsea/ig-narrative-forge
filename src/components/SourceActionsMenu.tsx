@@ -15,7 +15,7 @@ interface SourceActionsMenuProps {
   onToggle: (checked: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 }
 
 export const SourceActionsMenu = ({

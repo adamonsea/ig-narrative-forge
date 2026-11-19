@@ -4,16 +4,16 @@ interface Story {
   id: string;
   title: string;
   created_at: string;
-  author?: string;
-  cover_illustration_url?: string;
-  slides?: any[];
+  author?: string | null | undefined;
+  cover_illustration_url?: string | null | undefined;
+  slides?: any[] | undefined;
   article?: {
-    region?: string;
-    source_url?: string;
-    published_at?: string;
+    region?: string | undefined;
+    source_url?: string | undefined;
+    published_at?: string | undefined;
   };
-  mp_name?: string;
-  constituency?: string;
+  mp_name?: string | undefined;
+  constituency?: string | undefined;
 }
 
 interface StoryStructuredDataProps {

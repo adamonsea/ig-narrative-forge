@@ -1,8 +1,9 @@
+import { opt } from "@/lib/optionalProps";
 import { EventCategoryIcon, EVENT_CATEGORY_LABELS, type EventCategory } from "@/components/events/EventCategoryIcon";
 import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
 import { EventCard, EventDateBlock } from "@/components/events/EventCard";
 import { useState, type ReactNode } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate } from "@/lib/router-compat";
 import { Archive, ArrowLeft, ArrowRight, Eye, Check, RefreshCw, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +41,7 @@ function Block({ id, title, children }: { id: string; title: string; children: R
   );
 }
 
-function Spec({ name, children, className }: { name: string; children: ReactNode; className?: string }) {
+function Spec({ name, children, className }: { name: string; children: ReactNode; className?: string | undefined }) {
   return (
     <div className={cn("space-y-2", className)}>
       <p className="text-sm text-muted-foreground">{name}</p>
@@ -49,7 +50,7 @@ function Spec({ name, children, className }: { name: string; children: ReactNode
   );
 }
 
-const COLOURS: { token: string; cls: string; job: string; ink?: string }[] = [
+const COLOURS: { token: string; cls: string; job: string; ink?: string | undefined }[] = [
   { token: "background / card", cls: "bg-card border border-border", job: "Page and cards" },
   { token: "foreground", cls: "bg-foreground", job: "Navy ink" },
   { token: "primary", cls: "bg-primary", job: "The one primary button" },
@@ -85,7 +86,7 @@ function IconAction({ label, children, onClick }: { label: string; children: Rea
   );
 }
 
-function LiveBar({ phone }: { phone?: boolean }) {
+function LiveBar({ phone }: { phone?: boolean | undefined }) {
   return (
     <div className={cn("flex min-h-10 items-center gap-2 bg-mint px-4 py-2", !phone && "rounded-t-xl")}>
       <span className="live-pulse live-pulse-light h-2.5 w-2.5 shrink-0 rounded-full bg-mint-foreground" aria-hidden="true" />
@@ -98,9 +99,9 @@ function SampleCard({ i, open }: { i: number; open?: () => void }) {
   const s = STORIES[i];
   return (
     <DeskCard
-      title={s.title}
-      meta={<MetaLine parts={s.meta} />}
-      onOpen={open}
+      title={s!.title}
+      meta={<MetaLine parts={s!.meta} />}
+      {...opt("onOpen", open)}
       actions={<>
         <Button size="sm" variant="ghost">Skip</Button>
         <Button size="sm" variant="outline">Publish</Button>
@@ -258,7 +259,7 @@ export default function DesignSystem() {
             <div className="grid gap-6 md:grid-cols-2">
               <Spec name="DeskCard · at rest (hover or tap to reveal)"><SampleCard i={0} open={() => setDrawer(true)} /></Spec>
               <Spec name="DeskCard · revealed">
-                <DeskCard title={STORIES[1].title} meta={<MetaLine parts={STORIES[1].meta} />} keepActions
+                <DeskCard title={STORIES[1]!.title} meta={<MetaLine parts={STORIES[1]!.meta} />} keepActions
                   actions={<><Button size="sm" variant="ghost">Skip</Button><Button size="sm" variant="outline">Publish</Button></>} />
               </Spec>
             </div>
@@ -421,7 +422,7 @@ export default function DesignSystem() {
         <WorkspaceDrawer
           open={drawer}
           onOpenChange={setDrawer}
-          title={STORIES[0].title}
+          title={STORIES[0]!.title}
           description="Eastbourne Herald · 2h ago"
           footer={
             <div className="flex w-full justify-between gap-2">
@@ -436,7 +437,7 @@ export default function DesignSystem() {
         <Sheet open={sheet} onOpenChange={setSheet}>
           <SheetContent side="bottom" className="max-h-[85dvh] space-y-4 overflow-y-auto rounded-t-xl">
             <SheetHeader>
-              <SheetTitle className="text-lg font-semibold">{STORIES[1].title}</SheetTitle>
+              <SheetTitle className="text-lg font-semibold">{STORIES[1]!.title}</SheetTitle>
               <SheetDescription className="text-sm">Bournefree · 4h ago</SheetDescription>
             </SheetHeader>
             <div className="flex gap-2">

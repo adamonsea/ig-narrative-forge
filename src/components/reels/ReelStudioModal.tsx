@@ -13,8 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 interface ReelStudioStory {
   id: string;
   title: string;
-  cover_illustration_url?: string | null;
-  slides?: { slide_number: number; content: string }[] | null;
+  cover_illustration_url?: string | null | undefined;
+  slides?: { slide_number: number; content: string }[] | null | undefined;
 }
 
 interface ReelStudioModalProps {

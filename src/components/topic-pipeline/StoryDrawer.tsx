@@ -23,37 +23,37 @@ export interface StorySlide {
   id: string;
   slide_number: number;
   content: string;
-  word_count?: number;
-  alt_text?: string;
-  visual_prompt?: string;
-  links?: StoryLink[];
+  word_count?: number | undefined;
+  alt_text?: string | undefined;
+  visual_prompt?: string | undefined;
+  links?: StoryLink[] | undefined;
 }
 
 export interface PublishedStory {
   id: string;
-  title?: string;
-  headline?: string;
-  summary?: string;
-  author?: string;
-  publication_name?: string | null;
+  title?: string | undefined;
+  headline?: string | undefined;
+  summary?: string | undefined;
+  author?: string | undefined;
+  publication_name?: string | null | undefined;
   status: string;
   is_published: boolean;
   created_at: string;
   updated_at: string;
   slides: StorySlide[];
-  slide_count?: number;
-  slides_load_failed?: boolean;
-  article_id?: string;
-  topic_article_id?: string;
-  story_type?: "legacy" | "multi_tenant";
-  cover_illustration_url?: string | null;
-  cover_illustration_prompt?: string | null;
-  illustration_generated_at?: string | null;
-  animated_illustration_url?: string | null;
-  animation_suggestions?: string[] | null;
-  is_parliamentary?: boolean;
-  scheduled_publish_at?: string | null;
-  source_url?: string | null;
+  slide_count?: number | undefined;
+  slides_load_failed?: boolean | undefined;
+  article_id?: string | undefined;
+  topic_article_id?: string | undefined;
+  story_type?: "legacy" | "multi_tenant" | undefined;
+  cover_illustration_url?: string | null | undefined;
+  cover_illustration_prompt?: string | null | undefined;
+  illustration_generated_at?: string | null | undefined;
+  animated_illustration_url?: string | null | undefined;
+  animation_suggestions?: string[] | null | undefined;
+  is_parliamentary?: boolean | undefined;
+  scheduled_publish_at?: string | null | undefined;
+  source_url?: string | null | undefined;
 }
 
 function renderContentWithLinks(content: string, links: StoryLink[] = []) {
@@ -87,7 +87,7 @@ interface StoryDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sourceLabel: string;
-  topicSlug?: string;
+  topicSlug?: string | undefined;
   illustrationStyle: string;
   generating: boolean;
   animating: boolean;
@@ -104,9 +104,9 @@ interface StoryDrawerProps {
   onDelete: () => void;
   onRefresh: () => void;
   /** When this story's pin ends (null when it isn't pinned). */
-  pinnedUntil?: string | null;
+  pinnedUntil?: string | null | undefined;
   /** Another story is pinned: pinning this one replaces it. */
-  otherPinned?: boolean;
+  otherPinned?: boolean | undefined;
   /** Pin this live story for a number of hours; 0 unpins. Live now only. */
   onPin?: (hours: number) => Promise<void>;
 }

@@ -1,3 +1,4 @@
+import { definedOnly } from "@/lib/optionalProps";
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { InfoHint, SaveIndicator, type SaveState } from "@/components/ui/editorial";
@@ -79,7 +80,7 @@ export function AutopilotBasics({ topicId, onChanged }: { topicId: string; onCha
     const fields = paceFields(choice);
     setPace({ ...pace, ...fields });
     setState("saving");
-    const { error } = await supabase.from("topics").update({ ...fields, updated_at: new Date().toISOString() }).eq("id", topicId);
+    const { error } = await supabase.from("topics").update(definedOnly({ ...fields, updated_at: new Date().toISOString() })).eq("id", topicId);
     if (error) { setPace(previous); fail(error.message); return; }
     done();
   };

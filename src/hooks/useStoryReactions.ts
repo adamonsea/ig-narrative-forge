@@ -47,7 +47,7 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
         const { data, error } = await supabase.rpc('get_story_reaction_counts', {
           p_story_id: storyId,
           p_visitor_id: visitorId,
-          p_user_id: userId || null,
+          p_user_id: (userId || null)!,
         });
 
         if (error) {
@@ -57,9 +57,9 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
 
         if (isMounted && data && data.length > 0) {
           setCounts({
-            thumbsUp: Number(data[0].thumbs_up) || 0,
-            thumbsDown: Number(data[0].thumbs_down) || 0,
-            userReaction: data[0].user_reaction as 'like' | 'discard' | null,
+            thumbsUp: Number(data[0]!.thumbs_up) || 0,
+            thumbsDown: Number(data[0]!.thumbs_down) || 0,
+            userReaction: data[0]!.user_reaction as 'like' | 'discard' | null,
           });
         }
       } catch (err) {
@@ -147,7 +147,7 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
           p_visitor_id: visitorId,
           p_swipe_type: type,
           p_topic_id: topicId,
-          p_user_id: userId,
+          p_user_id: userId!,
         });
 
         if (error) {
@@ -158,9 +158,9 @@ export const useStoryReactions = (storyId: string, topicId: string) => {
         // Sync with server response
         if (data && data.length > 0) {
           setCounts({
-            thumbsUp: Number(data[0].thumbs_up) || 0,
-            thumbsDown: Number(data[0].thumbs_down) || 0,
-            userReaction: data[0].user_reaction as 'like' | 'discard' | null,
+            thumbsUp: Number(data[0]!.thumbs_up) || 0,
+            thumbsDown: Number(data[0]!.thumbs_down) || 0,
+            userReaction: data[0]!.user_reaction as 'like' | 'discard' | null,
           });
         }
       } catch (err) {

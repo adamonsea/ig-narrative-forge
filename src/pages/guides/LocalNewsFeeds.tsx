@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { usePageFavicon } from '@/hooks/usePageFavicon';

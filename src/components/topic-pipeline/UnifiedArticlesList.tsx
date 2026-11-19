@@ -28,9 +28,9 @@ interface UnifiedArticlesListProps {
   onBulkDelete: (articleIds: string[]) => void;
   defaultTone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
   defaultWritingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
-  topicKeywords?: string[];
-  topicLandmarks?: string[];
-  topicId?: string;
+  topicKeywords?: string[] | undefined;
+  topicLandmarks?: string[] | undefined;
+  topicId?: string | undefined;
   onRefresh?: () => void;
 }
 

@@ -10,11 +10,11 @@ import { toast } from 'sonner';
 
 interface Visual {
   id: string;
-  image_url?: string;
-  image_data?: string;
-  alt_text?: string;
-  style_preset?: string;
-  generation_prompt?: string;
+  image_url?: string | undefined;
+  image_data?: string | undefined;
+  alt_text?: string | undefined;
+  style_preset?: string | undefined;
+  generation_prompt?: string | undefined;
   created_at: string;
 }
 
@@ -22,7 +22,7 @@ interface Slide {
   id: string;
   slide_number: number;
   content: string;
-  visual_prompt?: string;
+  visual_prompt?: string | undefined;
   word_count: number;
 }
 
@@ -52,7 +52,7 @@ export default function SlideViewer({ slideId }: SlideViewerProps) {
         .single();
 
       if (slideError) throw slideError;
-      setSlide(slideData);
+      setSlide((slideData) as unknown as Slide | null);
 
       // Load carousel exports for this story (where the images actually are)
       const { data: exportData, error: exportError } = await supabase
@@ -67,7 +67,7 @@ export default function SlideViewer({ slideId }: SlideViewerProps) {
       
       if (exportData && exportData.length > 0) {
         const exportRecord = exportData[0];
-        const instagramPaths = exportRecord.export_formats?.['instagram-square']?.paths || [];
+        const instagramPaths = (exportRecord!.export_formats as Record<string, { paths?: string[] } | undefined> | null)?.['instagram-square']?.paths || [];
         
         // Convert storage paths to proper visual objects for compatibility
         const mockVisuals = instagramPaths.map((path: string, index: number) => ({
@@ -76,7 +76,7 @@ export default function SlideViewer({ slideId }: SlideViewerProps) {
           alt_text: `Slide ${index + 1} carousel image`,
           style_preset: 'instagram-square',
           generation_prompt: `Carousel image for slide ${index + 1}`,
-          created_at: exportRecord.created_at
+          created_at: exportRecord!.created_at
         }));
         
         setVisuals(mockVisuals);
@@ -89,7 +89,7 @@ export default function SlideViewer({ slideId }: SlideViewerProps) {
           .order('created_at', { ascending: false });
 
         if (visualError) throw visualError;
-        setVisuals(visualData || []);
+        setVisuals((visualData || []) as unknown as Visual[]);
       }
       
     } catch (error) {

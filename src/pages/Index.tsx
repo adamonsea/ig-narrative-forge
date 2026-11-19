@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { opt } from "@/lib/optionalProps";
+import { Link } from '@/lib/router-compat';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -98,8 +99,8 @@ interface SectionCopyProps {
   lead: string;
   emphasis: string;
   line: string;
-  center?: boolean;
-  children?: ReactNode;
+  center?: boolean | undefined;
+  children?: ReactNode | undefined;
 }
 
 /** One heading, one line. Fades up as it scrolls into view. */
@@ -132,7 +133,7 @@ const SplitSection = ({
   copy,
   scene,
 }: {
-  flip?: boolean;
+  flip?: boolean | undefined;
   copy: SectionCopyProps;
   scene: { id: HomeSceneId; label: string };
 }) => (
@@ -314,8 +315,8 @@ const Index = () => {
               className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-white/60 transition-colors hover:text-white"
             >
               <motion.span
-                animate={reduce ? undefined : { y: [0, 6, 0] }}
-                transition={reduce ? undefined : { duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                {...opt("animate", reduce ? undefined : { y: [0, 6, 0] })}
+                {...opt("transition", reduce ? undefined : { duration: 2, repeat: Infinity, ease: 'easeInOut' as const })}
                 className="flex"
               >
                 <ChevronDown className="h-7 w-7" aria-hidden="true" />

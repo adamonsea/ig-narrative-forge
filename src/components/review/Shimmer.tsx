@@ -12,8 +12,8 @@ export const Shimmer = ({
   className,
 }: {
   children: ReactNode;
-  delay?: number;
-  className?: string;
+  delay?: number | undefined;
+  className?: string | undefined;
 }) => {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: '-40px' });

@@ -6,7 +6,7 @@ import arrowRightSvg from '@/assets/arrow-right.svg';
 import { motion } from 'framer-motion';
 import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 
 interface RoundupCarouselProps {
   roundup: {

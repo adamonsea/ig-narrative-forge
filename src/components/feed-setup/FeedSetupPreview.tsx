@@ -16,12 +16,12 @@ export interface SetupSource {
   type: string;
   confidence_score: number;
   rationale: string;
-  platform_reliability?: "high" | "medium" | "low";
+  platform_reliability?: "high" | "medium" | "low" | undefined;
 }
 
 const DRAWN_CHOICES: PictureChoice[] = ["editorial_illustrative", "editorial_photographic", "illustrated_icon"];
 
-function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Row({ title, hint, children }: { title: string; hint?: string | undefined; children: React.ReactNode }) {
   return (
     <section className="space-y-3 border-t border-border py-6 first:border-t-0 first:pt-0">
       <div className="flex items-center gap-1.5">
@@ -61,7 +61,7 @@ export function FeedSetupPreview({
   selected: Set<string>;
   onToggleSource: (url: string) => void;
   onAddSource: (url: string) => string | null;
-  nameLocked?: boolean;
+  nameLocked?: boolean | undefined;
 }) {
   const [newSource, setNewSource] = useState("");
   const [sourceError, setSourceError] = useState<string | null>(null);

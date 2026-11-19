@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -9,7 +10,7 @@ type CarouselStory = {
   slug: string | null;
   title: string;
   cover_illustration_url: string | null;
-  note?: string;
+  note?: string | undefined;
 };
 
 /** Horizontal, snapping run of large covers with clear arrows and position dots. */
@@ -18,7 +19,7 @@ export const ImageCarousel = ({
   feedSlug,
 }: {
   stories: CarouselStory[];
-  feedSlug?: string;
+  feedSlug?: string | undefined;
 }) => {
   const reduce = useReducedMotion();
   const { open: openPreview } = useStoryPreview();
@@ -85,7 +86,7 @@ export const ImageCarousel = ({
           <motion.div
             key={story.id}
             className="w-[80%] shrink-0 snap-center sm:w-[46%] xl:w-[31%]"
-            initial={reduce ? undefined : { opacity: 0, y: 18 }}
+            {...opt("initial", reduce ? undefined : { opacity: 0, y: 18 })}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}
             transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : i * 0.06, ease: [0.16, 1, 0.3, 1] }}

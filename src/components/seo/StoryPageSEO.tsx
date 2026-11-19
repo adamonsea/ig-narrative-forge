@@ -13,8 +13,8 @@ interface Story {
     content: string;
   }>;
   article?: {
-    source_url?: string;
-    published_at?: string;
+    source_url?: string | undefined;
+    published_at?: string | undefined;
   };
 }
 
@@ -22,10 +22,10 @@ interface StoryPageSEOProps {
   story: Story;
   topicName: string;
   topicSlug: string;
-  topicType?: string;
-  topicLogoUrl?: string;
-  canonicalStoryId?: string; // For duplicate content - point to original
-  canonicalTopicSlug?: string;
+  topicType?: string | undefined;
+  topicLogoUrl?: string | undefined;
+  canonicalStoryId?: string | undefined; // For duplicate content - point to original
+  canonicalTopicSlug?: string | undefined;
 }
 
 export const StoryPageSEO = ({
@@ -64,7 +64,7 @@ export const StoryPageSEO = ({
   // Description: First 160 chars of first slide or fallback
   const getDescription = () => {
     if (story.slides && story.slides.length > 0) {
-      const firstSlideContent = story.slides[0].content;
+      const firstSlideContent = story.slides[0]!.content;
       // Strip HTML and trim to 160 chars
       const plainText = firstSlideContent.replace(/<[^>]*>/g, '').trim();
       if (plainText.length >= 50) {

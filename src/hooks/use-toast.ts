@@ -10,9 +10,9 @@ const TOAST_REMOVE_DELAY = 6000
 
 type ToasterToast = ToastProps & {
   id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
+  title?: React.ReactNode | undefined
+  description?: React.ReactNode | undefined
+  action?: ToastActionElement | undefined
 }
 
 const actionTypes = {
@@ -42,11 +42,11 @@ type Action =
     }
   | {
       type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
+      toastId?: ToasterToast["id"] | undefined
     }
   | {
       type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
+      toastId?: ToasterToast["id"] | undefined
     }
 
 interface State {

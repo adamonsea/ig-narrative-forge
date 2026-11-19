@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/feedHighlights.test.ts
+// run with: bun test ./src/lib/feedHighlights.test.ts
 import { describe, expect, test } from "bun:test";
 import { pickHighlight, pickNudge, type HighlightStats } from "./feedHighlights";
 

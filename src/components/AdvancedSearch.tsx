@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,7 @@ export const AdvancedSearch = ({ onSearchResults }: AdvancedSearchProps) => {
 
       if (error) throw error;
       setSavedFilters((data || []) as any);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading saved filters:', error);
     }
   };
@@ -103,7 +104,7 @@ export const AdvancedSearch = ({ onSearchResults }: AdvancedSearchProps) => {
       const tags = [...new Set(articles?.flatMap(a => a.tags || []).filter(Boolean))] as string[];
 
       setAvailableOptions({ regions, categories, tags, authors });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading options:', error);
     }
   };
@@ -170,7 +171,7 @@ export const AdvancedSearch = ({ onSearchResults }: AdvancedSearchProps) => {
       if (filters.tags.length > 0) {
         results = results.filter(article => 
           article.tags && 
-          filters.tags.some(tag => article.tags.includes(tag))
+          filters.tags.some(tag => article.tags!.includes(tag))
         );
       }
 
@@ -190,7 +191,7 @@ export const AdvancedSearch = ({ onSearchResults }: AdvancedSearchProps) => {
         .from('search_queries')
         .insert({
           query_text: filters.query || 'Advanced search',
-          user_id: user?.id,
+          ...opt("user_id", user?.id),
           results_count: results.length,
           execution_time_ms: executionTime,
           filters: filters as any
@@ -201,7 +202,7 @@ export const AdvancedSearch = ({ onSearchResults }: AdvancedSearchProps) => {
         description: `Found ${results.length} articles in ${executionTime}ms`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Search error:', error);
       toast({
         title: 'Search Error',
@@ -229,7 +230,7 @@ export const AdvancedSearch = ({ onSearchResults }: AdvancedSearchProps) => {
         .insert({
           name: saveFilterName.trim(),
           filters: filters as any,
-          user_id: user?.id,
+          user_id: (user?.id)!,
           is_public: false
         });
 
@@ -243,7 +244,7 @@ export const AdvancedSearch = ({ onSearchResults }: AdvancedSearchProps) => {
       setSaveFilterName('');
       setShowSaveDialog(false);
       loadSavedFilters();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving filter:', error);
       toast({
         title: 'Error',

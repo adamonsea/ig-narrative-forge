@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  * A quiet info icon. Explanatory copy lives in here instead of on the page,
  * so every settings surface stays light. Hover on desktop, tap on touch.
  */
-export function InfoHint({ label, children }: { label?: string; children: React.ReactNode }) {
+export function InfoHint({ label, children }: { label?: string | undefined; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const trigger = (
     <span
@@ -62,10 +62,10 @@ export function SectionHeader({
   className,
 }: {
   title: string;
-  description?: string;
-  actions?: React.ReactNode;
-  id?: string;
-  className?: string;
+  description?: string | undefined;
+  actions?: React.ReactNode | undefined;
+  id?: string | undefined;
+  className?: string | undefined;
 }) {
   return (
     <div id={id} className={cn("scroll-mt-24", className)}>
@@ -80,7 +80,7 @@ export function SectionHeader({
 
 export type SaveState = "saved" | "saving" | "not-saved" | null;
 
-export function SaveIndicator({ state, className }: { state: SaveState; className?: string }) {
+export function SaveIndicator({ state, className }: { state: SaveState; className?: string | undefined }) {
   if (!state) return null;
   return (
     <span className={cn("save-indicator", className)} aria-live="polite">
@@ -102,8 +102,8 @@ export function Disclosure({
 }: {
   label: string;
   children: React.ReactNode;
-  defaultOpen?: boolean;
-  className?: string;
+  defaultOpen?: boolean | undefined;
+  className?: string | undefined;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -127,7 +127,7 @@ export function StatusPill({
 }: {
   live: boolean;
   onToggle?: () => void;
-  className?: string;
+  className?: string | undefined;
 }) {
   const Comp = onToggle ? "button" : "span";
   return (
@@ -157,9 +157,9 @@ export function PageState({
   className,
 }: {
   title: string;
-  description?: string;
-  action?: React.ReactNode;
-  className?: string;
+  description?: string | undefined;
+  action?: React.ReactNode | undefined;
+  className?: string | undefined;
 }) {
   return (
     <div className={cn("py-16 text-center max-w-md mx-auto", className)}>
@@ -178,9 +178,9 @@ export function InlineError({
   className,
 }: {
   message: string;
-  actionLabel?: string;
+  actionLabel?: string | undefined;
   onAction?: () => void;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <div

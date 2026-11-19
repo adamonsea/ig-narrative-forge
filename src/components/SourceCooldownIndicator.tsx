@@ -8,8 +8,8 @@ import { formatDistanceToNow } from 'date-fns';
 interface SourceCooldownIndicatorProps {
   lastScrapedAt: string | null;
   scrapeFrequencyHours: number | null;
-  compact?: boolean;
-  showProgress?: boolean;
+  compact?: boolean | undefined;
+  showProgress?: boolean | undefined;
 }
 
 export const SourceCooldownIndicator = ({ 

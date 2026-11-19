@@ -8,7 +8,7 @@
 const OWN_HOSTS = [
   (() => {
     try {
-      return new URL(import.meta.env.VITE_SUPABASE_URL || "").hostname;
+      return new URL(import.meta.env['VITE_SUPABASE_URL'] || "").hostname;
     } catch {
       return "";
     }
@@ -31,7 +31,7 @@ export function photoCreditLabel(
   url: string | null | undefined,
   credit: string | null | undefined,
   publisher: string | null | undefined,
-  ownHosts?: string[],
+  ownHosts?: string[] | undefined,
 ): string | null {
   if (!isPublisherPhoto(url, ownHosts)) return null;
   const name = (credit || "").trim() || (publisher || "").trim();

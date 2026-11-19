@@ -1,7 +1,7 @@
 import { Rss, Globe, Handshake, Shield, Sparkles, AlertTriangle, CheckCircle, ExternalLink } from "lucide-react";
 
 interface SourceOnboardingTickerProps {
-  variant?: 'loading' | 'static';
+  variant?: 'loading' | 'static' | undefined;
 }
 
 export const SourceOnboardingTicker = ({ variant = 'loading' }: SourceOnboardingTickerProps) => {

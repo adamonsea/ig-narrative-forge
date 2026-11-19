@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * - Motion is a single calm loop per icon (1.6–3.6s). It only runs when `animate`
  *   is true — use it for the card in view — and never under prefers-reduced-motion.
  * - Unknown or suggested categories fall back to "other" until they get an icon.
- * - Styles and keyframes live once in src/index.css (.ec-icon …).
+ * - Styles and keyframes live once in src/styles.css (.ec-icon …).
  */
 
 export type EventCategory =
@@ -158,13 +158,13 @@ const ICONS: Record<EventCategory, React.ReactElement> = {
 };
 
 interface EventCategoryIconProps {
-  category?: string | null;
+  category?: string | null | undefined;
   /** Run the loop. Pass true only for the card in view. */
-  animate?: boolean;
+  animate?: boolean | undefined;
   /** Accent colour (any CSS colour), e.g. the feed colour from feedBrandPalette(). */
-  accent?: string;
-  className?: string;
-  title?: string;
+  accent?: string | undefined;
+  className?: string | undefined;
+  title?: string | undefined;
 }
 
 export function isEventCategory(value: string | null | undefined): value is EventCategory {

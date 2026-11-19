@@ -18,9 +18,9 @@ interface Story {
   publication_name: string;
   created_at: string;
   updated_at: string;
-  cover_illustration_url?: string;
-  animated_illustration_url?: string;
-  cover_illustration_prompt?: string;
+  cover_illustration_url?: string | undefined;
+  animated_illustration_url?: string | undefined;
+  cover_illustration_prompt?: string | undefined;
   popularity_data?: {
     period_type: string;
     swipe_count: number;
@@ -41,12 +41,12 @@ interface Story {
     published_at: string;
     region: string;
   };
-  is_parliamentary?: boolean;
-  mp_name?: string;
-  mp_names?: string[]; // all MPs associated with this story (aggregated)
-  mp_party?: string;
-  constituency?: string;
-  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
+  is_parliamentary?: boolean | undefined;
+  mp_name?: string | undefined;
+  mp_names?: string[] | undefined; // all MPs associated with this story (aggregated)
+  mp_party?: string | undefined;
+  constituency?: string | undefined;
+  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | undefined;
 }
 
 interface Topic {
@@ -57,35 +57,35 @@ interface Topic {
   keywords: string[];
   landmarks: string[];
   organizations: string[];
-  slug?: string;
-  region?: string;
+  slug?: string | undefined;
+  region?: string | undefined;
   is_public: boolean;
   created_by: string;
-  parliamentary_tracking_enabled?: boolean;
-  events_enabled?: boolean;
-  feed_lead?: string | null;
-  event_cards?: string | null;
-  event_currency?: string | null;
-  story_cover_style?: string | null;
-  community_intelligence_enabled?: boolean;
-  community_pulse_frequency?: number;
-  automated_insights_enabled?: boolean;
+  parliamentary_tracking_enabled?: boolean | undefined;
+  events_enabled?: boolean | undefined;
+  feed_lead?: string | null | undefined;
+  event_cards?: string | null | undefined;
+  event_currency?: string | null | undefined;
+  story_cover_style?: string | null | undefined;
+  community_intelligence_enabled?: boolean | undefined;
+  community_pulse_frequency?: number | undefined;
+  automated_insights_enabled?: boolean | undefined;
   branding_config?: {
-    logo_url?: string;
-    subheader?: string;
-    show_topic_name?: boolean;
-    icon_url?: string;
-    primary_color?: string;
+    logo_url?: string | undefined;
+    subheader?: string | undefined;
+    show_topic_name?: boolean | undefined;
+    icon_url?: string | undefined;
+    primary_color?: string | undefined;
   };
-  illustration_primary_color?: string | null;
-  donation_enabled?: boolean;
+  illustration_primary_color?: string | null | undefined;
+  donation_enabled?: boolean | undefined;
   donation_config?: {
     button_text: string;
     tiers: Array<{
       name: string;
       amount: string;
       stripe_payment_link: string;
-      description?: string;
+      description?: string | undefined;
     }>;
   };
 }
@@ -357,7 +357,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);
-      setTopic(topicObject);
+      setTopic((topicObject) as unknown as Topic | null);
       return topicObject;
     } catch (error) {
       console.error('❌ Error loading topic:', error);
@@ -370,7 +370,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       topicData: Topic, 
       pageNum: number = 0, 
       append: boolean = false,
-      options: { suppressFiltered?: boolean } = {}
+      options: { suppressFiltered?: boolean | undefined } = {}
     ): Promise<{ success: boolean; orderedContent: FeedContent[]; transformedStories: Story[] }> => {
       const topicSlug = topicData.slug || slug;
       if (!topicSlug) {
@@ -996,12 +996,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
         
         // Validation: check if slides are sequential starting from 1
-        const isSequential = slideNumbers.every((num, idx) => num === idx + 1);
+        const isSequential = slideNumbers.every((num: number, idx: number) => num === idx + 1);
         if (!isSequential) {
           console.error('🚨 Slide ordering bug detected!', {
             storyId: story.id.substring(0, 8),
             slideNumbers,
-            expected: sortedSlides.map((_, idx) => idx + 1)
+            expected: sortedSlides.map((_: unknown, idx: number) => idx + 1)
           });
         }
         
@@ -1603,13 +1603,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     const topicOrganizationsLower = (topicOrganizations || []).map(o => o.toLowerCase());
     
     topicKeywordsLower.forEach((keyword, idx) => {
-      keywordLookup.set(keyword, topicKeywords[idx]);
+      keywordLookup.set(keyword, topicKeywords[idx]!);
     });
     topicLandmarksLower.forEach((landmark, idx) => {
-      landmarkLookup.set(landmark, topicLandmarks[idx]);
+      landmarkLookup.set(landmark, topicLandmarks[idx]!);
     });
     topicOrganizationsLower.forEach((org, idx) => {
-      organizationLookup.set(org, topicOrganizations[idx]);
+      organizationLookup.set(org, topicOrganizations[idx]!);
     });
 
     const activeKeywordSet = new Set(activeKeywords.map(k => k.toLowerCase()));
@@ -2270,7 +2270,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           
           // Set topic from cache for instant header - ensure all required fields
           const cachedTopic = cachedEntry.topic;
-          setTopic({
+          setTopic(({
             id: cachedTopic.id || '',
             name: cachedTopic.name || '',
             slug: cachedTopic.slug || slug,
@@ -2284,7 +2284,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             created_by: '',
             branding_config: cachedTopic.branding_config || undefined,
             donation_enabled: cachedTopic.donation_enabled || false,
-          });
+          }) as unknown as Topic | null);
           setTopicLoading(false);
           
           // Convert cached stories to full format with cached slides (not placeholders)
@@ -2338,7 +2338,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         
         // Eagerly load filter index for instant availability when Curate button is clicked
         if (topicData) {
-          loadFilterStoryIndex(topicData);
+          loadFilterStoryIndex(topicData as unknown as Topic);
         }
         
         // Reset states
@@ -2605,7 +2605,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           console.log('🔄 Topic updated in real-time:', payload);
           // Reload topic data to get updated branding_config
           loadTopic().then(updatedTopic => {
-            setTopic(updatedTopic);
+            setTopic((updatedTopic) as unknown as Topic | null);
           });
         }
       )

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { Cookie, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CookieConsentProps {
-  variant?: 'feed' | 'home';
+  variant?: 'feed' | 'home' | undefined;
 }
 
 const COOKIE_CONSENT_KEY = 'cookie_consent';
@@ -33,6 +33,7 @@ export const CookieConsent = ({ variant = 'feed' }: CookieConsentProps) => {
       // Invalid consent data, show banner
       setShowBanner(true);
     }
+    return undefined;
   }, []);
 
   const handleAccept = () => {

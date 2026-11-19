@@ -8,10 +8,10 @@ export interface PulseKeyword {
   positiveMentions: number;
   negativeMentions: number;
   quote: string;
-  threadUrl?: string;
-  threadTitle?: string;
+  threadUrl?: string | undefined;
+  threadTitle?: string | undefined;
   setNumber: number;
-  subreddit?: string; // Added subreddit field
+  subreddit?: string | undefined; // Added subreddit field
 }
 
 export interface CommunityPulseData {
@@ -20,7 +20,7 @@ export interface CommunityPulseData {
     url: string;
     title: string;
   };
-  lastUpdated?: string;
+  lastUpdated?: string | undefined;
 }
 
 export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1) {
@@ -72,14 +72,14 @@ export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1
             subreddit: kw.subreddit // Include subreddit
           }));
 
-          setData({
+          setData(({
             keywords: formattedKeywords,
             mostActiveThread: keywords[0]?.most_active_thread_url ? {
               url: keywords[0].most_active_thread_url,
               title: keywords[0].most_active_thread_title || ''
             } : undefined,
             lastUpdated: keywords[0]?.created_at
-          });
+          }) as unknown as CommunityPulseData);
         } else {
           setData({ keywords: [] });
         }

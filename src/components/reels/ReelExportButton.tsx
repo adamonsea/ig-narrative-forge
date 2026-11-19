@@ -3,8 +3,8 @@ import { Film } from 'lucide-react';
 
 interface ReelExportButtonProps {
   onClick: () => void;
-  size?: 'sm' | 'default' | 'lg';
-  variant?: 'default' | 'outline' | 'secondary' | 'ghost';
+  size?: 'sm' | 'default' | 'lg' | undefined;
+  variant?: 'default' | 'outline' | 'secondary' | 'ghost' | undefined;
 }
 
 export const ReelExportButton = ({

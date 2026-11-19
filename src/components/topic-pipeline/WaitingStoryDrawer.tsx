@@ -27,7 +27,7 @@ interface WaitingStoryDrawerProps {
   article: MultiTenantArticle | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  dupInfo?: DuplicateInfo;
+  dupInfo?: DuplicateInfo | undefined;
   slideType: SlideLength;
   tone: StoryTone;
   writingStyle: WritingStyle;
@@ -36,7 +36,7 @@ interface WaitingStoryDrawerProps {
   onWritingStyle: (v: WritingStyle) => void;
   makePicture: boolean;
   onMakePicture: (on: boolean) => void;
-  highlightTerms?: HighlightTerms;
+  highlightTerms?: HighlightTerms | undefined;
   isProcessing: boolean;
   isDeleting: boolean;
   onPublish: () => void;

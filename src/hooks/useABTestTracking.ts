@@ -6,8 +6,8 @@ import { getVariant, isTestActive } from '@/lib/abTesting';
 interface UseABTestTrackingOptions {
   testName: string;
   visitorId: string;
-  topicId?: string;
-  trackImpression?: boolean;
+  topicId?: string | undefined;
+  trackImpression?: boolean | undefined;
 }
 
 /**

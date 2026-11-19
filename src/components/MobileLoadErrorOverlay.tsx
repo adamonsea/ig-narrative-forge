@@ -6,8 +6,8 @@ import { isGmailWebView, isInAppBrowser } from '@/lib/deviceUtils';
 interface MobileLoadErrorOverlayProps {
   error: string;
   onRetry: () => void;
-  retryCount?: number;
-  isRetrying?: boolean;
+  retryCount?: number | undefined;
+  isRetrying?: boolean | undefined;
 }
 
 /**

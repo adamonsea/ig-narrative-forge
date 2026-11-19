@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from '@/lib/router-compat';
 
 declare global {
   interface Window {
@@ -35,7 +35,7 @@ export const useGoogleAnalytics = () => {
  */
 export const trackEvent = (
   eventName: string,
-  parameters?: Record<string, unknown>
+  parameters?: Record<string, unknown> | undefined
 ) => {
   if (typeof window.gtag !== 'function') return;
   

@@ -8,7 +8,7 @@
 export interface ABTestVariant {
   id: string;
   label: string;
-  icon?: string;
+  icon?: string | undefined;
 }
 
 export interface ABTestConfig {
@@ -18,7 +18,7 @@ export interface ABTestConfig {
     B: ABTestVariant;
   };
   startDate: string;
-  endDate?: string;
+  endDate?: string | undefined;
 }
 
 // Active A/B tests configuration

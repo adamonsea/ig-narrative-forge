@@ -20,9 +20,9 @@ export interface SceneDef {
   /** Narration line, also used as the on-screen caption. */
   caption: string;
   /** Optional presenter clip for this beat; falls back to AVATAR_CLIPS by id. */
-  avatarClip?: string;
+  avatarClip?: string | undefined;
   /** Ident scenes use exact timing; narrated scenes receive the default tail pad. */
-  tailPad?: number;
+  tailPad?: number | undefined;
   Component: ComponentType<SceneProps>;
 }
 

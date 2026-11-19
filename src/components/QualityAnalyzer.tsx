@@ -75,7 +75,7 @@ export const QualityAnalyzer = ({ storyId, onAnalysisComplete }: QualityAnalyzer
       } else {
         throw new Error(data.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error running quality analysis:', error);
       toast({
         title: "Analysis failed",

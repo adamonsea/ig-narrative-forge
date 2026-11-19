@@ -22,7 +22,7 @@ export const STORY_SCORE_FLOOR = 30;
 export const DROPOFF_MIN_SESSIONS = 30;
 
 export interface Dropoff { sessions: number; reached: number[] }
-export interface TopStopper { id: string; title: string; image?: string | null; seen: number; stop_rate: number; expected_rate: number; score: number }
+export interface TopStopper { id: string; title: string; image?: string | null | undefined; seen: number; stop_rate: number; expected_rate: number; score: number }
 
 /** Share (0–100) of readers who reached each card, plus the card most readers stop before. Null below the floor. */
 export function dropoffCurve(d: Dropoff | null | undefined) {
@@ -43,7 +43,7 @@ export function topStopper(s: TopStopper | null | undefined) {
   return { ...s, ratePercent: Math.round(rate * 100), times: Math.round(times * 10) / 10 };
 }
 
-export interface StorySignalInput { seen?: number | null; stop_rate?: number | null; swipe_rate?: number | null }
+export interface StorySignalInput { seen?: number | null | undefined; stop_rate?: number | null | undefined; swipe_rate?: number | null | undefined }
 
 /** Hook vs hold for one story: % of readers who saw it that stopped, and % that swiped in. Null below the story floor. */
 export function storySignal(s: StorySignalInput | null | undefined) {

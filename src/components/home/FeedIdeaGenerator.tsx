@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/lib/router-compat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ const useTypewriterPlaceholder = (active: boolean, ideas: readonly string[]) => 
       return;
     }
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setText(ideas[0]);
+      setText(ideas[0]!);
       return;
     }
 
@@ -40,8 +40,8 @@ const useTypewriterPlaceholder = (active: boolean, ideas: readonly string[]) => 
       const word = ideas[idea];
       if (!deleting) {
         char += 1;
-        setText(word.slice(0, char));
-        if (char === word.length) {
+        setText(word!.slice(0, char));
+        if (char === word!.length) {
           deleting = true;
           timer = window.setTimeout(tick, 1800);
           return;
@@ -49,7 +49,7 @@ const useTypewriterPlaceholder = (active: boolean, ideas: readonly string[]) => 
         timer = window.setTimeout(tick, 70);
       } else {
         char -= 1;
-        setText(word.slice(0, char));
+        setText(word!.slice(0, char));
         if (char === 0) {
           deleting = false;
           idea = (idea + 1) % ideas.length;
@@ -69,7 +69,7 @@ const useTypewriterPlaceholder = (active: boolean, ideas: readonly string[]) => 
 
 interface FeedIdeaGeneratorProps {
   /** Example topics typed into the empty box, one after another. */
-  ideas?: readonly string[];
+  ideas?: readonly string[] | undefined;
 }
 
 export const FeedIdeaGenerator = ({ ideas = DEFAULT_PLACEHOLDER_IDEAS }: FeedIdeaGeneratorProps = {}) => {

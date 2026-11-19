@@ -40,7 +40,7 @@ export function posterLayout(lineCount: number, size: number): PosterLayout {
   const step = Math.round(size * LINE_HEIGHT);
   const last = H - SAFE.bottom - Math.ceil(size * 0.22); // leave room for descenders
   const baselines = Array.from({ length: lines }, (_, i) => last - (lines - 1 - i) * step);
-  const titleTop = baselines[0] - Math.round(size * 0.78);
+  const titleTop = baselines[0]! - Math.round(size * 0.78);
   const tileY = Math.max(SAFE.top, titleTop - TILE_GAP - TILE.h);
   return { tileX: SAFE.left, tileY, baselines, titleTop, textWidth: W - SAFE.left - SAFE.right };
 }

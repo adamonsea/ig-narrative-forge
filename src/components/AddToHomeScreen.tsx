@@ -8,7 +8,7 @@ import { useStoryViewTracker } from '@/hooks/useStoryViewTracker';
 interface AddToHomeScreenProps {
   topicName: string;
   topicSlug: string;
-  topicIcon?: string;
+  topicIcon?: string | undefined;
 }
 
 interface BeforeInstallPromptEvent extends Event {

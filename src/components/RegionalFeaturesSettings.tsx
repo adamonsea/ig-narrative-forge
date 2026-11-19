@@ -12,8 +12,8 @@ import { FEATURES } from "@/lib/featureFlags";
 
 interface RegionalFeaturesSettingsProps {
   topicId: string;
-  region?: string;
-  parliamentaryEnabled?: boolean;
+  region?: string | undefined;
+  parliamentaryEnabled?: boolean | undefined;
   onUpdate?: () => void;
 }
 

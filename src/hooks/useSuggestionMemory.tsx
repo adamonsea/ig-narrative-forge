@@ -19,7 +19,7 @@ interface SourceSuggestionMemory extends SuggestionMemoryItem {
   source_name: string;
   type: string;
   rationale: string;
-  technical_validation?: any;
+  technical_validation?: any | undefined;
 }
 
 export function useSuggestionMemory<T extends SuggestionMemoryItem>(

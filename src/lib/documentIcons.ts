@@ -6,8 +6,8 @@
 interface IconLink {
   rel: string;
   href: string;
-  type?: string;
-  sizes?: string;
+  type?: string | undefined;
+  sizes?: string | undefined;
 }
 
 const CURATR_ICONS: IconLink[] = [

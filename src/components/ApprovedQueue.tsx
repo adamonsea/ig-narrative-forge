@@ -25,7 +25,7 @@ interface Slide {
   id: string;
   slide_number: number;
   content: string;
-  visual_prompt?: string | null;
+  visual_prompt?: string | null | undefined;
   alt_text: string | null;
   word_count: number;
   story_id: string;
@@ -34,31 +34,31 @@ interface Slide {
 interface Visual {
   id: string;
   slide_id: string;
-  image_url?: string;
-  alt_text?: string;
-  style_preset?: string;
+  image_url?: string | undefined;
+  alt_text?: string | undefined;
+  style_preset?: string | undefined;
   created_at: string;
 }
 
 interface StoryArticle {
   id: string;
   title: string;
-  author?: string;
+  author?: string | undefined;
   source_url: string;
-  region?: string;
-  published_at?: string | null;
-  word_count?: number | null;
+  region?: string | undefined;
+  published_at?: string | null | undefined;
+  word_count?: number | null | undefined;
 }
 
 interface Post {
   id: string;
-  caption?: string;
-  hashtags?: any;
-  source_attribution?: string;
+  caption?: string | undefined;
+  hashtags?: any | undefined;
+  source_attribution?: string | undefined;
   story_id: string;
   status: string;
-  published_at?: string | null;
-  scheduled_at?: string | null;
+  published_at?: string | null | undefined;
+  scheduled_at?: string | null | undefined;
 }
 
 interface CarouselExport {
@@ -67,8 +67,8 @@ interface CarouselExport {
   status: string;
   export_formats: any;
   file_paths: any; // This is JSON from Supabase, we'll parse it
-  zip_url?: string | null;
-  error_message?: string | null;
+  zip_url?: string | null | undefined;
+  error_message?: string | null | undefined;
   created_at: string;
   updated_at: string;
 }
@@ -80,10 +80,10 @@ interface Story {
   article_id: string;
   created_at: string;
   slides: Slide[];
-  article?: StoryArticle;
-  posts?: Post[];
-  visuals?: Visual[];
-  carousel_exports?: CarouselExport[];
+  article?: StoryArticle | undefined;
+  posts?: Post[] | undefined;
+  visuals?: Visual[] | undefined;
+  carousel_exports?: CarouselExport[] | undefined;
 }
 
 export const ApprovedQueue = () => {
@@ -128,7 +128,7 @@ export const ApprovedQueue = () => {
         carousel_exports: story.carousel_exports ? [story.carousel_exports] : []
       })) || [];
 
-      setStories(storiesWithVisuals);
+      setStories((storiesWithVisuals) as unknown as Story[]);
     } catch (error: any) {
       console.error('Error loading approved stories:', error);
       toast({
@@ -323,8 +323,8 @@ export const ApprovedQueue = () => {
       failed: { status: 'failed', label: 'Generation Failed' }
     };
     
-    return statusMap[latestExport.status as keyof typeof statusMap] || 
-           { status: 'unknown', label: latestExport.status };
+    return statusMap[latestExport!.status as keyof typeof statusMap] || 
+           { status: 'unknown', label: latestExport!.status };
   };
 
   const openPreviewModal = (storyId: string) => {

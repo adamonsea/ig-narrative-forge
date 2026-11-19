@@ -13,7 +13,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  signInWithMagicLink: (email: string, displayName?: string, redirectTo?: string) => Promise<{ error: any }>;
+  signInWithMagicLink: (email: string, displayName?: string | undefined, redirectTo?: string) => Promise<{ error: any }>;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   isProductOwner: boolean;
@@ -232,13 +232,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithMagicLink = async (email: string, displayName?: string, redirectTo?: string) => {
+  const signInWithMagicLink = async (email: string, displayName?: string | undefined, redirectTo?: string) => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: redirectTo ? `${window.location.origin}${redirectTo}` : `${window.location.origin}/`,
-          data: displayName ? { display_name: displayName } : undefined
+          ...(displayName ? { data: { display_name: displayName } } : {})
         }
       });
 

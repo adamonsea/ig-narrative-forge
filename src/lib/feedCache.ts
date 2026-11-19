@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 /**
  * Feed caching utility for instant content display
  * Implements stale-while-revalidate pattern with robust error handling
@@ -22,21 +23,21 @@ export interface CachedSlide {
   slide_number: number;
   content: string;
   word_count: number;
-  links?: Array<{ text: string; url: string }>;
+  links?: Array<{ text: string; url: string }> | undefined;
 }
 
 export interface CachedStory {
   id: string;
   title: string;
-  cover_illustration_url?: string;
+  cover_illustration_url?: string | undefined;
   publication_name: string;
   created_at: string;
   slides: CachedSlide[];
-  is_parliamentary?: boolean;
+  is_parliamentary?: boolean | undefined;
   article?: {
-    source_url?: string;
-    published_at?: string;
-    region?: string;
+    source_url?: string | undefined;
+    published_at?: string | undefined;
+    region?: string | undefined;
   };
 }
 
@@ -45,17 +46,17 @@ export interface CachedTopic {
   name: string;
   slug: string;
   topic_type: 'regional' | 'keyword';
-  region?: string;
+  region?: string | undefined;
   branding_config?: {
-    logo_url?: string;
-    subheader?: string;
-    show_topic_name?: boolean;
-    icon_url?: string;
+    logo_url?: string | undefined;
+    subheader?: string | undefined;
+    show_topic_name?: boolean | undefined;
+    icon_url?: string | undefined;
   };
-  donation_enabled?: boolean;
-  keywords?: string[];
-  landmarks?: string[];
-  organizations?: string[];
+  donation_enabled?: boolean | undefined;
+  keywords?: string[] | undefined;
+  landmarks?: string[] | undefined;
+  organizations?: string[] | undefined;
 }
 
 export interface FeedCacheEntry {
@@ -192,11 +193,11 @@ export const toCachedStory = (story: any): CachedStory => ({
     links: slide.links,
   })),
   is_parliamentary: story.is_parliamentary,
-  article: story.article ? {
+  ...opt("article", story.article ? {
     source_url: story.article.source_url,
     published_at: story.article.published_at,
     region: story.article.region,
-  } : undefined,
+  } : undefined),
 });
 
 /**

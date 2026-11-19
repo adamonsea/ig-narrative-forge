@@ -18,11 +18,11 @@ export interface HeadlineStopTracker { observe: (el: Element, storyId: string, p
 
 const noop: HeadlineStopTracker = { observe: () => {}, destroy: () => {} };
 
-export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolean } = {}): HeadlineStopTracker {
+export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolean | undefined } = {}): HeadlineStopTracker {
   if (typeof window === 'undefined' || !('IntersectionObserver' in window) || opts.skip || !canTrackReader()) return noop;
 
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/record_story_views`;
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+  const url = `${import.meta.env['VITE_SUPABASE_URL']}/rest/v1/rpc/record_story_views`;
+  const key = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] as string;
   const visitorId = getVisitorId('visitor');
   const stories = new Map<string, Entry>();
   const ids = new WeakMap<Element, string>();
@@ -44,7 +44,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
     // Nothing is sent for a page no person has touched, moved, scrolled or typed on.
     if (!hasHumanSignal()) return;
     const now = performance.now();
-    const items: Array<{ s: string; p: boolean; d: number; i?: number }> = [];
+    const items: Array<{ s: string; p: boolean; d: number; i?: number | undefined }> = [];
     stories.forEach((e, s) => {
       // close open timings so dwell is captured, then reopen if still visible
       const wasOpen = e.since != null;

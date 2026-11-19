@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "@/lib/router-compat";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
@@ -16,7 +16,7 @@ interface Topic {
   id: string;
   name: string;
   slug: string;
-  branding_config?: any;
+  branding_config?: any | undefined;
 }
 
 interface Roundup {
@@ -26,10 +26,10 @@ interface Roundup {
   period_start: string;
   period_end: string;
   story_ids: string[];
-  stats?: any;
+  stats?: any | undefined;
   is_published: boolean;
   created_at: string;
-  audio_url?: string;
+  audio_url?: string | undefined;
 }
 
 export default function BriefingsArchive() {
@@ -66,7 +66,7 @@ export default function BriefingsArchive() {
           .single();
         
         if (topicData) {
-          setTopic(topicData);
+          setTopic((topicData) as unknown as Topic | null);
           setDailyRoundups(cached.dailyRoundups as Roundup[]);
           setWeeklyRoundups(cached.weeklyRoundups as Roundup[]);
           setLoading(false);
@@ -96,7 +96,7 @@ export default function BriefingsArchive() {
           return;
         }
 
-        setTopic(topicData);
+        setTopic((topicData) as unknown as Topic | null);
 
         // Fetch all daily and weekly roundups in parallel
         const [dailyResult, weeklyResult] = await Promise.all([

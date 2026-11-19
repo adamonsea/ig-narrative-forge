@@ -69,9 +69,9 @@ export default function TopicCTAManager({ topicId, topicName, onClose }: TopicCT
       if (error) throw error;
       
       if (data) {
-        setConfig(data);
+        setConfig((data) as unknown as FeedCTAConfig | null);
         setFormData({
-          engagement_question: data.engagement_question,
+          engagement_question: data.engagement_question!,
           show_like_share: data.show_like_share,
           attribution_cta: data.attribution_cta || '',
           is_active: data.is_active

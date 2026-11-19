@@ -34,7 +34,7 @@ interface MultiTenantStoriesListProps {
   onEditSlide: (slide: any) => void;
   onViewStory: (story: MultiTenantStory) => void;
   onRefresh?: () => void;
-  topicId?: string;
+  topicId?: string | undefined;
 }
 
 export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({

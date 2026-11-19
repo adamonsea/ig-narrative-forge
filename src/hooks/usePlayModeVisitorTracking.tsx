@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { canTrackReader } from '@/lib/visitorIdentity';
 import { getVisitorId } from '@/lib/visitorIdentity';
 import { useEffect, useRef } from 'react';
@@ -36,7 +37,7 @@ export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
             visitor_id: VISITOR_ID,
             user_agent: userAgent,
             referrer: referrer || null,
-            visit_date: new Date().toISOString().split('T')[0],
+            ...opt("visit_date", new Date().toISOString().split('T')[0]),
             page_type: 'play'
           });
 

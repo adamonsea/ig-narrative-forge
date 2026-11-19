@@ -1,5 +1,5 @@
 import { Home, Settings, LogOut, MapPin, Tag, ChevronDown, Code2 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "@/lib/router-compat";
 import {
   Sidebar,
   SidebarContent,
@@ -135,7 +135,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <div className="flex items-center gap-2 px-2 py-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarImage src={user?.user_metadata?.['avatar_url']} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   {user?.email?.[0]?.toUpperCase() || "U"}
                 </AvatarFallback>

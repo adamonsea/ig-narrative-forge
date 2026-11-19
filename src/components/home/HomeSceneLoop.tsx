@@ -59,7 +59,7 @@ interface HomeSceneLoopProps {
   /** Plain description of the animation for screen readers. */
   label: string;
   /** Audience-specific wording; the explainer's own copy is used when absent. */
-  content?: SceneContent;
+  content?: SceneContent | undefined;
 }
 
 /**
@@ -81,12 +81,12 @@ const HomeSceneLoop = ({ sceneId, label, content }: HomeSceneLoopProps) => {
   useEffect(() => {
     const el = frameRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setFrameW(entry.contentRect.width));
+    const ro = new ResizeObserver(([entry]) => setFrameW(entry!.contentRect.width));
     ro.observe(el);
     const io = new IntersectionObserver(
       ([entry]) => {
-        setInView(entry.isIntersecting);
-        if (entry.isIntersecting) setRun((r) => r + 1);
+        setInView(entry!.isIntersecting);
+        if (entry!.isIntersecting) setRun((r) => r + 1);
       },
       { threshold: 0.3 },
     );

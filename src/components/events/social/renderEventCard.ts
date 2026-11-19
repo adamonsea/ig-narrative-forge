@@ -24,7 +24,7 @@ const INK = "rgb(11 22 38)";
 const PAPER = "rgb(255 255 255)";
 const FONT = "Lexend, sans-serif";
 
-export interface RenderOpts { brandColor?: string | null; feedName: string; feedUrl: string; currency?: string | null }
+export interface RenderOpts { brandColor?: string | null | undefined; feedName: string; feedUrl: string; currency?: string | null | undefined }
 
 export interface PreparedPoster { bg: HTMLImageElement | null; photo: boolean }
 
@@ -70,7 +70,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLine
   if (line) lines.push(line);
   if (lines.length > maxLines) {
     const kept = lines.slice(0, maxLines);
-    kept[maxLines - 1] = `${kept[maxLines - 1].replace(/[\s,;:.]+$/, "")}…`;
+    kept[maxLines - 1] = `${kept[maxLines - 1]!.replace(/[\s,;:.]+$/, "")}…`;
     return kept;
   }
   return lines;
@@ -163,7 +163,7 @@ export function drawPosterFrame(ctx: CanvasRenderingContext2D, e: SocialEvent, o
   lines.forEach((line, i) => {
     const s = step(t, 1 + i * 0.14, 0.7);
     ctx.globalAlpha = s;
-    ctx.fillText(line, L.tileX, L.baselines[i] + (1 - s) * size * LINE_HEIGHT * 0.4);
+    ctx.fillText(line, L.tileX, L.baselines[i]! + (1 - s) * size * LINE_HEIGHT * 0.4);
   });
   ctx.restore();
 }

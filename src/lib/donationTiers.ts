@@ -3,7 +3,7 @@ export interface DonationTier {
   name: string;
   amount: string;
   stripe_payment_link: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 /** Only Stripe Payment Links are accepted as the pay link. */

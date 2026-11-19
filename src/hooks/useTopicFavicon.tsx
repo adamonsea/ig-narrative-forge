@@ -3,10 +3,10 @@ import { getFaviconUrl, getPwaIconUrl } from '@/lib/brandingImageUtils';
 import { restoreCuratrIcons, setFeedIcons } from '@/lib/documentIcons';
 
 interface BrandingConfig {
-  icon_url?: string;
-  logo_url?: string;
-  icon_variants?: Record<string, string>;
-  logo_variants?: Record<string, string>;
+  icon_url?: string | undefined;
+  logo_url?: string | undefined;
+  icon_variants?: Record<string, string> | undefined;
+  logo_variants?: Record<string, string> | undefined;
 }
 
 /**

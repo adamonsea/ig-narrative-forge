@@ -10,8 +10,8 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error?: Error;
-  errorInfo?: React.ErrorInfo;
+  error?: Error | undefined;
+  errorInfo?: React.ErrorInfo | undefined;
 }
 
 export class SystemErrorBoundary extends React.Component<Props, State> {
@@ -27,7 +27,7 @@ export class SystemErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('SystemErrorBoundary caught an error:', error, errorInfo);
     
     // Create error signature for deduplication
@@ -65,7 +65,7 @@ export class SystemErrorBoundary extends React.Component<Props, State> {
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-dvh p-6 flex items-center justify-center">

@@ -36,7 +36,7 @@ const SOURCE_TYPES: SourceTypeInfo[] = [
 ];
 
 interface SourceQualityGuideProps {
-  currentUrl?: string;
+  currentUrl?: string | undefined;
 }
 
 export const SourceQualityGuide = ({ currentUrl }: SourceQualityGuideProps) => {
@@ -58,6 +58,7 @@ export const SourceQualityGuide = ({ currentUrl }: SourceQualityGuideProps) => {
       
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, []);
 
   const detectSourceType = (url: string): SourceTypeInfo | null => {
@@ -69,18 +70,18 @@ export const SourceQualityGuide = ({ currentUrl }: SourceQualityGuideProps) => {
     if (lowerUrl.includes('/feed') || lowerUrl.includes('/rss') || 
         lowerUrl.includes('wordpress') || lowerUrl.includes('substack') ||
         lowerUrl.includes('.xml') || lowerUrl.includes('atom')) {
-      return SOURCE_TYPES[0];
+      return SOURCE_TYPES[0]!;
     }
     
     // Social media patterns  
     if (lowerUrl.includes('twitter') || lowerUrl.includes('facebook') ||
         lowerUrl.includes('linkedin') || lowerUrl.includes('instagram') ||
         lowerUrl.includes('tiktok') || lowerUrl.includes('youtube')) {
-      return SOURCE_TYPES[2];
+      return SOURCE_TYPES[2]!;
     }
     
     // Default to news sites
-    return SOURCE_TYPES[1];
+    return SOURCE_TYPES[1]!;
   };
 
   const getBadgeVariant = (badge: 'high' | 'medium' | 'low') => {

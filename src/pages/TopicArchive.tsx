@@ -1,4 +1,4 @@
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "@/lib/router-compat";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ interface Story {
   created_at: string;
   article: {
     source_url: string;
-    published_at?: string;
+    published_at?: string | undefined;
   };
 }
 
@@ -36,9 +36,9 @@ interface Topic {
   description: string;
   topic_type: string;
   branding_config?: {
-    logo_url?: string;
-    icon_url?: string;
-    subheader?: string;
+    logo_url?: string | undefined;
+    icon_url?: string | undefined;
+    subheader?: string | undefined;
   };
 }
 
@@ -84,7 +84,7 @@ const TopicArchive = () => {
 
         const topicData = topicResult.data;
         const brandingConfig = topicData.branding_config as any;
-        setTopic({
+        setTopic(({
           id: topicData.id,
           name: topicData.name,
           slug: topicData.slug,
@@ -95,7 +95,7 @@ const TopicArchive = () => {
             icon_url: brandingConfig.icon_url,
             subheader: brandingConfig.subheader
           } : undefined
-        });
+        }) as unknown as Topic | null);
 
         // Use join-based count to avoid URL length limits
         const countResult = await (supabase as any)

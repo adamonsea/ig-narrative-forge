@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/eventPhotoPath.test.ts
+// run with: bun test ./src/lib/eventPhotoPath.test.ts
 import { describe, expect, it } from 'bun:test';
 import { isStoredEventPhoto } from './eventPhotoPath';
 

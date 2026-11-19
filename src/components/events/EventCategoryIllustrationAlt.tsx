@@ -9,7 +9,7 @@ import type { EventCategory } from "./EventCategoryIcon";
  * Drawn only in tints of the feed colour on a pale tint of it, textured with a
  * printed halftone (SVG patterns, no filters). One slow motion per category when
  * `animate` is true (card in view); still under reduced motion.
- * Styles and keyframes live once in src/index.css (.ec-alt …).
+ * Styles and keyframes live once in src/styles.css (.ec-alt …).
  */
 
 type Ctx = { c: string; uid: string };
@@ -188,14 +188,14 @@ const ART: Record<EventCategory, Art> = {
 };
 
 interface EventCategoryIllustrationAltProps {
-  category?: string | null;
+  category?: string | null | undefined;
   /** Feed theme colour (any CSS colour), e.g. from feedBrandPalette(). */
   color: string;
   /** One slow motion; pass true only for the card in view. */
-  animate?: boolean;
+  animate?: boolean | undefined;
   /** Cut the bottom edge at an angle (default on). */
-  angled?: boolean;
-  className?: string;
+  angled?: boolean | undefined;
+  className?: string | undefined;
 }
 
 export function EventCategoryIllustrationAlt({ category, color, animate = false, angled = true, className }: EventCategoryIllustrationAltProps) {

@@ -4,8 +4,8 @@ import { ExplainerPlayer } from './ExplainerPlayer';
 interface ExplainerOverlayProps {
   open: boolean;
   onClose: () => void;
-  avatarSrc?: string;
-  endCta?: React.ReactNode;
+  avatarSrc?: string | undefined;
+  endCta?: React.ReactNode | undefined;
 }
 
 export const ExplainerOverlay = ({ open, onClose, avatarSrc, endCta }: ExplainerOverlayProps) => (

@@ -87,7 +87,7 @@ export const EngagementFunnel = ({ topicId }: EngagementFunnelProps) => {
         <div className="space-y-2">
           {stages.map((stage, index) => {
             const widthPercent = Math.max((stage.value / maxValue) * 100, 8);
-            const prevValue = index > 0 ? stages[index - 1].value : 0;
+            const prevValue = index > 0 ? stages[index - 1]!.value : 0;
             const hasConversion = index > 0 && prevValue > 0;
             const conversionRate = hasConversion
               ? Math.round((stage.value / prevValue) * 100)
@@ -124,7 +124,7 @@ export const EngagementFunnel = ({ topicId }: EngagementFunnelProps) => {
                   <p>{stage.tooltip}</p>
                   {index > 0 && hasConversion && (
                     <p className="text-muted-foreground mt-1">
-                      {conversionRate}% from {stages[index - 1].label}
+                      {conversionRate}% from {stages[index - 1]!.label}
                     </p>
                   )}
                 </TooltipContent>

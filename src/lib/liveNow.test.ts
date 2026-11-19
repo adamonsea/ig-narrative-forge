@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/liveNow.test.ts
+// run with: bun test ./src/lib/liveNow.test.ts
 import { describe, expect, it } from "bun:test";
 import { findLiveRepeat, groupHeld, isRepeatOfLive, splitLiveNow, staleHeld, withJustPublished } from "./liveNow";
 
@@ -36,7 +36,7 @@ describe("Live now mirrors the feed", () => {
 });
 
 describe("stale written stories", () => {
-  const held = (id, created_at, extra = {}) => ({ ...base, id, status: "draft", is_published: false, created_at, ...extra });
+  const held = (id: string, created_at: string, extra: Record<string, unknown> = {}) => ({ ...base, id, status: "draft", is_published: false, created_at, ...extra });
   it("a draft written 8 days ago is stale", () => {
     expect(staleHeld([held("a", "2026-11-09T08:00:00Z")], NOW).map((s) => s.id)).toEqual(["a"]);
   });
@@ -49,7 +49,7 @@ describe("stale written stories", () => {
 });
 
 describe("Story pool groups", () => {
-  const s = (id, status, created_at, extra = {}) => ({ ...base, id, status, is_published: false, created_at, ...extra });
+  const s = (id: string, status: string, created_at: string, extra: Record<string, unknown> = {}) => ({ ...base, id, status, is_published: false, created_at, ...extra });
   it("a draft from 2 days ago needs the owner's OK", () => {
     expect(groupHeld([s("a", "draft", "2026-11-15T09:00:00Z")], NOW).toCheck.map((x) => x.id)).toEqual(["a"]);
   });

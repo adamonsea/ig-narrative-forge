@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/lastSlide.test.ts
+// run with: bun test ./src/lib/lastSlide.test.ts
 import { describe, expect, test } from 'bun:test';
 import { stripReaderPrompts, cleanAuthor, buildReporterByline, prepareStorySlides } from './lastSlide';
 import { pickSharedSize } from './slideTextFit';
@@ -98,7 +98,7 @@ describe('empty closing slides are dropped', () => {
     ]);
     expect(out.dropped).toBe(1);
     expect(out.slides.map((x) => x.slide_number)).toEqual([1, 2]);
-    expect(out.slides[1].content).toBe('The pier kiosk is up for auction.');
+    expect(out.slides[1]!.content).toBe('The pier kiosk is up for auction.');
   });
   test('the new last slide is cleaned too', () => {
     const out = prepareStorySlides([
@@ -107,14 +107,14 @@ describe('empty closing slides are dropped', () => {
       s(3, 'Source: Eastbourne News.'),
     ]);
     expect(out.slides.length).toBe(2);
-    expect(out.slides[1].content).toBe('Bidding closes on 18 November.');
+    expect(out.slides[1]!.content).toBe('Bidding closes on 18 November.');
   });
   test('a story never ends on an empty slide and the headline is never dropped', () => {
     const out = prepareStorySlides([s(1, 'Headline'), s(2, 'Share this with friends.'), s(3, 'Source: X.')]);
     expect(out.slides.map((x) => x.slide_number)).toEqual([1]);
     for (const story of [out.slides]) {
       const last = story[story.length - 1];
-      expect(last.content.trim().length).toBeGreaterThan(0);
+      expect(last!.content.trim().length).toBeGreaterThan(0);
     }
   });
   test('appeal wording on the new last slide protects its share ask', () => {
@@ -124,14 +124,14 @@ describe('empty closing slides are dropped', () => {
       s(3, 'Source: Eastbourne reporting by Peter Lindsey. Discuss this developing story with others.'),
     ]);
     expect(out.slides.length).toBe(2);
-    expect(out.slides[1].content).toBe('Officers want to trace the driver. Share this appeal with friends.');
+    expect(out.slides[1]!.content).toBe('Officers want to trace the driver. Share this appeal with friends.');
   });
   test('cleaned last slide drops stale link offsets; untouched slide keeps them', () => {
     const link = { start: 0, end: 3, url: 'https://x.test', text: 'The' };
     const changed = prepareStorySlides([s(1, 'H'), { slide_number: 2, content: 'The pier opens. Share with friends.', links: [link] }]);
-    expect(changed.slides[1].links).toEqual([]);
+    expect(changed.slides[1]!.links).toEqual([]);
     const same = prepareStorySlides([s(1, 'H'), { slide_number: 2, content: 'The pier opens.', links: [link] }]);
-    expect(same.slides[1].links).toEqual([link]);
+    expect(same.slides[1]!.links).toEqual([link]);
   });
 });
 
@@ -169,7 +169,7 @@ describe('older credit tidy-up never deletes real text', () => {
       [{ content: 'Headline' }, { content: 'Source: Sussex Police via SussexExpress. Share this appeal to help trace Arthur.' }],
       stripGeneratedSourceAttribution
     );
-    expect(out.slides[1].content).toBe('Share this appeal to help trace Arthur.');
+    expect(out.slides[1]!.content).toBe('Share this appeal to help trace Arthur.');
   });
 });
 
@@ -180,7 +180,7 @@ describe('credit prefix never cuts a sentence in half', () => {
       [{ content: 'H' }, { content: 'The tower is listed. Source: bournefreelive.co.uk. Discuss this story with others—what would you do?' }],
       stripGeneratedSourceAttribution
     );
-    expect(out.slides[1].content).toBe('The tower is listed.');
+    expect(out.slides[1]!.content).toBe('The tower is listed.');
   });
 });
 
@@ -236,7 +236,7 @@ describe('closing question to the reader', () => {
       { content: 'Share this with friends.' },
     ]);
     expect(out.dropped).toBe(1);
-    expect(out.slides[1].content).toBe('The plan was approved. But will it ever be built?');
+    expect(out.slides[1]!.content).toBe('The plan was approved. But will it ever be built?');
   });
 });
 

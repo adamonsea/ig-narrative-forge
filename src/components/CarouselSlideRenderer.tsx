@@ -23,7 +23,7 @@ interface Story {
   article: {
     source_url: string;
     region: string;
-    published_at?: string;
+    published_at?: string | undefined;
   };
 }
 
@@ -77,7 +77,7 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
     return { mainContent, ctaContent: finalCtaContent, sourceUrl: story.article.source_url };
   };
 
-  const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide.content);
+  const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide!.content);
 
   // Extract source domain for display
   const sourceDomain = story.article.source_url && story.article.source_url !== '#' ? 
@@ -135,11 +135,11 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
             <div className="w-full max-w-4xl">
               <div className={`text-center leading-relaxed ${
                 isFirstSlide 
-                  ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
-                  : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
+                  ? `${getTextSize(currentSlide!.content, true)} font-bold uppercase text-balance` 
+                  : `${getTextSize(isLastSlide ? mainContent : currentSlide!.content, false)} font-light text-balance`
               }`}>
                 {/* Main story content */}
-                {isLastSlide ? mainContent : currentSlide.content}
+                {isLastSlide ? mainContent : currentSlide!.content}
                     
                 {/* CTA content with special styling on last slide */}
                 {isLastSlide && ctaContent && (

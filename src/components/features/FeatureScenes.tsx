@@ -1,3 +1,4 @@
+import type { MotionStyle } from "framer-motion";
 /**
  * Curatr — Features page explainer scenes (main brand: "Dark Ink Editorial").
  *
@@ -146,7 +147,7 @@ const SceneBoard = ({ label: aria, render }: { label: string; render: (active: b
   useLayoutEffect(() => {
     const el = outer.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setScale(e.contentRect.width / W));
+    const ro = new ResizeObserver(([e]) => setScale(e!.contentRect.width / W));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -185,11 +186,11 @@ const SceneBoard = ({ label: aria, render }: { label: string; render: (active: b
   );
 };
 
-const Abs = ({ x, y, w, h, children, style }: { x: number; y: number; w?: number; h?: number; children?: ReactNode; style?: CSSProperties }) => (
+const Abs = ({ x, y, w, h, children, style }: { x: number; y: number; w?: number | undefined; h?: number | undefined; children?: ReactNode | undefined; style?: CSSProperties | undefined }) => (
   <div style={{ position: 'absolute', left: x, top: y, width: w, height: h, ...style }}>{children}</div>
 );
 
-const Pill = ({ children, on, tone = MINT, style }: { children: ReactNode; on?: boolean; tone?: string; style?: CSSProperties }) => (
+const Pill = ({ children, on, tone = MINT, style }: { children: ReactNode; on?: boolean | undefined; tone?: string | undefined; style?: CSSProperties | undefined }) => (
   <motion.span
     animate={{
       backgroundColor: on ? tone : 'rgba(255,255,255,0.04)',
@@ -197,7 +198,7 @@ const Pill = ({ children, on, tone = MINT, style }: { children: ReactNode; on?: 
       borderColor: on ? tone : 'rgba(255,255,255,0.18)',
     }}
     transition={{ duration: 0.3 }}
-    style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid', borderRadius: 999, padding: '5px 12px', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', ...style }}
+    style={({ display: 'inline-flex', alignItems: 'center', border: '1px solid', borderRadius: 999, padding: '5px 12px', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', ...style }) as MotionStyle}
   >
     {children}
   </motion.span>
@@ -249,14 +250,14 @@ const TapIn = ({ show }: { show: boolean }) => (
   </AnimatePresence>
 );
 
-const Tick = ({ size = 26 }: { size?: number }) => (
+const Tick = ({ size = 26 }: { size?: number | undefined }) => (
   <svg width={size} height={size} viewBox="0 0 26 26">
     <circle cx="13" cy="13" r="13" fill={MINT} />
     <path d="M7.5 13.5l3.6 3.6 7.4-8" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-const Cross = ({ size = 26 }: { size?: number }) => (
+const Cross = ({ size = 26 }: { size?: number | undefined }) => (
   <svg width={size} height={size} viewBox="0 0 26 26">
     <circle cx="13" cy="13" r="13" fill={ROSE} />
     <path d="M9 9l8 8M17 9l-8 8" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
@@ -291,7 +292,7 @@ const ART: Record<'a' | 'b' | 'c', Cell[]> = {
 /** Which cells belong to which reveal layer (illustrate scene). */
 const LAYER_OF = [0, 1, 0, 1, 0, 1];
 
-const Art = ({ seed = 'a', pal = 0, uid, layer }: { seed?: 'a' | 'b' | 'c'; pal?: number; uid: string; layer?: 0 | 1 | 2 }) => {
+const Art = ({ seed = 'a', pal = 0, uid, layer }: { seed?: 'a' | 'b' | 'c'; pal?: number | undefined; uid: string; layer?: 0 | 1 | 2 }) => {
   const p = PALS[pal];
   const s = 100;
   const tr = { transition: 'fill .6s ease' };
@@ -304,12 +305,12 @@ const Art = ({ seed = 'a', pal = 0, uid, layer }: { seed?: 'a' | 'b' | 'c'; pal?
           </clipPath>
         ))}
       </defs>
-      {(layer === undefined || layer === 0) && <rect width="300" height="200" fill={p.bg} style={tr} />}
+      {(layer === undefined || layer === 0) && <rect width="300" height="200" fill={p!.bg} style={tr} />}
       {ART[seed].map((c, i) => {
-        if (layer !== undefined && LAYER_OF[i] + 1 !== layer) return null;
+        if (layer !== undefined && LAYER_OF[i]! + 1 !== layer) return null;
         const x = (i % 3) * s;
         const y = Math.floor(i / 3) * s;
-        const fill = p.c[c.col];
+        const fill = p!.c[c.col];
         let el: ReactElement;
         if (c.k === 'q') {
           const cx = x + (c.d === 1 || c.d === 2 ? s : 0);
@@ -376,7 +377,7 @@ const GatherScene = ({ active, still }: SceneProps) => {
         const on = i === src && step < slips.length;
         return (
           <Abs key={s.name} x={20} y={48 + i * 70} w={180} h={56}>
-            <motion.div animate={{ x: on ? 6 : 0 }} transition={{ duration: 0.3 }} style={{ ...card(on ? MINT : undefined), height: '100%', padding: '8px 14px' }}>
+            <motion.div animate={{ x: on ? 6 : 0 }} transition={{ duration: 0.3 }} style={({ ...card(on ? MINT : undefined), height: '100%', padding: '8px 14px' }) as MotionStyle}>
               <div style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1, whiteSpace: 'nowrap' }}>{s.name}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: on ? MINT : MUTED, marginTop: 6 }}>
                 <span style={{ width: 7, height: 7, borderRadius: 7, background: SRC_DOTS[i] }} />
@@ -446,19 +447,19 @@ const FilterScene = ({ active, still }: SceneProps) => {
   const idx = Math.floor(step / 3);
   const phase = step % 3;
   const item = items[idx];
-  const kept = items.slice(0, idx).filter((i) => i.keep).length + (phase === 2 && item.keep ? 1 : 0);
-  const dropped = items.slice(0, idx).filter((i) => !i.keep).length + (phase === 2 && !item.keep ? 1 : 0);
-  const verdict = phase >= 1 ? (item.keep ? MINT : ROSE) : undefined;
+  const kept = items.slice(0, idx).filter((i) => i.keep).length + (phase === 2 && item!.keep ? 1 : 0);
+  const dropped = items.slice(0, idx).filter((i) => !i.keep).length + (phase === 2 && !item!.keep ? 1 : 0);
+  const verdict = phase >= 1 ? (item!.keep ? MINT : ROSE) : undefined;
 
   return (
     <>
       <Abs x={20} y={20} w={440} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {TOPIC.keywords.map((k, i) => (
-          <Pill key={k} on={phase >= 1 && item.hit === i}>
+          <Pill key={k} on={phase >= 1 && item!.hit === i}>
             {k}
           </Pill>
         ))}
-        <Pill on={phase >= 1 && item.hit === 3} tone={ROSE} style={{ textDecoration: 'line-through' }}>
+        <Pill on={phase >= 1 && item!.hit === 3} tone={ROSE} style={{ textDecoration: 'line-through' }}>
           {TOPIC.blocked}
         </Pill>
       </Abs>
@@ -471,17 +472,17 @@ const FilterScene = ({ active, still }: SceneProps) => {
           initial={{ x: -240, y: 140, opacity: 1 }}
           animate={
             phase === 2
-              ? item.keep
+              ? item!.keep
                 ? { x: 320, y: 130, scale: 0.5, opacity: 0 }
                 : { x: 60, y: 330, opacity: 0 }
               : { x: 24, y: 140, opacity: 1, scale: 1 }
           }
           exit={{ opacity: 0 }}
           transition={{ duration: phase === 2 ? 0.6 : 0.55, ease: EASE }}
-          style={{ position: 'absolute', left: 0, top: 0, width: 224, padding: '12px 14px', ...card(verdict), zIndex: 5 }}
+          style={({ position: 'absolute', left: 0, top: 0, width: 224, padding: '12px 14px', ...card(verdict), zIndex: 5 }) as MotionStyle}
         >
           <div style={{ ...label, fontSize: 11.5, marginBottom: 4 }}>New story</div>
-          <div style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.05 }}>{item.t}</div>
+          <div style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.05 }}>{item!.t}</div>
           <AnimatePresence>
             {phase >= 1 && (
               <motion.div
@@ -491,13 +492,13 @@ const FilterScene = ({ active, still }: SceneProps) => {
                 transition={{ type: 'spring', stiffness: 300, damping: 16 }}
                 style={{ position: 'absolute', right: -12, top: -12 }}
               >
-                {item.keep ? <Tick size={30} /> : <Cross size={30} />}
+                {item!.keep ? <Tick size={30} /> : <Cross size={30} />}
               </motion.div>
             )}
           </AnimatePresence>
-          {phase >= 1 && !item.keep && (
+          {phase >= 1 && !item!.keep && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: ROSE }}>
-              {item.why}
+              {item!.why}
             </motion.div>
           )}
         </motion.div>
@@ -540,7 +541,7 @@ const BriefScene = ({ active, still }: SceneProps) => {
       <motion.div
         animate={{ opacity: step >= 2 ? 0.5 : 1 }}
         transition={{ duration: 0.5 }}
-        style={{ position: 'absolute', left: 18, top: 20, width: 216, height: 320, ...card(), padding: '14px 16px' }}
+        style={({ position: 'absolute', left: 18, top: 20, width: 216, height: 320, ...card(), padding: '14px 16px' }) as MotionStyle}
       >
         <div style={{ ...label, fontSize: 11.5, color: MINT }}>{TOPIC.article.source}</div>
         <div style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1.05, margin: '6px 0 12px' }}>{TOPIC.article.headline}</div>
@@ -770,7 +771,7 @@ const PublishScene = ({ active, still }: SceneProps) => {
           initial={false}
           animate={{ opacity: out ? 1 : 0.4, x: out ? 0 : 6 }}
           transition={{ duration: 0.4, delay: out ? 0.3 + i * 0.35 : 0 }}
-          style={{ position: 'absolute', left: 294, top: rows[i], width: 168, height: 64, ...card(out ? MINT : undefined), display: 'flex', alignItems: 'center', gap: 12, padding: '0 14px' }}
+          style={({ position: 'absolute', left: 294, top: rows[i], width: 168, height: 64, ...card(out ? MINT : undefined), display: 'flex', alignItems: 'center', gap: 12, padding: '0 14px' }) as MotionStyle}
         >
           <DestIcon i={i} />
           <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.15 }}>{d}</span>
@@ -846,7 +847,7 @@ const GrowScene = ({ active, still }: SceneProps) => {
             animate={{ x: 0, opacity: 1 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.5, ease: EASE }}
-            style={{ position: 'absolute', left: 246, top: 36, width: 216, ...card(), padding: '13px 15px' }}
+            style={({ position: 'absolute', left: 246, top: 36, width: 216, ...card(), padding: '13px 15px' }) as MotionStyle}
           >
             <div style={{ ...label, fontSize: 11.5 }}>1 new email</div>
             <div style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.05, margin: '8px 0 12px' }}>Confirm both briefings</div>
@@ -862,7 +863,7 @@ const GrowScene = ({ active, still }: SceneProps) => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5, ease: EASE }}
-            style={{ position: 'absolute', left: 246, top: 212, width: 216, ...card(MINT), padding: '13px 15px' }}
+            style={({ position: 'absolute', left: 246, top: 212, width: 216, ...card(MINT), padding: '13px 15px' }) as MotionStyle}
           >
             <div style={label}>Subscribers</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -956,7 +957,7 @@ const ReadersScene = ({ active, still }: SceneProps) => {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            style={{ position: 'absolute', left: cx(1) + 14, top: cy(DROP[1]) - 40, fontSize: 13, fontWeight: 600, background: VIOLET, color: INK, padding: '5px 10px', borderRadius: 8 }}
+            style={{ position: 'absolute', left: cx(1) + 14, top: cy(DROP[1]!) - 40, fontSize: 13, fontWeight: 600, background: VIOLET, color: INK, padding: '5px 10px', borderRadius: 8 }}
           >
             Drop-off: slide 2
           </motion.div>

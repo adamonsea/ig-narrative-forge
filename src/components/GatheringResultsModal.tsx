@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 interface GatheringResult {
   success: boolean;
-  isPartialSuccess?: boolean;
-  isCompleteFailure?: boolean;
+  isPartialSuccess?: boolean | undefined;
+  isCompleteFailure?: boolean | undefined;
   message: string;
   sourcesTriggered: number;
   successful: number;
@@ -18,8 +18,8 @@ interface GatheringResult {
     success: boolean;
     sourceName: string;
     articlesStored: number;
-    error?: string;
-    errorType?: string;
+    error?: string | undefined;
+    errorType?: string | undefined;
   }>;
   errorsByType?: Record<string, Array<{
     source: string;

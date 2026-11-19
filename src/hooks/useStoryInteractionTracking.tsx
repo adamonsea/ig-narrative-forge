@@ -21,7 +21,7 @@ export const useStoryInteractionTracking = () => {
           p_interaction_type: 'swipe',
           p_slide_index: slideIndex,
           p_user_agent: userAgent,
-          p_referrer: referrer || null
+          p_referrer: (referrer || null)!
         });
       } catch (error) {
         // Silent fail - don't disrupt user experience
@@ -45,7 +45,7 @@ export const useStoryInteractionTracking = () => {
           p_interaction_type: 'share_click',
           p_share_platform: platform,
           p_user_agent: userAgent,
-          p_referrer: referrer || null
+          p_referrer: (referrer || null)!
         });
       } catch (error) {
         // Silent fail - don't disrupt user experience
@@ -68,7 +68,7 @@ export const useStoryInteractionTracking = () => {
           p_visitor_id: visitorId,
           p_interaction_type: 'source_click',
           p_user_agent: userAgent,
-          p_referrer: referrer || null
+          p_referrer: (referrer || null)!
         });
       } catch (error) {
         // Silent fail - don't disrupt user experience

@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface InlinePWACardProps {
   topicName: string;
   topicSlug: string;
-  topicIcon?: string;
+  topicIcon?: string | undefined;
   storiesScrolledPast: number;
 }
 

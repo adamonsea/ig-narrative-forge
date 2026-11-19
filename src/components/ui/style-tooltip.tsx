@@ -4,15 +4,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info } from "lucide-react";
 
 interface StyleChoices {
-  slidetype?: string;
-  tone?: string;
-  writing_style?: string;
-  audience_expertise?: string;
+  slidetype?: string | undefined;
+  tone?: string | undefined;
+  writing_style?: string | undefined;
+  audience_expertise?: string | undefined;
 }
 
 interface StyleTooltipProps {
   styleChoices: StyleChoices;
-  className?: string;
+  className?: string | undefined;
 }
 
 const getStyleDisplayName = (key: string, value: string): string => {

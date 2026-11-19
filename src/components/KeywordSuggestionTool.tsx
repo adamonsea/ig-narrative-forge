@@ -16,10 +16,10 @@ interface KeywordSuggestion {
 interface KeywordSuggestionToolProps {
   topicId: string;
   topicName: string;
-  description?: string;
-  keywords?: string[];
+  description?: string | undefined;
+  keywords?: string[] | undefined;
   topicType: string;
-  region?: string;
+  region?: string | undefined;
   onKeywordAdd: (keyword: string) => void;
   existingKeywords: string[];
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from '@/lib/router-compat';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -27,6 +27,7 @@ export const PlanStatus = () => {
       }, 800);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [params, setParams, refresh, toast]);
 
   const openPortal = async () => {

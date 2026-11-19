@@ -59,12 +59,12 @@ const normalizeProviderName = (serviceName: string): string => {
 
 const getProviderColor = (serviceName: string): string => {
   const lower = serviceName.toLowerCase();
-  if (lower.includes('openai')) return PROVIDER_COLORS.openai;
-  if (lower.includes('deepseek')) return PROVIDER_COLORS.deepseek;
-  if (lower.includes('lovable') || lower.includes('gemini')) return PROVIDER_COLORS['lovable-gemini'];
-  if (lower.includes('replicate')) return PROVIDER_COLORS.replicate;
-  if (lower.includes('nebius')) return PROVIDER_COLORS.nebius;
-  return PROVIDER_COLORS.default;
+  if (lower.includes('openai')) return PROVIDER_COLORS['openai']!;
+  if (lower.includes('deepseek')) return PROVIDER_COLORS['deepseek']!;
+  if (lower.includes('lovable') || lower.includes('gemini')) return (PROVIDER_COLORS['lovable-gemini'])!;
+  if (lower.includes('replicate')) return PROVIDER_COLORS['replicate']!;
+  if (lower.includes('nebius')) return PROVIDER_COLORS['nebius']!;
+  return PROVIDER_COLORS['default']!;
 };
 
 export const AICostDashboard: React.FC = () => {
@@ -89,7 +89,7 @@ export const AICostDashboard: React.FC = () => {
 
       if (error) throw error;
 
-      setUsageData(data || []);
+      setUsageData((data || []) as unknown as UsageRecord[]);
 
       // Calculate provider summary
       const providerMap = new Map<string, { cost: number; count: number }>();
@@ -115,8 +115,8 @@ export const AICostDashboard: React.FC = () => {
       // Calculate daily usage trends
       const dailyMap = new Map<string, { openai: number; deepseek: number; lovable: number; replicate: number }>();
       (data || []).forEach((record) => {
-        const date = record.created_at.split('T')[0];
-        const existing = dailyMap.get(date) || { openai: 0, deepseek: 0, lovable: 0, replicate: 0 };
+        const date = record.created_at!.split('T')[0];
+        const existing = dailyMap.get(date!) || { openai: 0, deepseek: 0, lovable: 0, replicate: 0 };
         const provider = normalizeProviderName(record.service_name);
         const cost = record.cost_usd || 0;
 
@@ -125,7 +125,7 @@ export const AICostDashboard: React.FC = () => {
         else if (provider === 'Lovable AI') existing.lovable += cost;
         else if (provider === 'Replicate') existing.replicate += cost;
 
-        dailyMap.set(date, existing);
+        dailyMap.set(date!, existing);
       });
 
       const dailyData: DailyUsage[] = Array.from(dailyMap.entries())
@@ -335,7 +335,7 @@ export const AICostDashboard: React.FC = () => {
                       className="text-muted-foreground text-xs"
                     />
                     <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value) => formatCurrency(Number(value))}
                       labelFormatter={(label) => new Date(label).toLocaleDateString()}
                       contentStyle={{
                         backgroundColor: 'hsl(var(--popover))',
@@ -413,7 +413,7 @@ export const AICostDashboard: React.FC = () => {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -492,7 +492,7 @@ export const AICostDashboard: React.FC = () => {
                       className="text-muted-foreground text-xs"
                     />
                     <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value) => formatCurrency(Number(value))}
                       contentStyle={{
                         backgroundColor: 'hsl(var(--popover))',
                         border: '1px solid hsl(var(--border))',

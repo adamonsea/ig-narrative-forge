@@ -2,10 +2,10 @@ import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
 
 interface CaptureOptions {
-  width?: number;
-  height?: number;
-  scale?: number;
-  backgroundColor?: string;
+  width?: number | undefined;
+  height?: number | undefined;
+  scale?: number | undefined;
+  backgroundColor?: string | undefined;
 }
 
 interface ExportProgress {
@@ -152,8 +152,8 @@ export const exportCarouselSlides = async (
   renderSlide: (slideIndex: number, aspect: 'square' | 'story') => HTMLElement | null | Promise<HTMLElement | null>,
   totalSlides: number,
   storyTitle: string,
-  onProgress?: ProgressCallback,
-  caption?: string
+  onProgress?: ProgressCallback | undefined,
+  caption?: string | undefined
 ): Promise<void> => {
   const images: { blob: Blob; filename: string }[] = [];
   const safeTitle = sanitizeFilename(storyTitle);

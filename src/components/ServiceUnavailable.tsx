@@ -5,10 +5,10 @@ import { AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 
 
 interface ServiceUnavailableProps {
-  title?: string;
-  message?: string;
+  title?: string | undefined;
+  message?: string | undefined;
   onRetry?: () => void;
-  showHealthLink?: boolean;
+  showHealthLink?: boolean | undefined;
 }
 
 export function ServiceUnavailable({ 

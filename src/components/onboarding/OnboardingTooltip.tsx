@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface OnboardingTooltipProps {
   message: string;
   targetSelector: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: 'top' | 'bottom' | 'left' | 'right' | undefined;
   isVisible: boolean;
   onDismiss: () => void;
-  autoDismissMs?: number;
+  autoDismissMs?: number | undefined;
 }
 
 // CSS class for highlighting the target element

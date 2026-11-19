@@ -53,7 +53,7 @@ export function generateKeywordVariations(keyword: string): string[] {
   };
   
   if (synonymMap[keyword.toLowerCase()]) {
-    variations.push(...synonymMap[keyword.toLowerCase()]);
+    variations.push(...(synonymMap[keyword.toLowerCase()] ?? []));
   }
   
   return [...new Set(variations)]; // Remove duplicates

@@ -43,7 +43,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onSkip?: (story: PublishedStory) => void;
   onPublish?: (story: PublishedStory) => void;
-  publishing?: boolean;
+  publishing?: boolean | undefined;
 }
 
 /** Side-by-side check of a waiting story against the live story it repeats: Skip or Publish. */

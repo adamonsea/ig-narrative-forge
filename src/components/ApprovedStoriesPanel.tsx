@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +43,7 @@ interface Slide {
   id: string;
   slide_number: number;
   content: string;
-  visual_prompt?: string | null;
+  visual_prompt?: string | null | undefined;
   alt_text: string | null;
   word_count: number;
   story_id: string;
@@ -51,11 +52,11 @@ interface Slide {
 interface StoryArticle {
   id: string;
   title: string;
-  author?: string;
+  author?: string | undefined;
   source_url: string;
-  region?: string;
-  published_at?: string | null;
-  word_count?: number | null;
+  region?: string | undefined;
+  published_at?: string | null | undefined;
+  word_count?: number | null | undefined;
 }
 
 interface Story {
@@ -64,14 +65,14 @@ interface Story {
   status: string;
   article_id: string;
   created_at: string;
-  cover_illustration_url?: string | null;
-  cover_illustration_prompt?: string | null;
-  illustration_generated_at?: string | null;
-  animated_illustration_url?: string | null;
-  animation_suggestions?: string[] | null;
+  cover_illustration_url?: string | null | undefined;
+  cover_illustration_prompt?: string | null | undefined;
+  illustration_generated_at?: string | null | undefined;
+  animated_illustration_url?: string | null | undefined;
+  animation_suggestions?: string[] | null | undefined;
   slides: Slide[];
-  article?: StoryArticle;
-  publication_name?: string | null;
+  article?: StoryArticle | undefined;
+  publication_name?: string | null | undefined;
 }
 
 interface CarouselExport {
@@ -80,18 +81,18 @@ interface CarouselExport {
   status: string;
   file_paths: any;
   export_formats: any;
-  error_message?: string;
+  error_message?: string | undefined;
   created_at: string;
   updated_at: string;
 }
 
 interface CarouselStatus {
   status: 'none' | 'generating' | 'completed' | 'failed';
-  export?: CarouselExport;
+  export?: CarouselExport | undefined;
 }
 
 interface ApprovedStoriesPanelProps {
-  selectedTopicId?: string | null;
+  selectedTopicId?: string | null | undefined;
 }
 
 export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelProps) => {
@@ -104,10 +105,10 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
   const [coverSelectionModal, setCoverSelectionModal] = useState<{
     isOpen: boolean; 
-    storyId?: string; 
-    storyTitle?: string;
-    coverOptions?: any[];
-    selectedCoverId?: string;
+    storyId?: string | undefined; 
+    storyTitle?: string | undefined;
+    coverOptions?: any[] | undefined;
+    selectedCoverId?: string | undefined;
   }>({ isOpen: false });
   const [animationModalStory, setAnimationModalStory] = useState<Story | null>(null);
   const [reelStory, setReelStory] = useState<Story | null>(null);
@@ -134,7 +135,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
         
         if (data && !error) {
           setIllustrationStyle(data.illustration_style || 'editorial_illustrative');
-          setTopicInfo({ slug: data.slug, name: data.name });
+          setTopicInfo({ slug: data.slug!, name: data.name });
         }
       };
       fetchIllustrationStyle();
@@ -287,7 +288,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
           console.log(`✅ Found export for story ${storyId}:`, exportRecord);
           statusMap[storyId] = {
             status: exportRecord.status as 'generating' | 'completed' | 'failed',
-            export: exportRecord
+            export: exportRecord as CarouselExport
           };
         } else {
           console.log(`❌ No export found for story ${storyId}, setting status to 'none'`);
@@ -514,7 +515,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
 
       if (error) throw error;
       
-      const result = data as { success: boolean; error?: string };
+      const result = data as { success: boolean; error?: string | undefined };
       if (!result.success) {
         throw new Error(result.error || 'Failed to delete story');
       }
@@ -781,7 +782,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                                   published_at: story.article.published_at
                                 } : undefined
                               },
-                              ExportableSlideRenderer,
+                              ExportableSlideRenderer as unknown as Parameters<typeof exportStory>[1],
                               topicInfo?.name || 'Your feed',
                               {
                                 storyUrl: topicInfo?.slug

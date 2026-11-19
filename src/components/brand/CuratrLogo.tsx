@@ -2,8 +2,8 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
 
 type CuratrLogoProps = ComponentPropsWithoutRef<'span'> & {
-  iconOnly?: boolean;
-  iconClassName?: string;
+  iconOnly?: boolean | undefined;
+  iconClassName?: string | undefined;
 };
 
 export function CuratrLogo({ className, iconOnly = false, iconClassName, ...props }: CuratrLogoProps) {

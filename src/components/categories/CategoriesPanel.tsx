@@ -14,7 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 interface CategoriesPanelProps {
   topicId: string;
-  totalStories?: number;
+  totalStories?: number | undefined;
 }
 
 export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps) => {

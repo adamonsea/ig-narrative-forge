@@ -33,6 +33,6 @@ export function useSetStoryPin(topicId?: string) {
       p_hours: hours,
     });
     if (error) throw error;
-    queryClient.setQueryData<StoryPin | null>(pinKey(topicId), storyId && data ? { story_id: storyId, pinned_until: data as string } : null);
+    queryClient.setQueryData<StoryPin | null>(pinKey(topicId), (storyId && data ? { story_id: storyId, pinned_until: data as string } : null) as StoryPin | null);
   }, [topicId, queryClient]);
 }

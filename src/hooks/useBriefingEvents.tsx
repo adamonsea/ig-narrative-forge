@@ -5,7 +5,7 @@ import { briefingWindow, pickBriefingEvents, briefingEventsLabel, type BriefingK
 
 export interface BriefingTopic {
   id: string;
-  events_enabled?: boolean | null;
+  events_enabled?: boolean | null | undefined;
 }
 
 /** Whether this feed shows events to readers (same two switches as the feed). */

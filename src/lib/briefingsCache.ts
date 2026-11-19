@@ -22,7 +22,7 @@ export interface CachedRoundup {
   period_start: string;
   period_end: string;
   story_ids: string[];
-  stats?: any;
+  stats?: any | undefined;
 }
 
 export interface BriefingsCacheEntry {

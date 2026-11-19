@@ -65,15 +65,15 @@ const useNetworkSpeed = () => {
 
 interface Story {
   id: string;
-  slug?: string; // URL-friendly slug for shareable links
+  slug?: string | undefined; // URL-friendly slug for shareable links
   title: string;
   author: string | null;
   publication_name: string | null;
   created_at: string;
   updated_at: string;
-  cover_illustration_url?: string;
-  animated_illustration_url?: string;
-  cover_illustration_prompt?: string;
+  cover_illustration_url?: string | null | undefined;
+  animated_illustration_url?: string | null | undefined;
+  cover_illustration_prompt?: string | undefined;
   popularity_data?: {
     period_type: string;
     swipe_count: number;
@@ -93,27 +93,27 @@ interface Story {
   article: {
     source_url: string;
     region: string;
-    published_at?: string;
+    published_at?: string | undefined;
   };
-  is_teaser?: boolean; // Flag for stories generated from snippets
-  mp_name?: string;
-  mp_party?: string; // Party affiliation for parliamentary stories
-  constituency?: string;
-  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
+  is_teaser?: boolean | undefined; // Flag for stories generated from snippets
+  mp_name?: string | undefined;
+  mp_party?: string | undefined; // Party affiliation for parliamentary stories
+  constituency?: string | undefined;
+  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined;
 }
 
 interface StoryCarouselProps {
   story: Story;
-  storyUrl?: string;
-  topicId?: string; // Add topicId for tracking
-  storyIndex?: number; // Add story index for "New" flag logic
-  isRoundupView?: boolean; // Flag to indicate if this is a roundup view
+  storyUrl?: string | undefined;
+  topicId?: string | undefined; // Add topicId for tracking
+  storyIndex?: number | undefined; // Add story index for "New" flag logic
+  isRoundupView?: boolean | undefined; // Flag to indicate if this is a roundup view
   onStorySwipe?: (storyId: string) => void; // Callback when user swipes on a story
   onStoryScrolledPast?: () => void; // Callback when story scrolls out of view
-  topicName?: string; // Topic name for branded WhatsApp share
-  topicSlug?: string; // Topic slug for branded WhatsApp share
+  topicName?: string | undefined; // Topic name for branded WhatsApp share
+  topicSlug?: string | undefined; // Topic slug for branded WhatsApp share
   /** Feed accent colour for the last-slide "Read the full story" pill */
-  brandColor?: string | null;
+  brandColor?: string | null | undefined;
   onMoreLikeThis?: (story: Story) => void;
   onPrefetchFilter?: (story: Story) => void;
   /** Pre-fetched reaction counts from batch hook */
@@ -125,9 +125,9 @@ interface StoryCarouselProps {
   /** Callback to update batch counts after reaction */
   onReactionCountsChange?: (storyId: string, counts: { thumbsUp: number; thumbsDown: number; userReaction: 'like' | 'discard' | null }) => void;
   /** First-slide cover: 'split' (picture above headline, default) or 'full-bleed' (picture behind a white headline). Slides 2+ are the same in both. */
-  coverStyle?: 'split' | 'full-bleed';
+  coverStyle?: 'split' | 'full-bleed' | undefined;
   /** The feed owner pinned this story to the top. */
-  pinned?: boolean;
+  pinned?: boolean | undefined;
 }
 
 /** Publisher name used for credits: publication, then source name, then the article's web address. */
@@ -175,7 +175,7 @@ export default function StoryCarousel({
     }
   }, [currentSlideIndex, showMoreLikeThis, onMoreLikeThis, onPrefetchFilter, story]);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const iOSVersion = isIOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
+  const iOSVersion = isIOS ? parseInt(((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1])!) : 0;
   const { trackShareClick, trackSourceClick } = useStoryInteractionTracking();
   const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
   const isFastConnection = useNetworkSpeed(); // Network speed detection
@@ -194,7 +194,7 @@ export default function StoryCarousel({
     if (story.cover_illustration_url && currentSlideIndex === 0) {
       // Preload cover for first slide
       const img = new Image();
-      img.src = optimizeImageUrl(story.cover_illustration_url, { quality: 80 });
+      img.src = (optimizeImageUrl(story.cover_illustration_url, { quality: 80 }))!;
     }
   }, [currentSlideIndex, story, isIOS]);
   
@@ -371,7 +371,7 @@ export default function StoryCarousel({
     
     // Track share click
     if (topicId) {
-      trackShareClick(story.id, topicId, navigator.share ? 'native' : 'clipboard');
+      trackShareClick(story.id, topicId, 'share' in navigator ? 'native' : 'clipboard');
     }
 
     // Use story slug for shorter, readable URLs; fallback to UUID for backward compatibility
@@ -543,7 +543,7 @@ export default function StoryCarousel({
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const bylineText = buildReporterByline(story.author);
   const bylineHtml = bylineText
-    ? `<p class="story-byline" style="margin-top:0.9em;font-size:0.6em;font-weight:500;opacity:0.75">${bylineText.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c])}</p>`
+    ? `<p class="story-byline" style="margin-top:0.9em;font-size:0.6em;font-weight:500;opacity:0.75">${bylineText.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c] ?? c)}</p>`
     : '';
   const laterSlideHtml = sortedSlides.map((slide, index) => {
     if (index === 0) return '';
@@ -555,7 +555,7 @@ export default function StoryCarousel({
     ).__html as string;
     return isLast ? body + bylineHtml : body;
   });
-  const fit = useStoryFontSize(story.id, laterSlideHtml.slice(1), contentAreaRef);
+  const fit = useStoryFontSize(story.id, laterSlideHtml.slice(1), contentAreaRef as React.RefObject<HTMLElement>);
   
   // Validation: check if slides are in sequential order
   useEffect(() => {
@@ -595,7 +595,7 @@ export default function StoryCarousel({
         // Not positioned: the picture fills the whole slide box (the slide wrapper contains it), however tall the card grows.
         <div key={slide.id} className="h-full min-h-[32rem] w-full overflow-hidden bg-feed-cover-ink md:min-h-[36rem]">
           {story.animated_illustration_url && isFastConnection ? (
-            <video autoPlay loop muted playsInline poster={story.cover_illustration_url} preload="none"
+            <video autoPlay loop muted playsInline poster={story.cover_illustration_url ?? undefined} preload="none"
               className="absolute inset-0 h-full w-full object-cover object-center brightness-90 saturate-[0.9]" aria-hidden="true">
               <source src={story.animated_illustration_url} type="video/mp4" />
             </video>
@@ -629,29 +629,29 @@ export default function StoryCarousel({
                   loop
                   muted
                   playsInline
-                  poster={story.cover_illustration_url}
+                  poster={story.cover_illustration_url ?? undefined}
                   className="w-full h-full object-cover"
                   preload="none"
                 >
                   <source src={story.animated_illustration_url} type="video/mp4" />
                   {/* Fallback to static image if video fails */}
                   <img
-                    src={optimizeImageUrl(story.cover_illustration_url, { 
+                    src={optimizeImageUrl(story.cover_illustration_url ?? undefined, { 
                       width: 800, 
                       height: 600, 
                       quality: 85 
-                    }) || story.cover_illustration_url}
+                    }) || story.cover_illustration_url || undefined}
                     alt={`Cover illustration for ${story.title}`}
                     className="w-full h-full object-cover"
                   />
                 </video>
               ) : (
                 <img
-                  src={optimizeImageUrl(story.cover_illustration_url, { 
+                  src={optimizeImageUrl(story.cover_illustration_url ?? undefined, { 
                     width: 800, 
                     height: 600, 
                     quality: 85 
-                  }) || story.cover_illustration_url}
+                  }) || story.cover_illustration_url || undefined}
                   alt={`Cover illustration for ${story.title}`}
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -692,7 +692,7 @@ export default function StoryCarousel({
                 <div
                   className={FIT_TEXT_CLASS}
                   style={{ ...FIT_TEXT_STYLE, fontSize: fit ? `${fit.size}px` : undefined, visibility: fit ? 'visible' : 'hidden' }}
-                  dangerouslySetInnerHTML={{ __html: laterSlideHtml[index] }}
+                  dangerouslySetInnerHTML={{ __html: laterSlideHtml[index]! }}
                 />
               )}
             </div>

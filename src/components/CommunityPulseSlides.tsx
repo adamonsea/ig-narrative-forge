@@ -8,19 +8,19 @@ import type { PulseKeyword } from "@/hooks/useCommunityPulseKeywords";
 
 interface PulseSlide {
   type: 'hero' | 'keyword-detail' | 'cta';
-  keyword?: PulseKeyword;
-  keywords?: PulseKeyword[];
-  threadUrl?: string;
-  threadTitle?: string;
+  keyword?: PulseKeyword | undefined;
+  keywords?: PulseKeyword[] | undefined;
+  threadUrl?: string | undefined;
+  threadTitle?: string | undefined;
 }
 
 interface CommunityPulseSlidesProps {
   keywords: PulseKeyword[];
-  timeframe?: string;
-  mostActiveThreadUrl?: string;
-  mostActiveThreadTitle?: string;
-  subreddit?: string; // Subreddit name for the community
-  topicName?: string; // Topic name as fallback for subreddit
+  timeframe?: string | undefined;
+  mostActiveThreadUrl?: string | undefined;
+  mostActiveThreadTitle?: string | undefined;
+  subreddit?: string | undefined; // Subreddit name for the community
+  topicName?: string | undefined; // Topic name as fallback for subreddit
 }
 
 export const CommunityPulseSlides = ({

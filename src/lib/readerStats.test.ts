@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/readerStats.test.ts
+// run with: bun test ./src/lib/readerStats.test.ts
 import { describe, expect, test } from "bun:test";
 import { likelyAutomatedRise, sourceName, feedSignal } from "./readerStats";
 import { isHumanEvent } from "./humanSignal";

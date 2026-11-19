@@ -5,7 +5,7 @@ import { FEED_VIEWS, FEED_VIEW_LABELS, type FeedView } from "@/lib/feedView";
 interface FeedViewToggleProps {
   value: FeedView;
   onChange: (view: FeedView) => void;
-  brandColor?: string | null;
+  brandColor?: string | null | undefined;
 }
 
 /** Events | All | News — a three-way pill at the top of a feed that has both. */
@@ -22,7 +22,7 @@ export function FeedViewToggle({ value, onChange, brandColor }: FeedViewTogglePr
     e.preventDefault();
     const i = FEED_VIEWS.indexOf(value);
     const next = Math.min(FEED_VIEWS.length - 1, Math.max(0, i + (e.key === "ArrowRight" ? 1 : -1)));
-    onChange(FEED_VIEWS[next]);
+    onChange(FEED_VIEWS[next]!);
     refs.current[next]?.focus();
   };
 

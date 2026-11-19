@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/deskActivity.test.ts
+// run with: bun test ./src/lib/deskActivity.test.ts
 import { describe, it, expect } from "bun:test";
 import { publishedCounts } from "./deskActivity";
 

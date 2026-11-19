@@ -5,22 +5,22 @@ import { triggerHaptic, getEmblaSettings } from "@/lib/deviceUtils";
 
 export type EmblaSlideCarouselProps = {
   slides: React.ReactNode[];
-  className?: string;
-  height?: number | string;
-  initialIndex?: number;
-  showDots?: boolean;
-  dotStyle?: "default" | "instagram";
+  className?: string | undefined;
+  height?: number | string | undefined;
+  initialIndex?: number | undefined;
+  showDots?: boolean | undefined;
+  dotStyle?: "default" | "instagram" | undefined;
   onSlideChange?: (index: number) => void;
-  ariaLabel?: string;
-  storyId?: string;
-  topicId?: string;
-  showPreviewAnimation?: boolean;
-  autoSlide?: boolean;
-  autoSlideInterval?: number;
+  ariaLabel?: string | undefined;
+  storyId?: string | undefined;
+  topicId?: string | undefined;
+  showPreviewAnimation?: boolean | undefined;
+  autoSlide?: boolean | undefined;
+  autoSlideInterval?: number | undefined;
   /** Optional image URLs for pre-decoding adjacent slides */
   slideImageUrls?: (string | null | undefined)[];
   /** Light dots while the first slide is showing (full-bleed picture cover) */
-  lightDotsOnFirst?: boolean;
+  lightDotsOnFirst?: boolean | undefined;
 };
 
 export function EmblaSlideCarousel({

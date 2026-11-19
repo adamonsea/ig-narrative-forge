@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ReadershipPanel } from "@/components/readership/ReadershipPanel";
 import { TopicPulseProvider } from "@/hooks/useTopicPulse";
 import { ReadingNow, MilestoneNote, DeskLookTracker } from "@/components/pulse/PulseBits";
-import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "@/lib/router-compat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
@@ -39,16 +39,16 @@ interface TopicDashboardStats {
   ready_stories: number;
   simplified_stories_24h: number;
   sentiment_cards: number;
-  email_subscribers_daily?: number;
-  email_subscribers_weekly?: number;
-  email_subscribers_total?: number;
-  email_signups_today?: number;
-  email_signups_week?: number;
-  donation_button_clicks?: number;
-  donation_modal_opens?: number;
-  liked_stories?: number;
-  total_swipes?: number;
-  shared_stories?: number;
+  email_subscribers_daily?: number | undefined;
+  email_subscribers_weekly?: number | undefined;
+  email_subscribers_total?: number | undefined;
+  email_signups_today?: number | undefined;
+  email_signups_week?: number | undefined;
+  donation_button_clicks?: number | undefined;
+  donation_modal_opens?: number | undefined;
+  liked_stories?: number | undefined;
+  total_swipes?: number | undefined;
+  shared_stories?: number | undefined;
 }
 
 interface Topic {
@@ -58,53 +58,53 @@ interface Topic {
   slug: string;
   topic_type: 'regional' | 'keyword';
   keywords: string[];
-  landmarks?: string[];
-  landmark_descriptions?: Record<string, string>;
-  landmark_reference_images?: Record<string, { url: string; credit?: string }[]>;
-  landmark_setup_state?: Record<string, any>;
-  coverage_setup_state?: Record<string, any>;
-  postcodes?: string[];
-  organizations?: string[];
-  negative_keywords?: string[];
-  competing_regions?: string[];
-  region?: string;
+  landmarks?: string[] | undefined;
+  landmark_descriptions?: Record<string, string> | undefined;
+  landmark_reference_images?: (Record<string, { url: string; credit?: string | undefined }[]>) | undefined;
+  landmark_setup_state?: Record<string, any> | undefined;
+  coverage_setup_state?: Record<string, any> | undefined;
+  postcodes?: string[] | undefined;
+  organizations?: string[] | undefined;
+  negative_keywords?: string[] | undefined;
+  competing_regions?: string[] | undefined;
+  region?: string | undefined;
   is_public: boolean;
   is_active: boolean;
   created_by: string;
   created_at: string;
-  audience_expertise?: 'beginner' | 'intermediate' | 'expert';
-  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
-  default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
-  illustration_style?: IllustrationStyle;
-  illustration_primary_color?: string;
-  community_intelligence_enabled?: boolean;
-  community_pulse_frequency?: number;
+  audience_expertise?: 'beginner' | 'intermediate' | 'expert' | undefined;
+  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined;
+  default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined;
+  illustration_style?: IllustrationStyle | undefined;
+  illustration_primary_color?: string | undefined;
+  community_intelligence_enabled?: boolean | undefined;
+  community_pulse_frequency?: number | undefined;
   community_config?: {
-    subreddits?: string[];
-    last_processed?: string;
-    processing_frequency_hours?: number;
+    subreddits?: string[] | undefined;
+    last_processed?: string | undefined;
+    processing_frequency_hours?: number | undefined;
   };
-  auto_simplify_enabled?: boolean;
-  automation_quality_threshold?: number;
-  parliamentary_tracking_enabled?: boolean;
-  branding_config?: any;
-  donation_enabled?: boolean;
-  donation_config?: any;
-  drip_feed_enabled?: boolean;
-  public_widget_builder_enabled?: boolean;
-  rss_enabled?: boolean;
-  mcp_enabled?: boolean;
-  mcp_access?: 'open' | 'key';
-  email_subscriptions_enabled?: boolean;
-  audio_briefings_daily_enabled?: boolean;
-  audio_briefings_weekly_enabled?: boolean;
-  events_enabled?: boolean;
-  event_source_url?: string;
-  house_style_notes?: string | null;
-  house_style_examples?: string | null;
-  locality_strength?: number;
-  nearby_places?: unknown;
-  big_story_override?: boolean;
+  auto_simplify_enabled?: boolean | undefined;
+  automation_quality_threshold?: number | undefined;
+  parliamentary_tracking_enabled?: boolean | undefined;
+  branding_config?: any | undefined;
+  donation_enabled?: boolean | undefined;
+  donation_config?: any | undefined;
+  drip_feed_enabled?: boolean | undefined;
+  public_widget_builder_enabled?: boolean | undefined;
+  rss_enabled?: boolean | undefined;
+  mcp_enabled?: boolean | undefined;
+  mcp_access?: 'open' | 'key' | undefined;
+  email_subscriptions_enabled?: boolean | undefined;
+  audio_briefings_daily_enabled?: boolean | undefined;
+  audio_briefings_weekly_enabled?: boolean | undefined;
+  events_enabled?: boolean | undefined;
+  event_source_url?: string | undefined;
+  house_style_notes?: string | null | undefined;
+  house_style_examples?: string | null | undefined;
+  locality_strength?: number | undefined;
+  nearby_places?: unknown | undefined;
+  big_story_override?: boolean | undefined;
 }
 
 const SCRAPING_WINDOW_OPTIONS = new Set([7, 30, 60, 100]);
@@ -120,12 +120,12 @@ interface ScraperSummary {
 }
 
 interface UniversalScraperResponse {
-  success?: boolean;
-  status?: 'success' | 'partial_success' | 'failure';
-  message?: string;
-  summary?: ScraperSummary;
-  warnings?: string[];
-  errors?: string[];
+  success?: boolean | undefined;
+  status?: 'success' | 'partial_success' | 'failure' | undefined;
+  message?: string | undefined;
+  summary?: ScraperSummary | undefined;
+  warnings?: string[] | undefined;
+  errors?: string[] | undefined;
 }
 
 const TopicDashboard = () => {
@@ -215,14 +215,14 @@ const TopicDashboard = () => {
         return;
       }
 
-      setTopic({
+      setTopic(({
         ...topicData,
         topic_type: topicData.topic_type as 'regional' | 'keyword',
         keywords: topicData.keywords || [],
         landmarks: topicData.landmarks || [],
         landmark_descriptions: (topicData.landmark_descriptions as Record<string, string>) || {},
         landmark_reference_images:
-          ((topicData as any).landmark_reference_images as Record<string, { url: string; credit?: string }[]>) || {},
+          ((topicData as any).landmark_reference_images as Record<string, { url: string; credit?: string | undefined }[]>) || {},
         landmark_setup_state: ((topicData as any).landmark_setup_state as Record<string, any>) || {},
         coverage_setup_state: ((topicData as any).coverage_setup_state as Record<string, any>) || {},
         mcp_enabled: ((topicData as any).mcp_enabled as boolean) || false,
@@ -234,7 +234,7 @@ const TopicDashboard = () => {
         default_writing_style: (topicData.default_writing_style as 'journalistic' | 'educational' | 'listicle' | 'story_driven') || 'journalistic',
         illustration_style: (topicData.illustration_style as IllustrationStyle) || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE,
         community_config: topicData.community_config as any || { subreddits: [], processing_frequency_hours: 24 }
-      });
+      }) as unknown as Topic | null);
 
       setNegativeKeywords(topicData.negative_keywords || []);
       setCompetingRegions(topicData.competing_regions || []);
@@ -505,7 +505,7 @@ const TopicDashboard = () => {
     try {
       const stored = window.localStorage.getItem(`topic-scraping-settings:${topic.id}`);
       if (!stored) return;
-      const parsed = JSON.parse(stored) as { maxAgeDays?: number; forceRescrape?: boolean };
+      const parsed = JSON.parse(stored) as { maxAgeDays?: number | undefined; forceRescrape?: boolean | undefined };
       if (typeof parsed.maxAgeDays === "number" && SCRAPING_WINDOW_OPTIONS.has(parsed.maxAgeDays)) {
         setMaxAgeDays(parsed.maxAgeDays);
       }
@@ -789,7 +789,7 @@ const TopicDashboard = () => {
                 stats={stats}
                 negativeKeywords={negativeKeywords}
                 onNegativeKeywordsChange={setNegativeKeywords}
-                onTopicChange={(updatedTopic) => setTopic((current) => current ? { ...current, ...updatedTopic } : current)}
+                onTopicChange={(updatedTopic) => setTopic((current) => current ? ({ ...current, ...updatedTopic } as Topic) : current)}
                 onUpdate={loadTopicAndStats}
                 onChannelToggle={handleChannelToggle}
                 onToast={(title, description) => toast({ title, description })}

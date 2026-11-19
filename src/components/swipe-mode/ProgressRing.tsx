@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 interface ProgressRingProps {
   current: number;
   total: number;
-  size?: number;
+  size?: number | undefined;
 }
 
 export const ProgressRing = ({ current, total, size = 40 }: ProgressRingProps) => {

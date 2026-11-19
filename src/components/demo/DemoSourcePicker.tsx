@@ -4,7 +4,7 @@ import { Globe, Check } from 'lucide-react';
 
 interface DemoSourcePickerProps {
   onSelect: (source: DemoSource) => void;
-  selected?: string | null;
+  selected?: string | null | undefined;
   topicId: string; // demo category key e.g. 'local', 'culture'
 }
 
@@ -20,7 +20,7 @@ export const DemoSourcePicker = ({ onSelect, selected, topicId }: DemoSourcePick
       </div>
 
       <div className="flex flex-col gap-3 max-w-md mx-auto">
-        {sources.map((source, i) => {
+        {sources!.map((source, i) => {
           const isSelected = selected === source.id;
 
           return (

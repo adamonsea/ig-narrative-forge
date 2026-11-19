@@ -9,9 +9,9 @@ import { BRAND_COLOURS } from "@/lib/feedSetup";
 import { cn } from "@/lib/utils";
 
 interface BrandConfig {
-  logo_url?: string;
-  subheader?: string;
-  show_topic_name?: boolean;
+  logo_url?: string | undefined;
+  subheader?: string | undefined;
+  show_topic_name?: boolean | undefined;
   [key: string]: unknown;
 }
 
@@ -25,9 +25,9 @@ export function BrandBasics({
 }: {
   topicId: string;
   name: string;
-  colour?: string;
-  brandingConfig?: unknown;
-  onSaved: (patch: { name?: string; illustration_primary_color?: string; branding_config?: BrandConfig }) => void;
+  colour?: string | undefined;
+  brandingConfig?: unknown | undefined;
+  onSaved: (patch: { name?: string | undefined; illustration_primary_color?: string | undefined; branding_config?: BrandConfig | undefined }) => void;
 }) {
   const { toast } = useToast();
   const config = ((brandingConfig as BrandConfig) || {}) as BrandConfig;

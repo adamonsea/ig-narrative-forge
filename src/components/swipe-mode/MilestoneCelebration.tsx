@@ -24,6 +24,7 @@ export const MilestoneCelebration = ({ swipeCount }: MilestoneCelebrationProps) 
       const timer = setTimeout(() => setShowCelebration(false), 2000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [swipeCount, lastMilestone]);
 
   return (

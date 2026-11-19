@@ -11,14 +11,14 @@ import { getHouseStylePresets, matchPreset, CUSTOM_HOUSE_STYLE } from "@/lib/hou
 
 interface ContentVoiceSettingsProps {
   topicId: string;
-  topicName?: string;
-  topicType?: 'regional' | 'keyword' | string;
-  region?: string | null;
-  currentExpertise?: 'beginner' | 'intermediate' | 'expert';
-  currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet';
-  currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
-  currentHouseStyleNotes?: string | null;
-  currentHouseStyleExamples?: string | null;
+  topicName?: string | undefined;
+  topicType?: 'regional' | 'keyword' | string | undefined;
+  region?: string | null | undefined;
+  currentExpertise?: 'beginner' | 'intermediate' | 'expert' | undefined;
+  currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined;
+  currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined;
+  currentHouseStyleNotes?: string | null | undefined;
+  currentHouseStyleExamples?: string | null | undefined;
   onUpdate?: () => void;
 }
 

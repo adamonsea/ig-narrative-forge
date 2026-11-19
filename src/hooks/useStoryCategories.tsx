@@ -12,7 +12,7 @@ export interface StoryCategory {
 }
 
 export interface CategorySetting {
-  id?: string;
+  id?: string | undefined;
   topic_id: string;
   category_id: string;
   enabled: boolean;

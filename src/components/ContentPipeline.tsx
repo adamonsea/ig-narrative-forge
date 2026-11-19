@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +31,7 @@ interface Slide {
   id: string;
   slide_number: number;
   content: string;
-  visual_prompt?: string | null;
+  visual_prompt?: string | null | undefined;
   alt_text: string | null;
   word_count: number;
   story_id: string;
@@ -39,11 +40,11 @@ interface Slide {
 interface StoryArticle {
   id: string;
   title: string;
-  author?: string;
+  author?: string | undefined;
   source_url: string;
-  region?: string;
-  published_at?: string | null;
-  word_count?: number | null;
+  region?: string | undefined;
+  published_at?: string | null | undefined;
+  word_count?: number | null | undefined;
 }
 
 interface Story {
@@ -53,16 +54,16 @@ interface Story {
   article_id: string;
   created_at: string;
   slides: Slide[];
-  article?: StoryArticle;
-  articles?: StoryArticle;
+  article?: StoryArticle | undefined;
+  articles?: StoryArticle | undefined;
   // Lifecycle tracking
-  simplified_at?: string | null;
-  illustration_generated_at?: string | null;
-  animation_generated_at?: string | null;
-  is_auto_gathered?: boolean;
-  is_auto_simplified?: boolean;
-  is_auto_illustrated?: boolean;
-  is_auto_animated?: boolean;
+  simplified_at?: string | null | undefined;
+  illustration_generated_at?: string | null | undefined;
+  animation_generated_at?: string | null | undefined;
+  is_auto_gathered?: boolean | undefined;
+  is_auto_simplified?: boolean | undefined;
+  is_auto_illustrated?: boolean | undefined;
+  is_auto_animated?: boolean | undefined;
 }
 
 interface ContentPipelineProps {
@@ -167,7 +168,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         story.slides && story.slides.length > 0
       );
       
-      setStories(storiesWithSlides);
+      setStories((storiesWithSlides) as unknown as Story[]);
     } catch (error) {
       console.error('Error loading stories:', error);
       toast({
@@ -302,7 +303,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
       if (error) throw error;
       
-      const result = data as { success: boolean; error?: string };
+      const result = data as { success: boolean; error?: string | undefined };
       if (!result.success) {
         throw new Error(result.error || 'Failed to delete story');
       }
@@ -416,7 +417,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Panel: Content Pipeline */}
       <div className="space-y-6">
-        <ArticlePipelinePanel onRefresh={onRefresh} />
+        <ArticlePipelinePanel {...opt("onRefresh", onRefresh)} />
       </div>
 
       {/* Right Panel: Draft Stories Under Review and Approved Queue */}

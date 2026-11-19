@@ -98,9 +98,9 @@ export interface DuplicateInfo {
 
 export interface DuplicateOptions {
   /** Combined score required to treat two stories as the same event */
-  threshold?: number;
+  threshold?: number | undefined;
   /** Only compare stories published within this many hours of each other */
-  windowHours?: number;
+  windowHours?: number | undefined;
 }
 
 /**
@@ -132,10 +132,10 @@ export function detectDuplicateGroups<T extends { id: string; title: string; cre
       const gapOk =
         !Number.isFinite(times[i]) ||
         !Number.isFinite(times[j]) ||
-        Math.abs(times[i] - times[j]) <= windowMs;
+        Math.abs(times[i]! - times[j]!) <= windowMs;
       if (!gapOk) continue;
 
-      const { score, words } = storySimilarity(articles[i].title, articles[j].title);
+      const { score, words } = storySimilarity(articles[i]!.title, articles[j]!.title);
       // Require real wording overlap as well as a passing combined score,
       // so entity/number agreement alone can never group unrelated stories.
       if (score >= threshold && words >= 0.5) {
@@ -147,22 +147,22 @@ export function detectDuplicateGroups<T extends { id: string; title: string; cre
     if (group.length < 2) continue;
 
     // Sort group by created_at ascending -> oldest = leader
-    group.sort((a, b) => times[a] - times[b]);
+    group.sort((a, b) => times[a]! - times[b]!);
 
-    const memberIds = group.map(idx => articles[idx].id);
+    const memberIds = group.map(idx => articles[idx]!.id);
     const groupId = memberIds[0];
 
     for (let k = 0; k < group.length; k++) {
-      const art = articles[group[k]];
+      const art = articles[group[k]!]!;
       result.set(art.id, {
-        duplicateGroupId: groupId,
+        duplicateGroupId: groupId!,
         isDuplicateLeader: k === 0,
         similarCount: group.length - 1,
         similarTitles: group
           .filter((_, idx) => idx !== k)
-          .map(idx => articles[idx].title),
+          .map(idx => articles[idx]!.title),
         memberIds,
-        leaderId: groupId,
+        leaderId: groupId!,
       });
     }
   }

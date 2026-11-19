@@ -4,10 +4,10 @@ export type Pace = 'now' | 'spread' | 'twice';
 
 export interface PaceFields {
   drip_feed_enabled: boolean;
-  drip_release_interval_hours?: number;
-  drip_stories_per_release?: number;
-  drip_start_hour?: number;
-  drip_end_hour?: number;
+  drip_release_interval_hours?: number | undefined;
+  drip_stories_per_release?: number | undefined;
+  drip_start_hour?: number | undefined;
+  drip_end_hour?: number | undefined;
 }
 
 export const PACE_LABELS: Record<Pace, { label: string; hint: string }> = {

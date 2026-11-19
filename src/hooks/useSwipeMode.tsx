@@ -9,15 +9,15 @@ interface Story {
   author: string | null;
   cover_illustration_url: string | null;
   created_at: string;
-  shared_content_id?: string;
+  shared_content_id?: string | undefined;
   article: {
     source_url: string;
-    published_at?: string | null;
+    published_at?: string | null | undefined;
   } | null;
   slides?: Array<{
     slide_number: number;
     content: string;
-    story_id?: string;
+    story_id?: string | undefined;
   }>;
 }
 
@@ -98,7 +98,7 @@ export const useSwipeMode = (topicId: string) => {
       // Shuffle older stories (Fisher-Yates algorithm)
       for (let i = olderStories.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [olderStories[i], olderStories[j]] = [olderStories[j], olderStories[i]];
+        [olderStories[i], olderStories[j]] = [olderStories[j]!, olderStories[i]!];
       }
 
       // Combine: recent first, then randomized older

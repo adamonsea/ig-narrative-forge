@@ -12,8 +12,8 @@ interface Shop {
   url: string;
   name: string;
   state: 'reading' | 'ready' | 'empty' | 'added';
-  venue?: string | null;
-  events?: number;
+  venue?: string | null | undefined;
+  events?: number | undefined;
 }
 
 const READ_AT_ONCE = 2;
@@ -38,10 +38,10 @@ async function previewShop(topicId: string, url: string): Promise<Partial<Shop>>
  */
 export function ShopSuggestions({ topicId, platformUrl, title, emptyText, onAdded }: {
   topicId: string;
-  platformUrl?: string;
-  title?: string;
+  platformUrl?: string | undefined;
+  title?: string | undefined;
   /** Shown when nothing is found; nothing renders when omitted. */
-  emptyText?: string;
+  emptyText?: string | undefined;
   onAdded?: () => void;
 }) {
   const { toast } = useToast();
@@ -56,7 +56,7 @@ export function ShopSuggestions({ topicId, platformUrl, title, emptyText, onAdde
     (async () => {
       const res = await callReader({ action: 'discover', topicId, ...(platformUrl ? { url: platformUrl } : {}) });
       if (cancelled) return;
-      const found = res.failed ? [] : ((res.data?.suggestions || []) as { url: string; name: string; added?: boolean }[]);
+      const found = res.failed ? [] : ((res.data?.suggestions || []) as { url: string; name: string; added?: boolean | undefined }[]);
       setShops(found.map((s) => ({ url: s.url, name: s.name, state: s.added ? 'added' : 'reading' })));
       // Fill each new one in as it's read, a couple at a time
       const queue = found.filter((s) => !s.added).map((s) => s.url);

@@ -60,13 +60,13 @@ export interface DeskEvent {
   source_name: string | null;
   source_url: string | null;
   status: "pending" | "excluded" | "deleted" | "published";
-  source_api?: string | null;
+  source_api?: string | null | undefined;
   exclusion_reason: string | null;
   /** The owner confirmed it's fine where it is: never flagged as out of area again. */
-  area_confirmed?: boolean;
+  area_confirmed?: boolean | undefined;
   relevance_score: number | null;
   created_at: string;
-  event_type?: string | null;
+  event_type?: string | null | undefined;
 }
 
 export interface EventDesk {
@@ -251,7 +251,7 @@ export function useEventDeskActions(topicId: string | undefined) {
       for (const e of unique) { await setArea(e, true); done.push(e); }
       toast({
         title: events.length === 1 ? "Kept" : `Kept ${events.length} events`,
-        description: events.length === 1 ? events[0].title : undefined,
+        description: events.length === 1 ? events[0]!.title : undefined,
         action: (
           <ToastAction altText="Undo" onClick={async () => { mark(false); try { for (const e of done) await setArea(e, false); } finally { refresh(); } }}>
             Undo

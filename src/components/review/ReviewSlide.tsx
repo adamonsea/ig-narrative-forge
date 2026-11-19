@@ -19,15 +19,15 @@ export const ReviewSlide = ({
   aside,
 }: {
   children: ReactNode;
-  className?: string;
-  tone?: 'default' | 'inverted' | 'accent';
-  label?: string;
+  className?: string | undefined;
+  tone?: 'default' | 'inverted' | 'accent' | undefined;
+  label?: string | undefined;
   /** Feed-derived hue for this slide's wash and accent. */
-  hue?: number;
+  hue?: number | undefined;
   /** Illustration URLs to build a full-bleed background wall from. */
-  backdrop?: string[];
+  backdrop?: string[] | undefined;
   /** Optional imagery column shown beside the content on wide screens. */
-  aside?: ReactNode;
+  aside?: ReactNode | undefined;
 }) => {
   const skin = hue != null ? slideSkin(hue, tone === 'inverted') : null;
 
@@ -79,11 +79,11 @@ export const BigStat = ({
   suffix,
   prefix,
 }: {
-  value?: ReactNode;
-  count?: number;
+  value?: ReactNode | undefined;
+  count?: number | undefined;
   caption: string;
-  suffix?: string;
-  prefix?: string;
+  suffix?: string | undefined;
+  prefix?: string | undefined;
 }) => (
   <div>
     <div
@@ -105,8 +105,8 @@ export const RankRows = ({
   items,
   tone = 'default',
 }: {
-  items: Array<{ key: string; label: string; value: number; note?: string }>;
-  tone?: 'default' | 'inverted';
+  items: Array<{ key: string; label: string; value: number; note?: string | undefined }>;
+  tone?: 'default' | 'inverted' | undefined;
 }) => {
   const reduce = useReducedMotion();
   const max = Math.max(1, ...items.map((i) => i.value));

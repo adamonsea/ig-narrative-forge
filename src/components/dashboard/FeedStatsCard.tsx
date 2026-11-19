@@ -42,32 +42,32 @@ export interface FeedCardStats {
   new_country_readers: number | null;
   top_weekday: number | null;
   top_weekday_share: number | null;
-  search_impressions_week?: number | null;
-  search_clicks_week?: number | null;
-  search_impressions_prev?: number | null;
-  search_impressions_total?: number | null;
-  search_weeks?: number | null;
-  search_best_prior_week?: number | null;
-  top_search_story_id?: string | null;
-  top_search_story_title?: string | null;
-  top_search_story_clicks?: number | null;
-  top_stop_story_id?: string | null;
-  top_stop_story_title?: string | null;
-  top_stop_rate?: number | null;
-  top_stop_seen?: number | null;
-  median_stop_rate?: number | null;
-  stop_qualifying_stories?: number | null;
-  reads_month?: number | null;
-  readers_month?: number | null;
-  published_month?: number | null;
-  reads_daily_month?: number[] | null;
-  visits_week?: number | null;
-  visits_month?: number | null;
-  readers_weekly?: number[] | null;
-  returning_week?: number | null;
-  visits_daily?: number[] | null;
-  readers_daily?: number[] | null;
-  top_sources?: { host: string; visitors: number; readers: number }[] | null;
+  search_impressions_week?: number | null | undefined;
+  search_clicks_week?: number | null | undefined;
+  search_impressions_prev?: number | null | undefined;
+  search_impressions_total?: number | null | undefined;
+  search_weeks?: number | null | undefined;
+  search_best_prior_week?: number | null | undefined;
+  top_search_story_id?: string | null | undefined;
+  top_search_story_title?: string | null | undefined;
+  top_search_story_clicks?: number | null | undefined;
+  top_stop_story_id?: string | null | undefined;
+  top_stop_story_title?: string | null | undefined;
+  top_stop_rate?: number | null | undefined;
+  top_stop_seen?: number | null | undefined;
+  median_stop_rate?: number | null | undefined;
+  stop_qualifying_stories?: number | null | undefined;
+  reads_month?: number | null | undefined;
+  readers_month?: number | null | undefined;
+  published_month?: number | null | undefined;
+  reads_daily_month?: number[] | null | undefined;
+  visits_week?: number | null | undefined;
+  visits_month?: number | null | undefined;
+  readers_weekly?: number[] | null | undefined;
+  returning_week?: number | null | undefined;
+  visits_daily?: number[] | null | undefined;
+  readers_daily?: number[] | null | undefined;
+  top_sources?: { host: string; visitors: number; readers: number }[] | null | undefined;
 }
 
 export type CardPeriod = "week" | "month";
@@ -159,7 +159,7 @@ function Sparkline({ values }: { values: number[] }) {
 /** Week-on-week change is only shown when it's a clear rise (10%+). */
 export const visibleRise = (change: number | null): number | null => (change !== null && change >= 10 ? change : null);
 
-export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed" }: { stats: FeedCardStats | undefined; topicSlug?: string; topicId?: string; feedName?: string }) {
+export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed" }: { stats: FeedCardStats | undefined; topicSlug?: string | undefined; topicId?: string | undefined; feedName?: string | undefined }) {
   const highlight = useMemo(() => (stats ? pickHighlight(toHighlightStats(stats), feedName) : null), [stats, feedName]);
   const [celebrate, setCelebrate] = useState(false);
   useEffect(() => {

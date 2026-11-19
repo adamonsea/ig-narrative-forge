@@ -204,7 +204,7 @@ export async function exportReelSlides(content: ReelTeaserContent): Promise<void
   ];
 
   for (let i = 0; i < beats.length; i++) {
-    const [name, draw] = beats[i];
+    const [name, draw] = beats[i]!;
     drawBackground(ctx, bg);
     drawBrandBar(ctx, content);
     draw();

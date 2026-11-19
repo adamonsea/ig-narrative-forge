@@ -40,19 +40,19 @@ interface Article {
   import_metadata: any;
   created_at: string;
   processing_status: string;
-  category?: string;
-  tags?: string[];
-  reading_time_minutes?: number;
-  summary?: string;
-  source_name?: string;
-  source_domain?: string;
-  queue_status?: string;
-  queue_type?: string;
-  queue_id?: string;
-  queue_attempts?: number;
-  queue_max_attempts?: number;
-  queue_error?: string;
-  is_stuck?: boolean;
+  category?: string | undefined;
+  tags?: string[] | undefined;
+  reading_time_minutes?: number | undefined;
+  summary?: string | undefined;
+  source_name?: string | undefined;
+  source_domain?: string | undefined;
+  queue_status?: string | undefined;
+  queue_type?: string | undefined;
+  queue_id?: string | undefined;
+  queue_attempts?: number | undefined;
+  queue_max_attempts?: number | undefined;
+  queue_error?: string | undefined;
+  is_stuck?: boolean | undefined;
 }
 
 interface ArticlePipelinePanelProps {
@@ -161,7 +161,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
             reading_time_minutes, source_url, region, summary, body, created_at,
             import_metadata, processing_status
           `)
-          .in('id', queuedIds);
+          .in('id', queuedIds.filter((id): id is string => id !== null));
 
         if (articleError) throw articleError;
 
@@ -187,7 +187,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
           !(article.queue_attempts >= article.queue_max_attempts && article.queue_status !== 'processing')
         ) || [];
 
-        setQueuedArticles(enrichedQueuedArticles);
+        setQueuedArticles((enrichedQueuedArticles) as unknown as Article[]);
       } else {
         setQueuedArticles([]);
       }
@@ -232,7 +232,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
         !articlesWithStories.has(article.id) && !articlesQueued.has(article.id)
       );
 
-      setArticles(availableArticles);
+      setArticles((availableArticles) as unknown as Article[]);
     } catch (error: any) {
       console.error('Error loading articles:', error);
       toast({
@@ -558,7 +558,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
     
     // Count frequency and prefer proper nouns and longer words
     const wordCount = words.reduce((acc, word) => {
-      const isProperNoun = word[0] === word[0].toUpperCase();
+      const isProperNoun = word[0] === word[0]!.toUpperCase();
       const bonus = isProperNoun ? 2 : 1;
       acc[word] = (acc[word] || 0) + bonus;
       return acc;

@@ -136,7 +136,7 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
       <meta property="og:locale" content="en_GB" />
       <meta property="article:published_time" content={roundup.period_start} />
       <meta property="article:section" content={topicName} />
-      {keywords.map((keyword, i) => (
+      {keywords.map((keyword: string, i: number) => (
         <meta key={i} property="article:tag" content={keyword} />
       ))}
       

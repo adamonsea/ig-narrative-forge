@@ -12,9 +12,9 @@ interface ComparisonCardProps {
       negative: Array<{ keyword: string; mentions: number; ratio: number }>;
     };
   };
-  dataWindowStart?: string;
-  dataWindowEnd?: string;
-  topicId?: string;
+  dataWindowStart?: string | undefined;
+  dataWindowEnd?: string | undefined;
+  topicId?: string | undefined;
 }
 
 // Single sentiment card component with sparkline
@@ -29,7 +29,7 @@ const SentimentKeywordCard = ({
   mentions: number; 
   maxMentions: number; 
   isPositive: boolean;
-  topicId?: string;
+  topicId?: string | undefined;
 }) => {
   const percentage = Math.round((mentions / maxMentions) * 100);
   

@@ -15,9 +15,9 @@ interface KeywordTracking {
   sentiment_ratio: number;
   source_count: number;
   status: 'pending_review' | 'published' | 'discarded' | 'hidden';
-  published_at?: string;
-  discarded_at?: string;
-  review_due_at?: string;
+  published_at?: string | undefined;
+  discarded_at?: string | undefined;
+  review_due_at?: string | undefined;
   created_at: string;
 }
 
@@ -40,10 +40,10 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
         .order('total_mentions', { ascending: false });
 
       if (error) throw error;
-      setKeywords((data || []).map(k => ({
+      setKeywords(((data || []).map(k => ({
         ...k,
         status: k.status as 'pending_review' | 'published' | 'discarded' | 'hidden'
-      })));
+      }))) as unknown as KeywordTracking[]);
     } catch (error) {
       console.error('Error loading keywords:', error);
       toast.error('Failed to load keywords');

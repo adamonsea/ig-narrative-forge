@@ -14,8 +14,8 @@ interface ReExtractionResult {
 }
 
 interface ArticleReExtractorProps {
-  topicId?: string;
-  topicName?: string;
+  topicId?: string | undefined;
+  topicName?: string | undefined;
 }
 
 export function ArticleReExtractor({ topicId, topicName }: ArticleReExtractorProps) {
@@ -61,7 +61,7 @@ export function ArticleReExtractor({ topicId, topicName }: ArticleReExtractorPro
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Re-extraction error:', error);
       toast({
         title: "Re-extraction failed",

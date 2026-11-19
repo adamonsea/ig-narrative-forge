@@ -1,5 +1,6 @@
+import { opt } from "@/lib/optionalProps";
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link } from '@/lib/router-compat';
 import { motion, useScroll, useSpring, useReducedMotion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,8 +20,8 @@ import { makeTermGuard } from '@/lib/reviewTerms';
 interface Movement {
   name: string;
   count: number;
-  previous?: number;
-  change_percent?: number | null;
+  previous?: number | undefined;
+  change_percent?: number | null | undefined;
 }
 
 interface ReviewData {
@@ -30,7 +31,7 @@ interface ReviewData {
     change_percent: number | null;
     categories_covered: number;
     total_views: number;
-    total_words?: number;
+    total_words?: number | undefined;
   };
   scale?: {
     total_words: number;
@@ -39,7 +40,7 @@ interface ReviewData {
     days_covered: number;
     busiest_day: { date: string; count: number } | null;
   };
-  headline?: string | null;
+  headline?: string | null | undefined;
   categoryBreakdown: Array<{ slug: string; name: string; count: number; previous: number; change_percent: number | null }>;
   subcategoryBreakdown: Array<{ name: string; count: number }>;
   subcategoryInsights?: Array<{
@@ -78,18 +79,18 @@ interface ReviewData {
     peak_month: string | null;
     trend: 'rising' | 'fading' | 'spiky' | 'steady';
   }>;
-  trendMonths?: string[];
+  trendMonths?: string[] | undefined;
 
-  crimeBreakdown?: { total: number; items: Movement[] };
-  councilBreakdown?: { total: number; items: Movement[] };
-  anomalies?: Array<{ term: string; month: string; count: number; baseline: number; multiple: number }>;
-  risingTerms?: Array<{ term: string; count: number; month: string | null }>;
-  fadingTerms?: Array<{ term: string; count: number }>;
-  places?: Array<{ term: string; count: number }>;
-  entities?: Array<{ term: string; count: number }>;
-  categoryPerformance?: Array<{ slug: string; name: string; stories: number; views: number; reads_per_story: number }>;
-  sourceScorecard?: Array<{ name: string; count: number }>;
-  mosaic?: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
+  crimeBreakdown?: { total: number; items: Movement[] } | undefined;
+  councilBreakdown?: { total: number; items: Movement[] } | undefined;
+  anomalies?: Array<{ term: string; month: string; count: number; baseline: number; multiple: number }> | undefined;
+  risingTerms?: Array<{ term: string; count: number; month: string | null }> | undefined;
+  fadingTerms?: Array<{ term: string; count: number }> | undefined;
+  places?: Array<{ term: string; count: number }> | undefined;
+  entities?: Array<{ term: string; count: number }> | undefined;
+  categoryPerformance?: Array<{ slug: string; name: string; stories: number; views: number; reads_per_story: number }> | undefined;
+  sourceScorecard?: Array<{ name: string; count: number }> | undefined;
+  mosaic?: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }> | undefined;
   monthChapters?: Array<{
     month: string;
     count: number;
@@ -110,8 +111,8 @@ interface ReviewData {
     peak_month: string | null;
     story: { id: string; slug: string | null; title: string; cover_illustration_url: string | null } | null;
   }>;
-  wentQuiet?: Array<{ term: string; previous: number }>;
-  readingMinutes?: number;
+  wentQuiet?: Array<{ term: string; previous: number }> | undefined;
+  readingMinutes?: number | undefined;
   timeline: Array<{ month: string; count: number }>;
   hotTopics: Array<{ term: string; count: number }>;
   topStories: Array<{
@@ -128,7 +129,7 @@ interface ReviewData {
     count: number;
     stories: Array<{ id: string; slug: string | null; title: string; cover_illustration_url: string | null }>;
   }>;
-  topic: { name?: string; region?: string; slug?: string };
+  topic: { name?: string | undefined; region?: string | undefined; slug?: string | undefined };
 }
 
 const monthLabel = (m: string) =>
@@ -231,8 +232,8 @@ const PreviewTrigger = ({
   children,
 }: {
   story: MosaicCover;
-  className?: string;
-  title?: string;
+  className?: string | undefined;
+  title?: string | undefined;
   children: React.ReactNode;
 }) => {
   const { open } = useStoryPreview();
@@ -319,14 +320,14 @@ const PeriodReview = () => {
       const containerTop = el.getBoundingClientRect().top;
       const tops = items.map((node) => el.scrollTop + node.getBoundingClientRect().top - containerTop);
       const current = tops.reduce(
-        (best, top, i) => (Math.abs(top - el.scrollTop) < Math.abs(tops[best] - el.scrollTop) ? i : best),
+        (best, top, i) => (Math.abs(top - el.scrollTop) < Math.abs(tops[best]! - el.scrollTop) ? i : best),
         0
       );
       const nextIndex = Math.min(items.length - 1, Math.max(0, current + direction));
       if (nextIndex === current) return;
       locked = true;
       travel = 0;
-      el.scrollTo({ top: tops[nextIndex], behavior: reduce ? 'auto' : 'smooth' });
+      el.scrollTo({ ...opt("top", tops[nextIndex]), behavior: reduce ? 'auto' : 'smooth' });
       clearTimeout(unlockTimer);
       unlockTimer = setTimeout(() => {
         locked = false;
@@ -347,9 +348,9 @@ const PeriodReview = () => {
           const containerTop = el.getBoundingClientRect().top;
           const tops = items.map((node) => el.scrollTop + node.getBoundingClientRect().top - containerTop);
           let current = 0;
-          for (let i = 0; i < tops.length; i++) if (tops[i] <= el.scrollTop + 4) current = i;
-          const offset = el.scrollTop - tops[current];
-          const scrollable = items[current].offsetHeight - el.clientHeight;
+          for (let i = 0; i < tops.length; i++) if (tops[i]! <= el.scrollTop + 4) current = i;
+          const offset = el.scrollTop - tops[current]!;
+          const scrollable = items[current]!.offsetHeight - el.clientHeight;
           if ((dy > 0 && offset < scrollable - 1) || (dy < 0 && offset > 1)) return;
         }
       }
@@ -489,7 +490,7 @@ const PeriodReview = () => {
     const step = Math.max(1, Math.floor(imagePool.length / count));
     const picked: string[] = [];
     for (let i = 0; i < imagePool.length && picked.length < count; i += step) {
-      picked.push(imagePool[(i + offset) % imagePool.length]);
+      picked.push((imagePool[(i + offset) % imagePool.length])!);
     }
     return picked;
   };
@@ -544,7 +545,7 @@ const PeriodReview = () => {
         </Reveal>
         <motion.div
           className="mt-14 flex items-center gap-2 text-sm text-muted-foreground"
-          animate={reduce ? undefined : { y: [0, 6, 0] }}
+          {...opt("animate", reduce ? undefined : { y: [0, 6, 0] })}
           transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
         >
           <ChevronDown className="h-4 w-4" />
@@ -827,8 +828,8 @@ const PeriodReview = () => {
           />
           <Reveal delay={0.15}>
             <p className="mb-8 text-lg text-muted-foreground">
-              {p.items[0].share}% of them were {p.items[0].name.toLowerCase()}
-              {p.items[0].peak_month ? `, peaking in ${monthLabel(p.items[0].peak_month)}` : ''}.
+              {p.items[0]!.share}% of them were {p.items[0]!.name.toLowerCase()}
+              {p.items[0]!.peak_month ? `, peaking in ${monthLabel(p.items[0]!.peak_month)}` : ''}.
             </p>
           </Reveal>
           <RankRows

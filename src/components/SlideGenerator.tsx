@@ -12,12 +12,12 @@ import { Sparkles, Image as ImageIcon, Clock, CheckCircle, AlertCircle, Eye, Dow
 interface Article {
   id: string;
   title: string;
-  author?: string;
-  region?: string;
-  category?: string;
-  word_count?: number;
-  reading_time_minutes?: number;
-  summary?: string;
+  author?: string | undefined;
+  region?: string | undefined;
+  category?: string | undefined;
+  word_count?: number | undefined;
+  reading_time_minutes?: number | undefined;
+  summary?: string | undefined;
 }
 
 interface Slide {
@@ -25,7 +25,7 @@ interface Slide {
   slide_number: number;
   content: string;
   word_count: number;
-  alt_text?: string;
+  alt_text?: string | undefined;
 }
 
 interface Story {
@@ -37,8 +37,8 @@ interface Story {
   total_word_count: number;
   created_at: string;
   updated_at: string;
-  generated_at?: string;
-  slides?: Slide[];
+  generated_at?: string | undefined;
+  slides?: Slide[] | undefined;
 }
 
 interface SlideGeneratorProps {

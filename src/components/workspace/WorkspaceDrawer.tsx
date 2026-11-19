@@ -12,15 +12,15 @@ export interface WorkspaceDrawerProps {
   onOpenChange: (open: boolean) => void;
   title: React.ReactNode;
   /** Visible line under the title. Prefer none. */
-  description?: React.ReactNode;
+  description?: React.ReactNode | undefined;
   /** For screen readers when there is no visible description. */
-  srDescription?: string;
+  srDescription?: string | undefined;
   /** Pinned at the bottom: the drawer's actions. */
-  footer?: React.ReactNode;
-  size?: "md" | "lg" | "xl";
+  footer?: React.ReactNode | undefined;
+  size?: "md" | "lg" | "xl" | undefined;
   /** Focus the first field on open (off by default so phones don't jump to the keyboard). */
-  autoFocus?: boolean;
-  className?: string;
+  autoFocus?: boolean | undefined;
+  className?: string | undefined;
   children: React.ReactNode;
 }
 

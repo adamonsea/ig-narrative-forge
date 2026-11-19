@@ -4,18 +4,18 @@ import type { ElementType, ReactNode } from 'react';
 
 interface Segment {
   text: string;
-  italic?: boolean;
-  className?: string;
+  italic?: boolean | undefined;
+  className?: string | undefined;
 }
 
 interface MaskRevealHeadingProps {
   /** Either a plain string or styled segments (e.g. italic runs). */
   segments: string | Segment[];
-  as?: ElementType;
-  className?: string;
+  as?: ElementType | undefined;
+  className?: string | undefined;
   /** Animate on scroll into view (default) vs immediately on mount. */
-  onScroll?: boolean;
-  children?: ReactNode;
+  onScroll?: boolean | undefined;
+  children?: ReactNode | undefined;
 }
 
 const editorialEase = [0.19, 1, 0.22, 1] as const;

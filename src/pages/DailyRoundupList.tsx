@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "@/lib/router-compat";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
@@ -24,14 +24,14 @@ interface Topic {
   id: string;
   name: string;
   slug: string;
-  branding_config?: any;
-  keywords?: string[];
-  landmarks?: string[];
-  organizations?: string[];
-  events_enabled?: boolean | null;
-  feed_lead?: string | null;
-  illustration_primary_color?: string | null;
-  created_by?: string | null;
+  branding_config?: any | undefined;
+  keywords?: string[] | undefined;
+  landmarks?: string[] | undefined;
+  organizations?: string[] | undefined;
+  events_enabled?: boolean | null | undefined;
+  feed_lead?: string | null | undefined;
+  illustration_primary_color?: string | null | undefined;
+  created_by?: string | null | undefined;
 }
 
 interface Roundup {
@@ -46,8 +46,8 @@ interface Roundup {
   is_published: boolean;
   created_at: string;
   updated_at: string;
-  audio_url?: string;
-  audio_generated_at?: string;
+  audio_url?: string | undefined;
+  audio_generated_at?: string | undefined;
 }
 
 interface Story {
@@ -62,7 +62,7 @@ interface Story {
   article: {
     source_url: string;
     region: string;
-    published_at?: string;
+    published_at?: string | undefined;
   };
 }
 
@@ -114,7 +114,7 @@ export default function DailyRoundupList() {
           return;
         }
 
-        setTopic(topicData);
+        setTopic((topicData) as unknown as Topic | null);
 
         // Handle "latest" parameter - fetch most recent roundup
         if (date === 'latest') {
@@ -181,7 +181,7 @@ export default function DailyRoundupList() {
           return;
         }
 
-        setRoundup(roundupData);
+        setRoundup((roundupData) as unknown as Roundup | null);
 
         // Fetch stories using story_ids
         if (roundupData.story_ids && roundupData.story_ids.length > 0) {
@@ -328,7 +328,7 @@ export default function DailyRoundupList() {
       availableSources: Array.from(sourceMap.values())
         .sort((a, b) => b.count - a.count)
         .map(s => ({
-          source_name: s.domain.split('.')[0],
+          source_name: s.domain.split('.')[0] ?? s.domain,
           source_domain: s.domain,
           count: s.count
         })),

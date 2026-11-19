@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { format } from 'date-fns';
 import { buildShareUrl } from '@/lib/urlUtils';
 
@@ -15,7 +15,7 @@ interface Story {
   created_at: string;
   article: {
     source_url: string;
-    published_at?: string | null;
+    published_at?: string | null | undefined;
   } | null;
 }
 

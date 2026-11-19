@@ -5,13 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { QuizQuestion, QuizResponse, useSubmitQuizResponse } from '@/hooks/useQuizCards';
 import { Check, X, ExternalLink, Loader2, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/lib/router-compat';
 
 interface QuizCardProps {
   question: QuizQuestion;
   visitorId: string;
-  userId?: string | null;
-  topicSlug?: string;
+  userId?: string | null | undefined;
+  topicSlug?: string | undefined;
   onAnswered?: (questionId: string) => void;
 }
 

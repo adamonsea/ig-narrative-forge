@@ -7,12 +7,12 @@ import { cn } from "@/lib/utils";
 interface SourceHealthIndicatorProps {
   consecutiveFailures: number;
   totalFailures: number;
-  lastFailureAt?: string | null;
-  lastFailureReason?: string | null;
+  lastFailureAt?: string | null | undefined;
+  lastFailureReason?: string | null | undefined;
   isActive: boolean;
   onTest?: () => void;
   onReactivate?: () => void;
-  testing?: boolean;
+  testing?: boolean | undefined;
 }
 
 export const SourceHealthIndicator = ({

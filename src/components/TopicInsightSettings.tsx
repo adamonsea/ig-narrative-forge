@@ -43,14 +43,14 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
       if (error) throw error;
       
       // If social proof was just enabled, trigger immediate generation
-      if (updates.social_proof_enabled === true) {
+      if (updates['social_proof_enabled'] === true) {
         await supabase.functions.invoke('generate-social-proof-cards', {
           body: { topicId }
         });
       }
       
       // If story momentum was just enabled, trigger immediate generation
-      if (updates.story_momentum_enabled === true) {
+      if (updates['story_momentum_enabled'] === true) {
         await supabase.functions.invoke('generate-story-momentum-cards', {
           body: { topicId }
         });
@@ -139,7 +139,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
               )}
               <Switch
                 id="story-momentum"
-                checked={settings.story_momentum_enabled}
+                checked={settings.story_momentum_enabled!}
                 onCheckedChange={(checked) => 
                   updateSettings.mutate({ story_momentum_enabled: checked })
                 }
@@ -173,7 +173,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
               )}
               <Switch
                 id="social-proof"
-                checked={settings.social_proof_enabled}
+                checked={settings.social_proof_enabled!}
                 onCheckedChange={(checked) => 
                   updateSettings.mutate({ social_proof_enabled: checked })
                 }
@@ -195,7 +195,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             </div>
             <Switch
               id="play-mode"
-              checked={settings.play_mode_enabled}
+              checked={settings.play_mode_enabled!}
               onCheckedChange={(checked) => 
                 updateSettings.mutate({ play_mode_enabled: checked })
               }
@@ -217,7 +217,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
               </div>
               <Switch
                 id="quiz-cards"
-                checked={settings.quiz_cards_enabled}
+                checked={settings.quiz_cards_enabled!}
                 onCheckedChange={(checked) => 
                   updateSettings.mutate({ quiz_cards_enabled: checked })
                 }
@@ -253,7 +253,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             </div>
             <Switch
               id="flashback"
-              checked={settings.this_time_last_month_enabled}
+              checked={settings.this_time_last_month_enabled!}
               onCheckedChange={(checked) => 
                 updateSettings.mutate({ this_time_last_month_enabled: checked })
               }
@@ -290,7 +290,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             </div>
             <Switch
               id="sift-mode"
-              checked={settings.sift_enabled}
+              checked={settings.sift_enabled!}
               onCheckedChange={(checked) => 
                 updateSettings.mutate({ sift_enabled: checked })
               }

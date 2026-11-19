@@ -11,9 +11,9 @@ interface BackfillResult {
   sourceId: string;
   sourceName: string;
   success: boolean;
-  articlesScraped?: number;
-  successRate?: number;
-  error?: string;
+  articlesScraped?: number | undefined;
+  successRate?: number | undefined;
+  error?: string | undefined;
 }
 
 export function SourceMetricsBackfill() {
@@ -42,7 +42,7 @@ export function SourceMetricsBackfill() {
         description: `Updated metrics for ${data.successfulUpdates}/${data.totalSources} sources`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Backfill error:', error);
       toast({
         title: "Backfill Failed",
@@ -74,7 +74,7 @@ export function SourceMetricsBackfill() {
         description: `Updated metrics for ${data.successfulUpdates}/${data.totalSources} stale sources`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Stale update error:', error);
       toast({
         title: "Update Failed",

@@ -16,7 +16,7 @@ interface KeywordCategoryGridProps {
   keywords: GeneratedKeyword[];
   selectedKeywords: Set<string>;
   onToggleKeyword: (keyword: string) => void;
-  searchFilter?: string;
+  searchFilter?: string | undefined;
 }
 
 const categoryConfig = {

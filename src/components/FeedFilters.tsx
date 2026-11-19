@@ -8,20 +8,20 @@ import { getStorageKey } from "@/lib/constants/branding";
 
 interface FeedFiltersProps {
   slideCount: number;
-  monthlyCount?: number;
-  topicName?: string;
-  filteredStoryCount?: number;
+  monthlyCount?: number | undefined;
+  topicName?: string | undefined;
+  filteredStoryCount?: number | undefined;
   // Keyword filtering props
   onFilterClick?: () => void;
-  selectedKeywords?: string[];
+  selectedKeywords?: string[] | undefined;
   onRemoveKeyword?: (keyword: string) => void;
   // Source filtering props
-  selectedSources?: string[];
+  selectedSources?: string[] | undefined;
   onRemoveSource?: (source: string) => void;
   // Location filtering props
-  selectedLocations?: string[];
+  selectedLocations?: string[] | undefined;
   onRemoveLocation?: (location: string) => void;
-  hasActiveFilters?: boolean;
+  hasActiveFilters?: boolean | undefined;
 }
 
 export function FeedFilters({ 
@@ -142,7 +142,7 @@ export function FeedFilters({
           })}
           {selectedSources.map((source) => {
             // Title case for source display
-            const displayName = source.split('.')[0]
+            const displayName = source.split('.')[0]!
               .split(' ')
               .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
               .join(' ');

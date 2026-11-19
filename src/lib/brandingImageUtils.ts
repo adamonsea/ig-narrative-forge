@@ -4,12 +4,12 @@
  */
 
 interface BrandingConfig {
-  logo_url?: string;
-  icon_url?: string;
-  logo_variants?: Record<string, string>;
-  icon_variants?: Record<string, string>;
-  subheader?: string;
-  show_topic_name?: boolean;
+  logo_url?: string | undefined;
+  icon_url?: string | undefined;
+  logo_variants?: Record<string, string> | undefined;
+  icon_variants?: Record<string, string> | undefined;
+  subheader?: string | undefined;
+  show_topic_name?: boolean | undefined;
 }
 
 type LogoVariant = 'original' | 'header' | 'thumbnail' | 'email';

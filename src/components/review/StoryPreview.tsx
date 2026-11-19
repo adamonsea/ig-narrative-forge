@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 
 export type PreviewStory = {
   id: string;
-  slug?: string | null;
+  slug?: string | null | undefined;
   title: string;
-  cover_illustration_url?: string | null;
+  cover_illustration_url?: string | null | undefined;
 };
 
 type Ctx = { open: (story: PreviewStory) => void };
@@ -22,8 +22,8 @@ export const StoryPreviewProvider = ({
   placeLabel,
   children,
 }: {
-  feedSlug?: string;
-  placeLabel?: string;
+  feedSlug?: string | undefined;
+  placeLabel?: string | undefined;
   children: ReactNode;
 }) => {
   const [story, setStory] = useState<PreviewStory | null>(null);

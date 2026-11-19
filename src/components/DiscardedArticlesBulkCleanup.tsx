@@ -53,7 +53,7 @@ export const DiscardedArticlesBulkCleanup: React.FC<BulkCleanupProps> = ({
       const keywordList = keywords.split(',').map(k => k.trim()).filter(k => k);
       const domainList = domains.split(',').map(d => d.trim()).filter(d => d);
 
-      let articlesToProcess = [];
+      let articlesToProcess: any[] = [];
 
       if (keywordList.length > 0 || domainList.length > 0) {
         const { data: articles, error } = await query;
@@ -106,7 +106,7 @@ export const DiscardedArticlesBulkCleanup: React.FC<BulkCleanupProps> = ({
           } else {
             cleaned++;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.warn(`Error discarding article ${article.id}:`, error);
         }
       }
@@ -123,7 +123,7 @@ export const DiscardedArticlesBulkCleanup: React.FC<BulkCleanupProps> = ({
 
       onCleanupComplete?.();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Bulk cleanup error:', error);
       toast({
         title: "Cleanup Failed",

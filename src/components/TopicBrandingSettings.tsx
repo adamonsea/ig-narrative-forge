@@ -14,12 +14,12 @@ interface TopicBrandingSettingsProps {
   topic: {
     id: string;
     name: string;
-    illustration_primary_color?: string;
+    illustration_primary_color?: string | undefined;
     branding_config?: {
-      logo_url?: string;
-      icon_url?: string;
-      subheader?: string;
-      show_topic_name?: boolean;
+      logo_url?: string | undefined;
+      icon_url?: string | undefined;
+      subheader?: string | undefined;
+      show_topic_name?: boolean | undefined;
     };
   };
   onUpdate: () => void;
@@ -34,10 +34,10 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
   const [illustrationColor, setIllustrationColor] = useState(topic.illustration_primary_color || '#3b82f6');
   const cfg = (topic.branding_config ?? {}) as Record<string, unknown>;
   const [colorMode, setColorMode] = useState<'single' | 'cycle' | 'random'>(
-    (cfg.illustration_color_mode as 'single' | 'cycle' | 'random') || 'single'
+    (cfg['illustration_color_mode'] as 'single' | 'cycle' | 'random') || 'single'
   );
   const [palette, setPalette] = useState<string[]>(
-    Array.isArray(cfg.illustration_color_palette) ? (cfg.illustration_color_palette as string[]) : []
+    Array.isArray(cfg['illustration_color_palette']) ? (cfg['illustration_color_palette'] as string[]) : []
   );
   const togglePalette = (c: string) =>
     setPalette((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));

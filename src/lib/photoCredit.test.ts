@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/photoCredit.test.ts
+// run with: bun test ./src/lib/photoCredit.test.ts
 import { describe, it, expect } from "bun:test";
 import { isPublisherPhoto, photoCreditLabel } from "./photoCredit";
 

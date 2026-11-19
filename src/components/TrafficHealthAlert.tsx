@@ -31,7 +31,7 @@ export const TrafficHealthAlert = () => {
       const { data: topics, error: topicsError } = await supabase
         .from('topics')
         .select('id, name')
-        .eq('created_by', user?.id)
+        .eq('created_by', (user?.id)!)
         .eq('is_archived', false);
 
       if (topicsError) throw topicsError;

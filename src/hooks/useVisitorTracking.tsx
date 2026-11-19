@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getVisitorId, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
@@ -54,7 +55,7 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
             visitor_id: visitorId,
             user_agent: userAgent,
             referrer: referrer || null,
-            visit_date: new Date().toISOString().split('T')[0],
+            ...opt("visit_date", new Date().toISOString().split('T')[0]),
             page_type: pageType
           });
       } catch (error) {

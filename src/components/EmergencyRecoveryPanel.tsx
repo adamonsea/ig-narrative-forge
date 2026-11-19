@@ -27,7 +27,7 @@ export function EmergencyRecoveryPanel() {
       });
 
       setResults(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Method fix error:', error);
       toast({
         title: 'Fix Failed',
@@ -54,7 +54,7 @@ export function EmergencyRecoveryPanel() {
       });
 
       setResults(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Feed test error:', error);
       toast({
         title: 'Test Failed',

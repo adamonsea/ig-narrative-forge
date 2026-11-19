@@ -171,7 +171,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
           const active = group.modes.includes(automationMode);
           const targetMode = group.modes[0];
           return (
-            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-lg p-3 text-left transition-colors ${active ? 'border-primary bg-primary text-primary-foreground' : ''}`}>
+            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode!)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-lg p-3 text-left transition-colors ${active ? 'border-primary bg-primary text-primary-foreground' : ''}`}>
               <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-primary-foreground" />}{group.label}</span>
             </Button>
           );
@@ -199,7 +199,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
               </div>
               <Slider
                 value={[scrapeFrequency]}
-                onValueChange={([v]) => handleScrapeFrequency(v)}
+                onValueChange={([v]) => handleScrapeFrequency(v!)}
                 min={4} max={24} step={4}
               />
             </div>
@@ -213,7 +213,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
               </div>
               <Slider
                 value={[qualityThreshold]}
-                onValueChange={([v]) => handleQualityThreshold(v)}
+                onValueChange={([v]) => handleQualityThreshold(v!)}
                 min={30} max={100} step={5}
               />
             </div>
@@ -235,7 +235,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
                   </div>
                   <Slider
                     value={[illustrationThreshold]}
-                    onValueChange={([v]) => handleIllustrationThreshold(v)}
+                    onValueChange={([v]) => handleIllustrationThreshold(v!)}
                     min={50} max={100} step={5}
                   />
                 </div>

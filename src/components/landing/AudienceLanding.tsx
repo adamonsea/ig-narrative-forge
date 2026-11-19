@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { opt } from "@/lib/optionalProps";
+import { Link } from '@/lib/router-compat';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -73,7 +74,7 @@ const SceneFallback = () => (
   <div className="aspect-video w-full rounded-[2rem] border border-white/10 bg-[hsl(214,50%,7%)]" />
 );
 
-const Scene = ({ id, label, content }: { id: HomeSceneId; label: string; content?: SceneContent }) => (
+const Scene = ({ id, label, content }: { id: HomeSceneId; label: string; content?: SceneContent | undefined }) => (
   <Suspense fallback={<SceneFallback />}>
     <HomeSceneLoop sceneId={id} label={label} content={content} />
   </Suspense>
@@ -133,8 +134,8 @@ const HeroTypewriter = ({ line1: L1, line2: L2 }: { line1: string; line2: string
 };
 
 interface SectionCopyProps extends AudienceSectionCopy {
-  center?: boolean;
-  children?: ReactNode;
+  center?: boolean | undefined;
+  children?: ReactNode | undefined;
 }
 
 /** One heading, one line. Fades up as it scrolls into view. */
@@ -167,9 +168,9 @@ const SplitSection = ({
   copy,
   scene,
 }: {
-  flip?: boolean;
+  flip?: boolean | undefined;
   copy: AudienceSectionCopy;
-  scene: { id: HomeSceneId; label: string; content?: SceneContent };
+  scene: { id: HomeSceneId; label: string; content?: SceneContent | undefined };
 }) => (
   <section className="mx-auto flex min-h-[90svh] max-w-7xl items-center py-20 md:py-28">
     <div className="grid w-full items-center gap-12 md:grid-cols-12 md:gap-16">
@@ -369,8 +370,8 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
               className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-white/60 transition-colors hover:text-white"
             >
               <motion.span
-                animate={reduce ? undefined : { y: [0, 6, 0] }}
-                transition={reduce ? undefined : { duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                {...opt("animate", reduce ? undefined : { y: [0, 6, 0] })}
+                {...opt("transition", reduce ? undefined : { duration: 2, repeat: Infinity, ease: 'easeInOut' as const })}
                 className="flex"
               >
                 <ChevronDown className="h-7 w-7" aria-hidden="true" />

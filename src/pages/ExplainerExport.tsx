@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "@/lib/router-compat";
 import { ExplainerPlayer } from "@/components/explainer/ExplainerPlayer";
 import { TIMELINE, TOTAL_MS, sceneDuration } from "@/components/explainer/timeline";
 import { ResolutionBar, RESOLUTIONS } from "@/components/explainer/ResolutionBar";

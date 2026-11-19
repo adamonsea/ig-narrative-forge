@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate } from "@/lib/router-compat";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,7 +21,7 @@ const SWATCHES: { name: string; color: string }[] = [
  * Real Whats on Lisbon listings (Agenda LX). Lisbon has no sport, nightlife, markets,
  * comedy, workshops or other listings yet, so those rows borrow a real Lisbon listing.
  */
-const SAMPLES: { category: EventCategory; title: string; venue: string; date: string; borrowed?: boolean }[] = [
+const SAMPLES: { category: EventCategory; title: string; venue: string; date: string; borrowed?: boolean | undefined }[] = [
   { category: "music", title: "Rodrigo Leão", venue: "Coliseu dos Recreios", date: "2026-11-20" },
   { category: "family", title: "Exhibition of Models Built with LEGO® Bricks", venue: "Cordoaria Nacional", date: "2026-11-21" },
   { category: "sport", title: "Bike a Wish Tours", venue: "Bike a Wish", date: "2026-11-21", borrowed: true },
@@ -47,7 +47,7 @@ function toEvent(s: (typeof SAMPLES)[number]): WhatsOnFeedEvent {
 
 /** The compare view itself (no guard), so the page can be checked on its own. */
 export function EventCardsCompareBody() {
-  const [color, setColor] = useState(SWATCHES[0].color);
+  const [color, setColor] = useState(SWATCHES[0]!.color);
   return (
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-4xl space-y-8 px-4 py-12 md:px-8">

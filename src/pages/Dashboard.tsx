@@ -5,7 +5,7 @@ import { TopicManager } from "@/components/TopicManager";
 import { AppLayout } from "@/components/AppLayout";
 import { PlanStatus } from "@/components/billing/PlanStatus";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
 
 const Dashboard = () => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from '@/lib/router-compat';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useSwipeMode } from '@/hooks/useSwipeMode';
@@ -273,10 +273,10 @@ export default function SwipeMode() {
                   }}
                 >
                   {/* Static preview - optimized thumbnail */}
-                  {stories[currentIndex + 1].cover_illustration_url && (
+                  {stories[currentIndex + 1]!.cover_illustration_url && (
                     <div className="w-full aspect-[3/2] bg-muted overflow-hidden">
                       <img 
-                        src={swipeCoverUrl(stories[currentIndex + 1].cover_illustration_url) || ''}
+                        src={swipeCoverUrl(stories[currentIndex + 1]!.cover_illustration_url) || ''}
                         alt=""
                         className="w-full h-full object-cover opacity-80"
                         loading="lazy"
@@ -307,7 +307,7 @@ export default function SwipeMode() {
               <link 
                 rel="preload" 
                 as="image" 
-                href={swipeCoverUrl(stories[currentIndex + 1].cover_illustration_url) || ''} 
+                href={swipeCoverUrl(stories[currentIndex + 1]!.cover_illustration_url) || ''} 
               />
             )}
             

@@ -10,7 +10,7 @@ interface SentimentSlide {
   type: 'hero' | 'mention-count' | 'trend-graph' | 'references';
   content: string;
   order: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, any> | undefined;
 }
 
 interface SentimentCardProps {
@@ -19,25 +19,25 @@ interface SentimentCardProps {
   content: {
     headline: string;
     statistics: string;
-    key_quote?: string;
-    external_sentiment?: string;
+    key_quote?: string | undefined;
+    external_sentiment?: string | undefined;
     summary: string;
   };
   sources: Array<{
     url: string;
     title: string;
     date: string;
-    author?: string;
-    card_url?: string | null;
-    story_id?: string;
+    author?: string | undefined;
+    card_url?: string | null | undefined;
+    story_id?: string | undefined;
   }>;
   sentimentScore: number;
   confidenceScore: number;
   analysisDate: string;
   cardType: 'quote' | 'trend' | 'comparison' | 'timeline';
-  slides?: SentimentSlide[];
-  createdAt?: string;
-  updatedAt?: string;
+  slides?: SentimentSlide[] | undefined;
+  createdAt?: string | undefined;
+  updatedAt?: string | undefined;
 }
 
 export const SentimentCard = ({
@@ -55,10 +55,10 @@ export const SentimentCard = ({
   data_window_start,
   data_window_end
 }: SentimentCardProps & { 
-  card_category?: string; 
-  comparison_keyword_ids?: string[];
-  data_window_start?: string;
-  data_window_end?: string;
+  card_category?: string | undefined; 
+  comparison_keyword_ids?: string[] | undefined;
+  data_window_start?: string | undefined;
+  data_window_end?: string | undefined;
 }) => {
   // Route to ComparisonCard when detected (by cardType, card_category, or presence of chart_data)
   const isComparison = cardType === 'comparison' || card_category === 'comparison' || (content as any)?.chart_data;
@@ -89,7 +89,7 @@ export const SentimentCard = ({
   const getMentionCount = () => {
     if (!content.statistics) return sources.length;
     const match = content.statistics.match(/(\d+)\s*(mention|article|report|story)/i);
-    return match ? parseInt(match[1]) : sources.length;
+    return match ? parseInt(match[1]!) : sources.length;
   };
 
   // Calculate trend comparison (simplified - would need historical data for real trend)
@@ -194,7 +194,7 @@ export const SentimentCard = ({
         );
 
       case 'mention-count':
-        const mentionCount = slide.metadata?.mentionCount || 0;
+        const mentionCount = slide.metadata?.['mentionCount'] || 0;
         return (
           <div className="flex flex-col justify-center items-center h-full space-y-4">
             <div className="text-sm text-muted-foreground">
@@ -207,7 +207,7 @@ export const SentimentCard = ({
         );
 
       case 'trend-graph':
-        const trendData = slide.metadata?.trendData || { currentCount: 0, previousCount: 0, change: 0, isIncrease: true, hasHistory: false };
+        const trendData = slide.metadata?.['trendData'] || { currentCount: 0, previousCount: 0, change: 0, isIncrease: true, hasHistory: false };
         const maxCount = Math.max(trendData.currentCount, trendData.previousCount);
         const currentBarWidth = maxCount > 0 ? (trendData.currentCount / maxCount) * 100 : 0;
         const previousBarWidth = maxCount > 0 ? (trendData.previousCount / maxCount) * 100 : 0;

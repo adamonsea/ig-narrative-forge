@@ -120,14 +120,14 @@ export function priceFacts(offers: unknown, freeFlag?: unknown, costText?: unkno
   for (const o of list) {
     if (!o || typeof o !== 'object') continue;
     const r = o as Record<string, unknown>;
-    const p = r.price ?? r.lowPrice;
+    const p = r['price'] ?? r['lowPrice'];
     const num = typeof p === 'number' ? p : typeof p === 'string' ? Number(p.replace(',', '.')) : NaN;
     if (Number.isFinite(num)) {
       if (num === 0) return { price: null, is_free: true };
-      const cur = String(r.priceCurrency ?? '').toUpperCase();
+      const cur = String(r['priceCurrency'] ?? '').toUpperCase();
       const sym = cur === 'EUR' ? '€' : cur === 'GBP' ? '£' : cur === 'USD' ? '$' : '';
       const n = Number.isInteger(num) ? String(num) : num.toFixed(2);
-      return { price: sym ? `${r.lowPrice != null && r.price == null ? 'From ' : ''}${sym}${n}` : `${n}${cur ? ` ${cur}` : ''}`, is_free: false };
+      return { price: sym ? `${r['lowPrice'] != null && r['price'] == null ? 'From ' : ''}${sym}${n}` : `${n}${cur ? ` ${cur}` : ''}`, is_free: false };
     }
   }
   return { price: null, is_free: null };

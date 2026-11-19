@@ -10,10 +10,10 @@ export interface PromptMetrics {
 
 export interface OptimizationOptions {
   provider: 'openai' | 'deepseek';
-  maxTokens?: number;
-  includeFewShot?: boolean;
-  useStructuredFormat?: boolean;
-  optimizeForSpeed?: boolean;
+  maxTokens?: number | undefined;
+  includeFewShot?: boolean | undefined;
+  useStructuredFormat?: boolean | undefined;
+  optimizeForSpeed?: boolean | undefined;
 }
 
 /**

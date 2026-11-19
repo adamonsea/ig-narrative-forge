@@ -123,7 +123,7 @@ export function isMobileDevice(): boolean {
 function getIOSVersion(): number | null {
   const ua = navigator.userAgent;
   const match = ua.match(/OS (\d+)_/);
-  return match ? parseInt(match[1], 10) : null;
+  return match ? parseInt(match[1]!, 10) : null;
 }
 
 /**
@@ -132,7 +132,7 @@ function getIOSVersion(): number | null {
 function getAndroidVersion(): number | null {
   const ua = navigator.userAgent;
   const match = ua.match(/Android (\d+)/);
-  return match ? parseInt(match[1], 10) : null;
+  return match ? parseInt(match[1]!, 10) : null;
 }
 
 /**

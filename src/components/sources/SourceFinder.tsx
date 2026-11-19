@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,16 +15,16 @@ interface SourceSuggestion {
   type: 'RSS' | 'News' | 'Blog' | 'Publication' | 'Official' | 'WordPress' | 'Substack';
   confidence_score: number;
   rationale: string;
-  platform_reliability?: 'high' | 'medium' | 'low';
+  platform_reliability?: 'high' | 'medium' | 'low' | undefined;
 }
 
 export interface SourceFinderProps {
   topicId: string;
   topicName: string;
-  description?: string;
+  description?: string | undefined;
   keywords: string[];
   topicType: 'regional' | 'keyword';
-  region?: string;
+  region?: string | undefined;
   onSourceAdded?: () => void;
   /** An organiser's ticket shop was added as an events source. */
   onEventsAdded?: () => void;
@@ -106,7 +107,7 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
           .insert({
             source_name: s.source_name, feed_url: s.url, canonical_domain: domain, content_type: 'news',
             credibility_score: Math.min(95, credibility), is_active: true,
-            source_type: s.type === 'RSS' ? 'rss' : 'website', region: topicType === 'regional' ? region : null,
+            source_type: s.type === 'RSS' ? 'rss' : 'website', ...opt("region", topicType === 'regional' ? region : null),
           })
           .select('id').single();
         if (error) throw error;
@@ -177,7 +178,7 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
       ) : (
         <p className="text-base text-muted-foreground">{added > 0 ? `${added} added.` : 'No new sources found.'}</p>
       )}
-      <ShopSuggestions topicId={topicId} onAdded={onEventsAdded} />
+      <ShopSuggestions topicId={topicId} {...opt("onAdded", onEventsAdded)} />
       <Button variant="ghost" size="sm" onClick={find}>Find more</Button>
     </div>
   );

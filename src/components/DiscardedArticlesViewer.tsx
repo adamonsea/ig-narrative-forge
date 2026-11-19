@@ -14,7 +14,7 @@ interface DiscardedArticle {
   rejection_reason: string;
   source_url: string;
   created_at: string;
-  source_name?: string;
+  source_name?: string | undefined;
 }
 
 interface DiscardedArticlesViewerProps {

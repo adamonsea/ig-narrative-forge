@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/components/events/social/eventCaption.test.ts
+// run with: bun test ./src/components/events/social/eventCaption.test.ts
 import { describe, expect, it } from "bun:test";
 import { eventCaption } from "./eventCaption";
 

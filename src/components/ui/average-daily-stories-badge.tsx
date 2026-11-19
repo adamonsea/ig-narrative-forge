@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface AverageDailyStoriesBadgeProps {
   average: number;
-  todayCount?: number;
+  todayCount?: number | undefined;
 }
 
 export const AverageDailyStoriesBadge = ({ average, todayCount }: AverageDailyStoriesBadgeProps) => {

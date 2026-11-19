@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/briefingEvents.test.ts
+// run with: bun test ./src/lib/briefingEvents.test.ts
 import { describe, it, expect } from "bun:test";
 import { briefingWindow, pickBriefingEvents, briefingEventsLabel } from "./briefingEvents";
 

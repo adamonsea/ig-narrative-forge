@@ -31,7 +31,7 @@ export const DemoBuildProgress = ({ sourceName, tone, imageStyle, onComplete }: 
       // Advance step
       let cumulative = 0;
       for (let i = 0; i < STEPS.length; i++) {
-        cumulative += STEPS[i].duration;
+        cumulative += STEPS[i]!.duration;
         if (elapsed < cumulative) {
           setCurrentStep(i);
           break;

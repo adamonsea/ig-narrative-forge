@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from '@/lib/router-compat';
 import { Card, CardContent } from '@/components/ui/card';
 
 type UnsubStatus = 'loading' | 'success' | 'already' | 'not_found' | 'invalid' | 'error';

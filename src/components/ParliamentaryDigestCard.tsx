@@ -7,7 +7,7 @@ import { ParliamentaryDigestVote } from '@/hooks/useParliamentaryDigestCards';
 
 interface ParliamentaryDigestCardProps {
   votes: ParliamentaryDigestVote[];
-  topicSlug?: string;
+  topicSlug?: string | undefined;
 }
 
 const getPartyColor = (party: string | null): string => {

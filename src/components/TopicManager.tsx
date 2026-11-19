@@ -6,7 +6,7 @@ import { Plus, Archive, ExternalLink, TrendingDown, TrendingUp, AlertTriangle, M
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@/lib/router-compat";
 import { CreateTopicDialog } from "@/components/CreateTopicDialog";
 import {
   DropdownMenu,
@@ -28,23 +28,23 @@ interface Topic {
   description: string;
   topic_type: 'regional' | 'keyword';
   keywords: string[];
-  region?: string;
-  slug?: string;
+  region?: string | undefined;
+  slug?: string | undefined;
   is_active: boolean;
   is_public: boolean;
   created_at: string;
-  articles_in_arrivals?: number;
-  stories_published_this_week?: number;
-  visits_this_week?: number;
-  visits_last_week?: number;
-  articles_liked?: number;
-  articles_disliked?: number;
-  avg_stories_engaged?: number;
-  installs_total?: number;
-  registrants_total?: number;
-  email_subscribers?: number;
-  push_subscribers?: number;
-  branding_config?: any;
+  articles_in_arrivals?: number | undefined;
+  stories_published_this_week?: number | undefined;
+  visits_this_week?: number | undefined;
+  visits_last_week?: number | undefined;
+  articles_liked?: number | undefined;
+  articles_disliked?: number | undefined;
+  avg_stories_engaged?: number | undefined;
+  installs_total?: number | undefined;
+  registrants_total?: number | undefined;
+  email_subscribers?: number | undefined;
+  push_subscribers?: number | undefined;
+  branding_config?: any | undefined;
   _count?: {
     articles: number;
     sources: number;
@@ -86,7 +86,7 @@ export const TopicManager = () => {
       const topicsRes = await supabase
         .from('topics')
         .select('*')
-        .eq('created_by', user?.id)
+        .eq('created_by', (user?.id)!)
         .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
@@ -95,7 +95,7 @@ export const TopicManager = () => {
       const topicIds = (topicsRes.data || []).map(t => t.id);
 
       const [statsRes, subscribersRes, sourcesRes] = await Promise.all([
-        supabase.rpc('get_user_dashboard_stats', { p_user_id: user?.id }),
+        supabase.rpc('get_user_dashboard_stats', { p_user_id: (user?.id)! }),
         topicIds.length > 0 ? supabase
           .from('topic_newsletter_signups')
           .select('topic_id, notification_type, push_subscription')
@@ -152,7 +152,7 @@ export const TopicManager = () => {
         };
       });
 
-      setTopics(topicsWithStats);
+      setTopics((topicsWithStats) as unknown as Topic[]);
       (supabase.rpc as any)('get_dashboard_feed_cards', { p_user_id: user?.id }).then(({ data, error }: any) => {
         if (error) { console.error('Feed card stats failed:', error); return; }
         setCardStats(new Map((data || []).map((r: FeedCardStats) => [r.topic_id, r])));

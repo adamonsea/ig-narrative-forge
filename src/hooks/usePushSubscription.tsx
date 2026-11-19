@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // VAPID public key from environment
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+const VAPID_PUBLIC_KEY = import.meta.env['VITE_VAPID_PUBLIC_KEY'];
 
 interface PushSubscriptionState {
   isSupported: boolean;
@@ -251,7 +251,7 @@ const messages = {
       const { error } = await supabase
         .from('topic_newsletter_signups')
         .update({ is_active: false })
-        .eq('topic_id', topicId)
+        .eq('topic_id', topicId!)
         .eq('notification_type', notificationType)
         .filter('push_subscription', 'cs', JSON.stringify({ endpoint }));
 

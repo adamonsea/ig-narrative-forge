@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/whatsOn.test.ts
+// run with: bun test ./src/lib/whatsOn.test.ts
 import { describe, it, expect } from "bun:test";
 import {
   isBrokenWhatsOnSource, previewSentence, venueClicksLine, showEventsInFeed, eventSourceKindLabel,
@@ -64,7 +64,7 @@ describe("the What's on card set", () => {
     const events = [ev("past", "2026-11-11"), ev("far", "2026-11-26"), ...Array.from({ length: 10 }, (_, i) => ev(`e${i}`, `2026-11-${String(12 + i).padStart(2, "0")}`))];
     const out = upcomingWhatsOn(events, THU);
     expect(out.length).toBe(8);
-    expect(out[0].start_date).toBe(THU);
+    expect(out[0]!.start_date).toBe(THU);
     expect(out.map((e) => e.title)).not.toContain("past");
     expect(out.map((e) => e.title)).not.toContain("far");
     expect(upcomingWhatsOn([ev("last day", "2026-11-25")], THU).length).toBe(1);
@@ -123,16 +123,16 @@ describe("three rotating What's on sets", () => {
   it("splits into Today, This week (1-6 days) and Later this month", () => {
     const s = whatsOnSets(all, "2026-11-13", "08:00:00");
     expect(s.map((x) => x.label)).toEqual(["Today", "This week", "Later this month"]);
-    expect(s[0].events.map((e) => e.title)).toEqual(["Morning", "Tonight gig", "No time"]);
-    expect(s[1].events.map((e) => e.title)).toEqual(["Sat show", "Thu talk"]);
-    expect(s[2].events.map((e) => e.title)).toEqual(["Next Fri", "Month end"]);
+    expect(s[0]!.events.map((e) => e.title)).toEqual(["Morning", "Tonight gig", "No time"]);
+    expect(s[1]!.events.map((e) => e.title)).toEqual(["Sat show", "Thu talk"]);
+    expect(s[2]!.events.map((e) => e.title)).toEqual(["Next Fri", "Month end"]);
   });
   it("drops same-day events once started, and untimed ones at 6pm", () => {
     expect(hasStarted(ev("a", "2026-11-13", "09:30:00"), "2026-11-13", "10:00:00")).toBe(true);
     expect(hasStarted(ev("a", "2026-11-13"), "2026-11-13", "17:59:00")).toBe(false);
     expect(hasStarted(ev("a", "2026-11-13"), "2026-11-13", "18:00:00")).toBe(true);
     const s = whatsOnSets(all, "2026-11-13", "18:30:00");
-    expect(s[0].events.map((e) => e.title)).toEqual(["Tonight gig"]);
+    expect(s[0]!.events.map((e) => e.title)).toEqual(["Tonight gig"]);
   });
   it("skips empty sets", () => {
     expect(whatsOnSets([ev("x", "2026-11-14")], "2026-11-13", "08:00:00").map((x) => x.kind)).toEqual(["week"]);
@@ -257,7 +257,7 @@ describe("events-led paging", () => {
   it("the overlap is dropped by id, order kept", () => {
     const merged = mergeEventPages([page(0, 20), page(18, 20)]);
     expect(merged).toHaveLength(38);
-    expect(merged[19].id).toBe("e19");
+    expect(merged[19]!.id).toBe("e19");
     expect(nextEventsOffset([page(0, 20), page(18, 20)])).toBe(36);
   });
   it("stops after a short page or a page with nothing new", () => {

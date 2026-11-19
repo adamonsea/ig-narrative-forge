@@ -8,8 +8,8 @@ interface SourceHealthDotProps {
   lastStoryDate: string | null;
   storiesPublished7d: number;
   storiesGathered7d: number;
-  lastFailureReason?: string | null;
-  isBlacklisted?: boolean;
+  lastFailureReason?: string | null | undefined;
+  isBlacklisted?: boolean | undefined;
 }
 
 export const SourceHealthDot = ({

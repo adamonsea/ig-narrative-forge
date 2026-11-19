@@ -3,13 +3,13 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 
 interface ScrollScrubVideoProps {
   src: string;
-  poster?: string;
-  pinHeight?: number;
-  startOffset?: "start end" | "end start" | "start start" | "end end" | "center start" | "center end" | "center center";
-  endOffset?: "start end" | "end start" | "start start" | "end end" | "center start" | "center end" | "center center";
-  className?: string;
-  objectFit?: "cover" | "contain";
-  debug?: boolean;
+  poster?: string | undefined;
+  pinHeight?: number | undefined;
+  startOffset?: "start end" | "end start" | "start start" | "end end" | "center start" | "center end" | "center center" | undefined;
+  endOffset?: "start end" | "end start" | "start start" | "end end" | "center start" | "center end" | "center center" | undefined;
+  className?: string | undefined;
+  objectFit?: "cover" | "contain" | undefined;
+  debug?: boolean | undefined;
 }
 
 /**

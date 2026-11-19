@@ -20,8 +20,8 @@ import { BRAND } from '@/lib/constants/branding';
 
 interface ServiceStatus {
   status: 'healthy' | 'degraded' | 'unhealthy' | 'checking';
-  message?: string;
-  latency?: number;
+  message?: string | undefined;
+  latency?: number | undefined;
 }
 
 interface HealthData {
@@ -204,7 +204,7 @@ export default function Health() {
           }
         }));
       } else {
-        const latestTime = new Date(recentStories[0].created_at);
+        const latestTime = new Date(recentStories[0]!.created_at);
         const hoursAgo = Math.round((Date.now() - latestTime.getTime()) / (1000 * 60 * 60));
         setHealth(prev => ({
           ...prev,

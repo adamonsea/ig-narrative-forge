@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/readership.test.ts
+// run with: bun test ./src/lib/readership.test.ts
 import { describe, it, expect } from "bun:test";
 import { readershipChange, MEANINGFUL_READERS } from "./readership";
 

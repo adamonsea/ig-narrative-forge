@@ -44,7 +44,7 @@ export function createScraperToastMessage(
   sourceName: string,
   articlesFound: number = 0,
   articlesStored: number = 0,
-  error?: string
+  error?: string | undefined
 ) {
   const uiMessage = getScraperUIMessage(status);
   

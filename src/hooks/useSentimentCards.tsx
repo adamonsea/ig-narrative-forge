@@ -8,15 +8,15 @@ interface SentimentCard {
   content: {
     headline: string;
     statistics: string;
-    key_quote?: string;
-    external_sentiment?: string;
+    key_quote?: string | undefined;
+    external_sentiment?: string | undefined;
     summary: string;
   };
   sources: Array<{
     url: string;
     title: string;
     date: string;
-    author?: string;
+    author?: string | undefined;
   }>;
   sentiment_score: number;
   confidence_score: number;
@@ -31,10 +31,10 @@ interface SentimentCard {
     type: 'hero' | 'mention-count' | 'sentiment-score' | 'confidence-score' | 'forum-insight' | 'quote' | 'references';
     content: string;
     order: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, any> | undefined;
   }>;
-  display_count?: number;
-  last_shown_at?: string;
+  display_count?: number | undefined;
+  last_shown_at?: string | undefined;
 }
 
 export const useSentimentCards = (topicId?: string) => {
@@ -80,7 +80,7 @@ export const useSentimentCards = (topicId?: string) => {
         throw fetchError;
       }
 
-      setSentimentCards((data || [])
+      setSentimentCards(((data || [])
         .map(card => ({
           ...card,
           content: card.content as any,
@@ -97,7 +97,7 @@ export const useSentimentCards = (topicId?: string) => {
           updated_at: card.updated_at || card.created_at || '',
           display_count: card.display_count || 0,
           last_shown_at: card.last_shown_at || null
-        }))
+        }))) as unknown as SentimentCard[]
       );
     } catch (err) {
       console.error('Error loading sentiment cards:', err);

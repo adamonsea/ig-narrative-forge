@@ -1,15 +1,15 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router-compat';
 
 interface WelcomeFlashCardModalProps {
   isOpen: boolean;
   onClose: () => void;
   topicSlug: string;
-  headline?: string;
-  ctaText?: string;
-  showAboutLink?: boolean;
-  aboutPageEnabled?: boolean;
+  headline?: string | undefined;
+  ctaText?: string | undefined;
+  showAboutLink?: boolean | undefined;
+  aboutPageEnabled?: boolean | undefined;
 }
 
 export const WelcomeFlashCardModal = ({

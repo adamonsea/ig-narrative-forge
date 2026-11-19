@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { WIDGET_JS_VERSION } from '@/lib/widgetEmbed';
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "@/lib/router-compat";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { edgeErrorMessage } from "@/lib/edgeError";
@@ -22,9 +22,9 @@ interface TopicData {
   slug: string;
   public_widget_builder_enabled: boolean;
   branding_config?: {
-    primary_color?: string;
-    logo_url?: string;
-    icon_url?: string;
+    primary_color?: string | undefined;
+    logo_url?: string | undefined;
+    icon_url?: string | undefined;
   } | null;
 }
 
@@ -52,17 +52,17 @@ interface FeedSource {
 interface PreviewStory {
   title: string;
   url: string;
-  source_name?: string;
-  image_url?: string;
+  source_name?: string | undefined;
+  image_url?: string | undefined;
 }
 
 // Feed data returned from edge function (different from TopicData)
 interface PreviewFeed {
   name: string;
   slug: string;
-  logo_url?: string | null;
-  icon_url?: string | null;
-  brand_color?: string;
+  logo_url?: string | null | undefined;
+  icon_url?: string | null | undefined;
+  brand_color?: string | undefined;
 }
 
 export default function PublicWidgetBuilder() {
@@ -134,7 +134,7 @@ export default function PublicWidgetBuilder() {
     loadTopic();
   }, [slug]);
 
-  const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL || 'https://eezeenews.supabase.co'}/functions/v1`;
+  const FUNCTIONS_BASE = `${import.meta.env['VITE_SUPABASE_URL'] || 'https://eezeenews.supabase.co'}/functions/v1`;
 
   // Load the publications that appear in this feed
   useEffect(() => {
@@ -832,8 +832,8 @@ function WidgetPreview({
   theme: 'light' | 'dark'; 
   accent: string;
   topicName: string;
-  wideLayout?: boolean;
-  customAvatar?: string;
+  wideLayout?: boolean | undefined;
+  customAvatar?: string | undefined;
 }) {
   const isDark = theme === 'dark';
   const textColor = isDark ? '#f3f4f6' : '#1f2937';
@@ -869,7 +869,7 @@ function WidgetPreview({
         <div className="p-4 border-b flex items-center gap-3" style={{ borderColor }}>
           {(customAvatar || data.feed?.icon_url || data.feed?.logo_url) ? (
             <img 
-              src={customAvatar || data.feed?.icon_url || data.feed?.logo_url} 
+              src={(customAvatar || data.feed?.icon_url || data.feed?.logo_url)!} 
               alt="" 
               className="w-8 h-8 rounded-full object-cover" 
             />
@@ -1007,7 +1007,7 @@ function WidgetPreview({
       <div className="p-3 border-b flex items-center gap-2" style={{ borderColor }}>
         {(customAvatar || data.feed?.icon_url || data.feed?.logo_url) ? (
           <img 
-            src={customAvatar || data.feed?.icon_url || data.feed?.logo_url} 
+            src={(customAvatar || data.feed?.icon_url || data.feed?.logo_url)!} 
             alt="" 
             className="w-6 h-6 rounded-full object-cover" 
           />

@@ -32,8 +32,8 @@ export interface QuizResponse {
   selectedOption: string;
   optionDistribution: Record<string, number>;
   totalResponses: number;
-  correctRate?: number;
-  alreadyAnswered?: boolean;
+  correctRate?: number | undefined;
+  alreadyAnswered?: boolean | undefined;
 }
 
 // Generate a persistent visitor ID for quiz deduplication
@@ -172,7 +172,7 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean, 
       // Shuffle questions using Fisher-Yates for variety
       for (let i = questions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [questions[i], questions[j]] = [questions[j], questions[i]];
+        [questions[i], questions[j]] = [questions[j]!, questions[i]!];
       }
 
       // Return shuffled questions (limit to 10 for display)
@@ -218,8 +218,8 @@ export const useSubmitQuizResponse = () => {
       questionId: string;
       selectedOption: string;
       visitorId: string;
-      userId?: string;
-      responseTimeMs?: number;
+      userId?: string | undefined;
+      responseTimeMs?: number | undefined;
     }): Promise<QuizResponse> => {
       const { data, error } = await supabase.functions.invoke('submit-quiz-response', {
         body: {

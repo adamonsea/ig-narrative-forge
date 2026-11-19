@@ -4,17 +4,17 @@ import { OnboardingTooltip } from './OnboardingTooltip';
 import { HandSwipeHint } from '../HandSwipeHint';
 
 interface OnboardingConfig {
-  welcomeCardEnabled?: boolean;
-  welcomeCardHeadline?: string;
-  welcomeCardCtaText?: string;
-  welcomeCardAboutLink?: boolean;
-  aboutPageEnabled?: boolean;
+  welcomeCardEnabled?: boolean | undefined;
+  welcomeCardHeadline?: string | undefined;
+  welcomeCardCtaText?: string | undefined;
+  welcomeCardAboutLink?: boolean | undefined;
+  aboutPageEnabled?: boolean | undefined;
 }
 
 interface FeedOnboardingOrchestratorProps {
   topicSlug: string;
-  playModeEnabled?: boolean;
-  config?: OnboardingConfig;
+  playModeEnabled?: boolean | undefined;
+  config?: OnboardingConfig | undefined;
   onWelcomeClose?: () => void;
 }
 

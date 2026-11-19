@@ -63,7 +63,7 @@ export const useParliamentaryInsightCards = (
           return;
         }
 
-        setVotes(data || []);
+        setVotes((data || []) as unknown as ParliamentaryVote[]);
       } catch (err) {
         console.error('Failed to fetch parliamentary insight cards:', err);
         setVotes([]);

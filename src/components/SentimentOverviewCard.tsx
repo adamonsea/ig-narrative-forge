@@ -98,8 +98,8 @@ export const SentimentOverviewCard = ({ topicId }: SentimentOverviewCardProps) =
 
       // Calculate trend
       if (aggregated.length >= 2) {
-        const recent = aggregated[aggregated.length - 1].ratio;
-        const previous = aggregated[aggregated.length - 2].ratio;
+        const recent = aggregated[aggregated.length - 1]!.ratio;
+        const previous = aggregated[aggregated.length - 2]!.ratio;
         const diff = recent - previous;
         
         if (diff > 5) setTrend('improving');
@@ -203,7 +203,7 @@ export const SentimentOverviewCard = ({ topicId }: SentimentOverviewCardProps) =
                     borderRadius: '6px',
                     fontSize: '12px'
                   }}
-                  formatter={(value: number, name: string) => [value, name === 'positive' ? 'Positive' : 'Negative']}
+                  formatter={(value, name) => [value, name === 'positive' ? 'Positive' : 'Negative']}
                 />
                 <Area
                   type="monotone"

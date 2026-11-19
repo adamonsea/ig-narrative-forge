@@ -13,8 +13,8 @@ export const isBrokenWhatsOnSource = (consecutiveEmptyChecks: number | null | un
   (consecutiveEmptyChecks ?? 0) >= BROKEN_AFTER_EMPTY_CHECKS;
 
 const shortDate = (ymd: string): string => {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  const [y, m, d] = ymd.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m! - 1, d)).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 };
 
 /** "Found 8 upcoming events, e.g. 'The Nutcracker' on 4 Dec" */
@@ -85,18 +85,18 @@ export interface WhatsOnFeedEvent {
   source_url: string | null;
   source_name: string | null;
   /** Category key (see EventCategoryIcon); individual cards only. */
-  event_type?: string | null;
-  price?: string | null;
-  is_free?: boolean | null;
-  description?: string | null;
+  event_type?: string | null | undefined;
+  price?: string | null | undefined;
+  is_free?: boolean | null | undefined;
+  description?: string | null | undefined;
   /** Curatr's stored copy of the listing photo (topic-assets path); individual cards only. */
-  image_path?: string | null;
+  image_path?: string | null | undefined;
 }
 
 const DAY = 86_400_000;
 const ymdToUtc = (ymd: string) => {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
+  const [y, m, d] = ymd.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m! - 1, d));
 };
 const fmt = (ymd: string, opts: Intl.DateTimeFormatOptions) =>
   ymdToUtc(ymd).toLocaleDateString("en-GB", { ...opts, timeZone: "UTC" });
@@ -125,8 +125,8 @@ export function eventTime(hms: string | null | undefined): string | null {
   if (!hms) return null;
   const [h, m] = hms.split(":").map(Number);
   if (Number.isNaN(h)) return null;
-  const suffix = h >= 12 ? "pm" : "am";
-  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const suffix = h! >= 12 ? "pm" : "am";
+  const h12 = h! % 12 === 0 ? 12 : h! % 12;
   return m ? `${h12}:${String(m).padStart(2, "0")}${suffix}` : `${h12}${suffix}`;
 }
 
@@ -251,7 +251,7 @@ export function hasStarted(e: Pick<WhatsOnFeedEvent, "start_date" | "start_time"
  * Empty sets are skipped; each holds at most WHATS_ON_MAX, soonest first.
  */
 export function whatsOnSets<T extends Pick<WhatsOnFeedEvent, "start_date" | "start_time" | "title">>(events: T[], today: string, time: string): WhatsOnSet<T>[] {
-  const [y, m] = today.split("-").map(Number);
+  const [y, m] = today.split("-").map(Number) as [number, number];
   const monthEnd = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
   const sorted = events
     .filter((e) => !hasStarted(e, today, time))
@@ -335,7 +335,7 @@ export function comingUpTimeline<L extends Timed, W extends Timed>(
  * Events waiting for the owner's OK, pinned at the top of the Event pool:
  * reader suggestions first, then soonest first; started ones dropped.
  */
-export function toCheckOrder<T extends Timed & { source_api?: string | null }>(waiting: T[], today: string, time: string): T[] {
+export function toCheckOrder<T extends Timed & { source_api?: string | null | undefined }>(waiting: T[], today: string, time: string): T[] {
   const reader = (e: T) => (e.source_api === "reader" ? 0 : 1);
   return waiting.filter((e) => !hasStarted(e, today, time)).sort((a, b) => reader(a) - reader(b) || byWhen(a, b));
 }

@@ -9,8 +9,8 @@ const STORAGE_KEY = 'newsletter_subscriptions';
 
 interface StoredSubscriptions {
   [topicId: string]: {
-    daily?: boolean;
-    weekly?: boolean;
+    daily?: boolean | undefined;
+    weekly?: boolean | undefined;
   };
 }
 

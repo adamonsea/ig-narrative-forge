@@ -9,16 +9,16 @@ export interface AssistantDestination {
   label: string;
   /** What lives there — used by the assistant to choose the right one. */
   describes: string;
-  tab?: "feed" | "sources" | "settings" | "reviews";
-  section?: "coverage" | "voice" | "automation" | "distribution" | "identity" | "features";
+  tab?: "feed" | "sources" | "settings" | "reviews" | undefined;
+  section?: "coverage" | "voice" | "automation" | "distribution" | "identity" | "features" | undefined;
   /** Element id to scroll to and highlight. */
-  anchor?: string;
+  anchor?: string | undefined;
   /** Extra query params (e.g. auto-expanding the sources panel). */
-  params?: Record<string, string>;
+  params?: Record<string, string> | undefined;
   /** Absolute path instead of the feed dashboard. */
   path?: (slug: string) => string;
   /** Opens in a new tab (public-facing pages). */
-  external?: boolean;
+  external?: boolean | undefined;
 }
 
 export const ASSISTANT_DESTINATIONS: AssistantDestination[] = [

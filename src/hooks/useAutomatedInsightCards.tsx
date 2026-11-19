@@ -11,7 +11,7 @@ export interface AutomatedInsightCard {
     type: string;
     content: string;
     word_count: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, any> | undefined;
   }>;
   relevance_score: number;
   display_frequency: number;

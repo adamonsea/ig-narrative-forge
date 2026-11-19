@@ -1,3 +1,4 @@
+import { opt } from "@/lib/optionalProps";
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,7 @@ interface SourceSuggestion {
   type: 'RSS' | 'News' | 'Blog' | 'Publication' | 'Official' | 'WordPress' | 'Substack';
   confidence_score: number;
   rationale: string;
-  platform_reliability?: 'high' | 'medium' | 'low';
+  platform_reliability?: 'high' | 'medium' | 'low' | undefined;
 }
 
 interface ImprovedSourceSuggestionToolProps {
@@ -20,9 +21,9 @@ interface ImprovedSourceSuggestionToolProps {
   description: string;
   keywords: string;
   topicType: 'regional' | 'keyword';
-  region?: string;
-  topicId?: string;
-  autoTrigger?: boolean;
+  region?: string | undefined;
+  topicId?: string | undefined;
+  autoTrigger?: boolean | undefined;
   onTriggered?: () => void;
 }
 
@@ -207,7 +208,7 @@ export const ImprovedSourceSuggestionTool = ({
             credibility_score: credibilityScore,
             is_active: true,
             source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
-            region: topicType === 'regional' ? region : null
+            ...opt("region", topicType === 'regional' ? region : null)
           })
           .select('id')
           .single();

@@ -1,4 +1,4 @@
-// @ts-nocheck -- run with: bun test ./src/lib/feedView.test.ts
+// run with: bun test ./src/lib/feedView.test.ts
 import { describe, expect, it } from "bun:test";
 import { effectiveFeedView, FEED_VIEWS, showFeedViewToggle, viewShowsEvents, viewShowsNews } from "./feedView";
 

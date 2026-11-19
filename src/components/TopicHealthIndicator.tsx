@@ -54,7 +54,7 @@ export const TopicHealthIndicator = ({ topicId, topicName }: TopicHealthIndicato
       const activeSources = sources.filter(s => s.is_active).length;
       const inactiveSources = sources.filter(s => !s.is_active).length;
       const criticalSourcesInactive = sources.filter(s => s.is_critical && !s.is_active).length;
-      const failingSources = sources.filter(s => s.is_active && s.consecutive_failures >= 3).length;
+      const failingSources = sources.filter(s => s.is_active && s.consecutive_failures! >= 3).length;
 
       // Check for stale sources (not scraped in 48+ hours)
       const now = new Date();

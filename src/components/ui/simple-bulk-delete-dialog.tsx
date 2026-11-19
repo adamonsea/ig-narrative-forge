@@ -7,9 +7,9 @@ interface SimpleBulkDeleteDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   selectedCount: number;
-  isDeleting?: boolean;
-  title?: string;
-  description?: string;
+  isDeleting?: boolean | undefined;
+  title?: string | undefined;
+  description?: string | undefined;
 }
 
 export const SimpleBulkDeleteDialog = ({ 

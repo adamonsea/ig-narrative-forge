@@ -14,14 +14,14 @@ interface LifecycleStep {
 }
 
 interface StoryLifecycleTooltipProps {
-  gatheredAt?: string | null;
-  simplifiedAt?: string | null;
-  illustratedAt?: string | null;
-  animatedAt?: string | null;
-  isAutoGathered?: boolean;
-  isAutoSimplified?: boolean;
-  isAutoIllustrated?: boolean;
-  isAutoAnimated?: boolean;
+  gatheredAt?: string | null | undefined;
+  simplifiedAt?: string | null | undefined;
+  illustratedAt?: string | null | undefined;
+  animatedAt?: string | null | undefined;
+  isAutoGathered?: boolean | undefined;
+  isAutoSimplified?: boolean | undefined;
+  isAutoIllustrated?: boolean | undefined;
+  isAutoAnimated?: boolean | undefined;
   children: React.ReactNode;
 }
 

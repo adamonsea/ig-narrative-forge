@@ -73,7 +73,7 @@ export function EmergencyRecoveryDashboard() {
         // Find last successful scrape
         const lastSuccessfulScrape = sources
           .filter(s => s.last_scraped_at && (s.articles_scraped || 0) > 0)
-          .sort((a, b) => new Date(b.last_scraped_at).getTime() - new Date(a.last_scraped_at).getTime())[0]?.last_scraped_at;
+          .sort((a, b) => new Date(b.last_scraped_at!).getTime() - new Date(a.last_scraped_at!).getTime())[0]?.last_scraped_at;
 
         // Identify issues
         const issues: string[] = [];
@@ -86,7 +86,7 @@ export function EmergencyRecoveryDashboard() {
         healthData.push({
           topic_id: topic.id,
           topic_name: topic.name,
-          region: topic.region,
+          region: topic.region!,
           total_sources: totalSources,
           active_sources: activeSources,
           failing_sources: failingSources,

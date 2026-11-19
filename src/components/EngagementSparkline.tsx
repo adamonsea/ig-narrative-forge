@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 
 interface EngagementSparklineProps {
   topicId: string;
-  minimal?: boolean;
+  minimal?: boolean | undefined;
 }
 
 interface DayData {
@@ -49,7 +49,7 @@ export const EngagementSparkline = ({ topicId, minimal = false }: EngagementSpar
         const dayMap = new Map<string, { swipes: number; shares: number; visitors: number }>();
         for (let i = 0; i < effectiveRange; i++) {
           const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-          dayMap.set(date.toISOString().split('T')[0], { swipes: 0, shares: 0, visitors: 0 });
+          dayMap.set((date.toISOString().split('T')[0])!, { swipes: 0, shares: 0, visitors: 0 });
         }
 
         const visitorsPerDay = new Map<string, Set<string>>();
@@ -91,7 +91,7 @@ export const EngagementSparkline = ({ topicId, minimal = false }: EngagementSpar
       for (let i = 0; i < effectiveRange; i++) {
         const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
         const dateKey = date.toISOString().split('T')[0];
-        dayMap.set(dateKey, { swipes: 0, shares: 0, visitors: 0 });
+        dayMap.set(dateKey!, { swipes: 0, shares: 0, visitors: 0 });
       }
 
       interactions.forEach((interaction: any) => {

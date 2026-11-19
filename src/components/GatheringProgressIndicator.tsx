@@ -12,15 +12,15 @@ interface GatheringStatus {
   articlesFound: number;
   progress: number;
   lastUpdate: string;
-  error?: string;
-  diagnosticInfo?: string;
-  alternateRouteUsed?: string;
+  error?: string | undefined;
+  diagnosticInfo?: string | undefined;
+  alternateRouteUsed?: string | undefined;
 }
 
 interface GatheringProgressIndicatorProps {
   topicId: string;
   isVisible: boolean;
-  jobRunId?: string | null;
+  jobRunId?: string | null | undefined;
   onComplete?: () => void;
 }
 

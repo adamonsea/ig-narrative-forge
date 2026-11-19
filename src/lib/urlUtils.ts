@@ -128,7 +128,7 @@ export const publicationFromUrl = (input?: string | null): string => {
   host = host.replace(/^www\./i, '').toLowerCase();
   if (!host) return '';
 
-  if (KNOWN_PUBLICATIONS[host]) return KNOWN_PUBLICATIONS[host];
+  if (KNOWN_PUBLICATIONS[host]) return KNOWN_PUBLICATIONS[host]!;
 
   const parts = host.split('.');
 
@@ -163,8 +163,8 @@ const UNUSABLE_NAMES = new Set([
  * domain when the stored value is a fragment ("Co", "Gov") or looks like a bare domain.
  */
 export const resolvePublicationName = (
-  storedName?: string | null,
-  sourceUrl?: string | null
+  storedName?: string | null | undefined,
+  sourceUrl?: string | null | undefined
 ): string => {
   const derived = publicationFromUrl(sourceUrl);
   const stored = (storedName || '').trim();

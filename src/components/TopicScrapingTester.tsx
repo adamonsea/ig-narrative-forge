@@ -37,7 +37,7 @@ export function TopicScrapingTester() {
   // Set initial tab when topics load
   React.useEffect(() => {
     if (topics && topics.length > 0 && !activeTab) {
-      setActiveTab(topics[0].slug);
+      setActiveTab(topics[0]!.slug);
     }
   }, [topics, activeTab]);
 
@@ -74,10 +74,10 @@ export function TopicScrapingTester() {
         <CardTitle>Topic Scraping Test Suite</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs value={activeTab || topics[0].slug} onValueChange={setActiveTab}>
+        <Tabs value={(activeTab || topics[0]!.slug)!} onValueChange={setActiveTab}>
           <TabsList className={`grid w-full grid-cols-${Math.min(topics.length, 4)}`}>
             {topics.slice(0, 4).map((topic) => (
-              <TabsTrigger key={topic.slug} value={topic.slug} className="flex items-center gap-2">
+              <TabsTrigger key={topic.slug} value={topic.slug!} className="flex items-center gap-2">
                 <Badge variant={topic.topic_type === 'regional' ? 'secondary' : 'outline'}>
                   {topic.topic_type === 'regional' ? 'Regional' : 'Keyword'}
                 </Badge>
@@ -87,7 +87,7 @@ export function TopicScrapingTester() {
           </TabsList>
           
           {topics.map((topic) => (
-            <TabsContent key={topic.slug} value={topic.slug}>
+            <TabsContent key={topic.slug} value={topic.slug!}>
               <UniversalScrapingValidator 
                 topicId={topic.id}
                 topicName={`${topic.name} (${topic.topic_type === 'regional' ? 'Regional' : 'Keyword'})`}

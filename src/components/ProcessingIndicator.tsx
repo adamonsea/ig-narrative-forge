@@ -3,8 +3,8 @@ import { Loader2 } from "lucide-react";
 
 interface ProcessingIndicatorProps {
   isProcessing: boolean;
-  queuePosition?: number;
-  estimatedTime?: string;
+  queuePosition?: number | undefined;
+  estimatedTime?: string | undefined;
 }
 
 export const ProcessingIndicator: React.FC<ProcessingIndicatorProps> = ({

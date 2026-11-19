@@ -11,10 +11,10 @@ import { CheckCircle, XCircle, Clock, Play, Loader2, AlertTriangle, FileText, Ex
 interface ValidationResult {
   name: string;
   status: 'pending' | 'running' | 'passed' | 'failed' | 'warning';
-  message?: string;
-  duration?: number;
-  details?: any;
-  progress?: number;
+  message?: string | undefined;
+  duration?: number | undefined;
+  details?: any | undefined;
+  progress?: number | undefined;
 }
 
 interface SourceValidation {
@@ -43,7 +43,7 @@ export const Phase4Validator = () => {
   const [currentTest, setCurrentTest] = useState('');
   const { toast } = useToast();
 
-  const updateValidationStatus = (index: number, status: ValidationResult['status'], message?: string, details?: any, duration?: number, progress?: number) => {
+  const updateValidationStatus = (index: number, status: ValidationResult['status'], message?: string | undefined, details?: any | undefined, duration?: number | undefined, progress?: number) => {
     setValidations(prev => prev.map((validation, i) => 
       i === index ? { ...validation, status, message, details, duration, progress } : validation
     ));
@@ -204,7 +204,7 @@ export const Phase4Validator = () => {
           sourceValidation.errors.push(`Database error: ${articlesError.message}`);
         } else if (articles) {
           sourceValidation.articlesFound = articles.length;
-          sourceValidation.validArticles = articles.filter(a => a.word_count >= 50).length;
+          sourceValidation.validArticles = articles.filter(a => a.word_count! >= 50).length;
           sourceValidation.titlesExtracted = articles.filter(a => a.title && a.title.length > 10).length;
           sourceValidation.avgWordCount = articles.length > 0 
             ? Math.round(articles.reduce((sum, a) => sum + (a.word_count || 0), 0) / articles.length)
@@ -277,7 +277,7 @@ export const Phase4Validator = () => {
     // Articles with substantial content (likely full extraction, not just RSS summary)
     const fullContentArticles = articles.filter(a => 
       a.body.length > 500 && // More than typical RSS summary
-      a.word_count > 100 &&   // Substantial word count
+      a.word_count! > 100 &&   // Substantial word count
       !a.body.includes('[...]') && // No truncation indicators
       !a.body.includes('Read more') // No summary indicators
     );
