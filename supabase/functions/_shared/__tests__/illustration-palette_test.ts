@@ -61,3 +61,12 @@ Deno.test('quick brief bans eyes and fine lines and keeps a small detail budget'
   assert(p.includes('2 or 3 telling details'));
   assert(p.includes('Fine lines'));
 });
+
+Deno.test('quick brief shows form with shadow and white space, never outlines', () => {
+  const p = buildIllustrativePrompt('neutral', 'a bus stop', 'Feed', '#3B82F6', undefined, null, 'quick');
+  assert(p.includes('NO outlines'));
+  assert(p.includes('negative space'));
+  assert(p.includes('hard-edged shadow shape'));
+  assert(!p.includes('outlines are allowed'));
+  assert(!p.includes('outlines, shadows and the darkest masses'));
+});

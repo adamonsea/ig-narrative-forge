@@ -451,19 +451,25 @@ Express it through the big shapes that make it recognisable, stylized to match t
     : '';
 
   if (variant === 'quick') {
-    const quickInkRule = inkRule.replace('outlines, shadows and the darkest masses', 'a few bold outlines on key shapes, hard-edged shadow shapes and the darkest masses');
+    const quickInkRule = inkRule.replace('outlines, shadows and the darkest masses', 'hard-edged shadow shapes and the darkest masses only (never outlines or lines)');
     return `SIMPLE SCREEN-PRINT ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
 
-Make it look like a bold, simple screen-print poster: flat shapes, a few confident lines, and just enough detail to tell the story. Simple, but still a finished illustration.
+Make it look like a bold, simple screen-print poster: flat shapes, soft-spoken shadow and white space, and just enough detail to tell the story. Simple, but still a finished illustration.
 
 SHAPES (most important):
 - The picture is built from about 12 to 20 flat shapes. One clear subject, a middle ground and a simple background.
 - Keep 2 or 3 telling details that explain the story (a bus stop sign, a shop awning, a row of windows as simple blocks). Drop everything else.
 - Nothing smaller than a hand at the picture's scale.
-- Mostly colour meeting colour. Bold, even-weight outlines are allowed on the main shapes — never thin, sketchy, broken or repeated lines.
+- NO outlines and NO contour lines. Every edge is where one flat colour meets another.
+- Separate shapes with negative space: leave a sliver of white paper between a figure and the wall behind it, between a roof and the sky.
+
+LIGHT AND SHADOW (this is how form is shown):
+- Form comes from one slight, flat, hard-edged shadow shape on the side away from the light — a slightly darker tint of the colour it sits on.
+- A coat fold, a doorway, the underside of an awning: a shadow shape, never a line.
+- Keep shadows quiet and few; most of each shape stays a single flat colour.
 
 PEOPLE:
-- Minimal faces: a hair shape and at most a single nose or jaw line. NO eyes, NO mouths, NO eyebrows, NO wrinkles, NO hair strands.
+- Minimal faces: a hair shape, and at most a small shadow shape suggesting a nose or jaw (never a line). NO eyes, NO mouths, NO eyebrows, NO wrinkles, NO hair strands.
 - Figures can face any way; side and three-quarter views read well.
 - Bodies are simple flat shapes with one or two clothing cues (a coat collar, a scarf, a hi-vis vest). Hands as simple mitten shapes, no fingers.
 - Mood (${expressionGuidance}) comes from posture and composition only.
@@ -478,7 +484,8 @@ COMPOSITION: bold, graphic, reads instantly at thumbnail size. Landscape 3:2.
 
 FORBIDDEN:
 ❌ Eyes, mouths, expressions or any facial rendering
-❌ Fine lines, thin outlines, hatching, stippling, scribbles, pen or pencil work
+❌ Outlines or contour lines around any shape, thick or thin
+❌ Fine lines, hatching, stippling, scribbles, pen or pencil work
 ❌ Clutter, patterns, tiny objects, background crowds of small figures
 ❌ Gradients, soft shading, shadows with soft edges, 3D, photorealism
 ❌ Pure black or heavy near-black areas
