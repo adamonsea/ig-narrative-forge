@@ -416,7 +416,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               thumbnailUrl={story.cover_illustration_url ? (optimizeImageUrl(story.cover_illustration_url, { width: 128, height: 128, quality: 70 }) || story.cover_illustration_url) : null}
               thumbClassName={readingNow ? 'reading-ring' : undefined}
               thumbTitle={readingNow ? 'Being read now' : undefined}
-              onOpen={() => setOpenStoryId(story.id)}
+              onOpen={() => (repeatOf?.has(story.id) ? setCompareId(story.id) : setOpenStoryId(story.id))}
               keepActions={publishing}
               pinActions={toCheck}
               badges={
