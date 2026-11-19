@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { londonToday, eventSourceKindLabel } from "@/lib/whatsOn";
 import { attentionOrder, newsSourceHealth, typicalGapDays, type HealthVerdict } from "@/lib/sourceHealth";
 import { EventSourcePanel, host, useEventSourcesDeck, type EventSourceCardData } from "@/components/events/EventSources";
-import { SourceCard, SourceIcon, hostOf } from "./SourceCard";
+import { SourceCard, SourceIcon, hostOf, type SourceFigure } from "./SourceCard";
 import { NewsSourcePanel, type NewsSourceSettings, type NewsSourceView } from "./NewsSourcePanel";
 
 interface Rhythm { source_id: string; added_at: string | null; last_arrival_at: string | null; arrival_days: string[] | null; last7: number[] | null }
@@ -41,6 +41,14 @@ function Shelf({ id, title, children }: { id: string; title: string; children: R
 
 const GRID = "grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
 
+interface Periods { kind: "news" | "events"; source_id: string; w: number; m: number; y: number }
+
+const periodFigures = (p: Periods | undefined, thing: string): SourceFigure[] => [
+  { key: "w", label: "W", tip: `${thing} in the feed, last 7 days`, value: p?.w ?? 0 },
+  { key: "m", label: "M", tip: `${thing} in the feed, last 30 days`, value: p?.m ?? 0 },
+  { key: "y", label: "Y", tip: `${thing} in the feed, last 12 months`, value: p?.y ?? 0 },
+];
+
 /**
  * The Sources tab as two shelves of cards (News, Events), sources needing a look pinned first,
  * and one Archived fold. Card fronts stay quiet; everything else is in the side panel.
@@ -58,6 +66,18 @@ export function SourceShelves(p: SourceShelvesProps) {
     staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
+
+  const { data: periods } = useQuery({
+    queryKey: ["source-periods", p.topicId, scrapedKey, p.eventsReloadKey],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)("get_topic_source_periods", { p_topic_id: p.topicId });
+      if (error) throw error;
+      return (data ?? []) as Periods[];
+    },
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
+  const periodOf = useMemo(() => new Map((periods ?? []).map((r) => [`${r.kind}:${r.source_id}`, r])), [periods]);
 
   const cards = useMemo(() => {
     const byId = new Map((rhythm ?? []).map((r) => [r.source_id, r]));
@@ -103,7 +123,7 @@ export function SourceShelves(p: SourceShelvesProps) {
               return (
                 <SourceCard key={c.source.id} name={c.name} domain={c.source.canonical_domain || hostOf(c.source.feed_url)} kind="news"
                   health={c.health} healthLabel={c.verdict.label} dots={c.dots}
-                  figure={c.source.stories_published_7d ?? 0} figureLabel="in feed this week" busy={busy}
+                  figures={periodFigures(periodOf.get(`news:${c.source.id}`), "Stories")} busy={busy}
                   onOpen={() => setOpenNews(c.source.id)}
                   action={
                     <Button size="sm" variant="outline" onClick={() => p.onGather(c.source)} disabled={busy || !c.source.feed_url} aria-label={`Gather from ${c.name} now`}>
@@ -126,7 +146,8 @@ export function SourceShelves(p: SourceShelvesProps) {
               const busy = deck.busy === s.id;
               return (
                 <SourceCard key={s.id} name={s.name} domain={host(s.url)} kind="events" health={s.health} healthLabel={s.verdict.label}
-                  dots={s.dots} figure={s.upcoming} figureLabel="coming up" busy={busy} onOpen={() => setOpenEvent(s.id)}
+                  dots={s.dots} busy={busy}
+                  figures={[{ key: "c", label: "C", tip: "Coming up in the feed now", value: s.upcoming }, ...periodFigures(periodOf.get(`events:${s.id}`), "Events")]} onOpen={() => setOpenEvent(s.id)}
                   action={
                     <Button size="sm" variant="outline" onClick={() => deck.gather(s)} disabled={busy} aria-label={`Gather from ${s.name} now`}>
                       <RefreshCw className={`mr-2 h-4 w-4 ${busy ? "animate-spin" : ""}`} aria-hidden="true" />{busy ? "Checking…" : "Gather"}

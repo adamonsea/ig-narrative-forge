@@ -17,7 +17,7 @@ import { RememberedFold } from "@/components/settings/RememberedFold";
 import { DeskCard, DeskBadge, MetaLine } from "@/components/topic-pipeline/DeskCard";
 import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
 import { AttentionTag } from "@/components/events/DeskEvents";
-import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT } from "@/components/sources/SourceCard";
+import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
 
 /**
  * /design — the workspace design system, rendered from the parts the Desk already uses.
@@ -219,6 +219,19 @@ export default function DesignSystem() {
                   </p>
                 </div>
               ))}
+            </div>
+            <div className="flex flex-wrap items-end gap-8">
+              <SourceFigures figures={[
+                { key: "w", label: "W", tip: "Stories in the feed, last 7 days", value: 19 },
+                { key: "m", label: "M", tip: "Stories in the feed, last 30 days", value: 74 },
+                { key: "y", label: "Y", tip: "Stories in the feed, last 12 months", value: 612 },
+              ]} />
+              <SourceFigures figures={[
+                { key: "c", label: "C", tip: "Coming up in the feed now", value: 23 },
+                { key: "w", label: "W", tip: "Events in the feed, last 7 days", value: 6 },
+                { key: "m", label: "M", tip: "Events in the feed, last 30 days", value: 31 },
+                { key: "y", label: "Y", tip: "Events in the feed, last 12 months", value: 140 },
+              ]} />
             </div>
           </Block>
 

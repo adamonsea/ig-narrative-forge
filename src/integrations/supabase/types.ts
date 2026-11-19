@@ -7107,6 +7107,16 @@ export type Database = {
           term: string
         }[]
       }
+      get_topic_source_periods: {
+        Args: { p_topic_id: string }
+        Returns: {
+          kind: string
+          m: number
+          source_id: string
+          w: number
+          y: number
+        }[]
+      }
       get_topic_source_rhythm: {
         Args: { p_topic_id: string }
         Returns: {

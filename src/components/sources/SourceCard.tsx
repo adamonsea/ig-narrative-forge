@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { CalendarDays, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DeskCard } from "@/components/topic-pipeline/DeskCard";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SourceHealth } from "@/lib/sourceHealth";
 import { SourceDots } from "./SourceDots";
 
@@ -49,13 +50,36 @@ export function SourceIcon({ domain, kind = "news", size = "md" }: { domain: str
   );
 }
 
+export interface SourceFigure { key: string; label: string; tip: string; value: number }
+
+/** A small table of letters over figures (e.g. W M Y), each letter explained in a tooltip. */
+export function SourceFigures({ figures }: { figures: SourceFigure[] }) {
+  return (
+    <dl className="flex shrink-0 gap-4 text-right">
+      {figures.map((f) => (
+        <div key={f.key} className="flex min-w-6 flex-col items-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <dt tabIndex={0} className="cursor-default rounded text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span aria-hidden="true">{f.label}</span><span className="sr-only">{f.tip}</span>
+              </dt>
+            </TooltipTrigger>
+            <TooltipContent>{f.tip}</TooltipContent>
+          </Tooltip>
+          <dd className="text-lg font-semibold leading-tight tabular-nums text-foreground">{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 /**
- * One source on the Sources tab. At rest: a muted health-coloured fill, name, 7-day dots and one number.
+ * One source on the Sources tab. At rest: a muted health-coloured fill, name, 7-day dots and a mini W/M/Y table.
  * Hover (or first tap) shows Gather; click opens the side panel with everything else.
  */
-export function SourceCard({ name, domain, kind, health, healthLabel, dots, figure, figureLabel, action, busy, onOpen }: {
+export function SourceCard({ name, domain, kind, health, healthLabel, dots, figures, action, busy, onOpen }: {
   name: string; domain: string; kind: "news" | "events"; health: SourceHealth; healthLabel: string;
-  dots: number[]; figure: number; figureLabel: string; action?: ReactNode; busy?: boolean; onOpen: () => void;
+  dots: number[]; figures: SourceFigure[]; action?: ReactNode; busy?: boolean; onOpen: () => void;
 }) {
   const flagged = health === "failing" || health === "quiet";
   return (
@@ -67,11 +91,9 @@ export function SourceCard({ name, domain, kind, health, healthLabel, dots, figu
       className={cn(HEALTH_FILL[health])}
       badges={flagged ? <span className={cn("text-sm font-medium", HEALTH_TEXT[health])}>{healthLabel}</span> : null}
       meta={
-        <span className="flex w-full items-center justify-between gap-3">
+        <span className="flex w-full items-end justify-between gap-3">
           <SourceDots counts={dots} dotClass={HEALTH_DOT[health]} />
-          <span className="text-sm text-muted-foreground">
-            <span className="text-lg font-semibold tabular-nums text-foreground">{figure}</span> {figureLabel}
-          </span>
+          <SourceFigures figures={figures} />
         </span>
       }
       actions={action ?? null}
