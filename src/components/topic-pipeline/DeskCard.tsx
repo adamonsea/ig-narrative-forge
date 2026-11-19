@@ -1,5 +1,5 @@
 import { Fragment, useState, type ReactNode } from "react";
-import { Newspaper, X } from "lucide-react";
+import { Loader2, Newspaper, Pin, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -161,6 +161,35 @@ export function SpikeButton({ label = "Skip", onClick, disabled }: { label?: str
           className="mr-3 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
         >
           <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * The quick pin on a Live now card: a small, quiet icon at the end of the action row,
+ * kept apart from the spike (opposing actions never sit together). One click pins for
+ * 24 hours; on a pinned story it unpins. Longer pin lengths live in the story drawer.
+ */
+export function PinButton({ pinned = false, onClick, disabled, busy }: { pinned?: boolean; onClick: () => void; disabled?: boolean; busy?: boolean }) {
+  const label = pinned ? "Unpin" : "Pin to top for 24 hours";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          aria-pressed={pinned}
+          disabled={disabled || busy}
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          className={cn(
+            "ml-3 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+            pinned ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Pin className={cn("h-4 w-4", pinned && "fill-current")} aria-hidden="true" />}
         </button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

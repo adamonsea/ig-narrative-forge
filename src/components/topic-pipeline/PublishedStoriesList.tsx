@@ -15,7 +15,7 @@ import { AnimationInstructionsModal } from "@/components/topic-pipeline/Animatio
 import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 import { publicationFromUrl, resolvePublicationName } from "@/lib/urlUtils";
-import { DeskBadge, DeskCard, MetaLine, SpikeButton } from "./DeskCard";
+import { DeskBadge, DeskCard, MetaLine, PinButton, SpikeButton } from "./DeskCard";
 import { pinTimeLeft } from "@/lib/storyPin";
 import { StoryDrawer, type PublishedStory } from "./StoryDrawer";
 import { DuplicateCompareDrawer } from "./DuplicateCompareDrawer";
@@ -103,6 +103,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
   const [animatingVideos, setAnimatingVideos] = useState<Set<string>>(new Set());
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
+  const [pinningIds, setPinningIds] = useState<Set<string>>(new Set());
   const [cancellingQueue, setCancellingQueue] = useState<Set<string>>(new Set());
   const [openStoryId, setOpenStoryId] = useState<string | null>(null);
   const [compareId, setCompareId] = useState<string | null>(null);
@@ -122,6 +123,24 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       await onCancelProcessing(queueId);
     } finally {
       setCancellingQueue(prev => { const next = new Set(prev); next.delete(queueId); return next; });
+    }
+  };
+
+  /** One-click pin from the card: 24 hours, or unpin when it's the pinned story. */
+  const handleQuickPin = async (storyId: string) => {
+    if (!onPin) return;
+    setPinningIds(prev => new Set(prev.add(storyId)));
+    try {
+      if (pinnedId === storyId) {
+        await onPin(null, 0);
+      } else {
+        await onPin(storyId, 24);
+        toast({ title: 'Pinned for 24 hours', description: 'It leads the feed. Longer pins are in the story panel.' });
+      }
+    } catch (e: any) {
+      toast({ title: "Couldn't pin", description: edgeErrorMessage(e) || 'Try again.', variant: 'destructive' });
+    } finally {
+      setPinningIds(prev => { const n = new Set(prev); n.delete(storyId); return n; });
     }
   };
 
@@ -476,6 +495,13 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <>
                   {onSkip && <SpikeButton label="Remove from feed" onClick={() => onSkip(story)} />}
                   <Button size="sm" variant="ghost" onClick={() => onReturnToReview(story.id)}>Unpublish</Button>
+                  {feedOrder && onPin && (
+                    <PinButton
+                      pinned={pinnedId === story.id}
+                      busy={pinningIds.has(story.id)}
+                      onClick={() => handleQuickPin(story.id)}
+                    />
+                  )}
                 </>
               ) : (
                 <>
