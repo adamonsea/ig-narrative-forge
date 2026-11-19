@@ -46,7 +46,7 @@ Deno.test('satirical cartoons use white paper and no frame', () => {
   assert(/Borders, frames/.test(p));
 });
 
-// Low-cost pictures get a simpler brief: minimal faces, no fine lines, fewer shapes.
+// Low-cost pictures get a simpler brief: faces from shadow shapes, no fine lines, fewer shapes.
 Deno.test('low-quality tier uses the quick brief; medium and high keep the full brief', () => {
   assertEquals(illustrativeVariantForQuality('low'), 'quick');
   assertEquals(illustrativeVariantForQuality('medium'), 'current');
@@ -54,9 +54,12 @@ Deno.test('low-quality tier uses the quick brief; medium and high keep the full 
   assertEquals(illustrativeVariantForQuality(undefined), 'current');
 });
 
-Deno.test('quick brief bans eyes and fine lines and keeps a small detail budget', () => {
+Deno.test('quick brief builds faces from shadow shapes and keeps a small detail budget', () => {
   const p = buildIllustrativePrompt('neutral', 'a bus stop', 'Feed', '#3B82F6', undefined, null, 'quick');
-  assert(p.includes('NO eyes'));
+  assert(p.includes('two small flat shadow shapes'), 'eyes as shadow shapes');
+  assert(p.includes('one small flat shadow shape'), 'mouth as a shadow shape');
+  assert(p.includes('NO eye whites'), 'no rendered eye detail');
+  assert(!p.includes('NO eyes'), 'faces are no longer blank');
   assert(p.includes('12 to 20 flat shapes'));
   assert(p.includes('2 or 3 telling details'));
   assert(p.includes('Fine lines'));

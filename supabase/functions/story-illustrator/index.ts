@@ -934,7 +934,7 @@ serve(async (req) => {
 3. LINE WORK: Thick outer contours ONLY - NO window panes, NO brick texture, NO roof tiles, NO interior architectural detail
 4. SHADOWS: Solid deep-ink fills ONLY - NO crosshatching, NO halftone dots, NO texture patterns
 5. ROADS: Solid white ONLY - NO perspective lines, NO road markings, NO surface texture
-6. PEOPLE: Minimal faces (hair shape, at most one nose line) - NO eyes, NO mouth, NO fingers
+6. PEOPLE: Faces built from flat shadow shapes only - two small darker-tint shapes for eyes, one for the mouth, a hair shape. NO lines on faces, NO eye whites, NO pupils, NO teeth, NO fingers
 7. COMPOSITION: Edge-to-edge on a pure white background (never cream or yellowed) - NO border or frame - NO text anywhere
 
 SUBJECT: ${subjectMatter}

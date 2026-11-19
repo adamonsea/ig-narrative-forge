@@ -469,10 +469,16 @@ LIGHT AND SHADOW (this is how form is shown):
 - Keep shadows quiet and few; most of each shape stays a single flat colour.
 
 PEOPLE:
-- Minimal faces: a hair shape, and at most a small shadow shape suggesting a nose or jaw (never a line). NO eyes, NO mouths, NO eyebrows, NO wrinkles, NO hair strands.
-- Figures can face any way; side and three-quarter views read well.
+- Faces carry basic features, but every feature is a flat colour or shadow SHAPE, never a line:
+  - eyes: two small flat shadow shapes (a slightly darker tint of the face colour, or the deep ink)
+  - mouth: one small flat shadow shape
+  - a hair shape that sets the head's outline
+- Expression comes from the shape and placement of those few shapes: a mouth shape tilted up reads warm, level reads calm, tilted down reads serious; eyes set low in the face read thoughtful.
+- Keep the features small and quiet — they are the smallest shapes in the picture, and most of the face stays one flat colour.
+- NO eye whites, NO pupils, NO irises, NO teeth, NO wrinkles, NO hair strands, NO nose drawn as a line.
+- Figures can face any way; side and three-quarter views read well. In profile, one eye shape and one mouth shape are enough.
 - Bodies are simple flat shapes with one or two clothing cues (a coat collar, a scarf, a hi-vis vest). Hands as simple mitten shapes, no fingers.
-- Mood (${expressionGuidance}) comes from posture and composition only.
+- Mood (${expressionGuidance}) comes from those face shapes plus posture and composition.
 
 BACKGROUND:
 - Buildings, trees and crowds are big simple masses; windows as a few flat blocks at most. No bricks, tiles, individual leaves or fussy street furniture.
@@ -483,7 +489,7 @@ TEXTURE: only a light, even print grain inside the flat colours. Never drawn tex
 COMPOSITION: bold, graphic, reads instantly at thumbnail size. Landscape 3:2.
 
 FORBIDDEN:
-❌ Eyes, mouths, expressions or any facial rendering
+❌ Faces drawn with lines: no outlined eyes, no eye whites, no pupils, no teeth, no wrinkle lines
 ❌ Outlines or contour lines around any shape, thick or thin
 ❌ Fine lines, hatching, stippling, scribbles, pen or pencil work
 ❌ Clutter, patterns, tiny objects, background crowds of small figures
