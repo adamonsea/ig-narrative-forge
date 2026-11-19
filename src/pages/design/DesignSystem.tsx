@@ -332,6 +332,13 @@ export default function DesignSystem() {
                 <div key={`s${settleKey}`} className="settle-in rounded-xl border border-border bg-card p-3 text-base">New arrival</div>
                 <Button variant="ghost" size="sm" onClick={() => setSettleKey((k) => k + 1)}>Replay</Button>
               </Spec>
+              <Spec name="flow-out · skip-out">
+                <div className="space-y-2">
+                  <div key={`fo${settleKey}`} className="flow-out rounded-xl border border-border bg-card p-3 text-base">Published: toward Live now</div>
+                  <div key={`so${settleKey}`} className="skip-out rounded-xl border border-border bg-card p-3 text-base">Skipped: fades away</div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setSettleKey((k) => k + 1)}>Replay</Button>
+              </Spec>
             </div>
             <Spec name="Desk flow · pools feed Live now">
               <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2">

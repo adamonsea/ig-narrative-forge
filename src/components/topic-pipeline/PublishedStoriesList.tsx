@@ -56,6 +56,8 @@ interface PublishedStoriesListProps {
   onPublishNow?: (storyId: string, title: string) => Promise<void>;
   /** Just-published stories still getting their picture: shown faded until it lands. */
   settlingIds?: Set<string>;
+  /** Stories the owner just published or skipped: they play their leave motion before going. */
+  leavingIds?: Map<string, 'publish' | 'skip'>;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -84,6 +86,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   repeatOf,
   onPublishNow,
   settlingIds,
+  leavingIds,
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -411,7 +414,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           <React.Fragment key={story.id}>
             <DeskCard
               id={feedOrder ? `live-story-${story.id}` : undefined}
-              className={settling ? 'settle-in opacity-60' : undefined}
+              className={leavingIds?.get(story.id) === 'publish' ? 'flow-out' : leavingIds?.get(story.id) === 'skip' ? 'skip-out' : settling ? 'settle-in opacity-60' : undefined}
               title={storyTitle}
               thumbnailUrl={story.cover_illustration_url ? (optimizeImageUrl(story.cover_illustration_url, { width: 128, height: 128, quality: 70 }) || story.cover_illustration_url) : null}
               thumbClassName={readingNow ? 'reading-ring' : undefined}

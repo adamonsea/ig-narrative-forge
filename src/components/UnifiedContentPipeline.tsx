@@ -116,6 +116,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   // Published from the Desk: in Live now at once (until a load confirms it), faded while its picture is drawn.
   const [justPublished, setJustPublished] = useState<Set<string>>(new Set());
   const [settlingIds, setSettlingIds] = useState<Set<string>>(new Set());
+  // The owner's click shows at once: the card plays its leave motion, then is gone while the save runs.
+  const [leavingIds, setLeavingIds] = useState<Map<string, 'publish' | 'skip'>>(new Map());
+  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (justPublished.size === 0) return;
     const confirmed = stories.filter(s => justPublished.has(s.id) && s.is_published && s.status === 'published').map(s => s.id);
@@ -260,9 +263,18 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   /** Archive stories (Skip, or every stale one at once); Undo puts each back as it was. */
+  const LEAVE_MS = 220;
+  const setLeaving = (ids: string[], kind: 'publish' | 'skip' | null) =>
+    setLeavingIds(prev => { const n = new Map(prev); ids.forEach(id => (kind ? n.set(id, kind) : n.delete(id))); return n; });
+  const setSkipped = (ids: string[], on: boolean) =>
+    setSkippedIds(prev => { const n = new Set(prev); ids.forEach(id => (on ? n.add(id) : n.delete(id))); return n; });
+
   const archiveWithUndo = async (items: { id: string; status: string; is_published: boolean }[], skipped = false) => {
+    const ids = items.map(s => s.id);
+    // Gone from the Desk straight away; put back if the save fails or the owner taps Undo.
+    setLeaving(ids, 'skip');
+    window.setTimeout(() => { setSkipped(ids, true); setLeaving(ids, null); }, LEAVE_MS);
     try {
-      const ids = items.map(s => s.id);
       const { error } = await supabase
         .from('stories')
         .update({ status: 'archived', is_published: false, updated_at: new Date().toISOString() })
@@ -280,6 +292,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             await supabase.from('stories').update({ status, is_published: pub === 'true' }).in('id', groupIds);
           }
         } finally {
+          setSkipped(ids, false);
           refreshContent();
         }
       };
@@ -291,6 +304,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       refreshContent();
     } catch (error) {
       console.error('Error archiving stories:', error);
+      window.setTimeout(() => { setLeaving(ids, null); setSkipped(ids, false); }, LEAVE_MS);
       toast({ title: skipped ? "Couldn't skip" : "Couldn't archive", description: "Try again.", variant: "destructive" });
     }
   };
@@ -307,13 +321,20 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   const publishNow = async (storyId: string, title: string) => {
     const drop = (setter: typeof setSettlingIds) => setter(prev => { const n = new Set(prev); n.delete(storyId); return n; });
-    setJustPublished(prev => new Set(prev).add(storyId));
-    setSettlingIds(prev => new Set(prev).add(storyId));
-    // Bring it into view where it now sits in Live now (desktop shows all three columns).
+    // The card flows out of the pool at once, then joins Live now (faded) while the save runs.
+    let failed = false;
+    setLeaving([storyId], 'publish');
     window.setTimeout(() => {
-      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      document.getElementById(`live-story-${storyId}`)?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
-    }, 60);
+      setLeaving([storyId], null);
+      if (failed) return;
+      setJustPublished(prev => new Set(prev).add(storyId));
+      setSettlingIds(prev => new Set(prev).add(storyId));
+      // Bring it into view where it now sits in Live now (desktop shows all three columns).
+      window.setTimeout(() => {
+        const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        document.getElementById(`live-story-${storyId}`)?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+      }, 60);
+    }, LEAVE_MS);
     try {
       const publishedAt = new Date().toISOString();
       const { data, error } = await supabase
@@ -326,6 +347,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       if (!data) throw new Error('No story was updated.');
     } catch (e: any) {
       console.error('Error publishing story:', e);
+      failed = true;
       drop(setJustPublished);
       drop(setSettlingIds);
       toast({
@@ -387,7 +409,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   }
 
   // Live now = exactly the feed (same stories, same order); written-but-not-live waits in the Story pool.
-  const { live: liveStories, held: heldStories } = splitLiveNow(withJustPublished(stories as any[], justPublished));
+  const { live: liveStories, held: heldStories } = splitLiveNow(withJustPublished((stories as any[]).filter(st => !skippedIds.has(st.id)), justPublished));
   const visibleIdsKey = [...liveStories, ...heldStories].map(s => s.id).join(',');
   // Drafts nothing will publish on its own wait for a one-click OK; queued ones go out by themselves.
   const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
@@ -526,6 +548,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 stories={storiesToCheck}
                 onSkip={(s) => archiveWithUndo([s], true)}
                 onPublishNow={publishNow}
+                leavingIds={leavingIds}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
                 onDelete={handleMultiTenantRejectStory}
@@ -547,6 +570,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 repeatOf={repeatOf}
                 stories={queuedStories}
                 onPublishNow={publishNow}
+                leavingIds={leavingIds}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
                 onDelete={handleMultiTenantRejectStory}
@@ -570,6 +594,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <PublishedStoriesList
                 stories={otherHeld}
                 onPublishNow={publishNow}
+                leavingIds={leavingIds}
                 onArchive={handleArchiveStory}
                 onReturnToReview={handleMultiTenantRejectStory}
                 onDelete={handleMultiTenantRejectStory}
