@@ -1,3 +1,10 @@
+# Event social posters (19 Nov 2026)
+- [x] 9:16 poster: event photo full-bleed (category art if none), calendar-page date, event name only; clear of Instagram's buttons and captions (tested)
+- [x] 5-second motion: slow push-in, date settles, name rises; still image is the last frame
+- [x] Desk event drawer: live preview, Play, Instagram layout guide, Image/Video downloads, editable caption + Copy
+- [ ] Automation and hand-off to Mike (shared folder or API) — waits on Mike's preferred format
+- [ ] Cost logging per asset — with automation
+
 # Pinned stories + feed icons (19 Nov 2026)
 - [x] Pin one live story to the top of a feed for 24 hours, 2 days or 7 days (Desk story drawer); drops back when the pin ends
 - [x] Pinned story first in the public feed (with a "Pinned" label) and in Live now
