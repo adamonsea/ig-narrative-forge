@@ -8,7 +8,7 @@ import {
   extractSubjectMatter,
   extractLocationDetails,
   matchPlaceName,
-  buildIllustrativePrompt, 
+  buildIllustrativePrompt, deepInkFor, 
   buildPhotographicPrompt,
   generateSatiricalGag,
   buildSatiricalPrompt,
@@ -928,10 +928,10 @@ serve(async (req) => {
       
       // FLUX-specific prompt with quantified constraints and explicit bans
       const fluxPrompt = `MANDATORY STYLE RULES (FLUX MUST FOLLOW):
-1. COLORS: Black (#000000) + Primary Accent (${primaryColor}) ONLY - no orange, no gray fills, no other colors
+1. COLORS: Deep ink (${deepInkFor(primaryColor)}, dark shade of the accent hue, never pure black) + Primary Accent (${primaryColor}) ONLY - no orange, no gray fills, no other colors
 2. ACCENT LIMIT: Apply primary color to EXACTLY 2-3 small objects maximum (one window, one door, one sign) - NOT on multiple storefronts
 3. LINE WORK: Thick outer contours ONLY - NO window panes, NO brick texture, NO roof tiles, NO interior architectural detail
-4. SHADOWS: Solid black fills ONLY - NO crosshatching, NO halftone dots, NO texture patterns
+4. SHADOWS: Solid deep-ink fills ONLY - NO crosshatching, NO halftone dots, NO texture patterns
 5. ROADS: Solid white ONLY - NO perspective lines, NO road markings, NO surface texture
 6. COMPOSITION: Edge-to-edge with white background - NO text anywhere
 
@@ -940,8 +940,8 @@ SUBJECT: ${subjectMatter}
 STORY: "${promptTitle}"
 
 VISUAL EXECUTION CHECKLIST:
-✓ Bold black outlines (2-4px weight) defining building shapes
-✓ Solid black shadows under eaves and doorways
+✓ Bold deep-ink outlines (2-4px weight) defining building shapes
+✓ Solid deep-ink shadows under eaves and doorways
 ✓ 2-3 small accent elements in ${primaryColor} (e.g. one awning, one door, one window box)
 ✓ Simplified building facades - NO individual bricks, NO window frames, NO decorative molding
 ✓ Clean white road surface with NO markings
@@ -955,7 +955,7 @@ WHAT TO AVOID (CRITICAL):
 ❌ Brick/tile texture patterns
 ❌ Perspective construction lines on roads
 ❌ Interior architectural details (molding, frames, panels)
-❌ Any color other than black and mint green (#58FFBC)
+❌ Pure black, or any color other than the deep ink and ${primaryColor}
 
 Style benchmark: Think flat vector illustration with maximum 30 line strokes total.
 
@@ -1266,7 +1266,7 @@ ${TRADEMARK_RULE}`;
           }
 
           // FLUX-specific prompt (simplified for reliability)
-          const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${promptTitle}". Style: Clean editorial illustration with bold black outlines and ${primaryColor} accent color. Tone: ${storyTone}. No text. ${TRADEMARK_RULE}`;
+          const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${promptTitle}". Style: Clean editorial illustration with bold outlines in ${deepInkFor(primaryColor)} (a dark shade of the accent, never pure black) and ${primaryColor} accent color. Tone: ${storyTone}. No text. ${TRADEMARK_RULE}`;
 
           const fluxResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
             method: 'POST',

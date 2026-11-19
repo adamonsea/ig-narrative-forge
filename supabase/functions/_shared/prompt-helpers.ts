@@ -317,6 +317,28 @@ ${storyText.slice(0, 2000)}`
  * Place-specific accuracy only when story content warrants it
  * Now accepts optional locationHint for landmark-accurate rendering
  */
+
+/** Darkest ink for illustrations: a deep shade of the accent's own hue instead of black (lifts the picture, like two-colour riso). */
+export function deepInkFor(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#1F2433';
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  const s = 0.38, l = 0.17;
+  const a = s * Math.min(l, 1 - l);
+  const f = (k0: number) => { const k = (k0 + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  const to = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${to(f(0))}${to(f(8))}${to(f(4))}`;
+}
+
+const deepInkRule = (ink: string, accent: string) => `
+DARK INK (CRITICAL): Never use pure black. Every dark area, outline and shadow is printed in a deep shade of the accent's own hue, about ${ink} (dark navy for blue, dark plum/burgundy for red/pink, deep forest for green). Mid tones are lighter tints of ${accent}. The image must read light and airy overall, like a two-ink riso print, not heavy or murky.
+`;
+
 export type IllustrativePromptVariant = 'current' | 'handmade';
 
 export function buildIllustrativePrompt(
@@ -333,6 +355,8 @@ export function buildIllustrativePrompt(
     : tone.includes('uplifting') || tone.includes('hopeful') || tone.includes('positive')
     ? 'warm expressions, engaged demeanor'
     : 'neutral expressions, professional demeanor';
+  const ink = deepInkFor(primaryColor);
+  const inkRule = deepInkRule(ink, primaryColor);
 
   // Only add regional guidance if the subject actually mentions local/place elements
   // This prevents e.g. zoo stories getting seaside backgrounds
@@ -389,15 +413,15 @@ DETAIL BUDGET (the most important rule):
 - Under-detailed is correct. Over-detailed is a failure.
 
 INK LIMIT:
-- Exactly three inks: black, paper white, and one accent colour (${primaryColor}).
+- Exactly three inks: deep ink (${ink}, a dark shade of the accent hue — never black), paper white, and one accent colour (${primaryColor}).
 - Flat fills only. NO shading, NO gradients, NO blended or mixed tones, NO third mixed hue.
-- Overlap of accent and black may darken, as real ink does — nothing else.
+- Overlap of accent and deep ink may darken, as real ink does — nothing else.
 
 SHAPE LANGUAGE:
 - Hand-cut edges: slightly irregular, like lino or a cut paper stencil. Never vector-smooth.
 - Figures reduced to essential silhouettes: a hair shape, a jaw, a single nose line. No rendered eyes, no expressions, no fingers.
 - Backgrounds as silhouette masses — a whole stand of trees as one shape, a crowd as one shape, water as repeating white flecks, foliage as a repeated cut mark.
-${placeGuidance}${locationAccuracy}
+${placeGuidance}${locationAccuracy}${inkRule}
 TEXTURE (only from the printing, never from drawing):
 - Paper grain across the whole sheet, visible speckle in flat areas.
 - Slight registration shift between inks, a little ink starvation at edges.
@@ -417,6 +441,7 @@ FORBIDDEN:
 ❌ More than three inks
 ❌ Small background details, clutter, crowds of tiny objects
 ❌ Text, logos, speech bubbles, graphic design furniture
+❌ Pure black or heavy near-black areas
 ❌ Childish cartoon style
 
 BENCHMARK: A mid-century screen-printed travel or public-information poster, reprinted today by a small studio — flat, graphic, textured, confidently simple.`;
@@ -426,11 +451,11 @@ BENCHMARK: A mid-century screen-printed travel or public-information poster, rep
 
 CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
 - FLAT COLOR FILLS with visible print texture and grain (like risograph or screen print)
-- Clean BLACK OUTLINES defining shapes (hand-drawn quality, not digital vector)
-- LIMITED PALETTE: Black, white, accent color (${primaryColor}) - printed ink aesthetic
+- Clean DEEP-INK OUTLINES (${ink}) defining shapes (hand-drawn quality, not digital vector)
+- LIMITED PALETTE: deep ink ${ink} (never pure black), paper white, accent color (${primaryColor}) and its lighter tints - printed ink aesthetic
 - PAPER TEXTURE visible throughout (like printed on newsprint or art paper)
 - Slight registration shifts and imperfections (authentic print quality)
-${placeGuidance}${locationAccuracy}
+${placeGuidance}${locationAccuracy}${inkRule}
 COMPOSITION STYLE - Jon McNaught / Edward Hopper Influence:
 - Architectural, modernist composition with LARGE SIMPLE SHAPES
 - Bold geometric forms filling the frame (buildings, landscapes, objects)
@@ -459,6 +484,7 @@ FORBIDDEN ELEMENTS:
 ❌ Detailed pen work or cross-hatching
 ❌ Photorealistic rendering or CGI aesthetics
 ❌ Text, speech bubbles, or graphic design elements
+❌ Pure black or heavy near-black areas
 ❌ Childish cartoon style
 
 QUALITY BENCHMARK: Think mid-century editorial illustration meets contemporary screen print art - authentic, textured, print-made aesthetic suitable for serious editorial publication.`;
