@@ -1,3 +1,4 @@
+import { findPhotoCredit } from './photoCredit.ts';
 import { ScrapingResult, ArticleData } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
@@ -228,6 +229,7 @@ export class EnhancedScrapingStrategies {
           published_at: story.publishedAt,
           source_url: story.url,
           image_url: story.imageUrl,
+          image_credit: story.imageCredit,
           word_count: wordCount,
           regional_relevance_score: regionalRelevance,
           content_quality_score: qualityScore,
@@ -334,6 +336,7 @@ export class EnhancedScrapingStrategies {
             published_at: extracted.published_at,
             source_url: candidate.url,
             image_url: candidate.image,
+            image_credit: findPhotoCredit(articleHtml, candidate.image),
             word_count: extracted.word_count,
             regional_relevance_score: relevanceScore,
             content_quality_score: extracted.content_quality_score,
@@ -1578,6 +1581,7 @@ export class EnhancedScrapingStrategies {
         published_at: new Date().toISOString(),
         source_url: this.baseUrl,
         image_url: metadata.image,
+        image_credit: findPhotoCredit(html, metadata.image),
         word_count: wordCount,
         regional_relevance_score: 0,
         content_quality_score: qualityScore,

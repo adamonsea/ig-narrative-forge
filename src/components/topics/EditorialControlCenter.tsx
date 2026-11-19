@@ -33,6 +33,7 @@ import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
 import { FeedLeadSettings } from "@/components/settings/FeedLeadSettings";
 import { StoryCoverStyleSettings } from "@/components/settings/StoryCoverStyleSettings";
+import { PublisherPhotosSetting } from "@/components/settings/PublisherPhotosSetting";
 import { FEATURES, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
 
 export interface EditorialTopic {
@@ -69,6 +70,7 @@ export interface EditorialTopic {
   event_currency?: string | null;
   event_photos_enabled?: boolean | null;
   story_cover_style?: string | null;
+  use_publisher_photos?: boolean | null;
   event_source_url?: string;
   branding_config?: unknown;
   donation_enabled?: boolean;
@@ -203,6 +205,7 @@ export function EditorialControlCenter({
         />
         <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} currency={topic.event_currency} photos={topic.event_photos_enabled} onSaved={(values) => patch(values)} />
         <StoryCoverStyleSettings topicId={topic.id} value={topic.story_cover_style} onSaved={(values) => patch(values)} />
+        <PublisherPhotosSetting topicId={topic.id} value={topic.use_publisher_photos} onSaved={(values) => patch(values)} />
         <RememberedFold foldKey="brand-more" label="More options">
           <div className="space-y-12">
             <section>

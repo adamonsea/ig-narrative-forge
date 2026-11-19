@@ -105,7 +105,7 @@ serve(async (req) => {
       // - exact name match (case-insensitive)
       const { data: topic, error: topicError } = await supabase
         .from('topics')
-        .select('id, name, slug, region, branding_config, created_by, public_widget_builder_enabled')
+        .select('id, name, slug, region, branding_config, created_by, public_widget_builder_enabled, use_publisher_photos')
         .eq('is_public', true)
         .eq('is_archived', false)
         .or(`slug.eq.${feedSlug},region.ilike.${feedSlug},name.ilike.${feedSlug}`)
@@ -282,7 +282,7 @@ serve(async (req) => {
       const baseUrl = `https://curatr.pro`;
       const allFormatted = mergedStories
         .map(story => {
-          const imageUrl = story.cover_illustration_url || story.articles?.image_url || null;
+          const imageUrl = story.cover_illustration_url || ((topic as any)?.use_publisher_photos === false ? null : story.articles?.image_url) || null;
           
           // Skip stories without images
           if (!imageUrl) return null;

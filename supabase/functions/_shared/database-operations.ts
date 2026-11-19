@@ -172,6 +172,7 @@ export class DatabaseOperations {
           published_at: article.published_at,
           source_url: article.source_url,
           image_url: article.image_url,
+          image_credit: article.image_credit ?? null,
           canonical_url: article.canonical_url,
           word_count: article.word_count,
           regional_relevance_score: article.regional_relevance_score,

@@ -3,6 +3,7 @@
  * Reduces timeouts by using quick accessibility checks and limited processing
  */
 
+import { findPhotoCredit } from './photoCredit.ts';
 import { ScrapingResult, ArticleData } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
@@ -432,6 +433,7 @@ export class FastTrackScraper {
         published_at: arcArticle.publishedDate,
         source_url: arcArticle.url,
         image_url: arcArticle.imageUrl,
+        image_credit: arcArticle.imageCredit,
         word_count: arcArticle.wordCount,
         regional_relevance_score: 0,
         content_quality_score: 0,
@@ -553,6 +555,7 @@ export class FastTrackScraper {
             published_at: extracted.published_at,
             source_url: candidate.url,
             image_url: candidate.image,
+            image_credit: findPhotoCredit(articleHtml, candidate.image),
             word_count: extracted.word_count,
             regional_relevance_score: relevanceScore,
             content_quality_score: extracted.content_quality_score,

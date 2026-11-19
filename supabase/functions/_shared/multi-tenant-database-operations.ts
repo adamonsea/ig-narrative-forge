@@ -16,6 +16,7 @@ export interface ArticleData {
   published_at?: string
   source_url: string
   image_url?: string
+  image_credit?: string
   canonical_url?: string
   word_count?: number
   language?: string
@@ -365,6 +366,7 @@ export class MultiTenantDatabaseOperations {
         author: article.author,
         published_at: article.published_at,
         image_url: article.image_url,
+        image_credit: article.image_credit ?? null,
         canonical_url: article.canonical_url,
         word_count: article.word_count || this.calculateWordCount(article.body || ''),
         language: article.language || 'en',

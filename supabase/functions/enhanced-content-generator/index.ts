@@ -21,6 +21,7 @@ interface Article {
   source_url: string;
   source_id?: string;
   image_url?: string;
+  image_credit?: string | null;
   canonical_url?: string;
   word_count: number;
   regional_relevance_score: number;
@@ -1159,6 +1160,7 @@ Return in JSON format:
         published_at: sharedContent.published_at,
         source_url: sharedContent.url,
         image_url: sharedContent.image_url,
+        image_credit: sharedContent.image_credit ?? null,
         canonical_url: sharedContent.canonical_url,
         word_count: sharedContent.word_count || 0,
         regional_relevance_score: topicArticle?.regional_relevance_score || 0,
@@ -1193,6 +1195,7 @@ Return in JSON format:
     let dripFeedEnabled = false;
     let autoSimplifyEnabled = false; // Controls whether stories skip editorial review
     let houseStyleGuidance = '';
+    let usePublisherPhotos = true; // owner switch: false = never use the publisher's photo as cover
     let brandSafePictures = false; // brand/character/fandom feed: keep the source's own picture
     let placeRule = ''; // local feeds: leave the feed's own town out of headlines, name other places
     let placeEditRule = '';
@@ -1200,7 +1203,7 @@ Return in JSON format:
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples, family_safe, brand_safe_pictures, topic_type, region')
+        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples, family_safe, brand_safe_pictures, topic_type, region, use_publisher_photos')
         .eq('id', article.topic_id)
         .maybeSingle();
 
@@ -1237,6 +1240,7 @@ Return in JSON format:
         dripFeedEnabled = topicData.drip_feed_enabled || false;
         autoSimplifyEnabled = topicData.auto_simplify_enabled || false;
         brandSafePictures = (topicData as any).brand_safe_pictures === true;
+        usePublisherPhotos = (topicData as any).use_publisher_photos !== false;
         placeRule = headlinePlaceRule((topicData as any).topic_type, (topicData as any).region);
         placeEditRule = headlinePlaceEditRule((topicData as any).topic_type, (topicData as any).region);
 
@@ -1426,7 +1430,7 @@ Return in JSON format:
       // Multi-tenant: check by topic_article_id first
       const { data: multiTenantStory, error: mtError } = await supabase
         .from('stories')
-        .select('id,status,article_id')
+        .select('id,status,article_id,cover_illustration_url')
         .eq('topic_article_id', topicArticleId)
         .maybeSingle();
       
@@ -1442,7 +1446,7 @@ Return in JSON format:
     if (!existingStory && articleId) {
       const { data: legacyStory, error: legacyError } = await supabase
         .from('stories')
-        .select('id,status,topic_article_id')
+        .select('id,status,topic_article_id,cover_illustration_url')
         .eq('article_id', articleId)
         .maybeSingle();
       
@@ -1498,8 +1502,9 @@ Return in JSON format:
       };
       
       // Preserve article image for social sharing if story doesn't have one
-      if (article.image_url && !existingStory.cover_illustration_url) {
+      if (usePublisherPhotos && article.image_url && !existingStory.cover_illustration_url) {
         updateData.cover_illustration_url = article.image_url;
+        updateData.cover_photo_credit = article.image_credit || null;
       }
       
       // Set multi-tenant fields if this is a multi-tenant context
@@ -1561,7 +1566,8 @@ Return in JSON format:
         slide_type: finalSlideType,
         quality_score: article.content_quality_score,
         skip_auto_illustration: generateIllustration === false,
-        cover_illustration_url: article.image_url || null,
+        cover_illustration_url: usePublisherPhotos ? (article.image_url || null) : null,
+        cover_photo_credit: usePublisherPhotos && article.image_url ? (article.image_credit || null) : null,
         // Attribution must come from the real article, not the topic's source list
         publication_name: (() => {
           try {

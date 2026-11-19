@@ -15,6 +15,8 @@ export interface ArticleData {
   published_at?: string;
   source_url: string;
   image_url?: string;
+  /** Photo credit the source site gives for image_url, if any. */
+  image_credit?: string;
   canonical_url?: string;
   word_count: number;
   regional_relevance_score: number;

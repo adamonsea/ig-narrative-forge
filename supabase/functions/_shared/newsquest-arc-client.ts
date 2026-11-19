@@ -1,3 +1,4 @@
+import { creditFromArcPromo } from './photoCredit.ts';
 export interface ArcContentElement {
   type?: string;
   content?: string;
@@ -39,6 +40,7 @@ export interface NewsquestArcArticle {
   author?: string;
   publishedAt?: string;
   imageUrl?: string;
+  imageCredit?: string;
   summary?: string;
   bodyHtml: string;
   bodyText: string;
@@ -228,6 +230,7 @@ export class NewsquestArcClient {
     const author = this.extractAuthor(story);
     const publishedAt = story.publish_date || story.display_date || story.created_date;
     const imageUrl = this.extractLeadImage(story);
+    const imageCredit = this.extractLeadImageCredit(story);
     const section = story.taxonomy?.primary_section?._id || this.sectionPath;
 
     return {
@@ -239,6 +242,7 @@ export class NewsquestArcClient {
       author,
       publishedAt,
       imageUrl,
+      imageCredit,
       summary,
       bodyHtml: html || (summary ? `<p>${summary}</p>` : ''),
       bodyText: text || summary || ''
@@ -274,6 +278,15 @@ export class NewsquestArcClient {
       }
     }
 
+    return undefined;
+  }
+
+  private extractLeadImageCredit(story: ArcStory): string | undefined {
+    const promo = story.promo_items || {};
+    for (const item of [promo.lead_art, promo.basic, promo.featured, promo.thumbnail]) {
+      const credit = creditFromArcPromo(item);
+      if (credit) return credit;
+    }
     return undefined;
   }
 

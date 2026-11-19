@@ -40,4 +40,5 @@
 - Editing opens in `WorkspaceDrawer` (src/components/workspace); deletes use confirm boxes; errors `InlineError`.
 - Marketing colours: `shop-*` tokens only.
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
-- Feed Events|All|News switch shows only via `showFeedViewToggle`; display-only.
+- Events|All|News switch only via `showFeedViewToggle`; display-only.
+- Source photos always credited (photoCredit.ts); use_publisher_photos off = no new ones.

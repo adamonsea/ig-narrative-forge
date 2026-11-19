@@ -129,6 +129,7 @@ export async function attemptDeepRecovery(
           published_at: extracted.published_at || candidate.publishedAt || undefined,
           source_url: extracted.source_url,
           image_url: extracted.image_url || undefined,
+          image_credit: extracted.image_credit || undefined,
           word_count: extracted.body.split(/\s+/).length,
           language: 'en',
         });

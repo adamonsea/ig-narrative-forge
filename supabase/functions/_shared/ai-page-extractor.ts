@@ -7,6 +7,7 @@
  */
 
 const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+import { findPhotoCredit } from './photoCredit.ts';
 const MODEL = 'google/gemini-3.8-flash';
 const FETCH_TIMEOUT_MS = 10000;
 
@@ -16,6 +17,7 @@ export interface AiExtractedArticle {
   author?: string | null;
   published_at?: string | null;
   image_url?: string | null;
+  image_credit?: string | null;
   source_url: string;
 }
 
@@ -127,6 +129,7 @@ export async function extractArticleWithAi(url: string): Promise<AiExtractedArti
       author: typeof parsed.author === 'string' ? parsed.author.slice(0, 200) : null,
       published_at: typeof parsed.published_at === 'string' ? parsed.published_at : null,
       image_url: firstImage(html),
+      image_credit: findPhotoCredit(html, firstImage(html)) || null,
       source_url: url,
     };
   } catch (error) {

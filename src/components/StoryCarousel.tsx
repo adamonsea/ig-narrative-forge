@@ -16,6 +16,8 @@ import { useStoryFontSize, FIT_TEXT_CLASS, FIT_TEXT_STYLE } from '@/lib/slideTex
 import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { isPublisherPhoto, photoCreditLabel } from '@/lib/photoCredit';
+import { usePhotoCredit } from '@/hooks/usePhotoCredit';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -126,6 +128,21 @@ interface StoryCarouselProps {
   coverStyle?: 'split' | 'full-bleed';
 }
 
+/** Publisher name used for credits: publication, then source name, then the article's web address. */
+function publisherNameFor(story: any): string {
+  const generic = ['eezee news', 'unknown publication', 'unknown'];
+  let name = String(story?.publication_name || '').trim();
+  if (generic.includes(name.toLowerCase())) name = '';
+  if (!name) name = String(story?.article?.source?.source_name || story?.article?.source_name || story?.source_name || '').trim();
+  if (!name && story?.article?.source_url && story.article.source_url !== '#') {
+    try { name = new URL(story.article.source_url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+  }
+  if (!name && story?.cover_illustration_url) {
+    try { name = new URL(story.cover_illustration_url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+  }
+  return name;
+}
+
 export default function StoryCarousel({ 
   story, 
   storyUrl, 
@@ -159,6 +176,12 @@ export default function StoryCarousel({
   const { trackShareClick, trackSourceClick } = useStoryInteractionTracking();
   const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
   const isFastConnection = useNetworkSpeed(); // Network speed detection
+  // Publisher photos are always credited: the site's own credit, otherwise the publisher.
+  const coverIsPublisherPhoto = isPublisherPhoto(story.cover_illustration_url);
+  const savedPhotoCredit = usePhotoCredit(story.id, coverIsPublisherPhoto);
+  const photoCredit = coverIsPublisherPhoto
+    ? photoCreditLabel(story.cover_illustration_url, savedPhotoCredit, publisherNameFor(story))
+    : null;
   
   // iOS-specific: Preload next slide image for smoother transitions
   useEffect(() => {
@@ -565,6 +588,11 @@ export default function StoryCarousel({
               className="absolute inset-0 h-full w-full object-cover object-center brightness-90 saturate-[0.9]" />
           )}
           <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,hsl(var(--feed-cover-ink)/0.94)_0%,hsl(var(--feed-cover-ink)/0.78)_30%,hsl(var(--feed-cover-ink)/0.2)_65%,hsl(var(--feed-cover-ink)/0.25)_100%)]" />
+          {photoCredit && (
+            <p className="absolute right-3 top-3 z-[1] max-w-[70%] truncate rounded-full bg-[hsl(var(--feed-cover-ink)/0.6)] px-2 py-0.5 text-xs text-feed-cover-text">
+              {photoCredit}
+            </p>
+          )}
           <div className="absolute inset-x-0 bottom-0 px-5 pb-12 pt-6 md:px-8 md:pb-14">
             <div className={`w-full max-w-xl leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty text-feed-cover-text [text-shadow:0_1px_16px_hsl(var(--feed-cover-ink)/0.55)]`}>
               <div dangerouslySetInnerHTML={createSafeHTML(
@@ -618,6 +646,11 @@ export default function StoryCarousel({
                   loading="lazy"
                 />
               )}
+              {photoCredit && (
+                <p className="absolute bottom-2 right-2 max-w-[80%] truncate rounded-full bg-[hsl(var(--feed-cover-ink)/0.6)] px-2 py-0.5 text-xs text-feed-cover-text">
+                  {photoCredit}
+                </p>
+              )}
             </div>
             
             {/* Content below image */}
@@ -656,7 +689,7 @@ export default function StoryCarousel({
         )}
       </div>
     );
-  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001'), coverStyle]);
+  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001'), coverStyle, photoCredit]);
 
   const slidesForEmbla = slideComponents.length
     ? slideComponents

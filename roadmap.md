@@ -1,6 +1,6 @@
 # Publisher photos (19 Nov 2026)
-- [ ] Credit publisher photos on story covers (site's credit, else publisher name)
-- [ ] Feed Settings switch: Publisher photos on/off (off = illustrations only)
+- [x] Credit publisher photos on story covers (site's credit, else publisher name)
+- [x] Feed Settings switch: Publisher photos on/off (off = illustrations only)
 
 # Briefings: What's on first + event emails (18 Nov 2026)
 - [x] Daily and weekly briefing pages in the feed put What's on at the top when there are events (emails unchanged for news feeds)

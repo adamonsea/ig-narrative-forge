@@ -211,6 +211,7 @@ export type Database = {
           created_at: string
           extraction_attempts: number | null
           id: string
+          image_credit: string | null
           image_url: string | null
           import_metadata: Json | null
           keywords: string[] | null
@@ -243,6 +244,7 @@ export type Database = {
           created_at?: string
           extraction_attempts?: number | null
           id?: string
+          image_credit?: string | null
           image_url?: string | null
           import_metadata?: Json | null
           keywords?: string[] | null
@@ -275,6 +277,7 @@ export type Database = {
           created_at?: string
           extraction_attempts?: number | null
           id?: string
+          image_credit?: string | null
           image_url?: string | null
           import_metadata?: Json | null
           keywords?: string[] | null
@@ -3297,6 +3300,7 @@ export type Database = {
           content_checksum: string | null
           created_at: string
           id: string
+          image_credit: string | null
           image_url: string | null
           language: string | null
           last_seen_at: string
@@ -3315,6 +3319,7 @@ export type Database = {
           content_checksum?: string | null
           created_at?: string
           id?: string
+          image_credit?: string | null
           image_url?: string | null
           language?: string | null
           last_seen_at?: string
@@ -3333,6 +3338,7 @@ export type Database = {
           content_checksum?: string | null
           created_at?: string
           id?: string
+          image_credit?: string | null
           image_url?: string | null
           language?: string | null
           last_seen_at?: string
@@ -3623,6 +3629,7 @@ export type Database = {
           constituency: string | null
           cover_illustration_prompt: string | null
           cover_illustration_url: string | null
+          cover_photo_credit: string | null
           created_at: string
           drip_queued_at: string | null
           duplicate_of_story_id: string | null
@@ -3667,6 +3674,7 @@ export type Database = {
           constituency?: string | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
+          cover_photo_credit?: string | null
           created_at?: string
           drip_queued_at?: string | null
           duplicate_of_story_id?: string | null
@@ -3711,6 +3719,7 @@ export type Database = {
           constituency?: string | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
+          cover_photo_credit?: string | null
           created_at?: string
           drip_queued_at?: string | null
           duplicate_of_story_id?: string | null
@@ -5385,6 +5394,7 @@ export type Database = {
           story_cover_style: string
           topic_type: string
           updated_at: string | null
+          use_publisher_photos: boolean
           weekly_email_enabled: boolean
         }
         Insert: {
@@ -5463,6 +5473,7 @@ export type Database = {
           story_cover_style?: string
           topic_type?: string
           updated_at?: string | null
+          use_publisher_photos?: boolean
           weekly_email_enabled?: boolean
         }
         Update: {
@@ -5541,6 +5552,7 @@ export type Database = {
           story_cover_style?: string
           topic_type?: string
           updated_at?: string | null
+          use_publisher_photos?: boolean
           weekly_email_enabled?: boolean
         }
         Relationships: []
