@@ -588,11 +588,6 @@ export default function StoryCarousel({
               className="absolute inset-0 h-full w-full object-cover object-center brightness-90 saturate-[0.9]" />
           )}
           <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,hsl(var(--feed-cover-ink)/0.94)_0%,hsl(var(--feed-cover-ink)/0.78)_30%,hsl(var(--feed-cover-ink)/0.2)_65%,hsl(var(--feed-cover-ink)/0.25)_100%)]" />
-          {photoCredit && (
-            <p className="absolute right-3 top-3 z-[1] max-w-[70%] truncate rounded-full bg-[hsl(var(--feed-cover-ink)/0.6)] px-2 py-0.5 text-xs text-feed-cover-text">
-              {photoCredit}
-            </p>
-          )}
           <div className="absolute inset-x-0 bottom-0 px-5 pb-12 pt-6 md:px-8 md:pb-14">
             <div className={`w-full max-w-xl leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty text-feed-cover-text [text-shadow:0_1px_16px_hsl(var(--feed-cover-ink)/0.55)]`}>
               <div dangerouslySetInnerHTML={createSafeHTML(
@@ -646,11 +641,6 @@ export default function StoryCarousel({
                   loading="lazy"
                 />
               )}
-              {photoCredit && (
-                <p className="absolute bottom-2 right-2 max-w-[80%] truncate rounded-full bg-[hsl(var(--feed-cover-ink)/0.6)] px-2 py-0.5 text-xs text-feed-cover-text">
-                  {photoCredit}
-                </p>
-              )}
             </div>
             
             {/* Content below image */}
@@ -668,7 +658,12 @@ export default function StoryCarousel({
           </div>
         ) : (
           // Slides without image - use grid for perfect centering and fit-to-height on last slide
-          <div className="h-full flex items-center justify-center px-5 pt-6 pb-14 md:px-8 md:pt-8 md:pb-16 overflow-hidden">
+          <div className="relative h-full flex items-center justify-center px-5 pt-6 pb-14 md:px-8 md:pt-8 md:pb-16 overflow-hidden">
+            {index === 1 && photoCredit && (
+              <p className="absolute bottom-14 right-5 max-w-[70%] truncate text-xs text-muted-foreground md:bottom-16 md:right-8">
+                {photoCredit}
+              </p>
+            )}
             <div className={`w-full max-w-xl mx-auto text-left ${overflows ? 'max-h-full overflow-y-auto [mask-image:linear-gradient(to_bottom,black_85%,transparent)]' : ''}`}>
               {index === 0 ? (
                 <div className={`leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty`}>
