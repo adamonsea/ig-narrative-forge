@@ -8,7 +8,7 @@ import {
   extractSubjectMatter,
   extractLocationDetails,
   matchPlaceName,
-  buildIllustrativePrompt, deepInkFor, foilInkFor, NO_FRAME_RULE, WHITE_PAPER_RULE,
+  buildIllustrativePrompt, illustrativeVariantForQuality, deepInkFor, foilInkFor, NO_FRAME_RULE, WHITE_PAPER_RULE,
   buildPhotographicPrompt,
   generateSatiricalGag,
   buildSatiricalPrompt,
@@ -809,7 +809,7 @@ serve(async (req) => {
     let illustrationPrompt = satiricalPrompt ?? customStylePrompts[illustrationStyle]
       ?? (illustrationStyle === 'editorial_photographic'
         ? buildPhotographicPrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails)
-        : buildIllustrativePrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails))
+        : buildIllustrativePrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails, illustrativeVariantForQuality(modelConfig.quality)))
 
     illustrationPrompt = `${illustrationPrompt} ${TRADEMARK_RULE}`
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
@@ -934,7 +934,8 @@ serve(async (req) => {
 3. LINE WORK: Thick outer contours ONLY - NO window panes, NO brick texture, NO roof tiles, NO interior architectural detail
 4. SHADOWS: Solid deep-ink fills ONLY - NO crosshatching, NO halftone dots, NO texture patterns
 5. ROADS: Solid white ONLY - NO perspective lines, NO road markings, NO surface texture
-6. COMPOSITION: Edge-to-edge on a pure white background (never cream or yellowed) - NO border or frame - NO text anywhere
+6. PEOPLE: Faceless flat silhouettes - NO eyes, NO nose, NO mouth, NO fingers, NO clothing detail
+7. COMPOSITION: Edge-to-edge on a pure white background (never cream or yellowed) - NO border or frame - NO text anywhere
 
 SUBJECT: ${subjectMatter}
 

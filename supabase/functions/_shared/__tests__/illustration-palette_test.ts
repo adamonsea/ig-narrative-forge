@@ -1,6 +1,7 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   buildIllustrativePrompt,
+  illustrativeVariantForQuality,
   buildSatiricalPrompt,
   COOL_FOIL,
   foilInkFor,
@@ -30,7 +31,7 @@ Deno.test('grey or missing feed colours fall back to the warm foil', () => {
 
 // Pictures sit on clean white paper with no frame, in every drawn variant.
 Deno.test('house illustration asks for white paper, no frame and the foil ink', () => {
-  for (const variant of ['current', 'handmade'] as const) {
+  for (const variant of ['current', 'handmade', 'quick'] as const) {
     const p = buildIllustrativePrompt('neutral', 'a bus stop', 'Feed', '#3B82F6', undefined, null, variant);
     assert(p.includes(WHITE_PAPER_RULE), `${variant}: white paper rule`);
     assert(p.includes(NO_FRAME_RULE), `${variant}: no frame rule`);
@@ -43,4 +44,20 @@ Deno.test('satirical cartoons use white paper and no frame', () => {
   assert(p.includes('clean white paper'));
   assert(!/on off-white paper/.test(p));
   assert(/Borders, frames/.test(p));
+});
+
+// Low-cost pictures get the simplest brief: faceless people, no fine lines, a few big shapes.
+Deno.test('low-quality tier uses the quick brief; medium and high keep the full brief', () => {
+  assertEquals(illustrativeVariantForQuality('low'), 'quick');
+  assertEquals(illustrativeVariantForQuality('medium'), 'current');
+  assertEquals(illustrativeVariantForQuality('high'), 'current');
+  assertEquals(illustrativeVariantForQuality(undefined), 'current');
+});
+
+Deno.test('quick brief bans faces and fine lines and never asks for outlines', () => {
+  const p = buildIllustrativePrompt('neutral', 'a bus stop', 'Feed', '#3B82F6', undefined, null, 'quick');
+  assert(p.includes('Faceless'));
+  assert(p.includes('6 to 12 big flat shapes'));
+  assert(p.includes('Fine lines'));
+  assert(!p.includes('outlines, shadows and the darkest masses'));
 });

@@ -382,7 +382,12 @@ ${WHITE_PAPER_RULE}
 ${NO_FRAME_RULE}
 `;
 
-export type IllustrativePromptVariant = 'current' | 'handmade';
+export type IllustrativePromptVariant = 'current' | 'handmade' | 'quick';
+
+/** Low-cost tiers blur fine lines and faces into mush, so their brief asks for big cut-paper shapes only. */
+export function illustrativeVariantForQuality(quality?: string | null): IllustrativePromptVariant {
+  return quality === 'low' ? 'quick' : 'current';
+}
 
 export function buildIllustrativePrompt(
   tone: string,
@@ -444,6 +449,46 @@ Any description in brackets is a VERIFIED description of the real building and m
 Express it through the big shapes that make it recognisable, stylized to match the print aesthetic — accuracy of form, not fussy detail.
 `)
     : '';
+
+  if (variant === 'quick') {
+    const quickInkRule = inkRule.replace('outlines, shadows and the darkest masses', 'a few solid dark shapes and hard-edged shadow shapes (never outlines)');
+    return `SIMPLE CUT-PAPER ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
+
+Make it look like a bold, simple poster made from a handful of flat cut-paper shapes. Simplicity is the whole job: when in doubt, leave it out.
+
+SHAPES (most important):
+- The whole picture is 6 to 12 big flat shapes. One clear subject, one simple background. Nothing else.
+- Nothing smaller than a fist at the picture's scale. Delete anything smaller.
+- Shapes are defined by flat colour meeting colour, like cut paper. NO outlines and NO contour lines around shapes.
+- If a line is truly needed it is one thick confident stroke — never thin, never sketchy, never repeated.
+
+PEOPLE:
+- Faceless. Heads are plain flat shapes with NO eyes, NO nose, NO mouth, NO eyebrows, NO wrinkles, NO hair strands.
+- Prefer figures seen from behind, in profile silhouette, or small in the scene.
+- Bodies are simple blocks of colour: no fingers, no folds, no clothing detail.
+- Mood (${expressionGuidance}) comes from posture and composition only.
+
+BACKGROUND:
+- Buildings, trees, crowds and water are each ONE solid silhouette shape. No windows grids, bricks, tiles, leaves, signs or street furniture.
+- Large areas of plain white paper are good.
+${placeGuidance}${locationAccuracy ? `\nPLACE: suggest "${locationHint}" only through its overall silhouette — one recognisable outline shape, no architectural detail.\n` : ''}${quickInkRule}
+TEXTURE: only a light, even print grain inside the flat colours. Never drawn texture.
+
+COMPOSITION: bold, graphic, reads instantly at thumbnail size. Landscape 3:2.
+
+FORBIDDEN:
+❌ Facial features of any kind
+❌ Fine lines, thin outlines, hatching, stippling, scribbles, pen or pencil work
+❌ Small details, clutter, patterns, tiny objects, background crowds of figures
+❌ Gradients, soft shading, shadows with soft edges, 3D, photorealism
+❌ Pure black or heavy near-black areas
+❌ Cream, ivory, beige or yellowed paper
+❌ Borders, frames, margins or vignettes
+❌ Text, logos, speech bubbles
+❌ Childish cartoon style
+
+BENCHMARK: a confident mid-century cut-paper poster — a few big flat shapes, nothing fussy.`;
+  }
 
   if (variant === 'handmade') {
     return `HAND-MADE SCREEN PRINT for ${publicationName || 'local news publication'}. Subject: ${subject}
