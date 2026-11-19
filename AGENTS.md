@@ -41,4 +41,4 @@
 - Marketing colours: `shop-*` tokens only.
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
-- Source photos always credited (photoCredit.ts); use_publisher_photos off: none new.
+- Source photos always credited (photoCredit.ts); use_publisher_photos off: none new
