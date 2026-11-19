@@ -9,8 +9,8 @@ function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
 }
 
-function createSupabaseFetch(supabaseKey: string): (...args: Parameters<typeof fetch>) => Promise<Response> {
-  return (input, init) => {
+function createSupabaseFetch(supabaseKey: string): typeof fetch {
+  return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
     const headers = new Headers(
       typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined,
     );
@@ -26,7 +26,7 @@ function createSupabaseFetch(supabaseKey: string): (...args: Parameters<typeof f
 
     headers.set('apikey', supabaseKey);
     return fetch(input, { ...init, headers });
-  };
+  }) as unknown as typeof fetch;
 }
 
 function createSupabaseAdminClient() {
