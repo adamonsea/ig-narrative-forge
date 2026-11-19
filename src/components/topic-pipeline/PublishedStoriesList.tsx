@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, X, Columns2 } from "lucide-react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
@@ -17,6 +17,7 @@ import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 import { publicationFromUrl, resolvePublicationName } from "@/lib/urlUtils";
 import { DeskBadge, DeskCard, MetaLine } from "./DeskCard";
 import { StoryDrawer, type PublishedStory } from "./StoryDrawer";
+import { DuplicateCompareDrawer } from "./DuplicateCompareDrawer";
 import { StoryFilters, type StorySort, type StoryTypeFilter } from "./StoryFilters";
 
 /** Best-effort source label for a story. */
@@ -49,8 +50,8 @@ interface PublishedStoriesListProps {
   /** Drafts waiting for the owner's OK: Publish and Skip always showing, no filters or pages. */
   toCheck?: boolean;
   onSkip?: (story: PublishedStory) => void;
-  /** Ids of waiting stories that repeat one already live. */
-  repeatIds?: Set<string>;
+  /** Waiting stories that repeat one already live, mapped to that live story. */
+  repeatOf?: Map<string, PublishedStory>;
   /** Publishing handled by the Desk, so the story moves into Live now at once. */
   onPublishNow?: (storyId: string, title: string) => Promise<void>;
   /** Just-published stories still getting their picture: shown faded until it lands. */
@@ -80,7 +81,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   feedOrder = false,
   toCheck = false,
   onSkip,
-  repeatIds,
+  repeatOf,
   onPublishNow,
   settlingIds,
 }) => {
@@ -92,6 +93,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [cancellingQueue, setCancellingQueue] = useState<Set<string>>(new Set());
   const [openStoryId, setOpenStoryId] = useState<string | null>(null);
+  const [compareId, setCompareId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [storyFilter, setStoryFilter] = useState<StoryTypeFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
@@ -300,6 +302,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   };
 
   const openStory = openStoryId ? stories.find(s => s.id === openStoryId) ?? null : null;
+  const compareStory = compareId ? stories.find(s => s.id === compareId) ?? null : null;
   useEffect(() => {
     if (openStoryId && !stories.some(s => s.id === openStoryId)) setOpenStoryId(null);
   }, [openStoryId, stories]);
@@ -427,7 +430,16 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   {isScheduled && <DeskBadge><Clock className="h-3.5 w-3.5" aria-hidden="true" />{format(new Date(story.scheduled_publish_at!), 'd MMM, HH:mm')}</DeskBadge>}
                   {isReady && <DeskBadge tone="primary">Ready</DeskBadge>}
                   {isDraft && !toCheck && <DeskBadge>Draft</DeskBadge>}
-                  {repeatIds?.has(story.id) && <DeskBadge tone="warning">Already live</DeskBadge>}
+                  {repeatOf?.has(story.id) && (
+                    <button
+                      type="button"
+                      className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={(e) => { e.stopPropagation(); setCompareId(story.id); }}
+                      title="Compare with the live story"
+                    >
+                      <DeskBadge tone="warning"><Columns2 className="h-3.5 w-3.5" aria-hidden="true" />Duplicate live</DeskBadge>
+                    </button>
+                  )}
                 </>
               }
               meta={
@@ -509,6 +521,15 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           </Button>
         </div>
       )}
+
+      <DuplicateCompareDrawer
+        waiting={compareStory}
+        live={compareStory ? repeatOf?.get(compareStory.id) ?? null : null}
+        onOpenChange={(o) => !o && setCompareId(null)}
+        onSkip={onSkip}
+        onPublish={async (s) => { await handlePublishNow(s.id, s.title || s.headline || 'Untitled'); setCompareId(null); }}
+        publishing={compareStory ? publishingNow.has(compareStory.id) : false}
+      />
 
       <StoryDrawer
         story={openStory}

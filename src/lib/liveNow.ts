@@ -105,15 +105,26 @@ export function groupHeld<T extends LiveNowStory & { scheduled_publish_at?: stri
 
 const words = (t: string) => new Set(t.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2));
 
+function similarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let shared = 0;
+  for (const w of a) if (b.has(w)) shared++;
+  return shared / (a.size + b.size - shared);
+}
+
+/** The live story a held story's headline (nearly) repeats, the closest one first; null when none. */
+export function findLiveRepeat<T extends { title?: string | null }>(title: string, live: T[], threshold = 0.8): T | null {
+  const a = words(title);
+  let best: T | null = null;
+  let bestScore = threshold;
+  for (const s of live) {
+    const score = similarity(a, words(s.title || ""));
+    if (score >= bestScore) { best = s; bestScore = score; }
+  }
+  return best;
+}
+
 /** True when a held story's headline is (nearly) the same as one already live: a repeat, safe to Skip. */
 export function isRepeatOfLive(title: string, liveTitles: string[], threshold = 0.8): boolean {
-  const a = words(title);
-  if (a.size === 0) return false;
-  return liveTitles.some((t) => {
-    const b = words(t);
-    if (b.size === 0) return false;
-    let shared = 0;
-    for (const w of a) if (b.has(w)) shared++;
-    return shared / (a.size + b.size - shared) >= threshold;
-  });
+  return findLiveRepeat(title, liveTitles.map((t) => ({ title: t })), threshold) !== null;
 }

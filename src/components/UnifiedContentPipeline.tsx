@@ -21,7 +21,7 @@ import { HappenedSettings } from "@/components/topic-pipeline/HappenedSettings";
 import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder } from "@/lib/whatsOn";
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
-import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld, withJustPublished } from "@/lib/liveNow";
+import { findLiveRepeat, groupHeld, splitLiveNow, staleHeld, withJustPublished } from "@/lib/liveNow";
 import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -392,8 +392,13 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   // Drafts nothing will publish on its own wait for a one-click OK; queued ones go out by themselves.
   const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
   const staleStories = staleHeld(otherHeld);
-  const liveTitles = liveStories.map((s: any) => s.title || '');
-  const repeatIds = new Set([...storiesToCheck, ...queuedStories].filter((s: any) => isRepeatOfLive(s.title || '', liveTitles)).map((s: any) => s.id));
+  // Waiting stories that repeat one already live, with the live story they repeat (for side-by-side compare).
+  const repeatOf = new Map<string, any>();
+  for (const s of [...storiesToCheck, ...queuedStories] as any[]) {
+    const match = findLiveRepeat(s.title || '', liveStories as any[]);
+    if (match) repeatOf.set(s.id, match);
+  }
+  const repeatIds = new Set(repeatOf.keys());
   const repeatsToCheck = storiesToCheck.filter((s: any) => repeatIds.has(s.id));
   const setPulseIds = pulseCtx?.setStoryIds;
   useEffect(() => {
@@ -517,7 +522,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               </h4>
               <PublishedStoriesList
                 toCheck
-                repeatIds={repeatIds}
+                repeatOf={repeatOf}
                 stories={storiesToCheck}
                 onSkip={(s) => archiveWithUndo([s], true)}
                 onPublishNow={publishNow}
@@ -539,7 +544,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           {queuedStories.length > 0 && (
             <RememberedFold foldKey="desk-queued" label={`Queued · ${queuedStories.length}`} contentClassName="pt-2">
               <PublishedStoriesList
-                repeatIds={repeatIds}
+                repeatOf={repeatOf}
                 stories={queuedStories}
                 onPublishNow={publishNow}
                 onArchive={handleArchiveStory}

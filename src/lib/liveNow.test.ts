@@ -1,6 +1,6 @@
 // @ts-nocheck -- run with: bun test ./src/lib/liveNow.test.ts
 import { describe, expect, it } from "bun:test";
-import { groupHeld, isRepeatOfLive, splitLiveNow, staleHeld, withJustPublished } from "./liveNow";
+import { findLiveRepeat, groupHeld, isRepeatOfLive, splitLiveNow, staleHeld, withJustPublished } from "./liveNow";
 
 const NOW = Date.parse("2026-11-17T09:00:00Z");
 const base = { is_published: true, topic_article_id: "ta", article_published_at: null };
@@ -94,5 +94,18 @@ describe("Publishing from the Desk", () => {
     const stories = [{ ...base, id: "ok", status: "draft", is_published: false, created_at: "2026-11-17T07:00:00Z" }];
     expect(withJustPublished(stories, new Set())).toBe(stories);
     expect(splitLiveNow(withJustPublished(stories, new Set(["other"])), NOW).live).toEqual([]);
+  });
+});
+
+describe("findLiveRepeat", () => {
+  const live = [
+    { id: "a", title: "Christmas Day concert returns to Eastbourne bandstand" },
+    { id: "b", title: "Council approves new cycle lane on seafront" },
+  ];
+  it("returns the live story a waiting headline repeats", () => {
+    expect(findLiveRepeat("Christmas Day concert returns to the Eastbourne bandstand", live)?.id).toBe("a");
+  });
+  it("returns null when nothing live is close enough", () => {
+    expect(findLiveRepeat("Pier reopens after storm repairs", live)).toBeNull();
   });
 });
