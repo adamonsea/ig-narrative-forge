@@ -255,7 +255,7 @@ const Auth = () => {
                 type="button"
                 onClick={() => {
                   setError(null);
-                  setMode(mode === 'signup' ? 'signin' : 'signup');
+                  setMode(mode === 'signin' ? 'signup' : 'signin');
                 }}
                 className="mx-auto block text-sm text-[hsl(214,20%,70%)] transition-colors hover:text-white"
               >
