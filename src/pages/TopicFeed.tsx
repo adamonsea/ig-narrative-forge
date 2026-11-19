@@ -13,6 +13,8 @@ import { WhatsOnCard } from "@/components/events/WhatsOnCard";
 import { EventCard } from "@/components/events/EventCard";
 import { FeedViewToggle } from "@/components/feed/FeedViewToggle";
 import { effectiveFeedView, showFeedViewToggle, viewShowsEvents, type FeedView } from "@/lib/feedView";
+import { withPinnedFirst } from "@/lib/storyPin";
+import { useTopicPin } from "@/hooks/useStoryPin";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
 import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
@@ -524,6 +526,9 @@ const TopicFeed = () => {
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
   const shouldShowCommunityPulse = FEATURES.communityDiscussion && topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
 
+  // The owner's pinned story (one per feed) sits first while its pin lasts.
+  const { pinnedId } = useTopicPin(topic?.id);
+
   const lastStoryContentIndex = useMemo(() => {
     let lastIndex = -1;
     filteredContent.forEach((item, index) => {
@@ -667,7 +672,7 @@ const TopicFeed = () => {
     }
     
     // Apply ghost filter FIRST to create displayable content array
-    const displayableContent = filteredContent.filter(contentItem => {
+    const displayableContent = withPinnedFirst(filteredContent, pinnedId).filter(contentItem => {
       if (contentItem.type !== 'story') return true;
       const story = contentItem.data as any;
       const hasRealSlides = story.slides?.length > 0 && 
@@ -707,6 +712,7 @@ const TopicFeed = () => {
               topicSlug={slug}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               coverStyle={resolveStoryCoverStyle(topic?.story_cover_style)}
+              pinned={story.id === pinnedId}
               onStorySwipe={handleStorySwipe}
               onStoryScrolledPast={handleStoryScrolledPast}
               onMoreLikeThis={FEED_FILTERS_ENABLED ? handleMoreLikeThis : undefined}
@@ -902,11 +908,16 @@ const TopicFeed = () => {
 
     // Events-led: events are the run of cards; news and extras slot in counted against events
     if (eventsLed && individualCards && feedView === 'all') {
-      const stories = displayableContent.filter((item) => item.type === 'story');
+      const allStories = displayableContent.filter((item) => item.type === 'story');
+      // A pinned story leads, ahead of the events run
+      const pinnedItem = pinnedId ? allStories.find((item) => item.id === pinnedId) : undefined;
+      const stories = pinnedItem ? allStories.filter((item) => item !== pinnedItem) : allStories;
+      const offset = pinnedItem ? 1 : 0;
       const run: React.ReactNode[] = [];
+      if (pinnedItem) run.push(...renderStory(pinnedItem.data, 1, -1, false));
       eventsLedRun(feedEvents.length, stories.length, !eventsHasMore).forEach((item, k) => {
         if (item.kind === 'event') run.push(renderEventCard(feedEvents[item.index]));
-        else run.push(...renderStory(stories[item.index].data, item.index + 1, k, false));
+        else run.push(...renderStory(stories[item.index].data, item.index + 1 + offset, k, false));
         if (item.extrasAt !== null) run.push(...renderExtras(item.extrasAt, k, false));
       });
       return run;
@@ -928,7 +939,7 @@ const TopicFeed = () => {
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
     hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed,
     eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand, eventsHasMore, eventCurrency,
-    feedView, eventsInView
+    feedView, eventsInView, pinnedId
   ]);
 
   if (loading) {

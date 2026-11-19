@@ -22,6 +22,8 @@ import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder }
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
 import { findLiveRepeat, groupHeld, splitLiveNow, staleHeld, withJustPublished } from "@/lib/liveNow";
+import { withPinnedFirst } from "@/lib/storyPin";
+import { useSetStoryPin, useTopicPin } from "@/hooks/useStoryPin";
 import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -107,6 +109,16 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   // Events flow through the same pipeline: Waiting (Publish / Skip), Hidden, and the What's on set in Live
   const { data: eventDesk } = useEventDesk(selectedTopicId || propTopicId);
+  const { pin: storyPin, pinnedId } = useTopicPin(selectedTopicId || undefined);
+  const setStoryPin = useSetStoryPin(selectedTopicId || undefined);
+  const handlePin = useCallback(async (storyId: string | null, hours: number) => {
+    try {
+      await setStoryPin(storyId, hours);
+    } catch (e) {
+      console.error("Pin failed", e);
+      toast({ title: storyId ? "Couldn't pin" : "Couldn't unpin", description: "Try again.", variant: "destructive" });
+    }
+  }, [setStoryPin, toast]);
   const eventActions = useEventDeskActions(selectedTopicId || propTopicId);
 
   const multiTenantActions = useMultiTenantActions();
@@ -409,7 +421,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   }
 
   // Live now = exactly the feed (same stories, same order); written-but-not-live waits in the Story pool.
-  const { live: liveStories, held: heldStories } = splitLiveNow(withJustPublished((stories as any[]).filter(st => !skippedIds.has(st.id)), justPublished));
+  const { live: liveFeedOrder, held: heldStories } = splitLiveNow(withJustPublished((stories as any[]).filter(st => !skippedIds.has(st.id)), justPublished));
+  // A pinned story sits first, as it does in the public feed.
+  const liveStories = withPinnedFirst(liveFeedOrder, pinnedId);
   const visibleIdsKey = [...liveStories, ...heldStories].map(s => s.id).join(',');
   // Drafts nothing will publish on its own wait for a one-click OK; queued ones go out by themselves.
   const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
@@ -684,6 +698,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <PublishedStoriesList
               feedOrder
               stories={liveStories}
+              pinnedId={pinnedId}
+              pinnedUntil={storyPin?.pinned_until ?? null}
+              onPin={handlePin}
               onSkip={(s) => archiveWithUndo([s], 'removed')}
               leavingIds={leavingIds}
               settlingIds={settlingIds}

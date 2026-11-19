@@ -1,3 +1,11 @@
+# Pinned stories + feed icons (19 Nov 2026)
+- [x] Pin one live story to the top of a feed for 24 hours, 2 days or 7 days (Desk story drawer); drops back when the pin ends
+- [x] Pinned story first in the public feed (with a "Pinned" label) and in Live now
+- [x] Weekly email leads with the pinned story while pinned; daily email leads with it once (Adam chose "Lead once")
+- [x] Daily/weekly briefing pages lead with the pinned story when it's one of that period's stories
+- [x] Feed tabs use the feed's app icon (Curatr's extra icons no longer override it)
+- [ ] Pinned events (after stories, per Adam)
+
 # Publisher photos (19 Nov 2026)
 - [x] Credit publisher photos on story covers (site's credit, else publisher name)
 - [x] Feed Settings switch: Publisher photos on/off (off = illustrations only)

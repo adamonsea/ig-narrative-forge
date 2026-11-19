@@ -5386,6 +5386,10 @@ export type Database = {
           parliamentary_last_collection_at: string | null
           parliamentary_last_weekly_roundup_at: string | null
           parliamentary_tracking_enabled: boolean | null
+          pinned_at: string | null
+          pinned_daily_led_at: string | null
+          pinned_story_id: string | null
+          pinned_until: string | null
           postcodes: string[] | null
           public_widget_builder_enabled: boolean | null
           region: string | null
@@ -5465,6 +5469,10 @@ export type Database = {
           parliamentary_last_collection_at?: string | null
           parliamentary_last_weekly_roundup_at?: string | null
           parliamentary_tracking_enabled?: boolean | null
+          pinned_at?: string | null
+          pinned_daily_led_at?: string | null
+          pinned_story_id?: string | null
+          pinned_until?: string | null
           postcodes?: string[] | null
           public_widget_builder_enabled?: boolean | null
           region?: string | null
@@ -5544,6 +5552,10 @@ export type Database = {
           parliamentary_last_collection_at?: string | null
           parliamentary_last_weekly_roundup_at?: string | null
           parliamentary_tracking_enabled?: boolean | null
+          pinned_at?: string | null
+          pinned_daily_led_at?: string | null
+          pinned_story_id?: string | null
+          pinned_until?: string | null
           postcodes?: string[] | null
           public_widget_builder_enabled?: boolean | null
           region?: string | null
@@ -5555,7 +5567,15 @@ export type Database = {
           use_publisher_photos?: boolean
           weekly_email_enabled?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "topics_pinned_story_id_fkey"
+            columns: ["pinned_story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_credits: {
         Row: {
@@ -7092,6 +7112,13 @@ export type Database = {
           readers_today: number
         }[]
       }
+      get_topic_pin: {
+        Args: { p_topic_id: string }
+        Returns: {
+          pinned_until: string
+          story_id: string
+        }[]
+      }
       get_topic_pulse: {
         Args: { p_story_ids?: string[]; p_topic_id: string }
         Returns: Json
@@ -7470,6 +7497,10 @@ export type Database = {
       set_event_source_auto_publish: {
         Args: { p_on: boolean; p_source_id: string }
         Returns: number
+      }
+      set_story_pin: {
+        Args: { p_hours: number; p_story_id: string; p_topic_id: string }
+        Returns: string
       }
       set_topic_distribution: {
         Args: { p_enabled: boolean; p_field: string; p_topic_id: string }

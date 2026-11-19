@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { FEATURES } from '../_shared/parked-features.ts';
+import { activePinId, withPinnedFirst } from '../_shared/storyPin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,7 +62,7 @@ serve(async (req) => {
     // Get topic info
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('name, slug')
+      .select('name, slug, pinned_story_id, pinned_until')
       .eq('id', topic_id)
       .single();
 
@@ -120,6 +121,9 @@ serve(async (req) => {
 
       console.log(`📊 Top story by engagement: "${sortedStories[0]?.title}" with ${swipeCountMap.get(sortedStories[0]?.id) || 0} swipes`);
     }
+
+    // The owner's pinned story leads the briefing when it's one of this period's stories
+    sortedStories = withPinnedFirst(sortedStories, activePinId({ story_id: topic.pinned_story_id, pinned_until: topic.pinned_until }));
 
     if (storyCount === 0) {
       console.log('⏭️ No stories found for this day, skipping roundup generation');

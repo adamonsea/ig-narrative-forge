@@ -126,6 +126,8 @@ interface StoryCarouselProps {
   onReactionCountsChange?: (storyId: string, counts: { thumbsUp: number; thumbsDown: number; userReaction: 'like' | 'discard' | null }) => void;
   /** First-slide cover: 'split' (picture above headline, default) or 'full-bleed' (picture behind a white headline). Slides 2+ are the same in both. */
   coverStyle?: 'split' | 'full-bleed';
+  /** The feed owner pinned this story to the top. */
+  pinned?: boolean;
 }
 
 /** Publisher name used for credits: publication, then source name, then the article's web address. */
@@ -158,7 +160,8 @@ export default function StoryCarousel({
   onPrefetchFilter,
   prefetchedReactionCounts,
   onReactionCountsChange,
-  coverStyle = 'split'
+  coverStyle = 'split',
+  pinned = false
 }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
@@ -251,6 +254,19 @@ export default function StoryCarousel({
       );
     }
     
+    if (pinned) {
+      badges.push(
+        <Badge
+          key="pinned"
+          variant="outline"
+          className="text-xs px-2 py-1 scale-80 origin-left gap-1 border-2 border-foreground bg-background text-foreground font-semibold"
+        >
+          <Pin className="h-3 w-3" aria-hidden="true" />Pinned
+        </Badge>
+      );
+      return badges;
+    }
+
     const isNew = isNewStory(storyIndex);
 
     if (isNew) {
@@ -293,7 +309,7 @@ export default function StoryCarousel({
     }
 
     return badges;
-  }, [isRoundupView, storyIndex, story.popularity_data, story.article?.published_at, story.created_at, story.tone]);
+  }, [isRoundupView, storyIndex, story.popularity_data, story.article?.published_at, story.created_at, story.tone, pinned]);
 
   const teaserBadge = story.is_teaser ? (
     <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">

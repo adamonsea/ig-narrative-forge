@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_topics_pinned_story_id ON public.topics (pinned_story_id) WHERE pinned_story_id IS NOT NULL;

@@ -11,6 +11,7 @@ import { emailBrand, enrichEmailEvents, type EventDetails, type RichEmailEvent }
 import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProAccess } from '../_shared/auth.ts';
 import { dedupeByEvent, EMAIL_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
 import { FEATURES } from '../_shared/parked-features.ts';
+import { pinLeadsEmail } from '../_shared/storyPin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -138,7 +139,7 @@ serve(async (req) => {
     // Get topic details
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, slug, branding_config, illustration_primary_color, event_currency, events_enabled, feed_lead, created_by, email_subscriptions_enabled')
+      .select('id, name, slug, branding_config, illustration_primary_color, event_currency, events_enabled, feed_lead, created_by, email_subscriptions_enabled, pinned_story_id, pinned_at, pinned_until, pinned_daily_led_at')
       .eq('id', topicId)
       .single();
 
@@ -266,7 +267,51 @@ serve(async (req) => {
       console.log(`🚫 Duplicate held back: "${d.candidate.headline}" ≈ "${d.matched}" (${d.score.toFixed(2)})`)
     );
 
-    const topicStories = dedupedToday.slice(0, storyLimit);
+    let topicStories = dedupedToday.slice(0, storyLimit);
+
+    // Pinned story leads: the weekly email while the pin lasts, the daily email once per pin.
+    let pinnedLeadId: string | null = null;
+    const storyPin = {
+      story_id: topic.pinned_story_id,
+      pinned_at: topic.pinned_at,
+      pinned_until: topic.pinned_until,
+      daily_led_at: topic.pinned_daily_led_at,
+    };
+    if (pinLeadsEmail(storyPin, notificationType)) {
+      const { data: pinned } = await supabase
+        .from('stories')
+        .select(`
+          id,
+          title,
+          cover_illustration_url,
+          quality_score,
+          topic_article_id,
+          created_at,
+          slides!slides_story_id_fkey(content, slide_number)
+        `)
+        .eq('id', topic.pinned_story_id)
+        .eq('is_published', true)
+        .in('status', ['published', 'ready'])
+        .maybeSingle();
+      if (pinned?.topic_article_id) {
+        let ta = taMap.get(pinned.topic_article_id);
+        if (!ta) {
+          const { data: pinnedTa } = await supabase
+            .from('topic_articles')
+            .select('id, topic_id, source:content_sources(source_name), shared_content:shared_article_content(source_domain)')
+            .eq('id', pinned.topic_article_id)
+            .maybeSingle();
+          if (pinnedTa) { taMap.set(pinnedTa.id, pinnedTa); ta = pinnedTa; }
+        }
+        if (ta?.topic_id === topicId) {
+          const lead = withHeadline(pinned);
+          // Repeats of the pinned story drop out, so it leads alone
+          topicStories = dedupeByEvent([lead, ...dedupedToday.filter((st) => st.id !== lead.id)]).kept.slice(0, storyLimit);
+          pinnedLeadId = lead.id;
+          console.log(`📌 Pinned story leads the ${notificationType} email: "${lead.headline}"`);
+        }
+      }
+    }
 
     console.log(`📰 Found ${topicStories.length} published stories for ${topic.name} newsletter (${droppedToday.length} duplicates removed)`);
 
@@ -648,6 +693,15 @@ serve(async (req) => {
         errors.push(`${recipient.email}: ${error.message}`);
         failedCount++;
       }
+    }
+
+    // A pinned story leads the daily email once: remember it led
+    if (!testEmail && notificationType === 'daily' && pinnedLeadId && sentCount > 0) {
+      const { error: pinError } = await supabase
+        .from('topics')
+        .update({ pinned_daily_led_at: new Date().toISOString() })
+        .eq('id', topicId);
+      if (pinError) console.error('Error recording pinned daily lead (non-fatal):', pinError);
     }
 
     // Log the send operation (skip for test emails)

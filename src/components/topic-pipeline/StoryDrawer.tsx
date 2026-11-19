@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
-import { Archive, Clock, ExternalLink, Film, ImageIcon, Link as LinkIcon, Loader2, MoreHorizontal, RotateCcw, Save, Trash2, Zap } from "lucide-react";
+import { Archive, Clock, ExternalLink, Film, ImageIcon, Link as LinkIcon, Loader2, MoreHorizontal, Pin, PinOff, RotateCcw, Save, Trash2, Zap } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -10,6 +10,7 @@ import { ImageModelSelector, type ImageModel } from "@/components/ImageModelSele
 import { LinkEditor } from "@/components/LinkEditor";
 import { ReelExportButton } from "@/components/reels/ReelExportButton";
 import { DeskBadge, MetaLine } from "./DeskCard";
+import { PIN_LENGTHS, pinTimeLeft } from "@/lib/storyPin";
 
 export interface StoryLink {
   start: number;
@@ -102,14 +103,27 @@ interface StoryDrawerProps {
   onArchive: () => void;
   onDelete: () => void;
   onRefresh: () => void;
+  /** When this story's pin ends (null when it isn't pinned). */
+  pinnedUntil?: string | null;
+  /** Another story is pinned: pinning this one replaces it. */
+  otherPinned?: boolean;
+  /** Pin this live story for a number of hours; 0 unpins. Live now only. */
+  onPin?: (hours: number) => Promise<void>;
 }
 
 /** Everything about one story, one click away: picture, words, sharing and housekeeping. */
 export function StoryDrawer({
   story, open, onOpenChange, sourceLabel, topicSlug, illustrationStyle, generating, animating, publishing,
   onGenerateIllustration, onAnimate, onDeleteAnimation, onDeleteIllustration, onReel, onPublishNow, onUnpublish, onAssignTime, onArchive, onDelete, onRefresh,
+  pinnedUntil = null, otherPinned = false, onPin,
 }: StoryDrawerProps) {
   const { toast } = useToast();
+  const [pinning, setPinning] = useState(false);
+  const pin = async (hours: number) => {
+    if (!onPin) return;
+    setPinning(true);
+    try { await onPin(hours); } finally { setPinning(false); }
+  };
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [linkEditorSlide, setLinkEditorSlide] = useState<StorySlide | null>(null);
@@ -259,6 +273,34 @@ export function StoryDrawer({
                 ))}
               </div>
             </Section>
+
+            {isLive && onPin && (
+              <Section title="Pin to top">
+                {pinnedUntil ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <DeskBadge tone="primary"><Pin className="h-3.5 w-3.5" aria-hidden="true" />Pinned · {pinTimeLeft(pinnedUntil)}</DeskBadge>
+                    <Button variant="ghost" size="sm" onClick={() => pin(0)} disabled={pinning}>
+                      <PinOff className="mr-2 h-4 w-4" />Unpin
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {PIN_LENGTHS.map((p) => (
+                      <Button
+                        key={p.hours}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => pin(p.hours)}
+                        disabled={pinning}
+                        title={otherPinned ? "Replaces the pinned story" : undefined}
+                      >
+                        {p.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </Section>
+            )}
 
             {isLive && (
               <Section title="Share">

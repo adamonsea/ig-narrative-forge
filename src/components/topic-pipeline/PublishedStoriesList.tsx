@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, Columns2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, Columns2, Pin } from "lucide-react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
@@ -16,6 +16,7 @@ import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 import { publicationFromUrl, resolvePublicationName } from "@/lib/urlUtils";
 import { DeskBadge, DeskCard, MetaLine, SpikeButton } from "./DeskCard";
+import { pinTimeLeft } from "@/lib/storyPin";
 import { StoryDrawer, type PublishedStory } from "./StoryDrawer";
 import { DuplicateCompareDrawer } from "./DuplicateCompareDrawer";
 import { StoryFilters, type StorySort, type StoryTypeFilter } from "./StoryFilters";
@@ -58,6 +59,11 @@ interface PublishedStoriesListProps {
   settlingIds?: Set<string>;
   /** Stories the owner just published or skipped: they play their leave motion before going. */
   leavingIds?: Map<string, 'publish' | 'skip'>;
+  /** The feed's pinned story (Live now only): shown first with its time left. */
+  pinnedId?: string | null;
+  pinnedUntil?: string | null;
+  /** Pin a live story for a number of hours, or unpin with (null, 0). */
+  onPin?: (storyId: string | null, hours: number) => Promise<void>;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -87,6 +93,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onPublishNow,
   settlingIds,
   leavingIds,
+  pinnedId = null,
+  pinnedUntil = null,
+  onPin,
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -429,6 +438,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                       <span className="live-pulse h-2 w-2 rounded-full bg-pop" aria-hidden="true" />Adding picture
                     </DeskBadge>
                   )}
+                  {pinnedId === story.id && pinnedUntil && (
+                    <DeskBadge tone="primary"><Pin className="h-3.5 w-3.5" aria-hidden="true" />Pinned · {pinTimeLeft(pinnedUntil)}</DeskBadge>
+                  )}
                   {risingStoryId === story.id && <DeskBadge tone="pop">↑ Rising</DeskBadge>}
                   {isScheduled && <DeskBadge><Clock className="h-3.5 w-3.5" aria-hidden="true" />{format(new Date(story.scheduled_publish_at!), 'd MMM, HH:mm')}</DeskBadge>}
                   {isReady && <DeskBadge tone="primary">Ready</DeskBadge>}
@@ -553,6 +565,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         onArchive={() => { if (openStory) { onArchive(openStory.id, openStory.title || openStory.headline || 'Untitled'); setOpenStoryId(null); } }}
         onDelete={() => { if (openStory) { onDelete(openStory.id, openStory.title || openStory.headline || 'Untitled'); setOpenStoryId(null); } }}
         onRefresh={onRefresh}
+        pinnedUntil={openStory && openStory.id === pinnedId ? pinnedUntil : null}
+        otherPinned={Boolean(pinnedId && openStory && openStory.id !== pinnedId)}
+        onPin={onPin && feedOrder ? (hours) => openStory ? onPin(hours > 0 ? openStory.id : null, hours) : Promise.resolve() : undefined}
       />
 
       <AnimationInstructionsModal
