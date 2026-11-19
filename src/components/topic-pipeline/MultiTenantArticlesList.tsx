@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
 import type { HighlightTerms } from "@/lib/highlightTerms";
-import { DeskCard, MetaLine } from "./DeskCard";
+import { DeskCard, MetaLine, SpikeButton } from "./DeskCard";
 import { WaitingStoryDrawer } from "./WaitingStoryDrawer";
 
 interface MultiTenantArticlesListProps {
@@ -249,11 +249,11 @@ export default function MultiTenantArticlesList({
           ) : undefined}
           actions={
             <>
+              <SpikeButton onClick={() => onDelete(article.id, article.title)} disabled={isDeleting} />
               <Button size="sm" onClick={() => publishArticle(article, slideType, toneOverride, writingStyleOverride)} disabled={isProcessing || isDeleting}>
                 {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
                 Publish
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => onDelete(article.id, article.title)} disabled={isDeleting}>Skip</Button>
             </>
           }
         />

@@ -1,5 +1,6 @@
 import { Fragment, useState, type ReactNode } from "react";
-import { Newspaper } from "lucide-react";
+import { Newspaper, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const isTouch = () => typeof window !== "undefined" && window.matchMedia?.("(hover: none)").matches;
@@ -141,4 +142,28 @@ export function DeskBadge({ children, tone = "muted" }: { children: ReactNode; t
     destructive: "bg-destructive/10 text-destructive",
   };
   return <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm font-medium", tones[tone])}>{children}</span>;
+}
+
+/**
+ * The quick spike on every story card: a small, quiet icon kept apart from the main action
+ * (first in the row, gap after it) so it is fast to reach but hard to hit by mistake.
+ * Undo comes from the toast the handler shows.
+ */
+export function SpikeButton({ label = "Skip", onClick, disabled }: { label?: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          disabled={disabled}
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          className="mr-3 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 }

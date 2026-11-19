@@ -14,7 +14,7 @@ import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { InfoHint, InlineError, SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { RememberedFold } from "@/components/settings/RememberedFold";
-import { DeskCard, DeskBadge, MetaLine } from "@/components/topic-pipeline/DeskCard";
+import { DeskCard, DeskBadge, MetaLine, SpikeButton } from "@/components/topic-pipeline/DeskCard";
 import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
 import { AttentionTag } from "@/components/events/DeskEvents";
 import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
@@ -202,6 +202,10 @@ export default function DesignSystem() {
               <Button variant="outline">Gather</Button>
               <Button variant="ghost">Skip</Button>
               <IconAction label="Gather all now"><RefreshCw className="h-4 w-4" /></IconAction>
+            </div>
+            <div className="flex items-center">
+              <SpikeButton onClick={() => {}} />
+              <Button size="sm">Publish</Button>
             </div>
             <div className="flex flex-wrap items-center gap-8">
               <LiveFeedControl isLive feedName="Eastbourne" feedPath="/feed/eastbourne" onChange={() => {}} />

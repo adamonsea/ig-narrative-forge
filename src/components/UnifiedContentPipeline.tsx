@@ -269,7 +269,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const setSkipped = (ids: string[], on: boolean) =>
     setSkippedIds(prev => { const n = new Set(prev); ids.forEach(id => (on ? n.add(id) : n.delete(id))); return n; });
 
-  const archiveWithUndo = async (items: { id: string; status: string; is_published: boolean }[], skipped = false) => {
+  const archiveWithUndo = async (items: { id: string; status: string; is_published: boolean }[], skipped: boolean | 'removed' = false) => {
     const ids = items.map(s => s.id);
     // Gone from the Desk straight away; put back if the save fails or the owner taps Undo.
     setLeaving(ids, 'skip');
@@ -297,7 +297,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         }
       };
       toast({
-        description: skipped ? 'Skipped' : `Archived ${ids.length} ${ids.length === 1 ? 'story' : 'stories'}`,
+        description: skipped === 'removed' ? 'Removed from feed' : skipped ? 'Skipped' : `Archived ${ids.length} ${ids.length === 1 ? 'story' : 'stories'}`,
         duration: 3000,
         action: <ToastAction altText="Undo" onClick={restore}>Undo</ToastAction>,
       });
@@ -569,6 +569,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <PublishedStoriesList
                 repeatOf={repeatOf}
                 stories={queuedStories}
+                onSkip={(s) => archiveWithUndo([s], true)}
                 onPublishNow={publishNow}
                 leavingIds={leavingIds}
                 onArchive={handleArchiveStory}
@@ -593,6 +594,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               )}
               <PublishedStoriesList
                 stories={otherHeld}
+                onSkip={(s) => archiveWithUndo([s], true)}
                 onPublishNow={publishNow}
                 leavingIds={leavingIds}
                 onArchive={handleArchiveStory}
@@ -682,6 +684,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <PublishedStoriesList
               feedOrder
               stories={liveStories}
+              onSkip={(s) => archiveWithUndo([s], 'removed')}
+              leavingIds={leavingIds}
               settlingIds={settlingIds}
               processingItems={queueItems}
               onArchive={handleArchiveStory}

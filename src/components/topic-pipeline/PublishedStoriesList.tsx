@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, X, Columns2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Clock, XCircle, AlertCircle, Eye, RotateCcw, Zap, Check, Columns2 } from "lucide-react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImageUrl } from "@/lib/imageOptimization";
@@ -15,7 +15,7 @@ import { AnimationInstructionsModal } from "@/components/topic-pipeline/Animatio
 import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 import { publicationFromUrl, resolvePublicationName } from "@/lib/urlUtils";
-import { DeskBadge, DeskCard, MetaLine } from "./DeskCard";
+import { DeskBadge, DeskCard, MetaLine, SpikeButton } from "./DeskCard";
 import { StoryDrawer, type PublishedStory } from "./StoryDrawer";
 import { DuplicateCompareDrawer } from "./DuplicateCompareDrawer";
 import { StoryFilters, type StorySort, type StoryTypeFilter } from "./StoryFilters";
@@ -454,26 +454,24 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               }
               actions={toCheck ? (
                 <>
+                  {onSkip && <SpikeButton onClick={() => onSkip(story)} disabled={publishing} />}
                   <Button size="sm" onClick={() => handlePublishNow(story.id, storyTitle)} disabled={publishing}>
                     {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                     Publish
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => onSkip?.(story)} disabled={publishing}>
-                    <X className="mr-2 h-4 w-4" />Skip
-                  </Button>
                 </>
               ) : isLive ? (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setOpenStoryId(story.id)}>Open</Button>
+                  {onSkip && <SpikeButton label="Remove from feed" onClick={() => onSkip(story)} />}
                   <Button size="sm" variant="ghost" onClick={() => onReturnToReview(story.id)}>Unpublish</Button>
                 </>
               ) : (
                 <>
+                  {onSkip && <SpikeButton onClick={() => onSkip(story)} disabled={publishing} />}
                   <Button size="sm" onClick={() => handlePublishNow(story.id, storyTitle)} disabled={publishing}>
                     {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
                     Publish now
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setOpenStoryId(story.id)}>Open</Button>
                 </>
               )}
             />
