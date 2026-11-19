@@ -1,0 +1,1 @@
+- Maybe-undefined optional values go through `opt()`/`definedOnly()` (`src/lib/optionalProps.ts`); keeps strict types without changing runtime.
