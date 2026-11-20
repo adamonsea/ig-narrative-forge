@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import React, { useState } from "react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { Archive, Clock, Crop, ExternalLink, Film, ImageIcon, ImagePlus, Link as LinkIcon, Loader2, MoreHorizontal, Pin, PinOff, RotateCcw, Save, Trash2, Zap } from "lucide-react";
@@ -44,6 +45,7 @@ export interface PublishedStory {
   slides: StorySlide[];
   slide_count?: number | undefined;
   slides_load_failed?: boolean | undefined;
+  slides_pending?: boolean | undefined;
   article_id?: string | undefined;
   topic_article_id?: string | undefined;
   story_type?: "legacy" | "multi_tenant" | undefined;
@@ -256,6 +258,9 @@ export function StoryDrawer({
                 </div>
               )}
               <div className="space-y-3">
+                {story.slides_pending && story.slides.length === 0 && Array.from({ length: Math.min(slideCount || 3, 6) }).map((_, i) => (
+                  <Skeleton key={`slide-skel-${i}`} className="h-24 w-full rounded-lg" />
+                ))}
                 {story.slides.map((slide, index) => (
                   <div key={slide.id} className="space-y-2 rounded-lg border border-border p-3">
                     <div className="flex items-center justify-between text-sm text-muted-foreground">

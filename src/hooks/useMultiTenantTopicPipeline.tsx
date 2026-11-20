@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import { detectDuplicateGroups, DuplicateInfo } from "@/lib/titleSimilarity";
 import { getDisplayDate } from "@/lib/displayDate";
+import { readDeskMemory, readDeskStored, writeDeskSnapshot, clearDeskSnapshots } from "@/lib/deskCache";
 
 export interface MultiTenantArticle {
   id: string;
@@ -80,6 +81,9 @@ export interface MultiTenantStory {
   created_at: string;
   updated_at: string;
   slides: any[];
+  /** Slide text is still loading in the background (cards don't need it). */
+  slides_pending?: boolean | undefined;
+  slides_load_failed?: boolean | undefined;
   article_title: string;
   story_type: 'legacy' | 'multi_tenant';
   title?: string | undefined;
@@ -120,12 +124,14 @@ const PUBLISHED_PAGE_SIZE = 250;
 
 export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const { toast } = useToast();
-  const [articles, setArticles] = useState<MultiTenantArticle[]>([]);
-  const [queueItems, setQueueItems] = useState<MultiTenantQueueItem[]>([]);
-  const [stories, setStories] = useState<MultiTenantStory[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Last-seen lists for this feed (in-app navigation): shown at once, refreshed behind.
+  const [initialSnap] = useState(() => readDeskMemory(selectedTopicId));
+  const [articles, setArticles] = useState<MultiTenantArticle[]>(() => (initialSnap?.articles as MultiTenantArticle[]) ?? []);
+  const [queueItems, setQueueItems] = useState<MultiTenantQueueItem[]>(() => (initialSnap?.queueItems as MultiTenantQueueItem[]) ?? []);
+  const [stories, setStories] = useState<MultiTenantStory[]>(() => (initialSnap?.stories as MultiTenantStory[]) ?? []);
+  const [loading, setLoading] = useState(!initialSnap);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [stats, setStats] = useState<MultiTenantStats>({
+  const [stats, setStats] = useState<MultiTenantStats>(() => (initialSnap?.stats as MultiTenantStats) ?? {
     articles: 0,
     queueItems: 0,
     stories: 0
@@ -133,14 +139,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
   // Pagination state for articles
   const [articlesPage, setArticlesPage] = useState(1);
-  const [totalArticlesCount, setTotalArticlesCount] = useState<number | null>(null);
-  const [hasMoreArticles, setHasMoreArticles] = useState(true);
+  const [totalArticlesCount, setTotalArticlesCount] = useState<number | null>(initialSnap?.totalArticlesCount ?? null);
+  const [hasMoreArticles, setHasMoreArticles] = useState(initialSnap?.hasMoreArticles ?? true);
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Pagination state for published stories (feeds can hold thousands)
-  const [publishedLoadedCount, setPublishedLoadedCount] = useState(0);
+  const [publishedLoadedCount, setPublishedLoadedCount] = useState(initialSnap?.publishedLoadedCount ?? 0);
   const [totalPublishedCount, setTotalPublishedCount] = useState<number | null>(null);
-  const [hasMorePublished, setHasMorePublished] = useState(false);
+  const [hasMorePublished, setHasMorePublished] = useState(initialSnap?.hasMorePublished ?? false);
   const [loadingMorePublished, setLoadingMorePublished] = useState(false);
 
   // New content indicators for real-time updates
@@ -197,6 +203,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   };
 
 
+  // Latest lists for realtime handlers, so the live channel isn't rebuilt on every refresh.
+  const storiesRef = useRef(stories);
+  storiesRef.current = stories;
+  const queueItemsRef = useRef(queueItems);
+  queueItemsRef.current = queueItems;
+
   // Previous counts to detect new content
   const previousCountsRef = useRef<{
     articles: number;
@@ -216,63 +228,106 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     rejectMultiTenantStory
   } = useMultiTenantActions();
 
+  // Each load gets a number; an older load that finishes late never overwrites a newer one.
+  const loadGenRef = useRef(0);
+  // True once lists are on screen (from the server or the last-seen snapshot),
+  // so background refreshes never swap the Desk back to skeletons.
+  const hasDataRef = useRef(false);
+
   const loadTopicContent = useCallback(async () => {
     if (!selectedTopicId) {
       setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
-      setLoadError(null);
+    const topicId = selectedTopicId;
+    const gen = ++loadGenRef.current;
+    const isCurrent = () => gen === loadGenRef.current;
 
-      // Get ONLY multi-tenant articles for arrivals (no legacy articles)
-      // Use pagination - first page loads with reset
-      const multiTenantArticlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
-        p_topic_id: selectedTopicId,
-        p_status: null!, // Get all statuses to filter out processed ones
-        p_limit: ARTICLES_PAGE_SIZE,
-        p_offset: 0 // Always start from first page on initial load
-      });
-      
-      // Get total count for pagination display - only 'new' articles that haven't been processed yet
-      const { count: totalCount } = await supabase
-        .from('topic_articles')
-        .select('id', { count: 'exact', head: true })
-        .eq('topic_id', selectedTopicId)
-        .eq('processing_status', 'new');
-      
-      setTotalArticlesCount(totalCount || 0);
-      setArticlesPage(1); // Reset to first page
+    try {
+      if (!hasDataRef.current) setLoading(true);
+
+      // Fetch per status so a large backlog of published stories can never push
+      // drafts (or vice versa) out of a single shared row window. This is the
+      // single source of truth for the pipeline lists; the direct query is only
+      // a fallback when the RPC fails — never merged additively with it.
+      const STATUS_PAGE_SIZE: Record<string, number> = {
+        draft: 100,
+        ready: 100,
+        published: PUBLISHED_PAGE_SIZE,
+        archived: 100
+      };
+      const STATUSES = ['draft', 'ready', 'published', 'archived'];
+
+      // ---- Round 1: everything independent, in parallel ----
+      const [
+        sessionResult,
+        multiTenantArticlesResult,
+        newCountResult,
+        multiTenantQueueResult,
+        trackedMPsResult,
+        ...perStatusResults
+      ] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.rpc('get_topic_articles_multi_tenant', {
+          p_topic_id: topicId,
+          p_status: null!, // all statuses; processed ones are filtered below
+          p_limit: ARTICLES_PAGE_SIZE,
+          p_offset: 0
+        }),
+        // Total of genuinely new arrivals, for the pagination display
+        supabase
+          .from('topic_articles')
+          .select('id', { count: 'exact', head: true })
+          .eq('topic_id', topicId)
+          .eq('processing_status', 'new'),
+        // Queue items for this feed (also used to hide articles already being written)
+        supabase
+          .from('content_generation_queue')
+          .select(`
+            id,
+            topic_article_id,
+            shared_content_id,
+            status,
+            created_at,
+            started_at,
+            completed_at,
+            attempts,
+            max_attempts,
+            error_message,
+            slidetype,
+            tone,
+            writing_style,
+            topic_articles!inner(
+              id, topic_id,
+              shared_content:shared_article_content(title, url)
+            )
+          `)
+          .eq('topic_articles.topic_id', topicId)
+          .in('status', ['pending', 'processing'])
+          .order('created_at', { ascending: false }),
+        // Tracked MPs, to filter parliamentary stories
+        supabase
+          .from('topic_tracked_mps')
+          .select('mp_name, constituency, mp_id')
+          .eq('topic_id', topicId),
+        ...STATUSES.map((status) =>
+          supabase.rpc('get_admin_topic_stories', {
+            p_topic_id: topicId,
+            p_status: status,
+            p_limit: STATUS_PAGE_SIZE[status] ?? 100,
+            p_offset: 0
+          })
+        )
+      ]);
+      if (!isCurrent()) return;
+
+      const userId = sessionResult.data.session?.user?.id ?? null;
+      const trackedMPs = trackedMPsResult.data;
 
       if (multiTenantArticlesResult.error) {
         console.error('Error loading multi-tenant articles:', multiTenantArticlesResult.error);
-        // Quiet inline error instead of a toast — background refreshes must not
-        // stack red popups. Surfaced as a banner with a retry by the pipeline.
-        setLoadError('Some new arrivals could not be loaded. Showing what we have.');
-      } else {
-        setLoadError(null);
       }
-
-      // Get story IDs to filter out articles that are already published or queued for this topic
-      // Use RPC function to avoid URL length limits with large ID lists
-      const { data: publishedStoriesData } = await supabase
-        .from('stories')
-        .select('topic_article_id, topic_articles!inner(topic_id)')
-        .in('status', ['published', 'ready'])
-        .eq('topic_articles.topic_id', selectedTopicId)
-        .not('topic_article_id', 'is', null);
-      
-      const publishedMultiTenantIds = new Set(publishedStoriesData?.map(s => s.topic_article_id) || []);
-
-      // Get pending/processing queue items to hide approved articles  
-      const { data: queueItemsForFiltering } = await supabase
-        .from('content_generation_queue')
-        .select('topic_article_id')
-        .in('status', ['pending', 'processing'])
-        .not('topic_article_id', 'is', null);
-      
-      const queuedMultiTenantIds = new Set(queueItemsForFiltering?.map(q => q.topic_article_id) || []);
 
       // Deterministically exclude parliamentary items at topic_article level using import_metadata
       const isParliamentaryArticle = (item: any) => {
@@ -284,270 +339,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         );
       };
 
-      const parliamentaryExcluded = (multiTenantArticlesResult.data || []).filter(isParliamentaryArticle).length;
-      const heldReasons = await fetchHeldReasons(
-        (multiTenantArticlesResult.data || []).filter((item: any) => item.processing_status === 'new').map((item: any) => item.id)
-      );
-      
-      // Process ONLY multi-tenant articles (including snippets) that are still available for processing
-      const rawMultiTenantArticles = (multiTenantArticlesResult.data || [])
-        .filter((item: any) => 
-          item.processing_status === 'new' && // Only show genuinely new, unprocessed articles
-          !publishedMultiTenantIds.has(item.id) &&
-          !queuedMultiTenantIds.has(item.id) &&
-          !isParliamentaryArticle(item) // Exclude parliamentary items deterministically
-        )
-        .map((item: any) => {
-          const wordCount = item.word_count || 0;
-          const isSnippet = wordCount > 0 && wordCount < 150;
-          return {
-            id: item.id,
-            shared_content_id: item.shared_content_id,
-            topic_id: selectedTopicId,
-            source_id: item.source_id,
-            regional_relevance_score: item.regional_relevance_score || 0,
-            content_quality_score: item.content_quality_score || 0,
-            import_metadata: item.import_metadata || {},
-            originality_confidence: item.originality_confidence || 100,
-            created_at: item.created_at,
-            updated_at: item.updated_at,
-            processing_status: item.processing_status,
-            keyword_matches: item.keyword_matches || [],
-            url: item.url,
-            normalized_url: item.normalized_url || item.url,
-            title: item.title,
-            author: item.author,
-            image_url: item.image_url,
-            canonical_url: item.canonical_url,
-            content_checksum: item.content_checksum,
-            published_at: item.published_at,
-            word_count: wordCount,
-            language: item.language || 'en',
-            source_domain: item.source_domain,
-            last_seen_at: item.last_seen_at || item.updated_at,
-            is_snippet: isSnippet,
-            article_type: 'multi_tenant' as const,
-            held_reason: heldReasons.get(item.id) ?? null,
-          };
-        });
+      const articleRows: any[] = multiTenantArticlesResult.data || [];
+      const newArticleIds = articleRows.filter((item: any) => item.processing_status === 'new').map((item: any) => item.id);
 
-      // Deduplicate articles by normalized title and shared_content_id
-      const seenTitles = new Set();
-      const seenContentIds = new Set();
-      const allArticles = rawMultiTenantArticles
-        .filter(article => {
-          const normalizedTitle = article.title.toLowerCase().trim();
-          
-          // Skip if we've seen this exact title
-          if (seenTitles.has(normalizedTitle)) {
-            console.log('🔄 Duplicate title filtered:', normalizedTitle);
-            return false;
-          }
-          
-          // Skip if we've seen this shared content ID
-          if (article.shared_content_id && seenContentIds.has(article.shared_content_id)) {
-            console.log('🔄 Duplicate content ID filtered:', article.shared_content_id);
-            return false;
-          }
-          
-          // Add to seen sets
-          seenTitles.add(normalizedTitle);
-          if (article.shared_content_id) {
-            seenContentIds.add(article.shared_content_id);
-          }
-          
-          return true;
-        })
-        .sort((a, b) =>
-          new Date(getDisplayDate(b.created_at, b.published_at)).getTime() -
-          new Date(getDisplayDate(a.created_at, a.published_at)).getTime());
-
-      console.log('🧪 Multi-Tenant Only Pipeline - Articles Loaded:', {
-        rawMultiTenant: (multiTenantArticlesResult.data || []).length,
-        parliamentaryExcluded,
-        afterFiltering: rawMultiTenantArticles.length,
-        afterDeduplication: allArticles.length,
-        publishedMultiTenant: publishedMultiTenantIds.size,
-        queuedMultiTenant: queuedMultiTenantIds.size,
-        selectedTopicId,
-        duplicatesRemoved: rawMultiTenantArticles.length - allArticles.length
-      });
-
-      if (allArticles.length === 0) {
-        console.log('🔍 Empty Multi-Tenant Feed Analysis:', {
-          multiTenantRawCount: multiTenantArticlesResult.data?.length || 0,
-          publishedCount: publishedStoriesData?.length || 0,
-          queuedCount: queueItemsForFiltering?.length || 0,
-          message: 'All multi-tenant articles have been either published or are in processing queue'
-        });
-      }
-
-      // Drop tombstones the server already agrees are gone, then filter the rest
-      const serverArticleIds = new Set(allArticles.map(a => a.id));
-      pruneTombstones(removedArticlesRef.current);
-      removedArticlesRef.current.forEach((_, id) => {
-        if (!serverArticleIds.has(id)) removedArticlesRef.current.delete(id);
-      });
-      setArticles(filterTombstoned(allArticles, removedArticlesRef.current));
-
-      
-      // There is only more to fetch if the server actually filled this page.
-      // The raw database count includes arrivals that are then hidden here
-      // (already queued, duplicates, parliamentary, discarded), so counting
-      // against it used to promise more arrivals that could never appear.
-      const serverPageFull = (multiTenantArticlesResult.data || []).length === ARTICLES_PAGE_SIZE;
-      setHasMoreArticles(serverPageFull);
-      if (!serverPageFull) {
-        setTotalArticlesCount(allArticles.length);
-      }
-
-      // Detect new arrivals for visual indicator
-      if (previousCountsRef.current.articles > 0 && allArticles.length > previousCountsRef.current.articles) {
-        console.log('🆕 New arrivals detected!', {
-          previous: previousCountsRef.current.articles,
-          current: allArticles.length,
-          new: allArticles.length - previousCountsRef.current.articles
-        });
-        setNewArrivals(true);
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => setNewArrivals(false), 5000);
-      }
-      previousCountsRef.current.articles = allArticles.length;
-
-      // Update cache with loaded article IDs
-      topicArticleCacheRef.current = {
-        topicArticleIds: new Set(allArticles.map(article => article.id)),
-        sharedContentIds: new Set(
-          allArticles
-            .map(article => article.shared_content_id)
-            .filter((id): id is string => typeof id === "string" && id.length > 0)
-        ),
-      };
-
-      // Declare variables for filtered data
-      let filteredQueueItems: any[] = [];
-      let filteredStories: any[] = [];
-
-      // Get ONLY multi-tenant queue items for this topic
-      const multiTenantQueueResult = await supabase
-        .from('content_generation_queue')
-        .select(`
-          id,
-          topic_article_id,
-          shared_content_id,
-          status,
-          created_at,
-          started_at,
-          completed_at,
-          attempts,
-          max_attempts,
-          error_message,
-          slidetype,
-          tone,
-          writing_style,
-          topic_articles!inner(
-            id, topic_id,
-            shared_content:shared_article_content(title, url)
-          )
-        `)
-        .eq('topic_articles.topic_id', selectedTopicId)
-        .in('status', ['pending', 'processing'])
-        .order('created_at', { ascending: false });
-
-      console.log('🔄 Multi-tenant queue items loaded:', {
-        multiTenant: multiTenantQueueResult.data?.length || 0,
-        multiTenantError: multiTenantQueueResult.error
-      });
-
-      if (multiTenantQueueResult.error) {
-        console.error('Error loading multi-tenant queue items:', multiTenantQueueResult.error);
-        setQueueItems([]);
-      } else {
-        // Process ONLY multi-tenant queue items
-        filteredQueueItems = (multiTenantQueueResult.data || []).map((item: any) => ({
-          ...item,
-          title: item.topic_articles?.shared_content?.title || 'Unknown Title',
-          article_url: item.topic_articles?.shared_content?.url || ''
-        })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        
-        const queueItemsData = filteredQueueItems.map((item: any) => ({
-          id: item.id,
-          article_id: item.article_id || null,
-          topic_article_id: item.topic_article_id || null,
-          shared_content_id: item.shared_content_id || null,
-          status: item.status,
-          created_at: item.created_at,
-          started_at: item.started_at,
-          completed_at: item.completed_at,
-          attempts: item.attempts || 0,
-          max_attempts: item.max_attempts || 3,
-          error_message: item.error_message,
-          result_data: item.result_data || {},
-          slidetype: item.slidetype || 'tabloid',
-          tone: item.tone || 'conversational',
-          audience_expertise: item.audience_expertise || 'intermediate',
-          ai_provider: item.ai_provider || 'deepseek',
-          writing_style: item.writing_style || 'journalistic',
-          title: item.title,
-          article_title: item.title,
-          article_url: item.article_url
-        }));
-        setQueueItems(queueItemsData);
-        
-        console.log('✅ Multi-tenant queue items processed:', queueItemsData.length, 'items found');
-      }
-
-      console.log('🔄 Loading all stories for topic:', selectedTopicId);
-
-      // Fetch tracked MPs for this topic to filter parliamentary stories
-      const { data: trackedMPs } = await supabase
-        .from('topic_tracked_mps')
-        .select('mp_name, constituency, mp_id')
-        .eq('topic_id', selectedTopicId);
-
-      console.log('🗳️ Tracked MPs for filtering:', trackedMPs?.length || 0);
-
-      // Fetch per status so a large backlog of published stories can never push
-      // drafts (or vice versa) out of a single shared row window. This is the
-      // single source of truth for the pipeline lists; the direct query is only
-      // a fallback when the RPC fails — never merged additively with it, or the
-      // visible story count would drift as row windows shift.
-      // Published feeds routinely hold hundreds of stories, so the published
-      // window must be much larger than the working queues or the Published tab
-      // appears to "lose" stories it used to show.
-      const STATUS_PAGE_SIZE: Record<string, number> = {
-        draft: 100,
-        ready: 100,
-        published: PUBLISHED_PAGE_SIZE,
-        archived: 100
-      };
-      const STATUSES = ['draft', 'ready', 'published', 'archived'];
-      const perStatusResults = await Promise.all(
-        STATUSES.map((status) =>
-          supabase.rpc('get_admin_topic_stories', {
-            p_topic_id: selectedTopicId,
-            p_status: status,
-            p_limit: STATUS_PAGE_SIZE[status] ?? 100,
-            p_offset: 0
-          })
-        )
-      );
-
+      // ---- Stories (from round 1) ----
       const failedStatus = perStatusResults.find((r) => r.error);
       const rpcRows = perStatusResults.flatMap((r) => r.data || []);
-
-      // Published pagination bookkeeping — the tab shows the newest page and
-      // can pull older pages on demand.
       const publishedRowCount = perStatusResults[STATUSES.indexOf('published')]!.data?.length || 0;
-      setPublishedLoadedCount(publishedRowCount);
-      setHasMorePublished(publishedRowCount >= PUBLISHED_PAGE_SIZE);
-
-      console.log('📊 Admin stories query results:', {
-        byStatus: Object.fromEntries(
-          STATUSES.map((s, i) => [s, perStatusResults[i]!.data?.length || 0])
-        ),
-        error: failedStatus?.error
-      });
 
       // Old stories slot back to their original publication date so legacy
       // items curated today don't dominate the top of the list.
@@ -558,7 +356,6 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       let sortedStories: any[];
 
       if (!failedStatus?.error && rpcRows.length > 0) {
-        // Primary path: the admin RPC.
         sortedStories = [...rpcRows].sort(byNewestCreated);
       } else {
         if (failedStatus?.error) {
@@ -595,10 +392,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
               shared_content:shared_article_content(title, url, author, word_count)
             )
           `)
-          .eq('topic_articles.topic_id', selectedTopicId)
+          .eq('topic_articles.topic_id', topicId)
           .in('status', ['draft', 'ready', 'published'])
           .order('updated_at', { ascending: false })
           .limit(200);
+        if (!isCurrent()) return;
 
         if (directTopicStoriesError) {
           console.warn('⚠️ Direct topic-story fallback also failed:', directTopicStoriesError);
@@ -639,175 +437,164 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         }).sort(byNewestCreated);
       }
 
-      console.log('✅ Stories loaded successfully:', sortedStories.length, 'total stories');
-
-      // Validation logging for QA
-      const publishedCount = sortedStories.filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length;
-      console.log('📊 Published Stories Validation:', {
-        totalStories: sortedStories.length,
-        publishedCount,
-        readyCount: sortedStories.filter(s => s.status === 'ready' && s.is_published).length,
-        publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length
-      });
-
-      // Load slides for stories to enable edit functionality — only needed when
-      // the story rows didn't already come back with their slide text.
       // Slide text is only prefetched for the most recent stories; older ones
-      // keep their slide_count and load slides on demand, so a large backlog
-      // never slows the dashboard down.
+      // keep their slide_count and load slides on demand.
       const SLIDE_PREFETCH_LIMIT = 300;
       const storyIds = sortedStories.slice(0, SLIDE_PREFETCH_LIMIT).map((story: any) => story.id);
-      let slidesData: any[] = [];
-      let parliamentaryData: any[] = [];
-      let slidesHadError = false;
-      
-      if (storyIds.length > 0 && sortedStories.some((s: any) => !s.slides?.length)) {
-        // PostgREST caps responses at 1000 rows. With ~6 slides per story this
-        // silently truncated the result (stories rendering with missing/no slides).
-        // Fetch in story-id chunks and page through each chunk until exhausted.
-        const CHUNK = 60;
-        const PAGE = 1000;
-        for (let i = 0; i < storyIds.length; i += CHUNK) {
-          const chunkIds = storyIds.slice(i, i + CHUNK);
 
-          // Fast path: owner/admin RPC avoids evaluating the many permissive
-          // RLS policies on slides per row (that direct query can hit the
-          // statement timeout on large feeds). Falls back to the direct query.
-          const { data: rpcSlides, error: rpcError } = await supabase
-            .rpc('get_admin_slides_for_stories', { p_story_ids: chunkIds });
+      // ---- Round 2: lookups that need round 1's ids, in parallel ----
+      const [publishedForPageResult, heldReasons, mentionsResult] = await Promise.all([
+        // Articles on this page that already became a published/ready story
+        newArticleIds.length > 0
+          ? supabase
+              .from('stories')
+              .select('topic_article_id')
+              .in('status', ['published', 'ready'])
+              .in('topic_article_id', newArticleIds)
+          : Promise.resolve({ data: [] as { topic_article_id: string | null }[], error: null }),
+        fetchHeldReasons(newArticleIds),
+        // One query both identifies parliamentary stories and gives their MP
+        storyIds.length > 0
+          ? supabase
+              .from('parliamentary_mentions')
+              .select('story_id, mp_name, constituency')
+              .in('story_id', storyIds)
+          : Promise.resolve({ data: [] as { story_id: string; mp_name: string; constituency: string }[], error: null }),
+      ]);
+      if (!isCurrent()) return;
 
-          if (!rpcError && rpcSlides) {
-            slidesData = slidesData.concat(rpcSlides);
-            continue;
-          }
-          if (rpcError) {
-            console.warn('Slides RPC unavailable, falling back to direct query:', rpcError.message);
-          }
-
-          let offset = 0;
-          // eslint-disable-next-line no-constant-condition
-          while (true) {
-            const { data: slidesResult, error: slidesError } = await supabase
-              .from('slides')
-              .select('*')
-              .in('story_id', chunkIds)
-              .order('slide_number')
-              .range(offset, offset + PAGE - 1);
-
-            if (slidesError) {
-              console.error('Error loading slides:', slidesError);
-              slidesHadError = true;
-              break;
-            }
-
-            const rows = slidesResult || [];
-            slidesData = slidesData.concat(rows);
-            if (rows.length < PAGE) break;
-            offset += PAGE;
-          }
-        }
-
-
-        // Load parliamentary mentions to identify parliamentary stories
-        const { data: parliamentaryResult, error: parliamentaryError } = await supabase
-          .from('parliamentary_mentions')
-          .select('story_id')
-          .in('story_id', storyIds);
-        
-        if (parliamentaryError) {
-          console.error('Error loading parliamentary mentions:', parliamentaryError);
-        } else {
-          parliamentaryData = parliamentaryResult || [];
-        }
-      }
-
-      const parliamentaryStoryIds = new Set(parliamentaryData.map(p => p.story_id));
-
-      // Create tracked MPs lookup set for fast filtering (using mp_name + constituency)
-      const trackedMPSet = new Set(
-        trackedMPs?.map(mp => 
-          `${mp.mp_name.toLowerCase().trim()}|${mp.constituency.toLowerCase().trim()}`
-        ) || []
+      const publishedMultiTenantIds = new Set((publishedForPageResult.data || []).map((s: any) => s.topic_article_id));
+      const queuedMultiTenantIds = new Set(
+        (multiTenantQueueResult.data || []).map((q: any) => q.topic_article_id).filter(Boolean)
       );
 
-      // Get parliamentary mentions for filtering (only mp_name and constituency exist in this table)
-      const { data: allParliamentaryMentions, error: mentionsError } = await supabase
-        .from('parliamentary_mentions')
-        .select('story_id, mp_name, constituency')
-        .in('story_id', sortedStories.map(s => s.id).filter(id => parliamentaryStoryIds.has(id)));
+      // Process ONLY multi-tenant articles (including snippets) that are still available for processing
+      const rawMultiTenantArticles = articleRows
+        .filter((item: any) =>
+          item.processing_status === 'new' &&
+          !publishedMultiTenantIds.has(item.id) &&
+          !queuedMultiTenantIds.has(item.id) &&
+          !isParliamentaryArticle(item)
+        )
+        .map((item: any) => {
+          const wordCount = item.word_count || 0;
+          const isSnippet = wordCount > 0 && wordCount < 150;
+          return {
+            id: item.id,
+            shared_content_id: item.shared_content_id,
+            topic_id: topicId,
+            source_id: item.source_id,
+            regional_relevance_score: item.regional_relevance_score || 0,
+            content_quality_score: item.content_quality_score || 0,
+            import_metadata: item.import_metadata || {},
+            originality_confidence: item.originality_confidence || 100,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            processing_status: item.processing_status,
+            keyword_matches: item.keyword_matches || [],
+            url: item.url,
+            normalized_url: item.normalized_url || item.url,
+            title: item.title,
+            author: item.author,
+            image_url: item.image_url,
+            canonical_url: item.canonical_url,
+            content_checksum: item.content_checksum,
+            published_at: item.published_at,
+            word_count: wordCount,
+            language: item.language || 'en',
+            source_domain: item.source_domain,
+            last_seen_at: item.last_seen_at || item.updated_at,
+            is_snippet: isSnippet,
+            article_type: 'multi_tenant' as const,
+            held_reason: heldReasons.get(item.id) ?? null,
+          };
+        });
 
+      // Deduplicate articles by normalized title and shared_content_id
+      const seenTitles = new Set();
+      const seenContentIds = new Set();
+      const allArticles = rawMultiTenantArticles
+        .filter(article => {
+          const normalizedTitle = article.title.toLowerCase().trim();
+          if (seenTitles.has(normalizedTitle)) return false;
+          if (article.shared_content_id && seenContentIds.has(article.shared_content_id)) return false;
+          seenTitles.add(normalizedTitle);
+          if (article.shared_content_id) seenContentIds.add(article.shared_content_id);
+          return true;
+        })
+        .sort((a, b) =>
+          new Date(getDisplayDate(b.created_at, b.published_at)).getTime() -
+          new Date(getDisplayDate(a.created_at, a.published_at)).getTime());
+
+      // There is only more to fetch if the server actually filled this page.
+      // The raw database count includes arrivals that are then hidden here
+      // (already queued, duplicates, parliamentary, discarded), so counting
+      // against it used to promise more arrivals that could never appear.
+      const serverPageFull = articleRows.length === ARTICLES_PAGE_SIZE;
+      const nextTotalArticlesCount = serverPageFull ? (newCountResult.count || 0) : allArticles.length;
+
+      // ---- Queue items ----
+      let queueItemsData: any[] = [];
+      if (multiTenantQueueResult.error) {
+        console.error('Error loading multi-tenant queue items:', multiTenantQueueResult.error);
+      } else {
+        queueItemsData = (multiTenantQueueResult.data || []).map((item: any) => {
+          const title = item.topic_articles?.shared_content?.title || 'Unknown Title';
+          return {
+            id: item.id,
+            article_id: item.article_id || null,
+            topic_article_id: item.topic_article_id || null,
+            shared_content_id: item.shared_content_id || null,
+            status: item.status,
+            created_at: item.created_at,
+            started_at: item.started_at,
+            completed_at: item.completed_at,
+            attempts: item.attempts || 0,
+            max_attempts: item.max_attempts || 3,
+            error_message: item.error_message,
+            result_data: item.result_data || {},
+            slidetype: item.slidetype || 'tabloid',
+            tone: item.tone || 'conversational',
+            audience_expertise: item.audience_expertise || 'intermediate',
+            ai_provider: item.ai_provider || 'deepseek',
+            writing_style: item.writing_style || 'journalistic',
+            title,
+            article_title: title,
+            article_url: item.topic_articles?.shared_content?.url || ''
+          };
+        }).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
+
+      // ---- Parliamentary filter: only stories naming a tracked MP stay ----
+      const mentionsError = mentionsResult.error;
       if (mentionsError) {
         // Fail open: a failed filter query must never remove stories from the tab.
         console.error('Error loading parliamentary mentions for filtering; keeping all parliamentary stories:', mentionsError);
       }
-
-      // Create map of story_id -> mention for filtering
-      const storyMentionMap = new Map(
-        allParliamentaryMentions?.map(m => [m.story_id, m]) || []
+      const storyMentionMap = new Map<string, any>(
+        ((mentionsResult.data || []) as any[]).map((m) => [m.story_id, m])
       );
-
-      // Filter parliamentary stories - only keep those with tracked MPs
+      const parliamentaryStoryIds = new Set(storyMentionMap.keys());
+      const trackedMPSet = new Set(
+        trackedMPs?.map(mp =>
+          `${mp.mp_name.toLowerCase().trim()}|${mp.constituency.toLowerCase().trim()}`
+        ) || []
+      );
       const parliamentaryFilteredStories = sortedStories.filter((story: any) => {
-        const isParliamentary = parliamentaryStoryIds.has(story.id);
-        
-        if (!isParliamentary) return true; // Keep all non-parliamentary stories
-
-        // If the filter query failed, keep parliamentary stories visible.
+        if (!parliamentaryStoryIds.has(story.id)) return true;
         if (mentionsError) return true;
-
-        // For parliamentary stories, check if MP is tracked
         const mention = storyMentionMap.get(story.id);
-        if (!mention || !mention.mp_name || !mention.constituency) {
-          console.warn('🚫 Parliamentary story without valid mention:', story.id, story.title);
-          return false;
-        }
-
-        const mentionKey = `${mention.mp_name.toLowerCase().trim()}|${mention.constituency.toLowerCase().trim()}`;
-        const isTracked = trackedMPSet.has(mentionKey);
-
-        if (!isTracked) {
-          console.log('🗳️ Filtered out parliamentary story (MP not tracked):', {
-            storyId: story.id,
-            title: story.title,
-            mp: mention.mp_name,
-            constituency: mention.constituency
-          });
-        }
-
-        return isTracked;
+        if (!mention || !mention.mp_name || !mention.constituency) return false;
+        return trackedMPSet.has(`${mention.mp_name.toLowerCase().trim()}|${mention.constituency.toLowerCase().trim()}`);
       });
 
-      console.log(`🗳️ Parliamentary filter: ${sortedStories.filter(s => parliamentaryStoryIds.has(s.id)).length} total, ${parliamentaryFilteredStories.filter(s => parliamentaryStoryIds.has(s.id)).length} after filtering`);
-
-      // Map to MultiTenantStory shape - the RPC already provides clean data structure
+      // ---- Map to the Desk's story shape. Slide text comes in the background:
+      // cards don't need it, so the lists appear first with the last-known slides.
+      const prefetchIds = new Set(storyIds);
       const storiesData = parliamentaryFilteredStories.map((story: any) => {
-        // Prefer slide text that came back inline with the story row; only fall
-        // back to the separately fetched rows.
-        let storySlides: any[] = story.slides?.length
-          ? story.slides
-          : slidesData.filter((slide: any) => slide.story_id === story.id);
-        let slidesLoadFailed = false;
-
-        if (storySlides.length === 0 && (story.slide_count || 0) > 0 && slidesHadError) {
-          // The slide fetch failed — keep whatever slides were loaded last time
-          // instead of rendering the story as if it had none.
-          const previous = prevSlidesRef.current.get(story.id) || [];
-          if (previous.length > 0) {
-            storySlides = previous;
-            slidesLoadFailed = true;
-          }
-        }
-
-        const isParliamentary = parliamentaryStoryIds.has(story.id);
-        
-        console.log('🔍 Story mapping debug:', {
-          storyId: story.id,
-          storyTitle: story.article_title || story.title,
-          slideCount: story.slide_count || 0,
-          actualSlides: storySlides.length,
-          isParliamentary
-        });
-        
+        const inline = story.slides?.length ? story.slides : null;
+        const known = inline || prevSlidesRef.current.get(story.id) || [];
+        const pending = !inline && prefetchIds.has(story.id);
         return {
           id: story.id,
           article_id: story.article_id || null,
@@ -818,9 +605,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           is_published: story.is_published,
           created_at: story.created_at,
           updated_at: story.updated_at,
-          slides: storySlides,
-          slides_load_failed: slidesLoadFailed,
-          slide_count: story.slide_count || storySlides.length,
+          slides: known,
+          slides_load_failed: false,
+          slides_pending: pending,
+          slide_count: story.slide_count || known.length,
           article_title: story.article_title,
           story_type: story.story_type,
           title: story.title,
@@ -839,23 +627,35 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           writing_style: story.writing_style || '',
           audience_expertise: story.audience_expertise || '',
           is_teaser: story.is_teaser || false,
-          is_parliamentary: isParliamentary,
+          is_parliamentary: parliamentaryStoryIds.has(story.id),
           scheduled_publish_at: story.scheduled_publish_at || null,
           article_published_at: story.article_published_at || null
         };
       });
 
-      // Remember the latest good slides per story for fail-safe re-renders
-      prevSlidesRef.current.clear();
-      for (const s of storiesData) {
-        if (s.slides.length > 0) prevSlidesRef.current.set(s.id, s.slides);
-      }
+      const nextStats: MultiTenantStats = {
+        articles: allArticles.length,
+        queueItems: queueItemsData.length,
+        stories: storiesData.length,
+        totalArticles: allArticles.length,
+        pendingArticles: allArticles.length,
+        processingQueue: queueItemsData.length,
+        readyStories: storiesData.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
+      };
 
-      console.log('📊 Final stories data with slides:', {
-        totalStories: storiesData.length,
-        storiesWithSlides: storiesData.filter(s => s.slides.length > 0).length,
-        slideDistribution: storiesData.map(s => ({ id: s.id, title: s.title, slideCount: s.slides.length }))
+      // ---- Commit the lists ----
+      setLoadError(multiTenantArticlesResult.error ? 'Some new arrivals could not be loaded. Showing what we have.' : null);
+
+      const serverArticleIds = new Set(allArticles.map(a => a.id));
+      pruneTombstones(removedArticlesRef.current);
+      removedArticlesRef.current.forEach((_, id) => {
+        if (!serverArticleIds.has(id)) removedArticlesRef.current.delete(id);
       });
+      setArticles(filterTombstoned(allArticles, removedArticlesRef.current));
+      setTotalArticlesCount(nextTotalArticlesCount);
+      setArticlesPage(1);
+      setHasMoreArticles(serverPageFull);
+      setQueueItems(queueItemsData);
 
       const serverStoryIds = new Set(storiesData.map((s: any) => s.id));
       pruneTombstones(removedStoriesRef.current);
@@ -863,41 +663,117 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         if (!serverStoryIds.has(id)) removedStoriesRef.current.delete(id);
       });
       setStories(filterTombstoned(storiesData as any, removedStoriesRef.current) as any);
+      setPublishedLoadedCount(publishedRowCount);
+      setHasMorePublished(publishedRowCount >= PUBLISHED_PAGE_SIZE);
+      setStats(nextStats);
+      hasDataRef.current = true;
+      setLoading(false);
 
-      
-      // Detect new published stories for visual indicator
+      // Detect new arrivals / newly published stories for the visual indicators
+      if (previousCountsRef.current.articles > 0 && allArticles.length > previousCountsRef.current.articles) {
+        setNewArrivals(true);
+        setTimeout(() => setNewArrivals(false), 5000);
+      }
+      previousCountsRef.current.articles = allArticles.length;
       const publishedStories = storiesData.filter((s: any) => s.is_published && ['ready', 'published'].includes(s.status));
       if (previousCountsRef.current.stories > 0 && publishedStories.length > previousCountsRef.current.stories) {
-        console.log('🆕 New published stories detected!', {
-          previous: previousCountsRef.current.stories,
-          current: publishedStories.length,
-          new: publishedStories.length - previousCountsRef.current.stories
-        });
         setNewPublished(true);
-        // Auto-dismiss after 5 seconds
         setTimeout(() => setNewPublished(false), 5000);
       }
       previousCountsRef.current.stories = publishedStories.length;
-      
-      // Calculate stats using the processed data
-      setStats({
-        articles: allArticles.length,
-        queueItems: filteredQueueItems.length,
-        stories: storiesData.length,
-        totalArticles: allArticles.length,
-        pendingArticles: allArticles.filter((a: any) => a.processing_status === 'new').length,
-        processingQueue: filteredQueueItems.length,
-        readyStories: storiesData.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
-      });
 
+      topicArticleCacheRef.current = {
+        topicArticleIds: new Set(allArticles.map(article => article.id)),
+        sharedContentIds: new Set(
+          allArticles
+            .map(article => article.shared_content_id)
+            .filter((id): id is string => typeof id === "string" && id.length > 0)
+        ),
+      };
+
+      const snapshotBase = {
+        articles: allArticles,
+        queueItems: queueItemsData,
+        stats: nextStats,
+        totalArticlesCount: nextTotalArticlesCount,
+        hasMoreArticles: serverPageFull,
+        publishedLoadedCount: publishedRowCount,
+        hasMorePublished: publishedRowCount >= PUBLISHED_PAGE_SIZE,
+      };
+      writeDeskSnapshot(topicId, { ...snapshotBase, stories: storiesData, savedAt: Date.now() }, userId);
+
+      // ---- Round 3 (background): slide text for the newest stories ----
+      const needSlides = storiesData.filter((s: any) => s.slides_pending).map((s: any) => s.id);
+      if (needSlides.length === 0) return;
+
+      // Owner/admin RPC avoids evaluating the many permissive RLS policies on
+      // slides per row. PostgREST caps responses at 1000 rows, so the direct
+      // fallback pages through each chunk.
+      const CHUNK = 60;
+      const PAGE = 1000;
+      let slidesHadError = false;
+      const chunks: string[][] = [];
+      for (let i = 0; i < needSlides.length; i += CHUNK) chunks.push(needSlides.slice(i, i + CHUNK));
+      const chunkResults = await Promise.all(chunks.map(async (chunkIds) => {
+        const { data: rpcSlides, error: rpcError } = await supabase
+          .rpc('get_admin_slides_for_stories', { p_story_ids: chunkIds });
+        if (!rpcError && rpcSlides) return rpcSlides as any[];
+        if (rpcError) console.warn('Slides RPC unavailable, falling back to direct query:', rpcError.message);
+        let rows: any[] = [];
+        let offset = 0;
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { data: slidesResult, error: slidesError } = await supabase
+            .from('slides')
+            .select('*')
+            .in('story_id', chunkIds)
+            .order('slide_number')
+            .range(offset, offset + PAGE - 1);
+          if (slidesError) {
+            console.error('Error loading slides:', slidesError);
+            slidesHadError = true;
+            break;
+          }
+          const page = slidesResult || [];
+          rows = rows.concat(page);
+          if (page.length < PAGE) break;
+          offset += PAGE;
+        }
+        return rows;
+      }));
+      if (!isCurrent()) return;
+
+      const slidesByStory = new Map<string, any[]>();
+      for (const slide of chunkResults.flat()) {
+        const list = slidesByStory.get(slide.story_id);
+        if (list) list.push(slide); else slidesByStory.set(slide.story_id, [slide]);
+      }
+      slidesByStory.forEach((list) => list.sort((a: any, b: any) => (a.slide_number ?? 0) - (b.slide_number ?? 0)));
+
+      const withSlides = (s: any) => {
+        if (!s.slides_pending) return s;
+        const fetched = slidesByStory.get(s.id);
+        if (fetched && fetched.length > 0) return { ...s, slides: fetched, slides_pending: false, slides_load_failed: false };
+        // Fetch failed: keep the last good slides rather than rendering none.
+        const failed = slidesHadError && (s.slide_count || 0) > 0;
+        return { ...s, slides: failed ? s.slides : [], slides_pending: false, slides_load_failed: failed && s.slides.length > 0 };
+      };
+      const finalStories = storiesData.map(withSlides);
+      setStories(prev => prev.map(withSlides));
+
+      // Remember the latest good slides per story for fail-safe re-renders
+      prevSlidesRef.current.clear();
+      for (const s of finalStories) {
+        if (s.slides.length > 0) prevSlidesRef.current.set(s.id, s.slides);
+      }
+      writeDeskSnapshot(topicId, { ...snapshotBase, stories: finalStories, savedAt: Date.now() }, userId);
     } catch (error) {
       console.error('Error loading topic content:', error);
-      // Quiet inline error instead of a toast — see loadError above.
-      setLoadError('Couldn\'t fully refresh the pipeline. Showing the last good data.');
+      if (isCurrent()) setLoadError('Couldn\'t fully refresh the pipeline. Showing the last good data.');
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [selectedTopicId, toast]);
+  }, [selectedTopicId]);
 
   // Migration functions
   const testMigration = useCallback(async () => {
@@ -1178,8 +1054,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Check cache first
       if (
         topicArticleCacheRef.current.topicArticleIds.has(topicArticleId) ||
-        stories.some(story => story.topic_article_id === topicArticleId) ||
-        queueItems.some(item => item.topic_article_id === topicArticleId)
+        storiesRef.current.some(story => story.topic_article_id === topicArticleId) ||
+        queueItemsRef.current.some(item => item.topic_article_id === topicArticleId)
       ) {
         return true;
       }
@@ -1233,7 +1109,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
 
     return false;
-  }, [queueItems, selectedTopicId, stories]);
+  }, [selectedTopicId]);
 
   // Story ownership checker
   const doesStoryBelongToTopic = useCallback(async (storyRecord: any) => {
@@ -1246,7 +1122,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     // Check legacy articles
     if (storyRecord.article_id) {
-      if (stories.some(story => story.article_id === storyRecord.article_id)) {
+      if (storiesRef.current.some(story => story.article_id === storyRecord.article_id)) {
         return true;
       }
 
@@ -1265,7 +1141,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
 
     return false;
-  }, [isTopicArticleForSelectedTopic, selectedTopicId, stories]);
+  }, [isTopicArticleForSelectedTopic, selectedTopicId]);
 
   // Load content when topic changes
   useEffect(() => {
@@ -1276,7 +1152,50 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     };
     removedArticlesRef.current.clear();
     removedStoriesRef.current.clear();
-    
+
+    // Show this feed's last-seen lists at once (or start empty), then refresh behind them.
+    const snap = readDeskMemory(selectedTopicId);
+    const applySnap = (sn: NonNullable<typeof snap>) => {
+      setArticles(sn.articles as MultiTenantArticle[]);
+      setQueueItems(sn.queueItems as MultiTenantQueueItem[]);
+      setStories(sn.stories as MultiTenantStory[]);
+      setStats(sn.stats as MultiTenantStats);
+      setTotalArticlesCount(sn.totalArticlesCount);
+      setHasMoreArticles(sn.hasMoreArticles);
+      setPublishedLoadedCount(sn.publishedLoadedCount);
+      setHasMorePublished(sn.hasMorePublished);
+      setArticlesPage(1);
+      prevSlidesRef.current = new Map(
+        (sn.stories as MultiTenantStory[]).filter(s => s.slides?.length).map(s => [s.id, s.slides])
+      );
+      previousCountsRef.current = {
+        articles: sn.articles.length,
+        stories: (sn.stories as MultiTenantStory[]).filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length,
+      };
+      hasDataRef.current = true;
+      setLoading(false);
+    };
+    if (snap) {
+      applySnap(snap);
+    } else {
+      hasDataRef.current = false;
+      prevSlidesRef.current = new Map();
+      previousCountsRef.current = { articles: 0, stories: 0 };
+      setArticles([]);
+      setQueueItems([]);
+      setStories([]);
+      setLoading(Boolean(selectedTopicId));
+      // Full reload in the same tab: the account's own same-tab copy, if the server hasn't answered yet.
+      if (selectedTopicId) {
+        const topicAtStart = selectedTopicId;
+        void supabase.auth.getSession().then(({ data }) => {
+          const uid = data.session?.user?.id;
+          if (!uid || hasDataRef.current || topicAtStart !== selectedTopicId) return;
+          const stored = readDeskStored(topicAtStart, uid);
+          if (stored && !hasDataRef.current) applySnap(stored);
+        });
+      }
+    }
 
     
     if (selectedTopicId) {
@@ -1325,7 +1244,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           const storyRecord = (payload.new || payload.old) as any;
 
           // Optimistic check: if story is already in our list, it belongs to us
-          if (storyRecord.id && stories.some(s => s.id === storyRecord.id)) {
+          if (storyRecord.id && storiesRef.current.some(s => s.id === storyRecord.id)) {
             console.log('✅ Story already in topic list (optimistic), refreshing...');
             
             // Debounced refresh
@@ -1361,7 +1280,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         },
         async (payload) => {
           const slide = (payload.new || payload.old) as any;
-          const existingStory = stories.find(s => s.id === slide?.story_id);
+          const existingStory = storiesRef.current.find(s => s.id === slide?.story_id);
 
           if (existingStory) {
             console.log('🔄 Slide change for story in this topic, refreshing...', payload);
@@ -1445,8 +1364,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     selectedTopicId,
     loadTopicContent,
     doesStoryBelongToTopic,
-    isTopicArticleForSelectedTopic,
-    stories
+    isTopicArticleForSelectedTopic
   ]);
 
   // Fallback polling as safety net (every 30 seconds) — skipped while the live

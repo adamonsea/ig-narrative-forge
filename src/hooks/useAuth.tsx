@@ -5,6 +5,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { clearSupabaseAuthStorage } from '@/lib/authStorage';
+import { clearDeskSnapshots } from '@/lib/deskCache';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -89,6 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // Set up auth state listener
+    let lastUid: string | null | undefined;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
@@ -98,6 +100,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           handleAuthFailure('Token refresh failed');
           return;
         }
+
+        // A different (or no) account: forget the last-seen Desk lists.
+        const nextUid = session?.user?.id ?? null;
+        if (eventName === 'SIGNED_OUT' || (lastUid !== undefined && lastUid !== nextUid)) clearDeskSnapshots();
+        lastUid = nextUid;
 
         // Update state synchronously
         setSession(session);
