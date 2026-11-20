@@ -1,3 +1,8 @@
+# Feed look (20 Nov 2026)
+- [x] Top bar and background colour choices; welcome line, Live pill, Subscribe/menu, feed name, Events | All | News switch and empty-state text adjust automatically
+- [x] One Look panel in Settings → Brand (logo, colour, top bar, background, story cover) with a live phone preview
+- [ ] Signed-in look at the real Settings page — this project's sign-in can't be used from the test browser
+
 # Engagement metrics (20 Nov 2026)
 - [x] UK: random reader ID kept 7 days so returning readers count (Adam chose "Yes, 7-day ID"); opt-out removes it
 - [x] EU/unknown: counted per visit with nothing stored until they answer; Reject = nothing (Adam chose "Count per visit")

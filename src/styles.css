@@ -70,6 +70,10 @@
   --color-overlay: hsl(var(--overlay));
   --color-feed-cover-ink: hsl(var(--feed-cover-ink));
   --color-feed-cover-text: hsl(var(--feed-cover-text));
+  --color-feed-on-background: hsl(var(--feed-on-background));
+  --color-feed-on-background-muted: hsl(var(--feed-on-background-muted));
+  --color-feed-toggle-border: hsl(var(--feed-toggle-border));
+  --color-feed-live: hsl(var(--feed-live));
   --color-attention: hsl(var(--attention));
   --color-attention-soft: hsl(var(--attention-soft));
   --color-attention-foreground: hsl(var(--attention-foreground));
@@ -383,6 +387,12 @@
     /* Full-bleed story cover: dark scrim and white headline over the picture (same in light and dark) */
     --feed-cover-ink: 214 50% 6%;
     --feed-cover-text: 0 0% 100%;
+    /* Text straight on the feed background, the view-switch outline and the Live pill.
+       Owner-chosen top bar / background colours override these per feed (src/lib/feedSurfaces.ts). */
+    --feed-on-background: 210 40% 98%;
+    --feed-on-background-muted: 215 16% 72%;
+    --feed-toggle-border: 214 18% 90%;
+    --feed-live: 142 72% 29%;
 
     --sidebar-background: 150 20% 98%;
     --sidebar-foreground: 214 50% 9%;
@@ -466,6 +476,12 @@
     /* Full-bleed story cover: dark scrim and white headline over the picture (same in light and dark) */
     --feed-cover-ink: 214 50% 6%;
     --feed-cover-text: 0 0% 100%;
+    /* Text straight on the feed background, the view-switch outline and the Live pill.
+       Owner-chosen top bar / background colours override these per feed (src/lib/feedSurfaces.ts). */
+    --feed-on-background: 210 40% 98%;
+    --feed-on-background-muted: 215 16% 72%;
+    --feed-toggle-border: 214 25% 17%;
+    --feed-live: 142 72% 29%;
 
     --sidebar-background: 214 45% 7%;
     --sidebar-foreground: 210 25% 96%;

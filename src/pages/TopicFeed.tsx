@@ -10,6 +10,7 @@ import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
 import { whatsOnPositions, eventCardMode, eventsLedRun, newsSlotsWithin } from "@/lib/feedCardPositions";
 import { resolveStoryCoverStyle } from "@/lib/storyCoverStyle";
+import { feedSurfaceStyles, livePillTone } from "@/lib/feedSurfaces";
 import { WhatsOnCard } from "@/components/events/WhatsOnCard";
 import { EventCard } from "@/components/events/EventCard";
 import { FeedViewToggle } from "@/components/feed/FeedViewToggle";
@@ -353,6 +354,13 @@ const TopicFeed = () => {
   const whatsOn = useMemo(() => whatsOnSets(whatsOnEvents ?? [], whatsOnToday, londonTime()), [whatsOnEvents, whatsOnToday, whatsOnClock]);
   const feedEvents = useMemo(() => individualEvents(feedEventsRaw ?? [], whatsOnToday, londonTime()), [feedEventsRaw, whatsOnToday, whatsOnClock]);
   const feedBrand = topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color;
+  // Owner-chosen top bar and background; everything on them is contrast-picked (null = default look)
+  const topBarChoice = topic?.branding_config?.top_bar_color;
+  const backgroundChoice = topic?.branding_config?.feed_background_color;
+  const surfaces = useMemo(
+    () => feedSurfaceStyles({ topBar: topBarChoice, background: backgroundChoice, brand: feedBrand }),
+    [topBarChoice, backgroundChoice, feedBrand],
+  );
   const viewToggleShown = showFeedViewToggle(
     eventsInFeed,
     individualCards ? feedEvents.length : whatsOn.length,
@@ -1000,8 +1008,11 @@ const TopicFeed = () => {
     );
   }
 
+  // Live pill: the usual green/blue, or one contrast-picked colour on an owner-chosen top bar
+  const liveTone = livePillTone(surfaces.customTopBar, isRefreshing);
+
   return (
-    <div className="min-h-dvh feed-background">
+    <div className="min-h-dvh feed-background" style={surfaces.root}>
       {/* SEO Meta Tags */}
       <TopicFeedSEO
         topicName={topic.name}
@@ -1027,7 +1038,7 @@ const TopicFeed = () => {
       />}
 
       {isScrolled && topic && (
-        <div className="fixed top-0 left-0 right-0 z-50 feed-header backdrop-blur-sm border-b border-border">
+        <div className="fixed top-0 left-0 right-0 z-50 feed-header text-foreground backdrop-blur-sm border-b border-border" style={surfaces.header}>
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1124,37 +1135,29 @@ const TopicFeed = () => {
       )}
 
       {/* White banner header */}
-      <div className="bg-background border-b border-border">
+      <div className="bg-background text-foreground border-b border-border" style={surfaces.header}>
         <div className="container mx-auto px-1 md:px-4 py-16">
           {/* Top-left: Live badge */}
           <div className="absolute left-4 top-4 flex items-center gap-2">
             {isLive && avgDailyStories > 1 ? (
               <span 
                 data-onboarding="live-badge"
-                className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border transition-colors duration-300 ${
-                  isRefreshing 
-                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' 
-                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20'
-                }`}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border transition-colors duration-300 ${liveTone.pill}`}
               >
                 <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isRefreshing ? 'bg-blue-400' : 'bg-green-400'}`}></span>
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isRefreshing ? 'bg-blue-500' : 'bg-green-500'}`}></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${liveTone.ping}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${liveTone.dot}`}></span>
                 </span>
                 {isRefreshing ? 'Updating...' : `Live • ${Math.round(avgDailyStories)}/day`}
               </span>
             ) : isLive ? (
               <span 
                 data-onboarding="live-badge"
-                className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border transition-colors duration-300 ${
-                  isRefreshing 
-                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' 
-                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20'
-                }`}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full border transition-colors duration-300 ${liveTone.pill}`}
               >
                 <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isRefreshing ? 'bg-blue-400' : 'bg-green-400'}`}></span>
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isRefreshing ? 'bg-blue-500' : 'bg-green-500'}`}></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${liveTone.ping}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${liveTone.dot}`}></span>
                 </span>
                 {isRefreshing ? 'Updating...' : 'Live'}
               </span>
@@ -1392,15 +1395,15 @@ const TopicFeed = () => {
           <div className="text-center py-12 space-y-4">
             {hasActiveFilters ? (
               <>
-                <p className="text-lg text-muted-foreground">No stories match your selected filters</p>
-                <p className="text-sm text-muted-foreground">Try adjusting your keyword or source selections</p>
+                <p className="text-lg text-feed-on-background-muted">No stories match your selected filters</p>
+                <p className="text-sm text-feed-on-background-muted">Try adjusting your keyword or source selections</p>
               </>
             ) : topic?.feed_lead === 'events' ? (
-              <p className="text-lg text-muted-foreground">No events coming up</p>
+              <p className="text-lg text-feed-on-background-muted">No events coming up</p>
             ) : (
               <>
-                <p className="text-lg text-muted-foreground">No stories available yet</p>
-                <p className="text-sm text-muted-foreground">Check back soon for new content</p>
+                <p className="text-lg text-feed-on-background-muted">No stories available yet</p>
+                <p className="text-sm text-feed-on-background-muted">Check back soon for new content</p>
               </>
             )}
           </div>
@@ -1429,7 +1432,7 @@ const TopicFeed = () => {
                   <Skeleton key={i} className="w-full h-96 rounded-lg" />
                 ))}
                 {isServerFiltering && (
-                  <div className="text-center text-sm text-muted-foreground">
+                  <div className="text-center text-sm text-feed-on-background-muted">
                     Filtering stories...
                   </div>
                 )}
@@ -1450,10 +1453,10 @@ const TopicFeed = () => {
           </div>
         ) : hasActiveFilters ? (
           <div className="text-center py-12 space-y-4">
-            <Hash className="w-12 h-12 mx-auto text-muted-foreground/50" />
+            <Hash className="w-12 h-12 mx-auto text-feed-on-background-muted/50" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">No stories match your filters</h3>
-              <p className="text-muted-foreground mb-4">
+              <h3 className="text-lg font-semibold mb-2 text-feed-on-background">No stories match your filters</h3>
+              <p className="text-feed-on-background-muted mb-4">
                 Try removing some keywords or adjusting your filters
               </p>
               <button
@@ -1466,10 +1469,10 @@ const TopicFeed = () => {
           </div>
         ) : !loading && !loadingMore ? (
           <div className="text-center py-12 space-y-4">
-            <Hash className="w-12 h-12 mx-auto text-muted-foreground/50" />
+            <Hash className="w-12 h-12 mx-auto text-feed-on-background-muted/50" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">No stories yet</h3>
-              <p className="text-muted-foreground mb-4">
+              <h3 className="text-lg font-semibold mb-2 text-feed-on-background">No stories yet</h3>
+              <p className="text-feed-on-background-muted mb-4">
                 This feed doesn't have any published content yet. Check back soon for fresh stories!
               </p>
             </div>
@@ -1477,7 +1480,7 @@ const TopicFeed = () => {
         ) : null}
       </main>
       <footer className="py-8 text-center">
-        <Link to="/cookies#settings" className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground">
+        <Link to="/cookies#settings" className="text-sm text-feed-on-background-muted underline underline-offset-2 hover:text-feed-on-background">
           Cookie settings
         </Link>
       </footer>

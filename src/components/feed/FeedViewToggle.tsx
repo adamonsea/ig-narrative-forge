@@ -33,7 +33,7 @@ export function FeedViewToggle({ value, onChange, brandColor }: FeedViewTogglePr
         aria-label="Show"
         onKeyDown={onKeyDown}
         style={style}
-        className="feed-card inline-flex gap-1 rounded-full border border-border p-1 shadow-sm"
+        className="feed-card inline-flex gap-1 rounded-full border border-feed-toggle-border p-1 shadow-sm"
       >
         {FEED_VIEWS.map((view, i) => {
           const active = view === value;

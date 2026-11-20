@@ -42,3 +42,4 @@
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
 - Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
+- Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.

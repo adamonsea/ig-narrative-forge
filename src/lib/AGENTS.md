@@ -1,1 +1,2 @@
 - Maybe-undefined optional values go through `opt()`/`definedOnly()` (`src/lib/optionalProps.ts`); keeps strict types without changing runtime.
+- Feed look: `branding_config.top_bar_color`/`feed_background_color` hold hex or "brand"; unset means the default look, so `feedSurfaceStyles()` returns no tokens and existing feeds stay untouched.

@@ -76,6 +76,9 @@ interface Topic {
     show_topic_name?: boolean | undefined;
     icon_url?: string | undefined;
     primary_color?: string | undefined;
+    /** Owner-chosen surfaces (hex or "brand"); see src/lib/feedSurfaces.ts */
+    top_bar_color?: string | undefined;
+    feed_background_color?: string | undefined;
   };
   illustration_primary_color?: string | null | undefined;
   donation_enabled?: boolean | undefined;

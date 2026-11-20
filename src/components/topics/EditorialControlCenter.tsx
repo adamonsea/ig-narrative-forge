@@ -33,7 +33,7 @@ import { LookForPanel } from "@/components/settings/LookForPanel";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
 import { FeedLeadSettings } from "@/components/settings/FeedLeadSettings";
-import { StoryCoverStyleSettings } from "@/components/settings/StoryCoverStyleSettings";
+import { FeedLookEditor } from "@/components/settings/look/FeedLookEditor";
 import { PublisherPhotosSetting } from "@/components/settings/PublisherPhotosSetting";
 import { FEATURES, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
 
@@ -204,8 +204,17 @@ export function EditorialControlCenter({
           brandingConfig={topic.branding_config}
           onSaved={(values) => patch(values)}
         />
+        <FeedLookEditor
+          topicId={topic.id}
+          name={topic.name}
+          colour={topic.illustration_primary_color}
+          brandingConfig={topic.branding_config}
+          coverStyle={topic.story_cover_style}
+          regional={topic.topic_type === "regional"}
+          eventsEnabled={topic.events_enabled}
+          onSaved={(values) => patch(values)}
+        />
         <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} currency={topic.event_currency} photos={topic.event_photos_enabled} onSaved={(values) => patch(values)} />
-        <StoryCoverStyleSettings topicId={topic.id} value={topic.story_cover_style} onSaved={(values) => patch(values)} />
         <PublisherPhotosSetting topicId={topic.id} value={topic.use_publisher_photos} onSaved={(values) => patch(values)} />
         <RememberedFold foldKey="brand-more" label="More options">
           <div className="space-y-12">

@@ -22,6 +22,7 @@ import { AttentionTag } from "@/components/events/DeskEvents";
 import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
 import { LiveFeedControl } from "@/components/feed/LiveFeedControl";
 import { ReadershipLines } from "@/components/readership/ReadershipLines";
+import { FeedLookPreview } from "@/components/settings/look/FeedLookPreview";
 
 /**
  * /design — the workspace design system, rendered from the parts the Desk already uses.
@@ -407,6 +408,16 @@ export default function DesignSystem() {
             </Spec>
             <Spec name="Empty · no readers yet">
               <ReadershipLines readers={0} returning={0} stories={[]} sent={{ stories: 0, tickets: 0, details: 0, calendar: 0 }} />
+            </Spec>
+          </Block>
+
+          <Block id="feed-look" title="Feed look">
+            <Spec name="Look panel preview · Settings → Brand; owner picks top bar and background, everything on them is contrast-picked (src/lib/feedSurfaces.ts)">
+              <div className="flex flex-wrap gap-6">
+                <FeedLookPreview name="Seaside News" welcome="The best of the town, every day" brand="#BE185D" coverStyle="split" regional showToggle />
+                <FeedLookPreview name="Seaside News" welcome="The best of the town, every day" brand="#0F766E" topBar="#0B1522" background="#F1ECE2" coverStyle="full-bleed" regional showToggle />
+                <FeedLookPreview name="Seaside News" welcome="The best of the town, every day" brand="#C2410C" topBar="brand" background="#0B1522" coverStyle="split" regional />
+              </div>
             </Spec>
           </Block>
 
