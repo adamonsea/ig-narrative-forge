@@ -2,13 +2,14 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import webpush from "npm:web-push@3.6.7";
 import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden } from '../_shared/auth.ts';
+import { DEFAULT_VAPID_SUBJECT, SITE_URL } from "../_shared/brandConfig.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BASE_URL = Deno.env.get('PUBLIC_SITE_URL') || 'https://curatr.pro';
+const BASE_URL = Deno.env.get('PUBLIC_SITE_URL') || SITE_URL;
 
 interface NotificationRequest {
   storyId?: string;
@@ -176,7 +177,7 @@ serve(async (req: Request) => {
 
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
-    const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:notifications@curatr.pro';
+    const vapidSubject = Deno.env.get('VAPID_SUBJECT') || DEFAULT_VAPID_SUBJECT;
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       throw new Error('VAPID keys not configured');

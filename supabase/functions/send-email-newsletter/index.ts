@@ -12,13 +12,14 @@ import { getUser, userOwnsTopic, isServiceRole, unauthorized, forbidden, hasProA
 import { dedupeByEvent, EMAIL_DUPLICATE_THRESHOLD } from '../_shared/story-similarity.ts';
 import { FEATURES } from '../_shared/parked-features.ts';
 import { pinLeadsEmail } from '../_shared/storyPin.ts';
+import { SITE_URL, senderFor } from "../_shared/brandConfig.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BASE_URL = 'https://curatr.pro';
+const BASE_URL = SITE_URL;
 
 interface SendEmailRequest {
   topicId: string;
@@ -674,7 +675,7 @@ serve(async (req) => {
         }
 
         const { error: sendError } = await resend!.emails.send({
-          from: `${topic.name} <noreply@curatr.pro>`,
+          from: senderFor(topic.name),
           to: [recipient.email!],
           subject,
           html: emailHtml,

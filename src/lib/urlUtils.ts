@@ -4,6 +4,7 @@
  */
 
 import { BRAND, getProductionUrl } from './constants/branding';
+import { KNOWN_PUBLICATIONS } from '../../supabase/functions/_shared/publisherNames.ts';
 
 /**
  * Get the production base URL with guaranteed https:// prefix.
@@ -64,31 +65,6 @@ export const buildShareUrl = (path: string): string => {
  *      "eastbournereporter.co.uk" -> "Eastbourne Reporter"
  * Returns '' when nothing usable can be derived.
  */
-const KNOWN_PUBLICATIONS: Record<string, string> = {
-  'bbc.co.uk': 'BBC',
-  'bbc.com': 'BBC',
-  'theguardian.com': 'The Guardian',
-  'theargus.co.uk': 'The Argus',
-  'sussexexpress.co.uk': 'Sussex Express',
-  'eastbourneherald.co.uk': 'Eastbourne Herald',
-  'eastbournereporter.co.uk': 'Eastbourne Reporter',
-  'bournefreelive.co.uk': 'Bourne Free Live',
-  'eastbourne.gov.uk': 'Eastbourne Borough Council',
-  'lewes-eastbourne.gov.uk': 'Lewes & Eastbourne Councils',
-  'eastsussex.gov.uk': 'East Sussex County Council',
-  'wealden.gov.uk': 'Wealden District Council',
-  'hailsham-tc.gov.uk': 'Hailsham Town Council',
-  'parliament.uk': 'UK Parliament',
-  'gov.uk': 'GOV.UK',
-  'sussex.police.uk': 'Sussex Police',
-  'eastbourneunltd.co.uk': 'Eastbourne Chamber',
-  'itv.com': 'ITV News',
-  'sky.com': 'Sky News',
-  'independent.co.uk': 'The Independent',
-  'telegraph.co.uk': 'The Telegraph',
-  'thetimes.co.uk': 'The Times',
-  'standard.co.uk': 'Evening Standard',
-};
 
 /** Multi-label public suffixes we must skip to reach the real domain name. */
 const MULTI_PART_SUFFIXES = new Set([

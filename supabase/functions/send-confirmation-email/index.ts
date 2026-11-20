@@ -4,13 +4,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Resend } from 'npm:resend@4.0.0';
 import { renderAsync } from 'npm:@react-email/components@0.0.22';
 import { ConfirmationEmail } from './_templates/confirmation.tsx';
+import { SITE_URL, senderFor } from "../_shared/brandConfig.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BASE_URL = 'https://curatr.pro';
+const BASE_URL = SITE_URL;
 
 interface SendConfirmationRequest {
   signupId: string;
@@ -78,7 +79,7 @@ serve(async (req) => {
       : `Confirm your ${topicName} ${notificationType} briefing subscription`;
 
     const { data, error: sendError } = await resend.emails.send({
-      from: `${topicName} <noreply@curatr.pro>`,
+      from: senderFor(topicName),
       to: [email],
       subject,
       html: emailHtml,

@@ -139,10 +139,10 @@ RETURN FORMAT (single line):
 "[Exact Name] ([architectural style], [distinctive visual features])"
 
 EXAMPLES:
-- "Towner Art Gallery (modernist white building with angular facade and floor-to-ceiling windows)"
-- "Congress Theatre (Art Deco theatre with curved entrance canopy and distinctive signage)"
-- "Seven Sisters cliffs (dramatic white chalk cliffs overlooking English Channel)"
-- "Eastbourne Pier (Victorian pleasure pier with ornate ironwork and domed pavilions)"
+- "Town art gallery (modernist white building with angular facade and floor-to-ceiling windows)"
+- "Seafront theatre (Art Deco theatre with curved entrance canopy and distinctive signage)"
+- "Chalk cliffs (dramatic white chalk cliffs overlooking the sea)"
+- "Victorian pier (pleasure pier with ornate ironwork and domed pavilions)"
 
 If NO specific location, building, or landmark is mentioned, return exactly: null
 
@@ -288,7 +288,7 @@ Example outputs:
 - "MP Stephen Lloyd, middle-aged man, walking through flood-damaged streets talking with affected residents"
 - "Chef Gordon Ramsay, 50s, tasting dishes in his restaurant kitchen surrounded by staff"
 - "Councillor Sarah Thompson, woman in her 40s, examining architectural plans with the project team"
-- "Gallery curator Maria Santos, woman in her 40s, guiding visitors through Towner Art Gallery's bright modernist exhibition space"
+- "Gallery curator Maria Santos, woman in her 40s, guiding visitors through a bright modernist gallery's exhibition space"
 - "Local farmer James Wilson, weathered man in his 60s, inspecting storm damage to his barn"
 - "Business owner David Chen in his newly renovated cafe interior, arranging furniture before opening"
 
@@ -749,7 +749,7 @@ PROCESS (think privately, output only the final answer):
 3. Critique each: Is it funny without words? Is the twist visible, not explained? Is it about the story specifically, not generic? Is it punching up? Pick the sharpest. Make it more specific and more absurd, then cut anything that dilutes it.
 
 CAST THE RIGHT TARGET: the figure in the scene must be whoever actually holds responsibility in THIS story — the rail operator, developer, water company, police chief, council officers or cabinet, government department, MP, landlord, business owner, quango. Do NOT default to a mayor.
-- Mayors in towns like Eastbourne are ceremonial and hold no executive power. A mayor, chain of office, ribbon-cutting or giant scissors may appear ONLY if the story is literally about a mayor, a civic ceremony or an official opening. Otherwise they are banned — they are a cliché and an inaccurate depiction.
+- Mayors in most English towns are ceremonial and hold no executive power. A mayor, chain of office, ribbon-cutting or giant scissors may appear ONLY if the story is literally about a mayor, a civic ceremony or an official opening. Otherwise they are banned — they are a cliché and an inaccurate depiction.
 - Avoid repeating stock set-pieces; find the imagery specific to this story's subject (its trains, pipes, planning drawings, beach huts, hospital corridors, etc.).
 
 BRITISH VISUAL VOCABULARY (use only when apt, never as decoration): consultant with clipboard and lanyard, hi-vis tabard over a suit, executive with a glossy brochure, brass plaque, traffic cones, Heras fencing, "phase two" hoardings, tea urn in a draughty hall, damp anoraks, umbrellas turned inside out, a sardonic seagull on a bollard, a dog walker oblivious in the background.

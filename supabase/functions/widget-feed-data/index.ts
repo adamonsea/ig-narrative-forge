@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SOURCE_ALIASES, WIDGET_SOURCE_NAMES } from "../_shared/publisherNames.ts";
+import { SITE_URL } from "../_shared/brandConfig.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,22 +28,12 @@ serve(async (req) => {
 
     // Source aliases: remap legacy/mistaken source names to the canonical
     // publication so existing embeds self-correct without onsite code changes.
-    const SOURCE_ALIASES: Record<string, string> = {
-      'eastbourne.news': 'eastbournereporter.co.uk',
-    };
     const applyAlias = (name: string) => SOURCE_ALIASES[name] || name;
 
-    // Human-readable display titles for known publication domains.
-    const SOURCE_DISPLAY_NAMES: Record<string, string> = {
-      'eastbournereporter.co.uk': 'Eastbourne Reporter',
-      'theargus.co.uk': 'The Argus',
-      'sussexexpress.co.uk': 'Sussex Express',
-      'eastbourne.news': 'Eastbourne News',
-    };
     const displayNameFor = (name: string | null): string | null => {
       if (!name) return name;
       const key = name.trim().toLowerCase();
-      return SOURCE_DISPLAY_NAMES[key] || name;
+      return WIDGET_SOURCE_NAMES[key] || name;
     };
 
     // Optional per-embed source controls (comma separated publication names)
@@ -279,7 +271,7 @@ serve(async (req) => {
         : null;
 
       // Build story URLs with source attribution and images - filter to only stories with images
-      const baseUrl = `https://curatr.pro`;
+      const baseUrl = SITE_URL;
       const allFormatted = mergedStories
         .map(story => {
           const imageUrl = story.cover_illustration_url || ((topic as any)?.use_publisher_photos === false ? null : story.articles?.image_url) || null;

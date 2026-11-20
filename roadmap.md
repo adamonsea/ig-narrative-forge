@@ -248,3 +248,4 @@ Park six features + tidy keywords (13 November 2026)
 - [x] Queued (drip) stories in their own "Queued" fold
 - [x] Delete Eastbourne drafts over a week old
 - [x] Delete drafts over a week old on Adam's other feeds
+- [x] Phase 1 modular core: shared publisher names + brand config
