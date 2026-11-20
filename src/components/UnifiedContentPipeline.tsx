@@ -1,5 +1,5 @@
 import { opt } from "@/lib/optionalProps";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
@@ -446,6 +446,19 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   }
   const repeatIds = new Set(repeatOf.keys());
   const repeatsToCheck = storiesToCheck.filter((s: any) => repeatIds.has(s.id));
+  // Scheduled feeds: a queued story without a release time gets one now (next free slot,
+  // behind stories already queued) instead of waiting for the hourly scheduler run.
+  const untimedKey = releasesOnSchedule
+    ? (queuedStories as any[]).filter((s) => s.status === 'ready' && !s.scheduled_publish_at).map((s) => s.id).join(',')
+    : '';
+  const slottedRef = useRef<string>('');
+  useEffect(() => {
+    if (!untimedKey || !selectedTopicId || slottedRef.current === untimedKey) return;
+    slottedRef.current = untimedKey;
+    void supabase.functions
+      .invoke('drip-feed-scheduler', { body: { topic_id: selectedTopicId } })
+      .then(({ error }) => { if (error) console.warn('Could not give queued stories a time:', error.message); else refreshContent(); });
+  }, [untimedKey, selectedTopicId, refreshContent]);
   const setPulseIds = pulseCtx?.setStoryIds;
   useEffect(() => {
     setPulseIds?.(visibleIdsKey ? visibleIdsKey.split(',') : []);
