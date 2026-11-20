@@ -14,3 +14,15 @@ export function publishNowUpdate(nowIso: string, opts: { withPicture?: boolean }
     ...(opts.withPicture === false ? { skip_auto_illustration: true } : {}),
   };
 }
+
+/**
+ * Words for approving a gathered article that isn't written yet. On a feed that releases
+ * stories on a schedule, approving writes the story and slots it into the next free release
+ * time, behind stories already queued, so it reads "Add to queue". Otherwise it goes live
+ * as soon as it's written.
+ */
+export function approveArticleLabels(releasesOnSchedule: boolean) {
+  return releasesOnSchedule
+    ? { main: "Add to queue", withoutPicture: "Add to queue without picture" }
+    : { main: "Publish", withoutPicture: "Publish without picture" };
+}

@@ -13,6 +13,7 @@ import { DuplicateInfo } from "@/lib/titleSimilarity";
 import type { HighlightTerms } from "@/lib/highlightTerms";
 import { DeskBadge, DeskCard, MetaLine, PublishSplitButton, ShelfLabel, SpikeButton } from "./DeskCard";
 import { holdReasonTag } from "@/lib/holdReason";
+import { approveArticleLabels } from "@/lib/publishStory";
 import { WaitingStoryDrawer } from "./WaitingStoryDrawer";
 
 interface MultiTenantArticlesListProps {
@@ -50,6 +51,8 @@ interface MultiTenantArticlesListProps {
   onLoadMore?: () => void;
   /** The feed's Autopilot quality bar, or null when Autopilot is off (no reason tags then). */
   autopilotBar?: number | null | undefined;
+  /** The feed releases stories on a schedule: approving slots the story into the queue instead of publishing. */
+  releasesOnSchedule?: boolean | undefined;
 }
 
 export default function MultiTenantArticlesList({
@@ -80,7 +83,9 @@ export default function MultiTenantArticlesList({
   loadingMore = false,
   onLoadMore,
   autopilotBar = null,
+  releasesOnSchedule = false,
 }: MultiTenantArticlesListProps) {
+  const approveLabels = approveArticleLabels(releasesOnSchedule);
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
   const [selectMode, setSelectMode] = useState(false);
@@ -268,6 +273,8 @@ export default function MultiTenantArticlesList({
             <>
               <SpikeButton onClick={() => onDelete(article.id, article.title)} disabled={isDeleting} />
               <PublishSplitButton
+                label={approveLabels.main}
+                withoutPictureLabel={approveLabels.withoutPicture}
                 busy={isProcessing}
                 disabled={isDeleting}
                 onPublish={() => publishArticle(article, slideType, toneOverride, writingStyleOverride)}
@@ -407,6 +414,7 @@ export default function MultiTenantArticlesList({
             {...opt("highlightTerms", highlightTerms)}
             isProcessing={a ? processingArticle === a.id : false}
             isDeleting={a ? deletingArticles.has(a.id) : false}
+            publishLabel={approveLabels.main}
             onPublish={() => {
               if (!a) return;
               if (publishArticle(a, slideTypeFor(a), toneOverrides[a.id] || defaultTone, writingStyleOverrides[a.id] || defaultWritingStyle)) setOpenArticleId(null);

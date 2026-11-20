@@ -41,6 +41,7 @@ interface Topic {
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined;
   auto_simplify_enabled?: boolean | undefined;
   automation_quality_threshold?: number | undefined;
+  drip_feed_enabled?: boolean | null | undefined;
 }
 
 type DeskArea = 'happened' | 'live' | 'coming';
@@ -145,7 +146,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       try {
         const { data, error } = await supabase
           .from('topics')
-          .select('id, name, topic_type, is_active, keywords, landmarks, organizations, default_tone, default_writing_style, auto_simplify_enabled, automation_quality_threshold')
+          .select('id, name, topic_type, is_active, keywords, landmarks, organizations, default_tone, default_writing_style, auto_simplify_enabled, automation_quality_threshold, drip_feed_enabled')
           .eq('is_active', true)
           .order('name');
 
@@ -636,6 +637,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               loadingMore={loadingMore}
               onLoadMore={loadMoreArticles}
               autopilotBar={autopilot.on ? autopilot.bar : null}
+              releasesOnSchedule={currentTopic?.drip_feed_enabled === true}
             />
           )}
           {/* Supporting folds sit under the three shelves: needs your OK, Queued, Awaiting review */}

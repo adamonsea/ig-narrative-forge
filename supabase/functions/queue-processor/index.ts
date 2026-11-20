@@ -353,7 +353,11 @@ serve(async (req) => {
             // Only apply auto-approval logic if auto_simplify is enabled
             // If auto_simplify is off, the story was created with 'draft' status
             // and should stay there for editorial review
-            if (autoSimplifyEnabled) {
+            // An owner-approved article was already reviewed: never send it back for a second OK.
+            const ownerApproved = resultData?.owner_approved === true;
+            if (autoSimplifyEnabled && ownerApproved) {
+              console.log(`👤 Story ${storyId} approved by the owner, keeping status '${story.status}'`);
+            } else if (autoSimplifyEnabled) {
               if (story.quality_score && story.quality_score >= qualityThreshold) {
                 // Quality is good - keep the status as set by the generator
                 // 'ready' for drip-fed topics, 'published' for non-drip-fed

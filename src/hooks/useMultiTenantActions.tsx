@@ -198,7 +198,9 @@ export const useMultiTenantActions = () => {
           status: 'pending',
           result_data: {
             ...(article.is_snippet ? { is_snippet: true, original_word_count: article.word_count } : {}),
-            generate_illustration: generateIllustration
+            generate_illustration: generateIllustration,
+            // The owner chose this one: once written it goes out (or joins the queue) without a second OK.
+            owner_approved: true
           }
         })
         .select('id')

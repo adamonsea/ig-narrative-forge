@@ -40,6 +40,8 @@ interface WaitingStoryDrawerProps {
   isProcessing: boolean;
   isDeleting: boolean;
   onPublish: () => void;
+  /** "Add to queue" on scheduled feeds, otherwise "Publish". */
+  publishLabel?: string | undefined;
   onSkip: () => void;
   onSuppress?: () => void;
 }
@@ -47,7 +49,7 @@ interface WaitingStoryDrawerProps {
 /** A waiting article in full: why it matched, the original text, and how it will be written. */
 export function WaitingStoryDrawer({
   article, open, onOpenChange, dupInfo, slideType, tone, writingStyle, onSlideType, onTone, onWritingStyle,
-  makePicture, onMakePicture, highlightTerms, isProcessing, isDeleting, onPublish, onSkip, onSuppress,
+  makePicture, onMakePicture, highlightTerms, isProcessing, isDeleting, onPublish, publishLabel = "Publish", onSkip, onSuppress,
 }: WaitingStoryDrawerProps) {
   const [body, setBody] = useState<string | null>(null);
   const [loadingBody, setLoadingBody] = useState(false);
@@ -181,7 +183,7 @@ export function WaitingStoryDrawer({
               <div className="ml-auto flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={onSkip} disabled={isDeleting}>Skip</Button>
                 <Button size="sm" onClick={onPublish} disabled={isProcessing || isDeleting} className="min-w-[96px]">
-                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}Publish
+                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}{publishLabel}
                 </Button>
                 {onSuppress && (
                   <DropdownMenu>

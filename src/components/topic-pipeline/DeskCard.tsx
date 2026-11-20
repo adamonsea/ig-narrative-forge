@@ -205,9 +205,11 @@ export function PinButton({ pinned = false, onClick, disabled, busy }: { pinned?
  * Without `onPublishWithoutPicture` it's a plain Publish button.
  */
 export function PublishSplitButton({
-  label = "Publish", icon, onPublish, onPublishWithoutPicture, busy, disabled,
+  label = "Publish", withoutPictureLabel = "Publish without picture", icon, onPublish, onPublishWithoutPicture, busy, disabled,
 }: {
   label?: string | undefined;
+  /** Menu wording for the no-picture variant, e.g. "Add to queue without picture". */
+  withoutPictureLabel?: string | undefined;
   icon?: ReactNode | undefined;
   onPublish: () => void;
   onPublishWithoutPicture?: (() => void) | undefined;
@@ -234,7 +236,7 @@ export function PublishSplitButton({
                 <Button
                   size="sm"
                   disabled={off}
-                  aria-label="More ways to publish"
+                  aria-label="More options"
                   onClick={(e) => e.stopPropagation()}
                   className="rounded-l-none border-l border-primary-foreground/25 px-2"
                 >
@@ -242,11 +244,11 @@ export function PublishSplitButton({
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
-            <TooltipContent>More ways to publish</TooltipContent>
+            <TooltipContent>More options</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onSelect={onPublish}>{label}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={onPublishWithoutPicture}>Publish without picture</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onPublishWithoutPicture}>{withoutPictureLabel}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}

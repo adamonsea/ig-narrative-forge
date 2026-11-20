@@ -221,6 +221,10 @@ export default function DesignSystem() {
               <SpikeButton onClick={() => {}} />
               <PublishSplitButton onPublish={() => {}} onPublishWithoutPicture={() => {}} />
             </div>
+            <div className="flex items-center">
+              <SpikeButton onClick={() => {}} />
+              <PublishSplitButton label="Add to queue" withoutPictureLabel="Add to queue without picture" onPublish={() => {}} onPublishWithoutPicture={() => {}} />
+            </div>
             <div className="flex flex-wrap items-center gap-8">
               <LiveFeedControl isLive feedName="Eastbourne" feedPath="/feed/eastbourne" onChange={() => {}} />
               <LiveFeedControl isLive={false} feedName="Eastbourne" feedPath="/feed/eastbourne" onChange={() => {}} />
