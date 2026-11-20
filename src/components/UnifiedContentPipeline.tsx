@@ -194,6 +194,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     loadTopicSlug();
   }, [selectedTopicId]);
 
+  // Scheduled feeds: anything being written lands in Queued, so it's shown there, not in Live now.
+  const releasesOnSchedule = currentTopic?.drip_feed_enabled === true;
+  const writingIntoQueue = releasesOnSchedule ? queueItems : [];
+  const writingIntoLive = releasesOnSchedule ? [] : queueItems;
+
   const totalArticles = articles.length;
   const totalQueue = queueItems.length;
   const totalStories = stories.length;
@@ -577,11 +582,13 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               />
             </section>
           )}
-          {queuedStories.length > 0 && (
-            <RememberedFold foldKey="desk-queued" label={`Queued · ${queuedStories.length}`} contentClassName="pt-2">
+          {(queuedStories.length > 0 || writingIntoQueue.length > 0) && (
+            <RememberedFold foldKey="desk-queued" label={`Queued · ${queuedStories.length + writingIntoQueue.length}`} contentClassName="pt-2">
               <PublishedStoriesList
                 repeatOf={repeatOf}
                 stories={queuedStories}
+                processingItems={writingIntoQueue}
+                onCancelProcessing={handleMultiTenantCancelQueue}
                 onSkip={(s) => archiveWithUndo([s], true)}
                 onPublishNow={publishNow}
                 leavingIds={leavingIds}
@@ -637,7 +644,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               loadingMore={loadingMore}
               onLoadMore={loadMoreArticles}
               autopilotBar={autopilot.on ? autopilot.bar : null}
-              releasesOnSchedule={currentTopic?.drip_feed_enabled === true}
+              releasesOnSchedule={releasesOnSchedule}
             />
           )}
           {/* Supporting folds sit under the three shelves: needs your OK, Queued, Awaiting review */}
@@ -679,9 +686,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <span className="live-pulse live-pulse-light h-2.5 w-2.5 shrink-0 rounded-full bg-mint-foreground" aria-hidden="true" />
             <h3 id="desk-live" className="text-lg font-semibold text-pop-foreground">Live now</h3>
             <NewContentBadge show={newPublished} onDismiss={clearNewPublished} />
-            {queueItems.length > 0 && (
+            {writingIntoLive.length > 0 && (
               <span className="inline-flex items-center gap-2 text-sm text-pop-foreground animate-fade-in">
-                <span className="live-pulse live-pulse-light h-2 w-2 rounded-full bg-pop-foreground/60" aria-hidden="true" />{queueItems.length} being written
+                <span className="live-pulse live-pulse-light h-2 w-2 rounded-full bg-pop-foreground/60" aria-hidden="true" />{writingIntoLive.length} being written
               </span>
             )}
             {stuckCount > 0 && (
@@ -693,7 +700,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
           </div>
 
-          {liveStories.length === 0 && queueItems.length === 0 ? (
+          {liveStories.length === 0 && writingIntoLive.length === 0 ? (
             <div className="space-y-3">
               {eventsOn && eventDesk && (
                 <LiveWhatsOnRow first events={eventDesk.live} today={today} showInFeed={eventDesk.showInFeed} liveMore={eventDesk.liveMore}
@@ -711,7 +718,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               onSkip={(s) => archiveWithUndo([s], 'removed')}
               leavingIds={leavingIds}
               settlingIds={settlingIds}
-              processingItems={queueItems}
+              processingItems={writingIntoLive}
               onArchive={handleArchiveStory}
               onReturnToReview={handleMultiTenantRejectStory}
               onDelete={handleMultiTenantRejectStory}

@@ -39,6 +39,8 @@ serve(async (req) => {
     const payload = token ? JSON.parse(atob(token.split('.')[1])) : null;
     jwtRole = payload?.role;
   } catch {}
+  // Internal calls (queue-processor) send the service key itself, which may not be a JWT.
+  if (token && token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) jwtRole = 'service_role';
   if (jwtRole !== 'service_role' && jwtRole !== 'authenticated') {
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),

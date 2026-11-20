@@ -219,17 +219,7 @@ export const useMultiTenantActions = () => {
         throw new Error(`Failed to queue job: ${queueError.message}`);
       }
 
-      const typeLabels = {
-        short: 'Quick Teaser (3 slides)',
-        tabloid: 'Tabloid Style (6 slides)', 
-        indepth: 'In-Depth Analysis (8 slides)',
-        extensive: 'Comprehensive Story (12 slides)'
-      };
-
-      toast({
-        title: "Article Approved",
-        description: `${typeLabels[slideType]} generation started using DeepSeek`
-      });
+      toast({ title: "Writing it now" });
 
       console.log('✅ Multi-tenant article queued successfully with ID:', queueData.id);
       return queueData.id;

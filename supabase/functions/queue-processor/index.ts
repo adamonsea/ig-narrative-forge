@@ -355,6 +355,7 @@ serve(async (req) => {
             // and should stay there for editorial review
             // An owner-approved article was already reviewed: never send it back for a second OK.
             const ownerApproved = resultData?.owner_approved === true;
+            let finalStatus: string | null = story.status;
             if (autoSimplifyEnabled && ownerApproved) {
               console.log(`👤 Story ${storyId} approved by the owner, keeping status '${story.status}'`);
             } else if (autoSimplifyEnabled) {
@@ -374,6 +375,7 @@ serve(async (req) => {
                   .eq('id', storyId);
                 
                 if (!reviewError) {
+                  finalStatus = 'pending_review';
                   console.log(`📝 Story ${storyId} needs review - quality score ${story.quality_score || 'unknown'} < threshold ${qualityThreshold}`);
                 } else {
                   console.warn('⚠️ Failed to mark story for review:', reviewError);
@@ -382,6 +384,14 @@ serve(async (req) => {
             } else {
               // Auto-simplify is OFF - story stays at 'draft' for editorial review
               console.log(`📋 Story ${storyId} created with 'draft' status - auto_simplify is disabled, awaiting editorial review`);
+            }
+
+            // Queued on a scheduled feed: give it its release time now (next free slot, behind
+            // stories already queued) rather than waiting for the hourly scheduler run.
+            if (finalStatus === 'ready' && topicId) {
+              const { error: schedError } = await supabase.functions.invoke('drip-feed-scheduler', { body: { topic_id: topicId } });
+              if (schedError) console.warn('⚠️ Could not slot story into the release queue now:', schedError.message);
+              else console.log(`📅 Slotted story ${storyId} into the release queue`);
             }
           }
         } catch (autoApproveError) {
