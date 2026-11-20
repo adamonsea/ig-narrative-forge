@@ -1476,6 +1476,11 @@ const TopicFeed = () => {
           </div>
         ) : null}
       </main>
+      <footer className="py-8 text-center">
+        <Link to="/cookies#settings" className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground">
+          Cookie settings
+        </Link>
+      </footer>
 
       {/* Notification Preferences Modal */}
       <NotificationPreferencesModal

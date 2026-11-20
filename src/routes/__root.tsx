@@ -19,6 +19,8 @@ import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { useSiteVisitorTracking } from "@/hooks/useSiteVisitorTracking";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
+import { loadGoogleAnalyticsIfAllowed } from "@/lib/googleAnalyticsLoader";
+import { onReaderConsentChange } from "@/lib/readerConsent";
 import NotFound from "@/pages/NotFound";
 import appCss from "../styles.css?url";
 
@@ -26,21 +28,64 @@ const SITE_TITLE = "Curatr - AI-Curated News Feeds";
 const SITE_DESCRIPTION = "Create and follow curated news feeds powered by AI. Local news, niche topics, and more from trusted sources.";
 const SITE_IMAGE = "https://storage.googleapis.com/gpt-engineer-file-uploads/87LSF84r5Je8FzK2lSkFOrSp7fI3/social-images/social-1781172040122-Curatr_header_2x.webp";
 
-// Google Analytics 4 — skipped for bots/headless browsers; loaded only once the page is actually seen
-const GA_LOADER = `(function(){
-var ua=navigator.userAgent||'';
-try{var cc=JSON.parse(localStorage.getItem('cookie_consent')||'null');if(cc&&cc.analytics===false)return;}catch(e){}
-if(navigator.webdriver||/bot|crawl|spider|slurp|headless|lighthouse|preview|facebookexternalhit|python|curl|wget|puppeteer|playwright/i.test(ua))return;
-window.dataLayer=window.dataLayer||[];
-window.gtag=function(){dataLayer.push(arguments);};
-var loaded=false;
-function load(){
-if(loaded||document.visibilityState!=='visible')return;loaded=true;
-var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-C9VCW1ZPGR';document.head.appendChild(s);
-gtag('js',new Date());gtag('config','G-C9VCW1ZPGR');
+// Google Consent Mode defaults (cookie-consent skill script, unchanged) plus a one-time copy of the old
+// single answer ({ analytics: boolean }) into the per-purpose answer. Google Analytics itself is loaded
+// only by src/lib/googleAnalyticsLoader.ts when the reader's counting mode is 'full'.
+const CONSENT_DEFAULTS = `(function () {
+  try {
+    if (localStorage.getItem("cookie_consent_analytics") === null) {
+      var old = JSON.parse(localStorage.getItem("cookie_consent") || "null");
+      if (old && typeof old.analytics === "boolean") {
+        localStorage.setItem("cookie_consent_analytics", JSON.stringify({ choice: old.analytics ? "granted" : "denied", at: typeof old.timestamp === "number" ? old.timestamp : Date.now() }));
+      }
+    }
+  } catch (e) {}
+})();
+window.dataLayer = window.dataLayer || [];
+function gtag() {
+  dataLayer.push(arguments);
 }
-setTimeout(load,1500);
-document.addEventListener('visibilitychange',function(){setTimeout(load,1500);});
+gtag("consent", "default", {
+  analytics_storage: "granted",
+  ad_storage: "granted",
+  ad_user_data: "granted",
+  ad_personalization: "granted",
+});
+gtag("consent", "default", {
+  analytics_storage: "denied",
+  ad_storage: "denied",
+  ad_user_data: "denied",
+  ad_personalization: "denied",
+  wait_for_update: 500,
+  region:
+    "AT,BE,BG,HR,CY,CZ,DK,EE,FI,FR,DE,GR,HU,IE,IT,LV,LT,LU,MT,NL,PL,PT,RO,SK,SI,ES,SE,IS,LI,NO,GB,CH,RE,GP,MQ,GF,YT,MF,AX,CA-QC".split(
+      ",",
+    ),
+});
+(function () {
+  var signals = {
+    analytics: ["analytics_storage"],
+    advertising: ["ad_storage", "ad_user_data", "ad_personalization"],
+  };
+  for (var purpose in signals) {
+    var choice = null;
+    try {
+      var saved = JSON.parse(localStorage.getItem("cookie_consent_" + purpose) || "null");
+      if (
+        saved &&
+        (saved.choice === "denied" || (saved.choice === "granted" && Date.now() - saved.at < 365 * 86400000))
+      ) {
+        choice = saved.choice;
+      }
+    } catch (e) {}
+    if (navigator.globalPrivacyControl === true) choice = "denied";
+    if (!choice) continue;
+    var update = {};
+    signals[purpose].forEach(function (signal) {
+      update[signal] = choice;
+    });
+    gtag("consent", "update", update);
+  }
 })();`;
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -80,7 +125,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Work+Sans:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Lexend:wght@300;400;500;600;700&display=swap",
       },
     ],
-    scripts: [{ children: GA_LOADER }],
+    scripts: [{ children: CONSENT_DEFAULTS }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -106,6 +151,10 @@ function RootShell({ children }: { children: ReactNode }) {
 function SiteAnalyticsTracker() {
   useSiteVisitorTracking();
   useGoogleAnalytics();
+  useEffect(() => {
+    loadGoogleAnalyticsIfAllowed();
+    return onReaderConsentChange(loadGoogleAnalyticsIfAllowed);
+  }, []);
   return null;
 }
 

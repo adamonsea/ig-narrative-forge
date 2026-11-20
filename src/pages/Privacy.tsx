@@ -61,7 +61,7 @@ const Privacy = () => {
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li><strong>Usage Data:</strong> Pages visited, time spent, features used</li>
               <li><strong>Device Information:</strong> Browser type, operating system, device type</li>
-              <li><strong>Analytics Data:</strong> Anonymised interaction data for service improvement</li>
+              <li><strong>Analytics Data:</strong> Interaction data for service improvement. UK visitors are counted anonymously (no ID kept on the device) unless they opt out; EU visitors only with consent (see Cookie Policy)</li>
               <li><strong>Cookies:</strong> Essential and analytics cookies (see Cookie Policy)</li>
             </ul>
           </section>

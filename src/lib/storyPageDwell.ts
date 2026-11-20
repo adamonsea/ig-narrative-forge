@@ -4,8 +4,7 @@
  * `page_dwell` story interaction; read only through topic_engagement in the database.
  */
 import { supabase } from '@/integrations/supabase/client';
-import { canTrackReader, getVisitorId } from './visitorIdentity';
-import { onHumanSignal } from './humanSignal';
+import { getVisitorId, onReaderTrackable } from './visitorIdentity';
 
 export const STORY_PAGE_READ_MS = 10_000;
 
@@ -21,7 +20,7 @@ export function createDwellClock(now: () => number) {
 }
 
 export function startStoryPageDwell(storyId: string, topicId: string): () => void {
-  if (typeof window === 'undefined' || !canTrackReader()) return () => {};
+  if (typeof window === 'undefined') return () => {};
   const clock = createDwellClock(() => performance.now());
   let done = false;
   let unsubscribe: () => void = () => {};
@@ -45,7 +44,7 @@ export function startStoryPageDwell(storyId: string, topicId: string): () => voi
   const timer = window.setInterval(() => {
     if (clock.elapsed() >= STORY_PAGE_READ_MS) {
       window.clearInterval(timer);
-      unsubscribe = onHumanSignal(send);
+      unsubscribe = onReaderTrackable(send);
     }
   }, 1000);
 

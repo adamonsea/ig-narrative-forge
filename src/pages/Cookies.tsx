@@ -1,3 +1,4 @@
+import { CookieSettingsPanel } from '@/components/CookieConsent';
 import { Link } from '@/lib/router-compat';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
@@ -60,23 +61,34 @@ const Cookies = () => {
             <div className="bg-muted/30 rounded-lg p-4 mt-2">
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li><strong>sb-*-auth-token:</strong> Authentication session (Supabase)</li>
-                <li><strong>cookie_consent:</strong> Stores your cookie preferences</li>
+                <li><strong>cookie_consent, cookie_consent_analytics:</strong> Store your cookie choices</li>
+                <li><strong>curatr_reader_notice, curatr_reader_optout:</strong> Remember that you've seen the reader counting notice, and whether you opted out (UK)</li>
               </ul>
             </div>
 
-            <h3 className="text-xl font-medium mt-6 mb-3">3.2 Analytics Cookies</h3>
+            <h3 className="text-xl font-medium mt-6 mb-3">3.2 Anonymous read counts (UK visitors)</h3>
             <p className="text-muted-foreground leading-relaxed">
-              These cookies help us understand how visitors use our website by collecting 
-              anonymised information. This helps us improve our service.
+              If you're in the UK, we count reads anonymously so feeds can improve: whether a story was
+              swiped, paused on for a few seconds, or read for 10 seconds or more. Nothing is stored on your
+              device for this, no ID follows you between visits, and the counts are only ever shown as totals
+              to the feed's owner. They're not used for advertising or profiling, and not shared with anyone
+              else. You can opt out at any time in Cookie settings below.
+            </p>
+
+            <h3 className="text-xl font-medium mt-6 mb-3">3.3 Analytics (with your consent)</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              If you accept analytics, we keep a random ID on your device so we can count returning readers,
+              and we load Google Analytics. In the UK, the EU, Switzerland and Canada this only happens after
+              you accept. Elsewhere it's on unless you switch it off.
             </p>
             <div className="bg-muted/30 rounded-lg p-4 mt-2">
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li><strong>visitor_id:</strong> Anonymous visitor identifier</li>
-                <li><strong>feed_visit_*:</strong> Tracks feed visits for analytics</li>
+                <li><strong>curatr_vid:</strong> Random reader ID (only with analytics on)</li>
+                <li><strong>_ga, _ga_*:</strong> Google Analytics (only with analytics on)</li>
               </ul>
             </div>
 
-            <h3 className="text-xl font-medium mt-6 mb-3">3.3 Functional Cookies</h3>
+            <h3 className="text-xl font-medium mt-6 mb-3">3.4 Functional Cookies</h3>
             <p className="text-muted-foreground leading-relaxed">
               These cookies remember your choices and preferences to provide a more 
               personalised experience.
@@ -97,22 +109,24 @@ const Cookies = () => {
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li><strong>Supabase:</strong> For authentication and data storage (essential)</li>
+              <li><strong>Google Analytics:</strong> Only if you accept analytics</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-4">
-              We do not use third-party advertising or tracking cookies.
+              We do not use advertising cookies.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">5. Managing Cookies</h2>
             <p className="text-muted-foreground leading-relaxed">
-              When you first visit our site, you'll see a cookie consent banner. You can:
+              In the EU, Switzerland and Canada you'll be asked before anything is counted. In the UK you'll
+              see a short notice about anonymous read counts, with a one-tap opt-out. If your browser sends a
+              Global Privacy Control signal, nothing is counted. You can change your choice here at any time:
             </p>
-            <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Accept all cookies with one click</li>
-              <li>Reject non-essential cookies</li>
-              <li>Manage your preferences in your browser settings</li>
-            </ul>
+            <div id="settings" className="bg-muted/30 rounded-lg p-4 mt-4 scroll-mt-24">
+              <h3 className="text-xl font-medium mb-2">Cookie settings</h3>
+              <CookieSettingsPanel />
+            </div>
             <p className="text-muted-foreground leading-relaxed mt-4">
               Most browsers allow you to control cookies through their settings. However, 
               blocking essential cookies may affect the functionality of our service.
@@ -130,11 +144,13 @@ const Cookies = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4">7. UK PECR Compliance</h2>
+            <h2 className="text-2xl font-semibold mb-4">7. UK and EU rules</h2>
             <p className="text-muted-foreground leading-relaxed">
-              In accordance with the Privacy and Electronic Communications Regulations (PECR), 
-              we obtain your consent before placing non-essential cookies on your device. 
-              Essential cookies that are strictly necessary for the service do not require consent.
+              In the UK, anonymous read counts rely on the statistical purposes exemption added to the Privacy
+              and Electronic Communications Regulations (PECR) by the Data (Use and Access) Act 2025: they're
+              used only to improve the service, explained here, and you can object at any time. Everything else
+              that isn't strictly necessary needs your consent. In the EU, Switzerland and Canada, nothing beyond
+              what's strictly necessary is used without your consent.
             </p>
           </section>
 

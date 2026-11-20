@@ -1,7 +1,7 @@
 // run with: bun test ./src/lib/visitorId.test.ts
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { getVisitorId } from './visitorId';
-import { getVisitorId as getTrackingId } from './visitorIdentity';
+import { getVisitorId, peekVisitorId } from './visitorId';
+import { getStoredVisitorId as getTrackingId, getVisitorId as getCountingId } from './visitorIdentity';
 
 const LEGACY_ID = '12345678-1234-4234-8234-123456789abc';
 const SHARED_ID = 'abcdef0123456789';
@@ -58,5 +58,27 @@ describe('anonymous reaction identity compatibility', () => {
     stored.set('curatr_visitor_id', '');
     stored.set('curatr_vid', SHARED_ID);
     expect(getVisitorId()).toBe(`visitor_${SHARED_ID}`);
+  });
+});
+
+describe('anonymous counting', () => {
+  test('the counting ID is never written to the device when full counting is not on', () => {
+    const id = getCountingId('visitor');
+    expect(id).toMatch(/^visitor_anon_[a-z0-9]{8,16}$/);
+    expect(getCountingId('sv')).toBe(id.replace(/^visitor_/, 'sv_'));
+    expect(stored.has('curatr_vid')).toBe(false);
+  });
+});
+
+describe('showing reaction counts', () => {
+  test('does not create a stored ID before the reader reacts', () => {
+    expect(peekVisitorId()).toMatch(/^visitor_anon_/);
+    expect(stored.has('curatr_vid')).toBe(false);
+  });
+  test('uses the existing reaction ID when there is one', () => {
+    stored.set('curatr_vid', SHARED_ID);
+    expect(peekVisitorId()).toBe(`visitor_${SHARED_ID}`);
+    stored.set('curatr_visitor_id', LEGACY_ID);
+    expect(peekVisitorId()).toBe(LEGACY_ID);
   });
 });

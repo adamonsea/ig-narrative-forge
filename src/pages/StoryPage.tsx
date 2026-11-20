@@ -11,6 +11,7 @@ import { StoryStructuredData } from "@/components/seo/StoryStructuredData";
 import { StoryRatingCard } from "@/components/swipe-mode/StoryRatingCard";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { startStoryPageDwell } from "@/lib/storyPageDwell";
+import { CookieConsent } from "@/components/CookieConsent";
 import { resolveStoryCoverStyle } from "@/lib/storyCoverStyle";
 
 interface Story {
@@ -294,7 +295,13 @@ const StoryPage = () => {
         <div className="p-4">
           <StoryRatingCard storyId={story.id} topicSlug={slug} />
         </div>
+        <footer className="px-4 pb-8 text-center">
+          <Link to="/cookies#settings" className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground">
+            Cookie settings
+          </Link>
+        </footer>
       </div>
+      <CookieConsent variant="feed" />
     </div>
   );
 };

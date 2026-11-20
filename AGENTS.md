@@ -7,7 +7,7 @@
 - Client-callable SECURITY DEFINER functions start with a guard (`can_view_topic_stats`/`can_view_user_stats`, or `can_manage_topic` for feed actions); jobs are service-role only; keeps tenants apart.
 - The /dashboard feed card reads all its figures from the single `get_dashboard_feed_cards` call; one guarded query keeps the card fast and tenant-safe.
 - Feed-card highlights and nudges are picked by pure rules in `src/lib/feedHighlights.ts` from the single card call (no AI); keeps every positive true and testable.
-- Every reader tracker (and GA) must pass `canTrackReader()` in `src/lib/visitorIdentity.ts` (not a bot, not "Essential only"), and nothing is written before `onHumanSignal`/`hasHumanSignal` in `src/lib/humanSignal.ts`; bots that only load a page never enter the data.
+- Reader trackers and GA obey only `readerTrackingMode()` (`src/lib/readerConsent.ts`, regional rules) via `canTrackReader`/`getVisitorId`/`onReaderTrackable` in `visitorIdentity.ts`, after a human signal; one gate keeps regions consistent and bots out.
 - Reaction identities must preserve an existing `curatr_visitor_id` verbatim; stored anonymous reactions use exact ID matching, while new readers use the shared visitor identity.
 - Headline stop data is written only via the `record_story_views` batch RPC (insert or upgrade seen→paused, today only), from an IntersectionObserver-only tracker that sends on pagehide/hide; keeps the feed fast and rows tamper-safe.
 - Reader-facing feed filtering (Curate menu, More like this, filter banner, filter index download) is gated by `FEED_FILTERS_ENABLED` in `src/lib/featureFlags.ts`; one switch pauses or restores it without touching topic keyword data.

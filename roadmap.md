@@ -1,3 +1,12 @@
+# Reader counting by region (20 Nov 2026)
+- [x] UK readers counted anonymously (no ID kept on the phone), one-time notice with Opt out, Cookie settings on /cookies
+- [x] UK readers who chose "Essential only" before see the notice once, then count anonymously unless they opt out
+- [x] EU, Switzerland, Canada and unknown locations: nothing counted until Accept (Accept all / Reject all, equal buttons)
+- [x] Google Analytics loads only after Accept in the UK and EU (Adam chose "Keep, after Accept")
+- [x] Source-link and share clicks follow the same rules; reactions no longer save an ID before a reader reacts
+- [x] Country now comes from Curatr's own server, not ipapi.co
+- [ ] Legal check of the UK statistics exemption wording (Adam, with an adviser)
+
 # Edit picture: replace or reframe (20 Nov 2026)
 - [x] Story side panel and event side panel: Edit picture (drag to move, zoom) or Replace with your own photo; Add photo when there's none
 - [x] Saving makes a new picture file used everywhere (feed, emails, widgets, share previews); the original is kept so it can be reframed again

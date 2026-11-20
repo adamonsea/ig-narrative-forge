@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getVisitorId } from '@/lib/visitorId';
+import { peekVisitorId } from '@/lib/visitorId';
 
 export interface ReactionCounts {
   thumbsUp: number;
@@ -58,7 +58,7 @@ export const useStoriesReactionsBatch = (storyIds: string[], topicId: string) =>
 
     const fetchBatchCounts = async () => {
       try {
-        const visitorId = getVisitorId();
+        const visitorId = peekVisitorId();
         
         let userId: string | null = null;
         try {

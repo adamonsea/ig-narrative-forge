@@ -1,4 +1,8 @@
 // Stable, lightweight visitor identity + bot detection shared by all trackers.
+// Whether and how a reader is counted is decided only by src/lib/readerConsent.ts.
+import { currentReaderMode, whenReaderMode, readerCountry, onReaderConsentChange } from './readerConsent';
+import { onHumanSignal } from './humanSignal';
+
 const KEY = 'curatr_vid';
 
 export const isLikelyBot = (): boolean => {
@@ -9,12 +13,16 @@ export const isLikelyBot = (): boolean => {
   );
 };
 
-export const getVisitorId = (prefix = 'v'): string => {
+const randomId = (): string =>
+  (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, '').slice(0, 16);
+
+/** The ID kept on the device. Only for full counting and for features the reader uses (reactions). */
+export const getStoredVisitorId = (prefix = 'v'): string => {
   let id: string | null = null;
   try {
     id = localStorage.getItem(KEY);
     if (!id) {
-      id = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, '').slice(0, 16);
+      id = randomId();
       localStorage.setItem(KEY, id);
     }
   } catch {
@@ -23,28 +31,43 @@ export const getVisitorId = (prefix = 'v'): string => {
   return `${prefix}_${id}`;
 };
 
-const COUNTRY_KEY = 'curatr_cc';
-/** Returns cached country instantly; refreshes in background for next visit. Never blocks tracking. */
-export const getCachedCountry = (): string | null => {
-  let cc: string | null = null;
-  try { cc = localStorage.getItem(COUNTRY_KEY); } catch { /* ignore */ }
-  if (!cc) {
-    fetch('https://ipapi.co/country/', { signal: AbortSignal.timeout(3000) })
-      .then((r) => (r.ok ? r.text() : ''))
-      .then((t) => { const v = t.trim(); if (/^[A-Z]{2}$/.test(v)) localStorage.setItem(COUNTRY_KEY, v); })
-      .catch(() => {});
-  }
-  return cc;
+// Anonymous counting: one random ID held in memory for this page load only, never written to the device.
+let anonymousId: string | null = null;
+export const getAnonymousVisitorId = (prefix = 'v'): string => `${prefix}_anon_${(anonymousId ??= randomId())}`;
+
+/** Tracker ID: the stored ID only with full counting, otherwise the in-memory anonymous ID. */
+export const getVisitorId = (prefix = 'v'): string =>
+  currentReaderMode() === 'full' ? getStoredVisitorId(prefix) : getAnonymousVisitorId(prefix);
+
+/** Visitor's country from this site's own lookup (no third-party call). Null until known. */
+export const getCachedCountry = (): string | null => readerCountry();
+
+/** Single gate for every reader tracker: not a bot and counting allowed for this reader. */
+export const canTrackReader = (): boolean => {
+  if (isLikelyBot()) return false;
+  const mode = currentReaderMode();
+  return mode !== null && mode !== 'off';
 };
 
-/** False only when the reader chose "Essential only" on the cookie banner. No answer = not opted out. */
-export const hasAnalyticsConsent = (): boolean => {
-  try {
-    const raw = localStorage.getItem('cookie_consent');
-    if (!raw) return true;
-    return JSON.parse(raw)?.analytics !== false;
-  } catch { return true; }
-};
-
-/** Single gate for every reader tracker: not a bot and not opted out. */
-export const canTrackReader = (): boolean => !isLikelyBot() && hasAnalyticsConsent();
+/**
+ * Runs cb once a real person has interacted and counting is allowed for this reader. If counting is
+ * not allowed yet (e.g. the reader taps Accept after their first touch), it waits for that change.
+ */
+export function onReaderTrackable(cb: () => void): () => void {
+  let cancelled = false;
+  let offChange: () => void = () => {};
+  const attempt = (): boolean => {
+    if (cancelled || !canTrackReader()) return false;
+    cancelled = true;
+    offChange();
+    cb();
+    return true;
+  };
+  const unsubscribe = onHumanSignal(() => {
+    void whenReaderMode().then(() => {
+      if (attempt() || cancelled || typeof window === 'undefined') return;
+      offChange = onReaderConsentChange(() => { attempt(); });
+    });
+  });
+  return () => { cancelled = true; unsubscribe(); offChange(); };
+}

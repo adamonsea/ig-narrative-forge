@@ -3,8 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from '@/lib/router-compat';
 import { supabase } from '@/integrations/supabase/client';
 import { applyExcludeLink, isExcludedBrowser } from '@/lib/filmPlays';
-import { getVisitorId, getCachedCountry, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
-import { onHumanSignal } from "@/lib/humanSignal";
+import { getVisitorId, getCachedCountry, onReaderTrackable, canTrackReader } from "@/lib/visitorIdentity";
 
 interface PageClassification {
   pageType: string;
@@ -78,7 +77,7 @@ const topicIdCache = new Map<string, string>();
 export const useSiteVisitorTracking = () => {
   const location = useLocation();
   const hasTracked = useRef<Set<string>>(new Set());
-  const visitorId = useRef<string>(getVisitorId('sv'));
+  const visitorId = useRef<string>('');
 
   useEffect(() => {
     const pagePath = location.pathname;
@@ -87,12 +86,13 @@ export const useSiteVisitorTracking = () => {
     
     // Skip if already tracked this path today
     applyExcludeLink();
-    if (!canTrackReader() || isExcludedBrowser()) return;
+    if (isExcludedBrowser()) return;
     if (hasTracked.current.has(trackKey)) return;
 
     const trackVisit = async () => {
-      if (hasTracked.current.has(trackKey)) return;
+      if (hasTracked.current.has(trackKey) || !canTrackReader()) return;
       hasTracked.current.add(trackKey);
+      visitorId.current = getVisitorId('sv');
       try {
         const { pageType, topicSlug } = classifyPage(pagePath);
         
@@ -162,7 +162,7 @@ export const useSiteVisitorTracking = () => {
 
     // Record only once a real person has touched, moved, scrolled or typed (bots that just load never count).
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const unsubscribe = onHumanSignal(() => { timer = setTimeout(trackVisit, 150); });
+    const unsubscribe = onReaderTrackable(() => { timer = setTimeout(trackVisit, 150); });
 
     return () => { unsubscribe(); if (timer) clearTimeout(timer); };
   }, [location.pathname]);

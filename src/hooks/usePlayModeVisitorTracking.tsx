@@ -1,14 +1,8 @@
 import { opt } from "@/lib/optionalProps";
-import { canTrackReader } from '@/lib/visitorIdentity';
-import { getVisitorId } from '@/lib/visitorIdentity';
+import { getVisitorId, onReaderTrackable, canTrackReader } from '@/lib/visitorIdentity';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { onHumanSignal } from '@/lib/humanSignal';
 
-const generateVisitorId = (): string => getVisitorId('visitor');
-
-// Stable visitor ID - generated once per session
-const VISITOR_ID = generateVisitorId();
 
 /**
  * Hook to track Play Mode page visits (separate from feed visits)
@@ -23,7 +17,8 @@ export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
     }
 
     const trackVisit = async () => {
-    if (!canTrackReader()) return;
+      if (!canTrackReader()) return;
+      const VISITOR_ID = getVisitorId('visitor');
       try {
         const userAgent = navigator.userAgent;
         const referrer = document.referrer;
@@ -54,9 +49,9 @@ export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
 
     // Track visit only after a human signal (touch, pointer, wheel, key, scroll)
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const unsubscribe = onHumanSignal(() => { timer = setTimeout(trackVisit, 300); });
+    const unsubscribe = onReaderTrackable(() => { timer = setTimeout(trackVisit, 300); });
     return () => { unsubscribe(); if (timer) clearTimeout(timer); };
   }, [topicId]);
 
-  return VISITOR_ID;
+  return getVisitorId('visitor');
 };

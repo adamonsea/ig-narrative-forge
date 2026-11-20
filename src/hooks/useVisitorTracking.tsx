@@ -1,7 +1,7 @@
 import { opt } from "@/lib/optionalProps";
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getVisitorId, isLikelyBot, canTrackReader } from "@/lib/visitorIdentity";
+import { getVisitorId, canTrackReader, onReaderTrackable } from "@/lib/visitorIdentity";
 import { onHumanSignal, hasHumanSignal } from "@/lib/humanSignal";
 
 export const useVisitorTracking = (topicId: string | undefined, pageType: string = 'feed') => {
@@ -10,10 +10,8 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
   const hasTrackedVisit = useRef(false);
 
   useEffect(() => {
-    // Generate visitor ID once on mount
-    if (!canTrackReader()) return;
-    const id = getVisitorId('visitor');
-    setVisitorId(id);
+    // Visitor ID once a person has interacted and counting is allowed (anonymous mode gets an in-memory ID)
+    return onReaderTrackable(() => setVisitorId(getVisitorId('visitor')));
   }, []);
 
   useEffect(() => {
@@ -24,7 +22,7 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
 
     // Track raw click immediately (for GSC parity)
     const trackClick = async () => {
-      if (hasTrackedClick.current) return;
+      if (hasTrackedClick.current || !canTrackReader()) return;
       hasTrackedClick.current = true;
       
       try {
@@ -44,7 +42,7 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
 
     // Track unique visit (deduplicated daily)
     const trackVisit = async () => {
-      if (hasTrackedVisit.current) return;
+      if (hasTrackedVisit.current || !canTrackReader()) return;
       hasTrackedVisit.current = true;
       
       try {
@@ -73,7 +71,7 @@ export const useVisitorTracking = (topicId: string | undefined, pageType: string
 
     // Backup: track on page unload for quick bounces
     const handleBeforeUnload = () => {
-      if (!hasTrackedClick.current && hasHumanSignal()) {
+      if (!hasTrackedClick.current && hasHumanSignal() && canTrackReader()) {
         // Use sendBeacon for reliable tracking during page unload
         const payload = JSON.stringify({
           topic_id: topicId,

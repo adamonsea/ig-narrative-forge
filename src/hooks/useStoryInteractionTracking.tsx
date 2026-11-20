@@ -1,5 +1,4 @@
-import { canTrackReader } from '@/lib/visitorIdentity';
-import { getVisitorId } from '@/lib/visitorIdentity';
+import { canTrackReader, getVisitorId } from '@/lib/visitorIdentity';
 import { supabase } from '@/integrations/supabase/client';
 
 const generateVisitorId = (): string => getVisitorId('visitor');
@@ -31,6 +30,7 @@ export const useStoryInteractionTracking = () => {
   };
 
   const trackShareClick = (storyId: string, topicId: string, platform: string = 'native') => {
+    if (!canTrackReader()) return;
     // Non-blocking async call - fire and forget
     (async () => {
       try {
@@ -55,6 +55,7 @@ export const useStoryInteractionTracking = () => {
   };
 
   const trackSourceClick = (storyId: string, topicId: string) => {
+    if (!canTrackReader()) return;
     // Non-blocking async call - fire and forget
     (async () => {
       try {
