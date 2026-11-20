@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { RefreshCw, Loader2, Copy, MoreHorizontal } from "lucide-react";
+import { RefreshCw, Copy, MoreHorizontal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
 import type { HighlightTerms } from "@/lib/highlightTerms";
-import { DeskCard, MetaLine, SpikeButton } from "./DeskCard";
+import { DeskCard, MetaLine, PublishSplitButton, SpikeButton } from "./DeskCard";
 import { WaitingStoryDrawer } from "./WaitingStoryDrawer";
 
 interface MultiTenantArticlesListProps {
@@ -155,6 +155,7 @@ export default function MultiTenantArticlesList({
     slideType: 'short' | 'tabloid' | 'indepth' | 'extensive',
     tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven',
+    withPicture?: boolean,
   ) => {
     const dupInfo = duplicateMap?.get(article.id);
     if (dupInfo && !dupInfo.isDuplicateLeader) {
@@ -163,7 +164,7 @@ export default function MultiTenantArticlesList({
       );
       if (!ok) return false;
     }
-    onApprove(article, slideType, tone, writingStyle, illustrationOverrides[article.id] ?? true);
+    onApprove(article, slideType, tone, writingStyle, withPicture ?? illustrationOverrides[article.id] ?? true);
     return true;
   };
 
@@ -251,10 +252,12 @@ export default function MultiTenantArticlesList({
           actions={
             <>
               <SpikeButton onClick={() => onDelete(article.id, article.title)} disabled={isDeleting} />
-              <Button size="sm" onClick={() => publishArticle(article, slideType, toneOverride, writingStyleOverride)} disabled={isProcessing || isDeleting}>
-                {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-                Publish
-              </Button>
+              <PublishSplitButton
+                busy={isProcessing}
+                disabled={isDeleting}
+                onPublish={() => publishArticle(article, slideType, toneOverride, writingStyleOverride)}
+                onPublishWithoutPicture={() => publishArticle(article, slideType, toneOverride, writingStyleOverride, false)}
+              />
             </>
           }
         />

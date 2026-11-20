@@ -26,6 +26,7 @@ import { findLiveRepeat, groupHeld, splitLiveNow, staleHeld, withJustPublished }
 import { withPinnedFirst } from "@/lib/storyPin";
 import { useSetStoryPin, useTopicPin } from "@/hooks/useStoryPin";
 import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
+import { publishNowUpdate } from "@/lib/publishStory";
 import { ToastAction } from "@/components/ui/toast";
 
 interface Topic {
@@ -332,7 +333,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
-  const publishNow = async (storyId: string, title: string) => {
+  const publishNow = async (storyId: string, title: string, opts: { withPicture?: boolean } = {}) => {
+    const withPicture = opts.withPicture !== false;
     const drop = (setter: typeof setSettlingIds) => setter(prev => { const n = new Set(prev); n.delete(storyId); return n; });
     // The card flows out of the pool at once, then joins Live now (faded) while the save runs.
     let failed = false;
@@ -341,7 +343,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       setLeaving([storyId], null);
       if (failed) return;
       setJustPublished(prev => new Set(prev).add(storyId));
-      setSettlingIds(prev => new Set(prev).add(storyId));
+      if (withPicture) setSettlingIds(prev => new Set(prev).add(storyId));
       // Bring it into view where it now sits in Live now (desktop shows all three columns).
       window.setTimeout(() => {
         const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -352,7 +354,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       const publishedAt = new Date().toISOString();
       const { data, error } = await supabase
         .from('stories')
-        .update({ scheduled_publish_at: null, status: 'published', is_published: true, published_at: publishedAt, updated_at: publishedAt })
+        .update(publishNowUpdate(publishedAt, opts))
         .eq('id', storyId)
         .select('id')
         .maybeSingle();
@@ -380,6 +382,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
     refreshContent();
     // Draw its picture if it has none; the card stays faded until that's done.
+    if (!withPicture) return;
     void illustrateOnPublish(storyId).finally(() => {
       drop(setSettlingIds);
       refreshContent();

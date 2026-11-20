@@ -680,7 +680,8 @@
   }
   .desk-card:hover .desk-card-actions,
   .desk-card:focus-within .desk-card-actions,
-  .desk-card[data-revealed="true"] .desk-card-actions { opacity: 1; pointer-events: auto; }
+  .desk-card[data-revealed="true"] .desk-card-actions,
+  .desk-card:has(.desk-card-actions [data-state="open"]) .desk-card-actions { opacity: 1; pointer-events: auto; }
 }
 @media (hover: none) {
   .desk-card .desk-card-actions { display: none; padding: 0 0.75rem 0.75rem; }

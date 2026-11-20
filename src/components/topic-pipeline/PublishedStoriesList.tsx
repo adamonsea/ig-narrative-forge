@@ -16,7 +16,8 @@ import { AnimationInstructionsModal } from "@/components/topic-pipeline/Animatio
 import { ReelStudioModal } from "@/components/reels/ReelStudioModal";
 import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 import { publicationFromUrl, resolvePublicationName } from "@/lib/urlUtils";
-import { DeskBadge, DeskCard, MetaLine, PinButton, SpikeButton } from "./DeskCard";
+import { DeskBadge, DeskCard, MetaLine, PinButton, PublishSplitButton, SpikeButton } from "./DeskCard";
+import { publishNowUpdate } from "@/lib/publishStory";
 import { pinTimeLeft } from "@/lib/storyPin";
 import { StoryDrawer, type PublishedStory } from "./StoryDrawer";
 import { DuplicateCompareDrawer } from "./DuplicateCompareDrawer";
@@ -55,7 +56,7 @@ interface PublishedStoriesListProps {
   /** Waiting stories that repeat one already live, mapped to that live story. */
   repeatOf?: Map<string, PublishedStory> | undefined;
   /** Publishing handled by the Desk, so the story moves into Live now at once. */
-  onPublishNow?: (storyId: string, title: string) => Promise<void>;
+  onPublishNow?: (storyId: string, title: string, opts?: { withPicture?: boolean }) => Promise<void>;
   /** Just-published stories still getting their picture: shown faded until it lands. */
   settlingIds?: Set<string> | undefined;
   /** Stories the owner just published or skipped: they play their leave motion before going. */
@@ -145,11 +146,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     }
   };
 
-  const handlePublishNow = async (storyId: string, title: string) => {
+  const handlePublishNow = async (storyId: string, title: string, opts: { withPicture?: boolean } = {}) => {
     setPublishingNow(prev => new Set(prev.add(storyId)));
     if (onPublishNow) {
       try {
-        await onPublishNow(storyId, title);
+        await onPublishNow(storyId, title, opts);
       } finally {
         setPublishingNow(prev => { const n = new Set(prev); n.delete(storyId); return n; });
       }
@@ -159,13 +160,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       const publishedAt = new Date().toISOString();
       const { data, error } = await supabase
         .from('stories')
-        .update({
-          scheduled_publish_at: null,
-          status: 'published',
-          is_published: true,
-          published_at: publishedAt,
-          updated_at: publishedAt,
-        })
+        .update(publishNowUpdate(publishedAt, opts))
         .eq('id', storyId)
         .select('id')
         .maybeSingle();
@@ -173,8 +168,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       if (!data) throw new Error('No story was updated. Check topic ownership and access.');
       toast({ title: 'Published Immediately', description: `"${title}" is now live.` });
       onRefresh();
-      // Live now, so draw its picture if it has none; refresh again when it lands.
-      void illustrateOnPublish(storyId).then(onRefresh);
+      // Live now, so draw its picture if it has none (and the owner wants one); refresh again when it lands.
+      if (opts.withPicture !== false) void illustrateOnPublish(storyId).then(onRefresh);
     } catch (e: any) {
       console.error('Error publishing story:', e);
       const detail = e?.message || 'Could not publish story';
@@ -487,10 +482,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               actions={toCheck ? (
                 <>
                   {onSkip && <SpikeButton onClick={() => onSkip(story)} disabled={publishing} />}
-                  <Button size="sm" onClick={() => handlePublishNow(story.id, storyTitle)} disabled={publishing}>
-                    {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                    Publish
-                  </Button>
+                  <PublishSplitButton
+                    busy={publishing}
+                    icon={<Check className="mr-2 h-4 w-4" aria-hidden="true" />}
+                    onPublish={() => handlePublishNow(story.id, storyTitle)}
+                    onPublishWithoutPicture={story.cover_illustration_url ? undefined : () => handlePublishNow(story.id, storyTitle, { withPicture: false })}
+                  />
                 </>
               ) : isLive ? (
                 <>
@@ -507,10 +504,13 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               ) : (
                 <>
                   {onSkip && <SpikeButton onClick={() => onSkip(story)} disabled={publishing} />}
-                  <Button size="sm" onClick={() => handlePublishNow(story.id, storyTitle)} disabled={publishing}>
-                    {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                    Publish now
-                  </Button>
+                  <PublishSplitButton
+                    label="Publish now"
+                    busy={publishing}
+                    icon={<Zap className="mr-2 h-4 w-4" aria-hidden="true" />}
+                    onPublish={() => handlePublishNow(story.id, storyTitle)}
+                    onPublishWithoutPicture={story.cover_illustration_url ? undefined : () => handlePublishNow(story.id, storyTitle, { withPicture: false })}
+                  />
                 </>
               )}
             />

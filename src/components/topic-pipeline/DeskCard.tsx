@@ -1,5 +1,7 @@
 import { Fragment, useState, type ReactNode } from "react";
-import { Loader2, Newspaper, Pin, X } from "lucide-react";
+import { ChevronDown, Loader2, Newspaper, Pin, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -194,5 +196,60 @@ export function PinButton({ pinned = false, onClick, disabled, busy }: { pinned?
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
+  );
+}
+
+/**
+ * The one positive action on a story card: Publish, with a small ▾ for "Publish without picture".
+ * Still one control in the card's two-action budget; the menu holds the rarer variants.
+ * Without `onPublishWithoutPicture` it's a plain Publish button.
+ */
+export function PublishSplitButton({
+  label = "Publish", icon, onPublish, onPublishWithoutPicture, busy, disabled,
+}: {
+  label?: string | undefined;
+  icon?: ReactNode | undefined;
+  onPublish: () => void;
+  onPublishWithoutPicture?: (() => void) | undefined;
+  busy?: boolean | undefined;
+  disabled?: boolean | undefined;
+}) {
+  const off = disabled || busy;
+  return (
+    <div className="inline-flex items-center">
+      <Button
+        size="sm"
+        onClick={(e) => { e.stopPropagation(); onPublish(); }}
+        disabled={off}
+        className={cn(onPublishWithoutPicture && "rounded-r-none")}
+      >
+        {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : icon}
+        {label}
+      </Button>
+      {onPublishWithoutPicture && (
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  disabled={off}
+                  aria-label="More ways to publish"
+                  onClick={(e) => e.stopPropagation()}
+                  className="rounded-l-none border-l border-primary-foreground/25 px-2"
+                >
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>More ways to publish</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onSelect={onPublish}>{label}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onPublishWithoutPicture}>Publish without picture</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   );
 }
