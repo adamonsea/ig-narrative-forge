@@ -1,6 +1,7 @@
 /**
  * Headline stop-rate tracker. IntersectionObserver only: no scroll listeners, no per-card timers,
- * no layout reads. Results held in memory and sent in one batch on pagehide/hide (+ one mid-session flush).
+ * no layout reads. Results held in memory and sent in batches: right after the first 3s stop, then at most
+ * once a minute while visible (changed stories only, so an idle open tab sends nothing), and on pagehide/hide.
  * Each item carries the card's 0-based feed position (first seen); a reader's scroll depth is the deepest
  * position they reached, so no extra field is needed for the drop-off curve.
  */
@@ -10,7 +11,7 @@ import { hasHumanSignal } from './humanSignal';
 const SEEN_RATIO = 0.6;
 const STOP_MS = 3000; // a "stop" = 3s+ continuous dwell (matches story_stop_scores)
 const CAP_MS = 30000;
-const MID_FLUSH_MS = 3 * 60 * 1000;
+const LIVE_FLUSH_MS = 60 * 1000; // keeps "reading now" (last 5 minutes) live without a heartbeat
 
 type Entry = { paused: boolean; dwell: number; since: number | null; sent: string; inView: boolean; pos: number | null };
 
@@ -28,8 +29,9 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
   const positions = new WeakMap<Element, number>();
   const pending: Array<[Element, string]> = [];
   let observer: IntersectionObserver | null = null;
-  let midFlushed = false;
-  const started = performance.now();
+  let firstStopSent = false;
+  let firstStopTimer: ReturnType<typeof setTimeout> | null = null;
+  let liveTimer: ReturnType<typeof setInterval> | null = null;
 
   const close = (e: Entry, now: number) => {
     if (e.since == null) return;
@@ -97,7 +99,17 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
         close(e, now);
       }
     }
-    if (!midFlushed && now - started > MID_FLUSH_MS) { midFlushed = true; flush(); }
+    // First stop goes out as soon as it happens, so the owner sees a new reader within seconds.
+    if (!firstStopSent && !firstStopTimer && visible && [...stories.values()].some((x) => x.since != null)) {
+      firstStopTimer = setTimeout(() => {
+        firstStopTimer = null;
+        const t = performance.now();
+        if (!firstStopSent && [...stories.values()].some((x) => x.paused || (x.since != null && t - x.since >= STOP_MS))) {
+          firstStopSent = true;
+          flush();
+        }
+      }, STOP_MS + 250);
+    }
   };
 
   const start = () => {
@@ -105,6 +117,7 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
     pending.splice(0).forEach(([el, id]) => { ids.set(el, id); observer!.observe(el); });
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onPageHide);
+    liveTimer = setInterval(() => { if (document.visibilityState === 'visible') flush(); }, LIVE_FLUSH_MS);
   };
   const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, o?: { timeout: number }) => number);
   if (ric) ric.call(window, start, { timeout: 3000 }); else setTimeout(start, 1200);
@@ -118,6 +131,8 @@ export function createHeadlineStopTracker(topicId: string, opts: { skip?: boolea
     destroy() {
       flush();
       observer?.disconnect();
+      if (liveTimer) clearInterval(liveTimer);
+      if (firstStopTimer) clearTimeout(firstStopTimer);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', onPageHide);
     },

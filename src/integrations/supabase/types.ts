@@ -3987,6 +3987,7 @@ export type Database = {
           id: string
           impression_date: string
           is_internal: boolean
+          last_seen_at: string | null
           max_dwell_ms: number
           paused: boolean
           position: number | null
@@ -3999,6 +4000,7 @@ export type Database = {
           id?: string
           impression_date?: string
           is_internal?: boolean
+          last_seen_at?: string | null
           max_dwell_ms?: number
           paused?: boolean
           position?: number | null
@@ -4011,6 +4013,7 @@ export type Database = {
           id?: string
           impression_date?: string
           is_internal?: boolean
+          last_seen_at?: string | null
           max_dwell_ms?: number
           paused?: boolean
           position?: number | null
@@ -7578,6 +7581,7 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: boolean
       }
+      topic_reading_now: { Args: { p_topic_id: string }; Returns: number }
       topic_reads: {
         Args: { p_from: string; p_to?: string; p_topic_id: string }
         Returns: {

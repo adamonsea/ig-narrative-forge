@@ -2,7 +2,7 @@
 
 - Render the Curatr identity through `src/components/brand/CuratrLogo.tsx`; one shared lock-up keeps the icon and `.pro` proportions consistent.
 - Reuse `public/reveal.html` for explainer-film ident scenes and deterministic video exports (`?clean=1&capture=1`, `window.__curatr.frame(t)` after fonts load); one reveal source keeps the animated mark and wordmark balanced everywhere.
-- Readers and reads come only from `topic_engagement` (swipe, 3s+ headline pause, or `page_dwell` = 10s+ on a story page; internal/preview/`is_test_visitor` excluded) via `count_topic_readers`/`topic_reads`; page loads are "Visits" from `count_topic_visitors` only; keeps scrapers out of reader figures.
+- All reader numbers (reading now via `topic_reading_now`, readers, reads, per-story, returning) come only from `topic_engagement` signals (swipe, 3s+ stop, 10s+ story page) via `topic_reads`/`count_topic_readers`; Visits only from `count_topic_visitors`; one list keeps figures in agreement.
 - Google Search figures come only from `search_daily` (system-only, filled daily by `search-console-sync`), counting only days 3+ days old; half-reported days never look like drops.
 - Client-callable SECURITY DEFINER functions start with a guard (`can_view_topic_stats`/`can_view_user_stats`, or `can_manage_topic` for feed actions); jobs are service-role only; keeps tenants apart.
 - The /dashboard feed card reads all its figures from the single `get_dashboard_feed_cards` call; one guarded query keeps the card fast and tenant-safe.

@@ -1,3 +1,9 @@
+# One reader definition (20 Nov 2026)
+- [x] Reading now, readers, reads, per-story reads, rising and milestones all count the same signals (swipe, 3s headline stop, 10s story page)
+- [x] Headline stops count as reads (Adam chose "Count as a read")
+- [x] Test browsers, preview and owner visits left out of every figure, incl. the Desk; sv_/visitor_ IDs merged
+- [x] Headline stops sent within seconds and then once a minute while the page is open, so reading now stays live
+
 # Reader counting by region (20 Nov 2026)
 - [x] UK readers counted anonymously (no ID kept on the phone), one-time notice with Opt out, Cookie settings on /cookies
 - [x] UK readers who chose "Essential only" before see the notice once, then count anonymously unless they opt out
