@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
 import type { HighlightTerms } from "@/lib/highlightTerms";
-import { DeskCard, MetaLine, PublishSplitButton, SpikeButton } from "./DeskCard";
+import { DeskCard, MetaLine, PublishSplitButton, ShelfLabel, SpikeButton } from "./DeskCard";
 import { WaitingStoryDrawer } from "./WaitingStoryDrawer";
 
 interface MultiTenantArticlesListProps {
@@ -279,26 +279,31 @@ export default function MultiTenantArticlesList({
 
   return (
     <div className="space-y-3">
-      {/* One quiet row: count, and a menu for the tools that don't belong on a card */}
-      <div className={`flex items-center justify-end gap-2 ${articles.length === 0 ? "hidden" : ""}`}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Waiting tools">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => { if (selectMode) setSelectedArticles(new Set()); setSelectMode(!selectMode); }}>
-              {selectMode ? "Stop selecting" : "Select several"}
-            </DropdownMenuItem>
-            {duplicateMap && duplicateMap.size > 0 && (
-              <DropdownMenuCheckboxItem checked={showAllDuplicates} onCheckedChange={(v) => setShowAllDuplicates(v === true)}>
-                Show duplicates
-              </DropdownMenuCheckboxItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {/* Incoming = gathered articles not written yet; the tools menu sits on its label */}
+      <ShelfLabel
+        id="desk-incoming"
+        tool={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Incoming tools">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => { if (selectMode) setSelectedArticles(new Set()); setSelectMode(!selectMode); }}>
+                {selectMode ? "Stop selecting" : "Select several"}
+              </DropdownMenuItem>
+              {duplicateMap && duplicateMap.size > 0 && (
+                <DropdownMenuCheckboxItem checked={showAllDuplicates} onCheckedChange={(v) => setShowAllDuplicates(v === true)}>
+                  Show duplicates
+                </DropdownMenuCheckboxItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      >
+        Incoming · {totalArticlesCount ?? articles.length}
+      </ShelfLabel>
 
       {/* Bulk action toolbar - only in select mode */}
       {selectMode && (

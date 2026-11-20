@@ -4,7 +4,7 @@ import { EventCategoryIllustration } from "@/components/events/EventCategoryIllu
 import { EventCard, EventDateBlock } from "@/components/events/EventCard";
 import { useState, type ReactNode } from "react";
 import { Link, Navigate } from "@/lib/router-compat";
-import { Archive, ArrowLeft, ArrowRight, Eye, Check, RefreshCw, Plus } from "lucide-react";
+import { Archive, ArrowLeft, ArrowRight, Eye, Check, RefreshCw, Plus, ChevronDown, MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { InfoHint, InlineError, SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { RememberedFold } from "@/components/settings/RememberedFold";
-import { DeskCard, DeskBadge, MetaLine, PublishSplitButton, SpikeButton } from "@/components/topic-pipeline/DeskCard";
+import { DeskCard, DeskBadge, MetaLine, PublishSplitButton, ShelfLabel, SpikeButton } from "@/components/topic-pipeline/DeskCard";
 import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
 import { AttentionTag } from "@/components/events/DeskEvents";
 import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
@@ -357,6 +357,13 @@ export default function DesignSystem() {
                 <div className="overflow-hidden rounded-xl border bg-mint-soft shadow-sm"><LiveBar /></div>
                 <ArrowLeft className="h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
                 <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-base font-semibold">Event pool</div>
+              </div>
+            </Spec>
+            <Spec name="Story pool shelves · needs your OK, Queued, Incoming" className="w-full max-w-md">
+              <div className="space-y-2">
+                <div className="rounded-xl border border-attention/50 bg-attention-soft p-3 text-base font-semibold text-attention-foreground">1 story needs your OK</div>
+                <p className="flex items-center gap-2 py-1 text-sm font-medium text-muted-foreground"><ChevronDown className="h-4 w-4" aria-hidden="true" />Queued · 1</p>
+                <ShelfLabel tool={<Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Incoming tools"><MoreHorizontal className="h-4 w-4" /></Button>}>Incoming · 2</ShelfLabel>
               </div>
             </Spec>
           </Block>

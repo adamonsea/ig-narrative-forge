@@ -253,3 +253,13 @@ export function PublishSplitButton({
     </div>
   );
 }
+
+/** Quiet shelf label inside a Desk pool (e.g. "Incoming · 4"), with room for one small tool on the right. */
+export function ShelfLabel({ id, children, tool }: { id?: string; children: ReactNode; tool?: ReactNode }) {
+  return (
+    <div className="flex min-h-9 items-center gap-2">
+      <h4 id={id} className="text-sm font-medium text-muted-foreground">{children}</h4>
+      {tool ? <div className="ml-auto">{tool}</div> : null}
+    </div>
+  );
+}

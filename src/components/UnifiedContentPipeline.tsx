@@ -542,7 +542,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <h3 id="desk-happened" className="text-lg font-semibold text-foreground">Story pool</h3>
             {autopilot.on && <AutopilotPill />}
             {storiesToCheck.length > 0 && <AttentionTag>{storiesToCheck.length} to check</AttentionTag>}
-            {newsCount > 0 && <span className="text-base text-muted-foreground tabular-nums">{newsCount} new</span>}
             <NewContentBadge show={newArrivals} onDismiss={clearNewArrivals} />
             <div className="ml-auto flex items-center gap-1">
               <HappenedSettings topicId={selectedTopicId} onChanged={autopilot.refresh} />
@@ -577,41 +576,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               />
             </section>
           )}
-          {selectedTopicId && (
-            <RememberedFold foldKey="desk-story-glance" label="Published" contentClassName="pt-2">
-              <PublishedGlance topicId={selectedTopicId} />
-            </RememberedFold>
-          )}
           {queuedStories.length > 0 && (
             <RememberedFold foldKey="desk-queued" label={`Queued · ${queuedStories.length}`} contentClassName="pt-2">
               <PublishedStoriesList
                 repeatOf={repeatOf}
                 stories={queuedStories}
-                onSkip={(s) => archiveWithUndo([s], true)}
-                onPublishNow={publishNow}
-                leavingIds={leavingIds}
-                onArchive={handleArchiveStory}
-                onReturnToReview={handleMultiTenantRejectStory}
-                onDelete={handleMultiTenantRejectStory}
-                onViewStory={handleViewStory}
-                onRefresh={refreshContent}
-                loading={loading}
-                topicSlug={topicSlug}
-                topicId={selectedTopicId}
-              />
-            </RememberedFold>
-          )}
-          {otherHeld.length > 0 && (
-            <RememberedFold foldKey="desk-written-not-live" label={`Written, not in the feed · ${otherHeld.length}`} contentClassName="pt-2">
-              {staleStories.length > 0 && (
-                <div className="mb-2 flex justify-end">
-                  <Button size="sm" variant="ghost" disabled={archivingStale} onClick={() => handleArchiveStale(staleStories)}>
-                    Archive {staleStories.length} over a week old
-                  </Button>
-                </div>
-              )}
-              <PublishedStoriesList
-                stories={otherHeld}
                 onSkip={(s) => archiveWithUndo([s], true)}
                 onPublishNow={publishNow}
                 leavingIds={leavingIds}
@@ -667,6 +636,37 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               loadingMore={loadingMore}
               onLoadMore={loadMoreArticles}
             />
+          )}
+          {/* Supporting folds sit under the three shelves: needs your OK, Queued, Incoming */}
+          {otherHeld.length > 0 && (
+            <RememberedFold foldKey="desk-written-not-live" label={`Written, not in the feed · ${otherHeld.length}`} contentClassName="pt-2">
+              {staleStories.length > 0 && (
+                <div className="mb-2 flex justify-end">
+                  <Button size="sm" variant="ghost" disabled={archivingStale} onClick={() => handleArchiveStale(staleStories)}>
+                    Archive {staleStories.length} over a week old
+                  </Button>
+                </div>
+              )}
+              <PublishedStoriesList
+                stories={otherHeld}
+                onSkip={(s) => archiveWithUndo([s], true)}
+                onPublishNow={publishNow}
+                leavingIds={leavingIds}
+                onArchive={handleArchiveStory}
+                onReturnToReview={handleMultiTenantRejectStory}
+                onDelete={handleMultiTenantRejectStory}
+                onViewStory={handleViewStory}
+                onRefresh={refreshContent}
+                loading={loading}
+                topicSlug={topicSlug}
+                topicId={selectedTopicId}
+              />
+            </RememberedFold>
+          )}
+          {selectedTopicId && (
+            <RememberedFold foldKey="desk-story-glance" label="Published" contentClassName="pt-2">
+              <PublishedGlance topicId={selectedTopicId} />
+            </RememberedFold>
           )}
         </section>
 
