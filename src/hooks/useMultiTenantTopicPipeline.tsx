@@ -33,6 +33,17 @@ export interface MultiTenantArticle {
   last_seen_at: string;
   is_snippet?: boolean | undefined;
   article_type?: 'legacy' | 'multi_tenant' | undefined;
+  /** Why Autopilot left it for the owner (written by auto-simplify-queue). */
+  held_reason?: string | null | undefined;
+}
+
+/** Hold reasons for a page of gathered articles (owner-scoped by RLS); empty on failure. */
+async function fetchHeldReasons(ids: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (ids.length === 0) return map;
+  const { data } = await supabase.from('topic_articles').select('id, held_reason').in('id', ids).not('held_reason', 'is', null);
+  for (const row of data || []) if (row.held_reason) map.set(row.id, row.held_reason);
+  return map;
 }
 
 export interface MultiTenantQueueItem {
@@ -274,6 +285,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       };
 
       const parliamentaryExcluded = (multiTenantArticlesResult.data || []).filter(isParliamentaryArticle).length;
+      const heldReasons = await fetchHeldReasons(
+        (multiTenantArticlesResult.data || []).filter((item: any) => item.processing_status === 'new').map((item: any) => item.id)
+      );
       
       // Process ONLY multi-tenant articles (including snippets) that are still available for processing
       const rawMultiTenantArticles = (multiTenantArticlesResult.data || [])
@@ -312,7 +326,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             source_domain: item.source_domain,
             last_seen_at: item.last_seen_at || item.updated_at,
             is_snippet: isSnippet,
-            article_type: 'multi_tenant' as const
+            article_type: 'multi_tenant' as const,
+            held_reason: heldReasons.get(item.id) ?? null,
           };
         });
 
@@ -1471,6 +1486,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         return;
       }
       
+      const heldReasons = await fetchHeldReasons(
+        (result.data || []).filter((item: any) => item.processing_status === 'new').map((item: any) => item.id)
+      );
       // Process and append new articles
       const newArticles = (result.data || [])
         .filter((item: any) => item.processing_status === 'new')
@@ -1500,7 +1518,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           source_domain: item.source_domain,
           last_seen_at: item.last_seen_at || item.updated_at,
           is_snippet: (item.word_count || 0) > 0 && (item.word_count || 0) < 150,
-          article_type: 'multi_tenant' as const
+          article_type: 'multi_tenant' as const,
+          held_reason: heldReasons.get(item.id) ?? null,
         }));
       
       // Deduplicate against existing articles

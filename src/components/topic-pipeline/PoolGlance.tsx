@@ -92,13 +92,16 @@ export function EventHorizonGlance({ topicId, waiting }: { topicId: string; wait
 /** Is Autopilot running for this feed? `refresh` re-reads it after the owner changes the switch. */
 export function useAutopilotOn(topicId: string) {
   const [on, setOn] = useState(false);
+  const [bar, setBar] = useState<number | null>(null);
   const load = useCallback(async () => {
     if (!topicId) return;
-    const { data } = await supabase.from("topic_automation_settings").select("automation_mode").eq("topic_id", topicId).maybeSingle();
+    const { data } = await supabase.from("topic_automation_settings").select("automation_mode, quality_threshold").eq("topic_id", topicId).maybeSingle();
     setOn(data?.automation_mode === "holiday");
+    setBar(typeof data?.quality_threshold === "number" ? data.quality_threshold : null);
   }, [topicId]);
   useEffect(() => { load(); }, [load]);
-  return { on, refresh: load };
+  /** `bar` = the quality score Autopilot writes from, when known. */
+  return { on, bar, refresh: load };
 }
 
 export function AutopilotPill({ className }: { className?: string | undefined }) {

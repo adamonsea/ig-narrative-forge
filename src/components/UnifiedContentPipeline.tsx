@@ -635,9 +635,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               totalArticlesCount={totalArticlesCount}
               loadingMore={loadingMore}
               onLoadMore={loadMoreArticles}
+              autopilotBar={autopilot.on ? autopilot.bar : null}
             />
           )}
-          {/* Supporting folds sit under the three shelves: needs your OK, Queued, Incoming */}
+          {/* Supporting folds sit under the three shelves: needs your OK, Queued, Awaiting review */}
           {otherHeld.length > 0 && (
             <RememberedFold foldKey="desk-written-not-live" label={`Written, not in the feed · ${otherHeld.length}`} contentClassName="pt-2">
               {staleStories.length > 0 && (

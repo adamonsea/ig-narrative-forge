@@ -359,11 +359,12 @@ export default function DesignSystem() {
                 <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-base font-semibold">Event pool</div>
               </div>
             </Spec>
-            <Spec name="Story pool shelves · needs your OK, Queued, Incoming" className="w-full max-w-md">
+            <Spec name="Story pool shelves · needs your OK, Queued, Awaiting review (each card tagged with why Autopilot left it)" className="w-full max-w-md">
               <div className="space-y-2">
                 <div className="rounded-xl border border-attention/50 bg-attention-soft p-3 text-base font-semibold text-attention-foreground">1 story needs your OK</div>
                 <p className="flex items-center gap-2 py-1 text-sm font-medium text-muted-foreground"><ChevronDown className="h-4 w-4" aria-hidden="true" />Queued · 1</p>
-                <ShelfLabel tool={<Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Incoming tools"><MoreHorizontal className="h-4 w-4" /></Button>}>Incoming · 2</ShelfLabel>
+                <ShelfLabel tool={<Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Awaiting review tools"><MoreHorizontal className="h-4 w-4" /></Button>}>Awaiting review · 2</ShelfLabel>
+                <div className="flex flex-wrap gap-2"><DeskBadge>No place named</DeskBadge><DeskBadge>73% · needs 75%</DeskBadge></div>
               </div>
             </Spec>
           </Block>

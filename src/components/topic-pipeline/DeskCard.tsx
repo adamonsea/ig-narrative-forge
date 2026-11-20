@@ -254,7 +254,7 @@ export function PublishSplitButton({
   );
 }
 
-/** Quiet shelf label inside a Desk pool (e.g. "Incoming · 4"), with room for one small tool on the right. */
+/** Quiet shelf label inside a Desk pool (e.g. "Awaiting review · 4"), with room for one small tool on the right. */
 export function ShelfLabel({ id, children, tool }: { id?: string; children: ReactNode; tool?: ReactNode }) {
   return (
     <div className="flex min-h-9 items-center gap-2">

@@ -11,7 +11,8 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { DuplicateInfo } from "@/lib/titleSimilarity";
 import type { HighlightTerms } from "@/lib/highlightTerms";
-import { DeskCard, MetaLine, PublishSplitButton, ShelfLabel, SpikeButton } from "./DeskCard";
+import { DeskBadge, DeskCard, MetaLine, PublishSplitButton, ShelfLabel, SpikeButton } from "./DeskCard";
+import { holdReasonTag } from "@/lib/holdReason";
 import { WaitingStoryDrawer } from "./WaitingStoryDrawer";
 
 interface MultiTenantArticlesListProps {
@@ -47,6 +48,8 @@ interface MultiTenantArticlesListProps {
   totalArticlesCount?: number | null | undefined;
   loadingMore?: boolean | undefined;
   onLoadMore?: () => void;
+  /** The feed's Autopilot quality bar, or null when Autopilot is off (no reason tags then). */
+  autopilotBar?: number | null | undefined;
 }
 
 export default function MultiTenantArticlesList({
@@ -76,6 +79,7 @@ export default function MultiTenantArticlesList({
   totalArticlesCount = null,
   loadingMore = false,
   onLoadMore,
+  autopilotBar = null,
 }: MultiTenantArticlesListProps) {
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
@@ -177,6 +181,7 @@ export default function MultiTenantArticlesList({
     const isAnimating = animatingArticles.has(article.id);
     const dupInfo = duplicateMap?.get(article.id);
     const happened = article.published_at || article.created_at;
+    const holdTag = holdReasonTag({ heldReason: article.held_reason, qualityScore: article.content_quality_score, autopilotBar });
 
     return (
       <motion.div
@@ -200,6 +205,16 @@ export default function MultiTenantArticlesList({
           thumbnailUrl={article.image_url}
           onOpen={() => setOpenArticleId(article.id)}
           keepActions={isProcessing}
+          badges={holdTag ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span onClick={(e) => e.stopPropagation()}><DeskBadge>{holdTag.label}</DeskBadge></span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{holdTag.detail}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : undefined}
           leading={selectMode ? (
             <Checkbox
               checked={selectedArticles.has(article.id)}
@@ -279,13 +294,13 @@ export default function MultiTenantArticlesList({
 
   return (
     <div className="space-y-3">
-      {/* Incoming = gathered articles not written yet; the tools menu sits on its label */}
+      {/* Awaiting review = gathered articles not written yet, waiting on the owner; the tools menu sits on its label */}
       <ShelfLabel
         id="desk-incoming"
         tool={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Incoming tools">
+              <Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Awaiting review tools">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -302,7 +317,7 @@ export default function MultiTenantArticlesList({
           </DropdownMenu>
         }
       >
-        Incoming · {totalArticlesCount ?? articles.length}
+        Awaiting review · {totalArticlesCount ?? articles.length}
       </ShelfLabel>
 
       {/* Bulk action toolbar - only in select mode */}
