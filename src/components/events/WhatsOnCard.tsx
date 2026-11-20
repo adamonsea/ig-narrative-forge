@@ -3,7 +3,7 @@ import { ArrowUpRight, CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
 import { feedBrandPalette, toCss } from "@/lib/feedBrandColor";
-import { recordEventClick } from "@/lib/eventClicks";
+import { eventLinkKind, recordEventClick } from "@/lib/eventClicks";
 import { SuggestEventButton } from "@/components/events/SuggestEventDialog";
 import { coverLines, dateBadge, eventGroup, eventTime, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 
@@ -112,7 +112,7 @@ export function WhatsOnCard({ events, today, label = "Next 2 weeks", brandColor,
           {current ? (
             current.source_url ? (
               <a href={current.source_url} target="_blank" rel="noopener noreferrer" className={PILL}
-                onClick={() => { if (!isOwner) recordEventClick(current.id); }}>
+                onClick={() => { if (!isOwner) recordEventClick(current.id, eventLinkKind(current)); }}>
                 More at {source}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span>
               </a>
             ) : (

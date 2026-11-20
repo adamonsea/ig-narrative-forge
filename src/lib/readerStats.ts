@@ -49,3 +49,79 @@ export function feedSignal(s: FeedSignal | null | undefined): { stopped: number;
   if (s.stop_rate == null || s.swipe_rate == null) return null;
   return { stopped: Math.round(Number(s.stop_rate) * 100), swiped: Math.round(Number(s.swipe_rate) * 100), readers };
 }
+
+// ---------- Engagement (Readership three lines + story drawer) ----------
+
+/** One story's week, from get_topic_readership `stories`. stop_rate/score are present only above STORY_SCORE_FLOOR. */
+export interface EngagementStory {
+  id: string;
+  title: string;
+  image?: string | null | undefined;
+  reads: number;
+  seen: number;
+  stop_rate?: number | null | undefined;
+  score?: number | null | undefined;
+  opened: number;
+  read_through: number;
+  source_clicks: number;
+  shares: number;
+}
+export interface SentToSources { stories: number; tickets: number; details: number; calendar: number }
+export interface FeedEngagement { visits: number; seen_per_visit?: number | null | undefined; signups: number; shares: number }
+
+const n = (x: unknown) => Number(x) || 0;
+
+/**
+ * Best stories, at most 3. With stories above the reader floor: ranked by position-corrected stop score
+ * (story_stop_scores), then source clicks. Otherwise: most reads, then source clicks, shown as reads, never rates.
+ */
+export function bestStories(stories: EngagementStory[] | null | undefined, max = 3): { by: "stops" | "reads"; items: EngagementStory[] } {
+  const list = stories ?? [];
+  const rated = list.filter((s) => s.stop_rate != null && s.score != null);
+  if (rated.length) {
+    return { by: "stops", items: [...rated].sort((a, b) => n(b.score) - n(a.score) || n(b.source_clicks) - n(a.source_clicks)).slice(0, max) };
+  }
+  const read = list.filter((s) => n(s.reads) > 0 || n(s.source_clicks) > 0);
+  return { by: "reads", items: [...read].sort((a, b) => n(b.reads) - n(a.reads) || n(b.source_clicks) - n(a.source_clicks)).slice(0, max) };
+}
+
+/** One quiet line under a best story. */
+export function bestStoryLine(s: EngagementStory, by: "stops" | "reads"): string {
+  const lead = by === "stops" ? `${Math.round(n(s.stop_rate) * 100)}% stopped` : `${n(s.reads)} ${n(s.reads) === 1 ? "read" : "reads"}`;
+  const clicks = n(s.source_clicks);
+  return clicks ? `${lead} · ${clicks} to source` : lead;
+}
+
+/** Clicks out to original articles and event pages (calendar saves are not clicks out). */
+export const sentTotal = (s: SentToSources | null | undefined): number => (s ? n(s.stories) + n(s.tickets) + n(s.details) : 0);
+
+/** The tooltip split for "Sent to sources". */
+export function sentSplit(s: SentToSources | null | undefined): string {
+  if (!s) return "";
+  const parts = [
+    n(s.stories) && `${n(s.stories)} to stories`,
+    n(s.tickets) && `${n(s.tickets)} to tickets`,
+    n(s.details) && `${n(s.details)} to event details`,
+    n(s.calendar) && `${n(s.calendar)} saved to calendar`,
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+/** Drawer rows for one story. Stop rate only above the reader floor; everything else as plain counts. */
+export function storyDetailRows(s: EngagementStory): { label: string; value: string }[] {
+  const rows = [{ label: "Seen", value: String(n(s.seen)) }];
+  if (s.stop_rate != null) rows.push({ label: "Stopped", value: `${Math.round(n(s.stop_rate) * 100)}%` });
+  rows.push({ label: "Reads", value: String(n(s.reads)) });
+  rows.push({ label: "Read to the end", value: n(s.opened) ? `${n(s.read_through)} of ${n(s.opened)}` : String(n(s.read_through)) });
+  rows.push({ label: "To source", value: String(n(s.source_clicks)) });
+  rows.push({ label: "Shares", value: String(n(s.shares)) });
+  return rows;
+}
+
+/** Stories seen per visit shows once there are this many visits this week. */
+export const SEEN_PER_VISIT_MIN_VISITS = 5;
+
+export function seenPerVisit(f: FeedEngagement | null | undefined): number | null {
+  if (!f || n(f.visits) < SEEN_PER_VISIT_MIN_VISITS || f.seen_per_visit == null) return null;
+  return Math.round(n(f.seen_per_visit));
+}

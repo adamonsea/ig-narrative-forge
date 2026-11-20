@@ -1,7 +1,8 @@
 // run with: bun test ./src/lib/visitorId.test.ts
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { getVisitorId, peekVisitorId } from './visitorId';
-import { getStoredVisitorId as getTrackingId, getVisitorId as getCountingId } from './visitorIdentity';
+import { getStoredVisitorId as getTrackingId, getVisitorId as getCountingId, liveUkId } from './visitorIdentity';
+import { setReaderOptOut } from './readerConsent';
 
 const LEGACY_ID = '12345678-1234-4234-8234-123456789abc';
 const SHARED_ID = 'abcdef0123456789';
@@ -15,6 +16,7 @@ beforeEach(() => {
     value: {
       getItem: (key: string) => stored.get(key) ?? null,
       setItem: (key: string, value: string) => stored.set(key, value),
+      removeItem: (key: string) => stored.delete(key),
     },
   });
 });
@@ -61,18 +63,42 @@ describe('anonymous reaction identity compatibility', () => {
   });
 });
 
-describe('anonymous counting', () => {
-  test('the counting ID is never written to the device when full counting is not on', () => {
+describe('per-visit counting (EU before an answer)', () => {
+  test('the counting ID is held for this page load only and never written to the device', () => {
     const id = getCountingId('visitor');
-    expect(id).toMatch(/^visitor_anon_[a-z0-9]{8,16}$/);
+    expect(id).toMatch(/^visitor_once_[a-z0-9]{8,16}$/);
     expect(getCountingId('sv')).toBe(id.replace(/^visitor_/, 'sv_'));
     expect(stored.has('curatr_vid')).toBe(false);
+    expect(stored.has('curatr_rid')).toBe(false);
+  });
+});
+
+describe('UK 7-day reader ID', () => {
+  const DAY = 86_400_000;
+  const at = Date.UTC(2026, 10, 20);
+  const raw = JSON.stringify({ id: 'abcdef0123456789', at });
+  test('is reused within 7 days of first use', () => {
+    expect(liveUkId(raw, at + 6 * DAY + 23 * 3_600_000)).toBe('abcdef0123456789');
+  });
+  test('expires 7 days after first use', () => {
+    expect(liveUkId(raw, at + 7 * DAY)).toBeNull();
+  });
+  test('rejects anything malformed', () => {
+    expect(liveUkId('not json', at)).toBeNull();
+    expect(liveUkId(JSON.stringify({ id: 'abcdef0123456789' }), at)).toBeNull();
+    expect(liveUkId(null, at)).toBeNull();
+  });
+  test('opting out deletes it', () => {
+    stored.set('curatr_rid', raw);
+    setReaderOptOut(true);
+    expect(stored.has('curatr_rid')).toBe(false);
+    expect(stored.has('curatr_reader_optout')).toBe(true);
   });
 });
 
 describe('showing reaction counts', () => {
   test('does not create a stored ID before the reader reacts', () => {
-    expect(peekVisitorId()).toMatch(/^visitor_anon_/);
+    expect(peekVisitorId()).toMatch(/^visitor_once_/);
     expect(stored.has('curatr_vid')).toBe(false);
   });
   test('uses the existing reaction ID when there is one', () => {

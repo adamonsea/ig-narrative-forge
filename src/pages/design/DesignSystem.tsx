@@ -21,6 +21,7 @@ import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
 import { AttentionTag } from "@/components/events/DeskEvents";
 import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
 import { LiveFeedControl } from "@/components/feed/LiveFeedControl";
+import { ReadershipLines } from "@/components/readership/ReadershipLines";
 
 /**
  * /design — the workspace design system, rendered from the parts the Desk already uses.
@@ -31,6 +32,12 @@ const STORIES = [
   { title: "Seafront cycle lane plan goes back to the drawing board", meta: ["Eastbourne Herald", "2h ago"] },
   { title: "Pier reopens its arcade after winter repairs", meta: ["Bournefree", "4h ago"] },
   { title: "Council confirms extra bins for Airshow weekend", meta: ["Eastbourne Borough Council", "Yesterday"] },
+];
+
+const SAMPLE_STORIES = [
+  { id: "r1", title: STORIES[0]!.title, reads: 14, seen: 41, stop_rate: 0.42, score: 1.6, opened: 9, read_through: 6, source_clicks: 5, shares: 2 },
+  { id: "r2", title: STORIES[1]!.title, reads: 11, seen: 36, stop_rate: 0.31, score: 1.3, opened: 7, read_through: 3, source_clicks: 2, shares: 0 },
+  { id: "r3", title: STORIES[2]!.title, reads: 9, seen: 33, stop_rate: 0.28, score: 1.1, opened: 5, read_through: 2, source_clicks: 4, shares: 1 },
 ];
 
 function Block({ id, title, children }: { id: string; title: string; children: ReactNode }) {
@@ -389,6 +396,17 @@ export default function DesignSystem() {
                 <ShelfLabel tool={<Button size="icon" variant="ghost" className="h-9 w-9" aria-label="Awaiting review tools"><MoreHorizontal className="h-4 w-4" /></Button>}>Awaiting review · 2</ShelfLabel>
                 <div className="flex flex-wrap gap-2"><DeskBadge>No place named</DeskBadge><DeskBadge>73% · needs 75%</DeskBadge></div>
               </div>
+            </Spec>
+          </Block>
+
+          <Block id="readership" title="Readership">
+            <Spec name="Three lines · readers and came back, best stories (tap for the story drawer), sent to sources">
+              <div className="max-w-xl">
+                <ReadershipLines readers={18} returning={5} stories={SAMPLE_STORIES} sent={{ stories: 11, tickets: 3, details: 2, calendar: 4 }} />
+              </div>
+            </Spec>
+            <Spec name="Empty · no readers yet">
+              <ReadershipLines readers={0} returning={0} stories={[]} sent={{ stories: 0, tickets: 0, details: 0, calendar: 0 }} />
             </Spec>
           </Block>
 

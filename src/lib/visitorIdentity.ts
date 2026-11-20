@@ -31,13 +31,55 @@ export const getStoredVisitorId = (prefix = 'v'): string => {
   return `${prefix}_${id}`;
 };
 
-// Anonymous counting: one random ID held in memory for this page load only, never written to the device.
-let anonymousId: string | null = null;
-export const getAnonymousVisitorId = (prefix = 'v'): string => `${prefix}_anon_${(anonymousId ??= randomId())}`;
+// UK anonymous counting: a random ID kept for 7 days from first use so returning readers can be counted,
+// then replaced. Never linked to anything else; opting out deletes it.
+export const UK_ID_KEY = 'curatr_rid';
+export const UK_ID_DAYS = 7;
+const DAY_MS = 86_400_000;
 
-/** Tracker ID: the stored ID only with full counting, otherwise the in-memory anonymous ID. */
-export const getVisitorId = (prefix = 'v'): string =>
-  currentReaderMode() === 'full' ? getStoredVisitorId(prefix) : getAnonymousVisitorId(prefix);
+/** Pure: the stored UK ID if it is still within its 7 days, else null. */
+export function liveUkId(raw: string | null, now: number): string | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw) as { id?: unknown; at?: unknown };
+    if (typeof v.id !== 'string' || !/^[a-z0-9]{8,32}$/.test(v.id) || typeof v.at !== 'number') return null;
+    return now - v.at < UK_ID_DAYS * DAY_MS && now >= v.at ? v.id : null;
+  } catch {
+    return null;
+  }
+}
+
+let ukFallback: string | null = null;
+const getUkVisitorId = (prefix: string): string => {
+  let id: string | null = null;
+  try {
+    id = liveUkId(localStorage.getItem(UK_ID_KEY), Date.now());
+    if (!id) {
+      id = randomId();
+      localStorage.setItem(UK_ID_KEY, JSON.stringify({ id, at: Date.now() }));
+    }
+  } catch {
+    id = ukFallback ??= randomId();
+  }
+  return `${prefix}_anon_${id}`;
+};
+
+/** Removes the UK 7-day ID (opt-out, or counting switched off). */
+export function clearUkVisitorId(): void {
+  try { localStorage.removeItem(UK_ID_KEY); } catch { /* ignore */ }
+}
+
+// Per-visit counting (EU before an answer): one random ID in memory for this page load, never stored.
+let visitId: string | null = null;
+export const getAnonymousVisitorId = (prefix = 'v'): string => `${prefix}_once_${(visitId ??= randomId())}`;
+
+/** Tracker ID for the reader's mode: stored ID (full), UK 7-day ID (anonymous), or this page load only (visit). */
+export const getVisitorId = (prefix = 'v'): string => {
+  const mode = currentReaderMode();
+  if (mode === 'full') return getStoredVisitorId(prefix);
+  if (mode === 'anonymous') return getUkVisitorId(prefix);
+  return getAnonymousVisitorId(prefix);
+};
 
 /** Visitor's country from this site's own lookup (no third-party call). Null until known. */
 export const getCachedCountry = (): string | null => readerCountry();

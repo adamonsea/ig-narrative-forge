@@ -26,8 +26,8 @@ describe('UK readers: anonymous statistics with notice and opt-out', () => {
   });
 });
 
-describe('EU readers: consent only', () => {
-  it('no answer is not counted', () => expect(mode({ country: 'PT' })).toBe('off'));
+describe('EU readers: per visit until they answer, returning readers only with consent', () => {
+  it('no answer is counted for this visit only', () => expect(mode({ country: 'PT' })).toBe('visit'));
   it('accept gives full counting', () => expect(mode({ country: 'PT', choice: 'granted' })).toBe('full'));
   it('reject is not counted', () => expect(mode({ country: 'DE', choice: 'denied', ukNoticeSeen: true })).toBe('off'));
   it('Google Analytics needs accept', () => expect(canLoadGoogleAnalytics({ ...base, country: 'FR' })).toBe(false));
@@ -38,10 +38,11 @@ describe('EU readers: consent only', () => {
 });
 
 describe('unknown location, crown dependencies and the rest of the world', () => {
-  it('unknown location is treated as consent-only', () => {
-    expect(mode({ country: null })).toBe('off');
-    expect(mode({ country: 'XX' })).toBe('off');
-    expect(mode({ country: 'T1' })).toBe('off');
+  it('unknown location is treated like the EU', () => {
+    expect(mode({ country: null })).toBe('visit');
+    expect(mode({ country: 'XX' })).toBe('visit');
+    expect(mode({ country: 'T1' })).toBe('visit');
+    expect(mode({ country: null, choice: 'denied' })).toBe('off');
   });
   it('Jersey, Guernsey and the Isle of Man are consent-only', () => {
     for (const c of ['JE', 'GG', 'IM']) expect(regionFor(c)).toBe('consent');

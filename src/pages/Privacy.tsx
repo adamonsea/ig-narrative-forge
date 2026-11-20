@@ -61,7 +61,7 @@ const Privacy = () => {
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li><strong>Usage Data:</strong> Pages visited, time spent, features used</li>
               <li><strong>Device Information:</strong> Browser type, operating system, device type</li>
-              <li><strong>Analytics Data:</strong> Interaction data for service improvement. UK visitors are counted anonymously (no ID kept on the device) unless they opt out; EU visitors only with consent (see Cookie Policy)</li>
+              <li><strong>Analytics Data:</strong> Interaction data for service improvement. Reading signals (headline stops, read-through, taps to the original article, shares, event links and calendar saves) are counted as anonymous totals only, to improve Curatr. UK visitors: a random ID kept 7 days to count returning readers, with a simple opt-out. EU visitors: per visit only with nothing stored, and returning readers only with consent. Owners, signed-in accounts and bots are never counted (see Cookie Policy)</li>
               <li><strong>Cookies:</strong> Essential and analytics cookies (see Cookie Policy)</li>
             </ul>
           </section>

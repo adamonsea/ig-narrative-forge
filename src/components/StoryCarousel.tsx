@@ -176,7 +176,7 @@ export default function StoryCarousel({
   }, [currentSlideIndex, showMoreLikeThis, onMoreLikeThis, onPrefetchFilter, story]);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const iOSVersion = isIOS ? parseInt(((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1])!) : 0;
-  const { trackShareClick, trackSourceClick } = useStoryInteractionTracking();
+  const { trackShareClick, trackSourceClick, trackReadThrough } = useStoryInteractionTracking();
   const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
   const isFastConnection = useNetworkSpeed(); // Network speed detection
   // Publisher photos are always credited: the site's own credit, otherwise the publisher.
@@ -334,6 +334,13 @@ export default function StoryCarousel({
   const isLastSlide = safeSlideIndex === validSlides.length - 1;
 
   // Note: Placeholder slides are now ghosted at the feed level in TopicFeed.tsx
+
+  // Read-through: the reader swiped to the last slide shown (multi-slide stories only).
+  useEffect(() => {
+    if (topicId && validSlides.length > 1 && currentSlideIndex > 0 && currentSlideIndex === validSlides.length - 1) {
+      trackReadThrough(story.id, topicId, currentSlideIndex);
+    }
+  }, [currentSlideIndex, validSlides.length, story.id, topicId]); // eslint-disable-line react-hooks/exhaustive-deps
   
 
 

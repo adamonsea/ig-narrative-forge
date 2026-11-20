@@ -1,15 +1,18 @@
 /**
  * Reader counting by region (one rule for every tracker and Google Analytics).
  * - UK: anonymous, aggregate counts by default (statistics exemption), with a notice and a simple opt-out.
- *   Accepting analytics upgrades to full counting (stored ID, returning readers, Google Analytics).
- * - EU/EEA, Switzerland, Canada, crown dependencies and unknown locations: nothing until Accept.
+ *   A random ID is kept for 7 days so returning readers can be counted; opting out deletes it.
+ *   Accepting analytics upgrades to full counting (stored ID, Google Analytics).
+ * - EU/EEA, Switzerland, Canada, crown dependencies and unknown locations: counted per visit only, with
+ *   nothing stored on the device, until they answer; Accept = full counting, Reject = nothing.
  * - Elsewhere: counted unless the reader opts out.
  * - Global Privacy Control: never counted.
  * Location comes only from this site's own /cdn-cgi/trace (no third-party lookup).
  */
 import { readChoice, saveChoices, onConsentChange, type Choice } from './consent';
 
-export type ReaderMode = 'full' | 'anonymous' | 'off';
+/** full = stored ID (+ GA); anonymous = UK 7-day random ID; visit = this page load only, nothing stored; off = nothing. */
+export type ReaderMode = 'full' | 'anonymous' | 'visit' | 'off';
 export type ReaderRegion = 'uk' | 'consent' | 'open';
 export type ReaderBanner = 'none' | 'uk-notice' | 'consent';
 
@@ -38,7 +41,7 @@ export interface ReaderConsentInput {
 export function readerTrackingMode(i: ReaderConsentInput): ReaderMode {
   if (i.gpc) return 'off';
   const region = regionFor(i.country);
-  if (region === 'consent') return i.choice === 'granted' ? 'full' : 'off';
+  if (region === 'consent') return i.choice === 'granted' ? 'full' : i.choice === 'denied' ? 'off' : 'visit';
   if (i.optedOut) return 'off';
   if (i.choice === 'granted') return 'full';
   if (region === 'uk') {
@@ -146,10 +149,11 @@ export const isReaderOptedOut = (): boolean => flag(OPT_OUT_KEY);
 
 export function setReaderOptOut(optedOut: boolean): void {
   try {
-    if (optedOut) localStorage.setItem(OPT_OUT_KEY, String(Date.now()));
+    // Opting out also deletes the UK 7-day reader ID (key kept here to avoid a circular import).
+    if (optedOut) { localStorage.setItem(OPT_OUT_KEY, String(Date.now())); localStorage.removeItem('curatr_rid'); }
     else localStorage.removeItem(OPT_OUT_KEY);
   } catch { /* ignore */ }
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
 export function saveAnalyticsChoice(choice: Choice): void {

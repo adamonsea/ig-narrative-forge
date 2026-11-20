@@ -1,3 +1,13 @@
+# Engagement metrics (20 Nov 2026)
+- [x] UK: random reader ID kept 7 days so returning readers count (Adam chose "Yes, 7-day ID"); opt-out removes it
+- [x] EU/unknown: counted per visit with nothing stored until they answer; Reject = nothing (Adam chose "Count per visit")
+- [x] Capture: read-through, event click kind (tickets/details), Add to calendar
+- [x] Figures: readers + came back, best stories, sent to sources, per-story detail, feed fold
+- [x] Readership three lines + story drawer (on /design first)
+- [x] Privacy and cookie pages list each signal
+- [ ] Signed-in look at the real Readership tab — this project's sign-in can't be used from the test browser
+- [ ] Legal check of EU per-visit counting and the UK 7-day ID wording (Adam, with an adviser)
+
 # One reader definition (20 Nov 2026)
 - [x] Reading now, readers, reads, per-story reads, rising and milestones all count the same signals (swipe, 3s headline stop, 10s story page)
 - [x] Headline stops count as reads (Adam chose "Count as a read")

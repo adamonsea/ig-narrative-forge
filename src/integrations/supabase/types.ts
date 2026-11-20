@@ -1223,6 +1223,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          kind: string
           topic_id: string
           visitor_id: string
         }
@@ -1231,6 +1232,7 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          kind?: string
           topic_id: string
           visitor_id: string
         }
@@ -1239,6 +1241,7 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          kind?: string
           topic_id?: string
           visitor_id?: string
         }
@@ -7426,7 +7429,7 @@ export type Database = {
             Returns: string
           }
       record_event_click: {
-        Args: { p_event_id: string; p_visitor_id: string }
+        Args: { p_event_id: string; p_kind?: string; p_visitor_id: string }
         Returns: undefined
       }
       record_feed_visit: {

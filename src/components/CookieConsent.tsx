@@ -120,7 +120,7 @@ export const CookieConsent = ({ variant = 'feed' }: CookieConsentProps) => {
   const isUk = banner === 'uk-notice';
   const message = isUk
     ? `We count reads anonymously to improve this ${place}.`
-    : `We'd like to count readers and use analytics cookies to improve this ${place}.`;
+    : `We count visits anonymously, with nothing stored. Accept to also count return visits and use analytics cookies.`;
 
   const actions = isUk ? (
     <>

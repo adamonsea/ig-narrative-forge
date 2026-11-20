@@ -66,16 +66,33 @@ const Cookies = () => {
               </ul>
             </div>
 
-            <h3 className="text-xl font-medium mt-6 mb-3">3.2 Anonymous read counts (UK visitors)</h3>
+            <h3 className="text-xl font-medium mt-6 mb-3">3.2 Anonymous reader counts (UK visitors)</h3>
             <p className="text-muted-foreground leading-relaxed">
-              If you're in the UK, we count reads anonymously so feeds can improve: whether a story was
-              swiped, paused on for a few seconds, or read for 10 seconds or more. Nothing is stored on your
-              device for this, no ID follows you between visits, and the counts are only ever shown as totals
-              to the feed's owner. They're not used for advertising or profiling, and not shared with anyone
-              else. You can opt out at any time in Cookie settings below.
+              If you're in the UK, we count reading anonymously so feeds can improve, under the UK's statistical-purposes
+              exemption. We count: headlines you saw and paused on for a few seconds, stories you swiped into, read to the
+              end or read for 10 seconds or more, taps through to the original article, shares, event links you followed
+              (tickets or details) and events you added to your calendar.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              To count returning readers we keep a random ID on your device for 7 days, then replace it. It isn't linked
+              to your name, email or anything else, and it isn't used on other sites. Counts are only ever shown as totals
+              to the feed's owner and used solely to improve Curatr: never for advertising or profiling, and never shared.
+              Visits from feed owners, signed-in accounts and automated traffic are left out. You can opt out at any time
+              in Cookie settings below, which deletes the ID.
+            </p>
+            <div className="bg-muted/30 rounded-lg p-4 mt-2">
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li><strong>curatr_rid:</strong> Random reader ID, kept 7 days (UK, unless you opt out)</li>
+              </ul>
+            </div>
+
+            <h3 className="text-xl font-medium mt-6 mb-3">3.3 EU, Switzerland, Canada and unknown locations</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Until you answer the banner, we count the same reading signals for your current visit only: nothing is stored
+              on your device and nothing links one visit to the next. Choosing Reject all stops this.
             </p>
 
-            <h3 className="text-xl font-medium mt-6 mb-3">3.3 Analytics (with your consent)</h3>
+            <h3 className="text-xl font-medium mt-6 mb-3">3.4 Analytics (with your consent)</h3>
             <p className="text-muted-foreground leading-relaxed">
               If you accept analytics, we keep a random ID on your device so we can count returning readers,
               and we load Google Analytics. In the UK, the EU, Switzerland and Canada this only happens after
@@ -88,7 +105,7 @@ const Cookies = () => {
               </ul>
             </div>
 
-            <h3 className="text-xl font-medium mt-6 mb-3">3.4 Functional Cookies</h3>
+            <h3 className="text-xl font-medium mt-6 mb-3">3.5 Functional Cookies</h3>
             <p className="text-muted-foreground leading-relaxed">
               These cookies remember your choices and preferences to provide a more 
               personalised experience.

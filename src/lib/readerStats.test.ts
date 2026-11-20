@@ -48,3 +48,48 @@ describe("story page 10-second read", () => {
     expect(c.elapsed()).toBe(10000);
   });
 });
+
+import { bestStories, bestStoryLine, sentTotal, sentSplit, storyDetailRows, seenPerVisit, type EngagementStory } from "./readerStats";
+
+const story = (o: Partial<EngagementStory>): EngagementStory => ({ id: "s", title: "t", reads: 0, seen: 0, opened: 0, read_through: 0, source_clicks: 0, shares: 0, ...o });
+
+describe("best stories", () => {
+  test("above the reader floor: ranked by stop score, then source clicks", () => {
+    const r = bestStories([
+      story({ id: "a", stop_rate: 0.2, score: 1.1, reads: 40 }),
+      story({ id: "b", stop_rate: 0.4, score: 1.8, reads: 10 }),
+      story({ id: "c", stop_rate: 0.3, score: 1.1, source_clicks: 5 }),
+      story({ id: "d", reads: 99 }),
+    ]);
+    expect(r.by).toBe("stops");
+    expect(r.items.map((s) => s.id)).toEqual(["b", "c", "a"]);
+  });
+  test("below the floor: most reads, then source clicks, never rates", () => {
+    const r = bestStories([story({ id: "a", reads: 2 }), story({ id: "b", reads: 2, source_clicks: 3 }), story({ id: "c", reads: 5 }), story({ id: "z" })]);
+    expect(r.by).toBe("reads");
+    expect(r.items.map((s) => s.id)).toEqual(["c", "b", "a"]);
+    expect(bestStoryLine(r.items[1]!, r.by)).toBe("2 reads · 3 to source");
+  });
+  test("at most three", () => expect(bestStories(Array.from({ length: 6 }, (_, i) => story({ id: String(i), reads: i + 1 }))).items).toHaveLength(3));
+  test("rate line", () => expect(bestStoryLine(story({ stop_rate: 0.416, score: 1 }), "stops")).toBe("42% stopped"));
+});
+
+describe("sent to sources", () => {
+  const sent = { stories: 4, tickets: 2, details: 1, calendar: 3 };
+  test("counts clicks out to stories and events, not calendar saves", () => expect(sentTotal(sent)).toBe(7));
+  test("tooltip splits every kind", () => expect(sentSplit(sent)).toBe("4 to stories · 2 to tickets · 1 to event details · 3 saved to calendar"));
+});
+
+describe("story drawer", () => {
+  test("stop rate appears only above the floor", () => {
+    expect(storyDetailRows(story({ seen: 3 })).some((r) => r.label === "Stopped")).toBe(false);
+    expect(storyDetailRows(story({ seen: 40, stop_rate: 0.25, score: 1 })).find((r) => r.label === "Stopped")?.value).toBe("25%");
+  });
+  test("read to the end is shown against readers who opened it", () =>
+    expect(storyDetailRows(story({ opened: 6, read_through: 4 })).find((r) => r.label === "Read to the end")?.value).toBe("4 of 6"));
+});
+
+describe("stories seen per visit", () => {
+  test("hidden under 5 visits", () => expect(seenPerVisit({ visits: 4, seen_per_visit: 9, signups: 0, shares: 0 })).toBeNull());
+  test("median shown from 5 visits", () => expect(seenPerVisit({ visits: 5, seen_per_visit: 8.5, signups: 0, shares: 0 })).toBe(9));
+});

@@ -1,9 +1,10 @@
 import { memo, useEffect, useRef, useState, type ComponentType } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, CalendarPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
 import { eventIllustrationTint, feedBrandPalette, toCss } from "@/lib/feedBrandColor";
-import { recordEventClick } from "@/lib/eventClicks";
+import { eventLinkKind, recordEventClick } from "@/lib/eventClicks";
+import { downloadIcs } from "@/lib/eventCalendar";
 import { EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
 import { EventCategoryIllustration } from "@/components/events/EventCategoryIllustration";
 import { dateBlock, eventTime, priceLine, type WhatsOnFeedEvent } from "@/lib/whatsOn";
@@ -130,6 +131,13 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
           {facts.map((f) => <li key={f}>{f}</li>)}
         </ul>
         {completeDescription(e.description) && <p className="text-lg opacity-75 md:text-xl">{completeDescription(e.description)}</p>}
+        <button type="button" className={`inline-flex min-h-11 items-center gap-2 text-base font-semibold underline-offset-4 hover:underline ${ACCENT}`}
+          onClick={() => {
+            downloadIcs({ id: e.id, title: e.title, start_date: e.start_date, start_time: e.start_time, location: e.location, source_url: e.source_url, description: completeDescription(e.description) });
+            if (!isOwner) recordEventClick(e.id, "calendar");
+          }}>
+          <CalendarPlus className="h-5 w-5" aria-hidden="true" />Add to calendar
+        </button>
       </div>
     </div>
   );
@@ -143,7 +151,7 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
         <div className="flex min-h-[68px] items-center justify-center p-4">
           {e.source_url && (
             <a href={e.source_url} target="_blank" rel="noopener noreferrer" className={PILL}
-              onClick={() => { if (!isOwner) recordEventClick(e.id); }}>
+              onClick={() => { if (!isOwner) recordEventClick(e.id, eventLinkKind(e)); }}>
               More at {source}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span>
             </a>
           )}
