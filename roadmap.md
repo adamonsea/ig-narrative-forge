@@ -1,3 +1,11 @@
+# Edit picture: replace or reframe (20 Nov 2026)
+- [x] Story side panel and event side panel: Edit picture (drag to move, zoom) or Replace with your own photo; Add photo when there's none
+- [x] Saving makes a new picture file used everywhere (feed, emails, widgets, share previews); the original is kept so it can be reframed again
+- [x] Event social poster redraws from the edited photo; event frame shows Card and Poster guides
+- [x] Story moving picture is removed when its picture is edited (Adam: "Remove it, I re-animate")
+- [x] Gathering never overwrites an edited event photo; framed publisher photos keep their credit
+- [ ] Signed-in check of saving on the real Desk — this project's sign-in can't be used from the test browser
+
 # Event social posters (19 Nov 2026)
 - [x] 9:16 poster: event photo full-bleed (category art if none), calendar-page date, event name only; clear of Instagram's buttons and captions (tested)
 - [x] 5-second motion: slow push-in, date settles, name rises; still image is the last frame

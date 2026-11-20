@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
-import { Archive, Clock, ExternalLink, Film, ImageIcon, Link as LinkIcon, Loader2, MoreHorizontal, Pin, PinOff, RotateCcw, Save, Trash2, Zap } from "lucide-react";
+import { Archive, Clock, Crop, ExternalLink, Film, ImageIcon, ImagePlus, Link as LinkIcon, Loader2, MoreHorizontal, Pin, PinOff, RotateCcw, Save, Trash2, Zap } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -11,6 +11,7 @@ import { LinkEditor } from "@/components/LinkEditor";
 import { ReelExportButton } from "@/components/reels/ReelExportButton";
 import { DeskBadge, MetaLine } from "./DeskCard";
 import { PIN_LENGTHS, pinTimeLeft } from "@/lib/storyPin";
+import { StoryPictureEditor } from "@/components/picture-edit/StoryPictureEditor";
 
 export interface StoryLink {
   start: number;
@@ -88,6 +89,8 @@ interface StoryDrawerProps {
   onOpenChange: (open: boolean) => void;
   sourceLabel: string;
   topicSlug?: string | undefined;
+  /** Needed for Edit picture (pictures are stored in the feed's folder). */
+  topicId?: string | undefined;
   illustrationStyle: string;
   generating: boolean;
   animating: boolean;
@@ -113,12 +116,15 @@ interface StoryDrawerProps {
 
 /** Everything about one story, one click away: picture, words, sharing and housekeeping. */
 export function StoryDrawer({
-  story, open, onOpenChange, sourceLabel, topicSlug, illustrationStyle, generating, animating, publishing,
+  story, open, onOpenChange, sourceLabel, topicSlug, topicId, illustrationStyle, generating, animating, publishing,
   onGenerateIllustration, onAnimate, onDeleteAnimation, onDeleteIllustration, onReel, onPublishNow, onUnpublish, onAssignTime, onArchive, onDelete, onRefresh,
   pinnedUntil = null, otherPinned = false, onPin,
 }: StoryDrawerProps) {
   const { toast } = useToast();
   const [pinning, setPinning] = useState(false);
+  const [editingPicture, setEditingPicture] = useState(false);
+  const storyId = story?.id;
+  React.useEffect(() => { setEditingPicture(false); }, [storyId]);
   const pin = async (hours: number) => {
     if (!onPin) return;
     setPinning(true);
@@ -200,7 +206,21 @@ export function StoryDrawer({
             </SheetHeader>
 
             <Section title="Picture">
+              {editingPicture && topicId ? (
+                <StoryPictureEditor
+                  storyId={story.id}
+                  topicId={topicId}
+                  onCancel={() => setEditingPicture(false)}
+                  onDone={() => { setEditingPicture(false); toast({ title: "Picture saved", duration: 3000 }); onRefresh(); }}
+                />
+              ) : (
               <div className="flex flex-wrap items-center gap-2">
+                {topicId && (
+                  <Button variant="outline" size="sm" onClick={() => setEditingPicture(true)}>
+                    {story.cover_illustration_url ? <Crop className="mr-2 h-4 w-4" aria-hidden="true" /> : <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />}
+                    {story.cover_illustration_url ? "Edit picture" : "Add photo"}
+                  </Button>
+                )}
                 <ImageModelSelector
                   onModelSelect={(model, style) => onGenerateIllustration(model, style)}
                   isGenerating={generating}
@@ -225,6 +245,7 @@ export function StoryDrawer({
                   </Button>
                 )}
               </div>
+              )}
             </Section>
 
             <Section title="Words">

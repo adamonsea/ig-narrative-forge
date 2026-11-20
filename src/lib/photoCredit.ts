@@ -1,7 +1,9 @@
+import { isFramedPublisherCover } from "./pictureFrame";
 /**
  * Publisher-photo credits on story covers.
  * A cover is a publisher photo when it is not stored in our own storage
- * (AI pictures and owner uploads always are). Publisher photos are always credited:
+ * (AI pictures and owner uploads always are), or our framed copy of one (Edit picture).
+ * Publisher photos are always credited:
  * the credit the source site gives, otherwise the publisher's name.
  */
 
@@ -17,6 +19,7 @@ const OWN_HOSTS = [
 ].filter(Boolean);
 
 export function isPublisherPhoto(url: string | null | undefined, ownHosts: string[] = OWN_HOSTS): boolean {
+  if (isFramedPublisherCover(url)) return true;
   if (!url || url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("/")) return false;
   try {
     const host = new URL(url).hostname.toLowerCase();

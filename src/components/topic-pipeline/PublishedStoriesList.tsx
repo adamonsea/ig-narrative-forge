@@ -577,6 +577,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         onOpenChange={(o) => !o && setOpenStoryId(null)}
         sourceLabel={openStory ? storySourceLabel(openStory) : ''}
         {...opt("topicSlug", topicSlug)}
+        {...opt("topicId", topicId)}
         illustrationStyle={illustrationStyle}
         generating={openStory ? generatingIllustrations.has(openStory.id) : false}
         animating={openStory ? animatingVideos.has(openStory.id) : false}

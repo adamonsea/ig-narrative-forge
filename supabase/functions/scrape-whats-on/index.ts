@@ -139,9 +139,9 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const ids = events.map((e) => reader.externalId(source.id, e.key));
 
   // What the owner has already decided: removals and restores stick.
-  const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null; description: string | null; description_edited: boolean }>();
+  const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null; image_edited: boolean; description: string | null; description_edited: boolean }>();
   for (const part of chunks(ids, 150)) {
-    const { data } = await supabase.from('events').select('id, external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked, image_source_url, image_path, description, description_edited')
+    const { data } = await supabase.from('events').select('id, external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked, image_source_url, image_path, image_edited, description, description_edited')
       .eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
     for (const r of data || []) existing.set(r.external_id, r);
   }
@@ -219,7 +219,8 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   // A listing that changed (or dropped) its picture: the old copy goes, the new one is saved next
   const changed = unique.flatMap((r) => {
     const prev = existing.get(r.external_id);
-    return prev && (prev.image_source_url ?? null) !== r.image_source_url ? [prev] : [];
+    // The owner's own picture (Edit picture) sticks, like their description
+    return prev && !prev.image_edited && (prev.image_source_url ?? null) !== r.image_source_url ? [prev] : [];
   });
   if (changed.length) {
     await removePhotosOf(supabase, changed);
@@ -234,7 +235,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   inBackground(checkOtherCategories(supabase, source.topic_id, source.id));
   // Drop upcoming events from this source that it no longer lists
   const keep = unique.map((r) => `"${String(r.external_id).replace(/"/g, '')}"`).join(',');
-  const { data: dropped } = await supabase.from('events').select('image_path')
+  const { data: dropped } = await supabase.from('events').select('image_path, image_original_path')
     .eq('event_source_id', source.id).gte('start_date', londonToday())
     .not('external_id', 'in', `(${keep})`).not('image_path', 'is', null);
   await removePhotosOf(supabase, dropped);
@@ -267,7 +268,7 @@ async function filterStored(supabase: Db, source: Source, profile: PlaceProfile 
 
 async function deleteUpcoming(supabase: Db, source: Source) {
   const today = londonToday();
-  const { data: withPhotos } = await supabase.from('events').select('image_path')
+  const { data: withPhotos } = await supabase.from('events').select('image_path, image_original_path')
     .eq('event_source_id', source.id).gte('start_date', today).not('image_path', 'is', null);
   await removePhotosOf(supabase, withPhotos);
   await supabase.from('events').delete().eq('event_source_id', source.id).gte('start_date', today);

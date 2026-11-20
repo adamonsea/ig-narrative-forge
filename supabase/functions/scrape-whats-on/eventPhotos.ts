@@ -26,8 +26,8 @@ async function removeFiles(supabase: Db, paths: (string | null | undefined)[]) {
 }
 
 /** Delete the stored photos of rows about to be deleted (pass the same filters as the delete). */
-export async function removePhotosOf(supabase: Db, rows: { image_path: string | null }[] | null | undefined) {
-  return removeFiles(supabase, (rows || []).map((r) => r.image_path));
+export async function removePhotosOf(supabase: Db, rows: { image_path: string | null; image_original_path?: string | null }[] | null | undefined) {
+  return removeFiles(supabase, (rows || []).flatMap((r) => [r.image_path, r.image_original_path ?? null]));
 }
 
 async function saveOne(supabase: Db, ev: { id: string; topic_id: string; image_source_url: string }): Promise<string> {
@@ -106,20 +106,21 @@ export async function savePhotos(supabase: Db, opts: { sourceId?: string; limit?
 export async function cleanupPhotos(supabase: Db, topicIds: string[]) {
   const today = londonToday();
   let removed = 0;
-  const { data: gone } = await supabase.from('events').select('id, image_path')
+  const { data: gone } = await supabase.from('events').select('id, image_path, image_original_path')
     .not('image_path', 'is', null)
     .or(`image_hidden.eq.true,status.eq.deleted,status.eq.excluded,and(start_date.lt.${today},or(end_date.is.null,end_date.lt.${today}))`)
     .limit(1000);
-  const rows = (gone || []) as { id: string; image_path: string }[];
+  const rows = (gone || []) as { id: string; image_path: string; image_original_path: string | null }[];
   if (rows.length) {
-    removed += await removeFiles(supabase, rows.map((r) => r.image_path));
+    removed += await removePhotosOf(supabase, rows);
     for (let i = 0; i < rows.length; i += 150) {
-      await supabase.from('events').update({ image_path: null, image_status: null }).in('id', rows.slice(i, i + 150).map((r) => r.id));
+      await supabase.from('events').update({ image_path: null, image_status: null, image_original_path: null, image_framing: null }).in('id', rows.slice(i, i + 150).map((r) => r.id));
     }
   }
   // Feeds that turned photos off or show grouped cards: delete their copies too
+  // (owner-edited pictures stay: they also make the event's social poster)
   const { data: withTopic } = await supabase.from('events').select('id, image_path, topics!inner(event_photos_enabled, event_cards, feed_lead)')
-    .not('image_path', 'is', null).limit(2000);
+    .not('image_path', 'is', null).eq('image_edited', false).limit(2000);
   const offRows = ((withTopic || []) as { id: string; image_path: string; topics: Parameters<typeof showsPhotos>[0] }[])
     .filter((r) => !showsPhotos(r.topics));
   if (offRows.length) {
@@ -135,12 +136,12 @@ export async function cleanupPhotos(supabase: Db, topicIds: string[]) {
     const { data: files } = await supabase.storage.from(BUCKET).list(folder, { limit: 1000 });
     const list = (files || []) as { name: string; created_at?: string }[];
     if (!list.length) continue;
-    const idOf = (n: string) => n.replace(/\.(jpg|webp)(\.orig)?$/, '');
+    const idOf = (n: string) => n.replace(/\.(jpg|webp)(\.orig)?$/, '').replace(/-(v|src)\d+$/, '');
     const ids = [...new Set(list.map((f) => idOf(f.name)))].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
     const live = new Set<string>();
     for (let i = 0; i < ids.length; i += 150) {
-      const { data } = await supabase.from('events').select('image_path').in('id', ids.slice(i, i + 150)).not('image_path', 'is', null);
-      for (const r of data || []) live.add(r.image_path);
+      const { data } = await supabase.from('events').select('image_path, image_original_path').in('id', ids.slice(i, i + 150)).not('image_path', 'is', null);
+      for (const r of data || []) { live.add(r.image_path); if (r.image_original_path) live.add(r.image_original_path); }
     }
     const stray = list.filter((f) => {
       const path = `${folder}/${f.name}`;

@@ -42,3 +42,4 @@
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
 - Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
+- Owner picture edits (Replace / move within the frame) for stories and events go only through `src/components/picture-edit/` with maths and file names in `src/lib/pictureFrame.ts`: the frame is baked into a new stored file (uncropped original + framing kept for re-editing; events set `image_edited` so gathering keeps it; framed publisher photos keep their credit via the `publisher-` file name; publisher bytes come via `/api/picture-source`, owner-checked); every surface, social poster and email shows the new file with no per-surface framing code.

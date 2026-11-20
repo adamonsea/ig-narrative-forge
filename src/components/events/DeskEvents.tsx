@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { CalendarDays, Check, ChevronDown, Clock, ExternalLink, MapPin, Settings2, Ticket, UserRound, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { CalendarDays, Check, ChevronDown, Clock, Crop, ExternalLink, ImagePlus, MapPin, Settings2, Ticket, UserRound, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { eventPhotoUrl } from "@/lib/eventPhotos";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,7 @@ import { DeskBadge, DeskCard, MetaLine } from "@/components/topic-pipeline/DeskC
 import { Textarea } from "@/components/ui/textarea";
 import { InlineError } from "@/components/ui/editorial";
 import { EventSocialPack } from "@/components/events/social/EventSocialPack";
+import { EventPictureEditor } from "@/components/picture-edit/EventPictureEditor";
 
 /** Day and number, the event's at-a-glance date. */
 function DateTile({ date, size = "lg", category }: { date: string; size?: "lg" | "sm"; category?: string | null | undefined }) {
@@ -252,6 +253,8 @@ interface EventDetailRow {
   price: string | null;
   image_path?: string | null | undefined;
   image_hidden?: boolean | null | undefined;
+  image_original_path?: string | null | undefined;
+  image_framing?: unknown;
   description_edited?: boolean | null | undefined;
 }
 
@@ -297,13 +300,21 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
     enabled: Boolean(item?.id),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("events").select("description, description_edited, end_date, end_time, price, is_free, event_type, image_path, image_hidden").eq("id", item!.id).maybeSingle();
+      const { data, error } = await supabase.from("events").select("description, description_edited, end_date, end_time, price, is_free, event_type, image_path, image_hidden, image_original_path, image_framing" as never).eq("id", item!.id).maybeSingle();
       if (error) throw error;
       return (data ?? null) as EventDetailRow | null;
     },
   });
   const done = (fn: () => void) => { fn(); onClose(); };
   const queryClient = useQueryClient();
+  const [editingPicture, setEditingPicture] = useState(false);
+  useEffect(() => { setEditingPicture(false); }, [item?.id]);
+  const pictureSaved = (saved: { image_path: string; image_original_path: string; image_framing: unknown }) => {
+    if (!item) return;
+    queryClient.setQueryData(["event-detail", item.id], (d: EventDetailRow | null | undefined) => (d ? { ...d, ...saved, image_hidden: false } : d));
+    queryClient.invalidateQueries({ queryKey: ["events-feed", topicId] });
+    setEditingPicture(false);
+  };
   const photo = detail && !detail.image_hidden ? eventPhotoUrl(detail.image_path) : null;
   // Swap the listing photo for the illustration (or back); sticks for this event name
   const setPhoto = async (show: boolean) => {
@@ -352,14 +363,24 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
             </SheetHeader>
 
             <div className="flex-1 space-y-6 p-6 text-base">
-              {photo && (
-                <div className="space-y-2">
-                  <img src={photo} alt="" className="aspect-[2/1] w-full rounded-xl object-cover" />
-                  <Button variant="ghost" size="sm" className="px-0 text-muted-foreground" onClick={() => void setPhoto(false)}>Use illustration</Button>
-                </div>
-              )}
-              {detail?.image_hidden && (
-                <Button variant="ghost" size="sm" className="px-0 text-muted-foreground" onClick={() => void setPhoto(true)}>Use photo</Button>
+              {editingPicture && detail && topicId ? (
+                <EventPictureEditor eventId={item.id} topicId={topicId} detail={detail} onDone={pictureSaved} onCancel={() => setEditingPicture(false)} />
+              ) : (
+                <>
+                  {photo && <img src={photo} alt="" className="aspect-[2/1] w-full rounded-xl object-cover" />}
+                  {detail && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {topicId && (
+                        <Button variant="outline" size="sm" onClick={() => setEditingPicture(true)}>
+                          {photo ? <Crop className="mr-2 h-4 w-4" aria-hidden="true" /> : <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />}
+                          {photo ? "Edit picture" : "Add photo"}
+                        </Button>
+                      )}
+                      {photo && <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => void setPhoto(false)}>Use illustration</Button>}
+                      {detail.image_hidden && <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => void setPhoto(true)}>Use photo</Button>}
+                    </div>
+                  )}
+                </>
               )}
               {item.state === "live" && liveAreaFlag(item.exclusion_reason, item.area_confirmed) && (
                 <p className="rounded-lg bg-attention-soft p-3 text-muted-foreground">{leftOutExplanation("excluded", item.exclusion_reason)}</p>

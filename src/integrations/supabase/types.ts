@@ -1345,7 +1345,10 @@ export type Database = {
           exclusion_reason: string | null
           external_id: string | null
           id: string
+          image_edited: boolean
+          image_framing: Json | null
           image_hidden: boolean
+          image_original_path: string | null
           image_path: string | null
           image_source_url: string | null
           image_status: string | null
@@ -1381,7 +1384,10 @@ export type Database = {
           exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          image_edited?: boolean
+          image_framing?: Json | null
           image_hidden?: boolean
+          image_original_path?: string | null
           image_path?: string | null
           image_source_url?: string | null
           image_status?: string | null
@@ -1417,7 +1423,10 @@ export type Database = {
           exclusion_reason?: string | null
           external_id?: string | null
           id?: string
+          image_edited?: boolean
+          image_framing?: Json | null
           image_hidden?: boolean
+          image_original_path?: string | null
           image_path?: string | null
           image_source_url?: string | null
           image_status?: string | null
@@ -3627,8 +3636,10 @@ export type Database = {
           audience_expertise: string | null
           author: string | null
           constituency: string | null
+          cover_framing: Json | null
           cover_illustration_prompt: string | null
           cover_illustration_url: string | null
+          cover_original_url: string | null
           cover_photo_credit: string | null
           created_at: string
           drip_queued_at: string | null
@@ -3672,8 +3683,10 @@ export type Database = {
           audience_expertise?: string | null
           author?: string | null
           constituency?: string | null
+          cover_framing?: Json | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
+          cover_original_url?: string | null
           cover_photo_credit?: string | null
           created_at?: string
           drip_queued_at?: string | null
@@ -3717,8 +3730,10 @@ export type Database = {
           audience_expertise?: string | null
           author?: string | null
           constituency?: string | null
+          cover_framing?: Json | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
+          cover_original_url?: string | null
           cover_photo_credit?: string | null
           created_at?: string
           drip_queued_at?: string | null

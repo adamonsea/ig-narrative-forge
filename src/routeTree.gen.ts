@@ -26,6 +26,7 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as VerifySubscriptionRouteImport } from './routes/verify-subscription'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAiCostsRouteImport } from './routes/admin/ai-costs'
+import { Route as ApiPictureSourceRouteImport } from './routes/api/picture-source'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DesignIndexRouteImport } from './routes/design/index'
 import { Route as DesignEventCardsRouteImport } from './routes/design/event-cards'
@@ -135,6 +136,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAiCostsRoute = AdminAiCostsRouteImport.update({
   id: '/admin/ai-costs',
   path: '/admin/ai-costs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPictureSourceRoute = ApiPictureSourceRouteImport.update({
+  id: '/api/picture-source',
+  path: '/api/picture-source',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
@@ -282,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
   '/admin/ai-costs': typeof AdminAiCostsRoute
+  '/api/picture-source': typeof ApiPictureSourceRoute
   '/design/event-cards': typeof DesignEventCardsRoute
   '/design/story-covers': typeof DesignStoryCoversRoute
   '/explore/$slug': typeof ExploreSlugRoute
@@ -326,6 +333,7 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
   '/admin/ai-costs': typeof AdminAiCostsRoute
+  '/api/picture-source': typeof ApiPictureSourceRoute
   '/design/event-cards': typeof DesignEventCardsRoute
   '/design/story-covers': typeof DesignStoryCoversRoute
   '/explore/$slug': typeof ExploreSlugRoute
@@ -371,6 +379,7 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
   '/admin/ai-costs': typeof AdminAiCostsRoute
+  '/api/picture-source': typeof ApiPictureSourceRoute
   '/design/event-cards': typeof DesignEventCardsRoute
   '/design/story-covers': typeof DesignStoryCoversRoute
   '/explore/$slug': typeof ExploreSlugRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-subscription'
     | '/admin/ai-costs'
+    | '/api/picture-source'
     | '/design/event-cards'
     | '/design/story-covers'
     | '/explore/$slug'
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-subscription'
     | '/admin/ai-costs'
+    | '/api/picture-source'
     | '/design/event-cards'
     | '/design/story-covers'
     | '/explore/$slug'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-subscription'
     | '/admin/ai-costs'
+    | '/api/picture-source'
     | '/design/event-cards'
     | '/design/story-covers'
     | '/explore/$slug'
@@ -550,6 +562,7 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   VerifySubscriptionRoute: typeof VerifySubscriptionRoute
   AdminAiCostsRoute: typeof AdminAiCostsRoute
+  ApiPictureSourceRoute: typeof ApiPictureSourceRoute
   DesignEventCardsRoute: typeof DesignEventCardsRoute
   DesignStoryCoversRoute: typeof DesignStoryCoversRoute
   ExploreSlugRoute: typeof ExploreSlugRoute
@@ -697,6 +710,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/ai-costs'
       fullPath: '/admin/ai-costs'
       preLoaderRoute: typeof AdminAiCostsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/picture-source': {
+      id: '/api/picture-source'
+      path: '/api/picture-source'
+      fullPath: '/api/picture-source'
+      preLoaderRoute: typeof ApiPictureSourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
@@ -894,6 +914,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   VerifySubscriptionRoute: VerifySubscriptionRoute,
   AdminAiCostsRoute: AdminAiCostsRoute,
+  ApiPictureSourceRoute: ApiPictureSourceRoute,
   DesignEventCardsRoute: DesignEventCardsRoute,
   DesignStoryCoversRoute: DesignStoryCoversRoute,
   ExploreSlugRoute: ExploreSlugRoute,

@@ -61,7 +61,7 @@ export function emailBrand(color: string | null | undefined): EmailBrand {
 }
 
 export function isStoredEventPhoto(path: string | null | undefined): path is string {
-  return Boolean(path) && /^[0-9a-f-]{36}\/events\/[0-9a-f-]{36}\.(webp|jpg)$/i.test(path as string);
+  return Boolean(path) && /^[0-9a-f-]{36}\/events\/[0-9a-f-]{36}(-v\d+)?\.(webp|jpg)$/i.test(path as string);
 }
 
 /** Stored WebP → 1200×480 JPEG (2× a 600px email), cropped to fill like the art band. */

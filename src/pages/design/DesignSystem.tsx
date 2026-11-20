@@ -15,6 +15,7 @@ import { WorkspaceDrawer } from "@/components/workspace/WorkspaceDrawer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { InfoHint, InlineError, SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { RememberedFold } from "@/components/settings/RememberedFold";
+import { PictureEditor } from "@/components/picture-edit/PictureEditor";
 import { DeskCard, DeskBadge, MetaLine, PublishSplitButton, ShelfLabel, SpikeButton } from "@/components/topic-pipeline/DeskCard";
 import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
 import { AttentionTag } from "@/components/events/DeskEvents";
@@ -108,6 +109,18 @@ function SampleCard({ i, open }: { i: number; open?: () => void }) {
       </>}
     />
   );
+}
+
+/** A drawn sample picture for the Edit picture example (no external files). */
+function samplePicture(): Promise<Blob | null> {
+  const c = document.createElement("canvas");
+  c.width = 1600; c.height = 1000;
+  const ctx = c.getContext("2d")!;
+  const css = (v: string) => `hsl(${getComputedStyle(document.documentElement).getPropertyValue(v).trim()})`;
+  ctx.fillStyle = css("--muted"); ctx.fillRect(0, 0, 1600, 1000);
+  ctx.fillStyle = css("--primary"); ctx.beginPath(); ctx.arc(1150, 420, 220, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = css("--pop"); ctx.fillRect(150, 600, 600, 260);
+  return new Promise((r) => c.toBlob(r, "image/png"));
 }
 
 export default function DesignSystem() {
@@ -282,6 +295,12 @@ export default function DesignSystem() {
                 </RememberedFold>
               </Spec>
             </div>
+            <Spec name="Edit picture · replace or move within the frame (event: square with Card and Poster guides)">
+              <div className="max-w-sm">
+                <PictureEditor aspect={1} guides={[{ aspect: 2, label: "Card" }, { aspect: 9 / 16, label: "Poster" }]}
+                  loadSource={samplePicture} onSave={async () => {}} onCancel={() => {}} />
+              </div>
+            </Spec>
           </Block>
 
           <Block id="states" title="States">
