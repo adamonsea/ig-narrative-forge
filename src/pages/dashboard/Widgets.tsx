@@ -18,6 +18,9 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { edgeErrorMessage } from "@/lib/edgeError";
+import { LiveWidgetPreview } from "@/components/widget/LiveWidgetPreview";
+import { WidgetContentChoice } from "@/components/widget/WidgetContentChoice";
+import type { ResolvedWidgetContent, WidgetContent } from "@/lib/widgetContent";
 
 
 const SUPABASE_URL = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1";
@@ -37,6 +40,7 @@ interface WidgetConfig {
   featuredSources: string[];
   /** Days each featured source keeps its top slot, keyed by publication name */
   featuredDaysBySource: Record<string, number>;
+  content: WidgetContent;
 }
 
 interface FeedSource {
@@ -62,6 +66,7 @@ export default function Widgets() {
     sources: [],
     featuredSources: [],
     featuredDaysBySource: {},
+    content: "auto",
   });
 
   const [copied, setCopied] = useState(false);
@@ -99,7 +104,7 @@ export default function Widgets() {
         const list: FeedSource[] = data?.sources || [];
         setAvailableSources(list);
         // Default: every source included, none featured
-        setConfig(prev => ({ ...prev, sources: list.map(s => s.name), featuredSources: [] }));
+        setConfig(prev => ({ ...prev, sources: list.map(s => s.name), featuredSources: [], content: "auto" }));
       })
       .catch(err => console.error("Source list fetch error:", err));
 
@@ -141,10 +146,7 @@ export default function Widgets() {
     if (!config.feed) return;
 
     setPreviewLoading(true);
-    let url = `${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=${config.max}`;
-    if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
-    if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${encodeURIComponent(featuredDaysParam)}`;
-    fetch(url)
+    fetch(`${SUPABASE_URL}/widget-feed-data?feed=${config.feed}&max=1`)
       .then(res => res.json())
       .then(data => {
         setPreviewData(data);
@@ -155,7 +157,13 @@ export default function Widgets() {
       })
       .catch(err => console.error("Preview fetch error:", err))
       .finally(() => setPreviewLoading(false));
-  }, [config.feed, config.max, sourcesParam, featuredParam, featuredDaysParam]);
+  }, [config.feed]);
+
+  // What the feed can show; "auto" lets the feed decide
+  const autoContent: ResolvedWidgetContent =
+    previewData?.content === "events" || previewData?.content === "both" ? previewData.content : "stories";
+  const shownContent: ResolvedWidgetContent = config.content === "auto" ? autoContent : config.content;
+  const canChooseContent = !!previewData?.available?.stories && !!previewData?.available?.events;
 
   const isValidAvatarUrl = (url: string) => {
     if (!url) return true;
@@ -249,6 +257,7 @@ export default function Widgets() {
       attrs.push(`data-featured="${featuredParam.replace(/"/g, "&quot;")}"`);
       attrs.push(`data-featured-days="${featuredDaysParam}"`);
     }
+    if (config.content !== "auto") attrs.push(`data-content="${config.content}"`);
 
 
 
@@ -325,10 +334,17 @@ export default function Widgets() {
                 </Select>
               </div>
 
+              {canChooseContent && (
+                <WidgetContentChoice
+                  value={shownContent}
+                  onChange={(v) => setConfig(prev => ({ ...prev, content: v }))}
+                />
+              )}
+
               {/* Max Headlines */}
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <Label>Headlines to show</Label>
+                  <Label>{shownContent === "events" ? "Events to show" : "Headlines to show"}</Label>
                   <span className="text-sm text-muted-foreground">{config.max}</span>
                 </div>
                 <Slider
@@ -524,7 +540,7 @@ export default function Widgets() {
               )}
 
               {/* Publications shown in this embed */}
-              {availableSources.length > 1 && (
+              {availableSources.length > 1 && shownContent !== "events" && (
                 <div className="space-y-3">
                   <div>
                     <Label>Publications</Label>
@@ -633,13 +649,22 @@ export default function Widgets() {
                       className="mx-auto transition-[max-width] duration-300"
                       style={{ width: getPreviewWidth(), maxWidth: getPreviewMaxWidth() }}
                     >
-                      <WidgetPreview 
-                        data={previewData} 
-                        theme={config.theme === "auto" ? "light" : config.theme}
-                        accent={accentColor}
-                        customTitle={config.customTitle}
-                        customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ""}
-                        showSubscribe={config.showSubscribe}
+                      <LiveWidgetPreview
+                        attrs={{
+                          feed: config.feed,
+                          max: String(config.max),
+                          theme: config.theme === "auto" ? "light" : config.theme,
+                          accent: config.accent,
+                          width: config.width,
+                          title: config.customTitle,
+                          avatar: isValidAvatarUrl(config.customAvatar) ? config.customAvatar : "",
+                          subscribe: config.showSubscribe ? "true" : "",
+                          frequency: config.showSubscribe && config.frequency === "weekly" ? "weekly" : "",
+                          sources: sourcesParam,
+                          featured: featuredParam,
+                          "featured-days": featuredParam ? featuredDaysParam : "",
+                          content: config.content === "auto" ? "" : config.content,
+                        }}
                       />
                     </div>
                   )}
@@ -678,196 +703,5 @@ export default function Widgets() {
         </div>
       </div>
     </AppLayout>
-  );
-}
-
-// Inline preview component (simulates the widget appearance)
-function WidgetPreview({ 
-  data, 
-  theme, 
-  accent,
-  customTitle = "",
-  customAvatar = "",
-  showSubscribe = false,
-}: { 
-  data: any; 
-  theme: "light" | "dark"; 
-  accent: string;
-  customTitle?: string | undefined;
-  customAvatar?: string | undefined;
-  showSubscribe?: boolean | undefined;
-}) {
-  if (!data?.feed || !data?.stories) {
-    return <div className="text-center py-4 text-muted-foreground">No data</div>;
-  }
-
-
-  const isDark = theme === "dark";
-  const bg = isDark ? "#1a1a1a" : "#ffffff";
-  const text = isDark ? "#e5e5e5" : "#1a1a1a";
-  const textMuted = isDark ? "#a0a0a0" : "#6b7280";
-  const border = isDark ? "#333333" : "#e5e7eb";
-
-  return (
-    <div 
-      className="rounded-xl p-4"
-      style={{ 
-        background: bg, 
-        border: `1px solid ${border}`,
-        color: text,
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-        fontSize: "14px"
-      }}
-    >
-      {/* Header */}
-      <div 
-        className="flex items-center gap-2.5 pb-3 mb-3"
-        style={{ borderBottom: `1px solid ${border}` }}
-      >
-        {(customAvatar || data.feed.icon_url || data.feed.logo_url) ? (
-          <img 
-            src={customAvatar || data.feed.icon_url || data.feed.logo_url} 
-            alt={customTitle || data.feed.name}
-            className="w-7 h-7 rounded-full object-cover"
-          />
-        ) : (
-          <div 
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-            style={{ background: accent }}
-          >
-            {(customTitle || data.feed.name).charAt(0)}
-          </div>
-        )}
-        <span className="font-semibold">{customTitle || data.feed.name}</span>
-      </div>
-
-
-      {/* Stories — split into Featured / Latest, matching widget.js v1.5.0 */}
-      {(() => {
-        const featured = data.stories.filter((s: any) => s.featured);
-        const latest = data.stories.filter((s: any) => !s.featured);
-
-        const renderStory = (story: any, idx: number) => (
-          <div
-            key={idx}
-            className="flex items-start gap-2.5 p-2 rounded-lg transition-colors"
-            style={{
-              marginLeft: "-8px",
-              marginRight: "-8px",
-            }}
-          >
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
-              style={{ background: accent }}
-            />
-            <div className="flex-1 min-w-0">
-              <a
-                href={story.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium line-clamp-2 hover:underline block"
-                style={{ color: text }}
-              >
-                {story.title}
-              </a>
-              {story.source_name && (
-                <span
-                  className="inline-block text-xs px-1.5 py-0.5 rounded mt-1"
-                  style={{ background: isDark ? '#2a2a2a' : '#f3f4f6', color: textMuted }}
-                >
-                  {story.source_name}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-
-        const sectionLabel = (label: string) => (
-          <div
-            className="text-[11px] font-semibold uppercase tracking-wide mb-1 mt-1"
-            style={{ color: textMuted, letterSpacing: "0.06em" }}
-          >
-            {label}
-          </div>
-        );
-
-        if (featured.length === 0) {
-          return <div className="space-y-1">{data.stories.map(renderStory)}</div>;
-        }
-
-        return (
-          <div className="space-y-1">
-            {sectionLabel("Featured")}
-            {featured.map(renderStory)}
-            {latest.length > 0 && (
-              <>
-                {sectionLabel("Latest")}
-                {latest.map(renderStory)}
-              </>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* Subscribe box */}
-      {showSubscribe && (
-        <div
-          className="pt-3 mt-3"
-          style={{ borderTop: `1px solid ${border}` }}
-        >
-          <div className="text-xs mb-2" style={{ color: textMuted }}>
-            Get these highlights by email
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              placeholder="you@example.com"
-              readOnly
-              className="flex-1 rounded-md px-2 py-1.5 text-sm"
-              style={{ background: isDark ? '#2a2a2a' : '#f9fafb', border: `1px solid ${border}`, color: text }}
-            />
-            <button
-              type="button"
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
-              style={{ background: accent }}
-            >
-              Subscribe
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-
-      <div 
-        className="flex justify-between items-center pt-3 mt-3 flex-wrap gap-2"
-        style={{ borderTop: `1px solid ${border}` }}
-      >
-        <a 
-          href={`https://curatr.pro/feed/${data.feed.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-sm no-underline hover:underline"
-          style={{ color: accent }}
-        >
-          {data.feed?.stories_this_week > 0
-            ? `${data.feed.stories_this_week} stories this week →`
-            : 'View all stories →'}
-
-        </a>
-        <span className="text-xs" style={{ color: textMuted }}>
-          Powered by{' '}
-          <a 
-            href="https://curatr.pro" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:underline"
-            style={{ color: textMuted }}
-          >
-            Curatr
-          </a>
-        </span>
-      </div>
-    </div>
   );
 }

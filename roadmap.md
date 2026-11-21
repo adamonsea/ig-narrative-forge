@@ -1,3 +1,10 @@
+# Events in website widgets (21 Nov 2026)
+- [x] Widget can show News, What's on, or Both (News | What's on tabs; Adam chose tabs)
+- [x] Events-led feeds (Whats on Lisbon) show upcoming events automatically; other existing embeds unchanged
+- [x] Event rows: date tile, title, Today/Tomorrow/day, time, venue, price; wide layout leads with the event photo
+- [x] Show choice on both widget builders; preview now runs the real widget and isn't counted
+- [ ] Goes live on Mike's site once the app is published (widget script is served from the live site)
+
 # Feed look (20 Nov 2026)
 - [x] Top bar and background colour choices; welcome line, Live pill, Subscribe/menu, feed name, Events | All | News switch and empty-state text adjust automatically
 - [x] One Look panel in Settings → Brand (logo, colour, top bar, background, story cover) with a live phone preview

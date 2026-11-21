@@ -4,6 +4,7 @@
  * (?settings=...), so anyone can come back to the same widget later.
  * Pure helpers only — every value is validated before it is used.
  */
+import { parseWidgetContent, type WidgetContent } from "./widgetContent";
 
 export interface WidgetBuilderSettings {
   maxHeadlines: number;
@@ -17,6 +18,8 @@ export interface WidgetBuilderSettings {
   sources: string[];
   featuredSources: string[];
   featuredDaysBySource: Record<string, number>;
+  /** News, What's on, or both behind tabs; "auto" lets the feed decide (data-content left out). */
+  content: WidgetContent;
 }
 
 export const WIDGET_MAX_OPTIONS = [3, 5, 7, 10] as const;
@@ -49,6 +52,7 @@ export function parseWidgetSettings(raw: unknown): Partial<WidgetBuilderSettings
   }
   if (typeof r["showSubscribe"] === "boolean") out.showSubscribe = r["showSubscribe"];
   if (r["frequency"] === "daily" || r["frequency"] === "weekly") out.frequency = r["frequency"];
+  if (typeof r["content"] === "string" && parseWidgetContent(r["content"]) === r["content"]) out.content = parseWidgetContent(r["content"]);
   if (isStringList(r["sources"])) out.sources = r["sources"];
   if (isStringList(r["featuredSources"])) out.featuredSources = r["featuredSources"].slice(0, MAX_FEATURED);
 

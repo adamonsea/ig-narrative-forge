@@ -2,6 +2,13 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SOURCE_ALIASES, WIDGET_SOURCE_NAMES } from "../_shared/publisherNames.ts";
 import { SITE_URL } from "../_shared/brandConfig.ts";
+import { formatPrice, feedCurrency } from "../_shared/currency.ts";
+import { firstWidgetTab, parseWidgetContent, resolveWidgetContent } from "../_shared/widgetContent.ts";
+
+// Upcoming events looked up per widget request (also the cap on the "N events coming up" count)
+const EVENTS_LOOKUP = 50;
+// Only Curatr's stored copies of event photos are shown, never the venue's own image address
+const STORED_EVENT_PHOTO = /^[0-9a-f-]{36}\/events\/[0-9a-f-]{36}(-v\d+)?\.(webp|jpg)$/i;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +32,7 @@ serve(async (req) => {
     const feedSlug = url.searchParams.get('feed');
     const maxStories = Math.min(Math.max(parseInt(url.searchParams.get('max') || '5'), 1), 10);
     const mode = url.searchParams.get('mode');
+    const requestedContent = parseWidgetContent(url.searchParams.get('content'));
 
     // Source aliases: remap legacy/mistaken source names to the canonical
     // publication so existing embeds self-correct without onsite code changes.
@@ -97,7 +105,7 @@ serve(async (req) => {
       // - exact name match (case-insensitive)
       const { data: topic, error: topicError } = await supabase
         .from('topics')
-        .select('id, name, slug, region, branding_config, created_by, public_widget_builder_enabled, use_publisher_photos')
+        .select('id, name, slug, region, branding_config, created_by, public_widget_builder_enabled, use_publisher_photos, feed_lead, events_enabled, event_currency')
         .eq('is_public', true)
         .eq('is_archived', false)
         .or(`slug.eq.${feedSlug},region.ilike.${feedSlug},name.ilike.${feedSlug}`)
@@ -207,7 +215,10 @@ serve(async (req) => {
           slides(content, slide_number)
         `;
       const featuredWindowStart = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
-      const [storiesResult, weeklyStatsResult, featuredResult] = await Promise.all([
+      // Events follow the feed's own switches: on for the feed and shown in it
+      const eventsSwitchedOn = (topic as any).events_enabled === true;
+      const eventsLed = (topic as any).feed_lead === 'events';
+      const [storiesResult, weeklyStatsResult, featuredResult, eventsShownResult, eventsResult] = await Promise.all([
         supabase
         .from('stories')
         .select(storySelect)
@@ -241,7 +252,22 @@ serve(async (req) => {
             .order('created_at', { ascending: false })
             .abortSignal(storiesController.signal)
             .limit(MAX_FEATURED * 3)
-          : Promise.resolve({ data: [], error: null } as any)
+          : Promise.resolve({ data: [], error: null } as any),
+
+        eventsSwitchedOn
+          ? supabase
+            .from('topic_insight_settings')
+            .select('events_cards_enabled')
+            .eq('topic_id', topic.id)
+            .abortSignal(storiesController.signal)
+            .maybeSingle()
+          : Promise.resolve({ data: null, error: null } as any),
+
+        eventsSwitchedOn
+          ? supabase
+            .rpc('get_topic_events_feed', { p_topic_id: topic.id, p_limit: EVENTS_LOOKUP, p_offset: 0 })
+            .abortSignal(storiesController.signal)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
       clearTimeout(storiesTimeoutId);
@@ -377,12 +403,46 @@ serve(async (req) => {
         formattedStories = formattedStories.map(s => s.id === trendingId ? { ...s, trending: true } : s);
       }
 
-      console.log(`✅ Returning ${formattedStories.length} stories for widget (${storiesThisWeek} in 7 days, v3)`);
+      // Upcoming events (same list and order as the feed's individual event cards)
+      const eventsShown = eventsSwitchedOn && (eventsShownResult as any)?.data?.events_cards_enabled === true;
+      if ((eventsResult as any)?.error) console.warn('widget events unavailable', (eventsResult as any).error);
+      const eventRows: any[] = eventsShown ? ((eventsResult as any)?.data || []) : [];
+      const currency = feedCurrency((topic as any).event_currency, eventRows.map(e => e.source_url));
+      const allEvents = eventRows
+        .filter(e => typeof e.source_url === 'string' && /^https?:\/\//i.test(e.source_url))
+        .map(e => ({
+          id: e.id,
+          title: e.title,
+          start_date: e.start_date,
+          start_time: typeof e.start_time === 'string' ? e.start_time.slice(0, 5) : null,
+          venue: e.location || null,
+          price: formatPrice(e.price, e.is_free, currency),
+          image_url: e.image_path && STORED_EVENT_PHOTO.test(e.image_path)
+            ? `${supabaseUrl}/storage/v1/object/public/topic-assets/${e.image_path}`
+            : null,
+          url: e.source_url,
+        }));
+
+      const content = resolveWidgetContent(requestedContent, {
+        eventsLed,
+        eventsShown,
+        storyCount: working.length,
+        eventCount: allEvents.length,
+      });
+      feedData.lead = eventsLed ? 'events' : 'news';
+      feedData.first_tab = firstWidgetTab(eventsLed);
+      feedData.events_upcoming = allEvents.length;
+      feedData.events_lookup = EVENTS_LOOKUP;
+
+      console.log(`✅ Widget ${feedSlug}: ${content}, ${formattedStories.length} stories, ${allEvents.length} events (v4)`);
 
       return new Response(
         JSON.stringify({
           feed: feedData,
-          stories: formattedStories,
+          content,
+          available: { stories: working.length > 0, events: allEvents.length > 0 },
+          stories: content === 'events' ? [] : formattedStories,
+          events: content === 'stories' ? [] : allEvents.slice(0, maxStories),
         }),
         { 
           status: 200, 

@@ -26,6 +26,9 @@ import {
   type WidgetBuilderSettings,
 } from "@/lib/widgetBuilderSettings";
 import { useToast } from "@/hooks/use-toast";
+import { LiveWidgetPreview } from "@/components/widget/LiveWidgetPreview";
+import { WidgetContentChoice } from "@/components/widget/WidgetContentChoice";
+import type { ResolvedWidgetContent, WidgetContent } from "@/lib/widgetContent";
 
 interface TopicData {
   id: string;
@@ -52,6 +55,7 @@ interface WidgetConfig {
   featuredSources: string[];
   /** Days each featured source keeps its top slot, keyed by publication name */
   featuredDaysBySource: Record<string, number>;
+  content: WidgetContent;
 }
 
 interface FeedSource {
@@ -60,20 +64,11 @@ interface FeedSource {
 }
 
 
-interface PreviewStory {
-  title: string;
-  url: string;
-  source_name?: string | undefined;
-  image_url?: string | undefined;
-}
-
-// Feed data returned from edge function (different from TopicData)
-interface PreviewFeed {
-  name: string;
-  slug: string;
-  logo_url?: string | null | undefined;
-  icon_url?: string | null | undefined;
-  brand_color?: string | undefined;
+/** What the feed can show in a widget, and what "auto" picks for it. */
+interface FeedAvailability {
+  stories: boolean;
+  events: boolean;
+  auto: ResolvedWidgetContent;
 }
 
 export default function PublicWidgetBuilder() {
@@ -84,7 +79,7 @@ export default function PublicWidgetBuilder() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [previewData, setPreviewData] = useState<{ feed: PreviewFeed | null; stories: PreviewStory[] } | null>(null);
+  const [availability, setAvailability] = useState<FeedAvailability | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
   const [availableSources, setAvailableSources] = useState<FeedSource[]>([]);
@@ -108,6 +103,7 @@ export default function PublicWidgetBuilder() {
     sources: [],
     featuredSources: [],
     featuredDaysBySource: {},
+    content: 'auto',
   });
 
   // Restore saved settings: a shared link wins, then this device
@@ -246,29 +242,24 @@ export default function PublicWidgetBuilder() {
     }));
   };
 
-  // Fetch preview data
+  // What this feed can show (news, events) and what "auto" picks
   useEffect(() => {
-    const fetchPreview = async () => {
-      if (!slug) return;
-      
-      try {
-        let url = `${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&max=${config.maxHeadlines}`;
-        if (sourcesParam) url += `&sources=${encodeURIComponent(sourcesParam)}`;
-        if (featuredParam) url += `&featured=${encodeURIComponent(featuredParam)}&featuredDays=${encodeURIComponent(featuredDaysParam)}`;
-        const response = await fetch(url);
-        
-        if (response.ok) {
-          const data = await response.json();
-          setPreviewData(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch preview:', err);
-      }
-    };
-    
-    fetchPreview();
-  }, [slug, config.maxHeadlines, sourcesParam, featuredParam, featuredDaysParam]);
+    if (!slug) return;
+    let cancelled = false;
+    fetch(`${FUNCTIONS_BASE}/widget-feed-data?feed=${slug}&max=1`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (cancelled || !data?.available) return;
+        const auto: ResolvedWidgetContent = data.content === 'events' || data.content === 'both' ? data.content : 'stories';
+        setAvailability({ stories: !!data.available.stories, events: !!data.available.events, auto });
+      })
+      .catch(err => console.error('Failed to fetch widget content:', err));
+    return () => { cancelled = true; };
+  }, [slug]);
 
+  // The content shown: the owner's pick, else what the feed decides
+  const shownContent: ResolvedWidgetContent = config.content === 'auto' ? (availability?.auto ?? 'stories') : config.content;
+  const canChooseContent = !!availability?.stories && !!availability?.events;
 
   // Validate avatar URL (must be http/https to prevent XSS)
   const isValidAvatarUrl = (url: string) => {
@@ -402,8 +393,9 @@ export default function PublicWidgetBuilder() {
       code += ` data-featured="${featuredParam.replace(/"/g, '&quot;')}"`;
       code += ` data-featured-days="${featuredDaysParam}"`;
     }
-
-
+    if (config.content !== 'auto') {
+      code += ` data-content="${config.content}"`;
+    }
 
     
     code += `></div>\n<script src="${window.location.origin}/widget.js?v=${WIDGET_JS_VERSION}" async></script>`;
@@ -423,7 +415,21 @@ export default function PublicWidgetBuilder() {
     return config.width === '100%' ? 'none' : config.width;
   };
 
-  const isWideLayout = config.width === 'wide';
+  const previewAttrs = (theme: 'light' | 'dark'): Record<string, string> => ({
+    feed: slug || '',
+    max: String(config.maxHeadlines),
+    theme,
+    accent: config.accent,
+    width: config.width,
+    title: config.customTitle,
+    avatar: isValidAvatarUrl(config.customAvatar) ? config.customAvatar : '',
+    subscribe: config.showSubscribe ? 'true' : '',
+    frequency: config.showSubscribe && config.frequency === 'weekly' ? 'weekly' : '',
+    sources: sourcesParam,
+    featured: featuredParam,
+    'featured-days': featuredParam ? featuredDaysParam : '',
+    content: config.content === 'auto' ? '' : config.content,
+  });
 
   const handleCopy = async () => {
     try {
@@ -558,8 +564,15 @@ export default function PublicWidgetBuilder() {
                   </p>
                 </div>
 
+                {canChooseContent && (
+                  <WidgetContentChoice
+                    value={shownContent}
+                    onChange={(v) => setConfig(prev => ({ ...prev, content: v }))}
+                  />
+                )}
+
                 <div className="space-y-2">
-                  <Label>Headlines to show</Label>
+                  <Label>{shownContent === 'events' ? 'Events to show' : 'Headlines to show'}</Label>
                   <Select
                     value={String(config.maxHeadlines)}
                     onValueChange={(v) => setConfig(prev => ({ ...prev, maxHeadlines: parseInt(v) }))}
@@ -569,7 +582,7 @@ export default function PublicWidgetBuilder() {
                     </SelectTrigger>
                     <SelectContent>
                       {[3, 5, 7, 10].map(n => (
-                        <SelectItem key={n} value={String(n)}>{n} headlines</SelectItem>
+                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -739,7 +752,7 @@ export default function PublicWidgetBuilder() {
                 )}
 
                 {/* Publications shown in this embed */}
-                {availableSources.length > 1 && (
+                {availableSources.length > 1 && shownContent !== 'events' && (
                   <div className="space-y-3">
                     <div>
                       <Label>Publications</Label>
@@ -867,340 +880,19 @@ export default function PublicWidgetBuilder() {
               
               <TabsContent value="light">
                 <div className="p-6 bg-white rounded-lg border" style={{ width: getPreviewWidth(), maxWidth: getPreviewMaxWidth() }}>
-                  <WidgetPreview 
-                    data={previewData} 
-                    theme="light" 
-                    accent={accentColor}
-                    topicName={config.customTitle || topic.name}
-                    wideLayout={isWideLayout}
-                    customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ''}
-                  />
+                  <LiveWidgetPreview attrs={previewAttrs('light')} title="Light preview" />
                 </div>
               </TabsContent>
               
               <TabsContent value="dark">
                 <div className="p-6 bg-zinc-900 rounded-lg border border-zinc-700" style={{ width: getPreviewWidth(), maxWidth: getPreviewMaxWidth() }}>
-                  <WidgetPreview 
-                    data={previewData} 
-                    theme="dark" 
-                    accent={accentColor}
-                    topicName={config.customTitle || topic.name}
-                    wideLayout={isWideLayout}
-                    customAvatar={isValidAvatarUrl(config.customAvatar) ? config.customAvatar : ''}
-                  />
+                  <LiveWidgetPreview attrs={previewAttrs('dark')} title="Dark preview" />
                 </div>
               </TabsContent>
             </Tabs>
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-// Inline preview component
-function WidgetPreview({ 
-  data, 
-  theme, 
-  accent, 
-  topicName,
-  wideLayout = false,
-  customAvatar = ''
-}: { 
-  data: { feed: PreviewFeed | null; stories: PreviewStory[] } | null;
-  theme: 'light' | 'dark'; 
-  accent: string;
-  topicName: string;
-  wideLayout?: boolean | undefined;
-  customAvatar?: string | undefined;
-}) {
-  const isDark = theme === 'dark';
-  const textColor = isDark ? '#f3f4f6' : '#1f2937';
-  const mutedColor = isDark ? '#9ca3af' : '#6b7280';
-  const bgColor = isDark ? '#18181b' : '#ffffff';
-  const borderColor = isDark ? '#27272a' : '#e5e7eb';
-  const sourceBg = isDark ? '#27272a' : '#f3f4f6';
-  const hoverBg = isDark ? '#252525' : '#f9fafb';
-
-  if (!data) {
-    return (
-      <div className="text-center py-8" style={{ color: mutedColor }}>
-        Loading preview...
-      </div>
-    );
-  }
-
-  const featuredStory = data.stories[0];
-  const remainingStories = data.stories.slice(1);
-
-  // Wide layout with featured story + list
-  if (wideLayout && featuredStory) {
-    return (
-      <div 
-        className="rounded-lg border overflow-hidden"
-        style={{ 
-          background: bgColor, 
-          borderColor: borderColor,
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}
-      >
-        {/* Header */}
-        <div className="p-4 border-b flex items-center gap-3" style={{ borderColor }}>
-          {(customAvatar || data.feed?.icon_url || data.feed?.logo_url) ? (
-            <img 
-              src={(customAvatar || data.feed?.icon_url || data.feed?.logo_url)!} 
-              alt="" 
-              className="w-8 h-8 rounded-full object-cover" 
-            />
-          ) : (
-            <div 
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
-              style={{ background: accent }}
-            >
-              {topicName.charAt(0)}
-            </div>
-          )}
-          <span className="font-semibold" style={{ color: textColor }}>
-            {topicName}
-          </span>
-        </div>
-
-        {/* Featured story + list grid */}
-        <div className="grid md:grid-cols-2 gap-0">
-          {/* Featured story with image */}
-          <a 
-            href={featuredStory.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block p-4 border-b md:border-b-0 md:border-r transition-colors"
-            style={{ borderColor }}
-            onMouseEnter={(e) => e.currentTarget.style.background = hoverBg}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            {featuredStory.image_url && (
-              <div className="aspect-video rounded-lg overflow-hidden mb-3 bg-muted">
-                <img 
-                  src={featuredStory.image_url} 
-                  alt="" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-            <h3 
-              className="font-semibold text-lg leading-snug mb-2 hover:underline"
-              style={{ color: textColor }}
-            >
-              {featuredStory.title}
-            </h3>
-            {featuredStory.source_name && (
-              <span 
-                className="inline-block text-xs px-2 py-0.5 rounded"
-                style={{ background: sourceBg, color: mutedColor }}
-              >
-                {featuredStory.source_name}
-              </span>
-            )}
-          </a>
-
-          {/* Remaining stories as compact list */}
-          <div className="divide-y" style={{ borderColor }}>
-            {remainingStories.map((story, i) => (
-              <a 
-                key={i}
-                href={story.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-3 transition-colors"
-                onMouseEnter={(e) => e.currentTarget.style.background = hoverBg}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <div className="flex gap-2 items-start">
-                  <div 
-                    className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" 
-                    style={{ background: accent }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 
-                      className="font-medium text-sm leading-snug line-clamp-2 hover:underline"
-                      style={{ color: textColor }}
-                    >
-                      {story.title}
-                    </h4>
-                    {story.source_name && (
-                      <span 
-                        className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded"
-                        style={{ background: sourceBg, color: mutedColor }}
-                      >
-                        {story.source_name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div 
-          className="px-4 py-3 border-t text-sm flex justify-between items-center"
-          style={{ borderColor, color: mutedColor }}
-        >
-          <a 
-            href={`https://curatr.pro/feed/${data.feed?.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium hover:underline"
-            style={{ color: accent }}
-          >
-            View all stories →
-          </a>
-          <span>
-            Powered by{' '}
-            <a 
-              href="https://curatr.pro" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="hover:underline"
-              style={{ color: accent }}
-            >
-              curatr.pro
-            </a>
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // Default compact list layout
-  return (
-    <div 
-      className="rounded-lg border overflow-hidden"
-      style={{ 
-        background: bgColor, 
-        borderColor: borderColor,
-        fontFamily: 'system-ui, -apple-system, sans-serif'
-      }}
-    >
-      {/* Header */}
-      <div className="p-3 border-b flex items-center gap-2" style={{ borderColor }}>
-        {(customAvatar || data.feed?.icon_url || data.feed?.logo_url) ? (
-          <img 
-            src={(customAvatar || data.feed?.icon_url || data.feed?.logo_url)!} 
-            alt="" 
-            className="w-6 h-6 rounded-full object-cover" 
-          />
-        ) : (
-          <div 
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-            style={{ background: accent }}
-          >
-            {topicName.charAt(0)}
-          </div>
-        )}
-        <span className="font-semibold text-sm" style={{ color: textColor }}>
-          {topicName}
-        </span>
-      </div>
-
-      {/* Stories — split into Featured / Latest, matching widget.js v1.5.0 */}
-      {(() => {
-        const featured = data.stories.filter((s: any) => (s as any).featured);
-        const latest = data.stories.filter((s: any) => !(s as any).featured);
-
-        const renderStory = (story: any, i: number) => (
-          <div key={i} className="p-3 flex items-start gap-2">
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
-              style={{ background: accent }}
-            />
-            <div className="flex-1 min-w-0">
-              <a
-                href={story.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium leading-snug hover:underline block"
-                style={{ color: textColor }}
-              >
-                {story.title}
-              </a>
-              {story.source_name && (
-                <span
-                  className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded"
-                  style={{
-                    background: sourceBg,
-                    color: mutedColor
-                  }}
-                >
-                  {story.source_name}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-
-        const sectionLabel = (label: string) => (
-          <div
-            className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase"
-            style={{ color: mutedColor, letterSpacing: '0.06em' }}
-          >
-            {label}
-          </div>
-        );
-
-        if (featured.length === 0) {
-          return (
-            <div className="divide-y" style={{ borderColor }}>
-              {data.stories.map(renderStory)}
-            </div>
-          );
-        }
-
-        return (
-          <div>
-            {sectionLabel('Featured')}
-            <div className="divide-y" style={{ borderColor }}>
-              {featured.map(renderStory)}
-            </div>
-            {latest.length > 0 && (
-              <>
-                {sectionLabel('Latest')}
-                <div className="divide-y" style={{ borderColor }}>
-                  {latest.map(renderStory)}
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* Footer */}
-      <div 
-        className="px-3 py-2 border-t text-xs flex justify-between items-center"
-        style={{ borderColor, color: mutedColor }}
-      >
-        <a 
-          href={`https://curatr.pro/feed/${data.feed?.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium hover:underline"
-          style={{ color: accent }}
-        >
-          View all stories →
-        </a>
-        <span>
-          Powered by{' '}
-          <a 
-            href="https://curatr.pro" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:underline"
-            style={{ color: accent }}
-          >
-            curatr.pro
-          </a>
-        </span>
-      </div>
     </div>
   );
 }

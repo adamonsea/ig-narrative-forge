@@ -21,9 +21,16 @@ const base: WidgetBuilderSettings = {
   sources: ["Agenda LX", "Time Out"],
   featuredSources: ["Agenda LX"],
   featuredDaysBySource: { "Agenda LX": 3 },
+  content: "both",
 };
 
 describe("widget builder saved settings", () => {
+  it("remembers the News / What's on / Both choice and ignores anything else", () => {
+    expect(parseWidgetSettings({ content: "events" }).content).toBe("events");
+    expect(parseWidgetSettings({ content: "both" }).content).toBe("both");
+    expect(parseWidgetSettings({ content: "everything" }).content).toBeUndefined();
+  });
+
   it("a saved link brings back the same settings, including accented titles", () => {
     const saved = { ...base, customTitle: "Lisboa à noite" };
     expect(decodeWidgetSettings(encodeWidgetSettings(saved))).toEqual(saved);

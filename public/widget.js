@@ -7,7 +7,8 @@
  *      data-feed="your-feed-slug"
  *      data-max="5"
  *      data-theme="auto"
- *      data-accent="#3b82f6">
+ *      data-accent="#3b82f6"
+ *      data-content="auto">   <!-- auto | stories | events | both (News | What's on tabs) -->
  * </div>
  * <script src="https://curatr.pro/widget.js" async></script>
  */
@@ -15,7 +16,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.5.2';
+  const WIDGET_VERSION = '1.6.0';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -101,7 +102,11 @@
       })
       .slice(0, 25)
       .join(',');
-    const variantKey = `${sourceList}|${featuredList}|${featuredDays}`;
+    // What to show: news, upcoming events, or both behind News | What's on tabs (auto = the feed decides)
+    const content = ['stories', 'events', 'both'].indexOf(container.dataset.content) >= 0 ? container.dataset.content : 'auto';
+    // Builder previews never count as impressions or clicks
+    const preview = container.dataset.preview === 'true';
+    const variantKey = `${sourceList}|${featuredList}|${featuredDays}|${content}`;
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -128,7 +133,7 @@
     const cached = getCachedData(feedSlug, variantKey);
     if (cached) {
       wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
-      attachClickHandlers(shadow, feedSlug);
+      attachClickHandlers(shadow, feedSlug, preview);
       attachSubscribeHandler(shadow, feedSlug, cached, frequency);
     } else {
       wrapper.innerHTML = getLoadingHTML();
@@ -136,7 +141,7 @@
     shadow.appendChild(wrapper);
 
     // Fetch fresh data
-    fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays)
+    fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays, content)
       .then(data => {
         // Cache the successful response
         setCachedData(feedSlug, data, variantKey);
@@ -144,12 +149,12 @@
         wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
         
         // Track impression after successful render (only if not cached initially)
-        if (!cached) {
+        if (!cached && !preview) {
           trackEvent(feedSlug, 'impression');
         }
         
-        // Attach click handlers for story tracking
-        attachClickHandlers(shadow, feedSlug);
+        // Attach click handlers for story tracking and the News | What's on tabs
+        attachClickHandlers(shadow, feedSlug, preview);
         attachSubscribeHandler(shadow, feedSlug, data, frequency);
       })
       .catch(error => {
@@ -172,7 +177,7 @@
     return String(raw)
       .slice(0, 600)
       .split(',')
-      .map(n => n.replace(/[^\w &'’.\-]/g, '').trim())
+      .map(n => n.replace(/[^\w &'\u2019.\-]/g, '').trim())
       .filter(n => n.length > 0 && n.length <= 80)
       .slice(0, 25)
       .join(',');
@@ -213,19 +218,51 @@
     }
   }
 
-  // Attach click handlers to track story clicks
-  function attachClickHandlers(shadow, feedSlug) {
-    const storyLinks = shadow.querySelectorAll('[data-story-id]');
-    storyLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        const storyId = link.dataset.storyId;
-        trackEvent(feedSlug, 'click', storyId);
+  // Attach click handlers to track story and event clicks, and switch tabs
+  function attachClickHandlers(shadow, feedSlug, preview) {
+    if (!preview) {
+      shadow.querySelectorAll('[data-story-id]').forEach(link => {
+        link.addEventListener('click', () => {
+          trackEvent(feedSlug, 'click', link.dataset.storyId || null);
+        });
+      });
+      shadow.querySelectorAll('[data-event-id]').forEach(link => {
+        link.addEventListener('click', () => trackEvent(feedSlug, 'click'));
+      });
+    }
+    attachTabHandlers(shadow);
+  }
+
+  function attachTabHandlers(shadow) {
+    const tabs = Array.prototype.slice.call(shadow.querySelectorAll('.widget-tab'));
+    if (tabs.length === 0) return;
+    const select = (tab) => {
+      const key = tab.dataset.tab;
+      tabs.forEach(t => {
+        const on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+      });
+      shadow.querySelectorAll('[data-panel]').forEach(el => {
+        if (el.dataset.panel === key) el.removeAttribute('hidden');
+        else el.setAttribute('hidden', '');
+      });
+    };
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => select(tab));
+      tab.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        next.focus();
+        select(next);
       });
     });
   }
 
-  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays) {
+  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays, content) {
     let url = `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`;
+    if (content && content !== 'auto') url += `&content=${content}`;
     if (sourceList) url += `&sources=${encodeURIComponent(sourceList)}`;
     if (featuredList) url += `&featured=${encodeURIComponent(featuredList)}`;
     if (featuredList && featuredDays) url += `&featuredDays=${encodeURIComponent(featuredDays)}`;
@@ -329,7 +366,7 @@
       button.disabled = true;
       input.disabled = true;
       const originalLabel = button.textContent;
-      button.textContent = 'Sending…';
+      button.textContent = 'Sending\u2026';
       message.textContent = '';
       message.className = 'subscribe-message';
 
@@ -360,98 +397,203 @@
   }
 
   function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false, frequency = 'daily') {
-    const { feed, stories } = data;
+    const feed = data.feed;
+    const stories = data.stories || [];
+    const events = data.events || [];
+    // Older cached responses have no content field: they were news-only
+    const content = data.content === 'events' || data.content === 'both' ? data.content : 'stories';
     const accent = accentOverride || feed.brand_color || '#3b82f6';
     const displayName = customTitle || feed.name;
 
-    if (!stories || stories.length === 0) {
-      return `
-        <div class="widget-empty">
-          <p>No stories available</p>
-        </div>
-      `;
+    if (content === 'stories' && stories.length === 0) {
+      return `<div class="widget-empty"><p>No stories available</p></div>`;
+    }
+    if (content === 'events' && events.length === 0) {
+      return `<div class="widget-empty"><p>No events coming up</p></div>`;
     }
 
     // Priority: customAvatar > icon_url > logo_url > text fallback
     const avatarUrl = customAvatar || feed.icon_url || feed.logo_url;
     const logoHTML = avatarUrl 
-      ? `<img src="${escapeHTML(avatarUrl)}" alt="${escapeHTML(displayName)}" class="widget-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span class="widget-logo-text" style="background: ${accent}; display: none;">${displayName.charAt(0)}</span>`
-      : `<span class="widget-logo-text" style="background: ${accent}">${displayName.charAt(0)}</span>`;
+      ? `<img src="${escapeHTML(avatarUrl)}" alt="${escapeHTML(displayName)}" class="widget-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span class="widget-logo-text" style="background: ${accent}; display: none;">${escapeHTML(displayName.charAt(0))}</span>`
+      : `<span class="widget-logo-text" style="background: ${accent}">${escapeHTML(displayName.charAt(0))}</span>`;
 
-    // Wide layout with featured story + list
-    if (layout === 'wide' && stories.length > 0) {
-      const featured = stories[0];
-      const remaining = stories.slice(1);
-
-      const featuredImageHTML = featured.image_url 
-        ? `<div class="featured-image"><img src="${featured.image_url}" alt="" /></div>`
-        : '';
-
-      const remainingFeatured = remaining.filter(s => s.featured).length;
-      const remainingHTML = remaining.map((story, index) => {
-        const sourceHTML = story.source_name 
-          ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
-          : '';
-        // Fresh stories (< 2 hours) get a pulsing bullet with green transition
-        const isFresh = story.age_minutes !== undefined && story.age_minutes < 120;
-        const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
-        const bulletStyle = isFresh 
-          ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
-          : `background: ${accent}`;
-        // Mark where the featured run ends
-        const labelHTML = (remainingFeatured > 0 && index === remainingFeatured)
-          ? '<div class="section-label">Latest</div>'
-          : '';
-        return `
-          ${labelHTML}
-          <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
-            <span class="${bulletClass}" style="${bulletStyle}"></span>
-            <div class="story-content">
-              <span class="story-title">${escapeHTML(story.title)}</span>
-              ${story.trending ? '<span class="story-trending">Trending</span>' : ''}${sourceHTML}
-            </div>
-          </a>
-        `;
-      }).join('');
-
-      const featuredSourceHTML = featured.source_name 
-        ? `<span class="story-source">${escapeHTML(featured.source_name)}</span>`
-        : '';
-
-      // Build CTA text - prefer weekly count, fallback to generic
-      const wideCtaText = feed.stories_this_week > 0 
-        ? `${feed.stories_this_week} stories this week →`
-        : 'View all stories →';
-
-      return `
-        <div class="widget-header">
-          ${logoHTML}
-          <span class="widget-name">${escapeHTML(displayName)}</span>
-        </div>
-        <div class="widget-grid">
-          <a href="${featured.url}" target="_blank" rel="noopener" class="featured-story" data-story-id="${featured.id || ''}">
-            ${featuredImageHTML}
-            <h3 class="featured-title">${escapeHTML(featured.title)}</h3>
-            ${featured.trending ? '<span class="story-trending">Trending</span>' : ''}
-            ${featuredSourceHTML}
-          </a>
-          <div class="stories-list">
-            ${remainingHTML}
-          </div>
-        </div>
-        ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
-        <div class="widget-footer">
-          <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
-            ${wideCtaText}
-          </a>
-          <span class="widget-attribution">
-            Powered by <a href="https://curatr.pro" target="_blank" rel="noopener">Curatr</a>
-          </span>
-        </div>
-      `;
+    const wide = layout === 'wide';
+    const firstTab = content === 'both' ? (feed.first_tab === 'events' ? 'events' : 'stories') : content;
+    const panels = [];
+    if (content !== 'events') {
+      panels.push({
+        key: 'stories',
+        body: wide ? renderStoriesWide(stories, accent) : renderStoriesList(stories, accent),
+        cta: feed.stories_this_week > 0 ? `${feed.stories_this_week} stories this week \u2192` : 'View all stories \u2192',
+      });
+    }
+    if (content !== 'stories') {
+      panels.push({
+        key: 'events',
+        body: wide ? renderEventsWide(events, accent) : renderEventsList(events, accent),
+        cta: eventsCtaText(Number(feed.events_upcoming) || events.length, Number(feed.events_lookup) || 50),
+      });
     }
 
-    // Default compact list layout
+    const tabsHTML = content === 'both'
+      ? `<div class="widget-tabs" role="tablist" aria-label="Show">
+          ${panels.map(p => `<button type="button" role="tab" class="widget-tab" data-tab="${p.key}" aria-selected="${p.key === firstTab}" tabindex="${p.key === firstTab ? 0 : -1}" style="--tab-accent: ${accent}">${p.key === 'events' ? 'What&rsquo;s on' : 'News'}</button>`).join('')}
+        </div>`
+      : '';
+    const hiddenAttr = (key) => (key === firstTab ? '' : ' hidden');
+    const panelsHTML = panels.map(p =>
+      `<div class="widget-panel" data-panel="${p.key}"${content === 'both' ? ' role="tabpanel"' : ''}${hiddenAttr(p.key)}>${p.body}</div>`
+    ).join('');
+    const ctaHTML = panels.map(p =>
+      `<a href="https://curatr.pro/feed/${encodeURIComponent(feed.slug)}" target="_blank" rel="noopener" class="widget-cta" data-panel="${p.key}" style="color: ${accent}"${hiddenAttr(p.key)}>${p.cta}</a>`
+    ).join('');
+
+    return `
+      <div class="widget-header">
+        ${logoHTML}
+        <span class="widget-name">${escapeHTML(displayName)}</span>
+        ${tabsHTML}
+      </div>
+      ${panelsHTML}
+      ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
+      <div class="widget-footer">
+        <span class="widget-ctas">${ctaHTML}</span>
+        <span class="widget-attribution">
+          Powered by <a href="https://curatr.pro" target="_blank" rel="noopener">Curatr</a>
+        </span>
+      </div>
+    `;
+  }
+
+  function eventsCtaText(count, cap) {
+    if (count <= 0) return 'See what&rsquo;s on \u2192';
+    if (count >= cap) return `${cap}+ events coming up \u2192`;
+    return count === 1 ? '1 event coming up \u2192' : `${count} events coming up \u2192`;
+  }
+
+  // ---- Events -----------------------------------------------------------
+  function eventDate(ev) {
+    const parts = String(ev.start_date || '').split('-').map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return null;
+    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((date - today) / 86400000);
+    return {
+      day: parts[2],
+      month: date.toLocaleDateString('en-GB', { month: 'short' }),
+      when: days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : date.toLocaleDateString('en-GB', { weekday: 'short' }),
+    };
+  }
+
+  function eventMeta(ev, d) {
+    return [d && d.when, ev.start_time, ev.venue, ev.price].filter(Boolean).map(escapeHTML).join(' \u00b7 ');
+  }
+
+  function dateTileHTML(d, accent) {
+    if (!d) return '';
+    return `<span class="event-date" aria-hidden="true"><span class="event-month" style="color: ${accent}">${escapeHTML(d.month)}</span><span class="event-day">${d.day}</span></span>`;
+  }
+
+  function eventRowHTML(ev, accent) {
+    if (!isValidUrl(ev.url)) return '';
+    const d = eventDate(ev);
+    return `
+      <a href="${escapeHTML(ev.url)}" target="_blank" rel="noopener" class="event-item" data-event-id="${escapeHTML(ev.id || '')}">
+        ${dateTileHTML(d, accent)}
+        <div class="story-content">
+          <span class="story-title">${escapeHTML(ev.title)}</span>
+          <span class="event-meta">${eventMeta(ev, d)}</span>
+        </div>
+      </a>
+    `;
+  }
+
+  function renderEventsList(events, accent) {
+    return `<div class="widget-stories">${events.map(ev => eventRowHTML(ev, accent)).join('')}</div>`;
+  }
+
+  function renderEventsWide(events, accent) {
+    const featured = events.find(ev => isValidUrl(ev.url));
+    if (!featured) return renderEventsList(events, accent);
+    const d = eventDate(featured);
+    const imageHTML = isValidUrl(featured.image_url)
+      ? `<div class="featured-image"><img src="${escapeHTML(featured.image_url)}" alt="" loading="lazy" /></div>`
+      : '';
+    return `
+      <div class="widget-grid">
+        <a href="${escapeHTML(featured.url)}" target="_blank" rel="noopener" class="featured-story" data-event-id="${escapeHTML(featured.id || '')}">
+          ${imageHTML}
+          <div class="featured-event-head">
+            ${dateTileHTML(d, accent)}
+            <h3 class="featured-title">${escapeHTML(featured.title)}</h3>
+          </div>
+          <span class="event-meta">${eventMeta(featured, d)}</span>
+        </a>
+        <div class="stories-list">
+          ${events.filter(ev => ev !== featured).map(ev => eventRowHTML(ev, accent)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // ---- Stories ----------------------------------------------------------
+  function renderStoriesWide(stories, accent) {
+    const featured = stories[0];
+    const remaining = stories.slice(1);
+
+    const featuredImageHTML = featured.image_url 
+      ? `<div class="featured-image"><img src="${featured.image_url}" alt="" /></div>`
+      : '';
+
+    const remainingFeatured = remaining.filter(s => s.featured).length;
+    const remainingHTML = remaining.map((story, index) => {
+      const sourceHTML = story.source_name 
+        ? `<span class="story-source">${escapeHTML(story.source_name)}</span>`
+        : '';
+      // Fresh stories (< 2 hours) get a pulsing bullet with green transition
+      const isFresh = story.age_minutes !== undefined && story.age_minutes < 120;
+      const bulletClass = isFresh ? 'story-bullet fresh-pulse' : 'story-bullet';
+      const bulletStyle = isFresh 
+        ? `--accent-color: ${accent}; --fresh-color: #22c55e;`
+        : `background: ${accent}`;
+      // Mark where the featured run ends
+      const labelHTML = (remainingFeatured > 0 && index === remainingFeatured)
+        ? '<div class="section-label">Latest</div>'
+        : '';
+      return `
+        ${labelHTML}
+        <a href="${story.url}" target="_blank" rel="noopener" class="story-item-compact" data-story-id="${story.id || ''}">
+          <span class="${bulletClass}" style="${bulletStyle}"></span>
+          <div class="story-content">
+            <span class="story-title">${escapeHTML(story.title)}</span>
+            ${story.trending ? '<span class="story-trending">Trending</span>' : ''}${sourceHTML}
+          </div>
+        </a>
+      `;
+    }).join('');
+
+    const featuredSourceHTML = featured.source_name 
+      ? `<span class="story-source">${escapeHTML(featured.source_name)}</span>`
+      : '';
+
+    return `
+      <div class="widget-grid">
+        <a href="${featured.url}" target="_blank" rel="noopener" class="featured-story" data-story-id="${featured.id || ''}">
+          ${featuredImageHTML}
+          <h3 class="featured-title">${escapeHTML(featured.title)}</h3>
+          ${featured.trending ? '<span class="story-trending">Trending</span>' : ''}
+          ${featuredSourceHTML}
+        </a>
+        <div class="stories-list">
+          ${remainingHTML}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoriesList(stories, accent) {
     let leadingFeatured = 0;
     while (leadingFeatured < stories.length && stories[leadingFeatured].featured) leadingFeatured++;
     const showSectionLabels = leadingFeatured > 0 && leadingFeatured < stories.length;
@@ -486,29 +628,7 @@
       `;
     }).join('');
 
-    // Build CTA text - prefer weekly count, fallback to generic
-    const ctaText = feed.stories_this_week > 0 
-      ? `${feed.stories_this_week} stories this week →`
-      : 'View all stories →';
-
-    return `
-      <div class="widget-header">
-        ${logoHTML}
-        <span class="widget-name">${escapeHTML(displayName)}</span>
-      </div>
-      <div class="widget-stories">
-        ${storiesHTML}
-      </div>
-      ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
-      <div class="widget-footer">
-        <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
-          ${ctaText}
-        </a>
-        <span class="widget-attribution">
-          Powered by <a href="https://curatr.pro" target="_blank" rel="noopener">Curatr</a>
-        </span>
-      </div>
-    `;
+    return `<div class="widget-stories">${storiesHTML}</div>`;
   }
 
   function getStyles(isDark, accent, width, layout = 'compact') {
@@ -586,6 +706,118 @@
       .widget-name {
         font-weight: 600;
         font-size: 15px;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .widget-tabs {
+        display: inline-flex;
+        flex-shrink: 0;
+        padding: 2px;
+        border-radius: 999px;
+        background: ${sourceBg};
+      }
+
+      .widget-tab {
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+        padding: 8px 12px;
+        min-height: 32px;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: ${textMuted};
+        cursor: pointer;
+      }
+
+      .widget-tab[aria-selected="true"] {
+        background: ${bg};
+        color: ${text};
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+      }
+
+      .widget-tab:focus-visible {
+        outline: 2px solid var(--tab-accent, ${accent || '#3b82f6'});
+        outline-offset: 1px;
+      }
+
+      .event-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px;
+        margin: 0 -8px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: ${text};
+        transition: background-color 0.15s ease;
+      }
+
+      .stories-list .event-item {
+        margin: 0;
+        padding: 12px;
+        border-radius: 0;
+        border-bottom: 1px solid ${border};
+      }
+
+      .stories-list .event-item:last-child {
+        border-bottom: none;
+      }
+
+      .event-item:hover {
+        background: ${hoverBg};
+      }
+
+      .event-date {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        background: ${sourceBg};
+        line-height: 1.05;
+      }
+
+      .event-month {
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .event-day {
+        font-size: 18px;
+        font-weight: 700;
+        color: ${text};
+      }
+
+      .event-meta {
+        font-size: 12px;
+        color: ${textMuted};
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .featured-event-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      .featured-event-head .featured-title {
+        margin: 0;
       }
 
       .widget-stories {
@@ -748,6 +980,10 @@
         align-items: center;
         flex-wrap: wrap;
         gap: 8px;
+      }
+
+      .widget-ctas {
+        display: inline-flex;
       }
 
       .widget-cta {
@@ -927,7 +1163,7 @@
       <div class="widget-error">
         <p>Headlines temporarily unavailable</p>
         <a href="https://curatr.pro/feed/${feedSlug}" target="_blank" rel="noopener" style="color: #3b82f6; font-size: 12px;">
-          View feed →
+          View feed \u2192
         </a>
       </div>
     `;
