@@ -43,4 +43,3 @@
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
 - Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
-- Website widgets pick news, events or both (News | What's on tabs) only via `resolveWidgetContent` (`_shared/widgetContent.ts`, `data-content`; auto = events-led feeds show events, others keep news; events only when shown in the feed); builders preview through `LiveWidgetPreview` running the real `widget.js` (`data-preview` = not counted), so preview, embed and tests never drift.
