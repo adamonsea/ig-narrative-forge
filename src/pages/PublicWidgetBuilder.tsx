@@ -13,7 +13,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Check, Code, Eye, ArrowLeft, Upload, X, Loader2 } from "lucide-react";
+import { Copy, Check, Code, Eye, ArrowLeft, Upload, X, Loader2, Link2 } from "lucide-react";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
+import {
+  WIDGET_SETTINGS_PARAM,
+  applySavedSources,
+  decodeWidgetSettings,
+  encodeWidgetSettings,
+  parseWidgetSettings,
+  settingsToSave,
+  widgetSettingsStorageKey,
+  type WidgetBuilderSettings,
+} from "@/lib/widgetBuilderSettings";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicData {
@@ -78,6 +89,12 @@ export default function PublicWidgetBuilder() {
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
   const [availableSources, setAvailableSources] = useState<FeedSource[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Saved settings: restored once per feed, then remembered on every change
+  const restoredRef = useRef<Partial<WidgetBuilderSettings> | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [sourcesLoaded, setSourcesLoaded] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   
   const [config, setConfig] = useState<WidgetConfig>({
     maxHeadlines: 5,
@@ -92,6 +109,24 @@ export default function PublicWidgetBuilder() {
     featuredSources: [],
     featuredDaysBySource: {},
   });
+
+  // Restore saved settings: a shared link wins, then this device
+  useEffect(() => {
+    if (!slug) return;
+    let saved: Partial<WidgetBuilderSettings> | null = null;
+    try {
+      saved = decodeWidgetSettings(new URLSearchParams(window.location.search).get(WIDGET_SETTINGS_PARAM));
+      if (!saved) {
+        const stored = window.localStorage.getItem(widgetSettingsStorageKey(slug));
+        if (stored) saved = parseWidgetSettings(JSON.parse(stored));
+      }
+    } catch {
+      saved = null;
+    }
+    restoredRef.current = saved;
+    if (saved) setConfig(prev => ({ ...prev, ...saved }));
+    setRestored(true);
+  }, [slug]);
 
   // Load topic data
   useEffect(() => {
@@ -122,7 +157,7 @@ export default function PublicWidgetBuilder() {
       // Set default accent from branding config
       const brandingConfig = data.branding_config as TopicData['branding_config'];
       if (brandingConfig?.primary_color) {
-        setConfig(prev => ({
+        setConfig(prev => prev.accent ? prev : ({
           ...prev,
           accent: brandingConfig.primary_color || ''
         }));
@@ -147,9 +182,11 @@ export default function PublicWidgetBuilder() {
         if (cancelled) return;
         const list: FeedSource[] = data?.sources || [];
         setAvailableSources(list);
-        setConfig(prev => ({ ...prev, sources: list.map(s => s.name), featuredSources: [] }));
+        const picked = applySavedSources(restoredRef.current, list.map(s => s.name));
+        setConfig(prev => ({ ...prev, ...picked }));
       })
-      .catch(err => console.error('Failed to fetch sources:', err));
+      .catch(err => console.error('Failed to fetch sources:', err))
+      .finally(() => { if (!cancelled) setSourcesLoaded(true); });
 
     return () => { cancelled = true; };
   }, [slug]);
@@ -162,6 +199,32 @@ export default function PublicWidgetBuilder() {
   const featuredDaysParam = config.featuredSources
     .map(name => config.featuredDaysBySource[name] ?? 2)
     .join(',');
+
+  const savedSettings = settingsToSave(config, !sourcesParam);
+
+  // Remember settings on this device whenever they change
+  useEffect(() => {
+    if (!slug || !restored || !sourcesLoaded) return;
+    try {
+      window.localStorage.setItem(widgetSettingsStorageKey(slug), JSON.stringify(savedSettings));
+      restoredRef.current = savedSettings;
+      setSaveState('saved');
+    } catch {
+      setSaveState('not-saved');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, restored, sourcesLoaded, JSON.stringify(savedSettings)]);
+
+  const handleCopySettingsLink = async () => {
+    const url = `${window.location.origin}/feed/${slug}/widget?${WIDGET_SETTINGS_PARAM}=${encodeWidgetSettings(savedSettings)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      toast({ title: "Couldn't copy link", variant: "destructive" });
+    }
+  };
 
   const toggleSource = (name: string) => {
     setConfig(prev => {
@@ -455,10 +518,26 @@ export default function PublicWidgetBuilder() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Code className="w-5 h-5" />
-                  Configure Widget
-                </CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Code className="w-5 h-5" />
+                    Configure Widget
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <SaveIndicator state={saveState} />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopySettingsLink}
+                      disabled={!saveState}
+                      title="Copy a link that reopens these settings on any device"
+                    >
+                      {linkCopied ? <Check className="w-4 h-4 mr-1" /> : <Link2 className="w-4 h-4 mr-1" />}
+                      {linkCopied ? "Copied" : "Copy link"}
+                    </Button>
+                  </div>
+                </div>
                 <CardDescription>
                   Customize how the widget appears on your website
                 </CardDescription>
