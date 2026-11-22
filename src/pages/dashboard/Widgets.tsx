@@ -21,6 +21,7 @@ import { edgeErrorMessage } from "@/lib/edgeError";
 import { LiveWidgetPreview } from "@/components/widget/LiveWidgetPreview";
 import { WidgetContentChoice } from "@/components/widget/WidgetContentChoice";
 import { WidgetStyleChoice } from "@/components/widget/WidgetStyleChoice";
+import { PreviewJumpButton } from "@/components/widget/PreviewJumpButton";
 import type { ResolvedWidgetContent, WidgetContent, WidgetStyle } from "@/lib/widgetContent";
 
 
@@ -79,6 +80,7 @@ export default function Widgets() {
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
   const [availableSources, setAvailableSources] = useState<FeedSource[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
 
   // Redirect if not authenticated
@@ -238,7 +240,7 @@ export default function Widgets() {
   const getPreviewMaxWidth = () => {
     if (config.width === "responsive") return "480px";
     if (config.width === "wide") return "1000px";
-    return config.width === "100%" ? "none" : config.width;
+    return config.width === "100%" ? "none" : `min(${config.width}, 100%)`;
   };
 
   const generateEmbedCode = () => {
@@ -307,7 +309,7 @@ export default function Widgets() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Configuration Panel */}
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Code2 className="h-5 w-5" />
@@ -512,7 +514,7 @@ export default function Widgets() {
               </div>
 
               {/* Subscribe box */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label htmlFor="subscribe">Show subscribe box</Label>
                   <p className="text-sm text-muted-foreground">
@@ -562,14 +564,14 @@ export default function Widgets() {
                       const included = config.sources.includes(source.name);
                       const featured = config.featuredSources.includes(source.name);
                       return (
-                        <div key={source.name} className="flex items-center justify-between gap-3">
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <div key={source.name} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                          <label className="flex min-w-0 items-center gap-2 text-sm cursor-pointer">
                             <Checkbox
                               checked={included}
                               onCheckedChange={() => toggleSource(source.name)}
                               aria-label={`Show stories from ${source.name}`}
                             />
-                            <span>{source.name}</span>
+                            <span className="break-all">{source.name}</span>
                             <span className="text-sm text-muted-foreground">({source.count})</span>
                           </label>
                           <div className="flex items-center gap-2">
@@ -626,8 +628,8 @@ export default function Widgets() {
             </CardContent>
           </Card>
 
-          {/* Preview Panel */}
-          <div className="space-y-4">
+          {/* Preview Panel: always in view on wide screens, one tap away on phones */}
+          <div ref={previewRef} className="min-w-0 space-y-4 scroll-mt-4 lg:sticky lg:top-6 lg:self-start">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -691,7 +693,7 @@ export default function Widgets() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap font-mono">
+                <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all font-mono">
                   {generateEmbedCode()}
                 </pre>
                 <Button onClick={handleCopy} className="w-full">
@@ -712,6 +714,7 @@ export default function Widgets() {
           </div>
         </div>
       </div>
+      <PreviewJumpButton target={previewRef} />
     </AppLayout>
   );
 }

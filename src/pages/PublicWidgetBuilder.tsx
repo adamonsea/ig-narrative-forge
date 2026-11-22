@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LiveWidgetPreview } from "@/components/widget/LiveWidgetPreview";
 import { WidgetContentChoice } from "@/components/widget/WidgetContentChoice";
 import { WidgetStyleChoice } from "@/components/widget/WidgetStyleChoice";
+import { PreviewJumpButton } from "@/components/widget/PreviewJumpButton";
 import type { ResolvedWidgetContent, WidgetContent, WidgetStyle } from "@/lib/widgetContent";
 
 interface TopicData {
@@ -92,6 +93,10 @@ export default function PublicWidgetBuilder() {
   const [sourcesLoaded, setSourcesLoaded] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  // Uploading a logo needs an account; signed-out visitors paste an image link instead
+  const [signedIn, setSignedIn] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
   
   const [config, setConfig] = useState<WidgetConfig>({
     maxHeadlines: 5,
@@ -126,6 +131,16 @@ export default function PublicWidgetBuilder() {
     if (saved) setConfig(prev => ({ ...prev, ...saved }));
     setRestored(true);
   }, [slug]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+  }, []);
+
+  // The preview follows the chosen theme; Auto follows this device
+  useEffect(() => {
+    if (config.theme !== 'auto') setPreviewTheme(config.theme);
+    else setPreviewTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  }, [config.theme]);
 
   // Load topic data
   useEffect(() => {
@@ -418,7 +433,7 @@ export default function PublicWidgetBuilder() {
   const getPreviewMaxWidth = () => {
     if (config.width === 'responsive') return '480px';
     if (config.width === 'wide') return '1000px';
-    return config.width === '100%' ? 'none' : config.width;
+    return config.width === '100%' ? 'none' : `min(${config.width}, 100%)`;
   };
 
   const previewAttrs = (theme: 'light' | 'dark'): Record<string, string> => ({
@@ -482,11 +497,6 @@ export default function PublicWidgetBuilder() {
     );
   }
 
-  const effectiveTheme = config.theme === 'auto' 
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    : config.theme;
-  
-  const isDark = effectiveTheme === 'dark';
   const accentColor = config.accent || topic.branding_config?.primary_color || '#3b82f6';
   const logoUrl = topic.branding_config?.logo_url;
 
@@ -528,10 +538,10 @@ export default function PublicWidgetBuilder() {
       <main className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Configuration */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle className="flex items-center gap-2">
                     <Code className="w-5 h-5" />
                     Configure Widget
@@ -661,15 +671,27 @@ export default function PublicWidgetBuilder() {
 
                 <div className="space-y-2">
                   <Label>Custom avatar (optional)</Label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
+                  {signedIn && (
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  )}
                   
-                  {config.customAvatar && isValidAvatarUrl(config.customAvatar) ? (
+                  {!signedIn && !(config.customAvatar && isValidAvatarUrl(config.customAvatar)) ? (
+                    <input
+                      type="url"
+                      inputMode="url"
+                      aria-label="Avatar image link"
+                      value={config.customAvatar}
+                      onChange={(e) => setConfig(prev => ({ ...prev, customAvatar: e.target.value.trim() }))}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+                    />
+                  ) : config.customAvatar && isValidAvatarUrl(config.customAvatar) ? (
                     <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/50">
                       <img 
                         src={config.customAvatar} 
@@ -693,6 +715,7 @@ export default function PublicWidgetBuilder() {
                         size="icon"
                         className="shrink-0"
                         onClick={removeAvatar}
+                        aria-label="Remove avatar"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -721,9 +744,13 @@ export default function PublicWidgetBuilder() {
                     </div>
                   )}
                   
-                  <p className="text-xs text-muted-foreground">
-                    Ideal size: <strong>128×128px</strong> (square). Max 500KB. PNG, JPG, or WebP.
-                  </p>
+                  {config.customAvatar && !isValidAvatarUrl(config.customAvatar) ? (
+                    <p className="text-xs text-destructive">Use a link starting with https://</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Ideal size: <strong>128×128px</strong> (square).{signedIn ? ' Max 500KB. PNG, JPG, or WebP.' : ''}
+                    </p>
+                  )}
                 </div>
 
                 {/* Subscribe box */}
@@ -777,14 +804,14 @@ export default function PublicWidgetBuilder() {
                         const included = config.sources.includes(source.name);
                         const featured = config.featuredSources.includes(source.name);
                         return (
-                          <div key={source.name} className="flex items-center justify-between gap-3">
-                            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                          <div key={source.name} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            <label className="flex min-w-0 items-center gap-2 text-sm cursor-pointer">
                               <Checkbox
                                 checked={included}
                                 onCheckedChange={() => toggleSource(source.name)}
                                 aria-label={`Show stories from ${source.name}`}
                               />
-                              <span>{source.name}</span>
+                              <span className="break-all">{source.name}</span>
                               <span className="text-xs text-muted-foreground">({source.count})</span>
                             </label>
                             <div className="flex items-center gap-2">
@@ -851,7 +878,7 @@ export default function PublicWidgetBuilder() {
               </CardHeader>
               <CardContent>
                 <div className="relative">
-                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto font-mono">
+                  <pre className="bg-muted p-4 pt-12 rounded-lg text-sm whitespace-pre-wrap break-all font-mono">
                     {generateEmbedCode()}
                   </pre>
                   <Button
@@ -877,14 +904,14 @@ export default function PublicWidgetBuilder() {
             </Card>
           </div>
 
-          {/* Preview */}
-          <div className="space-y-4">
+          {/* Preview: always in view on wide screens, one tap away on phones */}
+          <div ref={previewRef} className="min-w-0 space-y-4 scroll-mt-4 lg:sticky lg:top-6 lg:self-start">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Eye className="w-5 h-5" />
               <span className="font-medium">Preview</span>
             </div>
             
-            <Tabs defaultValue={effectiveTheme} className="w-full">
+            <Tabs value={previewTheme} onValueChange={(v) => setPreviewTheme(v as 'light' | 'dark')} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="light">Light</TabsTrigger>
                 <TabsTrigger value="dark">Dark</TabsTrigger>
@@ -905,6 +932,7 @@ export default function PublicWidgetBuilder() {
           </div>
         </div>
       </main>
+      <PreviewJumpButton target={previewRef} />
     </div>
   );
 }

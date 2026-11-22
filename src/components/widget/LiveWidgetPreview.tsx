@@ -45,7 +45,8 @@ export function LiveWidgetPreview({
     const onLoad = () => {
       const doc = frame.contentDocument;
       if (!doc) return;
-      const measure = () => setHeight(Math.max(120, doc.documentElement.scrollHeight));
+      // Measure the content, not the page: the page is never shorter than the frame, so it could only grow
+      const measure = () => setHeight(Math.max(120, Math.ceil(doc.body.getBoundingClientRect().height)));
       measure();
       observer?.disconnect();
       observer = new ResizeObserver(measure);
