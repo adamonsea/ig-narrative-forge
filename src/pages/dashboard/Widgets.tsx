@@ -20,7 +20,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { edgeErrorMessage } from "@/lib/edgeError";
 import { LiveWidgetPreview } from "@/components/widget/LiveWidgetPreview";
 import { WidgetContentChoice } from "@/components/widget/WidgetContentChoice";
-import type { ResolvedWidgetContent, WidgetContent } from "@/lib/widgetContent";
+import { WidgetStyleChoice } from "@/components/widget/WidgetStyleChoice";
+import type { ResolvedWidgetContent, WidgetContent, WidgetStyle } from "@/lib/widgetContent";
 
 
 const SUPABASE_URL = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1";
@@ -41,6 +42,7 @@ interface WidgetConfig {
   /** Days each featured source keeps its top slot, keyed by publication name */
   featuredDaysBySource: Record<string, number>;
   content: WidgetContent;
+  style: WidgetStyle;
 }
 
 interface FeedSource {
@@ -67,6 +69,7 @@ export default function Widgets() {
     featuredSources: [],
     featuredDaysBySource: {},
     content: "auto",
+    style: "list",
   });
 
   const [copied, setCopied] = useState(false);
@@ -258,6 +261,7 @@ export default function Widgets() {
       attrs.push(`data-featured-days="${featuredDaysParam}"`);
     }
     if (config.content !== "auto") attrs.push(`data-content="${config.content}"`);
+    if (config.style === "cards") attrs.push(`data-style="cards"`);
 
 
 
@@ -334,6 +338,11 @@ export default function Widgets() {
                 </Select>
               </div>
 
+              <WidgetStyleChoice
+                value={config.style}
+                onChange={(v) => setConfig(prev => ({ ...prev, style: v }))}
+              />
+
               {canChooseContent && (
                 <WidgetContentChoice
                   value={shownContent}
@@ -344,7 +353,7 @@ export default function Widgets() {
               {/* Max Headlines */}
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <Label>{shownContent === "events" ? "Events to show" : "Headlines to show"}</Label>
+                  <Label>{config.style === "cards" ? "Cards to show" : shownContent === "events" ? "Events to show" : "Headlines to show"}</Label>
                   <span className="text-sm text-muted-foreground">{config.max}</span>
                 </div>
                 <Slider
@@ -664,6 +673,7 @@ export default function Widgets() {
                           featured: featuredParam,
                           "featured-days": featuredParam ? featuredDaysParam : "",
                           content: config.content === "auto" ? "" : config.content,
+                          style: config.style === "cards" ? "cards" : "",
                         }}
                       />
                     </div>

@@ -55,3 +55,41 @@ export function eventsCtaText(count: number, cap: number): string {
   if (count >= cap) return `${cap}+ events coming up →`;
   return count === 1 ? '1 event coming up →' : `${count} events coming up →`;
 }
+
+/**
+ * How a widget looks: "list" = headlines (the original embed), "cards" = a swipeable row
+ * of feed-style cards. Embeds set it with data-style; anything else means list, so
+ * existing embeds never change on their own.
+ */
+export type WidgetStyle = 'list' | 'cards';
+
+export function parseWidgetStyle(raw: unknown): WidgetStyle {
+  return raw === 'cards' ? 'cards' : 'list';
+}
+
+export interface WidgetMixItem {
+  kind: 'story' | 'event';
+  /** Position in that stream's own list (stories or events). */
+  index: number;
+}
+
+/**
+ * Order for a "both" cards widget: one row, led by what the feed leads with —
+ * two of the lead stream, then one of the other, repeating. When one stream runs
+ * out the other fills the rest, so the row is never shorter than it could be.
+ */
+export function mixWidgetCards(storyCount: number, eventCount: number, eventsLed: boolean, total: number): WidgetMixItem[] {
+  const lead: WidgetMixItem['kind'] = eventsLed ? 'event' : 'story';
+  const other: WidgetMixItem['kind'] = eventsLed ? 'story' : 'event';
+  const left = { story: Math.max(0, storyCount), event: Math.max(0, eventCount) };
+  const next = { story: 0, event: 0 };
+  const out: WidgetMixItem[] = [];
+  const limit = Math.min(Math.max(0, total), left.story + left.event);
+  while (out.length < limit) {
+    const want = out.length % 3 === 2 ? other : lead;
+    const kind = next[want] < left[want] ? want : want === lead ? other : lead;
+    out.push({ kind, index: next[kind] });
+    next[kind] += 1;
+  }
+  return out;
+}

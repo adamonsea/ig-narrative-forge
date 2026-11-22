@@ -28,7 +28,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { LiveWidgetPreview } from "@/components/widget/LiveWidgetPreview";
 import { WidgetContentChoice } from "@/components/widget/WidgetContentChoice";
-import type { ResolvedWidgetContent, WidgetContent } from "@/lib/widgetContent";
+import { WidgetStyleChoice } from "@/components/widget/WidgetStyleChoice";
+import type { ResolvedWidgetContent, WidgetContent, WidgetStyle } from "@/lib/widgetContent";
 
 interface TopicData {
   id: string;
@@ -56,6 +57,7 @@ interface WidgetConfig {
   /** Days each featured source keeps its top slot, keyed by publication name */
   featuredDaysBySource: Record<string, number>;
   content: WidgetContent;
+  style: WidgetStyle;
 }
 
 interface FeedSource {
@@ -104,6 +106,7 @@ export default function PublicWidgetBuilder() {
     featuredSources: [],
     featuredDaysBySource: {},
     content: 'auto',
+    style: 'list',
   });
 
   // Restore saved settings: a shared link wins, then this device
@@ -396,6 +399,9 @@ export default function PublicWidgetBuilder() {
     if (config.content !== 'auto') {
       code += ` data-content="${config.content}"`;
     }
+    if (config.style === 'cards') {
+      code += ` data-style="cards"`;
+    }
 
     
     code += `></div>\n<script src="${window.location.origin}/widget.js?v=${WIDGET_JS_VERSION}" async></script>`;
@@ -429,6 +435,7 @@ export default function PublicWidgetBuilder() {
     featured: featuredParam,
     'featured-days': featuredParam ? featuredDaysParam : '',
     content: config.content === 'auto' ? '' : config.content,
+    style: config.style === 'cards' ? 'cards' : '',
   });
 
   const handleCopy = async () => {
@@ -564,6 +571,11 @@ export default function PublicWidgetBuilder() {
                   </p>
                 </div>
 
+                <WidgetStyleChoice
+                  value={config.style}
+                  onChange={(v) => setConfig(prev => ({ ...prev, style: v }))}
+                />
+
                 {canChooseContent && (
                   <WidgetContentChoice
                     value={shownContent}
@@ -572,7 +584,7 @@ export default function PublicWidgetBuilder() {
                 )}
 
                 <div className="space-y-2">
-                  <Label>{shownContent === 'events' ? 'Events to show' : 'Headlines to show'}</Label>
+                  <Label>{config.style === 'cards' ? 'Cards to show' : shownContent === 'events' ? 'Events to show' : 'Headlines to show'}</Label>
                   <Select
                     value={String(config.maxHeadlines)}
                     onValueChange={(v) => setConfig(prev => ({ ...prev, maxHeadlines: parseInt(v) }))}

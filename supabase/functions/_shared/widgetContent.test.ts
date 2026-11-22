@@ -59,3 +59,40 @@ describe("widget content", () => {
     expect(eventsCtaText(50, 50)).toBe("50+ events coming up →");
   });
 });
+
+import { mixWidgetCards, parseWidgetStyle } from "./widgetContent.ts";
+
+const kinds = (items: { kind: string }[]) => items.map(i => (i.kind === "story" ? "S" : "E")).join("");
+
+describe("widget style", () => {
+  it("only data-style=cards gives cards; everything else stays the headline list", () => {
+    expect(parseWidgetStyle("cards")).toBe("cards");
+    expect(parseWidgetStyle(undefined)).toBe("list");
+    expect(parseWidgetStyle("grid")).toBe("list");
+  });
+});
+
+describe("mixed cards row", () => {
+  it("news-led feeds show two stories then one event", () => {
+    expect(kinds(mixWidgetCards(10, 10, false, 7))).toBe("SSESSES");
+  });
+
+  it("events-led feeds show two events then one story", () => {
+    expect(kinds(mixWidgetCards(10, 10, true, 6))).toBe("EESEES");
+  });
+
+  it("keeps each stream in its own order", () => {
+    const mix = mixWidgetCards(5, 5, false, 6);
+    expect(mix.filter(i => i.kind === "story").map(i => i.index)).toEqual([0, 1, 2, 3]);
+    expect(mix.filter(i => i.kind === "event").map(i => i.index)).toEqual([0, 1]);
+  });
+
+  it("fills from the other stream when one runs out", () => {
+    expect(kinds(mixWidgetCards(1, 10, false, 5))).toBe("SEEEE");
+  });
+
+  it("never asks for more cards than exist", () => {
+    expect(mixWidgetCards(2, 1, false, 10)).toHaveLength(3);
+    expect(mixWidgetCards(0, 0, true, 5)).toEqual([]);
+  });
+});

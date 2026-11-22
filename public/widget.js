@@ -8,7 +8,8 @@
  *      data-max="5"
  *      data-theme="auto"
  *      data-accent="#3b82f6"
- *      data-content="auto">   <!-- auto | stories | events | both (News | What's on tabs) -->
+ *      data-content="auto"    <!-- auto | stories | events | both -->
+ *      data-style="list">     <!-- list (headlines) | cards (swipeable feed-style cards; both = one mixed row) -->
  * </div>
  * <script src="https://curatr.pro/widget.js" async></script>
  */
@@ -16,7 +17,7 @@
   'use strict';
 
   const API_BASE = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-  const WIDGET_VERSION = '1.6.0';
+  const WIDGET_VERSION = '1.7.0';
   const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
 
   // Validate URL to prevent XSS (only allow http/https)
@@ -106,7 +107,9 @@
     const content = ['stories', 'events', 'both'].indexOf(container.dataset.content) >= 0 ? container.dataset.content : 'auto';
     // Builder previews never count as impressions or clicks
     const preview = container.dataset.preview === 'true';
-    const variantKey = `${sourceList}|${featuredList}|${featuredDays}|${content}`;
+    // Look: headline list (default, unchanged) or a swipeable row of feed-style cards
+    const style = container.dataset.style === 'cards' ? 'cards' : 'list';
+    const variantKey = `${sourceList}|${featuredList}|${featuredDays}|${content}|${style}`;
 
     if (!feedSlug) {
       console.error('Curatr Widget: Missing data-feed attribute');
@@ -132,8 +135,9 @@
     // Try to show cached data immediately while fetching fresh data
     const cached = getCachedData(feedSlug, variantKey);
     if (cached) {
-      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
+      wrapper.innerHTML = renderWidget(cached, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency, style);
       attachClickHandlers(shadow, feedSlug, preview);
+      attachCardNav(shadow);
       attachSubscribeHandler(shadow, feedSlug, cached, frequency);
     } else {
       wrapper.innerHTML = getLoadingHTML();
@@ -141,12 +145,12 @@
     shadow.appendChild(wrapper);
 
     // Fetch fresh data
-    fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays, content)
+    fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays, content, style)
       .then(data => {
         // Cache the successful response
         setCachedData(feedSlug, data, variantKey);
         
-        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency);
+        wrapper.innerHTML = renderWidget(data, prefersDark, accentColor, layout, customTitle, customAvatar, showSubscribe, frequency, style);
         
         // Track impression after successful render (only if not cached initially)
         if (!cached && !preview) {
@@ -155,6 +159,7 @@
         
         // Attach click handlers for story tracking and the News | What's on tabs
         attachClickHandlers(shadow, feedSlug, preview);
+        attachCardNav(shadow);
         attachSubscribeHandler(shadow, feedSlug, data, frequency);
       })
       .catch(error => {
@@ -260,9 +265,46 @@
     });
   }
 
-  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays, content) {
+  // Previous / next buttons for the cards row; hidden when every card already fits
+  function attachCardNav(shadow) {
+    const nav = shadow.querySelector('.card-nav');
+    if (!nav) return;
+    const prev = nav.querySelector('.card-prev');
+    const next = nav.querySelector('.card-next');
+    const visibleRow = () => {
+      const rows = Array.prototype.slice.call(shadow.querySelectorAll('.card-row'));
+      return rows.find(r => !r.closest('[hidden]')) || null;
+    };
+    const update = () => {
+      const row = visibleRow();
+      const overflow = !!row && row.scrollWidth > row.clientWidth + 2;
+      if (overflow) nav.removeAttribute('hidden'); else nav.setAttribute('hidden', '');
+      if (!row) return;
+      prev.disabled = row.scrollLeft <= 2;
+      next.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 2;
+    };
+    const go = (dir) => {
+      const row = visibleRow();
+      if (!row) return;
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      row.scrollBy({ left: dir * Math.max(200, row.clientWidth * 0.85), behavior: reduce ? 'auto' : 'smooth' });
+    };
+    prev.addEventListener('click', () => go(-1));
+    next.addEventListener('click', () => go(1));
+    shadow.querySelectorAll('.card-row').forEach(row => row.addEventListener('scroll', update, { passive: true }));
+    shadow.querySelectorAll('.widget-tab').forEach(tab => tab.addEventListener('click', () => setTimeout(update, 0)));
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(update);
+      shadow.querySelectorAll('.card-row').forEach(row => ro.observe(row));
+    }
+    shadow.querySelectorAll('.card-row img').forEach(img => img.addEventListener('load', update, { once: true }));
+    update();
+  }
+
+  async function fetchFeedData(feedSlug, maxStories, sourceList, featuredList, featuredDays, content, style) {
     let url = `${API_BASE}/widget-feed-data?feed=${encodeURIComponent(feedSlug)}&max=${maxStories}`;
     if (content && content !== 'auto') url += `&content=${content}`;
+    if (style === 'cards') url += '&style=cards';
     if (sourceList) url += `&sources=${encodeURIComponent(sourceList)}`;
     if (featuredList) url += `&featured=${encodeURIComponent(featuredList)}`;
     if (featuredList && featuredDays) url += `&featuredDays=${encodeURIComponent(featuredDays)}`;
@@ -396,7 +438,7 @@
     });
   }
 
-  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false, frequency = 'daily') {
+  function renderWidget(data, isDark, accentOverride, layout = 'compact', customTitle = '', customAvatar = '', showSubscribe = false, frequency = 'daily', style = 'list') {
     const feed = data.feed;
     const stories = data.stories || [];
     const events = data.events || [];
@@ -419,31 +461,46 @@
       : `<span class="widget-logo-text" style="background: ${accent}">${escapeHTML(displayName.charAt(0))}</span>`;
 
     const wide = layout === 'wide';
-    const firstTab = content === 'both' ? (feed.first_tab === 'events' ? 'events' : 'stories') : content;
+    const cards = style === 'cards';
+    const storiesCta = feed.stories_this_week > 0 ? `${feed.stories_this_week} stories this week \u2192` : 'View all stories \u2192';
+    // Cards showing both: one mixed row in feed order (the data function sends the order)
+    const mixed = cards && content === 'both' && Array.isArray(data.mix) && data.mix.length > 0;
+    const tabbed = content === 'both' && !mixed;
+    const firstTab = mixed ? 'mixed' : content === 'both' ? (feed.first_tab === 'events' ? 'events' : 'stories') : content;
     const panels = [];
-    if (content !== 'events') {
+    if (mixed) {
+      const items = data.mix
+        .map(m => m.kind === 'event' ? (events[m.index] && { kind: 'event', item: events[m.index] }) : (stories[m.index] && { kind: 'story', item: stories[m.index] }))
+        .filter(Boolean);
+      panels.push({ key: 'mixed', body: renderCardRow(items, accent, isDark), cta: 'See the full feed \u2192' });
+    }
+    if (!mixed && content !== 'events') {
       panels.push({
         key: 'stories',
-        body: wide ? renderStoriesWide(stories, accent) : renderStoriesList(stories, accent),
-        cta: feed.stories_this_week > 0 ? `${feed.stories_this_week} stories this week \u2192` : 'View all stories \u2192',
+        body: cards
+          ? renderCardRow(stories.map(item => ({ kind: 'story', item })), accent, isDark)
+          : wide ? renderStoriesWide(stories, accent) : renderStoriesList(stories, accent),
+        cta: storiesCta,
       });
     }
-    if (content !== 'stories') {
+    if (!mixed && content !== 'stories') {
       panels.push({
         key: 'events',
-        body: wide ? renderEventsWide(events, accent) : renderEventsList(events, accent),
+        body: cards
+          ? renderCardRow(events.map(item => ({ kind: 'event', item })), accent, isDark)
+          : wide ? renderEventsWide(events, accent) : renderEventsList(events, accent),
         cta: eventsCtaText(Number(feed.events_upcoming) || events.length, Number(feed.events_lookup) || 50),
       });
     }
 
-    const tabsHTML = content === 'both'
+    const tabsHTML = tabbed
       ? `<div class="widget-tabs" role="tablist" aria-label="Show">
           ${panels.map(p => `<button type="button" role="tab" class="widget-tab" data-tab="${p.key}" aria-selected="${p.key === firstTab}" tabindex="${p.key === firstTab ? 0 : -1}" style="--tab-accent: ${accent}">${p.key === 'events' ? 'What&rsquo;s on' : 'News'}</button>`).join('')}
         </div>`
       : '';
     const hiddenAttr = (key) => (key === firstTab ? '' : ' hidden');
     const panelsHTML = panels.map(p =>
-      `<div class="widget-panel" data-panel="${p.key}"${content === 'both' ? ' role="tabpanel"' : ''}${hiddenAttr(p.key)}>${p.body}</div>`
+      `<div class="widget-panel" data-panel="${p.key}"${tabbed ? ' role="tabpanel"' : ''}${hiddenAttr(p.key)}>${p.body}</div>`
     ).join('');
     const ctaHTML = panels.map(p =>
       `<a href="https://curatr.pro/feed/${encodeURIComponent(feed.slug)}" target="_blank" rel="noopener" class="widget-cta" data-panel="${p.key}" style="color: ${accent}"${hiddenAttr(p.key)}>${p.cta}</a>`
@@ -454,6 +511,10 @@
         ${logoHTML}
         <span class="widget-name">${escapeHTML(displayName)}</span>
         ${tabsHTML}
+        ${cards ? `<span class="card-nav" hidden>
+          <button type="button" class="card-btn card-prev" aria-label="Previous">&#8249;</button>
+          <button type="button" class="card-btn card-next" aria-label="Next">&#8250;</button>
+        </span>` : ''}
       </div>
       ${panelsHTML}
       ${showSubscribe ? getSubscribeHTML(feed, accent, frequency) : ''}
@@ -470,6 +531,73 @@
     if (count <= 0) return 'See what&rsquo;s on \u2192';
     if (count >= cap) return `${cap}+ events coming up \u2192`;
     return count === 1 ? '1 event coming up \u2192' : `${count} events coming up \u2192`;
+  }
+
+  // ---- Cards (feed-style tiles) ----------------------------------------
+  function hexToRgba(hex, alpha) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+
+  function ageText(minutes) {
+    if (typeof minutes !== 'number' || minutes < 0) return '';
+    if (minutes < 60) return `${Math.max(1, minutes)}m ago`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
+    const days = Math.floor(minutes / 1440);
+    return days === 1 ? 'Yesterday' : `${days}d ago`;
+  }
+
+  function storyCardHTML(story) {
+    if (!isValidUrl(story.url)) return '';
+    const image = isValidUrl(story.image_url)
+      ? `<img src="${escapeHTML(story.image_url)}" alt="" loading="lazy" />`
+      : '';
+    const meta = [story.source_name, ageText(story.age_minutes)].filter(Boolean).map(escapeHTML).join(' \u00b7 ');
+    return `
+      <a href="${escapeHTML(story.url)}" target="_blank" rel="noopener" class="feed-card story-card" data-story-id="${escapeHTML(story.id || '')}">
+        <span class="card-media">${image}</span>
+        <span class="card-body">
+          ${story.trending ? '<span class="story-trending">Trending</span>' : story.most_read ? '<span class="story-trending">Most read</span>' : ''}
+          <span class="card-title">${escapeHTML(story.title)}</span>
+          ${meta ? `<span class="card-meta card-foot">${meta}</span>` : ''}
+        </span>
+      </a>
+    `;
+  }
+
+  function eventCardHTML(ev, accent, isDark) {
+    if (!isValidUrl(ev.url)) return '';
+    const d = eventDate(ev);
+    const tint = hexToRgba(accent, isDark ? 0.28 : 0.16);
+    const dots = hexToRgba(accent, isDark ? 0.4 : 0.28);
+    const media = isValidUrl(ev.image_url)
+      ? `<img src="${escapeHTML(ev.image_url)}" alt="" loading="lazy" />`
+      : `<span class="event-tint"${tint ? ` style="background-color: ${tint}; --dots: ${dots}"` : ''}></span>`;
+    const when = [d && d.when, ev.start_time].filter(Boolean).map(escapeHTML).join(' \u00b7 ');
+    return `
+      <a href="${escapeHTML(ev.url)}" target="_blank" rel="noopener" class="feed-card event-card" data-event-id="${escapeHTML(ev.id || '')}">
+        <span class="card-media">
+          ${media}
+          ${ev.category ? `<span class="card-pill">${escapeHTML(ev.category)}</span>` : ''}
+          ${d ? `<span class="card-date" aria-hidden="true"><span class="event-month" style="color: ${accent}">${escapeHTML(d.month)}</span><span class="event-day">${d.day}</span></span>` : ''}
+        </span>
+        <span class="card-body${d ? ' has-date' : ''}">
+          <span class="card-title card-title-event">${escapeHTML(ev.title)}</span>
+          ${when ? `<span class="card-meta card-when">${when}</span>` : ''}
+          ${ev.venue ? `<span class="card-meta">${escapeHTML(ev.venue)}</span>` : ''}
+          ${ev.price ? `<span class="card-meta card-foot">${escapeHTML(ev.price)}</span>` : ''}
+        </span>
+      </a>
+    `;
+  }
+
+  function renderCardRow(items, accent, isDark) {
+    const html = items
+      .map(({ kind, item }) => kind === 'event' ? eventCardHTML(item, accent, isDark) : storyCardHTML(item))
+      .join('');
+    return `<div class="card-row" tabindex="0" aria-label="Swipe for more">${html}</div>`;
   }
 
   // ---- Events -----------------------------------------------------------
@@ -1014,6 +1142,186 @@
         text-align: center;
         padding: 20px;
         color: ${textMuted};
+      }
+
+      /* Cards: swipeable row of feed-style tiles */
+      .card-nav {
+        display: inline-flex;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .card-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: 1px solid ${border};
+        background: ${bg};
+        color: ${text};
+        font: inherit;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0 2px;
+      }
+
+      .card-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+
+      .card-btn:focus-visible, .card-row:focus-visible, .feed-card:focus-visible {
+        outline: 2px solid ${accent || '#3b82f6'};
+        outline-offset: 2px;
+      }
+
+      .card-row {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-padding-left: 16px;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        margin: 0 -16px;
+        padding: 2px 16px 8px;
+      }
+
+      .card-row::-webkit-scrollbar {
+        display: none;
+      }
+
+      .feed-card {
+        flex: 0 0 ${layout === 'wide' ? 'clamp(220px, calc((100% - 36px) / 4), 280px)' : 'min(76%, 240px)'};
+        scroll-snap-align: start;
+        display: flex;
+        flex-direction: column;
+        background: ${isDark ? '#222222' : '#ffffff'};
+        border: 1px solid ${border};
+        border-radius: 12px;
+        overflow: hidden;
+        text-decoration: none;
+        color: ${text};
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+      }
+
+      .feed-card:hover {
+        box-shadow: 0 6px 18px rgba(0, 0, 0, ${isDark ? '0.35' : '0.08'});
+      }
+
+      .card-media {
+        position: relative;
+        display: block;
+        aspect-ratio: 4 / 3;
+        background: ${sourceBg};
+        flex-shrink: 0;
+      }
+
+      .card-media img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .event-tint {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(var(--dots, transparent) 1px, transparent 1.4px);
+        background-size: 14px 14px;
+      }
+
+      .card-pill {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.94);
+        color: #1a1a1a;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
+      .card-date {
+        position: absolute;
+        left: 12px;
+        bottom: -22px;
+        width: 48px;
+        height: 52px;
+        border-radius: 10px;
+        background: ${isDark ? '#222222' : '#ffffff'};
+        box-shadow: 0 0 0 4px ${isDark ? '#222222' : '#ffffff'}, 0 2px 8px rgba(0, 0, 0, 0.12);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.05;
+      }
+
+      .card-date .event-day {
+        font-size: 20px;
+      }
+
+      .card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        padding: 12px 14px 14px;
+        min-width: 0;
+      }
+
+      .card-body.has-date {
+        padding-top: 32px;
+      }
+
+      .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 2px;
+      }
+
+      .card-title-event {
+        -webkit-line-clamp: 3;
+      }
+
+      .card-meta {
+        font-size: 12px;
+        color: ${textMuted};
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .card-when {
+        color: ${text};
+        font-weight: 600;
+      }
+
+      .card-foot {
+        margin-top: auto;
+        padding-top: 6px;
+      }
+
+      .card-when + .card-foot, .card-meta + .card-foot {
+        padding-top: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .feed-card { transition: none; }
       }
 
       /* Wide layout styles */

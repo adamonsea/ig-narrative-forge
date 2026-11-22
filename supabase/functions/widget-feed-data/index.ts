@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SOURCE_ALIASES, WIDGET_SOURCE_NAMES } from "../_shared/publisherNames.ts";
 import { SITE_URL } from "../_shared/brandConfig.ts";
 import { formatPrice, feedCurrency } from "../_shared/currency.ts";
-import { firstWidgetTab, parseWidgetContent, resolveWidgetContent } from "../_shared/widgetContent.ts";
+import { firstWidgetTab, mixWidgetCards, parseWidgetContent, parseWidgetStyle, resolveWidgetContent } from "../_shared/widgetContent.ts";
+import { EVENT_CATEGORY_LABELS } from "../_shared/eventCategories.ts";
 
 // Upcoming events looked up per widget request (also the cap on the "N events coming up" count)
 const EVENTS_LOOKUP = 50;
@@ -33,6 +34,7 @@ serve(async (req) => {
     const maxStories = Math.min(Math.max(parseInt(url.searchParams.get('max') || '5'), 1), 10);
     const mode = url.searchParams.get('mode');
     const requestedContent = parseWidgetContent(url.searchParams.get('content'));
+    const style = parseWidgetStyle(url.searchParams.get('style'));
 
     // Source aliases: remap legacy/mistaken source names to the canonical
     // publication so existing embeds self-correct without onsite code changes.
@@ -417,6 +419,9 @@ serve(async (req) => {
           start_time: typeof e.start_time === 'string' ? e.start_time.slice(0, 5) : null,
           venue: e.location || null,
           price: formatPrice(e.price, e.is_free, currency),
+          category: e.event_type && e.event_type !== 'other'
+            ? ((EVENT_CATEGORY_LABELS as Record<string, string>)[e.event_type] || null)
+            : null,
           image_url: e.image_path && STORED_EVENT_PHOTO.test(e.image_path)
             ? `${supabaseUrl}/storage/v1/object/public/topic-assets/${e.image_path}`
             : null,
@@ -436,13 +441,22 @@ serve(async (req) => {
 
       console.log(`✅ Widget ${feedSlug}: ${content}, ${formattedStories.length} stories, ${allEvents.length} events (v4)`);
 
+      const shownEvents = content === 'stories' ? [] : allEvents.slice(0, maxStories);
+      const shownStories = content === 'events' ? [] : formattedStories;
+      // Cards widgets showing both: one row in feed order (two of the lead stream, then one of the other)
+      const mix = style === 'cards' && content === 'both'
+        ? mixWidgetCards(shownStories.length, shownEvents.length, eventsLed, maxStories)
+        : undefined;
+
       return new Response(
         JSON.stringify({
           feed: feedData,
           content,
+          style,
+          ...(mix ? { mix } : {}),
           available: { stories: working.length > 0, events: allEvents.length > 0 },
-          stories: content === 'events' ? [] : formattedStories,
-          events: content === 'stories' ? [] : allEvents.slice(0, maxStories),
+          stories: shownStories,
+          events: shownEvents,
         }),
         { 
           status: 200, 

@@ -14,6 +14,13 @@ export const SPARE_EVENT_CATEGORIES = ['comedy', 'workshops'] as const;
 export const ALL_EVENT_CATEGORIES = [...STARTING_EVENT_CATEGORIES, ...SPARE_EVENT_CATEGORIES, 'other'] as const;
 export type EventCategoryKey = typeof ALL_EVENT_CATEGORIES[number];
 
+/** Reader-facing names for each category (widget cards and anywhere outside the app). */
+export const EVENT_CATEGORY_LABELS: Record<EventCategoryKey, string> = {
+  music: 'Music', family: 'Family', sport: 'Sport', 'food-drink': 'Food & drink', 'arts-theatre': 'Arts & theatre',
+  film: 'Film', talks: 'Talks', nightlife: 'Nightlife', outdoors: 'Outdoors', markets: 'Markets',
+  comedy: 'Comedy', workshops: 'Workshops', other: 'Other',
+};
+
 // Keyword rules (English + common Portuguese listing words). Order matters: first match wins.
 const RULES: [EventCategoryKey, RegExp][] = [
   ['comedy', /\b(comedy|comedian|stand[- ]?up|com[eé]dia|humor|improv)\b/i],

@@ -22,9 +22,16 @@ const base: WidgetBuilderSettings = {
   featuredSources: ["Agenda LX"],
   featuredDaysBySource: { "Agenda LX": 3 },
   content: "both",
+  style: "cards",
 };
 
 describe("widget builder saved settings", () => {
+  it("remembers the Headlines / Cards choice and ignores anything else", () => {
+    expect(parseWidgetSettings({ style: "cards" }).style).toBe("cards");
+    expect(parseWidgetSettings({ style: "list" }).style).toBe("list");
+    expect(parseWidgetSettings({ style: "carousel" }).style).toBeUndefined();
+  });
+
   it("remembers the News / What's on / Both choice and ignores anything else", () => {
     expect(parseWidgetSettings({ content: "events" }).content).toBe("events");
     expect(parseWidgetSettings({ content: "both" }).content).toBe("both");

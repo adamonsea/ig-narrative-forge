@@ -1,5 +1,5 @@
 // One place for the widget script version and the default embed snippet.
-export const WIDGET_JS_VERSION = '1.6.0';
+export const WIDGET_JS_VERSION = '1.7.0';
 
 /** The simplest working embed: the feed's latest headlines with default styling. */
 export function defaultWidgetCode(slug: string, origin: string): string {

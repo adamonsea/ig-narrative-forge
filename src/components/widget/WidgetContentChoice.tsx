@@ -7,7 +7,7 @@ const OPTIONS: [ResolvedWidgetContent, string][] = [
   ["both", "Both"],
 ];
 
-/** "Show: News | What's on | Both" for widget builders. Both = News | What's on tabs in the widget. */
+/** "Show: News | What's on | Both" for widget builders. Both = tabs for headlines, one mixed row for cards. */
 export function WidgetContentChoice({ value, onChange }: { value: ResolvedWidgetContent; onChange: (v: ResolvedWidgetContent) => void }) {
   return (
     <div className="space-y-2">
