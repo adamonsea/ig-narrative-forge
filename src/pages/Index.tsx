@@ -18,6 +18,7 @@ import { FeedIdeaGenerator } from '@/components/home/FeedIdeaGenerator';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
 import { HomeHeroMedia } from '@/components/home/HomeHeroMedia';
 import { NewsroomBand } from '@/components/home/NewsroomBand';
+import { DemoFeedSplitButton } from '@/components/home/DemoFeedSplitButton';
 import type { HomeSceneId } from '@/components/home/HomeSceneLoop';
 
 const HomeSceneLoop = lazy(() => import('@/components/home/HomeSceneLoop'));
@@ -294,18 +295,7 @@ const Index = () => {
                   </span>
                   <span className="text-lg font-medium">The power of Curatr</span>
                 </button>
-                <Link
-                  to="/feed/eastbourne"
-                  className="group flex items-center gap-3 text-white/80 transition-all hover:text-white"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 transition-all group-hover:border-shop-violet group-hover:bg-shop-violet/10">
-                    <ArrowRight
-                      className="h-4 w-4 text-white transition-colors group-hover:text-shop-violet"
-                      aria-hidden="true"
-                    />
-                  </span>
-                  <span className="text-lg font-medium">Live demo feed</span>
-                </Link>
+                <DemoFeedSplitButton />
               </motion.div>
             </motion.div>
 
