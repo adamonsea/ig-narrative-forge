@@ -201,17 +201,15 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
   const unclassified = Math.max(0, (storyTotal ?? 0) - classifiedCount);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
+    <div className="divide-y divide-border border-y border-border">
+      <div className="flex flex-wrap items-start justify-between gap-4 py-5">
         <div>
-          <p className="text-base font-medium">
-            {classifiedCount} of {storyTotal ?? '—'} stories categorised
-          </p>
+          <p className="text-base font-medium">Sort stories</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {unclassified > 0 ? `${unclassified} still to classify` : 'Everything is up to date'}
+            {classifiedCount} of {storyTotal ?? '—'} sorted{unclassified > 0 ? ` · ${unclassified} to go` : ''}. Used for readers' filters and look-backs.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={runDiscovery} disabled={discovering}>
             {discovering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
             Suggest categories
@@ -224,7 +222,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
       </div>
 
       {proposal?.categories?.length > 0 && (
-        <div className="rounded-xl border border-border p-4 space-y-3">
+        <div className="space-y-3 py-5">
           <p className="text-base font-medium">Suggested</p>
           <ul className="space-y-2">
             {proposal.categories.map((c: any) => {
@@ -270,19 +268,17 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
       )}
 
       {parents.length === 0 && !proposal && (
-        <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No categories yet.
-        </p>
+        <p className="py-5 text-base text-muted-foreground">No categories yet.</p>
       )}
 
-      <div className="space-y-2">
+      <div className="divide-y divide-border">
         {parents.map((cat) => {
           const setting = settings[cat.id];
           const enabled = setting?.enabled ?? true;
           const subs = childrenOf(cat.id);
           return (
-            <Collapsible key={cat.id} className="rounded-xl border border-border">
-              <div className="flex items-center justify-between gap-3 p-3">
+            <Collapsible key={cat.id}>
+              <div className="flex min-h-14 items-center justify-between gap-3 py-2">
                 <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left">
                   <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-base font-medium">{cat.name}</span>
@@ -296,11 +292,11 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                   onCheckedChange={(checked) => saveSetting(cat.id, { enabled: checked })}
                 />
               </div>
-              <CollapsibleContent className="border-t border-border p-3 space-y-3">
+              <CollapsibleContent className="space-y-3 pb-4 pl-6">
                 {cat.description && <p className="text-sm text-muted-foreground">{cat.description}</p>}
                 <div className={isLocal ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3 sm:max-w-[50%]'}>
                   {isLocal && <div className="space-y-1">
-                    <Label htmlFor={`radius-${cat.id}`} className="text-sm">
+                    <Label htmlFor={`radius-${cat.id}`} className="text-base">
                       Radius (miles)
                     </Label>
                     <Input
@@ -318,7 +314,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
                     />
                   </div>}
                   <div className="space-y-1">
-                    <Label htmlFor={`threshold-${cat.id}`} className="text-sm">
+                    <Label htmlFor={`threshold-${cat.id}`} className="text-base">
                       Relevance threshold
                     </Label>
                     <Input

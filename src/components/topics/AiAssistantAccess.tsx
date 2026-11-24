@@ -1,3 +1,4 @@
+import { SettingRow } from "@/components/settings/SettingRow";
 import { InfoHint } from "@/components/ui/editorial";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bot, Check, Copy, KeyRound, Loader2, Newspaper, Search, FileText, Sparkles, Trash2 } from "lucide-react";
@@ -122,26 +123,14 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
   };
 
   return (
-    <div className="space-y-6 py-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <Bot className="mt-0.5 h-4 w-4 text-muted-foreground" />
-          <div>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">AI assistants</Label>
-              <InfoHint label="About AI assistants">Readers can ask ChatGPT or Claude about {topicName}. Answers come only from your published stories, with the original publication credited.</InfoHint>
-              <Badge variant="secondary" className="text-sm">Pro</Badge>
-            </div>
-            {saveError && <p className="mt-1 text-sm text-destructive">Not saved</p>}
-          </div>
-        </div>
-        <Switch checked={enabled} onCheckedChange={(checked) => persist({ mcp_enabled: checked })} />
-      </div>
+    <div className="divide-y divide-border">
+      <SettingRow label="AI assistants" hint={saveError ? "Not saved. Please try again." : `People can ask ChatGPT or Claude about ${topicName}. Answers credit the original source. Pro.`}>
+        <Switch aria-label="AI assistants" checked={enabled} onCheckedChange={(checked) => persist({ mcp_enabled: checked })} />
+      </SettingRow>
 
       {enabled && (
-        <div className="space-y-6 rounded-xl border border-border bg-muted p-4">
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-muted-foreground">Who can connect</Label>
+        <>
+          <SettingRow label="Who can connect" hint="Anyone, or only people with a key.">
             <div className="flex flex-wrap gap-2">
               {(["open", "key"] as const).map((option) => (
                 <button
@@ -150,7 +139,7 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                   onClick={() => persist({ mcp_access: option })}
                   aria-pressed={access === option}
                   className={cn(
-                    "rounded-full border px-4 py-1.5 text-sm transition-colors",
+                    "min-h-11 rounded-full border px-4 text-base transition-colors",
                     access === option ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
                   )}
                 >
@@ -158,10 +147,10 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
                 </button>
               ))}
             </div>
-          </div>
+          </SettingRow>
 
+          <SettingRow label="Connection address" hint="Paste into ChatGPT or Claude." stack>
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-muted-foreground">Connection address</Label>
             <div className="flex items-center gap-2">
               <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-border bg-background px-3 py-2 text-sm">{endpoint}</code>
               <Button variant="outline" size="icon" onClick={() => copy(endpoint, "endpoint")} aria-label="Copy address" title="Copy address">
@@ -173,11 +162,12 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
               <SetupGuide tool="Claude" endpoint={endpoint} topicName={topicName} needsKey={access === "key"} />
             </div>
           </div>
+          </SettingRow>
 
           {access === "key" && (
-            <div className="space-y-3">
+            <div className="space-y-3 py-5">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium text-muted-foreground">Keys</Label>
+                <p className="text-base font-medium">Keys</p>
                 <Button variant="outline" size="sm" onClick={createKey} disabled={creating}>
                   {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
                   New key
@@ -217,11 +207,11 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
           )}
 
           {usageCount !== null && (
-            <p className="text-sm text-muted-foreground">
+            <p className="py-5 text-sm text-muted-foreground">
               {usageCount === 0 ? "No assistant reads in the last 7 days." : `${usageCount} assistant read${usageCount === 1 ? "" : "s"} in the last 7 days.`}
             </p>
           )}
-        </div>
+        </>
       )}
     </div>
   );

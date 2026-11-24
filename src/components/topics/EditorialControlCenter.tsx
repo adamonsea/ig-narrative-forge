@@ -357,7 +357,7 @@ export function EditorialControlCenter({
               <div id="ai-assistants-heading" className="scroll-mt-24">
                 <AiAssistantAccess topicId={topic.id} topicSlug={topic.slug} topicName={topic.name} enabled={topic.mcp_enabled || false} access={topic.mcp_access === "open" ? "open" : "key"} onChange={(values) => patch(values)} onEnabledChange={(checked) => onChannelToggle("mcp_enabled", checked, "AI assistants")} />
               </div>
-              <div className="py-5">
+              <div>
                 <TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} />
               </div>
             </SettingGroup>
