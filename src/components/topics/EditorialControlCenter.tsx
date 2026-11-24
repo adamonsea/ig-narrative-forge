@@ -14,6 +14,7 @@ import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 import { DripFeedSettings } from "@/components/DripFeedSettings";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
+import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
 import { OnboardingSettings } from "@/components/onboarding";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
 import { SentimentKeywordSettings } from "@/components/SentimentKeywordSettings";
@@ -399,6 +400,7 @@ export function EditorialControlCenter({
           <Page title={label} purpose={purpose}>
             <section><SubHeading>Feed cards</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
             <section><SubHeading>Support</SubHeading><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></section>
+            <section id="period-reviews" className="scroll-mt-24"><SubHeading>Period reviews</SubHeading><PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} /></section>
             {FEATURES.sentiment && <section><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>}
             {FEATURES.communityDiscussion && (
               <section>

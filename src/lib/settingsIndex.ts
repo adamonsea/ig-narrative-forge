@@ -72,6 +72,7 @@ export const SETTINGS_INDEX: SettingEntry[] = [
 
   e("extras", "Trending", "Most interacted-with stories in 24 hours.", ["momentum", "popular"], "story-momentum"),
   e("extras", "Donations", "Let readers support the feed.", ["support", "money", "tips", "stripe"]),
+  e("extras", "Period reviews", "A public look back over a period.", ["reviews", "look back", "retrospective", "archive", "recap"], "period-reviews"),
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();

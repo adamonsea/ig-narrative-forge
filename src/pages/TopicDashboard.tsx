@@ -24,7 +24,6 @@ import { Loader2, Sparkles } from "lucide-react";
 import { LiveFeedControl } from "@/components/feed/LiveFeedControl";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
-import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
 import { OwnerAssistant } from "@/components/assistant/OwnerAssistant";
 import { ProGateDialog } from "@/components/billing/ProGateDialog";
 
@@ -148,7 +147,7 @@ const TopicDashboard = () => {
     if (settingsSection) return 'settings';
     const requested = searchParams.get('tab');
     // Legacy deep links used ?tab=insights before the tab became Reviews.
-    if (requested === 'insights') return 'reviews';
+    if (requested === 'insights' || requested === 'reviews') return 'settings';
     return requested || "feed";
   });
   const [autoSuggestSources, setAutoSuggestSources] = useState(false);
@@ -193,14 +192,11 @@ const TopicDashboard = () => {
       navigate(settingsPath(slug, searchParams.get('section')), { replace: true });
       return;
     }
-    if (tab === 'insights') {
-      setActiveTab('reviews');
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set('tab', 'reviews');
-      setSearchParams(nextParams, { replace: true });
+    if ((tab === 'insights' || tab === 'reviews') && slug) {
+      navigate(`${settingsPath(slug, 'extras')}#period-reviews`, { replace: true });
       return;
     }
-    if (tab === 'feed' || tab === 'sources' || tab === 'stats' || tab === 'reviews' || tab === 'settings') setActiveTab(tab);
+    if (tab === 'feed' || tab === 'sources' || tab === 'stats' || tab === 'settings') setActiveTab(tab);
     if (!tab) setActiveTab('feed');
   }, [searchParams, setSearchParams, settingsSection, slug, navigate]);
 
@@ -707,7 +703,7 @@ const TopicDashboard = () => {
             </div>
           )}
 
-          {/* Tabs: Desk (default), Sources, Readership, Settings, Reviews */}
+          {/* Tabs: Desk (default), Sources, Readers, Settings */}
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
@@ -728,29 +724,17 @@ const TopicDashboard = () => {
               <TabsTrigger value="sources" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Sources
               </TabsTrigger>
-              <TabsTrigger value="stats" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
+              <TabsTrigger value="stats" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Readers
               </TabsTrigger>
               <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Settings
-              </TabsTrigger>
-              <TabsTrigger value="reviews" className=" rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
-                Reviews
               </TabsTrigger>
             </TabsList>
 
             {/* ===== STATS TAB ===== */}
             <TabsContent value="stats" className="space-y-8">
               <ReadershipPanel topicId={topic.id} topicSlug={topic.slug} />
-            </TabsContent>
-
-            {/* ===== REVIEWS TAB ===== */}
-            <TabsContent value="reviews" className="space-y-3">
-              <h2 className="display-heading text-2xl">Look back over a period</h2>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                Build a public visual review of everything published between two dates.
-              </p>
-              <PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} />
             </TabsContent>
 
 

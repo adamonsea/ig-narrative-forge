@@ -334,7 +334,7 @@ export const TopicManager = () => {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                navigate(`/dashboard/topic/${topic.slug}?tab=reviews`);
+                                navigate(`/dashboard/topic/${topic.slug}/settings/extras#period-reviews`);
                               }}
                             >
                               <TrendingUp className="w-3.5 h-3.5 mr-2" />
