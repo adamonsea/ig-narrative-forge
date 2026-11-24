@@ -1356,12 +1356,12 @@ const TopicFeed = () => {
           />
         )}
 
-        {topic?.id && feedView !== 'events' && (
-          <PinnedStoriesDeck topicId={topic.id} topicSlug={topic.slug} brandColor={feedBrand} />
-        )}
-
         {viewToggleShown && (
           <FeedViewToggle value={chosenView} onChange={setChosenView} brandColor={feedBrand} />
+        )}
+
+        {topic?.id && feedView !== 'events' && (
+          <PinnedStoriesDeck topicId={topic.id} topicSlug={topic.slug} brandColor={feedBrand} />
         )}
 
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
