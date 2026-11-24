@@ -16,6 +16,7 @@ import { EventCard } from "@/components/events/EventCard";
 import { FeedViewToggle } from "@/components/feed/FeedViewToggle";
 import { effectiveFeedView, showFeedViewToggle, viewShowsEvents, type FeedView } from "@/lib/feedView";
 import { PinnedStoriesDeck } from "@/components/feed/PinnedStoriesDeck";
+import { usePinnedStories } from "@/hooks/usePinnedStories";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
 import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
@@ -535,6 +536,10 @@ const TopicFeed = () => {
   const shouldShowCommunityPulse = FEATURES.communityDiscussion && topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
 
 
+  // With pinned stories on show, What's on leads the feed so the deck isn't followed by a repeat.
+  const { data: deckStories } = usePinnedStories(topic?.id);
+  const pinsFirst = feedView !== 'events' && (deckStories?.length ?? 0) > 0;
+
   const lastStoryContentIndex = useMemo(() => {
     let lastIndex = -1;
     filteredContent.forEach((item, index) => {
@@ -743,6 +748,33 @@ const TopicFeed = () => {
       return items;
     };
 
+    // What's on cards at a story position
+    const renderEventsAt = (storyIndex: number, isStory: boolean): React.ReactNode[] => {
+      const items: React.ReactNode[] = [];
+      // What's on: after story 1, then at least 15 stories apart, never beside another extra card
+      // News-led with individual cards: one event at each What's on position
+      if (eventsInView && isStory && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
+        items.push(renderEventCard((feedEvents[whatsOnPositions(storyIndex).indexOf(storyIndex) % feedEvents.length])!));
+      }
+
+      if (eventsInView && isStory && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
+        items.push(
+          <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
+            <WhatsOnCard
+              events={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length]!.events}
+              label={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length]!.label}
+              today={whatsOnToday}
+              brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
+              isOwner={isOwnFeed}
+              suggestTopicId={topicMetadata?.readerEventSubmissions ? topic?.id : null}
+            />
+          </div>
+        );
+      }
+
+      return items;
+    };
+
     // Extra cards (quiz, email sign-up …) at a position: stories in a news-led feed, events in an events-led one
     const renderExtras = (storyIndex: number, index: number, isStory: boolean): React.ReactNode[] => {
       const items: React.ReactNode[] = [];
@@ -817,26 +849,7 @@ const TopicFeed = () => {
         trackInsightCardDisplay(insightCard!.id);
       }
 
-      // What's on: after story 1, then at least 15 stories apart, never beside another extra card
-      // News-led with individual cards: one event at each What's on position
-      if (eventsInView && isStory && !eventsLed && individualCards && feedEvents.length > 0 && isWhatsOnPosition(storyIndex)) {
-        items.push(renderEventCard((feedEvents[whatsOnPositions(storyIndex).indexOf(storyIndex) % feedEvents.length])!));
-      }
-
-      if (eventsInView && isStory && eventsInFeed && !individualCards && whatsOn.length > 0 && isWhatsOnPosition(storyIndex)) {
-        items.push(
-          <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
-            <WhatsOnCard
-              events={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length]!.events}
-              label={whatsOn[whatsOnPositions(storyIndex).indexOf(storyIndex) % whatsOn.length]!.label}
-              today={whatsOnToday}
-              brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
-              isOwner={isOwnFeed}
-              suggestTopicId={topicMetadata?.readerEventSubmissions ? topic?.id : null}
-            />
-          </div>
-        );
-      }
+      if (!(pinsFirst && isStory && storyIndex === 1)) items.push(...renderEventsAt(storyIndex, isStory));
 
       // Quiz cards
       if (shouldShowQuiz(storyIndex) && quizQuestions.length > 0 && quizCardsEnabled) {
@@ -926,7 +939,8 @@ const TopicFeed = () => {
     return displayableContent.map((contentItem, index) => {
       const storyIndex = displayableContent.slice(0, index + 1).filter(item => item.type === 'story').length;
       const isStory = contentItem.type === 'story';
-      const items = isStory ? renderStory(contentItem.data, storyIndex, index, index === lastDisplayableStoryIndex) : [];
+      const items: React.ReactNode[] = pinsFirst && isStory && storyIndex === 1 ? renderEventsAt(1, true) : [];
+      if (isStory) items.push(...renderStory(contentItem.data, storyIndex, index, index === lastDisplayableStoryIndex));
       items.push(...renderExtras(storyIndex, index, isStory));
       return items;
     }).flat();
@@ -939,7 +953,7 @@ const TopicFeed = () => {
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
     hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed,
     eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand, eventsHasMore, eventCurrency,
-    feedView, eventsInView
+    feedView, eventsInView, pinsFirst
   ]);
 
   if (loading) {

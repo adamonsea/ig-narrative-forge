@@ -139,7 +139,7 @@ export function FanDeck({ stories, accent, onAccent, onOpen }: {
       ref={rootRef}
       aria-label="Pinned stories"
       aria-roledescription="carousel"
-      className="mx-auto w-full max-w-2xl"
+      className="mx-auto mb-8 w-full max-w-2xl"
       style={{ overflowX: width < 560 ? "clip" : "visible" }}
     >
       <div
