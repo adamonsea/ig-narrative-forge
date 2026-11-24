@@ -33,8 +33,7 @@
 - Readers never write `topic_newsletter_signups` directly: email via `secure-newsletter-signup`, browser notifications via `save-push-subscription` (owner/service-only table).
 - Event clicks: written only via `record_event_click` (`canTrackReader()`, owner clicks skipped), read only via `get_topic_readership`; tenant-safe.
 - Parked features are switched off only via `FEATURES` in `supabase/functions/_shared/parked-features.ts` (shared with the app via `featureFlags.ts`): screens hide and jobs return early, never by editing feeds' saved values; see docs/parked-features.md.
-- Feed Settings is one page per section at `/dashboard/topic/:slug/settings/:section`, listed only in `src/lib/settingsSections.ts` (old `?tab=settings&section=` links resolve there) and rendered by `EditorialControlCenter.tsx` with `SettingRow`/`SettingGroup`; one list keeps nav, links and the assistant in agreement.
-- Browser writes to settings tables guarded by `can_manage_topic` go through SECURITY DEFINER RPCs that call it inside (e.g. `save_feed_editorial_profile`), since that guard is revoked from browser roles.
+- Feed Settings: one page per section (`/settings/:section`), listed only in `src/lib/settingsSections.ts`; one list keeps nav, old links and assistant in agreement.
 - New feeds start from one sentence (`suggest-feed-setup` rules + `src/lib/feedSetup.ts`); fandom feeds set `brand_safe_pictures` (no drawn characters/logos). Feed terms are edited only in `LookForPanel` via `src/lib/termLists.ts` (case-insensitive, one list per term).
 - Autopilot = automation_mode 'holiday' + `auto_simplify_enabled=true`; turning it off never clears that flag (hand-written stories use it).
 - Desk story cards use `DeskCard` (quiet, ≤2 actions, drawer for more).

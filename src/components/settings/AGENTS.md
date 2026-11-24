@@ -1,0 +1,1 @@
+- Browser writes to settings tables guarded by `can_manage_topic` go through SECURITY DEFINER RPCs calling it inside (e.g. `save_feed_editorial_profile`); the guard is revoked from browser roles.
