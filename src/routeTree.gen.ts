@@ -38,6 +38,7 @@ import { Route as ForOrganisationsRouteImport } from './routes/for/organisations
 import { Route as GuidesLocalNewsFeedsRouteImport } from './routes/guides/local-news-feeds'
 import { Route as PlaySlugRouteImport } from './routes/play/$slug'
 import { Route as WaitlistWelcomeRouteImport } from './routes/waitlist/welcome'
+import { Route as ZzSettingsPreviewSectionRouteImport } from './routes/zz-settings-preview.$section'
 import { Route as DashboardTopicSlugRouteImport } from './routes/dashboard/topic/$slug'
 import { Route as DashboardWidgetsIndexRouteImport } from './routes/dashboard/widgets/index'
 import { Route as DashboardWidgetsTestRouteImport } from './routes/dashboard/widgets/test'
@@ -200,6 +201,12 @@ const WaitlistWelcomeRoute = WaitlistWelcomeRouteImport.update({
   path: '/waitlist/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZzSettingsPreviewSectionRoute =
+  ZzSettingsPreviewSectionRouteImport.update({
+    id: '/zz-settings-preview/$section',
+    path: '/zz-settings-preview/$section',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardTopicSlugRoute = DashboardTopicSlugRouteImport.update({
   id: '/dashboard/topic/$slug',
   path: '/dashboard/topic/$slug',
@@ -312,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/guides/local-news-feeds': typeof GuidesLocalNewsFeedsRoute
   '/play/$slug': typeof PlaySlugRoute
   '/waitlist/welcome': typeof WaitlistWelcomeRoute
+  '/zz-settings-preview/$section': typeof ZzSettingsPreviewSectionRoute
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/design/': typeof DesignIndexRoute
@@ -359,6 +367,7 @@ export interface FileRoutesByTo {
   '/guides/local-news-feeds': typeof GuidesLocalNewsFeedsRoute
   '/play/$slug': typeof PlaySlugRoute
   '/waitlist/welcome': typeof WaitlistWelcomeRoute
+  '/zz-settings-preview/$section': typeof ZzSettingsPreviewSectionRoute
   '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/design': typeof DesignIndexRoute
@@ -407,6 +416,7 @@ export interface FileRoutesById {
   '/guides/local-news-feeds': typeof GuidesLocalNewsFeedsRoute
   '/play/$slug': typeof PlaySlugRoute
   '/waitlist/welcome': typeof WaitlistWelcomeRoute
+  '/zz-settings-preview/$section': typeof ZzSettingsPreviewSectionRoute
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/design/': typeof DesignIndexRoute
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/guides/local-news-feeds'
     | '/play/$slug'
     | '/waitlist/welcome'
+    | '/zz-settings-preview/$section'
     | '/admin/'
     | '/dashboard/'
     | '/design/'
@@ -503,6 +514,7 @@ export interface FileRouteTypes {
     | '/guides/local-news-feeds'
     | '/play/$slug'
     | '/waitlist/welcome'
+    | '/zz-settings-preview/$section'
     | '/admin'
     | '/dashboard'
     | '/design'
@@ -550,6 +562,7 @@ export interface FileRouteTypes {
     | '/guides/local-news-feeds'
     | '/play/$slug'
     | '/waitlist/welcome'
+    | '/zz-settings-preview/$section'
     | '/admin/'
     | '/dashboard/'
     | '/design/'
@@ -598,6 +611,7 @@ export interface RootRouteChildren {
   GuidesLocalNewsFeedsRoute: typeof GuidesLocalNewsFeedsRoute
   PlaySlugRoute: typeof PlaySlugRoute
   WaitlistWelcomeRoute: typeof WaitlistWelcomeRoute
+  ZzSettingsPreviewSectionRoute: typeof ZzSettingsPreviewSectionRoute
   AdminIndexRoute: typeof AdminIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DesignIndexRoute: typeof DesignIndexRoute
@@ -824,6 +838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WaitlistWelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zz-settings-preview/$section': {
+      id: '/zz-settings-preview/$section'
+      path: '/zz-settings-preview/$section'
+      fullPath: '/zz-settings-preview/$section'
+      preLoaderRoute: typeof ZzSettingsPreviewSectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/topic/$slug': {
       id: '/dashboard/topic/$slug'
       path: '/dashboard/topic/$slug'
@@ -966,6 +987,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesLocalNewsFeedsRoute: GuidesLocalNewsFeedsRoute,
   PlaySlugRoute: PlaySlugRoute,
   WaitlistWelcomeRoute: WaitlistWelcomeRoute,
+  ZzSettingsPreviewSectionRoute: ZzSettingsPreviewSectionRoute,
   AdminIndexRoute: AdminIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DesignIndexRoute: DesignIndexRoute,
