@@ -1494,9 +1494,11 @@ export type Database = {
           rank_position: number | null
           relevance_score: number | null
           review_flags: string[]
+          run_start: string | null
           source_api: string | null
           source_hash: string | null
           source_name: string | null
+          source_subtitle: string | null
           source_tags: string[]
           source_url: string | null
           start_date: string
@@ -1544,9 +1546,11 @@ export type Database = {
           rank_position?: number | null
           relevance_score?: number | null
           review_flags?: string[]
+          run_start?: string | null
           source_api?: string | null
           source_hash?: string | null
           source_name?: string | null
+          source_subtitle?: string | null
           source_tags?: string[]
           source_url?: string | null
           start_date: string
@@ -1594,9 +1598,11 @@ export type Database = {
           rank_position?: number | null
           relevance_score?: number | null
           review_flags?: string[]
+          run_start?: string | null
           source_api?: string | null
           source_hash?: string | null
           source_name?: string | null
+          source_subtitle?: string | null
           source_tags?: string[]
           source_url?: string | null
           start_date?: string

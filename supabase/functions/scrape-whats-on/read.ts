@@ -8,6 +8,7 @@ import {
   pageName, londonToday,
 } from './extract.ts';
 import { siteScriptUrls, inlineScripts, findDataEndpoints, wpRestBase, wpEventLists } from './pageData.ts';
+import { englishEdition, mergeEnglishEdition } from './translations.ts';
 
 const USER_AGENT = 'Mozilla/5.0 (compatible; CuratrEvents/1.0; +https://curatr.pro)';
 const FETCH_TIMEOUT_MS = 15000;
@@ -181,6 +182,33 @@ export async function readPageData(html: string, pageUrl: string, name: string, 
 }
 
 const WP_MAX_PAGES = 4;
+/** A two-language site reads its whole list (the page language leads), so nothing drops off the end. */
+const WP_MAX_PAGES_BILINGUAL = 12;
+const WP_MAX_EVENTS_BILINGUAL = 600;
+
+/** Reads that stopped early (a page failed): the store step then keeps what it didn't see. */
+export const partialReads = new WeakSet<WhatsOnEvent[]>();
+
+async function readWpList(list: string, pageUrl: string, name: string, maxPages: number, paced = false): Promise<{ events: WhatsOnEvent[]; complete: boolean }> {
+  if (!(await allowedByRobots(list))) return { events: [], complete: false };
+  const all: WhatsOnEvent[] = [];
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  for (let page = 1; page <= maxPages; page++) {
+    const u = new URL(list);
+    if (page > 1) u.searchParams.set('page', String(page));
+    if (paced && page > 1) await wait(1200); // the site rate-limits quick page runs
+    let data = await jsonFrom(u.toString(), pageUrl, 'GET');
+    // Busy sites (behind Cloudflare) sometimes refuse one page: wait and try twice more
+    for (let t = 0; paced && data === null && t < 2; t++) {
+      await wait(3000 * (t + 1));
+      data = await jsonFrom(u.toString(), pageUrl, 'GET');
+    }
+    if (data === null) return { events: all, complete: page > 1 ? false : false };
+    all.push(...parseJsonFeed(data, pageUrl, name, { startOnly: true }));
+    if (!Array.isArray(data) || data.length < 50) return { events: all, complete: true };
+  }
+  return { events: all, complete: false };
+}
 
 /** WordPress events lists: read the site's data index, then up to four pages of 50 from each list. */
 async function readWordPressEvents(html: string, pageUrl: string, name: string, today: string): Promise<WhatsOnEvent[]> {
@@ -188,19 +216,26 @@ async function readWordPressEvents(html: string, pageUrl: string, name: string, 
   if (!base || !isPublicHttpUrl(base) || !(await allowedByRobots(base))) return [];
   const index = await jsonFrom(base, pageUrl, 'GET') as { routes?: Record<string, unknown> } | null;
   const lists = wpEventLists(Object.keys(index?.routes ?? {}), base, pageUrl);
+  const bilingual = englishEdition(html);
   for (const list of lists) {
-    if (!(await allowedByRobots(list))) continue;
-    const all: WhatsOnEvent[] = [];
-    for (let page = 1; page <= WP_MAX_PAGES; page++) {
-      const u = new URL(list);
-      if (page > 1) u.searchParams.set('page', String(page));
-      const data = await jsonFrom(u.toString(), pageUrl, 'GET');
-      if (data === null) break;
-      all.push(...parseJsonFeed(data, pageUrl, name, { startOnly: true }));
-      if (!Array.isArray(data) || data.length < 50) break;
+    const main = await readWpList(list, pageUrl, name, bilingual ? WP_MAX_PAGES_BILINGUAL : WP_MAX_PAGES, bilingual);
+    let events = upcomingUnique(main.events, today, DAYS_AHEAD, bilingual ? WP_MAX_EVENTS_BILINGUAL : 200);
+    let complete = main.complete;
+    if (bilingual && events.length) {
+      const en = new URL(list);
+      en.searchParams.set('lang', 'en');
+      const enRead = await readWpList(en.toString(), pageUrl, name, WP_MAX_PAGES_BILINGUAL, true);
+      complete = complete && enRead.complete;
+      const english = upcomingUnique(enRead.events, today, DAYS_AHEAD, WP_MAX_EVENTS_BILINGUAL);
+      // Same ids back = the site ignored lang=en (no separate edition): nothing to merge
+      const ptIds = new Set(events.map((e) => e.source_id).filter(Boolean));
+      const separate = english.length > 0 && !english.some((e) => e.source_id && ptIds.has(e.source_id));
+      const merged = separate ? mergeEnglishEdition(events, english) : { events, matched: 0, dropped: 0, kept: 0 };
+      console.log(`english edition ${list}: ${merged.matched} matched, ${merged.dropped} repeats dropped, ${merged.kept} English-only kept`);
+      events = merged.events;
     }
-    const events = upcomingUnique(all, today, DAYS_AHEAD);
-    console.log(`wordpress events ${list}: ${events.length} upcoming`);
+    console.log(`wordpress events ${list}: ${events.length} upcoming${bilingual && !complete ? ' (read stopped early)' : ''}`);
+    if (bilingual && !complete) partialReads.add(events);
     if (events.length) return events;
   }
   return [];
@@ -214,6 +249,8 @@ export interface ReadResult {
   name: string;
   error?: string;
   candidates?: number;
+  /** The read stopped early; events it didn't see are kept, not dropped. */
+  partial?: boolean;
 }
 
 async function readFeed(url: string, text: string, type: string, today: string): Promise<{ events: WhatsOnEvent[]; method: WhatsOnMethod } | null> {
@@ -272,7 +309,7 @@ export async function readWhatsOn(url: string): Promise<ReadResult> {
   // 3. the page's own calendar data (listings loaded after the page opens)
   try {
     const fromData = await readPageData(html, page.finalUrl, name, today);
-    if (fromData.length) return { events: fromData, method: 'json', name };
+    if (fromData.length) return { events: fromData, method: 'json', name, ...(partialReads.has(fromData) ? { partial: true } : {}) };
   } catch (e) {
     console.warn('Page data step failed', e instanceof Error ? e.message : e);
   }

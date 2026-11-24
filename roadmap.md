@@ -9,3 +9,5 @@
 - [ ] Phase 3 Brighton bleed + category steering
 - [ ] Phase 4 API
 - [ ] Lisbon source reads Agenda LX English pages: headings arrive in English, not the official Portuguese title
+
+- [x] Multi-day events: date range only in captions/synopsis/API; feed, cards, What's on, calendar links, widgets, ordering unchanged (confirm in report)

@@ -39,6 +39,13 @@ export interface WhatsOnEvent {
   tags?: string[];
   /** Last day as published (YYYY-MM-DD), only when later than start_date. */
   end_date?: string | null;
+  /** The listing's own record id (WordPress post id), when it has one. */
+  source_id?: string | null;
+  /** First day of the current run, from the source's own list of showings (start_date is the next one). */
+  run_start?: string | null;
+  /** Same listing in the site's other language (strict match only): its title and link. */
+  alt_title?: string | null;
+  alt_url?: string | null;
 }
 
 export type WhatsOnMethod = 'jsonld' | 'ical' | 'json' | 'text';
@@ -580,24 +587,60 @@ export function listedPriceValue(v: unknown): string | undefined {
   return m?.[1]?.trim() || undefined;
 }
 
+/**
+ * "qua: 20h" / "15h00" / "qua: 19h30; qui: 19h30" → "20:00:00" etc. (Agenda LX string_times).
+ * Only one distinct time counts; "vários horários", several times or anything unclear → null.
+ */
+export function listedTimes(v: unknown): string | null {
+  if (typeof v !== 'string' || !v.trim()) return null;
+  const times = new Set<string>();
+  for (const part of v.split(/[;,]/)) {
+    const m = part.replace(/^\s*[^\d:]*:\s*/, '').trim().match(/^(\d{1,2})h(\d{2})?$/i);
+    if (!m) return null;
+    const h = +m[1], mi = m[2] ? +m[2] : 0;
+    if (h > 23 || mi > 59) return null;
+    times.add(`${pad(h)}:${pad(mi)}:00`);
+  }
+  return times.size === 1 ? [...times][0] : null;
+}
+
+/**
+ * First day of the run that contains `next`, from the source's own showings list:
+ * walk back while consecutive showings are at most 60 days apart (older seasons are ignored).
+ */
+export function runStart(occurrences: unknown, next: string): string | null {
+  if (!Array.isArray(occurrences)) return null;
+  const days = [...new Set(occurrences.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();
+  let i = days.findIndex((d) => d >= next);
+  if (i < 0) return null;
+  const gap = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / 86_400_000;
+  while (i > 0 && gap(days[i - 1], days[i]) <= 60) i--;
+  return days[i] < next ? days[i] : null;
+}
+
 function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: string | null, opts: JsonFeedOptions): WhatsOnEvent | null {
   const when = eventWhen(o, opts.startOnly ? START_KEYS : DATE_KEYS);
   const title = clean(pick(o, TITLE_KEYS));
   if (!when || !title) return null;
   const venue = venueFrom(pick(o, VENUE_KEYS));
   const url = pick(o, URL_KEYS);
+  const end = laterDay(pick(o, END_KEYS), when.date);
+  const rs = end ? runStart(o.occurences ?? o.occurrences, when.date) : null;
+  const sid = typeof o.id === 'number' || (typeof o.id === 'string' && /^\d+$/.test(o.id)) ? String(o.id) : null;
   return {
     title,
     start_date: when.date,
-    start_time: when.time,
+    start_time: when.time ?? listedTimes(o.string_times),
     venue,
     url: absolute(typeof url === 'string' ? url : null, feedUrl),
     place: placeText(pick(o, ['venue', 'location'])) ?? venue ?? fallbackPlace,
     description: shortDescription(((d) => (typeof d === 'string' ? decodeEntities(d) : Array.isArray(d) ? decodeEntities(d.filter((x) => typeof x === 'string').join(' ')) : null))(pick(o, ['description', 'excerpt.rendered', 'excerpt', 'details', 'content.rendered']))),
     ...priceFacts(o.offers, o.is_free ?? o.isAccessibleForFree ?? (o.price_cat === 'free' ? true : undefined), o.cost ?? (typeof o.price === 'string' || typeof o.price === 'number' ? String(o.price) : undefined) ?? listedPriceValue(o.price_val)),
     hint: hintText(o.categories, o.categories_name_list, o.category, o.subject, o.tags, o.tags_name_list, o.genre),
-    ...sourceExtras(rawTags(o.categories_name_list ?? o.categories, o.category, o.subject, o.tags_name_list ?? o.tags, o.genre), laterDay(pick(o, END_KEYS), when.date)),
+    ...sourceExtras(rawTags(o.categories_name_list ?? o.categories, o.category, o.subject, o.tags_name_list ?? o.tags, o.genre), end),
     ...withImage(imageAddress(pick(o, IMAGE_KEYS), feedUrl)),
+    ...(sid ? { source_id: sid } : {}),
+    ...(rs ? { run_start: rs } : {}),
   };
 }
 

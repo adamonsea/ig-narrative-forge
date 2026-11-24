@@ -35,7 +35,8 @@ const PT_BR = /\b(voce|voces|onibus|trem|tela|garota|legal|a gente|ingressos?|di
 const PT_BR_GERUND = /\b(esta|estao|estou|estamos)\s+\w+(ando|endo|indo)\b/;
 
 export function sentences(text: string): string[] {
-  return text.trim().split(/(?<=[.!?…])\s+(?=[A-ZÀ-Ý"“(])/).filter((s) => s.trim());
+  // Initials ("J.S. Bach", "S. Paulo") are not sentence ends
+  return text.trim().split(/(?<=[.!?…])(?<!(?:^|[\s.])[A-ZÀ-Ý]\.)\s+(?=[A-ZÀ-Ý"“(])/).filter((s) => s.trim());
 }
 export const wordCount = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 
@@ -66,11 +67,32 @@ export function synopsisFlags(text: string, lang: string, ctx: { sourceText: str
   return flags;
 }
 
-/** Fact-safety flags: what the caption had to leave out. */
-export function factFlags(e: { start_time?: string | null; price?: string | null; is_free?: boolean | null; location?: string | null }): string[] {
+/** Fact-safety flags: what the caption had to leave out, or a fact that needs a look. */
+export function factFlags(e: { start_time?: string | null; price?: string | null; is_free?: boolean | null; location?: string | null; description?: string | null }, currency?: string | null): string[] {
   const f: string[] = [];
   if (!e.start_time) f.push("Start time unconfirmed");
   if (e.is_free !== true && !e.price?.trim()) f.push("Price not stated");
+  else if (e.is_free !== true && currencyMissing(e.price, currency)) f.push("Currency not stated");
   if (!e.location?.trim()) f.push("Venue not stated");
+  if (descriptionCutOff(e.description)) f.push("Description cut off");
   return f;
+}
+
+/** A price is fine with a currency symbol/code, a free word, or the feed's own currency; only a bare number without either is flagged. */
+export function currencyMissing(price: string | null | undefined, currency?: string | null): boolean {
+  const p = norm(price);
+  if (!p || !/\d/.test(p)) return false;
+  if (/[€£$]|\b(eur|euros?|gbp|usd|libras?|pounds?)\b/.test(p)) return false;
+  if (/\b(gratis|gratuito|gratuita|free|entrada livre)\b/.test(p)) return false;
+  return !currency;
+}
+
+/** The stored description stops mid-way ("…" / "..."). */
+export function descriptionCutOff(d: string | null | undefined): boolean {
+  return /(\.\.\.|…)\s*$/.test((d ?? "").trim());
+}
+
+/** Model flags that code decides instead (currency, cut-off text, missing time/price) are dropped. */
+export function keepModelFlag(flag: string): boolean {
+  return !/currency|cut off|truncat|start time|time (not|unconfirmed)|price not/i.test(flag);
 }

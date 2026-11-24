@@ -10,7 +10,7 @@ import { z } from 'npm:zod@3';
 import { createOpenAI } from 'npm:@ai-sdk/openai@4';
 import { streamText, Output } from 'npm:ai@7';
 import { assembleCaption, captionFields, cleanHashtags, factsHash, ticketNote } from './caption.ts';
-import { deriveFlags, factFlags, mapGenre, synopsisFlags, type FlagRule, type GenreRule } from './rules.ts';
+import { deriveFlags, factFlags, keepModelFlag, mapGenre, synopsisFlags, type FlagRule, type GenreRule } from './rules.ts';
 
 const AI_BASE_URL = 'https://ai.gateway.lovable.dev/v1';
 const AI_MODEL = 'openai/gpt-6-astra';
@@ -65,9 +65,9 @@ async function suggest(e: Row, profile: Row, sourceText: string, postDate: strin
     `genre: exactly one of: ${genres.join(', ')}.`,
     `event_hashtags: ${profile.event_hashtag_min}–${profile.event_hashtag_max} specific tags (genre, venue, festival), lower case, no accents, no #.`,
     'ticket: ticket collection rules exactly as the source states them (e.g. collection_offset "2 hours before"), else nulls.',
-    'review_flags: in English, at most 3, each under 6 words, only for a missing or ambiguous fact or a judgement call (e.g. "Description cut off", "Currency not stated"). Do not repeat missing time or price.',
+    'review_flags: in English, at most 3, each under 6 words, only for a missing or ambiguous fact or a judgement call (e.g. "Festival dates unclear"). Never flag time, price, currency or cut-off text: code checks those.',
   ].join('\n');
-  const prompt = `POSTING DATE: ${postDate}\nEVENT DATE: ${e.start_date}${e.end_date ? ` to ${e.end_date}` : ''}\nSOURCE:\n${sourceText}`;
+  const prompt = `POSTING DATE: ${postDate}\nEVENT DATE: ${e.end_date && e.end_date > e.start_date ? (e.run_start ?? e.start_date) : e.start_date}${e.end_date ? ` to ${e.end_date}` : ''}\nSOURCE:\n${sourceText}`;
   const result = streamText({
     model: provider.responses(AI_MODEL), system, prompt,
     output: Output.object({ schema: schema(languages) }),
@@ -118,7 +118,7 @@ export async function generateEventCopy(db: Db, opts: { eventId: string; dryRun?
 
   const sourceText = [`Title: ${e.title}`, e.location && `Venue: ${e.location}`, e.start_time && `Time: ${e.start_time}`,
     e.is_free ? 'Price: free' : e.price && `Price: ${e.price}`, e.source_tags?.length && `Tags: ${e.source_tags.join(', ')}`,
-    e.category && `Category: ${e.category}`, e.description && `Description: ${e.description}`].filter(Boolean).join('\n');
+    e.source_subtitle && `Other-language title: ${e.source_subtitle}`, e.category && `Category: ${e.category}`, e.description && `Description: ${e.description}`].filter(Boolean).join('\n');
   const ai = await suggest(e, profile, sourceText, postDate);
   if (!ai) throw new Error('No AI output');
 
@@ -127,8 +127,12 @@ export async function generateEventCopy(db: Db, opts: { eventId: string; dryRun?
   const festival: string | null = keep('festival', e.festival, inSource(ai.festival, sourceText) ? ai.festival : null);
   if (ai.festival && !festival && !locked.has('festival')) flags.push('Festival not in source');
   const subRow = copy.get('subtitle|');
-  let subtitle: string | null = subRow?.edited_at ? subRow.text : ai.subtitle.text;
-  if (!subRow?.edited_at && subtitle) {
+  // A title the source gives in another language is copied as a fact; only without one may the model propose
+  const sourceSub: string | null = e.source_subtitle?.trim() || null;
+  let subtitle: string | null = subRow?.edited_at ? subRow.text : sourceSub ?? ai.subtitle.text;
+  if (!subRow?.edited_at && sourceSub) {
+    if (norm(sourceSub) === norm(festival || e.title)) subtitle = null;
+  } else if (!subRow?.edited_at && subtitle) {
     if (norm(subtitle) === norm(festival || e.title)) subtitle = null;
     else if (!(ai.subtitle.copied_from_source && inSource(subtitle, sourceText))) flags.push('Subtitle written by Curatr');
   }
@@ -153,7 +157,7 @@ export async function generateEventCopy(db: Db, opts: { eventId: string; dryRun?
     synopsis[l] = row?.edited_at ? row.text : (ai.synopsis as Record<string, string>)[l] ?? '';
     if (!row?.edited_at) flags.push(...synopsisFlags(synopsis[l]!, l, { sourceText, eventDate: e.start_date, postDate }));
   }
-  const review_flags = [...new Set([...factFlags(e), ...flags, ...ai.review_flags.slice(0, 3).map((f) => f.slice(0, 60))])];
+  const review_flags = [...new Set([...factFlags(e, topic?.event_currency), ...flags, ...ai.review_flags.filter(keepModelFlag).slice(0, 3).map((f) => f.slice(0, 60))])];
 
   const fields = captionFields({ ...e, festival, subtitle, extra_facts, ticket_note, event_hashtags: tags, synopsis },
     { languages, fixed_hashtags: profile.fixed_hashtags, event_hashtag_max: profile.event_hashtag_max, labels: profile.labels ?? {} }, topic?.event_currency);

@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   assembleCaption, captionFields, normaliseTime, relativeBefore, ticketNote, cleanHashtags, mergeUnlocked,
-  priceText, dayPair, mapGenre, deriveFlags, synopsisFlags, factsHash,
+  priceText, dayPair, mapGenre, deriveFlags, synopsisFlags, factsHash, currencyMissing, factFlags, keepModelFlag,
 } from "@/lib/editorial/captionAssembler";
 
-const INSTAGRAM = ["{heading}", "{subheading}", "", "{day} {date}[ · {time}]", "{venue}", "[{price} · ]{tickets}", "{extra_facts}", "", "{synopsis.pt-PT}", "", "{synopsis.en}", "", "{hashtags}"];
+const INSTAGRAM = ["{heading}", "{subheading}", "", "{when}[ · {time}]", "{venue}", "[{price} · ]{tickets}", "{extra_facts}", "", "{synopsis.pt-PT}", "", "{synopsis.en}", "", "{hashtags}"];
 const LISBON = {
   languages: ["pt-PT", "en"], fixed_hashtags: ["#lisboa", "#oquefazeremlisboa", "#whatsonlisbon"], event_hashtag_max: 4,
   labels: { free: "Grátis / Free", tickets: "Bilhetes / Tickets: link na bio / link in bio" },
@@ -113,5 +113,41 @@ describe("edit locks and source hash", () => {
     const a = { title: "X", start_date: "2026-11-23", price: "€5" };
     expect(factsHash(a)).toBe(factsHash({ ...a }));
     expect(factsHash(a)).not.toBe(factsHash({ ...a, price: "€6" }));
+  });
+});
+
+describe("runs and fact flags (trial fixes)", () => {
+  it("a run shows start → end with no weekday; a one-day event keeps Seg/Mon", () => {
+    const run = captionFields({ title: "Era Uma Vez na América", start_date: "2026-11-24", run_start: "2026-11-20", end_date: "2026-12-31" }, LISBON);
+    expect(run["when"]).toBe("20.11 → 31.12");
+    const one = captionFields({ title: "Nena", start_date: "2026-11-23" }, LISBON);
+    expect(one["when"]).toBe("Seg/Mon 23.11");
+  });
+  it("€5, Grátis and a feed currency pass; a bare number with no currency is flagged", () => {
+    expect(currencyMissing("€5", null)).toBe(false);
+    expect(currencyMissing("Grátis", null)).toBe(false);
+    expect(currencyMissing("2", "EUR")).toBe(false);
+    expect(currencyMissing("5", null)).toBe(true);
+    expect(factFlags({ start_time: "20:00", price: "5", location: "x" }, "EUR")).not.toContain("Currency not stated");
+  });
+  it("cut-off description is flagged by code; model flags for currency/cut-off are dropped", () => {
+    expect(factFlags({ start_time: "20:00", is_free: true, location: "x", description: "Uma reflexão..." })).toContain("Description cut off");
+    expect(factFlags({ start_time: "20:00", is_free: true, location: "x", description: "Texto completo." })).not.toContain("Description cut off");
+    expect(keepModelFlag("Currency not stated")).toBe(false);
+    expect(keepModelFlag("Description cut off")).toBe(false);
+    expect(keepModelFlag("Festival dates unclear")).toBe(true);
+  });
+  it("a run's daily-moving next showing doesn't change the facts fingerprint", () => {
+    const a = factsHash({ title: "x", start_date: "2026-11-24", run_start: "2026-11-20", end_date: "2026-12-31" });
+    const b = factsHash({ title: "x", start_date: "2026-11-25", run_start: "2026-11-20", end_date: "2026-12-31" });
+    expect(a).toBe(b);
+  });
+});
+
+describe("sentence count", () => {
+  it("initials like J.S. Bach don't split a sentence", async () => {
+    const { sentences } = await import("@/lib/editorial/captionAssembler");
+    expect(sentences("O programa reúne obras de Weiss / J.S. Bach, com entrada gratuita. Segunda frase aqui.")).toHaveLength(2);
+    expect(sentences("Primeira. Segunda.")).toHaveLength(2);
   });
 });

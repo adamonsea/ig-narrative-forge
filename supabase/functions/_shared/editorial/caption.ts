@@ -141,6 +141,8 @@ export interface CaptionEvent {
   festival?: string | null;
   subtitle?: string | null;
   start_date: string;
+  /** First day of a run the source lists (exhibitions); start_date is then the next showing. */
+  run_start?: string | null;
   end_date?: string | null;
   start_time?: string | null;
   location?: string | null;
@@ -170,6 +172,10 @@ export function captionFields(e: CaptionEvent, p: CaptionProfile, currency?: str
     festival: e.festival ?? "",
     day: dayPair(e.start_date, p.languages),
     date: dottedDate(e.start_date, e.end_date),
+    // One-day: "Seg/Mon 23.11"; a run: "20.11 → 31.12" (no weekday, which would only be today's)
+    when: e.end_date && e.end_date > e.start_date
+      ? dottedDate(e.run_start && e.run_start < e.start_date ? e.run_start : e.start_date, e.end_date)
+      : `${dayPair(e.start_date, p.languages)} ${dottedDate(e.start_date)}`,
     time: normaliseTime(e.start_time) ?? "",
     venue: e.location ?? "",
     price: priceText(e.price, e.is_free, currency, p.labels.free ?? "Free") ?? "",
@@ -191,6 +197,8 @@ export function mergeUnlocked<T extends Record<string, unknown>>(current: T, inc
 
 /** Stable fingerprint of the source facts (FNV-1a), so copy is rewritten only when they change. */
 export function factsHash(e: Record<string, unknown>): string {
+  // A run's next showing moves daily; its first day doesn't, so copy isn't rewritten every day
+  if (e["run_start"]) e = { ...e, start_date: e["run_start"] };
   const keys = ["title", "start_date", "end_date", "start_time", "location", "price", "is_free", "description", "source_tags"];
   const s = keys.map((k) => JSON.stringify(e[k] ?? null)).join("|");
   let h = 0x811c9dc5;

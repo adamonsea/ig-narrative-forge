@@ -1,5 +1,6 @@
 import { categorizeEvent } from '../_shared/eventCategories.ts';
 import { factsHash } from '../_shared/editorial/caption.ts';
+import { cutOff, fetchFullDescriptions } from './detailPage.ts';
 import { generateEventCopy } from '../_shared/editorial/generate.ts';
 import { currencyFromUrls } from '../_shared/currency.ts';
 import { checkOtherCategories, inBackground } from './categoryCheck.ts';
@@ -53,7 +54,7 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('preview'), topicId: z.string().uuid(), url: Url }),
   z.object({ action: z.literal('save'), topicId: z.string().uuid(), url: Url, name: z.string().trim().max(120).optional(), kind: z.string().max(40).optional() }),
   z.object({ action: z.literal('update'), sourceId: z.string().uuid(), url: Url.optional(), name: z.string().trim().min(1).max(120).optional() }),
-  z.object({ action: z.literal('refresh'), sourceId: z.string().uuid(), quiet: z.boolean().optional() }),
+  z.object({ action: z.literal('refresh'), sourceId: z.string().uuid(), quiet: z.boolean().optional(), noCopy: z.boolean().optional() }),
   z.object({ action: z.literal('photos') }),
   z.object({ action: z.literal('remove'), sourceId: z.string().uuid() }),
   z.object({ action: z.literal('refresh_all') }),
@@ -145,10 +146,56 @@ async function writeEditorialCopy(supabase: Db, topicId: string, externalIds: st
   }
 }
 
-async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], verdicts: Verdict[], scores: (number | null)[]) {
+/**
+ * Captions on: when an event's key changes (the listing's own id replaces the old title/date
+ * fingerprint, or the source moves to its other-language edition), the row already stored under
+ * the old address keeps its id, owner decisions, edits, picture and copy instead of being
+ * dropped and re-created. One row per address: approved first, then the latest.
+ */
+async function adoptEarlierRows(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], ids: string[]) {
+  const have = new Set<string>();
+  for (const part of chunks(ids, 150)) {
+    const { data } = await supabase.from('events').select('external_id').eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
+    for (const r of data || []) have.add(r.external_id);
+  }
+  const wanted = new Map<string, string>(); // legacy url → new id
+  events.forEach((e, i) => {
+    const id = ids[i]!;
+    if (have.has(id)) return;
+    for (const u of [e.legacy_url, e.url]) if (u && !wanted.has(u)) { wanted.set(u, id); break; }
+  });
+  if (!wanted.size) return;
+  const today = londonToday();
+  const taken = new Set<string>();
+  let adopted = 0;
+  for (const part of chunks([...wanted.keys()], 100)) {
+    const { data } = await supabase.from('events').select('id, external_id, source_url, start_date, approved_at')
+      .eq('event_source_id', source.id).in('source_url', part).gte('start_date', today);
+    const best = new Map<string, { id: string; external_id: string; start_date: string; approved_at: string | null }>();
+    for (const r of data || []) {
+      if (ids.includes(r.external_id)) continue; // already someone's current key
+      const b = best.get(r.source_url);
+      if (!b || (Boolean(r.approved_at) && !b.approved_at) || (Boolean(r.approved_at) === Boolean(b.approved_at) && r.start_date > b.start_date)) best.set(r.source_url, r);
+    }
+    for (const [url, r] of best) {
+      const id = wanted.get(url)!;
+      if (taken.has(id)) continue;
+      const { error } = await supabase.from('events').update({ external_id: id }).eq('id', r.id);
+      if (!error) { taken.add(id); adopted++; }
+    }
+  }
+  console.log(`adopted ${adopted} stored events under their new keys`);
+}
+
+async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], verdicts: Verdict[], scores: (number | null)[], noCopy = false, partial = false) {
   if (!events.length) return; // never wipe a source's events on an empty read
   const now = new Date().toISOString();
-  const ids = events.map((e) => reader.externalId(source.id, e.key));
+  // Editorial profile on: end dates are kept and hand-edited facts are locked (off = unchanged behaviour)
+  const { data: profileRow } = await supabase.from('feed_editorial_profiles').select('enabled').eq('topic_id', source.topic_id).maybeSingle();
+  const profileOn = Boolean(profileRow?.enabled);
+  // Captions on: the listing's own record id is the key, so a daily-moving "next showing" never makes a new event
+  const ids = events.map((e) => reader.externalId(source.id, profileOn && e.stable_key ? e.stable_key : e.key));
+  if (profileOn) await adoptEarlierRows(supabase, reader, source, events, ids);
 
   // What the owner has already decided: removals and restores stick.
   const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null; image_edited: boolean; description: string | null; description_edited: boolean; title: string; start_date: string; start_time: string | null; end_date: string | null; location: string | null; price: string | null; is_free: boolean | null; source_hash: string | null; approved_at: string | null }>();
@@ -169,9 +216,6 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
     else if (r.kept_by_owner) keptTitles.add(titleKey(r.title));
   }
 
-  // Editorial profile on: end dates are kept and hand-edited facts are locked (off = unchanged behaviour)
-  const { data: profileRow } = await supabase.from('feed_editorial_profiles').select('enabled').eq('topic_id', source.topic_id).maybeSingle();
-  const profileOn = Boolean(profileRow?.enabled);
   const locks = new Map<string, Set<string>>();
   if (profileOn) {
     const prevIds = [...existing.values()].map((r) => r.id);
@@ -191,6 +235,21 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
 
   // The same picture on many events is a logo or "no image" tile, not a photo
   const placeholders = placeholderImages(events.map((e) => e.image));
+
+  // Captions on: cut-off excerpts are replaced by the event page's own full text (kept from earlier reads)
+  if (profileOn) {
+    const need: { url: string; excerpt: string }[] = [];
+    events.forEach((e, i) => {
+      if (!e.url || !e.description || !cutOff(e.description)) return;
+      const prev = existing.get(ids[i]!);
+      const head = e.description.replace(/(\.\.\.|…)\s*$/, '').slice(0, 60);
+      if (prev?.description && !cutOff(prev.description) && prev.description.startsWith(head)) e.description = prev.description;
+      else need.push({ url: e.url, excerpt: e.description });
+    });
+    const full = await fetchFullDescriptions(need, source.url);
+    for (const e of events) if (e.url && full.has(e.url) && e.description && cutOff(e.description)) e.description = full.get(e.url)!;
+    console.log(`full descriptions: ${full.size} of ${need.length} read from event pages`);
+  }
 
   const rows = events.map((e, i) => {
     const id = ids[i];
@@ -239,6 +298,8 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
     if (profileOn) {
       const row = base as Record<string, unknown>;
       row.end_date = e.end_date ?? null;
+      row.run_start = e.run_start ?? null;
+      row.source_subtitle = e.source_subtitle ?? null;
       const locked = prev ? locks.get(prev.id) : undefined;
       if (prev && locked) {
         const keep: Record<string, string[]> = { title: ['title'], start_date: ['start_date'], start_time: ['start_time'], end_date: ['end_date'], venue: ['location'], price: ['price', 'is_free'] };
@@ -268,7 +329,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   const currency = currencyFromUrls([source.url, ...unique.slice(0, 20).map((r) => r.source_url)]) ?? 'GBP';
   await supabase.from('topics').update({ event_currency: currency }).eq('id', source.topic_id).is('event_currency', null);
   // Editorial profile: published events that are new, newly approved or whose facts changed get fresh copy (in the background)
-  if (profileOn) {
+  if (profileOn && !noCopy) {
     const due = unique.filter((r) => {
       const prev = existing.get(r.external_id);
       return r.status === 'published' && (!prev || !prev.approved_at || prev.source_hash !== (r as Record<string, unknown>).source_hash);
@@ -279,6 +340,17 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   inBackground(checkOtherCategories(supabase, source.topic_id, source.id));
   // Drop upcoming events from this source that it no longer lists
   const keep = unique.map((r) => `"${String(r.external_id).replace(/"/g, '')}"`).join(',');
+  if (profileOn) {
+    if (partial) { console.log('read stopped early: nothing dropped'); return; }
+    // Compared here, not in one long query: a few hundred keys overflow the request address
+    const keepIds = new Set(unique.map((r) => String(r.external_id)));
+    const { data: upcoming } = await supabase.from('events').select('id, external_id, image_path, image_original_path')
+      .eq('event_source_id', source.id).gte('start_date', londonToday()).limit(5000);
+    const gone = (upcoming || []).filter((r: { external_id: string }) => !keepIds.has(r.external_id));
+    await removePhotosOf(supabase, gone.filter((r: { image_path: string | null }) => r.image_path));
+    for (const part of chunks(gone.map((r: { id: string }) => r.id), 150)) await supabase.from('events').delete().in('id', part);
+    return;
+  }
   const { data: dropped } = await supabase.from('events').select('image_path, image_original_path')
     .eq('event_source_id', source.id).gte('start_date', londonToday())
     .not('external_id', 'in', `(${keep})`).not('image_path', 'is', null);
@@ -344,7 +416,7 @@ async function mirrorLegacyCalendarUrl(supabase: Db, source: Source, newUrl: str
 const photosLater = (supabase: Db, sourceId: string) =>
   inBackground(savePhotos(supabase, { sourceId }).catch((e) => console.warn('event photos failed:', e instanceof Error ? e.message : e)));
 
-async function checkSource(supabase: Db, profiles: Profiles, source: Source, photos = true) {
+async function checkSource(supabase: Db, profiles: Profiles, source: Source, photos = true, noCopy = false) {
   const reader = readerFor(source.kind);
   const result = await readSafely(reader, source.url, source.name);
   const profile = await placeProfileFor(supabase, profiles, source.topic_id);
@@ -353,7 +425,7 @@ async function checkSource(supabase: Db, profiles: Profiles, source: Source, pho
   let storeError: string | null = null;
   try {
     if (result.events.length) {
-      await storeEvents(supabase, reader, source, result.events, verdicts, scores);
+      await storeEvents(supabase, reader, source, result.events, verdicts, scores, noCopy, Boolean(result.partial));
       if (photos) photosLater(supabase, source.id);
     } else await filterStored(supabase, source, profile);
   } catch (e) { storeError = e instanceof Error ? e.message : 'Store failed'; }
@@ -607,7 +679,9 @@ Deno.serve(async (req) => {
         const { verdicts, scores } = await judgeAndScore(supabase, profiles, source.topic_id, result.events, newUrl, body.name || source.name);
         if (!result.events.length) return json({ success: false, ...summarise(kind, result, verdicts), error: result.error || 'No upcoming events found at this address.' }, 422);
         await mirrorLegacyCalendarUrl(supabase, source, kind === 'calendar_feed' ? newUrl : null);
-        await deleteUpcoming(supabase, source);
+        // Captions on: stored events are carried over to the new address (adopted by link), not wiped
+        const { data: prof } = await supabase.from('feed_editorial_profiles').select('enabled').eq('topic_id', source.topic_id).maybeSingle();
+        if (!prof?.enabled) await deleteUpcoming(supabase, source);
         const updated = { ...source, url: newUrl, kind, name: body.name || source.name };
         await supabase.from('event_sources').update({
           url: newUrl, kind, name: updated.name, method: result.method, last_checked_at: new Date().toISOString(),
@@ -627,7 +701,9 @@ Deno.serve(async (req) => {
 
     // The daily run saves photos once at the end instead of per source
     const quiet = isSystem && 'quiet' in body && body.quiet === true;
-    return json({ success: true, ...(await checkSource(supabase, profiles, source, !quiet)) });
+    // System-only trial gathers can skip writing copy (no credits)
+    const noCopy = isSystem && 'noCopy' in body && body.noCopy === true;
+    return json({ success: true, ...(await checkSource(supabase, profiles, source, !quiet, noCopy)) });
   } catch (error) {
     console.error('scrape-whats-on failed:', error instanceof Error ? error.message : error);
     return json({ error: 'Something went wrong reading that address.' }, 500);

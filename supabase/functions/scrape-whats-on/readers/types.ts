@@ -35,6 +35,14 @@ export interface ReaderEvent {
   tags?: string[];
   /** Last day as published, only when later than start_date. */
   end_date?: string | null;
+  /** The listing's own record id, when it has one; used as the key only on feeds with captions on. */
+  stable_key?: string | null;
+  /** First day of the current run (start_date is the next showing). */
+  run_start?: string | null;
+  /** The title the source gives in another language (copied, never generated). */
+  source_subtitle?: string | null;
+  /** The address this event was stored under before (other language edition), to keep the same row. */
+  legacy_url?: string | null;
 }
 
 export interface ReaderResult {
@@ -43,6 +51,8 @@ export interface ReaderResult {
   /** Suggested name for the source, shown to readers. */
   name: string;
   error?: string | null;
+  /** The read stopped early (a page failed): stored events it didn't see are kept. */
+  partial?: boolean;
 }
 
 export interface EventReader {

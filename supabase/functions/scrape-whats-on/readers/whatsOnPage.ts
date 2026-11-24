@@ -32,7 +32,11 @@ export const whatsOnPageReader: EventReader = {
       image: e.image ?? null,
       tags: e.tags ?? [],
       end_date: e.end_date ?? null,
+      stable_key: e.source_id ? `wp:${e.source_id}` : null,
+      run_start: e.run_start ?? null,
+      source_subtitle: e.alt_title ?? null,
+      legacy_url: e.alt_url ?? null,
     })));
-    return { events, method: r.method, name: r.name, error: r.error ?? null };
+    return { events, method: r.method, name: r.name, error: r.error ?? null, ...(r.partial ? { partial: true } : {}) };
   },
 };
