@@ -1,8 +1,8 @@
+import { SettingRow } from "@/components/settings/SettingRow";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
@@ -33,70 +33,39 @@ export const RegionalFeaturesSettings = ({
     if (initialParliamentary !== undefined) setParliamentaryEnabled(initialParliamentary);
   }, [initialRegion, initialParliamentary]);
 
+  const [state, setState] = useState<SaveState>(null);
   const updateField = async (field: string, value: any) => {
-    try {
-      const { error } = await supabase
-        .from('topics')
-        .update({ [field]: value, updated_at: new Date().toISOString() } as any)
-        .eq('id', topicId);
-
-      if (error) throw error;
-      toast({ title: "Updated" });
-      onUpdate?.();
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to update", variant: "destructive" });
+    setState("saving");
+    const { error } = await supabase
+      .from('topics')
+      .update({ [field]: value, updated_at: new Date().toISOString() } as any)
+      .eq('id', topicId);
+    if (error) {
+      setState("not-saved");
+      toast({ title: "Not saved", description: "Please try again.", variant: "destructive" });
+      return;
     }
+    setState("saved");
+    onUpdate?.();
   };
 
   return (
-    <div className="space-y-6">
-      {/* Region Input */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          Region/Town
-        </Label>
-        <Input
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-          onBlur={() => updateField('region', region || null)}
-          placeholder="e.g., Hastings, Brighton, Lewes"
-          className="max-w-md"
-        />
-      </div>
-
-      {/* Email segments moved to Settings → Share and grow → Advanced */}
-
-
-
-
-
+    <div className="divide-y divide-border border-y border-border">
+      <SettingRow label="Town" hint="The place this feed reports on.">
+        <SaveIndicator state={state} />
+        <Input aria-label="Town" value={region} onChange={(e) => setRegion(e.target.value)} onBlur={() => updateField('region', region || null)} placeholder="e.g. Hastings" className="h-11 w-56 text-base" />
+      </SettingRow>
       {/* Parliamentary Tracking — parked (docs/parked-features.md); the saved setting is kept */}
       {FEATURES.parliament && (
-      <div className="space-y-4 py-3 border-t">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label className="flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              Parliament: local MPs and debates
-            </Label>
-          </div>
-          <Switch
-            checked={parliamentaryEnabled}
-            onCheckedChange={(checked) => {
-              setParliamentaryEnabled(checked);
-              updateField('parliamentary_tracking_enabled', checked);
-            }}
-          />
+        <SettingRow label="Parliament" hint="Local MPs' votes and debates.">
+          <Switch aria-label="Parliament" checked={parliamentaryEnabled} onCheckedChange={(checked) => { setParliamentaryEnabled(checked); updateField('parliamentary_tracking_enabled', checked); }} />
+        </SettingRow>
+      )}
+      {FEATURES.parliament && parliamentaryEnabled && region && (
+        <div className="space-y-4 py-5">
+          <ParliamentaryBackfillTrigger topicId={topicId} region={region} />
+          <TrackedMPsManager topicId={topicId} region={region} />
         </div>
-
-        {parliamentaryEnabled && region && (
-          <div className="space-y-4 pl-6 border-l-2 border-muted">
-            <ParliamentaryBackfillTrigger topicId={topicId} region={region} />
-            <TrackedMPsManager topicId={topicId} region={region} />
-          </div>
-        )}
-      </div>
       )}
     </div>
   );

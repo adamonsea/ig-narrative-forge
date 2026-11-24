@@ -1,3 +1,5 @@
+import { SettingRow } from "@/components/settings/SettingRow";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { InfoHint } from '@/components/ui/editorial';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -114,11 +116,13 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
+  const [saveState, setSaveState] = useState<SaveState>(null);
   const persist = useCallback(async (next: {
     locality_strength: number;
     nearby_places: NearbyPlace[];
     big_story_override: boolean;
   }) => {
+    setSaveState('saving');
     const { error } = await supabase
       .from('topics')
       .update({
@@ -130,6 +134,7 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
 
     if (error) {
       console.error('Failed to save news values', error);
+      setSaveState('not-saved');
       toast({
         title: 'Not saved',
         description: 'Your news settings could not be saved. Please try again.',
@@ -137,6 +142,7 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
       });
       return;
     }
+    setSaveState('saved');
     onChangeRef.current?.(next);
   }, [topicId, toast]);
 
@@ -175,89 +181,51 @@ export const NewsValuesPanel: React.FC<NewsValuesPanelProps> = ({
   const dial = getDial(strength);
 
   return (
-    <div className="space-y-6">
-        {/* The dial */}
+    <div className="divide-y divide-border border-y border-border">
+      <SettingRow label="How local" hint={dial.blurb} stack>
         <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <span className="flex items-center gap-2"><Label>How local?</Label><InfoHint label="About how local">{dial.blurb}</InfoHint></span>
-            <span className="text-sm font-medium">{dial.label}</span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-base font-medium">{dial.label}</span>
+            <SaveIndicator state={saveState} />
           </div>
-          <Slider
-            value={[strength]}
-            min={1}
-            max={5}
-            step={1}
-            onValueChange={(v) => setStrength(v[0]!)}
-          />
+          <Slider aria-label="How local" value={[strength]} min={1} max={5} step={1} onValueChange={(v) => setStrength(v[0]!)} />
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>{LOCALITY_DIAL[1]!.label}</span>
             <span>{LOCALITY_DIAL[5]!.label}</span>
           </div>
           {preview && (
-            <p className="text-sm text-muted-foreground border-t pt-3">
-              Of your last {preview.total} arrivals, <strong className="text-foreground">{preview.published}</strong>{' '}
-              would publish on their own and {preview.review} would wait for you.
-              {' '}({preview.tiers['home']} named your town, {preview.tiers['nearby']! + preview.tiers['far']!} a
-              neighbouring place, {preview.tiers['nowhere']} named nowhere.)
+            <p className="text-sm text-muted-foreground">
+              Of your last {preview.total} arrivals, <strong className="text-foreground">{preview.published}</strong> would publish on their own and {preview.review} would wait for you.
             </p>
           )}
         </div>
+      </SettingRow>
 
-        {/* Neighbouring places */}
-        <div className="space-y-3 border-t pt-4">
-          <Label className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5" />
-            Neighbouring places
-            <InfoHint label="About neighbouring places">Tap a place to switch it between near and further out. Further out places need a bigger story to get in.</InfoHint>
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              value={newPlace}
-              placeholder="e.g. Hailsham"
-              onChange={(e) => setNewPlace(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addPlace();
-                }
-              }}
-            />
-            <Button type="button" variant="outline" size="icon" onClick={addPlace} aria-label="Add place" title="Add place">
-              <Plus className="w-4 h-4" />
-            </Button>
+      <SettingRow label="Neighbouring places" hint="Tap a place to switch near / further out. Further out needs a bigger story." stack>
+        <div className="space-y-3">
+          <div className="flex gap-2 sm:max-w-md">
+            <Input aria-label="Add a place" className="h-11 text-base" value={newPlace} placeholder="e.g. Hailsham" onChange={(e) => setNewPlace(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlace(); } }} />
+            <Button type="button" variant="outline" size="icon" className="h-11 w-11" onClick={addPlace} aria-label="Add place" title="Add place"><Plus className="h-4 w-4" /></Button>
           </div>
           {places.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <ul className="flex flex-wrap gap-2">
               {places.map((p) => (
-                <Badge
-                  key={p.name}
-                  variant={p.tier === 'near' ? 'default' : 'secondary'}
-                  className="cursor-pointer gap-1.5"
-                  onClick={() => togglePlace(p.name)}
-                >
-                  {p.name}
-                  <span className="opacity-70">{p.tier === 'near' ? 'near' : 'further out'}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${p.name}`}
-                    onClick={(e) => { e.stopPropagation(); removePlace(p.name); }}
-                  >
-                    <X className="w-3 h-3" />
+                <li key={p.name} className={`inline-flex items-center rounded-full border text-base ${p.tier === 'near' ? 'border-primary bg-primary/5' : 'border-border text-muted-foreground'}`}>
+                  <button type="button" onClick={() => togglePlace(p.name)} className="py-1.5 pl-3 pr-1">
+                    {p.name} <span className="text-sm text-muted-foreground">· {p.tier === 'near' ? 'near' : 'further out'}</span>
                   </button>
-                </Badge>
+                  <button type="button" aria-label={`Remove ${p.name}`} onClick={() => removePlace(p.name)} className="rounded-r-full p-2 hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
+      </SettingRow>
 
-        {/* Big story override */}
-        <div className="flex items-start justify-between gap-4 border-t pt-4">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="big-story-override">Big stories</Label>
-            <InfoHint label="About big stories">A major incident, a large sum of money or one of your named organisations can carry a story in from further away.</InfoHint>
-          </div>
-          <Switch id="big-story-override" checked={override} onCheckedChange={setOverride} />
-        </div>
+      <SettingRow label="Big stories" hint="A major incident, big money or a named organisation can carry a story in from further away.">
+        <Switch id="big-story-override" aria-label="Big stories" checked={override} onCheckedChange={setOverride} />
+      </SettingRow>
     </div>
   );
 };
