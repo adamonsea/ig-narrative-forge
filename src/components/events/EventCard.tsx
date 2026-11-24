@@ -10,6 +10,7 @@ import { EventCategoryIllustration } from "@/components/events/EventCategoryIllu
 import { dateBlock, eventTime, priceLine, type WhatsOnFeedEvent } from "@/lib/whatsOn";
 import { eventPhotoUrl } from "@/lib/eventPhotos";
 import { completeDescription } from "@/lib/eventDescription";
+import { nextCalendarHint } from "@/lib/calendarHint";
 
 function brandVars(color?: string | null) {
   const p = feedBrandPalette(color);
@@ -39,8 +40,10 @@ export function EventDateBlock({ ymd, className = "" }: { ymd: string; className
  * corner settles in once the card is first in view (no tooltips); on hover-capable screens it
  * opens into "Add to calendar"; after a tap it briefly shows a tick. Slide 2 keeps its own link.
  */
-export function EventDateButton({ ymd, title, revealed, onAdd, className = "" }: {
+export function EventDateButton({ ymd, title, revealed, animate = true, onAdd, className = "" }: {
   ymd: string; title: string; revealed: boolean; onAdd: () => void; className?: string | undefined;
+  /** False shows the badge still (no settle-in); see calendarHint.ts for which cards animate. */
+  animate?: boolean | undefined;
 }) {
   const b = dateBlock(ymd);
   const [added, setAdded] = useState(false);
@@ -55,7 +58,7 @@ export function EventDateButton({ ymd, title, revealed, onAdd, className = "" }:
       className={`group relative inline-block align-top rounded-2xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--ev-accent)] ${className}`}>
       <EventDateBlock ymd={ymd} className="shadow-md ring-4 ring-[hsl(var(--feed-card))] transition-transform duration-200 ease-out group-active:scale-[0.97]" />
       <span aria-hidden="true"
-        className={`absolute -top-2 left-[calc(100%-26px)] inline-flex h-9 min-w-9 origin-left items-center justify-center rounded-full bg-[hsl(var(--feed-card))] px-2 text-sm font-semibold shadow-md ring-2 ring-[color:var(--ev-fill)] dark:ring-[color:var(--ev-fill-dark)] ${ACCENT} motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-safe:delay-200 ${revealed ? "scale-100" : "motion-safe:scale-0"}`}>
+        className={`absolute -top-2 left-[calc(100%-26px)] inline-flex h-9 min-w-9 origin-left items-center justify-center rounded-full bg-[hsl(var(--feed-card))] px-2 text-sm font-semibold shadow-md ring-2 ring-[color:var(--ev-fill)] dark:ring-[color:var(--ev-fill-dark)] ${ACCENT} ${animate ? "motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-safe:delay-200" : ""} ${revealed ? "scale-100" : "motion-safe:scale-0"}`}>
         {added ? <Check className="h-5 w-5" strokeWidth={2.75} /> : <Plus className="h-5 w-5" strokeWidth={2.75} />}
         <span className="max-w-0 overflow-hidden whitespace-nowrap motion-safe:transition-[max-width] motion-safe:duration-200 [@media(hover:hover)]:group-hover:max-w-[10rem] [@media(hover:hover)]:group-focus-visible:max-w-[10rem]">
           <span className="pl-1 pr-1">{added ? "Added" : "Add to calendar"}</span>
@@ -112,8 +115,16 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
     io.observe(el);
     return () => io.disconnect();
   }, []);
-  // The + badge settles in the first time the card is in view, then stays
+  // The + badge settles in the first time the card is in view, but only on some cards
+  // (calendarHint.ts); the rest show it still from the moment they mount.
+  const hint = useRef<boolean | null>(null);
+  const [animateHint, setAnimateHint] = useState(true);
   const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (hint.current === null) hint.current = nextCalendarHint();
+    setAnimateHint(hint.current);
+    if (!hint.current) setRevealed(true);
+  }, []);
   useEffect(() => { if (inView) setRevealed(true); }, [inView]);
   const addToCalendar = () => {
     downloadIcs({ id: e.id, title: e.title, start_date: e.start_date, start_time: e.start_time, location: e.location, source_url: e.source_url, description: completeDescription(e.description) });
@@ -145,7 +156,7 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
         </div>
         <div className="absolute bottom-0 left-0 right-0 px-5 md:px-8">
           <div className="mx-auto w-full max-w-xl">
-            <EventDateButton ymd={e.start_date} title={e.title} revealed={revealed} onAdd={addToCalendar} className="translate-y-1/2" />
+            <EventDateButton ymd={e.start_date} title={e.title} revealed={revealed} animate={animateHint} onAdd={addToCalendar} className="translate-y-1/2" />
           </div>
         </div>
       </div>
