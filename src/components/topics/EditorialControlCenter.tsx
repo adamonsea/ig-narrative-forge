@@ -209,7 +209,6 @@ export function EditorialControlCenter({
               </SettingRow>
             </SettingGroup>
             <section aria-labelledby="about-heading">
-              <SubHeading id="about-heading">{READER_ONBOARDING_EXTRAS ? "Welcome card and About page" : "About page"}</SubHeading>
               <OnboardingSettings topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
             </section>
           </Page>
@@ -269,7 +268,7 @@ export function EditorialControlCenter({
             />
             {topic.topic_type === "regional" && (
               <section aria-labelledby="news-values-heading">
-                <SubHeading id="news-values-heading">How local</SubHeading>
+                <span id="news-values-heading" className="sr-only">How local</span>
                 <NewsValuesPanel topicId={topic.id} region={topic.region} landmarks={topic.landmarks} postcodes={topic.postcodes} organizations={topic.organizations} localityStrength={topic.locality_strength} nearbyPlaces={topic.nearby_places} bigStoryOverride={topic.big_story_override} onChange={(values) => patch(values)} />
               </section>
             )}

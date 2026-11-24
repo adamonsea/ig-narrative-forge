@@ -1,3 +1,4 @@
+import { SettingRow } from "@/components/settings/SettingRow";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
@@ -157,103 +158,61 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
   };
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading…</div>;
+    return <div className="h-32 w-full animate-pulse rounded-xl bg-muted" />;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <Label className="text-sm">Level of control</Label>
-        <SaveIndicator state={saveState} />
-      </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        {MODE_GROUPS.map((group) => {
-          const active = group.modes.includes(automationMode);
-          const targetMode = group.modes[0];
-          return (
-            <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode!)} aria-pressed={active} className={`h-auto min-h-20 flex-col items-start justify-start whitespace-normal rounded-lg p-3 text-left transition-colors ${active ? 'border-primary bg-primary text-primary-foreground' : ''}`}>
-              <span className="flex items-center gap-2 text-sm font-medium">{active && <Check className="h-4 w-4 text-primary-foreground" />}{group.label}</span>
-            </Button>
-          );
-        })}
-      </div>
-
-      <Disclosure label="Fine-tune the details">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">Exact behaviour</Label>
-              <InfoHint label="About this behaviour">{MODE_DESCRIPTIONS[automationMode]}</InfoHint>
-            </div>
-            <Select value={automationMode} onValueChange={(v) => handleModeChange(v as AutomationMode)}>
-              <SelectTrigger className="w-[160px] shrink-0 text-sm" aria-label="Exact automation behaviour"><SelectValue /></SelectTrigger>
-              <SelectContent>{(Object.keys(MODE_LABELS) as AutomationMode[]).map((mode) => <SelectItem key={mode} value={mode}>{MODE_LABELS[mode]}</SelectItem>)}</SelectContent>
-            </Select>
+    <div className="divide-y divide-border border-y border-border">
+      <SettingRow label="Level of control" hint={automationMode !== 'manual' && nextRunAt ? `Next run ${new Date(nextRunAt) > new Date() ? `in ${Math.round((new Date(nextRunAt).getTime() - Date.now()) / (1000 * 60 * 60))}h` : 'overdue'}.` : "How much Curatr does for you."} stack>
+        <div className="space-y-3">
+          <div className="flex justify-end"><SaveIndicator state={saveState} /></div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {MODE_GROUPS.map((group) => {
+              const active = group.modes.includes(automationMode);
+              const targetMode = group.modes[0];
+              return (
+                <Button key={group.label} type="button" variant="outline" onClick={() => handleModeChange(targetMode!)} aria-pressed={active} className={`h-auto min-h-14 items-center justify-start whitespace-normal rounded-lg p-3 text-left text-base transition-colors ${active ? 'border-primary bg-primary text-primary-foreground' : ''}`}>
+                  {active && <Check className="mr-2 h-4 w-4 text-primary-foreground" />}{group.label}
+                </Button>
+              );
+            })}
           </div>
-
-          {(automationMode === 'auto_gather' || automationMode === 'holiday') && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Check every</Label>
-                <span className="text-sm text-muted-foreground">{scrapeFrequency}h</span>
-              </div>
-              <Slider
-                value={[scrapeFrequency]}
-                onValueChange={([v]) => handleScrapeFrequency(v!)}
-                min={4} max={24} step={4}
-              />
-            </div>
-          )}
-
-          {(automationMode === 'auto_simplify' || automationMode === 'holiday') && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Story quality bar</Label>
-                <span className="text-sm text-muted-foreground">{qualityThreshold}%</span>
-              </div>
-              <Slider
-                value={[qualityThreshold]}
-                onValueChange={([v]) => handleQualityThreshold(v!)}
-                min={30} max={100} step={5}
-              />
-            </div>
-          )}
-
-          {(automationMode === 'auto_illustrate' || automationMode === 'holiday') && (
-            <div className="space-y-3">
-              {automationMode === 'holiday' && (
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Add artwork automatically</Label>
-                  <Switch checked={autoIllustrateInHoliday} onCheckedChange={handleAutoIllustrateToggle} />
-                </div>
-              )}
-              {(automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday)) && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Artwork quality bar</Label>
-                    <span className="text-sm text-muted-foreground">{illustrationThreshold}%</span>
-                  </div>
-                  <Slider
-                    value={[illustrationThreshold]}
-                    onValueChange={([v]) => handleIllustrationThreshold(v!)}
-                    min={50} max={100} step={5}
-                  />
-                </div>
-              )}
-            </div>
-          )}
         </div>
-      </Disclosure>
-
-      {automationMode !== 'manual' && nextRunAt && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>
-            Next run: {new Date(nextRunAt) > new Date()
-              ? `in ${Math.round((new Date(nextRunAt).getTime() - Date.now()) / (1000 * 60 * 60))}h`
-              : 'overdue'}
-          </span>
-        </div>
+      </SettingRow>
+      <SettingRow label="Exact behaviour" hint={MODE_DESCRIPTIONS[automationMode]}>
+        <Select value={automationMode} onValueChange={(v) => handleModeChange(v as AutomationMode)}>
+          <SelectTrigger className="h-11 w-48 shrink-0 text-base" aria-label="Exact automation behaviour"><SelectValue /></SelectTrigger>
+          <SelectContent>{(Object.keys(MODE_LABELS) as AutomationMode[]).map((mode) => <SelectItem key={mode} value={mode}>{MODE_LABELS[mode]}</SelectItem>)}</SelectContent>
+        </Select>
+      </SettingRow>
+      {(automationMode === 'auto_gather' || automationMode === 'holiday') && (
+        <SettingRow label="Check every" hint="Hours between gathers.">
+              <div className="flex w-56 items-center gap-3">
+                <Slider aria-label="Check every" value={[scrapeFrequency]} onValueChange={([v]) => handleScrapeFrequency(v!)} min={4} max={24} step={4} />
+                <span className="w-12 text-right text-base">{scrapeFrequency}h</span>
+              </div>
+            </SettingRow>
+      )}
+      {(automationMode === 'auto_simplify' || automationMode === 'holiday') && (
+        <SettingRow label="Story quality bar" hint="Only stories above this are written.">
+              <div className="flex w-56 items-center gap-3">
+                <Slider aria-label="Story quality bar" value={[qualityThreshold]} onValueChange={([v]) => handleQualityThreshold(v!)} min={30} max={100} step={5} />
+                <span className="w-12 text-right text-base">{qualityThreshold}%</span>
+              </div>
+            </SettingRow>
+      )}
+      {automationMode === 'holiday' && (
+        <SettingRow label="Add artwork" hint="Create pictures for new stories automatically.">
+          <Switch aria-label="Add artwork" checked={autoIllustrateInHoliday} onCheckedChange={handleAutoIllustrateToggle} />
+        </SettingRow>
+      )}
+      {(automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday)) && (
+        <SettingRow label="Artwork quality bar" hint="Only stories above this get pictures.">
+              <div className="flex w-56 items-center gap-3">
+                <Slider aria-label="Artwork quality bar" value={[illustrationThreshold]} onValueChange={([v]) => handleIllustrationThreshold(v!)} min={50} max={100} step={5} />
+                <span className="w-12 text-right text-base">{illustrationThreshold}%</span>
+              </div>
+            </SettingRow>
       )}
     </div>
   );
