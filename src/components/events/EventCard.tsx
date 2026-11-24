@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState, type ComponentType } from "react";
-import { ArrowUpRight, CalendarPlus } from "lucide-react";
+import { ArrowUpRight, CalendarPlus, Check, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
 import { eventIllustrationTint, feedBrandPalette, toCss } from "@/lib/feedBrandColor";
@@ -31,6 +31,37 @@ export function EventDateBlock({ ymd, className = "" }: { ymd: string; className
       <div className="my-2 text-6xl font-bold">{b.day}</div>
       <div className="text-lg font-semibold">{b.month}</div>
     </div>
+  );
+}
+
+/**
+ * The date block as the quick "Add to calendar" button on slide 1. A small + badge on its
+ * corner settles in once the card is first in view (no tooltips); on hover-capable screens it
+ * opens into "Add to calendar"; after a tap it briefly shows a tick. Slide 2 keeps its own link.
+ */
+export function EventDateButton({ ymd, title, revealed, onAdd, className = "" }: {
+  ymd: string; title: string; revealed: boolean; onAdd: () => void; className?: string | undefined;
+}) {
+  const b = dateBlock(ymd);
+  const [added, setAdded] = useState(false);
+  useEffect(() => {
+    if (!added) return;
+    const t = setTimeout(() => setAdded(false), 2500);
+    return () => clearTimeout(t);
+  }, [added]);
+  return (
+    <button type="button" onClick={() => { onAdd(); setAdded(true); }}
+      aria-label={`Add ${title} on ${b.weekday} ${b.day} ${b.month} to calendar`}
+      className={`group relative inline-block align-top rounded-2xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--ev-accent)] ${className}`}>
+      <EventDateBlock ymd={ymd} className="shadow-md ring-4 ring-[hsl(var(--feed-card))] transition-transform duration-200 ease-out group-active:scale-[0.97]" />
+      <span aria-hidden="true"
+        className={`absolute -top-2 left-[calc(100%-26px)] inline-flex h-9 min-w-9 origin-left items-center justify-center rounded-full bg-[hsl(var(--feed-card))] px-2 text-sm font-semibold shadow-md ring-2 ring-[color:var(--ev-fill)] dark:ring-[color:var(--ev-fill-dark)] ${ACCENT} motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-safe:delay-200 ${revealed ? "scale-100" : "motion-safe:scale-0"}`}>
+        {added ? <Check className="h-5 w-5" strokeWidth={2.75} /> : <Plus className="h-5 w-5" strokeWidth={2.75} />}
+        <span className="max-w-0 overflow-hidden whitespace-nowrap motion-safe:transition-[max-width] motion-safe:duration-200 [@media(hover:hover)]:group-hover:max-w-[10rem] [@media(hover:hover)]:group-focus-visible:max-w-[10rem]">
+          <span className="pl-1 pr-1">{added ? "Added" : "Add to calendar"}</span>
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -81,6 +112,13 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
     io.observe(el);
     return () => io.disconnect();
   }, []);
+  // The + badge settles in the first time the card is in view, then stays
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => { if (inView) setRevealed(true); }, [inView]);
+  const addToCalendar = () => {
+    downloadIcs({ id: e.id, title: e.title, start_date: e.start_date, start_time: e.start_time, location: e.location, source_url: e.source_url, description: completeDescription(e.description) });
+    if (!isOwner) recordEventClick(e.id, "calendar");
+  };
 
   const category = isEventCategory(e.event_type) ? e.event_type : "other";
   const b = dateBlock(e.start_date);
@@ -107,7 +145,7 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
         </div>
         <div className="absolute bottom-0 left-0 right-0 px-5 md:px-8">
           <div className="mx-auto w-full max-w-xl">
-            <EventDateBlock ymd={e.start_date} className="translate-y-1/2 shadow-md ring-4 ring-[hsl(var(--feed-card))]" />
+            <EventDateButton ymd={e.start_date} title={e.title} revealed={revealed} onAdd={addToCalendar} className="translate-y-1/2" />
           </div>
         </div>
       </div>
@@ -132,10 +170,7 @@ function EventCardView({ event: e, brandColor, isOwner = false, currency = null,
         </ul>
         {completeDescription(e.description) && <p className="text-lg opacity-75 md:text-xl">{completeDescription(e.description)}</p>}
         <button type="button" className={`inline-flex min-h-11 items-center gap-2 text-base font-semibold underline-offset-4 hover:underline ${ACCENT}`}
-          onClick={() => {
-            downloadIcs({ id: e.id, title: e.title, start_date: e.start_date, start_time: e.start_time, location: e.location, source_url: e.source_url, description: completeDescription(e.description) });
-            if (!isOwner) recordEventClick(e.id, "calendar");
-          }}>
+          onClick={addToCalendar}>
           <CalendarPlus className="h-5 w-5" aria-hidden="true" />Add to calendar
         </button>
       </div>
