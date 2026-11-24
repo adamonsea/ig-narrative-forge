@@ -6942,6 +6942,11 @@ export type Database = {
           topic_type: string
         }[]
       }
+      get_event_editorial: { Args: { p_event_id: string }; Returns: Json }
+      get_feed_editorial_profile: {
+        Args: { p_topic_id: string }
+        Returns: Json
+      }
       get_feed_sentiment_cards_enabled: {
         Args: { _topic_id: string }
         Returns: boolean
@@ -7761,6 +7766,20 @@ export type Database = {
           deleted_count: number
           message: string
         }[]
+      }
+      save_event_editorial: {
+        Args: {
+          p_event_id: string
+          p_key: string
+          p_kind: string
+          p_language: string
+          p_value: Json
+        }
+        Returns: undefined
+      }
+      save_feed_editorial_profile: {
+        Args: { p_topic_id: string; p_values: Json }
+        Returns: Json
       }
       set_event_category: {
         Args: { p_category: string; p_event_id: string }

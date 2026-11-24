@@ -26,7 +26,8 @@ export function useEditorialProfile(topicId: string | undefined) {
     enabled: Boolean(topicId),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data } = await (supabase.from as any)("feed_editorial_profiles").select("*").eq("topic_id", topicId).maybeSingle();
+      const { data, error } = await (supabase.rpc as any)("get_feed_editorial_profile", { p_topic_id: topicId });
+      if (error) throw error;
       return (data ?? null) as Profile | null;
     },
   });
@@ -56,7 +57,7 @@ export function EventCaptionsSettings({ topicId }: { topicId: string }) {
 
   const save = async (values: Partial<Profile>) => {
     setState("saving");
-    const { error } = await (supabase.from as any)("feed_editorial_profiles").upsert({ topic_id: topicId, ...values }, { onConflict: "topic_id" });
+    const { error } = await (supabase.rpc as any)("save_feed_editorial_profile", { p_topic_id: topicId, p_values: values });
     setState(error ? "not-saved" : "saved");
     qc.invalidateQueries({ queryKey: editorialProfileKey(topicId) });
   };

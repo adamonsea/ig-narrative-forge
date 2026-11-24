@@ -27,12 +27,12 @@ export function EventEditorialPanel({ eventId, topicId }: { eventId: string; top
     enabled: Boolean(profile?.enabled),
     queryFn: async () => {
       const from = supabase.from as any;
-      const [ev, copy, caps] = await Promise.all([
+      const [ev, ed] = await Promise.all([
         from("events").select("genre, flags, review_flags").eq("id", eventId).maybeSingle(),
-        from("event_copy").select("kind, language, text, edited_at").eq("event_id", eventId),
-        from("event_captions").select("platform, text, edited_at").eq("event_id", eventId),
+        (supabase.rpc as any)("get_event_editorial", { p_event_id: eventId }),
       ]);
-      return { ev: (ev.data ?? null) as EvRow | null, copy: (copy.data ?? []) as CopyRow[], caps: (caps.data ?? []) as CapRow[] };
+      const e = (ed.data ?? {}) as { copy?: CopyRow[]; caps?: CapRow[] };
+      return { ev: (ev.data ?? null) as EvRow | null, copy: e.copy ?? [], caps: e.caps ?? [] };
     },
   });
   const [writing, setWriting] = useState(false);
@@ -40,24 +40,21 @@ export function EventEditorialPanel({ eventId, topicId }: { eventId: string; top
   if (!profile?.enabled) return null;
   if (isLoading) return <div className="h-40 w-full animate-pulse rounded-xl bg-muted" />;
 
-  const userId = async () => (await supabase.auth.getUser()).data.user?.id ?? null;
-  const lock = async (field: string) => {
-    await (supabase.from as any)("event_field_edits").upsert({ event_id: eventId, field, edited_at: new Date().toISOString(), edited_by: await userId() }, { onConflict: "event_id,field" });
-  };
+  const rpc = (kind: string, k: string, language: string, value: unknown) =>
+    (supabase.rpc as any)("save_event_editorial", { p_event_id: eventId, p_kind: kind, p_key: k, p_language: language, p_value: value });
   const saveCaption = async (platform: string, text: string) => {
-    const { error: e } = await (supabase.from as any)("event_captions").upsert({ event_id: eventId, platform, language: "", text, edited_at: new Date().toISOString(), edited_by: await userId() }, { onConflict: "event_id,platform,language" });
+    const { error: e } = await rpc("caption", platform, "", text);
     if (e) setError("Couldn't save the caption.");
     qc.invalidateQueries({ queryKey: key });
   };
   const saveCopy = async (kind: string, language: string, text: string) => {
-    const { error: e } = await (supabase.from as any)("event_copy").upsert({ event_id: eventId, kind, language, text, edited_at: new Date().toISOString(), edited_by: await userId() }, { onConflict: "event_id,language,kind" });
+    const { error: e } = await rpc("copy", kind, language, text);
     if (e) setError("Couldn't save.");
     qc.invalidateQueries({ queryKey: key });
   };
   const saveEvent = async (field: "genre" | "flags", value: unknown) => {
-    const { error: e } = await (supabase.from as any)("events").update({ [field]: value }).eq("id", eventId);
+    const { error: e } = await rpc("field", field, "", value);
     if (e) { setError("Couldn't save."); return; }
-    await lock(field);
     qc.invalidateQueries({ queryKey: key });
   };
   const write = async () => {
