@@ -200,9 +200,6 @@ export function EditorialControlCenter({
           <Page title={label} purpose={purpose}>
             <BrandBasics topicId={topic.id} name={topic.name} colour={topic.illustration_primary_color} brandingConfig={topic.branding_config} onSaved={(values) => patch(values)} />
             <SettingGroup>
-              <SettingRow label="Live" hint={topic.is_public ? "Readers can see the feed." : "Draft. Only you can see it."}>
-                <Switch aria-label="Live" checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
-              </SettingRow>
               <SettingRow label="Events" hint={eventsOn ? "Gathering events. Their settings are on the Events page." : "Gather what's on as well as news. Adds an Events page here."}>
                 <SaveIndicator state={eventsSaving} />
                 <Switch aria-label="Events" checked={eventsOn} onCheckedChange={(on) => void toggleEvents(on)} />

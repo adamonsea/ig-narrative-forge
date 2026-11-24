@@ -1,6 +1,6 @@
 /** Feed Settings pages: one section per URL (/dashboard/topic/:slug/settings/:section). */
 export const SETTINGS_SECTIONS = [
-  { id: "general", label: "General", purpose: "Name, welcome line and whether readers can see the feed." },
+  { id: "general", label: "General", purpose: "Name, welcome line and the feed basics." },
   { id: "look", label: "Look", purpose: "How the feed looks to readers." },
   { id: "pictures", label: "Pictures", purpose: "How story pictures are made." },
   { id: "coverage", label: "Coverage", purpose: "What belongs in the feed." },
