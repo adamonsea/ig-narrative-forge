@@ -1,3 +1,4 @@
+import { SettingRow } from "@/components/settings/SettingRow";
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -424,30 +425,14 @@ export function PictureReferences({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h3 id="picture-references-heading" className="flex items-center gap-2 text-lg font-semibold">
-          Pictures
-          <InfoHint label="About pictures">
-            Choose how covers look, then add the places your feed writes about. Curatr writes each place's appearance
-            note and finds reference photos, so illustrations draw the real buildings.
-          </InfoHint>
-        </h3>
-        {landmarks.length > 0 && (
-          <Badge variant={readyCount === landmarks.length ? 'default' : 'secondary'} className="shrink-0">
-            {readyCount} of {landmarks.length} ready
-          </Badge>
-        )}
-      </div>
-
+    <div className="divide-y divide-border border-y border-border">
       {onIllustrationStyleChange && (
-        <div className="space-y-2 max-w-sm">
-          <Label htmlFor="visual-style">Visual style</Label>
+        <SettingRow label="Illustration style" hint="How drawn story covers look.">
           <Select
             value={illustrationStyle || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE}
             onValueChange={(v) => onIllustrationStyleChange(v as IllustrationStyle)}
           >
-            <SelectTrigger id="visual-style"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="visual-style" aria-label="Illustration style" className="h-11 w-56 text-base"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE}>
                 {ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE]}
@@ -472,9 +457,11 @@ export function PictureReferences({
               </SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </SettingRow>
       )}
 
+      <SettingRow id="picture-references-heading" label="Place pictures" hint={landmarks.length > 0 ? `${readyCount} of ${landmarks.length} ready. Reference photos help pictures show the real buildings.` : "Places your feed writes about, so pictures show the real buildings."} stack>
+      <div className="space-y-4">
       {pending.length > 0 && (
         <p className="text-sm text-muted-foreground">
           {pending.length === 1 ? '1 place is' : `${pending.length} places are`} awaiting confirmation.
@@ -488,8 +475,10 @@ export function PictureReferences({
           onChange={(e) => setNewPlace(e.target.value)}
           placeholder="Add a place, landmark or venue…"
           onKeyDown={(e) => e.key === 'Enter' && addPlace()}
+          className="h-11 text-base"
+          aria-label="Add a place"
         />
-        <Button onClick={() => addPlace()} size="sm" variant="outline" disabled={saving}>
+        <Button onClick={() => addPlace()} variant="outline" className="h-11" aria-label="Add place" disabled={saving}>
           <MapPin className="h-4 w-4" />
         </Button>
       </div>
@@ -516,7 +505,7 @@ export function PictureReferences({
                     </span>
                   )}
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{place}</span>
+                    <span className="block truncate text-base font-medium">{place}</span>
                     <span className="block text-sm text-muted-foreground">
                       {placeConfirmed
                         ? `${(photos[place] || []).length} ${((photos[place] || []).length === 1) ? 'photo' : 'photos'} · ready`
@@ -534,16 +523,14 @@ export function PictureReferences({
           );
         })}
         {landmarks.length === 0 && (
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            No places yet.
-          </p>
+          <p className="text-base text-muted-foreground">No places yet.</p>
         )}
       </div>
 
-      <div className="rounded-lg border p-3">
+      <div>
         <button
           type="button"
-          className="flex w-full items-center justify-between text-sm font-medium"
+          className="flex min-h-11 w-full items-center justify-between text-base font-medium"
           onClick={() => setSuggestionsOpen((open) => !open)}
           aria-expanded={suggestionsOpen}
         >
@@ -590,6 +577,8 @@ export function PictureReferences({
           </div>
         )}
       </div>
+      </div>
+      </SettingRow>
     </div>
   );
 }
