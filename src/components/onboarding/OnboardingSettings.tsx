@@ -149,24 +149,25 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
   };
 
   return (
-    <div className="space-y-6">
+    <div className="divide-y divide-border border-y border-border">
         {/* Welcome card: hidden while reader welcome extras are paused (saved values are kept) */}
         {READER_ONBOARDING_EXTRAS && (
-        <div className="space-y-4">
+        <div className="space-y-4 py-5">
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-base font-medium">Welcome card</Label>
+              <p className="mt-1 text-sm text-muted-foreground">Greets first-time readers.</p>
             </div>
-            <Switch
+            <Switch aria-label="Welcome card"
               checked={welcomeEnabled}
               onCheckedChange={(v) => { setWelcomeEnabled(v); save({ welcome_card_enabled: v }); }}
             />
           </div>
 
           {welcomeEnabled && (
-            <div className="space-y-4 pl-4 border-l-2 border-muted">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="welcomeHeadline">Headline</Label>
+                <Label htmlFor="welcomeHeadline" className="text-base">Headline</Label>
                 <Input
                   id="welcomeHeadline"
                   value={welcomeHeadline}
@@ -178,7 +179,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
               </div>
 
               <div>
-                <Label htmlFor="welcomeCtaText">Button text</Label>
+                <Label htmlFor="welcomeCtaText" className="text-base">Button text</Label>
                 <Input
                   id="welcomeCtaText"
                   value={welcomeCtaText}
@@ -203,9 +204,12 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         )}
 
         {/* About Page */}
-        <div className={READER_ONBOARDING_EXTRAS ? "space-y-4 pt-4 border-t" : "space-y-4"}>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="about-page-on" className="text-base font-medium">About page</Label>
+        <div className="space-y-5 py-5">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <Label htmlFor="about-page-on" className="text-base font-medium">About page</Label>
+              <p className="mt-1 text-sm text-muted-foreground">Who curates the feed, linked from its menu.</p>
+            </div>
             <div className="flex items-center gap-3">
             <SaveIndicator state={state} />
             <Switch
@@ -217,10 +221,10 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
           </div>
 
           {aboutPageEnabled && (
-            <div className="space-y-4 pl-4 border-l-2 border-muted">
+            <div className="space-y-5">
               {/* Image Upload */}
               <div>
-                <Label className="mb-2 block text-sm font-medium">Photo</Label>
+                <Label className="mb-2 block text-base">Photo</Label>
                 
                 {aboutPhotoUrl ? (
                   <div className="w-full max-w-xs space-y-2">
@@ -267,7 +271,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
 
               {/* About Content */}
               <div>
-                <Label htmlFor="aboutContent">Text</Label>
+                <Label htmlFor="aboutContent" className="text-base">Text</Label>
                 <textarea
                   id="aboutContent"
                   value={aboutContent}
@@ -286,10 +290,10 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         </div>
 
         {READER_ONBOARDING_EXTRAS && welcomeEnabled && (
-          <Button variant="outline" onClick={handlePreview} className="gap-2">
+          <div className="py-5"><Button variant="outline" onClick={handlePreview} className="gap-2">
             <ExternalLink className="h-4 w-4" />
             Preview
-          </Button>
+          </Button></div>
         )}
     </div>
   );

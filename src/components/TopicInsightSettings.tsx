@@ -1,4 +1,3 @@
-import { InfoHint } from '@/components/ui/editorial';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -113,16 +112,17 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
     <div>
       <div className="space-y-6">
 
-        <div className="space-y-4">
+        <div className="divide-y divide-border border-y border-border">
           {/* Story Momentum - Free Feature */}
-          <div className="flex items-center justify-between p-4 rounded-lg border">
+          <div className="flex items-center justify-between gap-6 py-5">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="story-momentum" className="font-medium">
+                <Label htmlFor="story-momentum" className="text-base font-medium">
                   Trending
                 </Label>
-                <InfoHint label="About trending">Shows most interacted-with stories in the last 24 hours</InfoHint>
+                
               </div>
+              <p className="text-sm text-muted-foreground">Shows most interacted-with stories in the last 24 hours</p>
             </div>
             <div className="flex items-center gap-2">
               {settings.story_momentum_enabled && (
@@ -148,15 +148,16 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           </div>
 
           {/* Social Proof - Premium Feature */}
-          <div className="flex items-center justify-between p-4 rounded-lg border">
+          <div className="flex items-center justify-between gap-6 py-5">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="social-proof" className="font-medium">
+                <Label htmlFor="social-proof" className="text-base font-medium">
                   Community stats
                 </Label>
-                <InfoHint label="About community stats">Shows reader counts, peak times, and community milestones</InfoHint>
+                
                 <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
+              <p className="text-sm text-muted-foreground">Shows reader counts, peak times, and community milestones</p>
             </div>
             <div className="flex items-center gap-2">
               {settings.social_proof_enabled && (
@@ -183,15 +184,16 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           </div>
 
           {/* Play Mode - Premium Feature */}
-          <div className="flex items-center justify-between p-4 rounded-lg border">
+          <div className="flex items-center justify-between gap-6 py-5">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="play-mode" className="font-medium">
+                <Label htmlFor="play-mode" className="text-base font-medium">
                   Play mode
                 </Label>
-                <InfoHint label="About play mode">Swipe-based interface to discover stories across all feeds</InfoHint>
+                
                 <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
+              <p className="text-sm text-muted-foreground">Swipe-based interface to discover stories across all feeds</p>
             </div>
             <Switch
               id="play-mode"
@@ -204,16 +206,17 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           </div>
 
           {/* Quiz Cards - Premium Feature */}
-          <div className="p-4 rounded-lg border space-y-3">
+          <div className="py-5 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="quiz-cards" className="font-medium">
+                  <Label htmlFor="quiz-cards" className="text-base font-medium">
                     Quiz cards
                   </Label>
-                <InfoHint label="About quiz cards">AI-generated quiz questions based on your feed content</InfoHint>
+                
                   <Badge variant="default" className="text-sm">Premium</Badge>
                 </div>
+              <p className="text-sm text-muted-foreground">AI-generated quiz questions based on your feed content</p>
               </div>
               <Switch
                 id="quiz-cards"
@@ -233,7 +236,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
                   localStorage.removeItem('quiz_answered');
                   toast.success('Quiz history cleared. Refresh to see all quiz cards.');
                 }}
-                className="w-full"
+                className=""
               >
                 Clear quiz history
               </Button>
@@ -241,15 +244,16 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           </div>
 
           {/* This Time Last Month - Premium Feature */}
-          <div className="flex items-center justify-between p-4 rounded-lg border">
+          <div className="flex items-center justify-between gap-6 py-5">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="flashback" className="font-medium">
+                <Label htmlFor="flashback" className="text-base font-medium">
                   Flashback
                 </Label>
-                <InfoHint label="About flashback">Shows what stories were popular 30 days ago</InfoHint>
+                
                 <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
+              <p className="text-sm text-muted-foreground">Shows what stories were popular 30 days ago</p>
             </div>
             <Switch
               id="flashback"
@@ -265,10 +269,11 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           {FEATURES.parliament && ([
             ['parliamentary_cards_enabled', 'Parliament cards', 'MP vote cards and the weekly parliament digest in your public feed'],
           ] as const).map(([key, label, desc]) => (
-            <div key={key} className="flex items-center justify-between p-4 rounded-lg border">
+            <div key={key} className="flex items-center justify-between gap-6 py-5">
               <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2"><Label htmlFor={key} className="font-medium">{label}</Label><InfoHint label={`About ${label.toLowerCase()}`}>{desc}</InfoHint></div>
+                <div className="flex items-center gap-2"><Label htmlFor={key} className="text-base font-medium">{label}</Label></div>
               </div>
+              <p className="text-sm text-muted-foreground">{desc}</p>
               <Switch
                 id={key}
                 checked={!!(settings as any)[key]}
@@ -278,15 +283,16 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           ))}
 
           {/* Sift Mode - Premium Feature */}
-          <div className="flex items-center justify-between p-4 rounded-lg border">
+          <div className="flex items-center justify-between gap-6 py-5">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="sift-mode" className="font-medium">
+                <Label htmlFor="sift-mode" className="text-base font-medium">
                   Sift mode
                 </Label>
-                <InfoHint label="About sift mode">Photo pile interface for browsing stories visually</InfoHint>
+                
                 <Badge variant="default" className="text-sm">Premium</Badge>
               </div>
+              <p className="text-sm text-muted-foreground">Photo pile interface for browsing stories visually</p>
             </div>
             <Switch
               id="sift-mode"
@@ -300,9 +306,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
         </div>
 
         {!settings.is_premium_tier && (
-          <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border">
-            <p className="text-sm text-muted-foreground">Premium cards need Pro.</p>
-          </div>
+          <p className="text-sm text-muted-foreground">Premium cards need Pro.</p>
         )}
       </div>
     </div>
