@@ -268,16 +268,38 @@ function DeckCard({
           animate={{ y: isCentre ? "0%" : "102%" }}
           transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 34 }}
         >
-          <h3
-            className={`${imgSrc ? "line-clamp-3" : "line-clamp-6 text-center"} font-lexend font-semibold uppercase leading-[1.1]`}
-            style={{ fontSize: Math.round(imgSrc ? Math.max(21, Math.min(27, cardW / 13)) : Math.max(26, Math.min(34, cardW / 10))) }}
-          >
-            {story.title}
-          </h3>
+          <FitHeadline
+            text={story.title ?? ""}
+            centred={!imgSrc}
+            max={Math.round(imgSrc ? Math.max(21, Math.min(27, cardW / 13)) : Math.max(26, Math.min(34, cardW / 10)))}
+          />
           {story.source_name && <p className={`${imgSrc ? "mt-auto" : "absolute inset-x-4 bottom-4 text-center"} truncate text-sm opacity-70`}>{story.source_name}</p>}
         </motion.div>
         <motion.span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black" initial={false} animate={{ opacity: isCentre ? 0 : 0.18 }} />
       </motion.button>
     </motion.div>
+  );
+}
+
+/** Headline that shrinks to fit its panel instead of being cut off (never below 14px). */
+function FitHeadline({ text, centred, max }: { text: string; centred: boolean; max: number }) {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const [size, setSize] = useState(max);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let s = max;
+    el.style.fontSize = `${s}px`;
+    while (s > 14 && el.scrollHeight > el.clientHeight + 1) { s -= 1; el.style.fontSize = `${s}px`; }
+    setSize(s);
+  }, [text, max]);
+  return (
+    <h3
+      ref={ref}
+      className={`${centred ? "text-center" : ""} min-h-0 flex-1 overflow-hidden font-lexend font-semibold uppercase leading-[1.1] [overflow-wrap:anywhere]`}
+      style={{ fontSize: size, flex: centred ? "0 1 auto" : undefined, maxHeight: centred ? "100%" : undefined }}
+    >
+      {text}
+    </h3>
   );
 }
