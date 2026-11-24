@@ -11,3 +11,5 @@
 - [ ] Lisbon source reads Agenda LX English pages: headings arrive in English, not the official Portuguese title
 
 - [x] Multi-day events: date range only in captions/synopsis/API; feed, cards, What's on, calendar links, widgets, ordering unchanged (confirm in report)
+- [ ] Clean up old per-day duplicate copies of long-running Lisbon events (pre stable-key). Never delete rows readers or owners touched (impressions, clicks, edits, approvals); no deletion by time window; tests only via zztest_ visitor IDs.
+- [ ] Phase 3: Brighton bleed + category steering — plan shown, waiting for Adam's go.

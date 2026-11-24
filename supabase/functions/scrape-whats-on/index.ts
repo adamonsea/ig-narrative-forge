@@ -330,9 +330,14 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   await supabase.from('topics').update({ event_currency: currency }).eq('id', source.topic_id).is('event_currency', null);
   // Editorial profile: published events that are new, newly approved or whose facts changed get fresh copy (in the background)
   if (profileOn && !noCopy) {
+    // Only events starting within the feed's rolling window are written (and charged) automatically;
+    // anything further out waits for the owner's approval or Regenerate.
+    const { data: prof } = await supabase.from('feed_editorial_profiles').select('auto_copy_days').eq('topic_id', source.topic_id).maybeSingle();
+    const days = Number(prof?.auto_copy_days ?? 14);
+    const horizon = new Date(Date.parse(`${londonToday()}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
     const due = unique.filter((r) => {
       const prev = existing.get(r.external_id);
-      return r.status === 'published' && (!prev || !prev.approved_at || prev.source_hash !== (r as Record<string, unknown>).source_hash);
+      return r.status === 'published' && r.start_date <= horizon && (!prev || !prev.approved_at || prev.source_hash !== (r as Record<string, unknown>).source_hash);
     }).slice(0, 25);
     if (due.length) inBackground(writeEditorialCopy(supabase, source.topic_id, due.map((r) => r.external_id)));
   }

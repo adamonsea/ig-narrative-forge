@@ -1,0 +1,1 @@
+ALTER TABLE public.feed_editorial_profiles ADD COLUMN IF NOT EXISTS auto_copy_days integer NOT NULL DEFAULT 14 CHECK (auto_copy_days BETWEEN 0 AND 365);

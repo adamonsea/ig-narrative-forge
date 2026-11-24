@@ -55,7 +55,8 @@ async function suggest(e: Row, profile: Row, sourceText: string, postDate: strin
     'One container only: never mention a strand or series inside a festival.',
     `Use "hoje"/"today" only if the event date equals the posting date (${postDate}); otherwise give the date.`,
     'If the original-language title differs from the title used, name it once in brackets in the Portuguese synopsis only.',
-    'Each language says the same thing in natural phrasing, not word for word. Never copy sentences from the source.',
+    'Each language says the same thing in natural phrasing, not word for word.',
+    'Paraphrase completely: never reuse a sentence or any run of 6+ consecutive words from the source, in any language. Names of works, composers, performers, venues and festivals may be kept as written; everything around them must be your own words and structure.',
     'Portuguese means European Portuguese (pt-PT), never Brazilian.',
     'No promotional words, no exclamation marks, no rhetorical questions, never "Don\'t miss".',
     ...((profile.voice_rules as string[]) ?? []).map((r) => `Voice: ${r}`),
@@ -160,7 +161,7 @@ export async function generateEventCopy(db: Db, opts: { eventId: string; dryRun?
   const review_flags = [...new Set([...factFlags(e, topic?.event_currency), ...flags, ...ai.review_flags.filter(keepModelFlag).slice(0, 3).map((f) => f.slice(0, 60))])];
 
   const fields = captionFields({ ...e, festival, subtitle, extra_facts, ticket_note, event_hashtags: tags, synopsis },
-    { languages, fixed_hashtags: profile.fixed_hashtags, event_hashtag_max: profile.event_hashtag_max, labels: profile.labels ?? {} }, topic?.event_currency);
+    { languages, fixed_hashtags: profile.fixed_hashtags, event_hashtag_max: profile.event_hashtag_max, labels: profile.labels ?? {} }, topic?.event_currency, postDate);
   const caps = new Map<string, Row>((capRows ?? []).map((r: Row) => [r.platform, r]));
   const captions: Record<string, string> = {};
   for (const [platform, tpl] of Object.entries(profile.caption_templates as Record<string, string[]>)) {

@@ -118,10 +118,18 @@ describe("edit locks and source hash", () => {
 
 describe("runs and fact flags (trial fixes)", () => {
   it("a run shows start → end with no weekday; a one-day event keeps Seg/Mon", () => {
-    const run = captionFields({ title: "Era Uma Vez na América", start_date: "2026-11-24", run_start: "2026-11-20", end_date: "2026-12-31" }, LISBON);
+    const run = captionFields({ title: "Era Uma Vez na América", start_date: "2026-11-24", run_start: "2026-11-20", end_date: "2026-12-31" }, LISBON, null, "2026-11-18");
     expect(run["when"]).toBe("20.11 → 31.12");
     const one = captionFields({ title: "Nena", start_date: "2026-11-23" }, LISBON);
     expect(one["when"]).toBe("Seg/Mon 23.11");
+  });
+  it("a run that has already started shows Até/Until and the end date, never a past start", () => {
+    const on = captionFields({ title: "Twin Souls", start_date: "2026-11-24", run_start: "2026-02-28", end_date: "2026-12-30" }, LISBON, null, "2026-11-24");
+    expect(on["when"]).toBe("Até/Until 30.12");
+  });
+  it("a run starting later keeps start → end", () => {
+    const later = captionFields({ title: "Expo", start_date: "2026-11-30", end_date: "2026-12-31" }, LISBON, null, "2026-11-24");
+    expect(later["when"]).toBe("30.11 → 31.12");
   });
   it("€5, Grátis and a feed currency pass; a bare number with no currency is flagged", () => {
     expect(currencyMissing("€5", null)).toBe(false);

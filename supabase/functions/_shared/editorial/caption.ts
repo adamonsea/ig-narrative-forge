@@ -104,6 +104,12 @@ export function dayPair(ymd: string, languages: readonly string[]): string {
   return names.join("/");
 }
 
+const UNTIL: Record<string, string> = { pt: "Até", en: "Until", es: "Hasta", fr: "Jusqu'au", de: "Bis", it: "Fino al" };
+/** "Até/Until" in the profile's languages, in order. */
+export function untilPair(languages: readonly string[]): string {
+  return [...new Set(languages.map((l) => UNTIL[l.slice(0, 2).toLowerCase()] ?? UNTIL["en"]!))].join("/");
+}
+
 /** "23.11", or "20.11 → 31.12" for a run. */
 export function dottedDate(start: string, end?: string | null): string {
   const f = (s: string) => `${s.slice(8, 10)}.${s.slice(5, 7)}`;
@@ -162,7 +168,8 @@ export interface CaptionProfile {
 }
 
 /** Every caption token, from stored fields only. */
-export function captionFields(e: CaptionEvent, p: CaptionProfile, currency?: string | null): CaptionFields {
+export function captionFields(e: CaptionEvent, p: CaptionProfile, currency?: string | null, today?: string): CaptionFields {
+  const runFirst = e.run_start && e.run_start < e.start_date ? e.run_start : e.start_date;
   const heading = (e.festival?.trim() || e.title).trim();
   const sub = (e.festival?.trim() ? e.title : e.subtitle)?.trim() ?? "";
   const fields: CaptionFields = {
@@ -172,9 +179,9 @@ export function captionFields(e: CaptionEvent, p: CaptionProfile, currency?: str
     festival: e.festival ?? "",
     day: dayPair(e.start_date, p.languages),
     date: dottedDate(e.start_date, e.end_date),
-    // One-day: "Seg/Mon 23.11"; a run: "20.11 → 31.12" (no weekday, which would only be today's)
+    // One-day: "Seg/Mon 23.11"; a run not yet started: "20.11 → 31.12"; a run already on: "Até/Until 31.12"
     when: e.end_date && e.end_date > e.start_date
-      ? dottedDate(e.run_start && e.run_start < e.start_date ? e.run_start : e.start_date, e.end_date)
+      ? (runFirst < (today ?? e.start_date) ? `${untilPair(p.languages)} ${dottedDate(e.end_date)}` : dottedDate(runFirst, e.end_date))
       : `${dayPair(e.start_date, p.languages)} ${dottedDate(e.start_date)}`,
     time: normaliseTime(e.start_time) ?? "",
     venue: e.location ?? "",

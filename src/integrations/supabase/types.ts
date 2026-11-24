@@ -1754,6 +1754,7 @@ export type Database = {
       }
       feed_editorial_profiles: {
         Row: {
+          auto_copy_days: number
           caption_templates: Json
           created_at: string
           enabled: boolean
@@ -1770,6 +1771,7 @@ export type Database = {
           voice_rules: string[]
         }
         Insert: {
+          auto_copy_days?: number
           caption_templates?: Json
           created_at?: string
           enabled?: boolean
@@ -1786,6 +1788,7 @@ export type Database = {
           voice_rules?: string[]
         }
         Update: {
+          auto_copy_days?: number
           caption_templates?: Json
           created_at?: string
           enabled?: boolean

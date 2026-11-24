@@ -15,7 +15,7 @@ import type { GenreRule } from "@/lib/editorial/captionAssembler";
 interface Profile {
   topic_id: string; enabled: boolean; languages: string[]; caption_templates: Record<string, string[]>;
   fixed_hashtags: string[]; genres: GenreRule[]; flags: string[]; flag_rules: Record<string, string>;
-  labels: { free?: string; tickets?: string }; voice_rules: string[];
+  labels: { free?: string; tickets?: string }; voice_rules: string[]; auto_copy_days: number;
 }
 
 export const editorialProfileKey = (topicId: string | undefined) => ["editorial-profile", topicId];
@@ -75,6 +75,8 @@ export function EventCaptionsSettings({ topicId }: { topicId: string }) {
         </div>
         {on && p && (
           <div className="space-y-6">
+            <Field id="cap-days" label="Auto-write days ahead" value={String(p.auto_copy_days ?? 14)}
+              onSave={(v) => { const n = Math.round(Number(v)); if (Number.isFinite(n) && n >= 0 && n <= 365) void save({ auto_copy_days: n }); }} />
             <Field id="cap-langs" label="Languages" value={p.languages.join(", ")} onSave={(v) => void save({ languages: textToLanguages(v) })} />
             {PLATFORMS.map(([key, label]) => (
               <Field key={key} id={`cap-${key}`} label={label} rows={8} value={(p.caption_templates[key] ?? []).join("\n")}
