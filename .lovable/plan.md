@@ -1,37 +1,76 @@
-# Lisboa List: running cost estimate (discussion only, no code changes)
+# Editorial Profile, event copy and API (Lisboa List as one configuration)
 
-These are estimates at public list prices (USD), not measured costs. They assume one AI call per event that covers synopsis, PT-PT/EN translation and caption, plus a cheap classification call.
+Lisbon becomes a saved profile, not code. Any feed can switch it on.
 
-| Step | Per event | 500/mo | 1,000/mo |
-|---|---|---|---|
-| 1. Gathering/scraping (JSON/iCal reads, no paid scraper) | ~$0.001 | $0.50 | $1 |
-| 2. 2-sentence synopsis | ~$0.001 | $0.50 | $1 |
-| 3. Translation PT-PT + EN (same call) | ~$0.002 | $1 | $2 |
-| 4. Genre/flags/tags, fact checks, review flags (rules first, small model) | ~$0.0005 | $0.25 | $0.50 |
-| 5. Bilingual social caption | ~$0.002 | $1 | $2 |
-| 6a. Video in browser (today) | $0 | $0 | $0 |
-| 6b. Video on a server (automated) | ~$0.01–0.02 | $5–10 | $10–20 |
-| 7. Storage + bandwidth (poster + 5s MP4, deleted after event) | ~$0.002 | $1 | $2 |
-| 8. API feed to site/scheduler (cached JSON) | ~$0.0002 | $0.10 | $0.20 |
-| **Total, browser video** | **~$0.009** | **~$4.50** | **~$9** |
-| **Total, server video** | **~$0.02–0.03** | **~$10–15** | **~$20–30** |
+## Phase 1–2 database changes
 
-Allow about 2x for retries, re-edits and a better model for Portuguese: roughly $30 at 500 and $60 at 1,000 per month in the worst case.
+New, generic (all per feed or per event, nothing Lisbon-named):
 
-## Video today
-The poster and 5-second motion are drawn by the reader's own browser and recorded there as PNG/MP4. Our servers only send the event data and photo, so the cost is practically zero. Automating it means running that same drawing on a server (a headless browser), which costs compute time per video.
+1. `feed_editorial_profiles` (one row per feed, owner-only)
+   - `languages` text[] in order (Lisbon `{pt-PT,en}`, Eastbourne `{en}`)
+   - `caption_templates` jsonb: per platform (`instagram` now; `website`, `facebook` later) a list of lines with field tokens, each line dropped when its tokens are empty
+   - `fixed_hashtags` text[], `event_hashtag_min/max` (default 2/4)
+   - `genres` jsonb (list + mapping from source categories/tags), `flags` text[]
+   - `voice_rules` text[] (e.g. no promo words, no "!", pt-PT not pt-BR)
+   - `enabled` boolean, off by default
 
-## Models, caching, batching
-- Gemini 2.5 Flash for synopsis and captions. Test Gemini 2.5 Pro or GPT-5 for European Portuguese (about 4x the cost, still under $0.01 per event) and keep it if Mike notices a quality difference.
-- Caching: reusing the shared instructions cuts input cost by about 75%. The biggest saving is skipping events whose source data hasn't changed.
-- Batching: about 50% off, but results can take up to 24 hours. Fine for events weeks away, not for same-day ones.
+2. `event_copy`: one row per event × language × kind
+   - kinds: `synopsis`, `extra_facts`
+   - `text`, `source_hash`, `generated_at`, `edited_at`, `edited_by`
+   - unique (event_id, language, kind)
 
-## Suggested price
-- Manual in-browser creation: free on any plan.
-- Automation add-on: $49/month including 500 event credits, or $89/month including 1,000. Top-ups $10 per 100.
-- Costs stay below $30/$60 even in the worst case, which leaves a margin of about 40% at worst and over 70% normally.
+3. `event_captions`: one row per event × platform (× language when a platform needs one)
+   - assembled text, `source_hash`, `edited_at`, `edited_by`
+   - stored only so hand edits stick; when unedited it is rebuilt by code
 
-## Credits per feed
-- 1 credit = one event fully processed (synopsis, translation, tags, caption, server video) and delivered to the API.
-- Reprocessing an unchanged event costs nothing. A changed source or an owner-requested rerun costs 1 credit.
-- Every use is a ledger row (feed, event ID, action, credits, time) in the existing credit ledger. The feed's monthly allowance is used first, then top-ups. The Desk shows "credits left this month".
+4. `event_field_edits`: per-field edit locks for gathered fields
+   - (event_id, field, edited_at, edited_by), field = title, start_date, start_time, venue, price, ticket_url, ticket_note, age_limit, genre, flags, event_hashtags…
+   - Re-gathers and regenerations skip any locked field.
+
+5. New columns on `events` (facts copied from source only, all nullable):
+   `ticket_url`, `ticket_note`, `age_limit`, `festival`, `genre`, `flags` text[], `event_hashtags` text[], `review_flags` text[], `source_hash`, `approved_at`.
+   `events.id` is already stable; re-gathers match on `event_source_id + external_id` (fallback source_url) and update in place.
+
+Existing `description_edited`, `image_edited`, `category_locked` booleans are kept and back-filled into `event_field_edits` (no behaviour change), then read through one helper.
+
+All new tables: owner via `can_manage_topic`, service role for jobs, no anon.
+
+## Migration without breaking feeds
+
+- No profile row = today's behaviour. Eastbourne, Brighton, Lisbon keep rendering exactly as now.
+- `eventCaption.ts` stays as the fallback assembler; the new assembler lives in a shared module and is used only when a profile is enabled. Existing caption tests keep passing.
+- Lisbon gets a profile row seeded with Mike's template, hashtags, genres, flags and voice rules. Eastbourne gets an en-only profile left switched off.
+- No existing event is regenerated or charged until it is (re)approved or the owner taps Regenerate.
+
+## Where it sits in Feed Settings
+
+- **Editorial profile** — a fold in the Events section ("Captions"): languages, template per platform, hashtags, genres, flags, voice.
+- **API** — its own fold under Share ("API"): field ticks, live JSON preview, keys.
+
+## How it runs
+
+- On approval or auto-approve: code converts facts deterministically ("20h"→20:00, "2 hours before" a 20:00 start→18:00), sets review flags for missing/ambiguous facts; AI writes synopsis per language (2 sentences, 40–60 words) and suggests genre, flags, event hashtags, extra-facts line, review flags; code assembles captions from fields + template.
+- Re-runs only when `source_hash` changes, and only for unlocked fields. 1 credit per event processed, logged in the existing credit ledger.
+- Checks: no source sentence reused (n-gram overlap), word count, pt-BR marker list, no "!"/promo words; failures become review flags.
+- Golden tests: Gulbenkian Soloists and Family Therapy (Olhares do Mediterrâneo) — exact line order, missing price line omitted, festival as heading, ticket_note conversion.
+- Desk Event drawer: captions per platform (edit, one-tap copy), synopses per language, genre/flags, review-flag chips.
+
+## Phase 4 API (outline)
+
+`event_api_settings` (fields chosen) + `feed_api_keys` (hashed, revocable). Public route returns approved events only, stable IDs, `updated_since`, per-field `edited_by_hand`, cached + rate-limited. `ticket_url` sent as-is.
+
+## Risks and spec gaps
+
+- Venue is a single `location` text today; separate venue/address lines rely on the source giving them.
+- "Never copies source sentences" is checked automatically, but pt-PT quality still needs a human eye; manual review step stays.
+- Age limits and festivals are rarely structured in sources; many will be flags rather than lines.
+- Captions can't be fully fact-safe if the source itself is wrong; we copy, not verify.
+- Phase 3 (Brighton bleed, category steering) must land before Phase 4, as agreed.
+
+## Estimates
+
+- Phase 1 (profile, locks, storage, settings fold): 1.5–2 days
+- Phase 2 (writer, assembler, golden tests, Desk UI): 2–3 days
+- Phase 3 (Brighton bleed + category steering): 1–2 days, after its own plan
+- Phase 4 (API, picker, keys, preview): 1.5–2 days
+- Phase 5 (server still + MP4 add-on): later, 2–3 days
