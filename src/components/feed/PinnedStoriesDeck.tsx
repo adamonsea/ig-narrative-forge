@@ -274,7 +274,7 @@ function DeckCard({
           >
             {story.title}
           </h3>
-          {story.source_name && <p className={`${imgSrc ? "mt-auto" : "absolute inset-x-4 bottom-4 text-center"} truncate text-sm opacity-70">{story.source_name}</p>}
+          {story.source_name && <p className={`${imgSrc ? "mt-auto" : "absolute inset-x-4 bottom-4 text-center"} truncate text-sm opacity-70`}>{story.source_name}</p>}
         </motion.div>
         <motion.span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black" initial={false} animate={{ opacity: isCentre ? 0 : 0.18 }} />
       </motion.button>
