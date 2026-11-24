@@ -24,6 +24,12 @@ describe("settings sections", () => {
     expect(ids.indexOf("pictures")).toBe(ids.indexOf("look") + 1);
     expect(ids.indexOf("coverage")).toBe(ids.indexOf("pictures") + 1);
   });
+  it("Local page exists only for regional feeds and follows Coverage", () => {
+    expect(resolveSettingsSection("local", true, false)).toBe("coverage");
+    expect(visibleSettingsSections(true, false).map((s) => s.id)).not.toContain("local");
+    const ids = visibleSettingsSections(true, true).map((s) => s.id);
+    expect(ids.indexOf("local")).toBe(ids.indexOf("coverage") + 1);
+  });
   it("builds page links", () => {
     expect(settingsPath("eastbourne", "automation")).toBe("/dashboard/topic/eastbourne/settings/autopilot");
   });

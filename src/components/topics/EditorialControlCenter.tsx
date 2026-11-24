@@ -1,7 +1,8 @@
 import { opt } from "@/lib/optionalProps";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@/lib/router-compat";
-import { CalendarDays, ExternalLink, Image as ImageIcon, Palette, PenLine, Plane, Settings2, Share2, Sparkles, Target, type LucideIcon } from "lucide-react";
+import { Link, useNavigate } from "@/lib/router-compat";
+import { SettingsSearch } from "@/components/settings/SettingsSearch";
+import { CalendarDays, ExternalLink, MapPin, Image as ImageIcon, Palette, PenLine, Plane, Settings2, Share2, Sparkles, Target, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -113,7 +114,7 @@ interface EditorialControlCenterProps {
 }
 
 const SECTION_ICONS: Record<SettingsSectionId, LucideIcon> = {
-  general: Settings2, look: Palette, pictures: ImageIcon, coverage: Target, writing: PenLine,
+  general: Settings2, look: Palette, pictures: ImageIcon, coverage: Target, local: MapPin, writing: PenLine,
   events: CalendarDays, autopilot: Plane, share: Share2, extras: Sparkles,
 };
 
@@ -151,8 +152,37 @@ export function EditorialControlCenter({
   onProRequired,
 }: EditorialControlCenterProps) {
   const eventsOn = topic.events_enabled === true;
-  const current = resolveSettingsSection(section, eventsOn);
-  const sections = visibleSettingsSections(eventsOn);
+  const regional = topic.topic_type === "regional";
+  const current = resolveSettingsSection(section, eventsOn, regional);
+  const sections = visibleSettingsSections(eventsOn, regional);
+  const navigate = useNavigate();
+  const [reveal, setReveal] = useState<string | null>(null);
+
+  // Direct links (#anchor) and search results: wait for the row to render, scroll to it, briefly highlight it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const read = () => setReveal(decodeURIComponent(window.location.hash.slice(1)) || null);
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, [current]);
+  useEffect(() => {
+    if (!reveal) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      const el = document.getElementById(reveal);
+      if (!el && ++tries < 40) return;
+      window.clearInterval(timer);
+      if (!el) return;
+      const row = el.closest<HTMLElement>("[data-setting-row]") ?? el.closest<HTMLElement>(".py-5") ?? el;
+      row.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      row.classList.remove("setting-flash");
+      void row.offsetWidth;
+      row.classList.add("setting-flash");
+      window.setTimeout(() => row.classList.remove("setting-flash"), 2000);
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [reveal, current]);
   const patch = (values: Partial<EditorialTopic> | Record<string, unknown>) => onTopicChange({ ...topic, ...(values as Partial<EditorialTopic>) });
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -174,8 +204,16 @@ export function EditorialControlCenter({
   };
 
   return (
-    <div className="mx-auto max-w-6xl md:grid md:grid-cols-[192px_minmax(0,1fr)] md:gap-12">
+    <div className="mx-auto max-w-6xl md:grid md:grid-cols-[216px_minmax(0,1fr)] md:gap-12">
       <nav aria-label="Settings sections" className="md:sticky md:top-24 md:self-start">
+        <SettingsSearch
+          visible={sections.map((s) => s.id)}
+          onPick={(entry) => {
+            navigate(`${settingsPath(topic.slug, entry.section)}#${entry.anchor}`);
+            setReveal(null);
+            window.setTimeout(() => setReveal(entry.anchor), 0);
+          }}
+        />
         <div ref={navRef} className="-mx-4 flex snap-x gap-1 overflow-x-auto border-b border-border px-4 pb-2 md:mx-0 md:flex-col md:border-b-0 md:px-0 md:pb-0">
           {sections.map((s) => (
             <Link
@@ -263,16 +301,16 @@ export function EditorialControlCenter({
                 patch(values);
               }}
             />
-            {topic.topic_type === "regional" && (
-              <section aria-labelledby="news-values-heading">
-                <span id="news-values-heading" className="sr-only">How local</span>
-                <NewsValuesPanel topicId={topic.id} region={topic.region} landmarks={topic.landmarks} postcodes={topic.postcodes} organizations={topic.organizations} localityStrength={topic.locality_strength} nearbyPlaces={topic.nearby_places} bigStoryOverride={topic.big_story_override} onChange={(values) => patch(values)} />
-              </section>
-            )}
-            <section aria-labelledby="coverage-categories-heading">
+            <section id="categories" aria-labelledby="coverage-categories-heading" className="scroll-mt-24">
               <SubHeading id="coverage-categories-heading">Categories</SubHeading>
               <CategoriesPanel topicId={topic.id} />
             </section>
+          </Page>
+        )}
+
+        {current === "local" && regional && (
+          <Page title={label} purpose={purpose}>
+            <NewsValuesPanel topicId={topic.id} region={topic.region} landmarks={topic.landmarks} postcodes={topic.postcodes} organizations={topic.organizations} localityStrength={topic.locality_strength} nearbyPlaces={topic.nearby_places} bigStoryOverride={topic.big_story_override} onChange={(values) => patch(values)} />
           </Page>
         )}
 

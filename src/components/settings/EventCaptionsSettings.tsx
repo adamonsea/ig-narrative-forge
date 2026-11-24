@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
-import { SettingGroup, SettingRow } from "@/components/settings/SettingRow";
+import { SettingGroup, SettingLoadError, SettingRow } from "@/components/settings/SettingRow";
 
 function DaysInput({ value, onSave }: { value: number; onSave: (n: number) => void }) {
   const [text, setText] = useState(String(value));
@@ -59,7 +59,7 @@ function Field({ id, label, value, rows, hide, onSave }: { id: string; label: st
 /** Social captions for events. Off = nothing changes for this feed. */
 export function EventCaptionsSettings({ topicId }: { topicId: string }) {
   const qc = useQueryClient();
-  const { data: p, isLoading } = useEditorialProfile(topicId);
+  const { data: p, isLoading, isError, refetch } = useEditorialProfile(topicId);
   const [state, setState] = useState<SaveState>(null);
 
   const save = async (values: Partial<Profile>) => {
@@ -69,6 +69,7 @@ export function EventCaptionsSettings({ topicId }: { topicId: string }) {
     qc.invalidateQueries({ queryKey: editorialProfileKey(topicId) });
   };
   if (isLoading) return <div className="h-11 w-full animate-pulse rounded-lg bg-muted" />;
+  if (isError) return <SettingGroup id="social-captions" title="Social captions"><SettingLoadError what="Social captions" onRetry={() => void refetch()} /></SettingGroup>;
   const on = Boolean(p?.enabled);
 
   return (

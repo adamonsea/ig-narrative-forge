@@ -64,7 +64,7 @@ export function ShareBasics({
 
   return (
     <div className="divide-y divide-border border-y border-border">
-      <div className="flex items-start justify-between gap-6 py-5">
+      <div id="email-sign-ups" data-setting-row className="flex scroll-mt-24 items-start justify-between gap-6 py-5">
         <div>
           <div className="flex items-center gap-1.5">
             <label htmlFor="share-email" className="text-base font-medium">Email sign-ups</label>
@@ -73,7 +73,7 @@ export function ShareBasics({
         </div>
         <Switch id="share-email" checked={emailEnabled} onCheckedChange={(v) => onChannelToggle("email_subscriptions_enabled", v, "Email sign-ups")} className="mt-1" />
       </div>
-      <div className="flex items-start justify-between gap-6 py-5">
+      <div id="weekly-roundup-email" data-setting-row className="flex scroll-mt-24 items-start justify-between gap-6 py-5">
         <div>
           <div className="flex items-center gap-1.5">
             <label htmlFor="share-weekly" className="text-base font-medium">Weekly roundup email</label>
@@ -82,7 +82,7 @@ export function ShareBasics({
         </div>
         <Switch id="share-weekly" checked={weeklyEnabled} disabled={!emailEnabled} onCheckedChange={setWeekly} className="mt-1" />
       </div>
-      <div className="flex items-start justify-between gap-6 py-5">
+      <div id="website-widget" data-setting-row className="flex scroll-mt-24 items-start justify-between gap-6 py-5">
         <div>
           <div className="flex items-center gap-1.5">
             <p className="text-base font-medium">Website widget</p>

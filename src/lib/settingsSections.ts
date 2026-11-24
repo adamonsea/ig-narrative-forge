@@ -4,6 +4,7 @@ export const SETTINGS_SECTIONS = [
   { id: "look", label: "Look", purpose: "How the feed looks to readers." },
   { id: "pictures", label: "Pictures", purpose: "How story pictures are made." },
   { id: "coverage", label: "Coverage", purpose: "What belongs in the feed." },
+  { id: "local", label: "Local", purpose: "How close to home stories must be.", regionalOnly: true },
   { id: "writing", label: "Writing", purpose: "How stories are written." },
   { id: "events", label: "Events", purpose: "How events show, and captions for social posts.", eventsOnly: true },
   { id: "autopilot", label: "Autopilot", purpose: "How much happens without you." },
@@ -19,21 +20,24 @@ const LEGACY: Record<string, SettingsSectionId> = {
   brand: "general",
   voice: "writing",
   coverage: "coverage",
+  "how-local": "local",
+  locality: "local",
   automation: "autopilot",
   distribution: "share",
   features: "extras",
 };
 
-export function resolveSettingsSection(value: string | null | undefined, eventsEnabled = true): SettingsSectionId {
+export function resolveSettingsSection(value: string | null | undefined, eventsEnabled = true, regional = true): SettingsSectionId {
   const v = (value || "").toLowerCase();
   const direct = SETTINGS_SECTIONS.find((s) => s.id === v);
   const id = direct ? direct.id : LEGACY[v] ?? "general";
   if (id === "events" && !eventsEnabled) return "general";
+  if (id === "local" && !regional) return "coverage";
   return id;
 }
 
-export const visibleSettingsSections = (eventsEnabled: boolean) =>
-  SETTINGS_SECTIONS.filter((s) => !("eventsOnly" in s) || eventsEnabled);
+export const visibleSettingsSections = (eventsEnabled: boolean, regional = true) =>
+  SETTINGS_SECTIONS.filter((s) => (!("eventsOnly" in s) || eventsEnabled) && (!("regionalOnly" in s) || regional));
 
 export const settingsPath = (slug: string, section: string | null | undefined = "general") =>
   `/dashboard/topic/${slug}/settings/${resolveSettingsSection(section)}`;

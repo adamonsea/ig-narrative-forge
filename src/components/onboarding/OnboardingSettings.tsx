@@ -204,7 +204,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         )}
 
         {/* About Page */}
-        <div className="space-y-5 py-5">
+        <div id="about-page" data-setting-row className="scroll-mt-24 space-y-5 py-5">
           <div className="flex items-start justify-between gap-6">
             <div>
               <Label htmlFor="about-page-on" className="text-base font-medium">About page</Label>

@@ -776,3 +776,16 @@
 @keyframes alt-glow { 0%,100% { opacity: 1 } 50% { opacity: .6 } }
 @media (prefers-reduced-motion: reduce) { .ec-alt * { animation: none !important; } }
 
+
+/* A setting opened from a direct link or search: a brief mint wash, then gone */
+@keyframes setting-flash {
+  0%, 30% { background-color: hsl(var(--mint-soft)); }
+  100% { background-color: transparent; }
+}
+.setting-flash {
+  animation: setting-flash 1800ms ease-out both;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .setting-flash { animation: none; outline: 2px solid hsl(var(--purple-bright)); outline-offset: 4px; }
+}

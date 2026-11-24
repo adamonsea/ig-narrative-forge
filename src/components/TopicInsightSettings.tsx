@@ -1,3 +1,4 @@
+import { SettingLoadError } from '@/components/settings/SettingRow';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -17,7 +18,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
   const queryClient = useQueryClient();
 
   // Fetch current settings
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, refetch } = useQuery({
     queryKey: ['topic-insight-settings', topicId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -102,9 +103,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
 
   if (!settings) {
     return (
-      <Card className="p-6">
-        <p className="text-sm text-muted-foreground">Failed to load insight settings</p>
-      </Card>
+      <SettingLoadError what="Feed cards" onRetry={() => void refetch()} />
     );
   }
 

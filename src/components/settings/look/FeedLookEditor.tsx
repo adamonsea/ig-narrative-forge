@@ -284,7 +284,7 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">Logo</p>
+            <p className="scroll-mt-24 text-sm font-medium" id="look-logo">Logo</p>
             <div className="flex flex-wrap items-center gap-3">
               {logoUrl ? (
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">
@@ -303,7 +303,7 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">App icon</p>
+            <p className="scroll-mt-24 text-sm font-medium" id="look-app-icon">App icon</p>
             <div className="flex flex-wrap items-center gap-3">
               {config["icon_url"] ? (
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">

@@ -1,3 +1,4 @@
+import { SettingLoadError } from '@/components/settings/SettingRow';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -55,6 +56,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
   const [stats, setStats] = useState<SubscriberStats>({ daily: 0, weekly: 0, total: 0, signupsToday: 0, signupsWeek: 0, fromWidget: 0 });
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
   const loadSubscribers = async () => {
     try {
       setLoading(true);
+      setLoadFailed(false);
       
       // Load email subscribers
       let emailQuery = supabase
@@ -136,11 +139,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
 
     } catch (error) {
       console.error('Error loading subscribers:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load subscribers",
-        variant: "destructive"
-      });
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -221,6 +220,8 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
       </div>
     );
   }
+
+  if (loadFailed) return <SettingLoadError what="Subscribers" onRetry={() => void loadSubscribers()} />;
 
   return (
     <div className="space-y-6">

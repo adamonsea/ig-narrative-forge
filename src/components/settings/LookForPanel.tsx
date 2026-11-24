@@ -162,8 +162,8 @@ export function LookForPanel({
 
   return (
     <div className="divide-y divide-border border-y border-border [&>*]:py-5">
-      {show !== "less" && more}
-      {show !== "more" && less}
+      {show !== "less" && <div id="more-of-this" data-setting-row className="scroll-mt-24">{more}</div>}
+      {show !== "more" && <div id="less-of-this" data-setting-row className="scroll-mt-24">{less}</div>}
     </div>
   );
 }
