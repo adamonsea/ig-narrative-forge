@@ -246,6 +246,8 @@ const TopicDashboard = () => {
 
       setNegativeKeywords(topicData.negative_keywords || []);
       setCompetingRegions(topicData.competing_regions || []);
+      // Show the dashboard as soon as the feed itself is known; counts fill in after.
+      setLoading(false);
 
       const articlesRes = await supabase
         .from('topic_articles')
@@ -346,91 +348,94 @@ const TopicDashboard = () => {
       const yesterday = new Date();
       yesterday.setHours(yesterday.getHours() - 24);
       
-      const simplifiedRes = await supabase
-        .from('stories')
-        .select('id, topic_articles!inner(topic_id)', { count: 'exact' })
-        .eq('topic_articles.topic_id', topicData.id)
-        .gte('created_at', yesterday.toISOString())
-        .not('topic_article_id', 'is', null);
-
-      const sentimentRes = await supabase
-        .from('sentiment_cards')
-        .select('id', { count: 'exact' })
-        .eq('topic_id', topicData.id);
-
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
       const weekAgo = new Date(today);
       weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
 
-      const { count: dailySubscribers } = await supabase
+      const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11] = await Promise.all([
+        supabase
+        .from('stories')
+        .select('id, topic_articles!inner(topic_id)', { count: 'exact' })
+        .eq('topic_articles.topic_id', topicData.id)
+        .gte('created_at', yesterday.toISOString())
+        .not('topic_article_id', 'is', null),
+        supabase
+        .from('sentiment_cards')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicData.id),
+        supabase
         .from('topic_newsletter_signups')
         .select('*', { count: 'exact', head: true })
         .eq('topic_id', topicData.id)
         .eq('notification_type', 'daily')
         .eq('is_active', true)
-        .not('email', 'is', null);
-
-      const { count: weeklySubscribers } = await supabase
+        .not('email', 'is', null),
+        supabase
         .from('topic_newsletter_signups')
         .select('*', { count: 'exact', head: true })
         .eq('topic_id', topicData.id)
         .eq('notification_type', 'weekly')
         .eq('is_active', true)
-        .not('email', 'is', null);
-
-      const { count: totalEmailSubscribers } = await supabase
+        .not('email', 'is', null),
+        supabase
         .from('topic_newsletter_signups')
         .select('*', { count: 'exact', head: true })
         .eq('topic_id', topicData.id)
         .eq('is_active', true)
-        .not('email', 'is', null);
-
-      const { count: signupsToday } = await supabase
-        .from('topic_newsletter_signups')
-        .select('*', { count: 'exact', head: true })
-        .eq('topic_id', topicData.id)
-        .eq('is_active', true)
-        .not('email', 'is', null)
-        .gte('created_at', today.toISOString());
-
-      const { count: signupsWeek } = await supabase
+        .not('email', 'is', null),
+        supabase
         .from('topic_newsletter_signups')
         .select('*', { count: 'exact', head: true })
         .eq('topic_id', topicData.id)
         .eq('is_active', true)
         .not('email', 'is', null)
-        .gte('created_at', weekAgo.toISOString());
-
-      const { count: donationButtonClicks } = await supabase
+        .gte('created_at', today.toISOString()),
+        supabase
+        .from('topic_newsletter_signups')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('is_active', true)
+        .not('email', 'is', null)
+        .gte('created_at', weekAgo.toISOString()),
+        supabase
         .from('story_interactions')
         .select('*', { count: 'exact', head: true })
         .eq('topic_id', topicData.id)
-        .eq('interaction_type', 'donation_button_clicked');
-
-      const { count: donationModalOpens } = await supabase
+        .eq('interaction_type', 'donation_button_clicked'),
+        supabase
         .from('story_interactions')
         .select('*', { count: 'exact', head: true })
         .eq('topic_id', topicData.id)
-        .eq('interaction_type', 'donation_modal_opened');
-
-      const { count: likedStories } = await supabase
+        .eq('interaction_type', 'donation_modal_opened'),
+        supabase
         .from('story_swipes')
         .select('*', { count: 'exact', head: true })
         .eq('topic_id', topicData.id)
-        .eq('swipe_type', 'like');
-
-      const { count: totalSwipes } = await supabase
+        .eq('swipe_type', 'like'),
+        supabase
         .from('story_swipes')
         .select('*', { count: 'exact', head: true })
-        .eq('topic_id', topicData.id);
-
-      const { data: sharedStories } = await supabase
+        .eq('topic_id', topicData.id),
+        supabase
         .from('story_interactions')
         .select('story_id')
         .eq('topic_id', topicData.id)
-        .eq('interaction_type', 'share_click');
-      
+        .eq('interaction_type', 'share_click'),
+      ]);
+      const simplifiedRes = r0;
+      const sentimentRes = r1;
+      const { count: dailySubscribers } = r2;
+      const { count: weeklySubscribers } = r3;
+      const { count: totalEmailSubscribers } = r4;
+      const { count: signupsToday } = r5;
+      const { count: signupsWeek } = r6;
+      const { count: donationButtonClicks } = r7;
+      const { count: donationModalOpens } = r8;
+      const { count: likedStories } = r9;
+      const { count: totalSwipes } = r10;
+      const { data: sharedStories } = r11;
+
       const uniqueSharedStories = new Set(sharedStories?.map(s => s.story_id) || []).size;
 
       setStats({
