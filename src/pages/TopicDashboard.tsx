@@ -729,7 +729,7 @@ const TopicDashboard = () => {
                 Sources
               </TabsTrigger>
               <TabsTrigger value="stats" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-normal text-muted-foreground/70 data-[state=active]:text-foreground data-[state=active]:font-medium">
-                Readership
+                Readers
               </TabsTrigger>
               <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-bright data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground">
                 Settings
