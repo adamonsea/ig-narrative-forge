@@ -118,13 +118,13 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
       </SettingRow>
       {config.drip_feed_enabled && (
         <>
-          <SettingRow label="Every" hint="Hours between releases.">
+          <SettingRow label="Every" hint="Hours between releases." stack>
             <div className="flex w-56 items-center gap-3">
               <Slider aria-label="Release interval" value={[config.drip_release_interval_hours]} onValueChange={([v]) => updateConfig('drip_release_interval_hours', v)} min={1} max={8} step={1} />
               <span className="w-8 text-right text-base">{config.drip_release_interval_hours}h</span>
             </div>
           </SettingRow>
-          <SettingRow label="Stories each time" hint="How many go live per release.">
+          <SettingRow label="Stories each time" hint="How many go live per release." stack>
             <div className="flex w-56 items-center gap-3">
               <Slider aria-label="Stories per release" value={[config.drip_stories_per_release]} onValueChange={([v]) => updateConfig('drip_stories_per_release', v)} min={1} max={5} step={1} />
               <span className="w-8 text-right text-base">{config.drip_stories_per_release}</span>

@@ -186,7 +186,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
         </Select>
       </SettingRow>
       {(automationMode === 'auto_gather' || automationMode === 'holiday') && (
-        <SettingRow label="Check every" hint="Hours between gathers.">
+        <SettingRow label="Check every" hint="Hours between gathers." stack>
               <div className="flex w-56 items-center gap-3">
                 <Slider aria-label="Check every" value={[scrapeFrequency]} onValueChange={([v]) => handleScrapeFrequency(v!)} min={4} max={24} step={4} />
                 <span className="w-12 text-right text-base">{scrapeFrequency}h</span>
@@ -194,7 +194,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
             </SettingRow>
       )}
       {(automationMode === 'auto_simplify' || automationMode === 'holiday') && (
-        <SettingRow label="Story quality bar" hint="Only stories above this are written.">
+        <SettingRow label="Story quality bar" hint="Stories are written only if they score this well or better. Lower the bar for more stories." stack>
               <div className="flex w-56 items-center gap-3">
                 <Slider aria-label="Story quality bar" value={[qualityThreshold]} onValueChange={([v]) => handleQualityThreshold(v!)} min={30} max={100} step={5} />
                 <span className="w-12 text-right text-base">{qualityThreshold}%</span>
@@ -207,7 +207,7 @@ export function TopicAutomationSettings({ topicId, onModeChange }: TopicAutomati
         </SettingRow>
       )}
       {(automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday)) && (
-        <SettingRow label="Artwork quality bar" hint="Only stories above this get pictures.">
+        <SettingRow label="Artwork quality bar" hint="Pictures are added only to stories that score this well or better. Lower the bar for more pictures." stack>
               <div className="flex w-56 items-center gap-3">
                 <Slider aria-label="Artwork quality bar" value={[illustrationThreshold]} onValueChange={([v]) => handleIllustrationThreshold(v!)} min={50} max={100} step={5} />
                 <span className="w-12 text-right text-base">{illustrationThreshold}%</span>
