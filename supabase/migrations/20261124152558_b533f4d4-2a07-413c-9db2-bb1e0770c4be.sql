@@ -1,0 +1,2 @@
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS source_tags text[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.event_copy ADD CONSTRAINT event_copy_kind_check CHECK (kind IN ('synopsis','extra_facts','subtitle'));

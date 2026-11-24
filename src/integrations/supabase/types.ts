@@ -1217,6 +1217,53 @@ export type Database = {
         }
         Relationships: []
       }
+      event_captions: {
+        Row: {
+          created_at: string
+          edited_at: string | null
+          edited_by: string | null
+          event_id: string
+          id: string
+          language: string
+          platform: string
+          source_hash: string | null
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          event_id: string
+          id?: string
+          language?: string
+          platform: string
+          source_hash?: string | null
+          text?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          event_id?: string
+          id?: string
+          language?: string
+          platform?: string
+          source_hash?: string | null
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_captions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_clicks: {
         Row: {
           click_date: string
@@ -1258,6 +1305,85 @@ export type Database = {
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_copy: {
+        Row: {
+          created_at: string
+          edited_at: string | null
+          edited_by: string | null
+          event_id: string
+          generated_at: string | null
+          id: string
+          kind: string
+          language: string
+          source_hash: string | null
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          event_id: string
+          generated_at?: string | null
+          id?: string
+          kind: string
+          language: string
+          source_hash?: string | null
+          text?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          event_id?: string
+          generated_at?: string | null
+          id?: string
+          kind?: string
+          language?: string
+          source_hash?: string | null
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_copy_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_field_edits: {
+        Row: {
+          edited_at: string
+          edited_by: string | null
+          event_id: string
+          field: string
+        }
+        Insert: {
+          edited_at?: string
+          edited_by?: string | null
+          event_id: string
+          field: string
+        }
+        Update: {
+          edited_at?: string
+          edited_by?: string | null
+          event_id?: string
+          field?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_field_edits_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -1333,6 +1459,8 @@ export type Database = {
       }
       events: {
         Row: {
+          age_limit: string | null
+          approved_at: string | null
           area_confirmed: boolean
           category: string | null
           category_ai_checked: boolean
@@ -1343,10 +1471,14 @@ export type Database = {
           description_edited: boolean
           end_date: string | null
           end_time: string | null
+          event_hashtags: string[]
           event_source_id: string | null
           event_type: string
           exclusion_reason: string | null
           external_id: string | null
+          festival: string | null
+          flags: string[]
+          genre: string | null
           id: string
           image_edited: boolean
           image_framing: Json | null
@@ -1361,17 +1493,24 @@ export type Database = {
           price: string | null
           rank_position: number | null
           relevance_score: number | null
+          review_flags: string[]
           source_api: string | null
+          source_hash: string | null
           source_name: string | null
+          source_tags: string[]
           source_url: string | null
           start_date: string
           start_time: string | null
           status: string
+          ticket_note: string | null
+          ticket_url: string | null
           title: string
           topic_id: string
           updated_at: string
         }
         Insert: {
+          age_limit?: string | null
+          approved_at?: string | null
           area_confirmed?: boolean
           category?: string | null
           category_ai_checked?: boolean
@@ -1382,10 +1521,14 @@ export type Database = {
           description_edited?: boolean
           end_date?: string | null
           end_time?: string | null
+          event_hashtags?: string[]
           event_source_id?: string | null
           event_type?: string
           exclusion_reason?: string | null
           external_id?: string | null
+          festival?: string | null
+          flags?: string[]
+          genre?: string | null
           id?: string
           image_edited?: boolean
           image_framing?: Json | null
@@ -1400,17 +1543,24 @@ export type Database = {
           price?: string | null
           rank_position?: number | null
           relevance_score?: number | null
+          review_flags?: string[]
           source_api?: string | null
+          source_hash?: string | null
           source_name?: string | null
+          source_tags?: string[]
           source_url?: string | null
           start_date: string
           start_time?: string | null
           status?: string
+          ticket_note?: string | null
+          ticket_url?: string | null
           title: string
           topic_id: string
           updated_at?: string
         }
         Update: {
+          age_limit?: string | null
+          approved_at?: string | null
           area_confirmed?: boolean
           category?: string | null
           category_ai_checked?: boolean
@@ -1421,10 +1571,14 @@ export type Database = {
           description_edited?: boolean
           end_date?: string | null
           end_time?: string | null
+          event_hashtags?: string[]
           event_source_id?: string | null
           event_type?: string
           exclusion_reason?: string | null
           external_id?: string | null
+          festival?: string | null
+          flags?: string[]
+          genre?: string | null
           id?: string
           image_edited?: boolean
           image_framing?: Json | null
@@ -1439,12 +1593,17 @@ export type Database = {
           price?: string | null
           rank_position?: number | null
           relevance_score?: number | null
+          review_flags?: string[]
           source_api?: string | null
+          source_hash?: string | null
           source_name?: string | null
+          source_tags?: string[]
           source_url?: string | null
           start_date?: string
           start_time?: string | null
           status?: string
+          ticket_note?: string | null
+          ticket_url?: string | null
           title?: string
           topic_id?: string
           updated_at?: string
@@ -1582,6 +1741,66 @@ export type Database = {
             foreignKeyName: "feed_cta_configs_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_editorial_profiles: {
+        Row: {
+          caption_templates: Json
+          created_at: string
+          enabled: boolean
+          event_hashtag_max: number
+          event_hashtag_min: number
+          fixed_hashtags: string[]
+          flags: string[]
+          genres: Json
+          languages: string[]
+          topic_id: string
+          updated_at: string
+          voice_rules: string[]
+        }
+        Insert: {
+          caption_templates?: Json
+          created_at?: string
+          enabled?: boolean
+          event_hashtag_max?: number
+          event_hashtag_min?: number
+          fixed_hashtags?: string[]
+          flags?: string[]
+          genres?: Json
+          languages?: string[]
+          topic_id: string
+          updated_at?: string
+          voice_rules?: string[]
+        }
+        Update: {
+          caption_templates?: Json
+          created_at?: string
+          enabled?: boolean
+          event_hashtag_max?: number
+          event_hashtag_min?: number
+          fixed_hashtags?: string[]
+          flags?: string[]
+          genres?: Json
+          languages?: string[]
+          topic_id?: string
+          updated_at?: string
+          voice_rules?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_editorial_profiles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_editorial_profiles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
