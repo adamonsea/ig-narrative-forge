@@ -17,17 +17,17 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   e("general", "Events", "Gather what's on as well as news.", ["what's on", "whats on", "turn on events", "calendar"]),
   e("general", "About page", "Who curates the feed.", ["about", "bio", "curator"], "about-page"),
 
-  e("look", "Logo", "Shown in the feed's top bar.", ["brand", "branding", "image"], "look-logo"),
-  e("look", "App icon", "Browser tab and home screen.", ["favicon", "icon", "home screen"], "look-app-icon"),
-  e("look", "Colour", "The feed's main colour.", ["color", "brand colour", "accent", "logo"], "look-colour"),
-  e("look", "Top bar", "Colour of the top bar.", ["header", "color"], "look-top-bar"),
-  e("look", "Background", "Colour behind the stories.", ["color", "theme"], "look-background"),
-  e("look", "Story cover", "How the first slide looks.", ["cover style", "card"], "look-cover"),
+  e("look", "Logo", "Shown in the feed's top bar.", ["brand", "branding", "image"], "logo"),
+  e("look", "App icon", "Browser tab and home screen.", ["favicon", "icon", "home screen"], "app-icon"),
+  e("look", "Colour", "The feed's main colour.", ["color", "brand colour", "accent", "logo"], "colour"),
+  e("look", "Top bar", "Colour of the top bar.", ["header", "color"]),
+  e("look", "Background", "Colour behind the stories.", ["color", "theme"]),
+  e("look", "Story cover", "How the first slide looks.", ["cover style", "card"], "cover"),
 
   e("pictures", "Picture colours", "One colour, cycle or random.", ["colour mode", "color"]),
   e("pictures", "Publisher photos", "Use source photos, credited.", ["photos", "images", "credit"]),
   e("pictures", "Illustration style", "How generated pictures look.", ["art", "artwork", "image style", "drawing"]),
-  e("pictures", "Place pictures", "Reference photos of local places.", ["landmarks", "reference photos", "buildings"], "picture-references-heading"),
+  e("pictures", "Place pictures", "Reference photos of local places.", ["landmarks", "reference photos", "buildings"], "place-pictures"),
 
   e("coverage", "More of this", "Stories that mention these belong in the feed.", ["keywords", "terms", "topics", "include"]),
   e("coverage", "Less of this", "Stories about these are left out.", ["keywords", "negative keywords", "exclude", "block"]),
@@ -70,10 +70,16 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   e("share", "RSS", "A live feed for reader apps.", ["feed reader", "xml"]),
   e("share", "AI assistants", "Let ChatGPT or Claude read the feed.", ["mcp", "chatgpt", "claude"]),
 
-  e("extras", "Trending", "Most interacted-with stories in 24 hours.", ["momentum", "popular"], "story-momentum"),
+  e("extras", "Trending", "Most interacted-with stories in 24 hours.", ["momentum", "popular"], "trending"),
   e("extras", "Donations", "Let readers support the feed.", ["support", "money", "tips", "stripe"]),
   e("extras", "Period reviews", "A public look back over a period.", ["reviews", "look back", "retrospective", "archive", "recap"], "period-reviews"),
 ];
+
+/** Anchors shared before they were simplified → current anchor, so old links still land on the row. */
+export const LEGACY_ANCHORS: Record<string, string> = {
+  "look-logo": "logo", "look-app-icon": "app-icon", "look-colour": "colour", "look-top-bar": "top-bar",
+  "look-background": "background", "look-cover": "cover", "picture-references-heading": "place-pictures", "story-momentum": "trending",
+};
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 

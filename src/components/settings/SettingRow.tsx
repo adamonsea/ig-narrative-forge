@@ -1,11 +1,26 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { settingAnchor } from "@/lib/settingsIndex";
 
-/** Copies this row's direct link (page URL + #anchor). Shown on hover/focus (desktop) or after a long-press (phone). */
-function CopyLink({ anchor, visible }: { anchor: string; visible: boolean }) {
+/** Copies this row's direct link (page URL + #anchor). Shown on hover/focus (desktop) or after a long-press on its row (phone). Use inside any [data-setting-row] with "group/row". */
+export function CopyLink({ anchor }: { anchor: string }) {
   const [copied, setCopied] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const row = ref.current?.closest<HTMLElement>("[data-setting-row]");
+    if (!row) return;
+    let timer: number | undefined;
+    const start = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") return;
+      timer = window.setTimeout(() => { setVisible(true); window.setTimeout(() => setVisible(false), 4000); }, 500);
+    };
+    const end = () => window.clearTimeout(timer);
+    row.addEventListener("pointerdown", start);
+    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => row.addEventListener(t, end));
+    return () => { end(); row.removeEventListener("pointerdown", start); ["pointerup", "pointercancel", "pointerleave"].forEach((t) => row.removeEventListener(t, end)); };
+  }, []);
   const copy = async () => {
     const url = `${window.location.origin}${window.location.pathname}#${anchor}`;
     try { await navigator.clipboard.writeText(url); } catch { return; }
@@ -14,6 +29,7 @@ function CopyLink({ anchor, visible }: { anchor: string; visible: boolean }) {
   };
   return (
     <button
+      ref={ref}
       type="button"
       onClick={() => void copy()}
       aria-label="Copy link to this setting"
@@ -39,17 +55,10 @@ export function SettingRow({ id, label, hint, children, stack = false, className
   className?: string | undefined;
 }) {
   const anchor = id ?? settingAnchor(label);
-  const [pressed, setPressed] = useState(false);
-  const timer = useRef<number | undefined>(undefined);
-  const startPress = (e: React.PointerEvent) => {
-    if (e.pointerType !== "touch") return;
-    timer.current = window.setTimeout(() => { setPressed(true); window.setTimeout(() => setPressed(false), 4000); }, 500);
-  };
-  const endPress = () => window.clearTimeout(timer.current);
   return (
     <div id={anchor} data-setting-row className={cn("group/row scroll-mt-24 py-5", stack ? "space-y-4" : "flex items-start justify-between gap-6", className)}>
-      <div className="min-w-0" onPointerDown={startPress} onPointerUp={endPress} onPointerCancel={endPress} onPointerLeave={endPress}>
-        <p className="text-base font-medium">{label}<CopyLink anchor={anchor} visible={pressed} /></p>
+      <div className="min-w-0">
+        <p className="text-base font-medium">{label}<CopyLink anchor={anchor} /></p>
         {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
       </div>
       {children && <div className={cn(stack ? "" : "flex shrink-0 items-center gap-3")}>{children}</div>}

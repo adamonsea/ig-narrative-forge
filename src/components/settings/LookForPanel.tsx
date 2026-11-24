@@ -3,6 +3,7 @@ import { Plus, X } from "lucide-react";
 import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { CopyLink } from "@/components/settings/SettingRow";
 import { TermList } from "@/components/feed-setup/TermList";
 import { CleanUpPastStories } from "@/components/settings/CleanUpPastStories";
 import { addToList, dedupeTerms, freshSuggestions, normaliseTerm, removeTerm, type ListName } from "@/lib/termLists";
@@ -113,7 +114,7 @@ export function LookForPanel({
       label={LABEL.more}
       hint="Stories that mention these belong in the feed."
       hintInline
-      headerAction={<SaveIndicator state={state} />}
+      headerAction={<><CopyLink anchor="more-of-this" /><SaveIndicator state={state} /></>}
       terms={dedupeTerms(keywords)}
       onAdd={(t) => add("more", t)}
       onRemove={(t) => remove("more", t)}
@@ -162,8 +163,8 @@ export function LookForPanel({
 
   return (
     <div className="divide-y divide-border border-y border-border [&>*]:py-5">
-      {show !== "less" && <div id="more-of-this" data-setting-row className="scroll-mt-24">{more}</div>}
-      {show !== "more" && <div id="less-of-this" data-setting-row className="scroll-mt-24">{less}</div>}
+      {show !== "less" && <div id="more-of-this" data-setting-row className="group/row scroll-mt-24">{more}</div>}
+      {show !== "more" && <div id="less-of-this" data-setting-row className="group/row scroll-mt-24">{less}</div>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { CopyLink } from "@/components/settings/SettingRow";
 import { useState, useRef } from 'react';
 import { READER_ONBOARDING_EXTRAS } from '@/lib/featureFlags';
 import { Button } from '@/components/ui/button';
@@ -204,10 +205,10 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         )}
 
         {/* About Page */}
-        <div id="about-page" data-setting-row className="scroll-mt-24 space-y-5 py-5">
+        <div id="about-page" data-setting-row className="group/row scroll-mt-24 space-y-5 py-5">
           <div className="flex items-start justify-between gap-6">
             <div>
-              <Label htmlFor="about-page-on" className="text-base font-medium">About page</Label>
+              <Label htmlFor="about-page-on" className="text-base font-medium">About page</Label><CopyLink anchor="about-page" />
               <p className="mt-1 text-sm text-muted-foreground">Who curates the feed, linked from its menu.</p>
             </div>
             <div className="flex items-center gap-3">

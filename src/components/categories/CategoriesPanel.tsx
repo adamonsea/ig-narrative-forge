@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SettingLoadError } from '@/components/settings/SettingRow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, RefreshCw, Sparkles, ChevronDown } from 'lucide-react';
@@ -18,7 +19,7 @@ interface CategoriesPanelProps {
 }
 
 export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps) => {
-  const { categories, parents, childrenOf, settings, counts, classifiedCount, loading, isLocal, reload, saveSetting } =
+  const { categories, parents, childrenOf, settings, counts, classifiedCount, loading, failed, isLocal, reload, saveSetting } =
     useStoryCategories(topicId);
   const { toast } = useToast();
   const [classifying, setClassifying] = useState(false);
@@ -197,6 +198,8 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
       </div>
     );
   }
+
+  if (failed) return <SettingLoadError what="Categories" onRetry={() => void reload()} />;
 
   const unclassified = Math.max(0, (storyTotal ?? 0) - classifiedCount);
 

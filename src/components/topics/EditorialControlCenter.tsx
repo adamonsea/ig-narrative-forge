@@ -14,6 +14,8 @@ import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 import { DripFeedSettings } from "@/components/DripFeedSettings";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
+import { CopyLink } from "@/components/settings/SettingRow";
+import { LEGACY_ANCHORS } from "@/lib/settingsIndex";
 import { PeriodReviewPanel } from "@/components/categories/PeriodReviewPanel";
 import { OnboardingSettings } from "@/components/onboarding";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
@@ -121,7 +123,7 @@ const SECTION_ICONS: Record<SettingsSectionId, LucideIcon> = {
 
 function Page({ title, purpose, children }: { title: string; purpose?: string | undefined; children: React.ReactNode }) {
   return (
-    <section aria-labelledby="settings-page-title" className="space-y-10">
+    <section aria-labelledby="settings-page-title" className="space-y-6 md:space-y-10">
       <header>
         <h2 id="settings-page-title" className="text-2xl font-semibold">{title}</h2>
         {purpose && <p className="mt-1 text-base text-muted-foreground">{purpose}</p>}
@@ -162,7 +164,7 @@ export function EditorialControlCenter({
   // Direct links (#anchor) and search results: wait for the row to render, scroll to it, briefly highlight it.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const read = () => setReveal(decodeURIComponent(window.location.hash.slice(1)) || null);
+    const read = () => { const h = decodeURIComponent(window.location.hash.slice(1)); setReveal(h ? (LEGACY_ANCHORS[h] ?? h) : null); };
     read();
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
@@ -262,7 +264,7 @@ export function EditorialControlCenter({
               <PictureColourSetting topicId={topic.id} brandingConfig={topic.branding_config} onSaved={(values) => patch(values)} />
               <PublisherPhotosSetting topicId={topic.id} value={topic.use_publisher_photos} onSaved={(values) => patch(values)} />
             </SettingGroup>
-            <section aria-labelledby="picture-references-heading">
+            <section aria-labelledby="place-pictures">
               <PictureReferences
                 topicId={topic.id}
                 topicName={topic.name}
@@ -302,8 +304,8 @@ export function EditorialControlCenter({
                 patch(values);
               }}
             />
-            <section id="categories" aria-labelledby="coverage-categories-heading" className="scroll-mt-24">
-              <SubHeading id="coverage-categories-heading">Categories</SubHeading>
+            <section id="categories" data-setting-row aria-labelledby="coverage-categories-heading" className="group/row scroll-mt-24">
+              <SubHeading id="coverage-categories-heading">Categories<CopyLink anchor="categories" /></SubHeading>
               <CategoriesPanel topicId={topic.id} />
             </section>
           </Page>
@@ -400,7 +402,7 @@ export function EditorialControlCenter({
           <Page title={label} purpose={purpose}>
             <section><SubHeading>Feed cards</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
             <section><SubHeading>Support</SubHeading><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></section>
-            <section id="period-reviews" className="scroll-mt-24"><SubHeading>Period reviews</SubHeading><PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} /></section>
+            <section id="period-reviews" data-setting-row className="group/row scroll-mt-24"><SubHeading>Period reviews<CopyLink anchor="period-reviews" /></SubHeading><PeriodReviewPanel topicId={topic.id} topicSlug={topic.slug} /></section>
             {FEATURES.sentiment && <section><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>}
             {FEATURES.communityDiscussion && (
               <section>

@@ -32,6 +32,7 @@ export const useStoryCategories = (topicId?: string) => {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [classifiedCount, setClassifiedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   // The shared global set is a local-news taxonomy: only regional feeds use it.
   // Other feeds see only their own categories (mirrors _shared/taxonomy.ts).
   const [isLocal, setIsLocal] = useState(true);
@@ -39,6 +40,7 @@ export const useStoryCategories = (topicId?: string) => {
   const load = useCallback(async () => {
     if (!topicId) return;
     setLoading(true);
+    setFailed(false);
     try {
       // PostgREST caps a single response at 1000 rows, so page through
       // assignments rather than relying on .limit().
@@ -58,18 +60,19 @@ export const useStoryCategories = (topicId?: string) => {
         return rows;
       };
 
-      const { data: topicRow } = await supabase
+      const { data: topicRow, error: topicError } = await supabase
         .from('topics')
         .select('topic_type')
         .eq('id', topicId)
         .maybeSingle();
+      if (topicError) throw topicError;
       const local = topicRow?.topic_type === 'regional';
       setIsLocal(local);
 
       const catQuery = supabase
         .from('story_categories')
         .select('id, topic_id, parent_id, slug, name, description, sort_order');
-      const [{ data: cats }, { data: setts }, assignments] = await Promise.all([
+      const [{ data: cats, error: catsError }, { data: setts, error: settsError }, assignments] = await Promise.all([
         (local ? catQuery.or(`topic_id.is.null,topic_id.eq.${topicId}`) : catQuery.eq('topic_id', topicId))
           .eq('is_active', true)
           .order('sort_order', { ascending: true }),
@@ -77,6 +80,7 @@ export const useStoryCategories = (topicId?: string) => {
         fetchAllAssignments(),
       ]);
 
+      if (catsError || settsError) throw catsError ?? settsError;
       setCategories((cats ?? []) as StoryCategory[]);
 
       const settingMap: Record<string, CategorySetting> = {};
@@ -94,6 +98,8 @@ export const useStoryCategories = (topicId?: string) => {
       }
       setCounts(countMap);
       setClassifiedCount(classified);
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -134,5 +140,5 @@ export const useStoryCategories = (topicId?: string) => {
   const parents = categories.filter((c) => !c.parent_id);
   const childrenOf = (id: string) => categories.filter((c) => c.parent_id === id);
 
-  return { categories, parents, childrenOf, settings, counts, classifiedCount, loading, isLocal, reload: load, saveSetting };
+  return { categories, parents, childrenOf, settings, counts, classifiedCount, loading, failed, isLocal, reload: load, saveSetting };
 };

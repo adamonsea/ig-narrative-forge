@@ -1,3 +1,4 @@
+import { CopyLink } from "@/components/settings/SettingRow";
 import { SettingLoadError } from '@/components/settings/SettingRow';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -113,12 +114,12 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
 
         <div className="divide-y divide-border border-y border-border">
           {/* Story Momentum - Free Feature */}
-          <div className="flex items-center justify-between gap-6 py-5">
+          <div id="trending" data-setting-row className="group/row flex scroll-mt-24 items-center justify-between gap-6 py-5">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="story-momentum" className="text-base font-medium">
                   Trending
-                </Label>
+                </Label><CopyLink anchor="trending" />
                 
               </div>
               <p className="text-sm text-muted-foreground">Shows most interacted-with stories in the last 24 hours</p>

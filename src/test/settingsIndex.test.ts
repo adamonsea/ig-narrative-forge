@@ -24,3 +24,13 @@ describe("Find a setting", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 });
+
+import { LEGACY_ANCHORS as LEGACY } from "@/lib/settingsIndex";
+import { SETTINGS_INDEX as IDX_FOR_LEGACY } from "@/lib/settingsIndex";
+describe("old shared anchors", () => {
+  it("every old anchor points at a current row", () => {
+    const anchors = new Set(IDX_FOR_LEGACY.map((x) => x.anchor));
+    for (const target of Object.values(LEGACY)) expect(anchors.has(target)).toBe(true);
+  });
+  it("look#look-logo lands on look#logo", () => { expect(LEGACY["look-logo"]).toBe("logo"); });
+});

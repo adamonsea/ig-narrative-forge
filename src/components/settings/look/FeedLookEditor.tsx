@@ -1,3 +1,4 @@
+import { CopyLink } from "@/components/settings/SettingRow";
 import { padImageToSquare } from "@/lib/squareImage";
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, Upload, X } from "lucide-react";
@@ -84,8 +85,8 @@ function SwatchRow({
   const custom = !known && isHex(value) ? upper(value) : null;
   const pickerValue = isHex(value) ? value : toHex(resolveSurface(value, brand, "#FFFFFF"));
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium" id={id}>{label}</p>
+    <div data-setting-row className="group/row scroll-mt-24 space-y-2">
+      <p className="text-base font-medium" id={id}>{label}<CopyLink anchor={id} /></p>
       <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-labelledby={id}>
         {presets.map((p) => (
           <Swatch
@@ -283,8 +284,8 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
             <SaveIndicator state={state} />
           </div>
 
-          <div className="space-y-2">
-            <p className="scroll-mt-24 text-sm font-medium" id="look-logo">Logo</p>
+          <div data-setting-row className="group/row scroll-mt-24 space-y-2">
+            <p className="text-base font-medium" id="logo">Logo<CopyLink anchor="logo" /></p>
             <div className="flex flex-wrap items-center gap-3">
               {logoUrl ? (
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">
@@ -302,8 +303,8 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
             </div>
           </div>
 
-          <div className="space-y-2">
-            <p className="scroll-mt-24 text-sm font-medium" id="look-app-icon">App icon</p>
+          <div data-setting-row className="group/row scroll-mt-24 space-y-2">
+            <p className="text-base font-medium" id="app-icon">App icon<CopyLink anchor="app-icon" /></p>
             <div className="flex flex-wrap items-center gap-3">
               {config["icon_url"] ? (
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">
@@ -321,9 +322,9 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
             </div>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium" id="look-colour">Colour</p>
-            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-labelledby="look-colour">
+          <div data-setting-row className="group/row scroll-mt-24 space-y-2">
+            <p className="text-base font-medium" id="colour">Colour<CopyLink anchor="colour" /></p>
+            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-labelledby="colour">
               {accentChoices.map((c) => (
                 <Swatch key={c} label={`Colour ${c}`} fill={c} selected={accent === c} onClick={() => pickAccent(c)} />
               ))}
@@ -334,12 +335,12 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
             </div>
           </div>
 
-          <SwatchRow id="look-top-bar" label="Top bar" presets={TOP_BAR_PRESETS} value={topBar || DEFAULT_TOP_BAR} brand={brand} onPick={pickTopBar} />
-          <SwatchRow id="look-background" label="Background" presets={BACKGROUND_PRESETS} value={background || DEFAULT_BACKGROUND} brand={brand} onPick={pickBackground} />
+          <SwatchRow id="top-bar" label="Top bar" presets={TOP_BAR_PRESETS} value={topBar || DEFAULT_TOP_BAR} brand={brand} onPick={pickTopBar} />
+          <SwatchRow id="background" label="Background" presets={BACKGROUND_PRESETS} value={background || DEFAULT_BACKGROUND} brand={brand} onPick={pickBackground} />
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium" id="look-cover">Story cover</p>
-            <div className="inline-flex gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-labelledby="look-cover">
+          <div data-setting-row className="group/row scroll-mt-24 space-y-2">
+            <p className="text-base font-medium" id="cover">Story cover<CopyLink anchor="cover" /></p>
+            <div className="inline-flex gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-labelledby="cover">
               {STORY_COVER_STYLES.map((style) => (
                 <button
                   key={style}

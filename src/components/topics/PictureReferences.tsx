@@ -460,7 +460,7 @@ export function PictureReferences({
         </SettingRow>
       )}
 
-      <SettingRow id="picture-references-heading" label="Place pictures" hint={landmarks.length > 0 ? `${readyCount} of ${landmarks.length} ready. Reference photos help pictures show the real buildings.` : "Places your feed writes about, so pictures show the real buildings."} stack>
+      <SettingRow id="place-pictures" label="Place pictures" hint={landmarks.length > 0 ? `${readyCount} of ${landmarks.length} ready. Reference photos help pictures show the real buildings.` : "Places your feed writes about, so pictures show the real buildings."} stack>
       <div className="space-y-4">
       {pending.length > 0 && (
         <p className="text-sm text-muted-foreground">
