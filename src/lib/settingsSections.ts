@@ -1,13 +1,14 @@
 /** Feed Settings pages: one section per URL (/dashboard/topic/:slug/settings/:section). */
 export const SETTINGS_SECTIONS = [
-  { id: "general", label: "General" },
-  { id: "look", label: "Look" },
-  { id: "coverage", label: "Coverage" },
-  { id: "writing", label: "Writing" },
-  { id: "events", label: "Events", eventsOnly: true },
-  { id: "autopilot", label: "Autopilot" },
-  { id: "share", label: "Share" },
-  { id: "extras", label: "Extras" },
+  { id: "general", label: "General", purpose: "Name, welcome line and whether readers can see the feed." },
+  { id: "look", label: "Look", purpose: "How the feed looks to readers." },
+  { id: "pictures", label: "Pictures", purpose: "How story pictures are made." },
+  { id: "coverage", label: "Coverage", purpose: "What belongs in the feed." },
+  { id: "writing", label: "Writing", purpose: "How stories are written." },
+  { id: "events", label: "Events", purpose: "How events show, and captions for social posts.", eventsOnly: true },
+  { id: "autopilot", label: "Autopilot", purpose: "How much happens without you." },
+  { id: "share", label: "Share", purpose: "Ways for readers to follow the feed." },
+  { id: "extras", label: "Extras", purpose: "Optional cards and tools. All off unless you switch them on." },
 ] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];

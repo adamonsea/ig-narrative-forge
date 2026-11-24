@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { SettingGroup, SettingRow } from "@/components/settings/SettingRow";
 
 interface BrandConfig {
   logo_url?: string | undefined;
@@ -59,19 +60,18 @@ export function BrandBasics({
     save({ branding_config: updated }, { branding_config: updated });
   };
 
+  const enter = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); };
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end"><SaveIndicator state={state} /></div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <label htmlFor="brand-name" className="text-sm font-medium">Name</label>
-          <Input id="brand-name" value={feedName} onChange={(e) => setFeedName(e.target.value)} onBlur={saveName} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="h-11 text-base" />
+    <SettingGroup>
+      <SettingRow label="Name" hint="Shown at the top of the feed." stack>
+        <div className="flex items-center gap-3">
+          <Input id="brand-name" aria-label="Name" value={feedName} onChange={(e) => setFeedName(e.target.value)} onBlur={saveName} onKeyDown={enter} className="h-11 text-base" />
+          <SaveIndicator state={state} />
         </div>
-        <div className="space-y-1.5">
-          <label htmlFor="brand-welcome" className="text-sm font-medium">Welcome line</label>
-          <Input id="brand-welcome" value={welcome} placeholder="One sentence shown under the name" onChange={(e) => setWelcome(e.target.value)} onBlur={saveWelcome} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="h-11 text-base" />
-        </div>
-      </div>
-    </div>
+      </SettingRow>
+      <SettingRow label="Welcome line" hint="One sentence under the name." stack>
+        <Input id="brand-welcome" aria-label="Welcome line" value={welcome} onChange={(e) => setWelcome(e.target.value)} onBlur={saveWelcome} onKeyDown={enter} className="h-11 text-base" />
+      </SettingRow>
+    </SettingGroup>
   );
 }

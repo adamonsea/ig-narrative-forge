@@ -1,3 +1,4 @@
+import { padImageToSquare } from "@/lib/squareImage";
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -221,6 +222,36 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
 
   const removeLogo = () => queueConfig({ logo_url: undefined, show_topic_name: true });
 
+  const iconRef = useRef<HTMLInputElement>(null);
+  const [iconUploading, setIconUploading] = useState(false);
+  const uploadIcon = async (raw: File) => {
+    if (!raw.type.startsWith("image/") || raw.size > 1024 * 1024) {
+      toast({ title: "Use an image under 1MB", description: "Square works best, 512×512px.", variant: "destructive" });
+      return;
+    }
+    setIconUploading(true);
+    try {
+      // Browsers stretch non-square icons, so pad to a square first.
+      const file = await padImageToSquare(raw);
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const { data, error } = await supabase.functions.invoke("optimize-branding-image", {
+        body: { topicId, imageType: "icon", base64Data, mimeType: file.type, originalFileName: file.name },
+      });
+      if (error || !data?.success) throw new Error(data?.error || error?.message || "Upload failed");
+      queueConfig({ icon_url: data.originalUrl });
+    } catch (e) {
+      toast({ title: "App icon not uploaded", description: e instanceof Error ? e.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setIconUploading(false);
+      if (iconRef.current) iconRef.current.value = "";
+    }
+  };
+
   // The feed itself prefers an older saved primary_color, so the preview does too.
   const brand = config.primary_color || accent;
   const logoUrl = config.logo_url || null;
@@ -248,7 +279,7 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
 
         <div className="min-w-0 flex-1 space-y-6 p-6">
           <div className="flex items-center justify-between gap-3">
-            <h3 id="feed-look-title" className="text-lg font-semibold">Look</h3>
+            <h3 id="feed-look-title" className="text-lg font-semibold">Feed</h3>
             <SaveIndicator state={state} />
           </div>
 
@@ -268,6 +299,25 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
                 {logoUrl ? "Replace" : "Upload"}
               </Button>
               <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadLogo(f); }} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">App icon</p>
+            <div className="flex flex-wrap items-center gap-3">
+              {config["icon_url"] ? (
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">
+                  <img src={config["icon_url"] as string} alt="Current app icon" className="h-10 w-10 rounded-lg object-contain" />
+                  <Button variant="ghost" size="icon" onClick={() => queueConfig({ icon_url: undefined })} aria-label="Remove app icon" title="Remove app icon"><X className="h-4 w-4" /></Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Browser tab and home screen</p>
+              )}
+              <Button variant="outline" size="sm" onClick={() => iconRef.current?.click()} disabled={iconUploading} className="gap-1.5">
+                {iconUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {config["icon_url"] ? "Replace" : "Upload"}
+              </Button>
+              <input ref={iconRef} type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadIcon(f); }} />
             </div>
           </div>
 

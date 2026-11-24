@@ -1,7 +1,7 @@
 import { opt } from "@/lib/optionalProps";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@/lib/router-compat";
-import { CircleAlert, ExternalLink } from "lucide-react";
+import { CalendarDays, ExternalLink, Image as ImageIcon, Palette, PenLine, Plane, Settings2, Share2, Sparkles, Target, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -13,7 +13,6 @@ import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 import { DripFeedSettings } from "@/components/DripFeedSettings";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
-import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { OnboardingSettings } from "@/components/onboarding";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
 import { SentimentKeywordSettings } from "@/components/SentimentKeywordSettings";
@@ -23,8 +22,10 @@ import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager"
 import { EmailSegmentsManager } from "@/components/EmailSegmentsManager";
 import { WidgetAnalytics } from "@/components/WidgetAnalytics";
 import { cn } from "@/lib/utils";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { SettingGroup, SettingRow } from "@/components/settings/SettingRow";
-import { resolveSettingsSection, settingsPath, visibleSettingsSections } from "@/lib/settingsSections";
+import { resolveSettingsSection, settingsPath, visibleSettingsSections, type SettingsSectionId } from "@/lib/settingsSections";
+import { PictureColourSetting } from "@/components/settings/PictureColourSetting";
 import { type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 import { CategoriesPanel } from "@/components/categories/CategoriesPanel";
 import { RememberedFold } from "@/components/settings/RememberedFold";
@@ -111,10 +112,18 @@ interface EditorialControlCenterProps {
   onProRequired?: () => void;
 }
 
-function Page({ title, children }: { title: string; children: React.ReactNode }) {
+const SECTION_ICONS: Record<SettingsSectionId, LucideIcon> = {
+  general: Settings2, look: Palette, pictures: ImageIcon, coverage: Target, writing: PenLine,
+  events: CalendarDays, autopilot: Plane, share: Share2, extras: Sparkles,
+};
+
+function Page({ title, purpose, children }: { title: string; purpose?: string | undefined; children: React.ReactNode }) {
   return (
     <section aria-labelledby="settings-page-title" className="space-y-10">
-      <h2 id="settings-page-title" className="text-2xl font-semibold">{title}</h2>
+      <header>
+        <h2 id="settings-page-title" className="text-2xl font-semibold">{title}</h2>
+        {purpose && <p className="mt-1 text-base text-muted-foreground">{purpose}</p>}
+      </header>
       {children}
     </section>
   );
@@ -152,14 +161,17 @@ export function EditorialControlCenter({
     navRef.current?.querySelector<HTMLElement>("[aria-current=page]")?.scrollIntoView({ block: "nearest", inline: "center" });
   }, [current]);
 
-  const unconfirmedPlaces = (topic.landmarks || []).filter((place) => topic.landmark_setup_state?.[place]?.status !== "confirmed");
-  const attention: string[] = [];
-  if (!topic.is_public) attention.push("This feed is a draft. Readers can't see it yet.");
-  if ((topic.landmarks || []).length > 0 && unconfirmedPlaces.length > 0) {
-    attention.push(`${unconfirmedPlaces.length} ${unconfirmedPlaces.length === 1 ? "place is" : "places are"} waiting for your OK in Coverage → Picture references.`);
-  }
-  const brandKey = JSON.stringify([topic.name, topic.illustration_primary_color, topic.branding_config]);
-  const label = sections.find((s) => s.id === current)?.label ?? "General";
+  const meta = sections.find((s) => s.id === current) ?? sections[0]!;
+  const label = meta.label;
+  const purpose = meta.purpose;
+  const [eventsSaving, setEventsSaving] = useState<SaveState>(null);
+  const toggleEvents = async (on: boolean) => {
+    setEventsSaving("saving");
+    const { error } = await supabase.from("topics").update({ events_enabled: on, updated_at: new Date().toISOString() } as never).eq("id", topic.id);
+    if (error) { setEventsSaving("not-saved"); return; }
+    patch({ events_enabled: on });
+    setEventsSaving("saved");
+  };
 
   return (
     <div className="mx-auto max-w-6xl md:grid md:grid-cols-[192px_minmax(0,1fr)] md:gap-12">
@@ -172,9 +184,10 @@ export function EditorialControlCenter({
               aria-current={s.id === current ? "page" : undefined}
               className={cn(
                 "flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-lg px-3 text-base transition-colors",
-                s.id === current ? "bg-muted font-medium text-foreground md:border-l-2 md:border-purple-bright md:rounded-l-none" : "text-muted-foreground hover:text-foreground",
+                s.id === current ? "bg-muted font-semibold text-foreground shadow-[inset_0_-2px_0_hsl(var(--purple-bright))] md:shadow-[inset_2px_0_0_hsl(var(--purple-bright))]" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
               )}
             >
+              {(() => { const Icon = SECTION_ICONS[s.id]; return <Icon aria-hidden className="mr-3 h-4 w-4 shrink-0" />; })()}
               {s.label}
             </Link>
           ))}
@@ -182,24 +195,17 @@ export function EditorialControlCenter({
       </nav>
 
       <div className="mt-8 max-w-3xl space-y-10 md:mt-0">
-        {attention.length > 0 && current === "general" && (
-          <section className="rounded-xl border-l-2 border-destructive bg-destructive-soft px-4 py-4" aria-labelledby="attention-heading">
-            <div className="flex gap-3">
-              <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-              <div>
-                <h2 id="attention-heading" className="text-base font-semibold">Needs your attention</h2>
-                <ul className="mt-1 space-y-1 text-sm text-muted-foreground">{attention.map((text) => <li key={text}>{text}</li>)}</ul>
-              </div>
-            </div>
-          </section>
-        )}
 
         {current === "general" && (
-          <Page title={label}>
+          <Page title={label} purpose={purpose}>
             <BrandBasics topicId={topic.id} name={topic.name} colour={topic.illustration_primary_color} brandingConfig={topic.branding_config} onSaved={(values) => patch(values)} />
             <SettingGroup>
               <SettingRow label="Live" hint={topic.is_public ? "Readers can see the feed." : "Draft. Only you can see it."}>
                 <Switch aria-label="Live" checked={topic.is_public} onCheckedChange={(checked) => onChannelToggle("is_public", checked, "Public feed")} />
+              </SettingRow>
+              <SettingRow label="Events" hint={eventsOn ? "Gathering events. Their settings are on the Events page." : "Gather what's on as well as news. Adds an Events page here."}>
+                <SaveIndicator state={eventsSaving} />
+                <Switch aria-label="Events" checked={eventsOn} onCheckedChange={(on) => void toggleEvents(on)} />
               </SettingRow>
             </SettingGroup>
             <section aria-labelledby="about-heading">
@@ -210,39 +216,17 @@ export function EditorialControlCenter({
         )}
 
         {current === "look" && (
-          <Page title={label}>
+          <Page title={label} purpose={purpose}>
             <FeedLookEditor topicId={topic.id} name={topic.name} colour={topic.illustration_primary_color} brandingConfig={topic.branding_config} coverStyle={topic.story_cover_style} regional={topic.topic_type === "regional"} eventsEnabled={topic.events_enabled} onSaved={(values) => patch(values)} />
-            <SettingGroup>
-              <PublisherPhotosSetting topicId={topic.id} value={topic.use_publisher_photos} onSaved={(values) => patch(values)} />
-            </SettingGroup>
-            <RememberedFold foldKey="look-advanced" label="Advanced: app icon and picture colours">
-              <TopicBrandingSettings key={brandKey} topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config as never }} onUpdate={onUpdate} />
-            </RememberedFold>
           </Page>
         )}
 
-        {current === "coverage" && (
-          <Page title={label}>
-            <LookForPanel
-              topicId={topic.id}
-              keywords={topic.keywords}
-              negativeKeywords={negativeKeywords}
-              setupState={topic.coverage_setup_state || {}}
-              onChange={(values) => {
-                if (values.negative_keywords) onNegativeKeywordsChange(values.negative_keywords);
-                patch(values);
-              }}
-            />
-            {topic.topic_type === "regional" && (
-              <section aria-labelledby="news-values-heading">
-                <SubHeading id="news-values-heading">How local</SubHeading>
-                <NewsValuesPanel topicId={topic.id} region={topic.region} landmarks={topic.landmarks} postcodes={topic.postcodes} organizations={topic.organizations} localityStrength={topic.locality_strength} nearbyPlaces={topic.nearby_places} bigStoryOverride={topic.big_story_override} onChange={(values) => patch(values)} />
-              </section>
-            )}
-            <section aria-labelledby="coverage-categories-heading">
-              <SubHeading id="coverage-categories-heading">Categories</SubHeading>
-              <CategoriesPanel topicId={topic.id} />
-            </section>
+        {current === "pictures" && (
+          <Page title={label} purpose={purpose}>
+            <SettingGroup>
+              <PictureColourSetting topicId={topic.id} brandingConfig={topic.branding_config} onSaved={(values) => patch(values)} />
+              <PublisherPhotosSetting topicId={topic.id} value={topic.use_publisher_photos} onSaved={(values) => patch(values)} />
+            </SettingGroup>
             <section aria-labelledby="picture-references-heading">
               <PictureReferences
                 topicId={topic.id}
@@ -271,8 +255,33 @@ export function EditorialControlCenter({
           </Page>
         )}
 
+        {current === "coverage" && (
+          <Page title={label} purpose={purpose}>
+            <LookForPanel
+              topicId={topic.id}
+              keywords={topic.keywords}
+              negativeKeywords={negativeKeywords}
+              setupState={topic.coverage_setup_state || {}}
+              onChange={(values) => {
+                if (values.negative_keywords) onNegativeKeywordsChange(values.negative_keywords);
+                patch(values);
+              }}
+            />
+            {topic.topic_type === "regional" && (
+              <section aria-labelledby="news-values-heading">
+                <SubHeading id="news-values-heading">How local</SubHeading>
+                <NewsValuesPanel topicId={topic.id} region={topic.region} landmarks={topic.landmarks} postcodes={topic.postcodes} organizations={topic.organizations} localityStrength={topic.locality_strength} nearbyPlaces={topic.nearby_places} bigStoryOverride={topic.big_story_override} onChange={(values) => patch(values)} />
+              </section>
+            )}
+            <section aria-labelledby="coverage-categories-heading">
+              <SubHeading id="coverage-categories-heading">Categories</SubHeading>
+              <CategoriesPanel topicId={topic.id} />
+            </section>
+          </Page>
+        )}
+
         {current === "writing" && (
-          <Page title={label}>
+          <Page title={label} purpose={purpose}>
             <div id="voice-heading">
               <ContentVoiceSettings topicId={topic.id} topicName={topic.name} topicType={topic.topic_type} region={topic.region} currentExpertise={topic.audience_expertise} currentTone={topic.default_tone} currentWritingStyle={topic.default_writing_style} currentHouseStyleNotes={topic.house_style_notes} currentHouseStyleExamples={topic.house_style_examples} onUpdate={onUpdate} />
             </div>
@@ -280,14 +289,14 @@ export function EditorialControlCenter({
         )}
 
         {current === "events" && eventsOn && (
-          <Page title={label}>
+          <Page title={label} purpose={purpose}>
             <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} currency={topic.event_currency} photos={topic.event_photos_enabled} onSaved={(values) => patch(values)} />
             <EventCaptionsSettings topicId={topic.id} />
           </Page>
         )}
 
         {current === "autopilot" && (
-          <Page title={label}>
+          <Page title={label} purpose={purpose}>
             <AutopilotBasics key={`ap-${topic.drip_feed_enabled}`} topicId={topic.id} onChanged={onUpdate} />
             <section>
               <SubHeading>Release timing</SubHeading>
@@ -300,7 +309,7 @@ export function EditorialControlCenter({
         )}
 
         {current === "share" && (
-          <Page title={label}>
+          <Page title={label} purpose={purpose}>
             <SettingGroup>
               <SettingRow label="Public link" hint={`${typeof window !== "undefined" ? window.location.host : "curatr.pro"}/feed/${topic.slug}`}>
                 <Button variant="outline" asChild><Link to={`/feed/${topic.slug}`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Open</Link></Button>
@@ -351,15 +360,12 @@ export function EditorialControlCenter({
               <div className="py-5">
                 <TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} />
               </div>
-              <SettingRow id="data-feed" label="Data feed (API)" hint="Send approved stories and events to your own website.">
-                <span className="text-sm text-muted-foreground">Coming soon</span>
-              </SettingRow>
             </SettingGroup>
           </Page>
         )}
 
         {current === "extras" && (
-          <Page title={label}>
+          <Page title={label} purpose={purpose}>
             <section><SubHeading>Feed cards</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
             {FEATURES.sentiment && <section><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>}
             {FEATURES.communityDiscussion && (
