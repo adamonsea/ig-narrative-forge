@@ -1,5 +1,5 @@
+import { SettingGroup, SettingRow } from "@/components/settings/SettingRow";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
@@ -108,83 +108,42 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
   const slots = Math.floor(activeHours / config.drip_release_interval_hours);
   const totalStories = slots * config.drip_stories_per_release;
 
-  if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
-  }
+  if (loading) return <div className="h-20 w-full animate-pulse rounded-xl bg-muted" />;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">Release in batches</Label>
-        <div className="flex items-center gap-2">
-          <SaveIndicator state={saveState} />
-          <Switch
-            checked={config.drip_feed_enabled}
-            onCheckedChange={(checked) => updateConfig('drip_feed_enabled', checked, true)}
-          />
-        </div>
-      </div>
-
+    <SettingGroup>
+      <SettingRow label="Release in batches" hint={config.drip_feed_enabled ? `Up to ${totalStories} stories across ${slots} slots, ${formatTime(config.drip_start_hour)}–${formatTime(config.drip_end_hour)}.` : "Publish finished stories at set times, not all at once."}>
+        <SaveIndicator state={saveState} />
+        <Switch aria-label="Release in batches" checked={config.drip_feed_enabled} onCheckedChange={(checked) => updateConfig('drip_feed_enabled', checked, true)} />
+      </SettingRow>
       {config.drip_feed_enabled && (
-        <div className="space-y-4 pl-0">
-          {/* Interval */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Release interval</Label>
-              <span className="text-sm text-muted-foreground">{config.drip_release_interval_hours}h</span>
+        <>
+          <SettingRow label="Every" hint="Hours between releases.">
+            <div className="flex w-56 items-center gap-3">
+              <Slider aria-label="Release interval" value={[config.drip_release_interval_hours]} onValueChange={([v]) => updateConfig('drip_release_interval_hours', v)} min={1} max={8} step={1} />
+              <span className="w-8 text-right text-base">{config.drip_release_interval_hours}h</span>
             </div>
-            <Slider
-              value={[config.drip_release_interval_hours]}
-              onValueChange={([v]) => updateConfig('drip_release_interval_hours', v)}
-              min={1} max={8} step={1}
-            />
-          </div>
-
-          {/* Stories per release */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Stories per release</Label>
-              <span className="text-sm text-muted-foreground">{config.drip_stories_per_release}</span>
+          </SettingRow>
+          <SettingRow label="Stories each time" hint="How many go live per release.">
+            <div className="flex w-56 items-center gap-3">
+              <Slider aria-label="Stories per release" value={[config.drip_stories_per_release]} onValueChange={([v]) => updateConfig('drip_stories_per_release', v)} min={1} max={5} step={1} />
+              <span className="w-8 text-right text-base">{config.drip_stories_per_release}</span>
             </div>
-            <Slider
-              value={[config.drip_stories_per_release]}
-              onValueChange={([v]) => updateConfig('drip_stories_per_release', v)}
-              min={1} max={5} step={1}
-            />
-          </div>
-
-          {/* Active hours */}
-          <div className="space-y-2">
-            <Label className="text-sm">Active hours (UTC)</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-sm text-muted-foreground">Start</span>
-                <Slider
-                  value={[config.drip_start_hour]}
-                  onValueChange={([v]) => updateConfig('drip_start_hour', Math.min(v!, config.drip_end_hour - 1))}
-                  min={0} max={23} step={1}
-                />
-                <div className="text-center text-sm font-medium">{formatTime(config.drip_start_hour)}</div>
+          </SettingRow>
+          <SettingRow label="Active hours" hint="UK time is UTC in winter, UTC+1 in summer." stack>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="flex justify-between text-base"><span className="text-muted-foreground">Start</span><span>{formatTime(config.drip_start_hour)}</span></div>
+                <Slider aria-label="Start hour" value={[config.drip_start_hour]} onValueChange={([v]) => updateConfig('drip_start_hour', Math.min(v!, config.drip_end_hour - 1))} min={0} max={23} step={1} />
               </div>
-              <div className="space-y-1">
-                <span className="text-sm text-muted-foreground">End</span>
-                <Slider
-                  value={[config.drip_end_hour]}
-                  onValueChange={([v]) => updateConfig('drip_end_hour', Math.max(v!, config.drip_start_hour + 1))}
-                  min={1} max={24} step={1}
-                />
-                <div className="text-center text-sm font-medium">{formatTime(config.drip_end_hour)}</div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-base"><span className="text-muted-foreground">End</span><span>{formatTime(config.drip_end_hour)}</span></div>
+                <Slider aria-label="End hour" value={[config.drip_end_hour]} onValueChange={([v]) => updateConfig('drip_end_hour', Math.max(v!, config.drip_start_hour + 1))} min={1} max={24} step={1} />
               </div>
             </div>
-          </div>
-
-          {/* Preview */}
-          <p className="text-sm text-muted-foreground">
-            Up to {totalStories} stories across {slots} slots, {formatTime(config.drip_start_hour)}–{formatTime(config.drip_end_hour)}
-          </p>
-
-        </div>
+          </SettingRow>
+        </>
       )}
-    </div>
+    </SettingGroup>
   );
 };

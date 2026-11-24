@@ -1,7 +1,8 @@
+import { SettingGroup, SettingRow } from "@/components/settings/SettingRow";
 import { definedOnly } from "@/lib/optionalProps";
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { InfoHint, SaveIndicator, type SaveState } from "@/components/ui/editorial";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PACE_LABELS, paceFields, paceOf, type Pace, type PaceFields } from "@/lib/autopilotPace";
@@ -85,50 +86,25 @@ export function AutopilotBasics({ topicId, onChanged }: { topicId: string; onCha
     done();
   };
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (loading) return <div className="h-32 w-full animate-pulse rounded-xl bg-muted" />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-1.5">
-            <label htmlFor="autopilot" className="text-base font-semibold">Autopilot</label>
-            <InfoHint label="About Autopilot">
-              {on
-                ? "On: new stories are collected, written and published without you. You can still edit, reorder or remove anything on the Desk."
-                : OTHER_MODES[mode] || "Off: new stories wait on your Desk for you to publish."}
-            </InfoHint>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <SaveIndicator state={state} />
-          <Switch id="autopilot" checked={on} onCheckedChange={toggle} className="mt-1" />
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <p className="text-sm font-medium" id="pace-label">Publishing pace</p>
-        <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-labelledby="pace-label">
+    <SettingGroup>
+      <SettingRow label="Autopilot" hint={on ? "Stories are gathered, written and published without you." : OTHER_MODES[mode] || "New stories wait on your Desk for you."}>
+        <SaveIndicator state={state} />
+        <Switch id="autopilot" aria-label="Autopilot" checked={on} onCheckedChange={toggle} />
+      </SettingRow>
+      <SettingRow label="Publishing pace" hint={currentPace === null ? "Custom pace." : "How often new stories go live."} stack>
+        <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Publishing pace">
           {(Object.keys(PACE_LABELS) as Pace[]).map((choice) => (
-            <button
-              key={choice}
-              type="button"
-              role="radio"
-              aria-checked={currentPace === choice}
-              onClick={() => choosePace(choice)}
-              className={cn(
-                "rounded-lg border p-3 text-left transition-colors",
-                currentPace === choice ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/40",
-              )}
-            >
-              <span className="block text-sm font-medium">{PACE_LABELS[choice].label}</span>
+            <button key={choice} type="button" role="radio" aria-checked={currentPace === choice} onClick={() => choosePace(choice)}
+              className={cn("min-h-11 rounded-lg border p-3 text-left text-base transition-colors",
+                currentPace === choice ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-muted-foreground/40")}>
+              {PACE_LABELS[choice].label}
             </button>
           ))}
         </div>
-        {currentPace === null && (
-          <p className="text-sm text-muted-foreground">Custom pace</p>
-        )}
-      </div>
-    </div>
+      </SettingRow>
+    </SettingGroup>
   );
 }

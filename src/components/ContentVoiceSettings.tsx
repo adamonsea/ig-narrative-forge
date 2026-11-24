@@ -1,3 +1,5 @@
+import { SettingRow } from "@/components/settings/SettingRow";
+import { SaveIndicator } from "@/components/ui/editorial";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pencil, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { InfoHint } from "@/components/ui/editorial";
 import { getHouseStylePresets, matchPreset, CUSTOM_HOUSE_STYLE } from "@/lib/houseStylePresets";
 
 interface ContentVoiceSettingsProps {
@@ -104,33 +105,28 @@ export const ContentVoiceSettings = ({
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex justify-end text-sm text-muted-foreground" aria-live="polite">
-        {saveState === 'saving' ? 'Saving' : saveState === 'error' ? 'Not saved' : 'Saved'}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label>Audience expertise</Label>
+    <div className="divide-y divide-border border-y border-border">
+        <SettingRow label="Audience" hint="How much readers already know.">
+          <SaveIndicator state={saveState === 'saving' ? 'saving' : saveState === 'error' ? 'not-saved' : saveState === 'saved' ? 'saved' : null} />
           <Select
             value={currentExpertise || 'intermediate'}
             onValueChange={(v) => autoSave('audience_expertise', v)}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="beginner">Beginner</SelectItem>
               <SelectItem value="intermediate">Intermediate</SelectItem>
               <SelectItem value="expert">Expert</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </SettingRow>
 
-        <div className="space-y-1.5">
-          <Label>Tone</Label>
+        <SettingRow label="Tone" hint="How stories sound.">
           <Select
             value={currentTone || 'conversational'}
             onValueChange={(v) => autoSave('default_tone', v)}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="formal">Formal</SelectItem>
               <SelectItem value="conversational">Conversational</SelectItem>
@@ -139,15 +135,14 @@ export const ContentVoiceSettings = ({
               <SelectItem value="rhyming_couplet">Rhyming couplet</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </SettingRow>
 
-        <div className="space-y-1.5">
-          <Label>Writing style</Label>
+        <SettingRow label="Writing style" hint="How stories are shaped.">
           <Select
             value={currentWritingStyle || 'journalistic'}
             onValueChange={(v) => autoSave('default_writing_style', v)}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="journalistic">Journalistic</SelectItem>
               <SelectItem value="educational">Educational</SelectItem>
@@ -155,15 +150,10 @@ export const ContentVoiceSettings = ({
               <SelectItem value="story_driven">Story-driven</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </SettingRow>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Label htmlFor="house-style-preset">House style</Label>
-            <InfoHint label="About house style">
-              Applied to every story in this feed, including automated ones.
-            </InfoHint>
-          </div>
+        <SettingRow label="House style" hint="Applied to every story, including automated ones." stack>
+          <div className="space-y-3">
           <Select
             value={presetChoice || undefined}
             onValueChange={(v) => {
@@ -176,7 +166,7 @@ export const ContentVoiceSettings = ({
               }
             }}
           >
-            <SelectTrigger id="house-style-preset">
+            <SelectTrigger id="house-style-preset" aria-label="House style" className="h-11 text-base sm:w-80">
               <SelectValue placeholder="Choose a house style" />
             </SelectTrigger>
             <SelectContent>
@@ -186,10 +176,9 @@ export const ContentVoiceSettings = ({
               <SelectItem value={CUSTOM_HOUSE_STYLE}>Your own description…</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
         {presetChoice && (
-          <div className="sm:col-span-2 space-y-1.5">
+          <div className="space-y-1.5">
             {presetChoice === CUSTOM_HOUSE_STYLE ? (
               <Textarea
                 id="house-style-notes"
@@ -205,18 +194,14 @@ export const ContentVoiceSettings = ({
                 }}
               />
             ) : (
-              <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">{houseStyleNotes}</p>
+              <p className="rounded-lg bg-muted/40 p-3 text-base text-muted-foreground">{houseStyleNotes}</p>
             )}
           </div>
         )}
-
-        <div className="sm:col-span-2 space-y-2">
-          <div className="flex items-center gap-1.5">
-            <Label>Example sentences</Label>
-            <InfoHint label="About example sentences">
-              Sentences you'd be happy to publish. Their rhythm is copied, not their content.
-            </InfoHint>
           </div>
+        </SettingRow>
+
+        <SettingRow label="Example sentences" hint="Sentences you'd publish. Their rhythm is copied, not their content." stack>
 
           <div className="space-y-2">
             {examples.map((example, index) =>
@@ -230,7 +215,7 @@ export const ContentVoiceSettings = ({
                 </div>
               ) : (
                 <div key={index} className="group flex items-start gap-3 rounded-lg border p-3">
-                  <p className="flex-1 text-sm leading-relaxed">{example}</p>
+                  <p className="flex-1 text-base leading-relaxed">{example}</p>
                   <div className="flex shrink-0 items-center gap-1">
                     <Button
                       size="icon"
@@ -279,8 +264,7 @@ export const ContentVoiceSettings = ({
               </Button>
             )}
           </div>
-        </div>
-      </div>
+        </SettingRow>
     </div>
   );
 };

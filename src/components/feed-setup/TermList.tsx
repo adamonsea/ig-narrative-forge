@@ -21,6 +21,7 @@ export function TermList({
   placeholder,
   notice,
   headerAction,
+  hintInline,
   children,
 }: {
   label: string;
@@ -33,6 +34,8 @@ export function TermList({
   /** A short, temporary note under the input, e.g. "“pier” moved from Less of this". */
   notice?: string | null | undefined;
   headerAction?: React.ReactNode | undefined;
+  /** Settings row style: the hint shows as one plain line under the label. */
+  hintInline?: boolean | undefined;
   children?: React.ReactNode | undefined;
 }) {
   const [draft, setDraft] = useState("");
@@ -51,12 +54,13 @@ export function TermList({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-1.5">
-            <h3 id={id} className="text-base font-semibold">
+            <h3 id={id} className={hintInline ? "text-base font-medium" : "text-base font-semibold"}>
               {label}
               {terms.length > 0 && <span className="ml-2 text-sm font-normal text-muted-foreground">{terms.length}</span>}
             </h3>
-            {hint && <InfoHint label={`About ${label.toLowerCase()}`}>{hint}</InfoHint>}
+            {hint && !hintInline && <InfoHint label={`About ${label.toLowerCase()}`}>{hint}</InfoHint>}
           </div>
+          {hint && hintInline && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
         </div>
         {headerAction}
       </div>

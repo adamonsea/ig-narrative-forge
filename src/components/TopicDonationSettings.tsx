@@ -1,4 +1,5 @@
-import { InfoHint, SaveIndicator, type SaveState } from "@/components/ui/editorial";
+import { SettingRow } from "@/components/settings/SettingRow";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,28 +63,21 @@ export const TopicDonationSettings = ({ topicId, donationEnabled, donationConfig
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="donations-on" className="text-base">Donations</Label>
-          <InfoHint label="About donations">A support button in your feed, paid through Stripe Payment Links.</InfoHint>
-        </div>
-        <div className="flex items-center gap-3">
-          <SaveIndicator state={state} />
-          <Switch id="donations-on" checked={enabled} onCheckedChange={(v) => { setEnabled(v); save({ enabled: v }); }} />
-        </div>
-      </div>
+    <div className="divide-y divide-border">
+      <SettingRow label="Donations" hint="A support button in your feed, paid through Stripe.">
+        <SaveIndicator state={state} />
+        <Switch id="donations-on" aria-label="Donations" checked={enabled} onCheckedChange={(v) => { setEnabled(v); save({ enabled: v }); }} />
+      </SettingRow>
 
       {enabled && (
         <>
-          <div className="space-y-2">
-            <Label htmlFor="button-text" className="text-sm font-medium">Button text</Label>
-            <Input id="button-text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} onBlur={() => save()} placeholder="Support this feed" />
-          </div>
+          <SettingRow label="Button text" hint="What the button says.">
+            <Input id="button-text" aria-label="Button text" className="h-11 w-56 text-base" value={buttonText} onChange={(e) => setButtonText(e.target.value)} onBlur={() => save()} placeholder="Support this feed" />
+          </SettingRow>
 
+          <SettingRow label="Tiers" hint="Up to 3, each with its own Stripe Payment Link." stack>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Tiers</Label>
+            <div className="flex justify-end">
               <Button type="button" variant="outline" size="sm" onClick={() => setTiers([...tiers, { name: "", amount: "", stripe_payment_link: "", description: "" }])} disabled={tiers.length >= 3}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add
@@ -104,23 +98,23 @@ export const TopicDonationSettings = ({ topicId, donationEnabled, donationConfig
                   </div>
                   <div className="grid gap-4" onBlur={() => save()}>
                     <div className="space-y-2">
-                      <Label htmlFor={`tier-${index}-name`} className="text-sm font-medium">Name</Label>
+                      <Label htmlFor={`tier-${index}-name`} className="text-base font-medium">Name</Label>
                       <Input id={`tier-${index}-name`} value={tier.name} onChange={(e) => updateTier(index, "name", e.target.value)} placeholder="Supporter" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`tier-${index}-amount`} className="text-sm font-medium">Amount</Label>
+                      <Label htmlFor={`tier-${index}-amount`} className="text-base font-medium">Amount</Label>
                       <Input id={`tier-${index}-amount`} value={tier.amount} onChange={(e) => updateTier(index, "amount", e.target.value)} placeholder="£5/month" />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor={`tier-${index}-link`} className="text-sm font-medium">Payment link</Label>
-                        <InfoHint label="About Payment Links">In Stripe: Products, create a product with subscription pricing, then create a Payment Link and paste it here.</InfoHint>
+                        <Label htmlFor={`tier-${index}-link`} className="text-base font-medium">Payment link</Label>
+                        
                       </div>
                       <Input id={`tier-${index}-link`} value={tier.stripe_payment_link} onChange={(e) => updateTier(index, "stripe_payment_link", e.target.value)} placeholder="https://buy.stripe.com/…" aria-invalid={badLink} />
                       {badLink && <p className="text-sm text-destructive">Use a Stripe Payment Link.</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`tier-${index}-desc`} className="text-sm font-medium">Description</Label>
+                      <Label htmlFor={`tier-${index}-desc`} className="text-base font-medium">Description</Label>
                       <Textarea id={`tier-${index}-desc`} value={tier.description || ""} onChange={(e) => updateTier(index, "description", e.target.value)} placeholder="Help keep the content flowing" rows={2} />
                     </div>
                   </div>
@@ -128,6 +122,7 @@ export const TopicDonationSettings = ({ topicId, donationEnabled, donationConfig
               );
             })}
           </div>
+          </SettingRow>
         </>
       )}
     </div>

@@ -112,6 +112,8 @@ export function LookForPanel({
     <TermList
       label={LABEL.more}
       hint="Stories that mention these belong in the feed."
+      hintInline
+      headerAction={<SaveIndicator state={state} />}
       terms={dedupeTerms(keywords)}
       onAdd={(t) => add("more", t)}
       onRemove={(t) => remove("more", t)}
@@ -148,6 +150,7 @@ export function LookForPanel({
     <TermList
       label={LABEL.less}
       hint="Stories about these are left out."
+      hintInline
       tone="less"
       terms={dedupeTerms(negativeKeywords)}
       onAdd={(t) => add("less", t)}
@@ -158,11 +161,9 @@ export function LookForPanel({
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end"><SaveIndicator state={state} /></div>
-      {show === "both" ? (
-        <div className="grid gap-10 md:grid-cols-2">{more}{less}</div>
-      ) : show === "more" ? more : less}
+    <div className="divide-y divide-border border-y border-border [&>*]:py-5">
+      {show !== "less" && more}
+      {show !== "more" && less}
     </div>
   );
 }
