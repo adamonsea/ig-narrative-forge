@@ -36,7 +36,7 @@ export const ASSISTANT_DESTINATIONS: AssistantDestination[] = [
   { id: "voice", label: "Open Writing", describes: "Tone, writing style, house style and example sentences", tab: "settings", section: "voice" },
   { id: "picture-references", label: "Open Picture references", describes: "Local places, reference photos and illustration style", tab: "settings", section: "coverage", anchor: "picture-references-heading" },
   { id: "automation", label: "Open Autopilot", describes: "How much Curatr may publish without you, and publishing pace", tab: "settings", section: "automation" },
-  { id: "distribution", label: "Open Share", describes: "Email sign-ups, weekly roundup, widget, RSS and donations", tab: "settings", section: "distribution" },
+  { id: "distribution", label: "Open Share", describes: "Email sign-ups, weekly roundup, widget, RSS and AI assistants", tab: "settings", section: "distribution" },
   { id: "ai-assistants", label: "Open AI assistants", describes: "Connect the feed to ChatGPT or Claude", tab: "settings", section: "distribution", anchor: "ai-assistants-heading" },
   { id: "identity", label: "Open General", describes: "Name, welcome line, live or draft, About page", tab: "settings", section: "identity" },
   { id: "features", label: "Open Extras", describes: "In-feed cards, quizzes and local tools", tab: "settings", section: "features" },

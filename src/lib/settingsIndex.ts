@@ -69,9 +69,9 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   e("share", "Website widget", "Your latest headlines on any website.", ["embed", "widget"]),
   e("share", "RSS", "A live feed for reader apps.", ["feed reader", "xml"]),
   e("share", "AI assistants", "Let ChatGPT or Claude read the feed.", ["mcp", "chatgpt", "claude"]),
-  e("share", "Donations", "Let readers support the feed.", ["support", "money", "tips"]),
 
   e("extras", "Trending", "Most interacted-with stories in 24 hours.", ["momentum", "popular"], "story-momentum"),
+  e("extras", "Donations", "Let readers support the feed.", ["support", "money", "tips", "stripe"]),
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();

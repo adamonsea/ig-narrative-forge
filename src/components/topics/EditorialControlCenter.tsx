@@ -391,9 +391,6 @@ export function EditorialControlCenter({
               <div id="ai-assistants-heading" className="scroll-mt-24">
                 <AiAssistantAccess topicId={topic.id} topicSlug={topic.slug} topicName={topic.name} enabled={topic.mcp_enabled || false} access={topic.mcp_access === "open" ? "open" : "key"} onChange={(values) => patch(values)} onEnabledChange={(checked) => onChannelToggle("mcp_enabled", checked, "AI assistants")} />
               </div>
-              <div>
-                <TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} />
-              </div>
             </SettingGroup>
           </Page>
         )}
@@ -401,6 +398,7 @@ export function EditorialControlCenter({
         {current === "extras" && (
           <Page title={label} purpose={purpose}>
             <section><SubHeading>Feed cards</SubHeading><TopicInsightSettings topicId={topic.id} /></section>
+            <section><SubHeading>Support</SubHeading><TopicDonationSettings topicId={topic.id} donationEnabled={topic.donation_enabled || false} donationConfig={(topic.donation_config as never) || { button_text: "Support this feed", tiers: [] }} onUpdate={onUpdate} /></section>
             {FEATURES.sentiment && <section><SubHeading>Coverage mood</SubHeading><SentimentKeywordSettings topicId={topic.id} /></section>}
             {FEATURES.communityDiscussion && (
               <section>

@@ -10,6 +10,8 @@ describe("Find a setting", () => {
     expect(findSettings("logo", all)[0]?.section).toBe("look");
     expect(findSettings("newsletter", all)[0]?.anchor).toBe("email-sign-ups");
     expect(findSettings("keywords", all)[0]?.section).toBe("coverage");
+    expect(findSettings("donations", all)[0]?.section).toBe("extras");
+    expect(SETTINGS_INDEX.some((s) => s.section === "share" && s.anchor === "donations")).toBe(false);
   });
   it("hides rows on pages the feed doesn't have", () => {
     const noEvents = visibleSettingsSections(false, false).map((s) => s.id);

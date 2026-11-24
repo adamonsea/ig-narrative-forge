@@ -63,7 +63,7 @@ export const TopicDonationSettings = ({ topicId, donationEnabled, donationConfig
   };
 
   return (
-    <div className="divide-y divide-border">
+    <div className="divide-y divide-border border-y border-border">
       <SettingRow label="Donations" hint="A support button in your feed, paid through Stripe.">
         <SaveIndicator state={state} />
         <Switch id="donations-on" aria-label="Donations" checked={enabled} onCheckedChange={(v) => { setEnabled(v); save({ enabled: v }); }} />
