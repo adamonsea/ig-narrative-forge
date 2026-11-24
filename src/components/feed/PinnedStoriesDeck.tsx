@@ -94,7 +94,7 @@ export function FanDeck({ stories, accent, onAccent, onOpen }: {
       aria-label="Pinned stories"
       aria-roledescription="carousel"
       className="mx-auto w-full max-w-2xl"
-      style={{ overflowX: "clip" }}
+      style={{ overflowX: width < 560 ? "clip" : "visible" }}
     >
       <div
         tabIndex={0}
