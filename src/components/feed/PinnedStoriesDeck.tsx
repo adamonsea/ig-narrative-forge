@@ -263,18 +263,18 @@ function DeckCard({
         </motion.span>
         <motion.div
           className="absolute inset-x-0 bottom-0 flex flex-col gap-2 bg-[hsl(var(--feed-card))] p-4"
-          style={{ height: "48%" }}
+          style={{ height: imgSrc ? "48%" : "100%", justifyContent: imgSrc ? undefined : "center", paddingTop: imgSrc ? undefined : 56 }}
           initial={false}
           animate={{ y: isCentre ? "0%" : "102%" }}
           transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 34 }}
         >
           <h3
-            className="line-clamp-3 font-lexend font-semibold uppercase leading-[1.1]"
-            style={{ fontSize: Math.round(Math.max(21, Math.min(27, cardW / 13))) }}
+            className={`${imgSrc ? "line-clamp-3" : "line-clamp-6 text-center"} font-lexend font-semibold uppercase leading-[1.1]`}
+            style={{ fontSize: Math.round(imgSrc ? Math.max(21, Math.min(27, cardW / 13)) : Math.max(26, Math.min(34, cardW / 10))) }}
           >
             {story.title}
           </h3>
-          {story.source_name && <p className="mt-auto truncate text-sm opacity-70">{story.source_name}</p>}
+          {story.source_name && <p className={`${imgSrc ? "mt-auto" : "absolute inset-x-4 bottom-4 text-center"} truncate text-sm opacity-70">{story.source_name}</p>}
         </motion.div>
         <motion.span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black" initial={false} animate={{ opacity: isCentre ? 0 : 0.18 }} />
       </motion.button>
