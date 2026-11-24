@@ -916,6 +916,7 @@ const TopicFeed = () => {
               topicSlug={slug || ''}
               topicLogoUrl={topic.branding_config?.icon_url || topic.branding_config?.logo_url}
               brandColor={topic.branding_config?.primary_color || topic.illustration_primary_color}
+              topBarColor={topBarChoice}
             />
           </div>
         );

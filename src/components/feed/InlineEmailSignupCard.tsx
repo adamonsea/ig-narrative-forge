@@ -4,7 +4,8 @@ import { Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { saveSubscriptionStatus } from '@/hooks/useNotificationSubscriptions';
 import { useToast } from '@/hooks/use-toast';
-import { feedBrandSurface, toCss } from '@/lib/feedBrandColor';
+import { toCss } from '@/lib/feedBrandColor';
+import { DEFAULT_TOP_BAR, resolveSurface, topBarTones } from '@/lib/feedSurfaces';
 
 interface InlineEmailSignupCardProps {
   topicId: string;
@@ -14,6 +15,8 @@ interface InlineEmailSignupCardProps {
   topicLogoUrl?: string | undefined;
   /** Feed's configured colour (hex or HSL) */
   brandColor?: string | null | undefined;
+  /** Owner's chosen top bar colour; the card wears the same look as the feed header */
+  topBarColor?: string | null | undefined;
 }
 
 type FrequencyOption = 'daily' | 'weekly' | 'both';
@@ -36,6 +39,7 @@ export const InlineEmailSignupCard = ({
   topicName,
   topicLogoUrl,
   brandColor,
+  topBarColor,
 }: InlineEmailSignupCardProps) => {
   const { toast } = useToast();
   const storageKey = `email_briefing_subscribed_${topicId}`;
@@ -50,22 +54,21 @@ export const InlineEmailSignupCard = ({
   const [logoFailed, setLogoFailed] = useState(false);
 
   const brandVars = useMemo(() => {
-    const p = feedBrandSurface(brandColor);
+    // Same surface and contrast-checked tones as the feed's own top bar.
+    const t = topBarTones(resolveSurface(topBarColor, brandColor, DEFAULT_TOP_BAR), brandColor);
     const vars: Record<string, string> = {};
-    (['light', 'dark'] as const).forEach((mode) => {
-      const suffix = mode === 'dark' ? '-dark' : '';
-      const t = p[mode];
-      vars[`--su-bg${suffix}`] = toCss(t.surface);
+    (['', '-dark'] as const).forEach((suffix) => {
+      vars[`--su-bg${suffix}`] = toCss(t.bar);
       vars[`--su-border${suffix}`] = toCss(t.border);
       vars[`--su-text${suffix}`] = toCss(t.text);
       vars[`--su-muted${suffix}`] = toCss(t.muted);
       vars[`--brand-text${suffix}`] = toCss(t.accent);
-      vars[`--brand-fill${suffix}`] = toCss(t.fill);
-      vars[`--brand-on-fill${suffix}`] = toCss(t.onFill);
-      vars[`--su-field${suffix}`] = toCss(t.field);
+      vars[`--brand-fill${suffix}`] = toCss(t.accentFill);
+      vars[`--brand-on-fill${suffix}`] = toCss(t.onAccentFill);
+      vars[`--su-field${suffix}`] = toCss(t.button);
     });
     return vars as CSSProperties;
-  }, [brandColor]);
+  }, [brandColor, topBarColor]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,10 +170,10 @@ export const InlineEmailSignupCard = ({
         <div className="space-y-2">
           <h3
             id={`${inputId}-title`}
-            className="font-display text-[2rem] leading-[1.1] sm:text-[2.4rem] tracking-tight"
+            className="text-[1.75rem] font-bold leading-[1.15] sm:text-[2rem] tracking-tight"
           >
             Never miss another story from{' '}
-            <em className={`italic ${accentText}`}>{topicName}</em>
+            <span className={accentText}>{topicName}</span>
           </h3>
           <p className="text-[17px] sm:text-lg leading-relaxed">
             The best of {topicName}, in brief. Straight to your inbox.
