@@ -15,7 +15,6 @@ import { WhatsOnCard } from "@/components/events/WhatsOnCard";
 import { EventCard } from "@/components/events/EventCard";
 import { FeedViewToggle } from "@/components/feed/FeedViewToggle";
 import { effectiveFeedView, showFeedViewToggle, viewShowsEvents, type FeedView } from "@/lib/feedView";
-import { usePinnedStories } from "@/hooks/usePinnedStories";
 import { PinnedStoriesDeck } from "@/components/feed/PinnedStoriesDeck";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
 import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
@@ -535,9 +534,6 @@ const TopicFeed = () => {
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
   const shouldShowCommunityPulse = FEATURES.communityDiscussion && topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
 
-  // Stories shown in the pinned deck are left out of the main list (once the deck has loaded).
-  const { data: deckStories } = usePinnedStories(topic?.id);
-  const deckIds = useMemo(() => new Set((deckStories ?? []).map((p) => p.story_id)), [deckStories]);
 
   const lastStoryContentIndex = useMemo(() => {
     let lastIndex = -1;
@@ -685,7 +681,6 @@ const TopicFeed = () => {
     const displayableContent = filteredContent.filter(contentItem => {
       if (contentItem.type !== 'story') return true;
       const story = contentItem.data as any;
-      if (deckIds.has(story.id)) return false;
       const hasRealSlides = story.slides?.length > 0 && 
         !story.slides[0]?.id?.startsWith('placeholder-') &&
         story.slides[0]?.content !== 'Loading...';
@@ -944,7 +939,7 @@ const TopicFeed = () => {
     parliamentaryVotes, hasParliamentaryData, parliamentaryDigestVotes,
     hasParliamentaryDigest, topicMetadata, filterMatchesMap, isOwnFeed,
     eventsInFeed, whatsOn, whatsOnToday, eventsLed, individualCards, feedEvents, feedBrand, eventsHasMore, eventCurrency,
-    feedView, eventsInView, deckIds
+    feedView, eventsInView
   ]);
 
   if (loading) {

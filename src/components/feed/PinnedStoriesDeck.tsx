@@ -6,6 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Pin } from "lucide-react";
 import { usePinnedStories, type PinnedStory } from "@/hooks/usePinnedStories";
 import { feedBrandPalette, toCss } from "@/lib/feedBrandColor";
+import { optimizeImageUrl, coverPixelWidth } from "@/lib/imageOptimization";
 
 /**
  * The owner's pinned stories as a fanned hand of cards above the feed.
@@ -170,6 +171,7 @@ export function FanDeck({ stories, accent, onAccent, onOpen }: {
               reduced={!!reduced}
               dragX={dragX}
               pillOpen={!browsed && i === 0}
+              eager={i === 0}
               onTap={() => (o === 0 ? onOpen(s) : (setBrowsed(true), setActive(i)))}
               label={`${i + 1} of ${total}: ${s.title ?? ""}`}
             />
@@ -177,37 +179,16 @@ export function FanDeck({ stories, accent, onAccent, onOpen }: {
         })}
       </div>
 
-      {total > 1 && (
-        <div className="mt-3 flex justify-center gap-2" role="tablist" aria-label="Choose a pinned story">
-          {stories.map((s, i) => (
-            <button
-              key={s.story_id}
-              role="tab"
-              aria-selected={i === active}
-              aria-label={`Pinned story ${i + 1}`}
-              onClick={() => { setBrowsed(true); setActive(i); }}
-              className="grid h-6 w-6 place-items-center"
-            >
-              <motion.span
-                className="block h-2 rounded-full"
-                animate={{ width: i === active ? 20 : 8, opacity: i === active ? 1 : 0.35 }}
-                transition={reduced ? { duration: 0 } : SPRING}
-                style={{ background: i === active ? accent : "hsl(var(--feed-on-background, 0 0% 100%))" }}
-              />
-            </button>
-          ))}
-        </div>
-      )}
       <p className="sr-only" aria-live="polite">{`Pinned story ${active + 1} of ${total}: ${stories[active]?.title ?? ""}`}</p>
     </section>
   );
 }
 
 function DeckCard({
-  story, offset, isCentre, stackDepth, cardW, cardH, spread, accent, onAccent, reduced, dragX, pillOpen, onTap, label,
+  story, offset, isCentre, stackDepth, cardW, cardH, spread, accent, onAccent, reduced, dragX, pillOpen, onTap, label, eager,
 }: {
   story: PinnedStory; offset: number; isCentre: boolean; stackDepth: number; cardW: number; cardH: number; spread: number;
-  accent: string; onAccent: string; reduced: boolean; dragX: MotionValue<number>; pillOpen: boolean; onTap: () => void; label: string;
+  accent: string; onAccent: string; reduced: boolean; dragX: MotionValue<number>; pillOpen: boolean; onTap: () => void; label: string; eager: boolean;
 }) {
   const abs = Math.abs(offset);
   const hidden = abs > 2;
@@ -223,6 +204,8 @@ function DeckCard({
 
   // Only the centre card follows the finger; side cards stay put.
   const still = useMotionValue(0);
+  const imgW = coverPixelWidth(cardW);
+  const imgSrc = optimizeImageUrl(story.cover_url, { width: imgW, height: Math.round(imgW * 1.28), quality: 80, format: "webp" }) ?? story.cover_url;
   const dragRotate = useTransform(dragX, [-200, 0, 200], [-8, 0, 8]);
 
   return (
@@ -232,7 +215,7 @@ function DeckCard({
       animate={pose}
       transition={reduced ? { duration: 0 } : { ...SPRING, delay: stackDepth * 0.035 }}
       style={{
-        width: cardW, height: cardH, marginLeft: -cardW / 2,
+        width: cardW, height: cardH, marginLeft: -cardW / 2, contain: "paint",
         zIndex: 50 - stackDepth, transformOrigin: "50% 90%",
         pointerEvents: hidden ? "none" : "auto",
       }}
@@ -255,7 +238,7 @@ function DeckCard({
         {/* Picture fills the card; the headline panel rises over it on the centre card only. */}
         <div className="absolute inset-0" style={{ background: accent }}>
           {story.cover_url && (
-            <img src={story.cover_url} alt="" draggable={false} loading="lazy" className="h-full w-full object-cover" />
+            <img src={imgSrc ?? undefined} alt="" draggable={false} decoding="async" loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : "auto"} className="h-full w-full object-cover" />
           )}
         </div>
         {/* Pin marker: opens as a "Pinned" pill on the first card, folds to the icon once the reader browses. */}
