@@ -17,7 +17,7 @@ import { FeedViewToggle } from "@/components/feed/FeedViewToggle";
 import { effectiveFeedView, showFeedViewToggle, viewShowsEvents, type FeedView } from "@/lib/feedView";
 import { withPinnedFirst } from "@/lib/storyPin";
 import { useTopicPin } from "@/hooks/useStoryPin";
-import { PinnedEventsDeck } from "@/components/feed/PinnedEventsDeck";
+import { PinnedStoriesDeck } from "@/components/feed/PinnedStoriesDeck";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
 import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
@@ -1361,8 +1361,8 @@ const TopicFeed = () => {
           />
         )}
 
-        {topic?.id && feedView !== 'news' && (
-          <PinnedEventsDeck topicId={topic.id} brandColor={feedBrand} />
+        {topic?.id && feedView !== 'events' && (
+          <PinnedStoriesDeck topicId={topic.id} topicSlug={topic.slug} brandColor={feedBrand} />
         )}
 
         {viewToggleShown && (

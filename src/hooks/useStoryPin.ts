@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { activePinId, type StoryPin } from "@/lib/storyPin";
+import { pinnedStoriesKey } from "@/hooks/usePinnedStories";
 
 const pinKey = (topicId?: string) => ["topic-pin", topicId];
 
@@ -22,7 +23,7 @@ export function useTopicPin(topicId?: string) {
   return { pin, pinnedId: activePinId(pin) };
 }
 
-/** Pin a live story for 24, 48 or 168 hours, or unpin (hours = 0). Replaces any other pin. */
+/** Pin a live story for 24, 48 or 168 hours, or unpin it (hours = 0). Up to 9 pins per feed. */
 export function useSetStoryPin(topicId?: string) {
   const queryClient = useQueryClient();
   return useCallback(async (storyId: string | null, hours: number) => {
@@ -33,6 +34,10 @@ export function useSetStoryPin(topicId?: string) {
       p_hours: hours,
     });
     if (error) throw error;
-    queryClient.setQueryData<StoryPin | null>(pinKey(topicId), (storyId && data ? { story_id: storyId, pinned_until: data as string } : null) as StoryPin | null);
+    void data;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: pinKey(topicId) }),
+      queryClient.invalidateQueries({ queryKey: pinnedStoriesKey(topicId) }),
+    ]);
   }, [topicId, queryClient]);
 }

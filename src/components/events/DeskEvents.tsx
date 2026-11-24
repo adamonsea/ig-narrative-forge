@@ -15,7 +15,6 @@ import type { DeskEvent } from "@/hooks/useWhatsOnEvents";
 import { EventCategoryIcon, EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
 import { useEventCategories, useEventCategoryActions } from "@/hooks/useEventCategories";
 import { DeskBadge, DeskCard, MetaLine } from "@/components/topic-pipeline/DeskCard";
-import { EventPinButton } from "@/components/events/EventPinButton";
 import { Textarea } from "@/components/ui/textarea";
 import { InlineError } from "@/components/ui/editorial";
 import { EventSocialPack } from "@/components/events/social/EventSocialPack";
@@ -218,10 +217,7 @@ function ComingUpEventCard({ event, today, actions, onOpen, topicId }: { event: 
           <Button size="sm" variant="ghost" onClick={() => actions.skip(event)}>Skip</Button>
         </>
       ) : (
-        <>
-          <Button size="sm" variant="ghost" onClick={() => actions.removeFromLive(event)}>Remove</Button>
-          <EventPinButton eventId={event.id} topicId={topicId} />
-        </>
+        <Button size="sm" variant="ghost" onClick={() => actions.removeFromLive(event)}>Remove</Button>
       )}
     />
   );

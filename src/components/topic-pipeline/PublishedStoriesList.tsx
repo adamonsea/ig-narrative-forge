@@ -61,9 +61,8 @@ interface PublishedStoriesListProps {
   settlingIds?: Set<string> | undefined;
   /** Stories the owner just published or skipped: they play their leave motion before going. */
   leavingIds?: Map<string, 'publish' | 'skip'> | undefined;
-  /** The feed's pinned story (Live now only): shown first with its time left. */
-  pinnedId?: string | null | undefined;
-  pinnedUntil?: string | null | undefined;
+  /** Pinned stories (Live now only): story id → pinned until. */
+  pins?: Record<string, string> | undefined;
   /** Pin a live story for a number of hours, or unpin with (null, 0). */
   onPin?: (storyId: string | null, hours: number) => Promise<void>;
 }
@@ -95,8 +94,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onPublishNow,
   settlingIds,
   leavingIds,
-  pinnedId = null,
-  pinnedUntil = null,
+  pins = {},
   onPin,
 }) => {
   const { toast } = useToast();
@@ -133,11 +131,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     if (!onPin) return;
     setPinningIds(prev => new Set(prev.add(storyId)));
     try {
-      if (pinnedId === storyId) {
-        await onPin(null, 0);
+      if (pins[storyId]) {
+        await onPin(storyId, 0);
       } else {
         await onPin(storyId, 24);
-        toast({ title: 'Pinned for 24 hours', description: 'It leads the feed. Longer pins are in the story panel.' });
+        toast({ title: 'Pinned for 24 hours', description: 'Added to the pinned cards at the top of the feed.' });
       }
     } catch (e: any) {
       toast({ title: "Couldn't pin", description: edgeErrorMessage(e) || 'Try again.', variant: 'destructive' });
@@ -453,8 +451,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                       <span className="live-pulse h-2 w-2 rounded-full bg-pop" aria-hidden="true" />Adding picture
                     </DeskBadge>
                   )}
-                  {pinnedId === story.id && pinnedUntil && (
-                    <DeskBadge tone="primary"><Pin className="h-3.5 w-3.5" aria-hidden="true" />Pinned · {pinTimeLeft(pinnedUntil)}</DeskBadge>
+                  {pins[story.id] && (
+                    <DeskBadge tone="primary"><Pin className="h-3.5 w-3.5" aria-hidden="true" />Pinned · {pinTimeLeft(pins[story.id]!)}</DeskBadge>
                   )}
                   {risingStoryId === story.id && <DeskBadge tone="pop">↑ Rising</DeskBadge>}
                   {isScheduled && <DeskBadge><Clock className="h-3.5 w-3.5" aria-hidden="true" />{format(new Date(story.scheduled_publish_at!), 'd MMM, HH:mm')}</DeskBadge>}
@@ -495,7 +493,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   <Button size="sm" variant="ghost" onClick={() => onReturnToReview(story.id)}>Unpublish</Button>
                   {feedOrder && onPin && (
                     <PinButton
-                      pinned={pinnedId === story.id}
+                      pinned={Boolean(pins[story.id])}
                       busy={pinningIds.has(story.id)}
                       onClick={() => handleQuickPin(story.id)}
                     />
@@ -593,9 +591,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         onArchive={() => { if (openStory) { onArchive(openStory.id, openStory.title || openStory.headline || 'Untitled'); setOpenStoryId(null); } }}
         onDelete={() => { if (openStory) { onDelete(openStory.id, openStory.title || openStory.headline || 'Untitled'); setOpenStoryId(null); } }}
         onRefresh={onRefresh}
-        pinnedUntil={openStory && openStory.id === pinnedId ? pinnedUntil : null}
-        otherPinned={Boolean(pinnedId && openStory && openStory.id !== pinnedId)}
-        {...opt("onPin", onPin && feedOrder ? (hours: number) => openStory ? onPin(hours > 0 ? openStory.id : null, hours) : Promise.resolve() : undefined)}
+        pinnedUntil={openStory ? pins[openStory.id] ?? null : null}
+        {...opt("onPin", onPin && feedOrder ? (hours: number) => openStory ? onPin(openStory.id, hours) : Promise.resolve() : undefined)}
       />
 
       <AnimationInstructionsModal

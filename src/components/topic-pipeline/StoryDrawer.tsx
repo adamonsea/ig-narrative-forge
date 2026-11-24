@@ -111,7 +111,6 @@ interface StoryDrawerProps {
   /** When this story's pin ends (null when it isn't pinned). */
   pinnedUntil?: string | null | undefined;
   /** Another story is pinned: pinning this one replaces it. */
-  otherPinned?: boolean | undefined;
   /** Pin this live story for a number of hours; 0 unpins. Live now only. */
   onPin?: (hours: number) => Promise<void>;
 }
@@ -120,7 +119,7 @@ interface StoryDrawerProps {
 export function StoryDrawer({
   story, open, onOpenChange, sourceLabel, topicSlug, topicId, illustrationStyle, generating, animating, publishing,
   onGenerateIllustration, onAnimate, onDeleteAnimation, onDeleteIllustration, onReel, onPublishNow, onUnpublish, onAssignTime, onArchive, onDelete, onRefresh,
-  pinnedUntil = null, otherPinned = false, onPin,
+  pinnedUntil = null, onPin,
 }: StoryDrawerProps) {
   const { toast } = useToast();
   const [pinning, setPinning] = useState(false);
@@ -318,7 +317,6 @@ export function StoryDrawer({
                         size="sm"
                         onClick={() => pin(p.hours)}
                         disabled={pinning}
-                        title={otherPinned ? "Replaces the pinned story" : undefined}
                       >
                         {p.label}
                       </Button>

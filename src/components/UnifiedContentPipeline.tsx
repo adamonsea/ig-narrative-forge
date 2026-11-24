@@ -25,6 +25,7 @@ import { whatsOnPositions } from "@/lib/feedCardPositions";
 import { findLiveRepeat, groupHeld, splitLiveNow, staleHeld, withJustPublished } from "@/lib/liveNow";
 import { withPinnedFirst } from "@/lib/storyPin";
 import { useSetStoryPin, useTopicPin } from "@/hooks/useStoryPin";
+import { usePinnedStories } from "@/hooks/usePinnedStories";
 import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
 import { publishNowUpdate } from "@/lib/publishStory";
 import { ToastAction } from "@/components/ui/toast";
@@ -112,7 +113,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   // Events flow through the same pipeline: Waiting (Publish / Skip), Hidden, and the What's on set in Live
   const { data: eventDesk } = useEventDesk(selectedTopicId || propTopicId);
-  const { pin: storyPin, pinnedId } = useTopicPin(selectedTopicId || undefined);
+  const { pinnedId } = useTopicPin(selectedTopicId || undefined);
+  const { data: pinnedStories } = usePinnedStories(selectedTopicId || undefined);
+  const storyPins = Object.fromEntries((pinnedStories ?? []).map((p) => [p.story_id, p.pinned_until]));
   const setStoryPin = useSetStoryPin(selectedTopicId || undefined);
   const handlePin = useCallback(async (storyId: string | null, hours: number) => {
     try {
@@ -725,8 +728,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <PublishedStoriesList
               feedOrder
               stories={liveStories}
-              pinnedId={pinnedId}
-              pinnedUntil={storyPin?.pinned_until ?? null}
+              pins={storyPins}
               onPin={handlePin}
               onSkip={(s) => archiveWithUndo([s], 'removed')}
               leavingIds={leavingIds}

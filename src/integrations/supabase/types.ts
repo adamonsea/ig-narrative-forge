@@ -1358,7 +1358,6 @@ export type Database = {
           is_free: boolean | null
           kept_by_owner: boolean
           location: string | null
-          pinned_at: string | null
           price: string | null
           rank_position: number | null
           relevance_score: number | null
@@ -1398,7 +1397,6 @@ export type Database = {
           is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
-          pinned_at?: string | null
           price?: string | null
           rank_position?: number | null
           relevance_score?: number | null
@@ -1438,7 +1436,6 @@ export type Database = {
           is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
-          pinned_at?: string | null
           price?: string | null
           rank_position?: number | null
           relevance_score?: number | null
@@ -3664,6 +3661,8 @@ export type Database = {
           last_quality_check: string | null
           mp_name: string | null
           mp_party: string | null
+          pinned_at: string | null
+          pinned_until: string | null
           publication_name: string | null
           published_at: string | null
           quality_score: number | null
@@ -3711,6 +3710,8 @@ export type Database = {
           last_quality_check?: string | null
           mp_name?: string | null
           mp_party?: string | null
+          pinned_at?: string | null
+          pinned_until?: string | null
           publication_name?: string | null
           published_at?: string | null
           quality_score?: number | null
@@ -3758,6 +3759,8 @@ export type Database = {
           last_quality_check?: string | null
           mp_name?: string | null
           mp_party?: string | null
+          pinned_at?: string | null
+          pinned_until?: string | null
           publication_name?: string | null
           published_at?: string | null
           quality_score?: number | null
@@ -7143,16 +7146,14 @@ export type Database = {
           story_id: string
         }[]
       }
-      get_topic_pinned_events: {
+      get_topic_pinned_stories: {
         Args: { p_topic_id: string }
         Returns: {
-          event_type: string
-          id: string
-          image_path: string
-          location: string
-          source_url: string
-          start_date: string
-          start_time: string
+          cover_url: string
+          pinned_until: string
+          slug: string
+          source_name: string
+          story_id: string
           title: string
         }[]
       }
@@ -7530,10 +7531,6 @@ export type Database = {
       set_event_category: {
         Args: { p_category: string; p_event_id: string }
         Returns: number
-      }
-      set_event_pin: {
-        Args: { p_event_id: string; p_pinned: boolean }
-        Returns: string
       }
       set_event_source_auto_publish: {
         Args: { p_on: boolean; p_source_id: string }
