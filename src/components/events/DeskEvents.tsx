@@ -15,6 +15,7 @@ import type { DeskEvent } from "@/hooks/useWhatsOnEvents";
 import { EventCategoryIcon, EVENT_CATEGORY_LABELS, isEventCategory } from "@/components/events/EventCategoryIcon";
 import { useEventCategories, useEventCategoryActions } from "@/hooks/useEventCategories";
 import { DeskBadge, DeskCard, MetaLine } from "@/components/topic-pipeline/DeskCard";
+import { EventPinButton } from "@/components/events/EventPinButton";
 import { Textarea } from "@/components/ui/textarea";
 import { InlineError } from "@/components/ui/editorial";
 import { EventSocialPack } from "@/components/events/social/EventSocialPack";
@@ -191,7 +192,7 @@ function CategorySuggestion({ topicId }: { topicId: string }) {
 }
 
 /** One upcoming event in the Event pool: live in the feed or waiting. Click for its details. */
-function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpItem; today: string; actions: EventActions; onOpen: () => void }) {
+function ComingUpEventCard({ event, today, actions, onOpen, topicId }: { event: ComingUpItem; today: string; actions: EventActions; onOpen: () => void; topicId?: string | undefined }) {
   const waiting = event.state === "waiting";
   const low = waiting && isLowRelevance(event.relevance_score);
   return (
@@ -217,7 +218,10 @@ function ComingUpEventCard({ event, today, actions, onOpen }: { event: ComingUpI
           <Button size="sm" variant="ghost" onClick={() => actions.skip(event)}>Skip</Button>
         </>
       ) : (
-        <Button size="sm" variant="ghost" onClick={() => actions.removeFromLive(event)}>Remove</Button>
+        <>
+          <Button size="sm" variant="ghost" onClick={() => actions.removeFromLive(event)}>Remove</Button>
+          <EventPinButton eventId={event.id} topicId={topicId} />
+        </>
       )}
     />
   );
@@ -514,7 +518,7 @@ export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions,
         </p>
       ) : view === "upcoming" ? (
         upcoming.slice(0, shown).map((e) => (
-          <ComingUpEventCard key={`${e.state}-${e.id}`} event={e} today={today} actions={actions} onOpen={() => setOpen(e)} />
+          <ComingUpEventCard key={`${e.state}-${e.id}`} event={e} today={today} actions={actions} onOpen={() => setOpen(e)} topicId={topicId} />
         ))
       ) : (
         leftOut.slice(0, shown).map((e) => (

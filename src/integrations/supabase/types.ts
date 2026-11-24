@@ -1358,6 +1358,7 @@ export type Database = {
           is_free: boolean | null
           kept_by_owner: boolean
           location: string | null
+          pinned_at: string | null
           price: string | null
           rank_position: number | null
           relevance_score: number | null
@@ -1397,6 +1398,7 @@ export type Database = {
           is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
+          pinned_at?: string | null
           price?: string | null
           rank_position?: number | null
           relevance_score?: number | null
@@ -1436,6 +1438,7 @@ export type Database = {
           is_free?: boolean | null
           kept_by_owner?: boolean
           location?: string | null
+          pinned_at?: string | null
           price?: string | null
           rank_position?: number | null
           relevance_score?: number | null
@@ -7140,6 +7143,19 @@ export type Database = {
           story_id: string
         }[]
       }
+      get_topic_pinned_events: {
+        Args: { p_topic_id: string }
+        Returns: {
+          event_type: string
+          id: string
+          image_path: string
+          location: string
+          source_url: string
+          start_date: string
+          start_time: string
+          title: string
+        }[]
+      }
       get_topic_pulse: {
         Args: { p_story_ids?: string[]; p_topic_id: string }
         Returns: Json
@@ -7514,6 +7530,10 @@ export type Database = {
       set_event_category: {
         Args: { p_category: string; p_event_id: string }
         Returns: number
+      }
+      set_event_pin: {
+        Args: { p_event_id: string; p_pinned: boolean }
+        Returns: string
       }
       set_event_source_auto_publish: {
         Args: { p_on: boolean; p_source_id: string }

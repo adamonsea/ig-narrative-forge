@@ -17,6 +17,7 @@ import { FeedViewToggle } from "@/components/feed/FeedViewToggle";
 import { effectiveFeedView, showFeedViewToggle, viewShowsEvents, type FeedView } from "@/lib/feedView";
 import { withPinnedFirst } from "@/lib/storyPin";
 import { useTopicPin } from "@/hooks/useStoryPin";
+import { PinnedEventsDeck } from "@/components/feed/PinnedEventsDeck";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
 import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
 import { FilterModal } from "@/components/FilterModal";
@@ -369,7 +370,7 @@ const TopicFeed = () => {
   const feedView = effectiveFeedView(chosenView, viewToggleShown);
   const eventsInView = viewShowsEvents(feedView);
   const renderEventCard = (e: (typeof feedEvents)[number]) => (
-    <div key={`event-${e.id}`} className="w-full max-w-2xl">
+    <div key={`event-${e.id}`} id={`event-card-${e.id}`} className="w-full max-w-2xl scroll-mt-24">
       <EventCard event={e} brandColor={feedBrand} isOwner={isOwnFeed} currency={eventCurrency} />
     </div>
   );
@@ -1358,6 +1359,10 @@ const TopicFeed = () => {
             tiers={topic.donation_config?.tiers || []}
             visitorId={`visitor_${Date.now()}`}
           />
+        )}
+
+        {topic?.id && feedView !== 'news' && (
+          <PinnedEventsDeck topicId={topic.id} brandColor={feedBrand} />
         )}
 
         {viewToggleShown && (

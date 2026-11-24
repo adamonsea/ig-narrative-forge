@@ -175,8 +175,8 @@ export function SpikeButton({ label = "Skip", onClick, disabled }: { label?: str
  * kept apart from the spike (opposing actions never sit together). One click pins for
  * 24 hours; on a pinned story it unpins. Longer pin lengths live in the story drawer.
  */
-export function PinButton({ pinned = false, onClick, disabled, busy }: { pinned?: boolean | undefined; onClick: () => void; disabled?: boolean | undefined; busy?: boolean | undefined }) {
-  const label = pinned ? "Unpin" : "Pin to top for 24 hours";
+export function PinButton({ pinned = false, onClick, disabled, busy, pinLabel = "Pin to top for 24 hours" }: { pinned?: boolean | undefined; onClick: () => void; disabled?: boolean | undefined; busy?: boolean | undefined; pinLabel?: string | undefined }) {
+  const label = pinned ? "Unpin" : pinLabel;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
