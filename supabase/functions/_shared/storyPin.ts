@@ -52,3 +52,13 @@ export function pinLeadsEmail(pin: StoryPin | null | undefined, type: "daily" | 
   if (!pin!.pinned_at) return false;
   return new Date(pin!.daily_led_at).getTime() < new Date(pin!.pinned_at).getTime();
 }
+
+/** Every pinned story first (in the given pin order), then the rest in their own order. */
+export function withAllPinnedFirst<T extends { id: string }>(items: T[], pinnedIds: readonly string[]): T[] {
+  if (!pinnedIds.length) return items;
+  const byId = new Map(items.map((x) => [x.id, x]));
+  const first = pinnedIds.map((id) => byId.get(id)).filter((x): x is T => !!x);
+  if (!first.length) return items;
+  const ids = new Set(first.map((x) => x.id));
+  return [...first, ...items.filter((x) => !ids.has(x.id))];
+}

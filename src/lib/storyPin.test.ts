@@ -1,6 +1,6 @@
 // run with: bun test ./src/lib/storyPin.test.ts
 import { describe, expect, it } from "bun:test";
-import { PIN_LENGTHS, activePinId, pinLeadsEmail, pinTimeLeft, withPinnedFirst } from "./storyPin";
+import { PIN_LENGTHS, activePinId, pinLeadsEmail, pinTimeLeft, withPinnedFirst, withAllPinnedFirst } from "./storyPin";
 
 const NOW = new Date("2026-11-19T12:00:00Z").getTime();
 const hoursFromNow = (h: number) => new Date(NOW + h * 3_600_000).toISOString();
@@ -42,5 +42,13 @@ describe("story pin", () => {
     const pin = { story_id: "a", pinned_at: hoursFromNow(-2), pinned_until: hoursFromNow(22), daily_led_at: hoursFromNow(-1) };
     expect(pinLeadsEmail(pin, "weekly", NOW)).toBe(true);
     expect(pinLeadsEmail({ ...pin, pinned_until: hoursFromNow(-1) }, "weekly", NOW)).toBe(false);
+  });
+});
+
+describe("withAllPinnedFirst", () => {
+  it("puts every pinned story first in pin order", () => {
+    const items = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+    expect(withAllPinnedFirst(items, ["d", "b", "zz"]).map((x) => x.id)).toEqual(["d", "b", "a", "c"]);
+    expect(withAllPinnedFirst(items, [])).toBe(items);
   });
 });

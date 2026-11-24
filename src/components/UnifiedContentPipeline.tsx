@@ -23,7 +23,7 @@ import { comingUpTimeline, leftOutOrder, londonTime, londonToday, toCheckOrder }
 import { cn } from "@/lib/utils";
 import { whatsOnPositions } from "@/lib/feedCardPositions";
 import { findLiveRepeat, groupHeld, splitLiveNow, staleHeld, withJustPublished } from "@/lib/liveNow";
-import { withPinnedFirst } from "@/lib/storyPin";
+import { withAllPinnedFirst } from "@/lib/storyPin";
 import { useSetStoryPin, useTopicPin } from "@/hooks/useStoryPin";
 import { usePinnedStories } from "@/hooks/usePinnedStories";
 import { illustrateOnPublish } from "@/lib/illustrateOnPublish";
@@ -435,8 +435,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   // Live now = exactly the feed (same stories, same order); written-but-not-live waits in the Story pool.
   const { live: liveFeedOrder, held: heldStories } = splitLiveNow(withJustPublished((stories as any[]).filter(st => !skippedIds.has(st.id)), justPublished));
-  // A pinned story sits first, as it does in the public feed.
-  const liveStories = withPinnedFirst(liveFeedOrder, pinnedId);
+  // Every pinned story sits at the top of Live now, so the owner sees all pins in one place.
+  const pinnedIdList = [...new Set([...(pinnedStories ?? []).map((p) => p.story_id), ...(pinnedId ? [pinnedId] : [])])];
+  const liveStories = withAllPinnedFirst(liveFeedOrder, pinnedIdList);
   const visibleIdsKey = [...liveStories, ...heldStories].map(s => s.id).join(',');
   // Drafts nothing will publish on its own wait for a one-click OK; queued ones go out by themselves.
   const { toCheck: storiesToCheck, queued: queuedStories, other: otherHeld } = groupHeld(heldStories as any[]);
