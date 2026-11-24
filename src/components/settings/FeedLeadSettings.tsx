@@ -4,7 +4,7 @@ import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { eventCardMode, type EventCardMode, type FeedLead } from "@/lib/feedCardPositions";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { SettingGroup, SettingRow } from "@/components/settings/SettingRow";
 import { CURRENCY_SYMBOL, FEED_CURRENCIES, isFeedCurrency, type FeedCurrency } from "@/lib/currency";
 
 interface Props {
@@ -19,9 +19,9 @@ interface Props {
 
 function Choice<T extends string>({ id, label, value, options, onChange }: { id: string; label: string; value: T | null; options: [T, string][]; onChange: (v: T) => void }) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-medium" id={id}>{label}</p>
-      <div className={cn("grid gap-2 sm:max-w-sm", options.length === 3 ? "grid-cols-3" : "grid-cols-2")} role="radiogroup" aria-labelledby={id}>
+    <div>
+      <span className="sr-only" id={id}>{label}</span>
+      <div className={cn("grid w-full gap-2 sm:w-72", options.length === 3 ? "grid-cols-3" : "grid-cols-2")} role="radiogroup" aria-labelledby={id}>
         {options.map(([v, text]) => (
           <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)}
             className={cn("min-h-11 rounded-lg border p-3 text-left text-base transition-colors",
@@ -60,25 +60,28 @@ export function FeedLeadSettings({ topicId, lead, cards, currency, photos, onSav
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <Choice id="feed-lead" label="Lead with" value={currentLead} options={[["news", "News"], ["events", "Events"]]} onChange={chooseLead} />
+    <SettingGroup id="events-show" title="How events show">
+      <SettingRow label="Lead with" hint="What readers see first.">
         <SaveIndicator state={state} />
-      </div>
-      <Choice id="event-cards" label="Event cards" value={currentCards}
-        options={[["grouped", "Grouped"], ["individual", "Individual"]]}
-        onChange={(v: EventCardMode) => { if (v !== currentCards) void save({ event_cards: v }); }} />
+        <Choice id="feed-lead" label="Lead with" value={currentLead} options={[["news", "News"], ["events", "Events"]]} onChange={chooseLead} />
+      </SettingRow>
+      <SettingRow label="Event cards" hint="One card per day, or one per event.">
+        <Choice id="event-cards" label="Event cards" value={currentCards}
+          options={[["grouped", "Grouped"], ["individual", "Individual"]]}
+          onChange={(v: EventCardMode) => { if (v !== currentCards) void save({ event_cards: v }); }} />
+      </SettingRow>
       {currentCards === "individual" && (
-        <Choice id="event-currency" label="Currency" value={isFeedCurrency(currency) ? currency : null}
-          options={FEED_CURRENCIES.map((c) => [c, CURRENCY_SYMBOL[c]] as [FeedCurrency, string])}
-          onChange={(v: FeedCurrency) => { if (v !== currency) void save({ event_currency: v }); }} />
+        <SettingRow label="Currency" hint="Used when a price has no symbol.">
+          <Choice id="event-currency" label="Currency" value={isFeedCurrency(currency) ? currency : null}
+            options={FEED_CURRENCIES.map((c) => [c, CURRENCY_SYMBOL[c]] as [FeedCurrency, string])}
+            onChange={(v: FeedCurrency) => { if (v !== currency) void save({ event_currency: v }); }} />
+        </SettingRow>
       )}
       {currentCards === "individual" && (
-        <div className="flex items-center justify-between gap-4 sm:max-w-sm">
-          <Label htmlFor="event-photos" className="text-sm font-medium">Event photos</Label>
-          <Switch id="event-photos" checked={photos !== false} onCheckedChange={(on) => void save({ event_photos_enabled: on })} />
-        </div>
+        <SettingRow label="Event photos" hint="Use the listing's own photo when there is one.">
+          <Switch id="event-photos" aria-label="Event photos" checked={photos !== false} onCheckedChange={(on) => void save({ event_photos_enabled: on })} />
+        </SettingRow>
       )}
-    </div>
+    </SettingGroup>
   );
 }

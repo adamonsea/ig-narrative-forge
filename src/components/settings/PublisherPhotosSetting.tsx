@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { InfoHint, SaveIndicator, type SaveState } from "@/components/ui/editorial";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { SettingRow } from "@/components/settings/SettingRow";
 
 interface Props {
   topicId: string;
@@ -28,17 +28,9 @@ export function PublisherPhotosSetting({ topicId, value, onSaved }: Props) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 sm:max-w-sm">
-      <div className="flex items-center gap-1">
-        <Label htmlFor="publisher-photos" className="text-sm font-medium">Publisher photos</Label>
-        <InfoHint label="About publisher photos">
-          On: a story can use the source's own photo, always credited. Off: new stories get illustrations only.
-        </InfoHint>
-      </div>
-      <div className="flex items-center gap-3">
-        <SaveIndicator state={state} />
-        <Switch id="publisher-photos" checked={on} onCheckedChange={(next) => void save(next)} />
-      </div>
-    </div>
+    <SettingRow label="Publisher photos" hint="Use the source's own photo, always credited. Off: illustrations only.">
+      <SaveIndicator state={state} />
+      <Switch id="publisher-photos" aria-label="Publisher photos" checked={on} onCheckedChange={(next) => void save(next)} />
+    </SettingRow>
   );
 }

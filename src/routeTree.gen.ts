@@ -51,6 +51,8 @@ import { Route as FeedSlugReviewReviewSlugRouteImport } from './routes/feed/$slu
 import { Route as FeedSlugStoryStoryIdRouteImport } from './routes/feed/$slug/story/$storyId'
 import { Route as FeedSlugWeeklyWeekStartRouteImport } from './routes/feed/$slug/weekly/$weekStart'
 import { Route as FeedTopicSlugIndexRouteImport } from './routes/feed/topic/$slug/index'
+import { Route as DashboardTopicSlugSettingsIndexRouteImport } from './routes/dashboard/topic/$slug_.settings.index'
+import { Route as DashboardTopicSlugSettingsSectionRouteImport } from './routes/dashboard/topic/$slug_.settings.$section'
 import { Route as FeedTopicSlugStoryStoryIdRouteImport } from './routes/feed/topic/$slug/story/$storyId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -264,6 +266,18 @@ const FeedTopicSlugIndexRoute = FeedTopicSlugIndexRouteImport.update({
   path: '/feed/topic/$slug/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardTopicSlugSettingsIndexRoute =
+  DashboardTopicSlugSettingsIndexRouteImport.update({
+    id: '/dashboard/topic/$slug_/settings/',
+    path: '/dashboard/topic/$slug/settings/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardTopicSlugSettingsSectionRoute =
+  DashboardTopicSlugSettingsSectionRouteImport.update({
+    id: '/dashboard/topic/$slug_/settings/$section',
+    path: '/dashboard/topic/$slug/settings/$section',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const FeedTopicSlugStoryStoryIdRoute =
   FeedTopicSlugStoryStoryIdRouteImport.update({
     id: '/feed/topic/$slug/story/$storyId',
@@ -314,7 +328,9 @@ export interface FileRoutesByFullPath {
   '/feed/$slug/story/$storyId': typeof FeedSlugStoryStoryIdRoute
   '/feed/$slug/weekly/$weekStart': typeof FeedSlugWeeklyWeekStartRoute
   '/feed/topic/$slug/': typeof FeedTopicSlugIndexRoute
+  '/dashboard/topic/$slug/settings/$section': typeof DashboardTopicSlugSettingsSectionRoute
   '/feed/topic/$slug/story/$storyId': typeof FeedTopicSlugStoryStoryIdRoute
+  '/dashboard/topic/$slug/settings/': typeof DashboardTopicSlugSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -359,7 +375,9 @@ export interface FileRoutesByTo {
   '/feed/$slug/story/$storyId': typeof FeedSlugStoryStoryIdRoute
   '/feed/$slug/weekly/$weekStart': typeof FeedSlugWeeklyWeekStartRoute
   '/feed/topic/$slug': typeof FeedTopicSlugIndexRoute
+  '/dashboard/topic/$slug/settings/$section': typeof DashboardTopicSlugSettingsSectionRoute
   '/feed/topic/$slug/story/$storyId': typeof FeedTopicSlugStoryStoryIdRoute
+  '/dashboard/topic/$slug/settings': typeof DashboardTopicSlugSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -405,7 +423,9 @@ export interface FileRoutesById {
   '/feed/$slug/story/$storyId': typeof FeedSlugStoryStoryIdRoute
   '/feed/$slug/weekly/$weekStart': typeof FeedSlugWeeklyWeekStartRoute
   '/feed/topic/$slug/': typeof FeedTopicSlugIndexRoute
+  '/dashboard/topic/$slug_/settings/$section': typeof DashboardTopicSlugSettingsSectionRoute
   '/feed/topic/$slug/story/$storyId': typeof FeedTopicSlugStoryStoryIdRoute
+  '/dashboard/topic/$slug_/settings/': typeof DashboardTopicSlugSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -452,7 +472,9 @@ export interface FileRouteTypes {
     | '/feed/$slug/story/$storyId'
     | '/feed/$slug/weekly/$weekStart'
     | '/feed/topic/$slug/'
+    | '/dashboard/topic/$slug/settings/$section'
     | '/feed/topic/$slug/story/$storyId'
+    | '/dashboard/topic/$slug/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -497,7 +519,9 @@ export interface FileRouteTypes {
     | '/feed/$slug/story/$storyId'
     | '/feed/$slug/weekly/$weekStart'
     | '/feed/topic/$slug'
+    | '/dashboard/topic/$slug/settings/$section'
     | '/feed/topic/$slug/story/$storyId'
+    | '/dashboard/topic/$slug/settings'
   id:
     | '__root__'
     | '/'
@@ -542,7 +566,9 @@ export interface FileRouteTypes {
     | '/feed/$slug/story/$storyId'
     | '/feed/$slug/weekly/$weekStart'
     | '/feed/topic/$slug/'
+    | '/dashboard/topic/$slug_/settings/$section'
     | '/feed/topic/$slug/story/$storyId'
+    | '/dashboard/topic/$slug_/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -588,7 +614,9 @@ export interface RootRouteChildren {
   FeedSlugStoryStoryIdRoute: typeof FeedSlugStoryStoryIdRoute
   FeedSlugWeeklyWeekStartRoute: typeof FeedSlugWeeklyWeekStartRoute
   FeedTopicSlugIndexRoute: typeof FeedTopicSlugIndexRoute
+  DashboardTopicSlugSettingsSectionRoute: typeof DashboardTopicSlugSettingsSectionRoute
   FeedTopicSlugStoryStoryIdRoute: typeof FeedTopicSlugStoryStoryIdRoute
+  DashboardTopicSlugSettingsIndexRoute: typeof DashboardTopicSlugSettingsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -887,6 +915,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedTopicSlugIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/topic/$slug_/settings/': {
+      id: '/dashboard/topic/$slug_/settings/'
+      path: '/dashboard/topic/$slug/settings'
+      fullPath: '/dashboard/topic/$slug/settings/'
+      preLoaderRoute: typeof DashboardTopicSlugSettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/topic/$slug_/settings/$section': {
+      id: '/dashboard/topic/$slug_/settings/$section'
+      path: '/dashboard/topic/$slug/settings/$section'
+      fullPath: '/dashboard/topic/$slug/settings/$section'
+      preLoaderRoute: typeof DashboardTopicSlugSettingsSectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/feed/topic/$slug/story/$storyId': {
       id: '/feed/topic/$slug/story/$storyId'
       path: '/feed/topic/$slug/story/$storyId'
@@ -940,7 +982,10 @@ const rootRouteChildren: RootRouteChildren = {
   FeedSlugStoryStoryIdRoute: FeedSlugStoryStoryIdRoute,
   FeedSlugWeeklyWeekStartRoute: FeedSlugWeeklyWeekStartRoute,
   FeedTopicSlugIndexRoute: FeedTopicSlugIndexRoute,
+  DashboardTopicSlugSettingsSectionRoute:
+    DashboardTopicSlugSettingsSectionRoute,
   FeedTopicSlugStoryStoryIdRoute: FeedTopicSlugStoryStoryIdRoute,
+  DashboardTopicSlugSettingsIndexRoute: DashboardTopicSlugSettingsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

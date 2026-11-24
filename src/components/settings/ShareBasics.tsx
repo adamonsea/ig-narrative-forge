@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { InfoHint } from "@/components/ui/editorial";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { defaultWidgetCode } from "@/lib/widgetEmbed";
@@ -68,30 +67,27 @@ export function ShareBasics({
       <div className="flex items-start justify-between gap-6 py-5">
         <div>
           <div className="flex items-center gap-1.5">
-            <label htmlFor="share-email" className="text-base font-semibold">Email sign-ups</label>
-            <InfoHint label="About email sign-ups">Readers can subscribe from the feed.</InfoHint>
+            <label htmlFor="share-email" className="text-base font-medium">Email sign-ups</label>
           </div>
-          <p className="mt-0.5 text-sm text-muted-foreground">{subscriberCount} {subscriberCount === 1 ? "subscriber" : "subscribers"}</p>
+          <p className="mt-1 text-sm text-muted-foreground">Readers subscribe from the feed · {subscriberCount} {subscriberCount === 1 ? "subscriber" : "subscribers"}</p>
         </div>
         <Switch id="share-email" checked={emailEnabled} onCheckedChange={(v) => onChannelToggle("email_subscriptions_enabled", v, "Email sign-ups")} className="mt-1" />
       </div>
       <div className="flex items-start justify-between gap-6 py-5">
         <div>
           <div className="flex items-center gap-1.5">
-            <label htmlFor="share-weekly" className="text-base font-semibold">Weekly roundup email</label>
-            <InfoHint label="About the weekly roundup email">
-              The week's best stories, sent to weekly subscribers.{emailEnabled ? "" : " Sent once email sign-ups are on."}
-            </InfoHint>
+            <label htmlFor="share-weekly" className="text-base font-medium">Weekly roundup email</label>
           </div>
+          <p className="mt-1 text-sm text-muted-foreground">The week's best stories.{emailEnabled ? "" : " Needs email sign-ups."}</p>
         </div>
         <Switch id="share-weekly" checked={weeklyEnabled} disabled={!emailEnabled} onCheckedChange={setWeekly} className="mt-1" />
       </div>
       <div className="flex items-start justify-between gap-6 py-5">
         <div>
           <div className="flex items-center gap-1.5">
-            <p className="text-base font-semibold">Website widget</p>
-            <InfoHint label="About the website widget">Show your latest headlines on any website. Copy the code and paste it into a page.</InfoHint>
+            <p className="text-base font-medium">Website widget</p>
           </div>
+          <p className="mt-1 text-sm text-muted-foreground">Your latest headlines on any website.</p>
         </div>
         <Button variant="outline" onClick={copyWidget} disabled={copying} className="shrink-0 gap-1.5">
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}

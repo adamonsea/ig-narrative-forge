@@ -1,0 +1,25 @@
+import { describe, expect, it } from "vitest";
+import { resolveSettingsSection, settingsPath, visibleSettingsSections } from "@/lib/settingsSections";
+
+describe("settings sections", () => {
+  it("old ?section= links land on the new pages", () => {
+    expect(resolveSettingsSection("identity")).toBe("general");
+    expect(resolveSettingsSection("voice")).toBe("writing");
+    expect(resolveSettingsSection("coverage")).toBe("coverage");
+    expect(resolveSettingsSection("automation")).toBe("autopilot");
+    expect(resolveSettingsSection("distribution")).toBe("share");
+    expect(resolveSettingsSection("features")).toBe("extras");
+  });
+  it("unknown or missing sections open General", () => {
+    expect(resolveSettingsSection(null)).toBe("general");
+    expect(resolveSettingsSection("nope")).toBe("general");
+  });
+  it("Events page exists only when events are on", () => {
+    expect(resolveSettingsSection("events", false)).toBe("general");
+    expect(visibleSettingsSections(false).map((s) => s.id)).not.toContain("events");
+    expect(visibleSettingsSections(true).map((s) => s.id)).toContain("events");
+  });
+  it("builds page links", () => {
+    expect(settingsPath("eastbourne", "automation")).toBe("/dashboard/topic/eastbourne/settings/autopilot");
+  });
+});

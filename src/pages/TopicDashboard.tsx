@@ -13,6 +13,7 @@ import { GatheringProgressIndicator } from "@/components/GatheringProgressIndica
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { FeedSetupGuide, storageKeyFor } from "@/components/onboarding/FeedSetupGuide";
 import { EditorialControlCenter } from "@/components/topics/EditorialControlCenter";
+import { settingsPath } from "@/lib/settingsSections";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,7 +130,7 @@ interface UniversalScraperResponse {
 }
 
 const TopicDashboard = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, section: settingsSection } = useParams<{ slug: string; section?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -144,6 +145,7 @@ const TopicDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [gatheringAll, setGatheringAll] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
+    if (settingsSection) return 'settings';
     const requested = searchParams.get('tab');
     // Legacy deep links used ?tab=insights before the tab became Reviews.
     if (requested === 'insights') return 'reviews';
@@ -184,7 +186,13 @@ const TopicDashboard = () => {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
+    if (settingsSection) { setActiveTab('settings'); return; }
     const tab = searchParams.get('tab');
+    // Old ?tab=settings[&section=] links → the settings page that now holds them.
+    if (tab === 'settings' && slug) {
+      navigate(settingsPath(slug, searchParams.get('section')), { replace: true });
+      return;
+    }
     if (tab === 'insights') {
       setActiveTab('reviews');
       const nextParams = new URLSearchParams(searchParams);
@@ -194,7 +202,7 @@ const TopicDashboard = () => {
     }
     if (tab === 'feed' || tab === 'sources' || tab === 'stats' || tab === 'reviews' || tab === 'settings') setActiveTab(tab);
     if (!tab) setActiveTab('feed');
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, settingsSection, slug, navigate]);
 
   const loadTopicAndStats = async () => {
     try {
@@ -699,6 +707,8 @@ const TopicDashboard = () => {
             value={activeTab}
             onValueChange={(value) => {
               setActiveTab(value);
+              if (value === 'settings' && slug) { navigate(settingsPath(slug, 'general')); return; }
+              if (settingsSection && slug) { navigate(`/dashboard/topic/${slug}?tab=${value}`); return; }
               const nextParams = new URLSearchParams(searchParams);
               nextParams.set('tab', value);
               if (value !== 'settings') nextParams.delete('section');
@@ -785,6 +795,7 @@ const TopicDashboard = () => {
             {/* ===== EDITORIAL CONTROL CENTRE ===== */}
             <TabsContent value="settings" className="mt-0 pt-2">
               <EditorialControlCenter
+                section={settingsSection}
                 topic={topic}
                 stats={stats}
                 negativeKeywords={negativeKeywords}

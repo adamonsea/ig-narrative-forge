@@ -23,7 +23,7 @@ export function HappenedSettings({ topicId, onChanged }: { topicId: string; onCh
         </SheetHeader>
         {open && <AutopilotBasics topicId={topicId} {...opt("onChanged", onChanged)} />}
         <Button variant="outline" asChild onClick={() => setOpen(false)}>
-          <Link to={`${pathname}?tab=settings&section=automation`}>All news settings</Link>
+          <Link to={`${pathname}/settings/autopilot`}>All news settings</Link>
         </Button>
       </SheetContent>
     </Sheet>
