@@ -31,6 +31,10 @@ export interface ReaderEvent {
   hint?: string | null;
   /** The listing's own picture (https); saved as a shrunk copy only if it passes eventImage.ts. */
   image?: string | null;
+  /** The source's raw categories/tags, verbatim. */
+  tags?: string[];
+  /** Last day as published, only when later than start_date. */
+  end_date?: string | null;
 }
 
 export interface ReaderResult {

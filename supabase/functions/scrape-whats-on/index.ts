@@ -1,4 +1,6 @@
 import { categorizeEvent } from '../_shared/eventCategories.ts';
+import { factsHash } from '../_shared/editorial/caption.ts';
+import { generateEventCopy } from '../_shared/editorial/generate.ts';
 import { currencyFromUrls } from '../_shared/currency.ts';
 import { checkOtherCategories, inBackground } from './categoryCheck.ts';
 import { placeholderImages } from './eventImage.ts';
@@ -56,6 +58,7 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('remove'), sourceId: z.string().uuid() }),
   z.object({ action: z.literal('refresh_all') }),
   z.object({ action: z.literal('discover'), topicId: z.string().uuid(), url: Url.optional() }),
+  z.object({ action: z.literal('editorial_copy'), eventId: z.string().uuid(), dryRun: z.boolean().optional(), force: z.boolean().optional(), postDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
   z.object({
     action: z.literal('suggest'), topicId: z.string().uuid(),
     title: z.string().trim().min(3).max(160), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -133,15 +136,24 @@ async function deadLinks(urls: string[]): Promise<Set<string>> {
   return dead;
 }
 
+/** Auto-approved events: stamp approval and write their copy (skips unchanged facts and locked fields). */
+async function writeEditorialCopy(supabase: Db, topicId: string, externalIds: string[]) {
+  const { data } = await supabase.from('events').select('id, approved_at').eq('topic_id', topicId).in('external_id', externalIds);
+  for (const ev of data || []) {
+    if (!ev.approved_at) await supabase.from('events').update({ approved_at: new Date().toISOString() }).eq('id', ev.id);
+    await generateEventCopy(supabase, { eventId: ev.id }).catch((e) => console.warn('editorial copy failed', ev.id, e instanceof Error ? e.message : e));
+  }
+}
+
 async function storeEvents(supabase: Db, reader: EventReader, source: Source, events: ReaderEvent[], verdicts: Verdict[], scores: (number | null)[]) {
   if (!events.length) return; // never wipe a source's events on an empty read
   const now = new Date().toISOString();
   const ids = events.map((e) => reader.externalId(source.id, e.key));
 
   // What the owner has already decided: removals and restores stick.
-  const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null; image_edited: boolean; description: string | null; description_edited: boolean }>();
+  const existing = new Map<string, { id: string; status: string; kept_by_owner: boolean; exclusion_reason: string | null; area_confirmed: boolean; event_type: string | null; category_locked: boolean; image_source_url: string | null; image_path: string | null; image_edited: boolean; description: string | null; description_edited: boolean; title: string; start_date: string; start_time: string | null; end_date: string | null; location: string | null; price: string | null; is_free: boolean | null; source_hash: string | null; approved_at: string | null }>();
   for (const part of chunks(ids, 150)) {
-    const { data } = await supabase.from('events').select('id, external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked, image_source_url, image_path, image_edited, description, description_edited')
+    const { data } = await supabase.from('events').select('id, external_id, status, kept_by_owner, exclusion_reason, area_confirmed, event_type, category_locked, image_source_url, image_path, image_edited, description, description_edited, title, start_date, start_time, end_date, location, price, is_free, source_hash, approved_at')
       .eq('topic_id', source.topic_id).eq('source_api', reader.sourceApi).in('external_id', part);
     for (const r of data || []) existing.set(r.external_id, r);
   }
@@ -155,6 +167,18 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
     if (r.area_confirmed) confirmedTitles.add(titleKey(r.title));
     if (r.status === 'deleted') removedTitles.add(titleKey(r.title));
     else if (r.kept_by_owner) keptTitles.add(titleKey(r.title));
+  }
+
+  // Editorial profile on: end dates are kept and hand-edited facts are locked (off = unchanged behaviour)
+  const { data: profileRow } = await supabase.from('feed_editorial_profiles').select('enabled').eq('topic_id', source.topic_id).maybeSingle();
+  const profileOn = Boolean(profileRow?.enabled);
+  const locks = new Map<string, Set<string>>();
+  if (profileOn) {
+    const prevIds = [...existing.values()].map((r) => r.id);
+    for (const part of chunks(prevIds, 150)) {
+      const { data } = await supabase.from('event_field_edits').select('event_id, field').in('event_id', part);
+      for (const r of data || []) (locks.get(r.event_id) ?? locks.set(r.event_id, new Set()).get(r.event_id)!).add(r.field);
+    }
   }
 
   // Spare categories (Comedy, Workshops …) the owner has added for this feed
@@ -179,7 +203,7 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       prev, removedByOwner: removedTitles.has(t), publishedByOwner: keptTitles.has(t),
       areaConfirmed, verdict, score, autoPublish: Boolean(source.auto_publish),
     });
-    return {
+    const base = {
       topic_id: source.topic_id,
       event_source_id: source.id,
       source_api: reader.sourceApi,
@@ -209,8 +233,20 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
       area_confirmed: areaConfirmed,
       relevance_score: score,
       image_source_url: e.image && !placeholders.has(e.image) ? e.image : null,
+      source_tags: e.tags ?? [],
       updated_at: now,
     };
+    if (profileOn) {
+      const row = base as Record<string, unknown>;
+      row.end_date = e.end_date ?? null;
+      const locked = prev ? locks.get(prev.id) : undefined;
+      if (prev && locked) {
+        const keep: Record<string, string[]> = { title: ['title'], start_date: ['start_date'], start_time: ['start_time'], end_date: ['end_date'], venue: ['location'], price: ['price', 'is_free'] };
+        for (const [field, cols] of Object.entries(keep)) if (locked.has(field)) for (const c of cols) row[c] = (prev as Record<string, unknown>)[c];
+      }
+      row.source_hash = factsHash({ ...row, description: e.description ?? null });
+    }
+    return base;
   });
   // One row per id (a source can repeat itself)
   const unique = [...new Map(rows.map((r) => [r.external_id, r])).values()];
@@ -231,6 +267,14 @@ async function storeEvents(supabase: Db, reader: EventReader, source: Source, ev
   // A feed without a currency yet takes it from its sources' country (.pt → €, .co.uk → £)
   const currency = currencyFromUrls([source.url, ...unique.slice(0, 20).map((r) => r.source_url)]) ?? 'GBP';
   await supabase.from('topics').update({ event_currency: currency }).eq('id', source.topic_id).is('event_currency', null);
+  // Editorial profile: published events that are new, newly approved or whose facts changed get fresh copy (in the background)
+  if (profileOn) {
+    const due = unique.filter((r) => {
+      const prev = existing.get(r.external_id);
+      return r.status === 'published' && (!prev || !prev.approved_at || prev.source_hash !== (r as Record<string, unknown>).source_hash);
+    }).slice(0, 25);
+    if (due.length) inBackground(writeEditorialCopy(supabase, source.topic_id, due.map((r) => r.external_id)));
+  }
   // Events the rules left as "Other": one model check, after this response
   inBackground(checkOtherCategories(supabase, source.topic_id, source.id));
   // Drop upcoming events from this source that it no longer lists
@@ -492,6 +536,14 @@ Deno.serve(async (req) => {
     // Everything else needs the feed's owner
     const user = isSystem ? null : await getUser(req);
     if (!isSystem && !user) return json({ error: 'Please sign in' }, 401);
+
+    if (body.action === 'editorial_copy') {
+      const { data: ev } = await supabase.from('events').select('topic_id').eq('id', body.eventId).maybeSingle();
+      if (!ev) return json({ error: 'Not found' }, 404);
+      if (!isSystem && !(await userOwnsTopic(supabase, user!.id, ev.topic_id))) return json({ error: 'Not your feed' }, 403);
+      const result = await generateEventCopy(supabase, { eventId: body.eventId, dryRun: body.dryRun, force: body.force, postDate: body.postDate });
+      return json(result, result.error === 'Not enough credits' ? 402 : result.error ? 400 : 200);
+    }
 
     if (body.action === 'discover') {
       if (!isSystem && !(await userOwnsTopic(supabase, user!.id, body.topicId))) return json({ error: 'Not your feed' }, 403);

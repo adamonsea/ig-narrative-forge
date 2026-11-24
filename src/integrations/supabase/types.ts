@@ -1754,8 +1754,10 @@ export type Database = {
           event_hashtag_max: number
           event_hashtag_min: number
           fixed_hashtags: string[]
+          flag_rules: Json
           flags: string[]
           genres: Json
+          labels: Json
           languages: string[]
           topic_id: string
           updated_at: string
@@ -1768,8 +1770,10 @@ export type Database = {
           event_hashtag_max?: number
           event_hashtag_min?: number
           fixed_hashtags?: string[]
+          flag_rules?: Json
           flags?: string[]
           genres?: Json
+          labels?: Json
           languages?: string[]
           topic_id: string
           updated_at?: string
@@ -1782,8 +1786,10 @@ export type Database = {
           event_hashtag_max?: number
           event_hashtag_min?: number
           fixed_hashtags?: string[]
+          flag_rules?: Json
           flags?: string[]
           genres?: Json
+          labels?: Json
           languages?: string[]
           topic_id?: string
           updated_at?: string

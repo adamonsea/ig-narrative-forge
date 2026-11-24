@@ -1,3 +1,4 @@
+import { useEditorialProfile } from "@/components/settings/EventCaptionsSettings";
 import { useCallback, useMemo } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -140,6 +141,7 @@ const UNDO: Record<EventAction, EventAction> = { publish: "unhide", skip: "unhid
 /** Owner actions on events and the two event switches, with Undo. */
 export function useEventDeskActions(topicId: string | undefined) {
   const queryClient = useQueryClient();
+  useEditorialProfile(topicId); // keeps the captions switch cached for Publish
   const { toast } = useToast();
 
   const refresh = useCallback(() => {
@@ -166,6 +168,11 @@ export function useEventDeskActions(topicId: string | undefined) {
     }
     try {
       await run(event.id, action);
+      // Feeds with captions on: write this event's copy on approval (the server skips unchanged facts)
+      if (action === "publish" && queryClient.getQueryData<{ enabled?: boolean } | null>(["editorial-profile", topicId])?.enabled) {
+        void supabase.functions.invoke("scrape-whats-on", { body: { action: "editorial_copy", eventId: event.id } })
+          .then(() => queryClient.invalidateQueries({ queryKey: ["event-editorial", event.id] }));
+      }
       toast({
         title: DONE[action],
         description: event.title,

@@ -121,6 +121,8 @@ export function shopEvents(data: Record<string, unknown>, origin: string, today:
         price: null,
         is_free: null,
         hint: tagNames(e.tags),
+        tags: tagNames(e.tags)?.split(', ') ?? [],
+        end_date: endM && endM[1] > date ? endM[1] : null,
         image: stripSid(Object.values(e.images ?? {}).find((i) => i?.url)?.url ?? null),
       });
     }

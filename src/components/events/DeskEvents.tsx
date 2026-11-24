@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { InlineError } from "@/components/ui/editorial";
 import { EventSocialPack } from "@/components/events/social/EventSocialPack";
 import { EventPictureEditor } from "@/components/picture-edit/EventPictureEditor";
+import { EventEditorialPanel } from "@/components/events/EventEditorialPanel";
 
 /** Day and number, the event's at-a-glance date. */
 function DateTile({ date, size = "lg", category }: { date: string; size?: "lg" | "sm"; category?: string | null | undefined }) {
@@ -430,6 +431,7 @@ function EventDetailSheet({ item, today, actions, onClose, topicId }: { item: De
                   event_type: detail.event_type ?? item.event_type, image_path: detail.image_hidden ? null : detail.image_path,
                 }} />
               )}
+              {topicId && <EventEditorialPanel eventId={item.id} topicId={topicId} />}
               {item.source_url && (
                 <Button asChild variant="outline" className="w-full justify-center">
                   <a href={item.source_url} target="_blank" rel="noopener noreferrer">

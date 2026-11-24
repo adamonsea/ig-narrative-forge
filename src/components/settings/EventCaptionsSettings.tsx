@@ -1,0 +1,99 @@
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { SaveIndicator, type SaveState } from "@/components/ui/editorial";
+import { RememberedFold } from "@/components/settings/RememberedFold";
+import {
+  flagsToText, genresToText, textToFlags, textToGenres, textToHashtags, textToLanguages, textToLines, textToTemplate,
+} from "@/lib/editorial/profileText";
+import type { GenreRule } from "@/lib/editorial/captionAssembler";
+
+interface Profile {
+  topic_id: string; enabled: boolean; languages: string[]; caption_templates: Record<string, string[]>;
+  fixed_hashtags: string[]; genres: GenreRule[]; flags: string[]; flag_rules: Record<string, string>;
+  labels: { free?: string; tickets?: string }; voice_rules: string[];
+}
+
+export const editorialProfileKey = (topicId: string | undefined) => ["editorial-profile", topicId];
+
+export function useEditorialProfile(topicId: string | undefined) {
+  return useQuery({
+    queryKey: editorialProfileKey(topicId),
+    enabled: Boolean(topicId),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await (supabase.from as any)("feed_editorial_profiles").select("*").eq("topic_id", topicId).maybeSingle();
+      return (data ?? null) as Profile | null;
+    },
+  });
+}
+
+const PLATFORMS: [string, string][] = [["instagram", "Instagram"], ["website", "Website"], ["facebook", "Facebook"]];
+
+/** Field (blur-saves one column). */
+function Field({ id, label, value, rows, onSave }: { id: string; label: string; value: string; rows?: number; onSave: (v: string) => void }) {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  const blur = () => { if (text !== value) onSave(text); };
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-base font-medium">{label}</Label>
+      {rows ? <Textarea id={id} rows={rows} value={text} onChange={(e) => setText(e.target.value)} onBlur={blur} className="font-mono text-sm leading-relaxed" />
+        : <Input id={id} value={text} onChange={(e) => setText(e.target.value)} onBlur={blur} className="text-base" />}
+    </div>
+  );
+}
+
+/** Captions: the feed's editorial profile for event copy. Off = nothing changes for this feed. */
+export function EventCaptionsSettings({ topicId }: { topicId: string }) {
+  const qc = useQueryClient();
+  const { data: p, isLoading } = useEditorialProfile(topicId);
+  const [state, setState] = useState<SaveState>(null);
+
+  const save = async (values: Partial<Profile>) => {
+    setState("saving");
+    const { error } = await (supabase.from as any)("feed_editorial_profiles").upsert({ topic_id: topicId, ...values }, { onConflict: "topic_id" });
+    setState(error ? "not-saved" : "saved");
+    qc.invalidateQueries({ queryKey: editorialProfileKey(topicId) });
+  };
+  if (isLoading) return <div className="h-11 w-full animate-pulse rounded-lg bg-muted" />;
+  const on = Boolean(p?.enabled);
+
+  return (
+    <RememberedFold foldKey="event-captions" label="Captions">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <Label htmlFor="captions-on" className="text-base font-medium">Write captions</Label>
+          <div className="flex items-center gap-3">
+            <SaveIndicator state={state} />
+            <Switch id="captions-on" checked={on} onCheckedChange={(v) => void save({ enabled: v })} />
+          </div>
+        </div>
+        {on && p && (
+          <div className="space-y-6">
+            <Field id="cap-langs" label="Languages" value={p.languages.join(", ")} onSave={(v) => void save({ languages: textToLanguages(v) })} />
+            {PLATFORMS.map(([key, label]) => (
+              <Field key={key} id={`cap-${key}`} label={label} rows={8} value={(p.caption_templates[key] ?? []).join("\n")}
+                onSave={(v) => {
+                  const lines = textToTemplate(v);
+                  const next = { ...p.caption_templates };
+                  if (lines.some((l) => l.trim())) next[key] = lines; else delete next[key];
+                  void save({ caption_templates: next });
+                }} />
+            ))}
+            <Field id="cap-free" label="Free" value={p.labels.free ?? ""} onSave={(v) => void save({ labels: { ...p.labels, free: v.trim() } })} />
+            <Field id="cap-tickets" label="Tickets" value={p.labels.tickets ?? ""} onSave={(v) => void save({ labels: { ...p.labels, tickets: v.trim() } })} />
+            <Field id="cap-tags" label="Hashtags" value={p.fixed_hashtags.join(" ")} onSave={(v) => void save({ fixed_hashtags: textToHashtags(v) })} />
+            <Field id="cap-genres" label="Genres" rows={8} value={genresToText(p.genres)} onSave={(v) => void save({ genres: textToGenres(v) })} />
+            <Field id="cap-flags" label="Flags" rows={4} value={flagsToText(p.flags, p.flag_rules)} onSave={(v) => void save(textToFlags(v))} />
+            <Field id="cap-voice" label="Voice" rows={5} value={p.voice_rules.join("\n")} onSave={(v) => void save({ voice_rules: textToLines(v) })} />
+          </div>
+        )}
+      </div>
+    </RememberedFold>
+  );
+}

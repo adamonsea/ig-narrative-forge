@@ -35,6 +35,10 @@ export interface WhatsOnEvent {
   hint?: string | null;
   /** The listing's own picture (https), when it gives one; checked again before use. */
   image?: string | null;
+  /** The source's raw categories/tags, verbatim (kept for genre mapping). */
+  tags?: string[];
+  /** Last day as published (YYYY-MM-DD), only when later than start_date. */
+  end_date?: string | null;
 }
 
 export type WhatsOnMethod = 'jsonld' | 'ical' | 'json' | 'text';
@@ -44,6 +48,34 @@ const LONDON = 'Europe/London';
 
 /** Only listings with a picture carry the field. */
 const withImage = (image: string | null) => (image ? { image } : {});
+
+/** The source's own category/tag names, verbatim, de-duplicated (max 20). */
+export function rawTags(...vals: unknown[]): string[] {
+  const out: string[] = [];
+  const add = (v: unknown, d = 0) => {
+    if (d > 2 || v == null) return;
+    if (typeof v === 'string') v.split(/\s*,\s*/).forEach((x) => out.push(x));
+    else if (Array.isArray(v)) v.forEach((x) => add(x, d + 1));
+    else if (typeof v === 'object') {
+      const o = v as Record<string, unknown>;
+      const own = o.name ?? o.title;
+      if (typeof own === 'string') out.push(own);
+      else if (own == null) Object.values(o).forEach((x) => add(x, d + 1));
+    }
+  };
+  vals.forEach((v) => add(v));
+  const clean = out.map((x) => decodeEntities(x).trim()).filter((x) => x && x.length <= 60 && !/^(event|events|\d+)$/i.test(x));
+  return [...new Set(clean)].slice(0, 20);
+}
+
+/** End date as published, only when it's a real later day. */
+function laterDay(value: unknown, start: string): string | null {
+  const w = parseIsoLike(value);
+  return w && w.date > start ? w.date : null;
+}
+
+/** Only events whose source has tags / a later end day carry the fields. */
+const sourceExtras = (tags: string[], end: string | null) => ({ ...(tags.length ? { tags } : {}), ...(end ? { end_date: end } : {}) });
 
 function hintText(...vals: unknown[]): string | null {
   const out: string[] = [];
@@ -384,6 +416,7 @@ export function extractJsonLdEvents(html: string, pageUrl: string): WhatsOnEvent
           description: shortDescription(typeof o.description === 'string' ? decodeEntities(o.description) : null),
           ...priceFacts(o.offers, o.isAccessibleForFree),
           hint: hintText(o['@type'], o.keywords, o.genre, o.about),
+          ...sourceExtras(rawTags(o.keywords, o.genre), laterDay(o.endDate, when.date)),
           ...withImage(imageAddress(o.image, pageUrl)),
         });
       }
@@ -502,6 +535,7 @@ const DATE_KEYS = [
   'startDate', 'start_date', 'start.dateTime', 'start.date', 'start', 'dtstart', 'startDateTime', 'start_datetime',
   'EventDates.EventDate', 'eventDate', 'event_date', 'FirstDate', 'InstanceDate', 'date', 'datetime', 'dateTime', 'start_time',
 ];
+const END_KEYS = ['endDate', 'end_date', 'end.dateTime', 'end.date', 'dtend', 'endDateTime', 'end_datetime', 'LastDate'];
 const START_KEYS = DATE_KEYS.filter((k) => /start|first/i.test(k));
 const TIME_KEYS = ['EventTime', 'eventTime', 'startTime', 'start_time', 'time', 'doors'];
 const URL_KEYS = ['url', 'link', 'permalink', 'htmlLink', 'eventUrl', 'event_url', 'pageUrl', 'BookingLink', 'bookingUrl', 'ticketUrl'];
@@ -562,6 +596,7 @@ function jsonEvent(o: Record<string, unknown>, feedUrl: string, fallbackPlace: s
     description: shortDescription(((d) => (typeof d === 'string' ? decodeEntities(d) : Array.isArray(d) ? decodeEntities(d.filter((x) => typeof x === 'string').join(' ')) : null))(pick(o, ['description', 'excerpt.rendered', 'excerpt', 'details', 'content.rendered']))),
     ...priceFacts(o.offers, o.is_free ?? o.isAccessibleForFree ?? (o.price_cat === 'free' ? true : undefined), o.cost ?? (typeof o.price === 'string' || typeof o.price === 'number' ? String(o.price) : undefined) ?? listedPriceValue(o.price_val)),
     hint: hintText(o.categories, o.categories_name_list, o.category, o.subject, o.tags, o.tags_name_list, o.genre),
+    ...sourceExtras(rawTags(o.categories_name_list ?? o.categories, o.category, o.subject, o.tags_name_list ?? o.tags, o.genre), laterDay(pick(o, END_KEYS), when.date)),
     ...withImage(imageAddress(pick(o, IMAGE_KEYS), feedUrl)),
   };
 }

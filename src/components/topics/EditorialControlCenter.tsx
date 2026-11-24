@@ -33,6 +33,7 @@ import { LookForPanel } from "@/components/settings/LookForPanel";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
 import { FeedLeadSettings } from "@/components/settings/FeedLeadSettings";
+import { EventCaptionsSettings } from "@/components/settings/EventCaptionsSettings";
 import { FeedLookEditor } from "@/components/settings/look/FeedLookEditor";
 import { PublisherPhotosSetting } from "@/components/settings/PublisherPhotosSetting";
 import { FEATURES, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
@@ -215,6 +216,7 @@ export function EditorialControlCenter({
           onSaved={(values) => patch(values)}
         />
         <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} currency={topic.event_currency} photos={topic.event_photos_enabled} onSaved={(values) => patch(values)} />
+        {topic.events_enabled && <EventCaptionsSettings topicId={topic.id} />}
         <PublisherPhotosSetting topicId={topic.id} value={topic.use_publisher_photos} onSaved={(values) => patch(values)} />
         <RememberedFold foldKey="brand-more" label="More options">
           <div className="space-y-12">
