@@ -1,2 +1,3 @@
 - Maybe-undefined optional values go through `opt()`/`definedOnly()` (`src/lib/optionalProps.ts`); keeps strict types without changing runtime.
 - Feed look: `branding_config.top_bar_color`/`feed_background_color` hold hex or "brand"; unset means the default look, so `feedSurfaceStyles()` returns no tokens and existing feeds stay untouched.
+- Event editorial copy is generic (feed_editorial_profiles, event_copy, event_captions, event_field_edits); captions are assembled by code here, AI never writes facts.

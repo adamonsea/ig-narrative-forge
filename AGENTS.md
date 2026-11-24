@@ -43,4 +43,3 @@
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
 - Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
-- Event editorial copy is generic: per-feed `feed_editorial_profiles`, text in `event_copy` (event × language × kind), captions in `event_captions`, hand-edit locks in `event_field_edits`; captions are assembled by code in `src/lib/editorial/captionAssembler.ts`, AI never writes facts; any feed can use it without feed-specific columns.
