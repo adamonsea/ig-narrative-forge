@@ -70,6 +70,8 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   e("share", "Website widget", "Your latest headlines on any website.", ["embed", "widget"]),
   e("share", "RSS", "A live feed for reader apps.", ["feed reader", "xml"]),
   e("share", "AI assistants", "Let ChatGPT or Claude read the feed.", ["mcp", "chatgpt", "claude"]),
+  e("share", "API token", "Read-only access to your events.", ["api", "developer", "json", "token", "key"]),
+  e("share", "Include photos", "Event photos in the API.", ["api", "photos", "images"]),
 
   e("extras", "Trending", "Most interacted-with stories in 24 hours.", ["momentum", "popular"], "trending"),
   e("extras", "Donations", "Let readers support the feed.", ["support", "money", "tips", "stripe"]),

@@ -1668,6 +1668,60 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_api_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          last_used_at: string | null
+          revoked_at: string | null
+          rl_count: number
+          rl_window_start: string
+          token_hash: string
+          token_prefix: string
+          topic_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          rl_count?: number
+          rl_window_start?: string
+          token_hash: string
+          token_prefix: string
+          topic_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          rl_count?: number
+          rl_window_start?: string
+          token_hash?: string
+          token_prefix?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_api_tokens_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_api_tokens_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_clicks: {
         Row: {
           click_date: string
@@ -5613,6 +5667,7 @@ export type Database = {
       }
       topics: {
         Row: {
+          api_include_photos: boolean
           archived_at: string | null
           archived_by: string | null
           audience_expertise:
@@ -5696,6 +5751,7 @@ export type Database = {
           weekly_email_enabled: boolean
         }
         Insert: {
+          api_include_photos?: boolean
           archived_at?: string | null
           archived_by?: string | null
           audience_expertise?:
@@ -5779,6 +5835,7 @@ export type Database = {
           weekly_email_enabled?: boolean
         }
         Update: {
+          api_include_photos?: boolean
           archived_at?: string | null
           archived_by?: string | null
           audience_expertise?:
@@ -6731,6 +6788,7 @@ export type Database = {
         Args: { p_from: string; p_to?: string; p_topic_id: string }
         Returns: number
       }
+      create_feed_api_token: { Args: { p_topic_id: string }; Returns: string }
       create_story_from_multi_tenant: {
         Args: {
           p_shared_content_id: string
@@ -6784,6 +6842,22 @@ export type Database = {
         Returns: undefined
       }
       emergency_manual_scrape: { Args: { p_topic_id?: string }; Returns: Json }
+      feed_api_events: {
+        Args: {
+          p_category?: string
+          p_feed: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_to?: string
+          p_token_hash: string
+        }
+        Returns: Json
+      }
+      feed_api_use_token: {
+        Args: { p_hash: string; p_per_minute?: number }
+        Returns: Json
+      }
       find_duplicate_articles: {
         Args: { p_article_id: string; p_similarity_threshold?: number }
         Returns: {
@@ -6980,6 +7054,7 @@ export type Database = {
         }[]
       }
       get_event_editorial: { Args: { p_event_id: string }; Returns: Json }
+      get_feed_api_status: { Args: { p_topic_id: string }; Returns: Json }
       get_feed_editorial_profile: {
         Args: { p_topic_id: string }
         Returns: Json
@@ -7797,6 +7872,10 @@ export type Database = {
         Args: { p_category: string; p_event_ids: string[]; p_topic_id: string }
         Returns: number
       }
+      revoke_feed_api_token: {
+        Args: { p_topic_id: string }
+        Returns: undefined
+      }
       run_nightly_topic_backups: { Args: never; Returns: Json }
       safe_cleanup_inactive_sources: {
         Args: never
@@ -7826,6 +7905,10 @@ export type Database = {
       set_event_source_auto_publish: {
         Args: { p_on: boolean; p_source_id: string }
         Returns: number
+      }
+      set_feed_api_photos: {
+        Args: { p_on: boolean; p_topic_id: string }
+        Returns: undefined
       }
       set_feed_handle: {
         Args: { p_slug: string; p_topic_id: string }
@@ -7895,6 +7978,15 @@ export type Database = {
       topic_has_active_signups: {
         Args: { p_topic_id: string }
         Returns: boolean
+      }
+      topic_reader_events: {
+        Args: { p_topic_id: string }
+        Returns: {
+          id: string
+          start_date: string
+          start_time: string
+          title: string
+        }[]
       }
       topic_reading_now: { Args: { p_topic_id: string }; Returns: number }
       topic_reads: {

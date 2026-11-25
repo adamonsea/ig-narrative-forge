@@ -39,6 +39,7 @@ import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
 import { FeedLeadSettings } from "@/components/settings/FeedLeadSettings";
 import { FeedHandleSetting } from "@/components/settings/FeedHandleSetting";
+import { FeedApiSetting } from "@/components/settings/FeedApiSetting";
 import { ShowEventsInFeedSetting } from "@/components/settings/ShowEventsInFeedSetting";
 import { EventCaptionsSettings } from "@/components/settings/EventCaptionsSettings";
 import { FeedLookEditor } from "@/components/settings/look/FeedLookEditor";
@@ -398,6 +399,7 @@ export function EditorialControlCenter({
               <div id="ai-assistants-heading" className="scroll-mt-24">
                 <AiAssistantAccess topicId={topic.id} topicSlug={topic.slug} topicName={topic.name} enabled={topic.mcp_enabled || false} access={topic.mcp_access === "open" ? "open" : "key"} onChange={(values) => patch(values)} onEnabledChange={(checked) => onChannelToggle("mcp_enabled", checked, "AI assistants")} />
               </div>
+              <div id="api" className="scroll-mt-24"><FeedApiSetting topicId={topic.id} slug={topic.slug} /></div>
             </SettingGroup>
           </Page>
         )}

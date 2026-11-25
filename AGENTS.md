@@ -43,3 +43,5 @@
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
 - Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
+- Feed API (`/api/public/feed-api/v1/*`, shaping in `src/lib/feedApi/`) reads only via guarded `feed_api_events` (hashed per-feed token, 60/min, same `topic_reader_events` set as the public feed); new resources (stories, pins) reuse the same envelope and token, and `feedApiAllowed()` is the paid-plan hook.
+- RSS enclosures carry only Curatr illustrations (`illustration_generated_at` set, our storage, not `publisher-N`); uncredited source photos never leave via RSS.

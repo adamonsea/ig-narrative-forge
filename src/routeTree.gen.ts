@@ -52,6 +52,7 @@ import { Route as FeedSlugReviewReviewSlugRouteImport } from './routes/feed/$slu
 import { Route as FeedSlugStoryStoryIdRouteImport } from './routes/feed/$slug/story/$storyId'
 import { Route as FeedSlugWeeklyWeekStartRouteImport } from './routes/feed/$slug/weekly/$weekStart'
 import { Route as FeedTopicSlugIndexRouteImport } from './routes/feed/topic/$slug/index'
+import { Route as ApiPublicFeedApiV1EventsRouteImport } from './routes/api/public/feed-api/v1/events'
 import { Route as DashboardTopicSlugSettingsIndexRouteImport } from './routes/dashboard/topic/$slug_.settings.index'
 import { Route as DashboardTopicSlugSettingsSectionRouteImport } from './routes/dashboard/topic/$slug_.settings.$section'
 import { Route as FeedTopicSlugStoryStoryIdRouteImport } from './routes/feed/topic/$slug/story/$storyId'
@@ -272,6 +273,12 @@ const FeedTopicSlugIndexRoute = FeedTopicSlugIndexRouteImport.update({
   path: '/feed/topic/$slug/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicFeedApiV1EventsRoute =
+  ApiPublicFeedApiV1EventsRouteImport.update({
+    id: '/api/public/feed-api/v1/events',
+    path: '/api/public/feed-api/v1/events',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardTopicSlugSettingsIndexRoute =
   DashboardTopicSlugSettingsIndexRouteImport.update({
     id: '/dashboard/topic/$slug_/settings/',
@@ -335,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/feed/$slug/story/$storyId': typeof FeedSlugStoryStoryIdRoute
   '/feed/$slug/weekly/$weekStart': typeof FeedSlugWeeklyWeekStartRoute
   '/feed/topic/$slug/': typeof FeedTopicSlugIndexRoute
+  '/api/public/feed-api/v1/events': typeof ApiPublicFeedApiV1EventsRoute
   '/dashboard/topic/$slug/settings/$section': typeof DashboardTopicSlugSettingsSectionRoute
   '/feed/topic/$slug/story/$storyId': typeof FeedTopicSlugStoryStoryIdRoute
   '/dashboard/topic/$slug/settings/': typeof DashboardTopicSlugSettingsIndexRoute
@@ -382,6 +390,7 @@ export interface FileRoutesByTo {
   '/feed/$slug/story/$storyId': typeof FeedSlugStoryStoryIdRoute
   '/feed/$slug/weekly/$weekStart': typeof FeedSlugWeeklyWeekStartRoute
   '/feed/topic/$slug': typeof FeedTopicSlugIndexRoute
+  '/api/public/feed-api/v1/events': typeof ApiPublicFeedApiV1EventsRoute
   '/dashboard/topic/$slug/settings/$section': typeof DashboardTopicSlugSettingsSectionRoute
   '/feed/topic/$slug/story/$storyId': typeof FeedTopicSlugStoryStoryIdRoute
   '/dashboard/topic/$slug/settings': typeof DashboardTopicSlugSettingsIndexRoute
@@ -431,6 +440,7 @@ export interface FileRoutesById {
   '/feed/$slug/story/$storyId': typeof FeedSlugStoryStoryIdRoute
   '/feed/$slug/weekly/$weekStart': typeof FeedSlugWeeklyWeekStartRoute
   '/feed/topic/$slug/': typeof FeedTopicSlugIndexRoute
+  '/api/public/feed-api/v1/events': typeof ApiPublicFeedApiV1EventsRoute
   '/dashboard/topic/$slug_/settings/$section': typeof DashboardTopicSlugSettingsSectionRoute
   '/feed/topic/$slug/story/$storyId': typeof FeedTopicSlugStoryStoryIdRoute
   '/dashboard/topic/$slug_/settings/': typeof DashboardTopicSlugSettingsIndexRoute
@@ -481,6 +491,7 @@ export interface FileRouteTypes {
     | '/feed/$slug/story/$storyId'
     | '/feed/$slug/weekly/$weekStart'
     | '/feed/topic/$slug/'
+    | '/api/public/feed-api/v1/events'
     | '/dashboard/topic/$slug/settings/$section'
     | '/feed/topic/$slug/story/$storyId'
     | '/dashboard/topic/$slug/settings/'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/feed/$slug/story/$storyId'
     | '/feed/$slug/weekly/$weekStart'
     | '/feed/topic/$slug'
+    | '/api/public/feed-api/v1/events'
     | '/dashboard/topic/$slug/settings/$section'
     | '/feed/topic/$slug/story/$storyId'
     | '/dashboard/topic/$slug/settings'
@@ -576,6 +588,7 @@ export interface FileRouteTypes {
     | '/feed/$slug/story/$storyId'
     | '/feed/$slug/weekly/$weekStart'
     | '/feed/topic/$slug/'
+    | '/api/public/feed-api/v1/events'
     | '/dashboard/topic/$slug_/settings/$section'
     | '/feed/topic/$slug/story/$storyId'
     | '/dashboard/topic/$slug_/settings/'
@@ -616,6 +629,7 @@ export interface RootRouteChildren {
   DashboardWidgetsTestRoute: typeof DashboardWidgetsTestRoute
   DashboardWidgetsIndexRoute: typeof DashboardWidgetsIndexRoute
   FeedTopicSlugIndexRoute: typeof FeedTopicSlugIndexRoute
+  ApiPublicFeedApiV1EventsRoute: typeof ApiPublicFeedApiV1EventsRoute
   DashboardTopicSlugSettingsSectionRoute: typeof DashboardTopicSlugSettingsSectionRoute
   FeedTopicSlugStoryStoryIdRoute: typeof FeedTopicSlugStoryStoryIdRoute
   DashboardTopicSlugSettingsIndexRoute: typeof DashboardTopicSlugSettingsIndexRoute
@@ -924,6 +938,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedTopicSlugIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/feed-api/v1/events': {
+      id: '/api/public/feed-api/v1/events'
+      path: '/api/public/feed-api/v1/events'
+      fullPath: '/api/public/feed-api/v1/events'
+      preLoaderRoute: typeof ApiPublicFeedApiV1EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/topic/$slug_/settings/': {
       id: '/dashboard/topic/$slug_/settings/'
       path: '/dashboard/topic/$slug/settings'
@@ -1011,6 +1032,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardWidgetsTestRoute: DashboardWidgetsTestRoute,
   DashboardWidgetsIndexRoute: DashboardWidgetsIndexRoute,
   FeedTopicSlugIndexRoute: FeedTopicSlugIndexRoute,
+  ApiPublicFeedApiV1EventsRoute: ApiPublicFeedApiV1EventsRoute,
   DashboardTopicSlugSettingsSectionRoute:
     DashboardTopicSlugSettingsSectionRoute,
   FeedTopicSlugStoryStoryIdRoute: FeedTopicSlugStoryStoryIdRoute,

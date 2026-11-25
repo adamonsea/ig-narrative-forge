@@ -4,6 +4,7 @@ import { ReadershipPanel } from "@/components/readership/ReadershipPanel";
 import { TopicPulseProvider } from "@/hooks/useTopicPulse";
 import { ReadingNow, MilestoneNote, DeskLookTracker } from "@/components/pulse/PulseBits";
 import { useParams, Link, useSearchParams, useNavigate } from "@/lib/router-compat";
+import { resolveRenamedFeed } from "@/lib/shareMeta";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
@@ -209,7 +210,15 @@ const TopicDashboard = () => {
         .single();
 
       if (topicError) {
-        if (topicError.code === 'PGRST116') throw new Error('Topic not found');
+        if (topicError.code === 'PGRST116') {
+          // Renamed handle: move to the feed's current address, same page.
+          const current = slug ? await resolveRenamedFeed(slug) : null;
+          if (current && current !== slug) {
+            navigate(window.location.pathname.replace(`/topic/${slug}`, `/topic/${current}`) + window.location.search + window.location.hash, { replace: true });
+            return;
+          }
+          throw new Error('Topic not found');
+        }
         throw topicError;
       }
 
