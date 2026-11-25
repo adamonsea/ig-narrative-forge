@@ -37,7 +37,7 @@ const Scene = ({ id, label }: { id: HomeSceneId; label: string }) => (
 );
 
 const HERO_LINE_1 = 'Run your own';
-const HERO_LINE_2 = 'news desk...';
+const HERO_LINE_2 = 'news desks...';
 
 /** Blinking typewriter caret. */
 const Caret = () => (
