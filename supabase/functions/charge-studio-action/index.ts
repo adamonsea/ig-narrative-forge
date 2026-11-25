@@ -71,8 +71,8 @@ serve(async (req) => {
     });
 
     if (error || !data?.success) {
-      return new Response(JSON.stringify({ error: data?.error || 'Not enough credits' }), {
-        status: 400,
+      return new Response(JSON.stringify({ success: false, error: 'Not enough credits to render this reel.' }), {
+        status: 200, // expected outcome; the studio shows the message
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
