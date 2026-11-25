@@ -386,6 +386,14 @@ export default function DesignSystem() {
                 <div key={`s${settleKey}`} className="settle-in rounded-xl border border-border bg-card p-3 text-base">New arrival</div>
                 <Button variant="ghost" size="sm" onClick={() => setSettleKey((k) => k + 1)}>Replay</Button>
               </Spec>
+              <Spec name="setup-land · setup-slide · setup-drop (create a feed)">
+                <div key={`su${settleKey}`} className="space-y-2">
+                  <span className="setup-land inline-flex h-[54px] items-center rounded-full border-[1.5px] border-border bg-card px-5 text-lg font-medium">Source lands</span>
+                  <div className="setup-slide w-[150px] rounded-2xl border border-border bg-card p-3 text-[15px] font-medium">Event slides in</div>
+                  <div className="setup-drop rounded-2xl border border-border bg-card p-3 text-base font-semibold">Story drops in</div>
+                  <div className="relative h-[3px] w-48 overflow-hidden rounded-full bg-muted"><div className="setup-sweep h-full w-[30%] bg-gradient-to-r from-transparent via-pop to-transparent" /></div>
+                </div>
+              </Spec>
               <Spec name="flow-out · skip-out">
                 <div className="space-y-2">
                   <div key={`fo${settleKey}`} className="flow-out rounded-xl border border-border bg-card p-3 text-base">Published: toward Live now</div>

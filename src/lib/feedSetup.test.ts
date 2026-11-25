@@ -62,3 +62,11 @@ describe("feed setup", () => {
     expect(topicInsertFromDraft(draftFromSuggestion(eastbourne), "e", "u").branding_config).toEqual({ subheader: "Pokémon news, every day." });
   });
 });
+
+import { looksLikePlace } from "./feedSetup";
+describe("looksLikePlace", () => {
+  test("treats a town name as a place", () => expect(looksLikePlace("Eastbourne")).toBe(true));
+  test("treats 'Jazz in Brighton' as a place", () => expect(looksLikePlace("Jazz in Brighton")).toBe(true));
+  test("treats Pokémon as niche", () => expect(looksLikePlace("Pokémon")).toBe(false));
+  test("treats lowercase subjects as niche", () => expect(looksLikePlace("life sciences")).toBe(false));
+});

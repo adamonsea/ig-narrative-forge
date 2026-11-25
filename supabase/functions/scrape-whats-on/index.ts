@@ -17,6 +17,7 @@ import { cleanupPhotos, removePhotosOf, savePhotos } from './eventPhotos.ts';
  *   { action: 'update', sourceId, name?, url? }            owner: rename and/or change the address
  *   { action: 'refresh', sourceId }                        owner: re-check one source
  *   { action: 'remove', sourceId }                         owner: remove a source and its upcoming events
+ *   { action: 'find', name, region?, topicType? }         owner (create-a-feed): what's-on addresses with upcoming events, nothing saved
  *   { action: 'discover', topicId, url? }                  owner: organiser ticket shop addresses for this feed (platforms.ts), unread
  *                                                          and never filtered by place; with a platform link, every shop on it
  *   { action: 'suggest', topicId, title, date, time?, venue, url, visitorId, website? }  anyone: a reader's event suggestion (Waiting only)
@@ -34,7 +35,8 @@ import { cleanupPhotos, removePhotosOf, savePhotos } from './eventPhotos.ts';
  */
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { automationGate } from '../_shared/allowance.ts';
+import { automationGate, meterUsage } from '../_shared/allowance.ts';
+import { findCandidates, findConfidence, findQueries, FIND_TICKED, rankFound, type FoundSource } from './find.ts';
 import { z } from 'npm:zod@3';
 import { getUser, userOwnsTopic, isServiceRole } from '../_shared/auth.ts';
 import { addDays, londonToday } from './extract.ts';
@@ -60,6 +62,7 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('remove'), sourceId: z.string().uuid() }),
   z.object({ action: z.literal('refresh_all') }),
   z.object({ action: z.literal('discover'), topicId: z.string().uuid(), url: Url.optional() }),
+  z.object({ action: z.literal('find'), name: z.string().trim().min(2).max(120), region: z.string().trim().max(120).nullable().optional(), topicType: z.enum(['regional', 'keyword']).optional() }),
   z.object({ action: z.literal('editorial_copy'), eventId: z.string().uuid(), dryRun: z.boolean().optional(), force: z.boolean().optional(), postDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
   z.object({
     action: z.literal('suggest'), topicId: z.string().uuid(),
@@ -640,6 +643,28 @@ Deno.serve(async (req) => {
       const result = await generateEventCopy(supabase, { eventId: body.eventId, dryRun: body.dryRun, force: body.force, postDate: body.postDate });
       // Out of credits is an expected outcome (approval writes run in the background), not a failure
       return json(result, result.error && result.error !== 'Not enough credits' ? 400 : 200);
+    }
+
+    if (body.action === 'find') {
+      if (!firecrawlAvailable()) return json({ success: true, suggestions: [] });
+      const regional = body.topicType === 'regional' && !!body.region;
+      const term = regional ? body.region! : body.name;
+      const links = (await Promise.all([...findQueries(term, regional), ...discoveryQueries(term)].map((q) => firecrawlSearch(q, 10)))).flat();
+      const today = londonToday();
+      const found: FoundSource[] = (await Promise.all(findCandidates(links).map(async (url) => {
+        try {
+          const kind = ticketShopOrigin(url) ? 'ticket_shop' : await detectKind(url);
+          const r = await Promise.race([readSafely(readerFor(kind), url, hostOf(url)), new Promise<ReaderResult>((res) => setTimeout(() => res({ events: [], method: null, name: hostOf(url) }), 20000))]);
+          const upcoming = r.events.filter((e) => e.start_date >= today).sort((a, b) => a.start_date.localeCompare(b.start_date));
+          return { url, name: r.name || hostOf(url), kind, count: upcoming.length, samples: upcoming.slice(0, 2).map((e) => ({ title: e.title, date: e.start_date })), confidence_score: findConfidence(upcoming.length) };
+        } catch { return null; }
+      }))).filter((f): f is FoundSource => !!f);
+      if (user) {
+        const { data: sa } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'superadmin' });
+        await meterUsage(supabase, { payerId: user.id, topicId: null, actor: 'user', kind: 'suggestion', credits: 1, chargeUser: true, bypass: sa === true, refId: 'event-sources' }).catch(() => {});
+      }
+      const ranked = rankFound(found);
+      return json({ success: true, suggestions: ranked, ticked: ranked.slice(0, FIND_TICKED).map((f) => f.url) });
     }
 
     if (body.action === 'discover') {

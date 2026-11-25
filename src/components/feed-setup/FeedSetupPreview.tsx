@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { BRAND_COLOURS, PICTURE_LABELS, type FeedSetupDraft, type PictureChoice } from "@/lib/feedSetup";
+import { BRAND_COLOURS, PICTURE_LABELS, type EventSourceSuggestion, type FeedSetupDraft, type PictureChoice } from "@/lib/feedSetup";
 import { TermList } from "./TermList";
 import { FEATURES } from "@/lib/featureFlags";
 import { InfoHint } from "@/components/ui/editorial";
@@ -53,6 +53,9 @@ export function FeedSetupPreview({
   selected,
   onToggleSource,
   onAddSource,
+  eventSources = [],
+  eventSelected,
+  onToggleEventSource,
   nameLocked = false,
 }: {
   draft: FeedSetupDraft;
@@ -61,6 +64,9 @@ export function FeedSetupPreview({
   selected: Set<string>;
   onToggleSource: (url: string) => void;
   onAddSource: (url: string) => string | null;
+  eventSources?: EventSourceSuggestion[] | undefined;
+  eventSelected?: Set<string> | undefined;
+  onToggleEventSource?: ((url: string) => void) | undefined;
   nameLocked?: boolean | undefined;
 }) {
   const [newSource, setNewSource] = useState("");
@@ -176,6 +182,33 @@ export function FeedSetupPreview({
           </Button>
         </div>
         {sourceError && <p className="text-sm text-destructive">{sourceError}</p>}
+        {eventSources.length > 0 && (
+          <div className="space-y-2 pt-2">
+            <h4 className="text-sm font-semibold text-muted-foreground">What's on</h4>
+            <ul className="flex flex-wrap gap-2">
+              {eventSources.map((s) => {
+                const on = !!eventSelected?.has(s.url);
+                return (
+                  <li key={s.url}>
+                    <button
+                      type="button"
+                      onClick={() => onToggleEventSource?.(s.url)}
+                      aria-pressed={on}
+                      title={s.samples[0] ? `${s.count} upcoming, e.g. ${s.samples[0].title}` : `${s.count} upcoming`}
+                      className={cn(
+                        "inline-flex max-w-[260px] items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        on ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground line-through decoration-muted-foreground/50",
+                      )}
+                    >
+                      {on && <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />}
+                      <span className="truncate">{s.name}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </Row>
 
       <section className="space-y-6 border-t border-border py-6">

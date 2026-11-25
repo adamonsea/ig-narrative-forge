@@ -611,6 +611,23 @@
   animation-duration: 1300ms;
 }
 
+
+/* Create-a-feed: sources land, the feed assembles (see /design → Motion) */
+@keyframes setup-land { from { opacity: 0; transform: translateY(-18px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes setup-slide { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: none; } }
+@keyframes setup-drop { from { opacity: 0; transform: translateY(-30px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes setup-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes setup-sweep { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+.setup-land { animation: setup-land .5s cubic-bezier(.2,.9,.3,1.25) both; }
+.setup-slide { animation: setup-slide .55s cubic-bezier(.2,.9,.3,1) both; }
+.setup-drop { animation: setup-drop .6s cubic-bezier(.2,.9,.3,1.15) both; }
+.setup-rise { animation: setup-rise .4s ease-out both; }
+.setup-sweep { animation: setup-sweep 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .setup-land, .setup-slide, .setup-drop, .setup-rise { animation: none; }
+  .setup-sweep { animation: none; transform: none; width: 100%; opacity: .5; }
+}
+
 /* Anything live: a ring in pop green by default; .live-pulse-light on the bright mint bar */
 @keyframes live-pulse {
   0% { box-shadow: 0 0 0 0 hsl(var(--pulse-colour) / 0.55); }

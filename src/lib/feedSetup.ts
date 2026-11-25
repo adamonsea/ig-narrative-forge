@@ -121,3 +121,27 @@ export function automationFromDraft(d: FeedSetupDraft, now = new Date()) {
         next_run_at: new Date(now.getTime() + 12 * 3600 * 1000).toISOString(),
       };
 }
+
+/**
+ * Quick guess while typing: does this sentence describe a place (so "Include what's on"
+ * starts on)? Single capitalised words or "in X"/"local" phrasing → place. The setup
+ * suggestion's topic_type replaces this guess once it arrives.
+ */
+const NICHE_HINTS = /\b(pok[eé]mon|science|sciences|tech|football|cycling|cyclo|crypto|games?|gaming|ai|fashion|music|beer|wine|food|politics|health|cars?|motorsport|anime|film|books?)\b/i;
+export function looksLikePlace(text: string): boolean {
+  const t = text.trim();
+  if (t.length < 2) return false;
+  if (/\b(in|around|near|local|town|city|village|borough|county)\b/i.test(t)) return true;
+  if (NICHE_HINTS.test(t)) return false;
+  const words = t.split(/\s+/);
+  return words.length <= 3 && words.every((w) => /^[A-ZÀ-Ý][\p{L}'-]*$/u.test(w));
+}
+
+export interface EventSourceSuggestion {
+  url: string;
+  name: string;
+  kind: string;
+  count: number;
+  samples: { title: string; date: string }[];
+  confidence_score: number;
+}

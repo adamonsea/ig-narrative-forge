@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowRight, ArrowLeft, X, Loader2, Plus, CheckCircle, ExternalLink, Newspaper, LayoutList } from "lucide-react";
+import { ArrowRight, ArrowLeft, X, Loader2, Plus, CheckCircle, LayoutList } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { FindingSources, type FoundChip } from "@/components/feed-setup/FindingSources";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { FeedBuildProgress } from "@/components/FeedBuildProgress";
-import { SourceScanLoop, ClippingStackLoop, SourceChipSkeletons, PulsingDots } from "@/components/onboarding/WaitingAnimations";
+import { PulsingDots } from "@/components/onboarding/WaitingAnimations";
 import { FeedSetupPreview, type SetupSource } from "@/components/feed-setup/FeedSetupPreview";
 import {
   slugify,
@@ -16,13 +18,10 @@ import {
   draftFromSuggestion,
   topicInsertFromDraft,
   automationFromDraft,
+  looksLikePlace,
+  type EventSourceSuggestion,
   type FeedSetupDraft,
 } from "@/lib/feedSetup";
-
-interface StoryPreview {
-  id: string;
-  title: string;
-}
 
 interface CreateTopicDialogProps {
   open: boolean;
@@ -34,17 +33,12 @@ interface CreateTopicDialogProps {
   initialKeywords?: string[] | undefined;
 }
 
-type Step = "about" | "name" | "thinking" | "sources" | "preview" | "building" | "done";
+type Step = "about" | "name" | "thinking" | "sources" | "preview" | "building";
 
 const EXAMPLES = ["Pokémon", "Eastbourne", "Jazz in Brighton", "Life sciences", "Cyclo-cross"];
 const MAX_NAME_LENGTH = 60;
 
-const THINKING_MESSAGES = [
-  "Choosing a name and colour…",
-  "Finding publications that cover this…",
-  "Checking each source works…",
-  "Deciding what to look for…",
-];
+const REVEAL_MS = 520;
 
 const BLOCKED_HOSTS = ["facebook.com", "twitter.com", "instagram.com", "tiktok.com", "reddit.com", "pinterest.com", "linkedin.com", "youtube.com", "medium.com"];
 
@@ -69,7 +63,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
 
   const [about, setAbout] = useState("");
   const [exampleIndex, setExampleIndex] = useState(0);
-  const [thinkingIndex, setThinkingIndex] = useState(0);
+  // "Include what's on": guessed from the sentence until the owner flips it
+  const [includeEvents, setIncludeEvents] = useState(false);
+  const [eventsTouched, setEventsTouched] = useState(false);
+  const [eventSources, setEventSources] = useState<EventSourceSuggestion[]>([]);
+  const [eventSelected, setEventSelected] = useState<Set<string>>(new Set());
 
   // "Set it up myself": the owner's own name
   const [manualName, setManualName] = useState("");
@@ -87,7 +85,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
   const [isCreating, setIsCreating] = useState(false);
   const [sourceFailures, setSourceFailures] = useState(0);
   const [attemptedSourceCount, setAttemptedSourceCount] = useState(0);
-  const [completedStories, setCompletedStories] = useState<StoryPreview[]>([]);
   const [buildError, setBuildError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,10 +93,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
   }, []);
 
   useEffect(() => {
-    if (step !== "thinking") { setThinkingIndex(0); return; }
-    const t = setInterval(() => setThinkingIndex((i) => (i + 1) % THINKING_MESSAGES.length), 2600);
-    return () => clearInterval(t);
-  }, [step]);
+    if (!eventsTouched) setIncludeEvents(looksLikePlace(about));
+  }, [about, eventsTouched]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -116,13 +111,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
     setSources([]);
     setSelected(new Set());
     setFindingSources(false);
+    setIncludeEvents(false);
+    setEventsTouched(false);
+    setEventSources([]);
+    setEventSelected(new Set());
     setTopicId(null);
     setTopicSlug("");
     setCreatedSourceIds([]);
     setIsCreating(false);
     setSourceFailures(0);
     setAttemptedSourceCount(0);
-    setCompletedStories([]);
     setBuildError(null);
   };
 
@@ -177,10 +175,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
     return data.setup;
   };
 
-  const fetchSources = async (d: FeedSetupDraft) => {
+  /** News and what's-on sources are searched together; events never hold up news. Returns how many were found. */
+  const fetchSources = async (d: FeedSetupDraft): Promise<number> => {
     setFindingSources(true);
-    try {
-      const { data } = await supabase.functions.invoke("suggest-content-sources", {
+    const wantEvents = eventsTouched ? includeEvents : d.topic_type === "regional";
+    if (!eventsTouched) setIncludeEvents(wantEvents);
+    const news = supabase.functions
+      .invoke("suggest-content-sources", {
         body: {
           topicName: d.name,
           description: d.description,
@@ -188,16 +189,28 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
           topicType: d.topic_type,
           region: d.region || undefined,
         },
-      });
-      const { list, picked } = rankSources((data?.suggestions || []) as SetupSource[]);
-      setSources(list);
-      setSelected(picked);
-    } catch {
-      setSources([]);
-      setSelected(new Set());
-    } finally {
-      setFindingSources(false);
-    }
+      })
+      .then(({ data }) => {
+        const { list, picked } = rankSources((data?.suggestions || []) as SetupSource[]);
+        setSources(list);
+        setSelected(picked);
+        return list.length;
+      })
+      .catch(() => { setSources([]); setSelected(new Set()); return 0; });
+    const events = wantEvents
+      ? supabase.functions
+          .invoke("scrape-whats-on", { body: { action: "find", name: d.name, region: d.region, topicType: d.topic_type } })
+          .then(({ data }) => {
+            const list = (data?.suggestions || []) as EventSourceSuggestion[];
+            setEventSources(list);
+            setEventSelected(new Set((data?.ticked as string[] | undefined) ?? list.slice(0, 3).map((e) => e.url)));
+            return list.length;
+          })
+          .catch(() => { setEventSources([]); setEventSelected(new Set()); return 0; })
+      : Promise.resolve(0).then((n) => { setEventSources([]); setEventSelected(new Set()); return n; });
+    const [a, b] = await Promise.all([news, events]);
+    setFindingSources(false);
+    return a + b;
   };
 
   /** Picks the first free name: "Name", then "Name 2", "Name 3"… */
@@ -222,7 +235,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
       const next = draftFromSuggestion(setup, name);
       if (initialKeywords?.length) next.keywords = Array.from(new Set([...next.keywords, ...initialKeywords.map((k) => k.toLowerCase())]));
       setDraft(next);
-      await fetchSources(next);
+      const found = await fetchSources(next);
+      // Let the found chips land before moving on
+      await new Promise((res) => setTimeout(res, found * REVEAL_MS + 1100));
       setStep("preview");
     } catch (e) {
       toast({ title: "Something went wrong", description: e instanceof Error ? e.message : "Please try again.", variant: "destructive" });
@@ -307,6 +322,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
       setAttemptedSourceCount(chosen.length);
       const sourceIds: string[] = [];
       let failures = 0;
+      const chosenEvents = eventSources.filter((e) => eventSelected.has(e.url));
+      if (chosenEvents.length > 0) {
+        const { error: eventsError } = await supabase.from("topics").update({ events_enabled: true } as any).eq("id", topicData.id);
+        if (eventsError) console.error("Events not switched on:", eventsError);
+      }
       for (const source of chosen) {
         try {
           const domain = new URL(source.url).hostname.replace("www.", "");
@@ -348,7 +368,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
       }
       setSourceFailures(failures);
       setCreatedSourceIds(sourceIds);
-      if (sourceIds.length === 0) setTimeout(() => setStep("done"), 1200);
     } catch (error) {
       console.error("Feed creation error:", error);
       const message = error instanceof Error ? error.message : "The feed could not be created";
@@ -359,15 +378,17 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
     }
   };
 
-  const handleBuildComplete = useCallback((stories: StoryPreview[]) => {
-    setCompletedStories(stories);
-    setStep("done");
-  }, []);
+  const toggleEventSource = (url: string) =>
+    setEventSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url); else next.add(url);
+      return next;
+    });
 
-  const handleBuildError = useCallback((error: string) => {
-    setBuildError(error);
-    setStep("done");
-  }, []);
+  const foundChips: FoundChip[] = [
+    ...sources.map((s) => ({ url: s.url, name: s.source_name, group: "news" as const })),
+    ...eventSources.map((e) => ({ url: e.url, name: e.name, group: "events" as const })),
+  ];
 
   if (!open) return null;
 
@@ -410,6 +431,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                         autoFocus
                         onKeyDown={(e) => { if (e.key === "Enter" && about.trim().length >= 2) handleAboutContinue(); }}
                       />
+                      <div className="flex items-center justify-center gap-3">
+                        <Switch
+                          id="setup-include-events"
+                          checked={includeEvents}
+                          onCheckedChange={(v) => { setEventsTouched(true); setIncludeEvents(v); }}
+                        />
+                        <label htmlFor="setup-include-events" className="text-base">Include what's on</label>
+                      </div>
                       <div className="text-center">
                         <button
                           type="button"
@@ -443,29 +472,20 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                   )}
 
                   {step === "thinking" && (
-                    <motion.div key="thinking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center space-y-8 py-6" aria-live="polite">
-                      <SourceScanLoop />
-                      <div className="space-y-2 text-center">
-                        <p className="text-lg font-semibold">Setting up "{about.trim()}"</p>
-                        <motion.p key={thinkingIndex} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-muted-foreground">
-                          {THINKING_MESSAGES[thinkingIndex]}
-                        </motion.p>
-                      </div>
-                      <SourceChipSkeletons count={6} />
+                    <motion.div key="thinking" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                      <FindingSources name={draft?.name || about.trim()} chips={foundChips} done={!!draft && !findingSources} />
                     </motion.div>
                   )}
 
                   {step === "sources" && (
                     <motion.div key="sources" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-                      <h1 className="text-center text-2xl font-semibold">Choose sources</h1>
                       {findingSources || !draft ? (
-                        <div className="flex flex-col items-center space-y-6 py-6" aria-live="polite">
-                          <SourceScanLoop />
-                          <p className="text-muted-foreground">Finding publications that cover "{manualName.trim()}"…</p>
-                          <SourceChipSkeletons count={6} />
-                        </div>
+                        <FindingSources name={manualName.trim()} chips={foundChips} done={false} />
                       ) : (
+                        <>
+                        <h1 className="text-center text-2xl font-semibold">Choose sources</h1>
                         <SourcesPicker sources={sources} selected={selected} onToggle={toggleSource} onAdd={addSource} onSelectAll={() => setSelected(new Set(sources.map((s) => s.url)))} />
+                        </>
                       )}
                     </motion.div>
                   )}
@@ -482,6 +502,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                         selected={selected}
                         onToggleSource={toggleSource}
                         onAddSource={addSource}
+                        eventSources={eventSources}
+                        eventSelected={eventSelected}
+                        onToggleEventSource={toggleEventSource}
                         nameLocked={manual}
                       />
                     </motion.div>
@@ -494,64 +517,26 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                           <p className="font-medium text-destructive">{buildError}</p>
                           <Button variant="outline" onClick={() => { setBuildError(null); setStep("preview"); }}>Back</Button>
                         </div>
-                      ) : topicId && createdSourceIds.length > 0 ? (
+                      ) : topicId && !isCreating ? (
                         <FeedBuildProgress
                           topicId={topicId}
-                          topicSlug={topicSlug}
                           topicName={draft?.name || ""}
+                          colour={draft?.colour || "#0B1522"}
                           sourceIds={createdSourceIds}
+                          eventSources={eventSources.filter((e) => eventSelected.has(e.url)).map((e) => ({ url: e.url, name: e.name, kind: e.kind }))}
                           connectedNote={sourceFailures > 0 ? `${createdSourceIds.length} of ${attemptedSourceCount} sources connected` : undefined}
-                          onComplete={handleBuildComplete}
-                          onError={handleBuildError}
+                          onSeeFeed={() => { const slug = topicSlug; handleClose(); window.open(`/@${slug}`, "_blank"); }}
+                          onOpenDesk={() => { const slug = topicSlug; onTopicCreated(slug); handleClose(); }}
                         />
                       ) : (
                         <div className="flex min-h-[40vh] flex-col items-center justify-center space-y-6" aria-live="polite">
-                          <ClippingStackLoop />
-                          <p className="text-muted-foreground">Creating your feed…</p>
+                          <p className="text-xl text-muted-foreground">Creating your feed…</p>
                           <PulsingDots />
                         </div>
                       )}
                     </motion.div>
                   )}
 
-                  {step === "done" && (
-                    <motion.div key="done" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center space-y-8">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/20">
-                        <CheckCircle className="h-8 w-8 text-accent-foreground" />
-                      </div>
-                      <div className="space-y-2 text-center">
-                        <h2 className="text-2xl font-semibold">
-                          {completedStories.length > 0 ? "Your feed is live" : "Your feed is set up"}
-                        </h2>
-                        <p className="text-muted-foreground">
-                          {completedStories.length > 0
-                            ? draft?.autopilot
-                              ? `${completedStories.length} stories so far. Autopilot will keep it up to date.`
-                              : `${completedStories.length} stories are waiting on your Desk.`
-                            : "Stories will appear as your sources publish them."}
-                        </p>
-                      </div>
-                      {completedStories.length > 0 && (
-                        <ul className="w-full max-w-sm space-y-2">
-                          {completedStories.slice(0, 3).map((story) => (
-                            <li key={story.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                              <Newspaper className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                              <span className="truncate text-sm">{story.title}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="flex w-full max-w-xs flex-col items-center gap-3">
-                        <Button size="lg" className="w-full gap-2" onClick={() => { const slug = topicSlug; handleClose(); window.open(`/@${slug}`, "_blank"); }}>
-                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                          See your feed
-                        </Button>
-                        <Button variant="ghost" className="text-muted-foreground" onClick={() => { const slug = topicSlug; onTopicCreated(slug); handleClose(); }}>
-                          Open the Desk
-                        </Button>
-                      </div>
-                    </motion.div>
-                  )}
                 </AnimatePresence>
               </div>
             </div>
