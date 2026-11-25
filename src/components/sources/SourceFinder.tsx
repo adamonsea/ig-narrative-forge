@@ -106,7 +106,7 @@ export function SourceFinder({ topicId, topicName, description = '', keywords, t
           .from('content_sources')
           .insert({
             source_name: s.source_name, feed_url: s.url, canonical_domain: domain, content_type: 'news',
-            credibility_score: Math.min(95, credibility), is_active: true,
+            credibility_score: Math.min(95, credibility), is_active: true, topic_id: topicId,
             source_type: s.type === 'RSS' ? 'rss' : 'website', ...opt("region", topicType === 'regional' ? region : null),
           })
           .select('id').single();

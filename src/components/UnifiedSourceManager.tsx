@@ -720,7 +720,8 @@ export const UnifiedSourceManager = ({
             is_blacklisted: false,
             region: currentTopic?.region || region,
             scraping_config: Object.keys(scrapingConfig).length > 0 ? scrapingConfig : null
-            // Note: No topic_id - we use junction table now
+            // Owners may only create sources tied to a feed they own (RLS); still linked via topic_sources.
+            topic_id: topicId,
           };
 
           const { data: newSourceData, error: createError } = await supabase

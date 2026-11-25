@@ -262,7 +262,8 @@ export const useTopicSources = () => {
         .from('content_sources')
         .insert(definedOnly({
           ...sourceData,
-          // Do not set topic_id here; link via topic_sources junction to avoid unique constraints
+          // Owners may only create sources tied to a feed they own (RLS); still linked via topic_sources.
+          ...(topicId ? { topic_id: topicId } : {}),
           credibility_score: sourceData.credibility_score || 70,
           content_type: sourceData.content_type || 'news',
           is_active: true,
