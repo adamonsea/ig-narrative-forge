@@ -40,6 +40,7 @@ export default function VerifySubscription() {
           // Store email for subscriber perks
           if (data.email) {
             localStorage.setItem(SUBSCRIBER_EMAIL_KEY, data.email.toLowerCase());
+            localStorage.setItem('subscriber_token', token);
           }
         } else {
           setStatus('error');

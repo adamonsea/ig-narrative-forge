@@ -6949,6 +6949,7 @@ export type Database = {
         Args: { p_email_hash: string; p_ip_hash?: string }
         Returns: boolean
       }
+      check_source_validate_rate: { Args: { p_user: string }; Returns: boolean }
       check_topic_slug_available: { Args: { p_slug: string }; Returns: boolean }
       cleanup_diane_abbott_stories_eastbourne: { Args: never; Returns: Json }
       cleanup_duplicate_articles: { Args: never; Returns: Json }
@@ -7521,8 +7522,9 @@ export type Database = {
         }[]
       }
       get_subscriber_status: {
-        Args: { p_email: string; p_topic_id: string }
+        Args: { p_token: string; p_topic_id: string }
         Returns: {
+          email: string
           email_verified: boolean
           notification_type: string
         }[]
@@ -8248,8 +8250,8 @@ export type Database = {
       upsert_subscriber_score: {
         Args: {
           p_best_streak: number
-          p_email: string
           p_like_count: number
+          p_token: string
           p_topic_id: string
           p_total_swipes: number
         }

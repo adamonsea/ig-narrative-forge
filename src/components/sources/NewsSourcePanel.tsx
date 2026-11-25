@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { rhythmSentence, type HealthVerdict } from "@/lib/sourceHealth";
 import { SourceDots } from "./SourceDots";
 import { SourceIcon } from "./SourceCard";
+import { useTrustGuard } from "@/hooks/useTrustGuard";
 import { Figure, BackfillFold, HealthLine, InfoTip, PanelSection } from "./SourcePanelParts";
 
 export interface NewsSourceView {
@@ -31,9 +32,9 @@ export interface NewsSourceSettings { feed_url: string; trust: boolean; trustDay
 
 /** Everything about one news source, in the same right-hand panel the Desk uses for stories. */
 export function NewsSourcePanel({
-  source, verdict, dots, gap, lastArrivalAt, gathering, testing, onClose, onGather, onBackfill, onArchive, onRestore, onRemove, onSave, onTest,
+  topicId, source, verdict, dots, gap, lastArrivalAt, gathering, testing, onClose, onGather, onBackfill, onArchive, onRestore, onRemove, onSave, onTest,
 }: {
-  source: NewsSourceView | null; verdict: HealthVerdict | null; dots: number[]; gap: number | null; lastArrivalAt: string | null;
+  topicId?: string | undefined; source: NewsSourceView | null; verdict: HealthVerdict | null; dots: number[]; gap: number | null; lastArrivalAt: string | null;
   gathering: boolean; testing: boolean; onClose: () => void; onGather: () => void; onBackfill: (days: number) => Promise<void> | void;
   onArchive: () => void; onRestore: () => void; onRemove: () => void; onSave: (s: NewsSourceSettings) => Promise<void> | void; onTest: () => void;
 }) {
@@ -41,6 +42,8 @@ export function NewsSourcePanel({
   const [trust, setTrust] = useState(false);
   const [trustDays, setTrustDays] = useState(1);
   const [saving, setSaving] = useState(false);
+  const trustCheck = useTrustGuard(topicId);
+  const broad = Boolean(source) && trustCheck({ url: source?.feed_url || source?.canonical_domain || "", name: source?.source_name ?? "" }) === "broad";
 
   useEffect(() => {
     setUrl(source?.feed_url ?? "");
@@ -121,10 +124,11 @@ export function NewsSourcePanel({
                 <Input id="source-link" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/feed" />
               </div>
               <div className="flex items-start gap-3">
-                <Checkbox id="source-trust" checked={trust} onCheckedChange={(c) => setTrust(c === true)} className="mt-0.5" />
+                <Checkbox id="source-trust" checked={trust} disabled={broad && !trust} onCheckedChange={(c) => setTrust(c === true && !broad)} className="mt-0.5" />
                 <Label htmlFor="source-trust" className="text-base font-normal leading-snug">Trust everything</Label>
                 <InfoTip label="About trust everything">Skips the relevance check. Keep the time window short.</InfoTip>
               </div>
+              {broad && <p className="text-sm text-muted-foreground">Broad site — keyword filtering recommended</p>}
               {trust && (
                 <Select value={String(trustDays)} onValueChange={(v) => setTrustDays(Number(v))}>
                   <SelectTrigger aria-label="Time window"><SelectValue /></SelectTrigger>

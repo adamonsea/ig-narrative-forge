@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.192.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
-import { isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
+import { isServiceRole, getUser, unauthorized, requireTopicManager } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -454,7 +454,19 @@ serve(async (req) => {
 
   try {
     const { url, sourceType, topicType, region, topicId, existingCanonicalDomain }: ValidationRequest = await req.json();
-    if (!isServiceRole(req) && !(await getUser(req))) return unauthorized(corsHeaders);
+    if (!isServiceRole(req)) {
+      const user = await getUser(req);
+      if (!user) return unauthorized(corsHeaders);
+      const svc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      if (topicId) {
+        const denied = await requireTopicManager(req, svc, topicId, corsHeaders);
+        if (denied) return denied;
+      }
+      const { data: allowed } = await svc.rpc('check_source_validate_rate', { p_user: user.id });
+      if (allowed === false) {
+        return new Response(JSON.stringify({ success: false, error: 'Too many checks. Try again in an hour.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
 
     console.log('🔍 Validating source:', { url, sourceType, topicType, existingCanonicalDomain });
 

@@ -11,7 +11,7 @@ interface SubscriberScore {
 }
 
 export const useSubscriberScores = (topicId: string | null) => {
-  const { isVerifiedSubscriber, email } = useSubscriberStatus(topicId);
+  const { isVerifiedSubscriber, email, token } = useSubscriberStatus(topicId);
   const [score, setScore] = useState<SubscriberScore | null>(null);
   const [leaderboard, setLeaderboard] = useState<Array<{
     email: string;
@@ -91,9 +91,9 @@ export const useSubscriberScores = (topicId: string | null) => {
     if (!topicId || !email || !isVerifiedSubscriber) return;
 
     try {
-      const { error } = await supabase.rpc('upsert_subscriber_score', {
+      const { error } = await (supabase as any).rpc('upsert_subscriber_score', {
         p_topic_id: topicId,
-        p_email: email,
+        p_token: token,
         p_total_swipes: sessionStats.totalSwipes,
         p_like_count: sessionStats.likeCount,
         p_best_streak: sessionStats.bestStreak,
@@ -106,7 +106,7 @@ export const useSubscriberScores = (topicId: string | null) => {
     } catch (err) {
       console.error('Score update failed:', err);
     }
-  }, [topicId, email, isVerifiedSubscriber, fetchScore]);
+  }, [topicId, email, token, isVerifiedSubscriber, fetchScore]);
 
   return {
     score,

@@ -4,17 +4,21 @@ import { supabase } from '@/integrations/supabase/client';
 interface SubscriberStatus {
   isVerifiedSubscriber: boolean;
   email: string | null;
+  token: string | null;
   subscribedTypes: string[];
   loading: boolean;
 }
 
 // Store email in localStorage after verification for subscriber perks
 const SUBSCRIBER_EMAIL_KEY = 'subscriber_email';
+// Private code from the verification link; proves this browser is the subscriber
+export const SUBSCRIBER_TOKEN_KEY = 'subscriber_token';
 
 export const useSubscriberStatus = (topicId: string | null) => {
   const [status, setStatus] = useState<SubscriberStatus>({
     isVerifiedSubscriber: false,
     email: null,
+        token: null,
     subscribedTypes: [],
     loading: true
   });
@@ -27,11 +31,13 @@ export const useSubscriberStatus = (topicId: string | null) => {
 
     // Check if we have a stored email from verification
     const storedEmail = localStorage.getItem(SUBSCRIBER_EMAIL_KEY);
+    const storedToken = localStorage.getItem(SUBSCRIBER_TOKEN_KEY);
     
-    if (!storedEmail) {
+    if (!storedEmail || !storedToken) {
       setStatus({
         isVerifiedSubscriber: false,
         email: null,
+        token: null,
         subscribedTypes: [],
         loading: false
       });
@@ -42,7 +48,7 @@ export const useSubscriberStatus = (topicId: string | null) => {
       const { data, error } = await (supabase as any)
         .rpc('get_subscriber_status', {
           p_topic_id: topicId,
-          p_email: storedEmail,
+          p_token: storedToken,
         });
 
       if (error) {
@@ -59,6 +65,7 @@ export const useSubscriberStatus = (topicId: string | null) => {
       setStatus({
         isVerifiedSubscriber: verifiedTypes.length > 0,
         email: storedEmail,
+        token: storedToken,
         subscribedTypes: verifiedTypes,
         loading: false
       });
@@ -81,9 +88,11 @@ export const useSubscriberStatus = (topicId: string | null) => {
   // Method to clear subscriber email (logout equivalent)
   const clearSubscriberEmail = useCallback(() => {
     localStorage.removeItem(SUBSCRIBER_EMAIL_KEY);
+    localStorage.removeItem(SUBSCRIBER_TOKEN_KEY);
     setStatus({
       isVerifiedSubscriber: false,
       email: null,
+        token: null,
       subscribedTypes: [],
       loading: false
     });

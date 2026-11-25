@@ -181,6 +181,7 @@ export function SourceShelves(p: SourceShelvesProps) {
       )}
 
       <NewsSourcePanel
+        topicId={p.topicId}
         source={newsOpen?.source ?? null} verdict={newsOpen?.verdict ?? null} dots={newsOpen?.dots ?? []} gap={newsOpen?.gap ?? null}
         lastArrivalAt={newsOpen?.lastArrivalAt ?? null}
         gathering={Boolean(newsOpen && p.gatheringId === newsOpen.source.id)} testing={Boolean(newsOpen && p.testingId === newsOpen.source.id)}

@@ -16,6 +16,8 @@ import { ShopSuggestions } from './ShopSuggestions';
 import { isOrganiserShop, ticketPlatformOf } from '@/lib/ticketPlatforms';
 import { addSourceNameFromLink, addSourceHost } from '@/lib/addSource';
 
+import { useTrustGuard } from "@/hooks/useTrustGuard";
+
 export interface NewNewsSource { name: string; url: string; trust: boolean; trustDays: number }
 
 type Step = 'link' | 'news' | 'events' | 'find';
@@ -39,6 +41,7 @@ export function AddSourceSheet({
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
   const [trust, setTrust] = useState(false);
+  const trustCheck = useTrustGuard(topicId);
   const [trustDays, setTrustDays] = useState(1);
   const [adding, setAdding] = useState(false);
 
@@ -47,6 +50,7 @@ export function AddSourceSheet({
   }, [open]);
 
   const host = addSourceHost(url);
+  const broad = Boolean(url.trim()) && trustCheck({ url: url.trim(), name }) === "broad";
   const platform = step === 'events' ? ticketPlatformOf(url) : null;
   const organiser = platform ? isOrganiserShop(url) : false;
   const next = () => {
@@ -57,7 +61,7 @@ export function AddSourceSheet({
 
   const addNews = async () => {
     setAdding(true);
-    const ok = await onAddNews({ name: name.trim(), url: url.trim(), trust, trustDays });
+    const ok = await onAddNews({ name: name.trim(), url: url.trim(), trust: trust && !broad, trustDays });
     setAdding(false);
     if (ok) onOpenChange(false);
   };
@@ -121,8 +125,9 @@ export function AddSourceSheet({
                         <TooltipContent className="max-w-xs">Skips the relevance check. Keep the time window short.</TooltipContent>
                       </Tooltip>
                     </div>
-                    <Switch id="add-source-trust" checked={trust} onCheckedChange={setTrust} />
+                    <Switch id="add-source-trust" checked={trust && !broad} disabled={broad} onCheckedChange={setTrust} />
                   </div>
+                  {broad && <p className="text-sm text-muted-foreground">Broad site — keyword filtering recommended</p>}
                   {trust && (
                     <Select value={String(trustDays)} onValueChange={(v) => setTrustDays(Number(v))}>
                       <SelectTrigger aria-label="Time window"><SelectValue /></SelectTrigger>
