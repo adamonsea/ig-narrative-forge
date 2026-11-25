@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { automationGate } from '../_shared/allowance.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { checkAnonymity } from '../_shared/anonymity-guard.ts';
+import { requireTopicManager, requireSystemOrAdmin } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,6 +49,12 @@ Deno.serve(async (req) => {
     }
 
     const { topicId, storyIds, dryRun, maxIllustrations } = validated.data;
+    {
+      const denied = topicId
+        ? await requireTopicManager(req, supabase, topicId, corsHeaders)
+        : await requireSystemOrAdmin(req, supabase, corsHeaders);
+      if (denied) return denied;
+    }
 
     console.log('Auto-illustrate request:', { topicId, storyIds, dryRun, maxIllustrations });
 
