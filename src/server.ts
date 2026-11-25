@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { permanentFeedRedirect } from "./lib/feedHandle";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -49,6 +50,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
 // twice and renders garbled.
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // Old /feed/{slug}/... (and /feed/topic/{slug}/...) links move permanently to /@{slug}/..., path and query kept.
+    const moved = permanentFeedRedirect(request.url);
+    if (moved) return new Response(null, { status: 308, headers: { location: moved } });
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

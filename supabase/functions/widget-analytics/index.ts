@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { currentFeedSlug } from "../_shared/feedSlug.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,7 +53,7 @@ serve(async (req) => {
     const { data: topic, error: topicError } = await supabase
       .from('topics')
       .select('id')
-      .eq('slug', feedSlug)
+      .eq('slug', await currentFeedSlug(supabase, feedSlug))
       .eq('is_public', true)
       .maybeSingle();
 

@@ -5,6 +5,7 @@ import { SITE_URL } from "../_shared/brandConfig.ts";
 import { formatPrice, feedCurrency } from "../_shared/currency.ts";
 import { firstWidgetTab, mixWidgetCards, parseWidgetContent, parseWidgetStyle, resolveWidgetContent } from "../_shared/widgetContent.ts";
 import { EVENT_CATEGORY_LABELS } from "../_shared/eventCategories.ts";
+import { currentFeedSlug } from "../_shared/feedSlug.ts";
 
 // Upcoming events looked up per widget request (also the cap on the "N events coming up" count)
 const EVENTS_LOOKUP = 50;
@@ -99,6 +100,7 @@ serve(async (req) => {
       controller.abort();
     }, QUERY_TIMEOUT_MS);
 
+    const liveSlug = await currentFeedSlug(supabase, feedSlug);
     try {
       // Fetch topic/feed data (PUBLIC ONLY)
       // Accepts either:
@@ -110,7 +112,7 @@ serve(async (req) => {
         .select('id, name, slug, region, branding_config, created_by, public_widget_builder_enabled, use_publisher_photos, feed_lead, events_enabled, event_currency')
         .eq('is_public', true)
         .eq('is_archived', false)
-        .or(`slug.eq.${feedSlug},region.ilike.${feedSlug},name.ilike.${feedSlug}`)
+        .or(`slug.eq.${liveSlug},region.ilike.${feedSlug},name.ilike.${feedSlug}`)
         .abortSignal(controller.signal)
         .maybeSingle();
 

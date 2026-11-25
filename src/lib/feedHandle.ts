@@ -23,3 +23,13 @@ export function internalToHandle(pathname: string): string | null {
 
 /** Path of a feed page in @ form, e.g. feedPath("lisbon", "/story/1") -> "/@lisbon/story/1". */
 export const feedPath = (slug: string, path = "") => `/@${slug}${path}`;
+
+const LEGACY = /^\/feed\/(?:topic\/)?([^/]+)(\/.*)?$/;
+
+/** Server: "/feed/x/rest?q" or "/feed/topic/x/rest?q" -> "/@x/rest?q" (relative), else null. */
+export function permanentFeedRedirect(href: string): string | null {
+  const url = new URL(href);
+  const m = LEGACY.exec(url.pathname);
+  if (!m || !m[1] || m[1] === "topic") return null;
+  return `/@${m[1]}${m[2] ?? ""}${url.search}`;
+}

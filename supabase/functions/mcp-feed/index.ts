@@ -1,6 +1,7 @@
 // MCP Streamable HTTP server exposing a single Curatr feed to AI assistants.
 // Route: /functions/v1/mcp-feed/<topic-slug>
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { currentFeedSlug } from "../_shared/feedSlug.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -259,7 +260,7 @@ Deno.serve(async (req) => {
     const { data: topic } = await supabase
       .from("topics")
       .select("id, name, slug, description, mcp_enabled, mcp_access, is_active, is_public, created_by")
-      .eq("slug", slug)
+      .eq("slug", await currentFeedSlug(supabase, slug))
       .eq("is_active", true)
       .maybeSingle();
 

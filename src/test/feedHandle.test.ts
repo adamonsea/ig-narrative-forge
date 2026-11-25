@@ -20,3 +20,17 @@ describe("feed handles", () => {
     expect(HANDLE_PATTERN.test("lis_bon")).toBe(false);
   });
 });
+
+import { permanentFeedRedirect } from "@/lib/feedHandle";
+describe("permanentFeedRedirect", () => {
+  it("moves /feed/x pages to /@x keeping path and query", () => {
+    expect(permanentFeedRedirect("https://curatr.pro/feed/eastbourne/story/1?a=1")).toBe("/@eastbourne/story/1?a=1");
+  });
+  it("moves /feed/topic/x to /@x", () => {
+    expect(permanentFeedRedirect("https://curatr.pro/feed/topic/eastbourne")).toBe("/@eastbourne");
+  });
+  it("leaves other pages alone", () => {
+    expect(permanentFeedRedirect("https://curatr.pro/@eastbourne")).toBeNull();
+    expect(permanentFeedRedirect("https://curatr.pro/dashboard")).toBeNull();
+  });
+});
