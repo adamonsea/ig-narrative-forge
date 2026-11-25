@@ -35,3 +35,8 @@ Next up after Phase 0 and the reliability sprint: 1 and 2. Keep Curatr's core mo
 - [ ] 6. Weekly print one-pager — auto-generated PDF of the week's top stories and events.
 
 Parked: audio briefings (already parked).
+
+## Reliability sprint
+- [x] New feed saves its news sources (finder retries, typed website kept, smoke check)
+- [ ] Pokémon Junior test feed still has no news sources — waiting on Adam to add them
+- [ ] auto-illustrate-stories fails on a missing stories.summary column (seen in logs)

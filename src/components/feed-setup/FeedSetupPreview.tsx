@@ -53,6 +53,7 @@ export function FeedSetupPreview({
   selected,
   onToggleSource,
   onAddSource,
+  onPendingSource,
   eventSources = [],
   eventSelected,
   onToggleEventSource,
@@ -64,6 +65,8 @@ export function FeedSetupPreview({
   selected: Set<string>;
   onToggleSource: (url: string) => void;
   onAddSource: (url: string) => string | null;
+  /** Text still in the add box, so "Looks good" doesn't lose it. */
+  onPendingSource?: (text: string) => void;
   eventSources?: EventSourceSuggestion[] | undefined;
   eventSelected?: Set<string> | undefined;
   onToggleEventSource?: ((url: string) => void) | undefined;
@@ -83,7 +86,7 @@ export function FeedSetupPreview({
   const addSource = () => {
     const error = onAddSource(newSource);
     setSourceError(error);
-    if (!error) setNewSource("");
+    if (!error) { setNewSource(""); onPendingSource?.(""); }
   };
 
   return (
@@ -170,7 +173,7 @@ export function FeedSetupPreview({
         <div className="flex gap-2">
           <Input
             value={newSource}
-            onChange={(e) => { setNewSource(e.target.value); setSourceError(null); }}
+            onChange={(e) => { setNewSource(e.target.value); onPendingSource?.(e.target.value); setSourceError(null); }}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSource(); } }}
             placeholder="Add a website, e.g. example.com"
             aria-label="Add a source website"

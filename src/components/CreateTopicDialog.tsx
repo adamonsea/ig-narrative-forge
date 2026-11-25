@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +45,7 @@ const BLOCKED_HOSTS = ["facebook.com", "twitter.com", "instagram.com", "tiktok.c
 /** Filters and ranks suggested sources; returns them with the ones to start ticked. */
 function rankSources(raw: SetupSource[]): { list: SetupSource[]; picked: Set<string> } {
   const list = raw
-    .filter((s) => s.confidence_score >= 60 && s.platform_reliability !== "low" && !BLOCKED_HOSTS.some((b) => s.url.toLowerCase().includes(b)))
+    .filter((s) => s.confidence_score >= 40 && s.platform_reliability !== "low" && !BLOCKED_HOSTS.some((b) => s.url.toLowerCase().includes(b)))
     .sort((a, b) => {
       const score = (s: SetupSource) => s.confidence_score + (s.platform_reliability === "high" ? 25 : s.platform_reliability === "medium" ? 15 : 0);
       return score(b) - score(a);
@@ -77,6 +77,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
   const [draft, setDraft] = useState<FeedSetupDraft | null>(null);
   const [sources, setSources] = useState<SetupSource[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // A website typed in the add box but not yet added still counts when the feed is created.
+  const pendingSource = useRef("");
   const [findingSources, setFindingSources] = useState(false);
 
   const [topicId, setTopicId] = useState<string | null>(null);
@@ -110,6 +112,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
     setDraft(null);
     setSources([]);
     setSelected(new Set());
+    pendingSource.current = "";
     setFindingSources(false);
     setIncludeEvents(false);
     setEventsTouched(false);
@@ -180,16 +183,20 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
     setFindingSources(true);
     const wantEvents = eventsTouched ? includeEvents : d.topic_type === "regional";
     if (!eventsTouched) setIncludeEvents(wantEvents);
-    const news = supabase.functions
-      .invoke("suggest-content-sources", {
-        body: {
-          topicName: d.name,
-          description: d.description,
-          keywords: d.keywords.slice(0, 12).join(", "),
-          topicType: d.topic_type,
-          region: d.region || undefined,
-        },
-      })
+    const body = {
+      topicName: d.name,
+      description: d.description,
+      keywords: d.keywords.slice(0, 12).join(", "),
+      topicType: d.topic_type,
+      region: d.region || undefined,
+    };
+    // A failed or empty search is tried once more, so news never silently disappears.
+    const askNews = async () => {
+      const first = await supabase.functions.invoke("suggest-content-sources", { body });
+      if (!first.error && !first.data?.error && (first.data?.suggestions?.length ?? 0) > 0) return first;
+      return supabase.functions.invoke("suggest-content-sources", { body });
+    };
+    const news = askNews()
       .then(({ data }) => {
         const { list, picked } = rankSources((data?.suggestions || []) as SetupSource[]);
         setSources(list);
@@ -319,6 +326,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
       }
 
       const chosen = sources.filter((s) => selected.has(s.url));
+      const typed = pendingSource.current.trim();
+      if (typed) {
+        try {
+          const parsed = new URL(/^https?:\/\//i.test(typed) ? typed : `https://${typed}`);
+          const url = parsed.toString();
+          if (parsed.hostname.includes(".") && !chosen.some((c) => c.url === url)) {
+            chosen.push({ url, source_name: parsed.hostname.replace(/^www\./, ""), type: "News", confidence_score: 70, rationale: "Added by you" });
+          }
+        } catch { /* not a website address: ignore */ }
+      }
       setAttemptedSourceCount(chosen.length);
       const sourceIds: string[] = [];
       let failures = 0;
@@ -502,6 +519,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                         selected={selected}
                         onToggleSource={toggleSource}
                         onAddSource={addSource}
+                        onPendingSource={(v) => { pendingSource.current = v; }}
                         eventSources={eventSources}
                         eventSelected={eventSelected}
                         onToggleEventSource={toggleEventSource}

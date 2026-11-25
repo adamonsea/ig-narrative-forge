@@ -48,6 +48,19 @@ function looksLikeFeed(body: string, contentType: string) {
 }
 
 /** Try to resolve a working RSS/Atom feed for a candidate URL. */
+/** Pulls the JSON array out of a model reply, tolerating code fences or extra text around it. */
+function parseSuggestionArray(text: string): SourceSuggestion[] {
+  const start = text.indexOf('[');
+  const end = text.lastIndexOf(']');
+  if (start < 0 || end <= start) return [];
+  try {
+    const parsed = JSON.parse(text.slice(start, end + 1));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 async function resolveFeed(rawUrl: string): Promise<{ reachable: boolean; feedUrl: string | null }> {
   let base: URL;
   try {
@@ -234,50 +247,39 @@ For each source, provide exactly this JSON format:
 
 Return ONLY a valid JSON array of suggestions, no other text or formatting.`;
 
-    const response = await llmFetch({
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${deepseekApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-v4-flash',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a content sourcing expert. Return only valid JSON arrays with no additional text or markdown formatting.'
+    // One retry: a single bad model reply must never leave a new feed with no news sources.
+    let suggestions: SourceSuggestion[] = [];
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await llmFetch({
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${deepseekApiKey}`,
+            'Content-Type': 'application/json',
           },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('DeepSeek API error:', response.status, errorText);
-      throw new Error(`DeepSeek API error: ${response.status} ${errorText}`);
+          body: JSON.stringify({
+            model: 'deepseek-v4-flash',
+            messages: [
+              { role: 'system', content: 'You are a content sourcing expert. Return only valid JSON arrays with no additional text or markdown formatting.' },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+          }),
+        });
+        if (!response.ok) throw new Error(`DeepSeek API error: ${response.status} ${await response.text()}`);
+        const data = await response.json();
+        const aiResponse: string = data?.choices?.[0]?.message?.content ?? '';
+        suggestions = parseSuggestionArray(aiResponse);
+        if (suggestions.length > 0) { lastError = null; break; }
+        throw new Error('No suggestions in AI response');
+      } catch (e) {
+        lastError = e;
+        console.error(`Suggestion attempt ${attempt} failed:`, e);
+      }
     }
-
-    const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
-    
-    console.log('🤖 DeepSeek raw response:', aiResponse);
-
-    // Parse the AI response as JSON
-    let suggestions: SourceSuggestion[];
-    try {
-      // Clean the response in case there's markdown formatting
-      const cleanedResponse = aiResponse.replace(/```json\n?/, '').replace(/```\n?$/, '');
-      suggestions = JSON.parse(cleanedResponse);
-    } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError, aiResponse);
-      throw new Error('Invalid JSON response from AI');
-    }
+    if (lastError) throw lastError;
 
     // Normalise + dedupe by hostname before we spend network calls verifying
     const seenHosts = new Set<string>();

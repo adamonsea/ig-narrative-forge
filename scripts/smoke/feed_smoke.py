@@ -1,7 +1,7 @@
 """Curatr smoke test: run before saying any feed, Desk or pipeline change is done.
 Usage: python3 scripts/smoke/feed_smoke.py [base_url]   (default https://curatr.pro)
 Uses a zztest_ visitor so no reader figures move. Prints PASS/FAIL per check; exits 1 on any failure."""
-import asyncio, sys, json, urllib.request
+import asyncio, sys, json, os, subprocess, urllib.request
 from playwright.async_api import async_playwright
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "https://curatr.pro"
@@ -46,6 +46,21 @@ async def feed(p, slug):
     check(f"{slug}: no page errors", not errors, "; ".join(errors)[:200])
     await b.close()
 
+def new_feeds_keep_sources():
+    """New feed saves its news sources: every feed made in the last 14 days has at least one news source."""
+    if not os.environ.get("PGHOST"):
+        print("SKIP new feed saves its news sources — no database access here"); return
+    sql = ("select coalesce(string_agg(t.name, ', '), '') from topics t where t.created_at > now() - interval '14 days' "
+           "and not exists (select 1 from content_sources c where c.topic_id = t.id) "
+           "and not exists (select 1 from topic_sources s where s.topic_id = t.id)")
+    try:
+        out = subprocess.run(["psql", "-At", "-c", sql], capture_output=True, text=True, timeout=30)
+        missing = out.stdout.strip()
+        check("new feed saves its news sources", out.returncode == 0 and not missing,
+              missing and f"no news sources: {missing}" or out.stderr.strip()[:120])
+    except Exception as e:
+        check("new feed saves its news sources", False, str(e)[:120])
+
 async def main():
     async with async_playwright() as p:
         for s in FEEDS:
@@ -55,6 +70,7 @@ async def main():
         check(f"{s}: widget data", st == 200 and body.strip().startswith("{"), str(st))
     st, body = get(f"{SUPA}/rss-feed/eastbourne")
     check("eastbourne: RSS valid", st == 200 and "<rss" in body and "<item>" in body, str(st))
+    new_feeds_keep_sources()
     print("Desk: not checked automatically (needs owner sign-in)")
     print(f"\n{sum(results)}/{len(results)} passed")
     sys.exit(0 if all(results) else 1)
