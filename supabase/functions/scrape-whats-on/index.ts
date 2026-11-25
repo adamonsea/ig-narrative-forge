@@ -84,6 +84,24 @@ async function readSafely(reader: EventReader, url: string, fallbackName: string
   }
 }
 
+/**
+ * Preview then Add reads the same page twice within seconds (and a double-mounted preview
+ * a third time). Share one read per address for 2 minutes in this worker so the page and
+ * its model pass run once, keeping the worker under its compute limit.
+ */
+const recentReads = new Map<string, { at: number; result: Promise<ReaderResult> }>();
+function readShared(reader: EventReader, url: string, fallbackName: string): Promise<ReaderResult> {
+  const key = `${reader.kind}|${url}`;
+  const now = Date.now();
+  for (const [k, v] of recentReads) if (now - v.at > 120_000) recentReads.delete(k);
+  const hit = recentReads.get(key);
+  if (hit) return hit.result;
+  const result = readSafely(reader, url, fallbackName);
+  recentReads.set(key, { at: now, result });
+  result.then((r) => { if (r.error || !r.events.length) recentReads.delete(key); });
+  return result;
+}
+
 const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 
 // ---------- location filter ----------
@@ -640,7 +658,7 @@ Deno.serve(async (req) => {
       const kind = shop ? 'ticket_shop' : detected;
       const url = shop ?? pasted;
       const reader = readerFor(kind);
-      const result = await readSafely(reader, url, hostOf(url));
+      const result = await readShared(reader, url, hostOf(url));
       const { verdicts, scores } = await judgeAndScore(supabase, profiles, body.topicId, result.events, url, ("name" in body ? body.name : undefined) || result.name);
       const summary = summarise(kind, result, verdicts);
       if (body.action === 'preview') return json({ success: true, ...summary });
