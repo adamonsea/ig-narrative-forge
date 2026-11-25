@@ -619,7 +619,8 @@ Deno.serve(async (req) => {
       if (!ev) return json({ error: 'Not found' }, 404);
       if (!isSystem && !(await userOwnsTopic(supabase, user!.id, ev.topic_id))) return json({ error: 'Not your feed' }, 403);
       const result = await generateEventCopy(supabase, { eventId: body.eventId, dryRun: body.dryRun, force: body.force, postDate: body.postDate });
-      return json(result, result.error === 'Not enough credits' ? 402 : result.error ? 400 : 200);
+      // Out of credits is an expected outcome (approval writes run in the background), not a failure
+      return json(result, result.error && result.error !== 'Not enough credits' ? 400 : 200);
     }
 
     if (body.action === 'discover') {

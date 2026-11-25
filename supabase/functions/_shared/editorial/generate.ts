@@ -173,7 +173,7 @@ export async function generateEventCopy(db: Db, opts: { eventId: string; dryRun?
 
   const key = `event-copy:${event_id}:${hash}`;
   const { data: reserve, error: rErr } = await db.rpc('reserve_user_credits', { p_user_id: topic!.created_by, p_amount: EVENT_COPY_CREDITS, p_idempotency_key: key, p_description: 'Event copy', p_story_id: null });
-  if (rErr || !reserve?.success) return { error: reserve?.error || 'Not enough credits' };
+  if (rErr || !reserve?.success) return { error: 'Not enough credits' };
   try {
     const now = new Date().toISOString();
     const upd: Record<string, unknown> = { review_flags, approved_at: e.approved_at ?? now };
