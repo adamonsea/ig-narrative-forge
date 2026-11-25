@@ -628,6 +628,11 @@
   .setup-sweep { animation: none; transform: none; width: 100%; opacity: .5; }
 }
 
+/* First visit: the story's own slides peek left twice to show there's more (uses `translate`, so Embla's transform is untouched) */
+@keyframes swipe-peek { 0%, 100% { translate: 0 0; } 18% { translate: -14% 0; } 36% { translate: 0 0; } 58% { translate: -9% 0; } 76% { translate: 0 0; } }
+.swipe-peek .embla-container-smooth { animation: swipe-peek 2.4s cubic-bezier(.4,0,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .swipe-peek .embla-container-smooth { animation: none; } }
+
 /* Anything live: a ring in pop green by default; .live-pulse-light on the bright mint bar */
 @keyframes live-pulse {
   0% { box-shadow: 0 0 0 0 hsl(var(--pulse-colour) / 0.55); }
