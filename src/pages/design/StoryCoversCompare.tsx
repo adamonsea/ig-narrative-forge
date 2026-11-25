@@ -97,7 +97,7 @@ export default function StoryCoversCompare() {
   const { user, userRole, loading, isAdmin } = useAuth();
   // The role arrives just after sign-in; wait for it so admins aren't bounced to the dashboard
   if (loading || (user && userRole === null)) return <main className="min-h-dvh bg-background p-8"><Skeleton className="h-8 w-48" /></main>;
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/auth?mode=signin" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return <StoryCoversCompareBody />;
 }

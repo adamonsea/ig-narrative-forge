@@ -33,7 +33,7 @@ const Discover = () => {
             <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Pricing
             </Link>
-            <Link to="/auth" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+            <Link to="/auth?mode=signin" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Sign in
             </Link>
           </div>

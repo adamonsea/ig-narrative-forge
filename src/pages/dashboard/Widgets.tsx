@@ -86,7 +86,7 @@ export default function Widgets() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/auth");
+      navigate("/auth?mode=signin");
     }
   }, [user, authLoading, navigate]);
 

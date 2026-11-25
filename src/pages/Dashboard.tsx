@@ -16,7 +16,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth', { replace: true });
+      navigate('/auth?mode=signin', { replace: true });
     }
   }, [authLoading, user, navigate]);
 

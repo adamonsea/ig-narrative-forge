@@ -31,6 +31,12 @@ const Auth = () => {
   const navigate = useNavigate();
   usePageFavicon();
 
+  // Honour ?mode=signin / ?mode=signup / ?mode=reset so "Sign in" links land on sign in.
+  useEffect(() => {
+    const m = new URLSearchParams(window.location.search).get('mode');
+    if (m === 'signin' || m === 'signup' || m === 'reset') setMode(m);
+  }, []);
+
   useEffect(() => {
     const checkUser = async () => {
       try {

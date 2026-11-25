@@ -278,7 +278,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
                 </Button>
               ) : (
                 <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30">
-                  <Link to="/auth">Sign in</Link>
+                  <Link to="/auth?mode=signin">Sign in</Link>
                 </Button>
               )}
             </div>
@@ -289,7 +289,7 @@ export const AudienceLanding = ({ config }: { config: AudienceConfig }) => {
                 size="sm"
                 className="rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]"
               >
-                <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
+                <Link to={user ? '/dashboard' : '/auth?mode=signin'}>{user ? 'Dashboard' : 'Sign in'}</Link>
               </Button>
               <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                 <SheetTrigger asChild>

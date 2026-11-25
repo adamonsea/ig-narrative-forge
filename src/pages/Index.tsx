@@ -223,7 +223,7 @@ const Index = () => {
                 </Button>
               ) : (
                 <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-shop-violet/20 border border-shop-violet/30">
-                  <Link to="/auth">Sign in</Link>
+                  <Link to="/auth?mode=signin">Sign in</Link>
                 </Button>
               )}
             </div>
@@ -235,7 +235,7 @@ const Index = () => {
                 size="sm"
                 className="rounded-full bg-shop-mint text-shop-ink hover:bg-shop-mint-hover"
               >
-                <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
+                <Link to={user ? '/dashboard' : '/auth?mode=signin'}>{user ? 'Dashboard' : 'Sign in'}</Link>
               </Button>
               <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>

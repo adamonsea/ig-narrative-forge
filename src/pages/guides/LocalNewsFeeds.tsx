@@ -182,7 +182,7 @@ export default function LocalNewsFeedsGuide() {
               size="lg"
               className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30"
             >
-              <Link to="/auth">Sign in</Link>
+              <Link to="/auth?mode=signin">Sign in</Link>
             </Button>
           </nav>
         </header>

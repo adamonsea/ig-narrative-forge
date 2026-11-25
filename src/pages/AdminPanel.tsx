@@ -32,7 +32,7 @@ export default function AdminPanel() {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/auth?mode=signin" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (

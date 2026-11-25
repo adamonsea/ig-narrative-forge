@@ -68,7 +68,7 @@ const Features = () => {
               Pricing
             </Link>
             <Button asChild variant="secondary">
-              <Link to={user ? '/dashboard' : '/auth'}>{user ? 'Dashboard' : 'Sign in'}</Link>
+              <Link to={user ? '/dashboard' : '/auth?mode=signin'}>{user ? 'Dashboard' : 'Sign in'}</Link>
             </Button>
           </div>
         </nav>
