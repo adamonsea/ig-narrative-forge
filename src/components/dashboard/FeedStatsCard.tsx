@@ -1,7 +1,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect, useMemo, useState } from "react";
 import { pickHighlight, type HighlightStats } from "@/lib/feedHighlights";
-import { likelyAutomatedRise, sourceName } from "@/lib/readerStats";
+import { sourceName } from "@/lib/readerStats";
 
 export interface FeedCardStats {
   topic_id: string;
@@ -185,11 +185,9 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
   const collecting = daysOfData(stats.first_read_date) < 7;
   const weekly = (stats.readers_weekly || []).map(n);
   const readsShown = isMonth ? n(stats.reads_month) : n(stats.reads_week);
-  const visitsShown = isMonth ? n(stats.visits_month) : n(stats.visits_week);
   const publishedShown = isMonth ? n(stats.published_month) : n(stats.published_week);
   const returning = n(stats.returning_week);
   const source = (stats.top_sources || [])[0];
-  const automated = likelyAutomatedRise(stats.visits_daily, stats.readers_daily);
   const isMostRead = highlight?.kind === "story_took_off";
   const periodWord = isMonth ? "month" : "week";
 
@@ -278,15 +276,9 @@ export function FeedStatsBody({ stats, topicSlug, topicId, feedName = "your feed
           </PopoverContent>
         </Popover>
         {" · "}{publishedShown.toLocaleString("en-GB")} published
-        </span>{" "}
-        <span className="whitespace-nowrap text-sm" title="Every page load, including automated traffic such as scrapers">
-          · {visitsShown.toLocaleString("en-GB")} visits incl. automated
         </span>
       </p>
 
-      {automated && (
-        <p className="text-sm text-muted-foreground">Visits up, readers flat: likely automated.</p>
-      )}
     </div>
   );
 }

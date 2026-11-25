@@ -6810,6 +6810,16 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_reader_consistency: {
+        Args: never
+        Returns: {
+          card_readers: number
+          name: string
+          page_loads: number
+          tab_readers: number
+          topic_id: string
+        }[]
+      }
       approve_article_for_generation: {
         Args: { article_uuid: string }
         Returns: boolean
@@ -7523,16 +7533,6 @@ export type Database = {
           total_visitors: number
         }[]
       }
-      get_topic_engagement_funnel: {
-        Args: { p_days?: number; p_topic_id: string }
-        Returns: {
-          completed: number
-          engaged: number
-          shared: number
-          source_clicks: number
-          visitors: number
-        }[]
-      }
       get_topic_engagement_stats: {
         Args: { p_topic_id: string }
         Returns: {
@@ -7883,6 +7883,7 @@ export type Database = {
         }
         Returns: string
       }
+      london_today: { Args: never; Returns: string }
       mark_desk_looked: { Args: { p_topic_id: string }; Returns: undefined }
       migrate_articles_to_multi_tenant: {
         Args: { p_limit?: number }
@@ -8112,6 +8113,16 @@ export type Database = {
           start_date: string
           start_time: string
           title: string
+        }[]
+      }
+      topic_reader_metrics: {
+        Args: { p_from: string; p_to?: string; p_topic_id: string }
+        Returns: {
+          readers: number
+          reads: number
+          sent_to_sources: number
+          shares: number
+          signups: number
         }[]
       }
       topic_reading_now: { Args: { p_topic_id: string }; Returns: number }

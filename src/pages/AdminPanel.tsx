@@ -17,6 +17,7 @@ import { Disclosure } from '@/components/ui/editorial';
 import { VoucherCodesPanel } from '@/components/admin/VoucherCodesPanel';
 import { SatiricalBenchPanel } from '@/components/admin/SatiricalBenchPanel';
 import { SiteStatsPanel } from '@/components/admin/SiteStatsPanel';
+import { ReaderConsistencyPanel } from '@/components/admin/ReaderConsistencyPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminPanel() {
@@ -48,6 +49,7 @@ export default function AdminPanel() {
             </TabsList>
             <TabsContent value="site-stats" className="pt-6">
               <SiteStatsPanel />
+              <div className="pt-8"><ReaderConsistencyPanel /></div>
             </TabsContent>
             <TabsContent value="operations" className="space-y-8 pt-6">
           <section>

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { EngagementFunnel } from "@/components/EngagementFunnel";
 import { RememberedFold } from "@/components/settings/RememberedFold";
 import { ReadershipLines } from "@/components/readership/ReadershipLines";
-import { readershipChange, barHeights, MEANINGFUL_READERS, dropoffCurve, type Dropoff } from "@/lib/readership";
+import { readershipChange, barHeights, dropoffCurve, type Dropoff } from "@/lib/readership";
 import { useCountUp } from "@/hooks/useCountUp";
 import { feedSignal, seenPerVisit, type FeedSignal, type EngagementStory, type SentToSources, type FeedEngagement } from "@/lib/readerStats";
 
@@ -128,7 +127,6 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
             </section>
           )}
 
-          {Number(data.readers_week) >= MEANINGFUL_READERS && <EngagementFunnel topicId={topicId} />}
         </div>
       </RememberedFold>
     </div>
