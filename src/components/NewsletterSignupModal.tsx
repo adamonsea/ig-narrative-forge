@@ -135,10 +135,10 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg gap-6 rounded-xl p-6 sm:p-10" overlayClassName="bg-overlay/80 backdrop-blur-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Mail className="w-5 h-5 text-primary" aria-hidden="true" />
+          <DialogTitle className="flex items-center gap-2 text-2xl font-semibold">
+            <Mail className="w-6 h-6 text-primary" aria-hidden="true" />
             {titleLabels[selectedFrequency]}
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -146,7 +146,7 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" aria-hidden="true" />
             <Input
@@ -156,7 +156,7 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 h-11 text-base"
+              className="pl-10 h-12 text-base"
               required
             />
           </div>
@@ -169,7 +169,7 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={isSubmitting}
-            className="h-11 text-base"
+            className="h-12 text-base"
           />
 
           {isPushSupported && (
@@ -186,7 +186,7 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
             </div>
           )}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
