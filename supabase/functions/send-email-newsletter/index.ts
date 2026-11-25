@@ -69,8 +69,7 @@ interface EmailEvent {
  */
 function optimizeEmailThumbnail(url: string | null): string | null {
   if (!url) return null;
-  const stripped = url.replace(/^https?:\/\//, '');
-  return `https://wsrv.nl/?url=${encodeURIComponent(stripped)}&w=320&output=jpg&q=75`;
+  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=320&output=jpg&q=75`;
 }
 
 serve(async (req) => {
@@ -386,6 +385,23 @@ serve(async (req) => {
     const allStories = [...topicStories, ...fallbackStories];
 
     // Transform stories for email template
+    // Some publishers block the resize proxy (e.g. 401). Check each picture once and
+    // fall back to the original photo so emails never drop to no picture.
+    const thumbFor = new Map<string, string | null>();
+    await Promise.all(allStories.map(async (story) => {
+      const original = story.cover_illustration_url as string | null;
+      if (!original || thumbFor.has(original)) return;
+      const proxied = optimizeEmailThumbnail(original);
+      try {
+        const r = await fetch(proxied!, { signal: AbortSignal.timeout(6000) });
+        const ok = r.ok && (r.headers.get('content-type') || '').startsWith('image/');
+        await r.body?.cancel();
+        thumbFor.set(original, ok ? proxied : original);
+      } catch {
+        thumbFor.set(original, original);
+      }
+    }));
+
     const stories: EmailStory[] = allStories.map((story) => {
       const ta = story.topic_article_id ? taMap.get(story.topic_article_id) : undefined;
       const sourceName = ta?.source?.source_name || ta?.shared_content?.source_domain || topic.name;
@@ -396,7 +412,7 @@ serve(async (req) => {
       return {
         id: story.id,
         title: headline,
-        thumbnail_url: optimizeEmailThumbnail(story.cover_illustration_url),
+        thumbnail_url: story.cover_illustration_url ? (thumbFor.get(story.cover_illustration_url) ?? null) : null,
         source_name: sourceName,
         story_url: `${BASE_URL}/feed/${topic.slug}/story/${story.id}`,
       };
