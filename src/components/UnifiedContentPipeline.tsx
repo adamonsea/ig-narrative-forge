@@ -490,7 +490,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         return (
           <div className="py-1">
             <LiveWhatsOnRow first={first} events={eventDesk.live} today={today} showInFeed={eventDesk.showInFeed} liveMore={eventDesk.liveMore}
-              onToggleShow={eventActions.setShowInFeed} onRemove={(e) => eventActions.removeFromLive(e)} />
+              onRemove={(e) => eventActions.removeFromLive(e)} />
           </div>
         );
       }
@@ -721,7 +721,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <div className="space-y-3">
               {eventsOn && eventDesk && (
                 <LiveWhatsOnRow first events={eventDesk.live} today={today} showInFeed={eventDesk.showInFeed} liveMore={eventDesk.liveMore}
-                  onToggleShow={eventActions.setShowInFeed} onRemove={(e) => eventActions.removeFromLive(e)} />
+                  onRemove={(e) => eventActions.removeFromLive(e)} />
               )}
               <p className="py-8 text-center text-base text-muted-foreground">Nothing live yet</p>
             </div>
@@ -767,7 +767,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             {eventsToCheck.length > 0 && <AttentionTag>{eventsToCheck.length} to check</AttentionTag>}
             <div className="ml-auto">
               <EventsSettings on={eventsOn} disabled={!eventDesk} onChange={eventActions.setEventsOn}
-                {...opt("showInFeed", eventDesk?.showInFeed)} onShowInFeedChange={eventActions.setShowInFeed}
                 {...opt("suggestOn", eventDesk?.readerSuggestions)} onSuggestChange={eventActions.setReaderSuggestions} />
             </div>
           </div>

@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -536,9 +535,9 @@ export function ComingUpPanel({ toCheck = [], upcoming, leftOut, today, actions,
 }
 
 /** The What's on card set in Live now, where readers see it. Only the first one carries the controls. */
-export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onToggleShow, onRemove }: {
+export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onRemove }: {
   events: WhatsOnFeedEvent[]; today: string; showInFeed: boolean; liveMore: number; first: boolean;
-  onToggleShow: (on: boolean) => void; onRemove: (e: WhatsOnFeedEvent) => void;
+  onRemove: (e: WhatsOnFeedEvent) => void;
 }) {
   const [open, setOpen] = useState(false);
   if (!first) {
@@ -555,15 +554,13 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-3 text-left" disabled={!events.length}>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><CalendarDays className="h-5 w-5" aria-hidden="true" /></div>
           <div className="min-w-0 flex-1">
-            <p className="text-base font-medium">What's on · {events.length ? count : "nothing in the next 2 weeks"}</p>
+            <p className="flex items-center gap-2 text-base font-medium">What's on · {events.length ? count : "nothing in the next 2 weeks"}
+              <span className={`h-2 w-2 shrink-0 rounded-full ${showInFeed ? "bg-pop" : "bg-muted-foreground/40"}`} role="img" aria-label={showInFeed ? "In the feed" : "Not in the feed"} title={showInFeed ? "In the feed" : "Not in the feed"} />
+            </p>
             {events.length > 0 && <p className="truncate text-sm text-muted-foreground">{coverSentence(events, today)}</p>}
           </div>
           {events.length > 0 && <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />}
         </button>
-      </div>
-      <div className="flex items-center gap-2 border-t border-primary/20 px-3 py-2">
-        <Checkbox id="whats-on-show-in-feed" checked={showInFeed} onCheckedChange={(v) => onToggleShow(v === true)} />
-        <Label htmlFor="whats-on-show-in-feed" className="text-sm font-normal">Show in the feed</Label>
       </div>
       {open && events.length > 0 && (
         <ul className="divide-y divide-border border-t border-primary/20 px-3">
@@ -586,11 +583,10 @@ export function LiveWhatsOnRow({ events, today, showInFeed, liveMore, first, onT
   );
 }
 
-/** The Event pool's settings: events on/off, reader suggestions and show in the feed. */
-export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestChange, showInFeed, onShowInFeedChange }: {
+/** The Event pool's settings: events on/off and reader suggestions (Show in the feed lives in Settings → Events). */
+export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestChange }: {
   on: boolean; onChange: (on: boolean) => void; disabled?: boolean | undefined;
   suggestOn?: boolean; onSuggestChange?: (on: boolean) => void;
-  showInFeed?: boolean; onShowInFeedChange?: (on: boolean) => void;
 }) {
   return (
     <Popover>
@@ -604,12 +600,6 @@ export function EventsSettings({ on, onChange, disabled, suggestOn, onSuggestCha
           <Label htmlFor="desk-events-switch" className="text-base">Events</Label>
           <Switch id="desk-events-switch" checked={on} onCheckedChange={onChange} disabled={disabled} />
         </div>
-        {on && onShowInFeedChange && (
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="desk-events-show-in-feed" className="text-base font-normal">Show in the feed</Label>
-            <Switch id="desk-events-show-in-feed" checked={Boolean(showInFeed)} onCheckedChange={onShowInFeedChange} disabled={disabled} />
-          </div>
-        )}
         {on && onSuggestChange && (
           <div className="flex items-center justify-between gap-3">
             <Label htmlFor="desk-reader-suggest" className="text-base font-normal">Let readers suggest events</Label>

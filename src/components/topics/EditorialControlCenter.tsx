@@ -38,6 +38,7 @@ import { LookForPanel } from "@/components/settings/LookForPanel";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
 import { FeedLeadSettings } from "@/components/settings/FeedLeadSettings";
+import { ShowEventsInFeedSetting } from "@/components/settings/ShowEventsInFeedSetting";
 import { EventCaptionsSettings } from "@/components/settings/EventCaptionsSettings";
 import { FeedLookEditor } from "@/components/settings/look/FeedLookEditor";
 import { PublisherPhotosSetting } from "@/components/settings/PublisherPhotosSetting";
@@ -327,6 +328,7 @@ export function EditorialControlCenter({
 
         {current === "events" && eventsOn && (
           <Page title={label} purpose={purpose}>
+            <ShowEventsInFeedSetting topicId={topic.id} />
             <FeedLeadSettings topicId={topic.id} lead={topic.feed_lead} cards={topic.event_cards} currency={topic.event_currency} photos={topic.event_photos_enabled} onSaved={(values) => patch(values)} />
             <EventCaptionsSettings topicId={topic.id} />
           </Page>
