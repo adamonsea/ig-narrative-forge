@@ -23,3 +23,15 @@
 - [ ] Custom domain and social automation gates (features don't exist yet)
 - [ ] Decide Autopilot picture price once real measured costs are in
 - [ ] Fresh free-account test with amd@lindoneast.com — not yet an account; waiting on Adam to sign up and confirm the email
+
+## Future channels (not building yet)
+Next up after Phase 0 and the reliability sprint: 1 and 2. Keep Curatr's core modular so these can plug in.
+
+- [ ] 1. Calendar subscriptions — a feed's events as a subscribable iCal feed (Google/Apple), auto-updating.
+- [ ] 2. WhatsApp and Telegram channels — daily/weekly digest broadcast.
+- [ ] 3. AI answer engines — be the cited source in Google AI answers/Perplexity: structured story pages (schema.org NewsArticle/Event), clear source credit.
+- [ ] 4. Venue screens — a full-screen, auto-rotating feed display for cafés, libraries, receptions.
+- [ ] 5. Slack, Teams and Discord bots — post a feed into a channel (organisation "own channel" and niche communities).
+- [ ] 6. Weekly print one-pager — auto-generated PDF of the week's top stories and events.
+
+Parked: audio briefings (already parked).
