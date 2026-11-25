@@ -687,7 +687,7 @@ serve(async (req) => {
     let systemCharge = false
     if (isServiceRole) {
       if (!payerId) console.warn(`No feed owner found for story ${storyId}; metered as no_owner`)
-      else if (await isBillingEnforced(supabase)) {
+      else if (await isBillingEnforced(supabase, payerId)) {
         const { data: acct } = await supabase.from('user_credits').select('billing_exempt').eq('user_id', payerId).maybeSingle()
         systemCharge = acct?.billing_exempt !== true
       }

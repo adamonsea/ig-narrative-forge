@@ -29,8 +29,13 @@ export async function topicOwner(service: any, topicId: string | null | undefine
   return data?.created_by ?? null;
 }
 
-export async function isBillingEnforced(service: any): Promise<boolean> {
+/** Enforcement is on globally, or for one test account (user_credits.billing_enforce_test). */
+export async function isBillingEnforced(service: any, userId?: string | null): Promise<boolean> {
   if (Deno.env.get('BILLING_ENFORCE') === 'false') return false;
+  if (userId) {
+    const { data, error } = await service.rpc('billing_enforced_for', { p_user: userId });
+    if (!error) return data === true;
+  }
   const { data } = await service.from('feature_flags').select('enabled').eq('flag_name', 'billing_enforce').maybeSingle();
   return data?.enabled === true;
 }
@@ -66,7 +71,7 @@ export async function meterUsage(service: any, input: MeterInput): Promise<Meter
   let wouldPause = false;
   let enforce = false;
   try {
-    enforce = await isBillingEnforced(service);
+    enforce = await isBillingEnforced(service, input.payerId);
     if (input.payerId) {
       const { data } = await service.from('user_credits').select('credits_balance, billing_exempt').eq('user_id', input.payerId).maybeSingle();
       exempt = data?.billing_exempt === true;
@@ -150,7 +155,7 @@ export async function automationGate(service: any, topicId: string | null | unde
     const { data: reason, error } = await service.rpc('automation_pause_reason', { p_user: owner, p_kind: kind });
     if (error) throw error;
     if (reason && reason !== 'no_owner') {
-      const enforce = await isBillingEnforced(service);
+      const enforce = await isBillingEnforced(service, owner);
       result = { skip: enforce, reason };
       const ref = `${kind}:${reason}`;
       const since = new Date(); since.setUTCHours(0, 0, 0, 0);

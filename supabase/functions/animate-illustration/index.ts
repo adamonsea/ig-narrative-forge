@@ -141,7 +141,7 @@ serve(async (req) => {
       isSuperAdmin = !!userRole;
     }
     let systemCharge = false;
-    if (isSystem && payerId && await isBillingEnforced(supabase)) {
+    if (isSystem && payerId && await isBillingEnforced(supabase, payerId)) {
       const { data: acct } = await supabase.from('user_credits').select('billing_exempt').eq('user_id', payerId).maybeSingle();
       systemCharge = acct?.billing_exempt !== true;
     }

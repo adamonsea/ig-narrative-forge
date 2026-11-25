@@ -6011,6 +6011,7 @@ export type Database = {
       }
       user_credits: {
         Row: {
+          billing_enforce_test: boolean
           billing_exempt: boolean
           created_at: string
           credits_balance: number
@@ -6022,6 +6023,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_enforce_test?: boolean
           billing_exempt?: boolean
           created_at?: string
           credits_balance?: number
@@ -6033,6 +6035,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_enforce_test?: boolean
           billing_exempt?: boolean
           created_at?: string
           credits_balance?: number
@@ -6829,6 +6832,7 @@ export type Database = {
         Returns: string
       }
       billing_enforced: { Args: never; Returns: boolean }
+      billing_enforced_for: { Args: { p_user: string }; Returns: boolean }
       billing_owner_status: { Args: { p_user: string }; Returns: Json }
       build_topic_snapshot: { Args: { p_topic_id: string }; Returns: Json }
       bulk_cleanup_topic_content: {

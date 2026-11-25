@@ -22,4 +22,4 @@
 - [ ] Free-feed private preview link (needs feed reads to accept a preview token)
 - [ ] Custom domain and social automation gates (features don't exist yet)
 - [ ] Decide Autopilot picture price once real measured costs are in
-- [ ] Fresh free-account test — waiting on a new inbox (adam@upthereeverywhere.com is already an account)
+- [ ] Fresh free-account test with amd@lindoneast.com — not yet an account; waiting on Adam to sign up and confirm the email

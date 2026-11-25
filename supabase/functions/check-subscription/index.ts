@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     // Welcome credits: once per normalised email; once billing is enforced, only after email verification.
     const emailHash = await hashEmail(normaliseEmail(user.email));
     let welcomeAllowed = true;
-    if (await isBillingEnforced(service)) {
+    if (await isBillingEnforced(service, user.id)) {
       const { data: full } = await service.auth.admin.getUserById(user.id);
       const verified = !!full?.user?.email_confirmed_at;
       const { count } = await service.from('credit_grants').select('id', { count: 'exact', head: true })
