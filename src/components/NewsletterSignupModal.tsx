@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
-import { Mail, Bell, Loader2 } from 'lucide-react';
+import { Mail, Loader2 } from 'lucide-react';
 
 export type SubscriptionFrequency = 'daily' | 'weekly' | 'both';
 
@@ -29,6 +29,12 @@ const frequencyLabels: Record<SubscriptionFrequency, string> = {
   daily: 'daily updates',
   weekly: 'weekly digest',
   both: 'daily updates and weekly digest',
+};
+
+const titleLabels: Record<SubscriptionFrequency, string> = {
+  daily: 'Daily briefing',
+  weekly: 'Weekly briefing',
+  both: 'Daily and weekly briefings',
 };
 
 export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, defaultFrequency = 'weekly' }: NewsletterSignupModalProps) => {
@@ -131,70 +137,56 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId, def
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-primary" />
-            Stay Updated
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Mail className="w-5 h-5 text-primary" aria-hidden="true" />
+            {titleLabels[selectedFrequency]}
           </DialogTitle>
-          <DialogDescription>
-            Subscribe to {frequencyLabels[selectedFrequency]} for <strong>{topicName}</strong>
+          <DialogDescription className="sr-only">
+            Subscribe to {frequencyLabels[selectedFrequency]} for {topicName}
           </DialogDescription>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email address *</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="name">First name (optional)</Label>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" aria-hidden="true" />
             <Input
-              id="name"
-              type="text"
-              placeholder="First name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={isSubmitting}
+              id="email"
+              type="email"
+              aria-label="Email address"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-10 h-11 text-base"
+              required
             />
           </div>
 
+          <Input
+            id="name"
+            type="text"
+            aria-label="First name"
+            placeholder="First name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isSubmitting}
+            className="h-11 text-base"
+          />
+
           {isPushSupported && (
-            <div className="flex items-start space-x-3 rounded-lg border border-border/50 bg-muted/30 p-4">
+            <div className="flex items-center gap-3 py-2">
               <Checkbox
                 id="push-notifications"
                 checked={enablePushNotifications}
                 onCheckedChange={(checked) => setEnablePushNotifications(checked as boolean)}
                 disabled={isSubmitting}
               />
-              <div className="flex-1 space-y-1">
-                <Label
-                  htmlFor="push-notifications"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4" />
-                    Get browser notifications
-                  </div>
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Receive weekly updates even when offline. Works on desktop and mobile.
-                </p>
-              </div>
+              <Label htmlFor="push-notifications" className="text-sm font-normal cursor-pointer">
+                Get browser notifications
+              </Label>
             </div>
           )}
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
