@@ -80,14 +80,25 @@ const showsPhotos = (t: { event_photos_enabled?: boolean | null; event_cards?: s
 
 export async function savePhotos(supabase: Db, opts: { sourceId?: string; limit?: number } = {}) {
   const today = londonToday();
-  let q = supabase.from('events').select('id, topic_id, image_source_url, topics!inner(event_photos_enabled)')
-    .not('image_source_url', 'is', null).is('image_path', null).is('image_status', null).eq('image_hidden', false)
-    .in('status', ['published', 'pending']).or(`start_date.gte.${today},end_date.gte.${today}`)
-    .eq('topics.event_photos_enabled', true).or(INDIVIDUAL_CARDS, { referencedTable: 'topics' })
-    .order('start_date').order('start_time', { ascending: true, nullsFirst: false }).limit(opts.limit ?? 40);
-  if (opts.sourceId) q = q.eq('event_source_id', opts.sourceId);
-  const { data, error } = await q;
-  if (error) { console.warn('event photos: list failed', error.message); return {}; }
+  const limit = opts.limit ?? 40;
+  const base = () => {
+    let q = supabase.from('events').select('id, topic_id, image_source_url, topics!inner(event_photos_enabled)')
+      .not('image_source_url', 'is', null).is('image_path', null).is('image_status', null).eq('image_hidden', false)
+      .in('status', ['published', 'pending'])
+      .eq('topics.event_photos_enabled', true).or(INDIVIDUAL_CARDS, { referencedTable: 'topics' });
+    if (opts.sourceId) q = q.eq('event_source_id', opts.sourceId);
+    return q;
+  };
+  // Feed order first: events starting today onwards (by date, then time), then runs already
+  // under way (their old start date would otherwise put them ahead of tonight's events)
+  const upcoming = await base().gte('start_date', today)
+    .order('start_date').order('start_time', { ascending: true, nullsFirst: false }).limit(limit);
+  if (upcoming.error) { console.warn('event photos: list failed', upcoming.error.message); return {}; }
+  let data = upcoming.data || [];
+  if (data.length < limit) {
+    const running = await base().lt('start_date', today).gte('end_date', today).order('end_date').limit(limit - data.length);
+    data = data.concat(running.data || []);
+  }
   const todo = (data || []) as { id: string; topic_id: string; image_source_url: string }[];
   const tally: Record<string, number> = {};
   for (let i = 0; i < todo.length; i += 4) {
