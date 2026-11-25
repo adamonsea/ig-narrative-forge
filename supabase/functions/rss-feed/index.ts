@@ -64,20 +64,19 @@ serve(async (req: Request) => {
       .from("stories")
       .select(`
         id,
+        title,
         created_at,
         published_at,
-        slides,
+        cover_illustration_url,
         topic_articles!inner (
           topic_id,
-          articles!inner (
-            source_url,
-            author,
-            published_at
-          )
-        )
+          shared_article_content ( url )
+        ),
+        slides ( slide_number, content )
       `)
       .eq("topic_articles.topic_id", topic.id)
       .eq("status", "published")
+      .eq("is_published", true)
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(20);
 
@@ -92,19 +91,22 @@ serve(async (req: Request) => {
     console.log(`[RSS Feed] Found ${stories?.length || 0} stories`);
 
     const baseUrl = SITE_URL;
-    const feedUrl = `${baseUrl}/feed/${topic.slug}`;
+    const feedUrl = `${baseUrl}/@${topic.slug}`;
     const buildDate = new Date().toUTCString();
 
     // Build RSS items
     const items = (stories || []).map((story) => {
-      const slides = story.slides as any[] || [];
-      const title = slides[0]?.text || "Untitled Story";
-      const description = slides[1]?.text || slides[0]?.text || "";
+      const slides = ((story.slides as any[]) || []).slice().sort((x, y) => x.slide_number - y.slide_number);
+      const strip = (t: string) => (t || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+      const title = strip(slides[0]?.content) || story.title || "Untitled story";
+      const description = slides.slice(1).map((sl) => strip(sl.content)).filter(Boolean).join(" ");
+      const cut = description.length > 600 ? description.slice(0, 600) : description;
+      const end = cut.length < description.length ? cut.lastIndexOf(". ") : -1;
+      const summary = end > 200 ? cut.slice(0, end + 1) : cut;
       const pubDate = new Date(story.published_at || story.created_at).toUTCString();
-      const link = `${baseUrl}/feed/${topic.slug}/story/${story.id}`;
-      const topicArticle = story.topic_articles as any;
-      const sourceUrl = topicArticle?.articles?.source_url || link;
-      
+      const link = `${baseUrl}/@${topic.slug}/story/${story.id}`;
+      const sourceUrl = (story.topic_articles as any)?.shared_article_content?.url || link;
+      const image = story.cover_illustration_url as string | null;
       // Escape XML entities
       const escapeXml = (str: string) => str
         .replace(/&/g, "&amp;")
@@ -117,19 +119,20 @@ serve(async (req: Request) => {
     <item>
       <title>${escapeXml(title)}</title>
       <link>${escapeXml(link)}</link>
-      <description><![CDATA[${description}]]></description>
+      <description>${escapeXml(summary)}</description>
       <pubDate>${pubDate}</pubDate>
       <guid isPermaLink="true">${escapeXml(link)}</guid>
-      <source url="${escapeXml(sourceUrl)}">Original Source</source>
+      <source url="${escapeXml(sourceUrl)}">Original source</source>${image ? `\n      <enclosure url="${escapeXml(image)}" length="0" type="${image.endsWith(".png") ? "image/png" : image.endsWith(".webp") ? "image/webp" : "image/jpeg"}"/>` : ""}
     </item>`;
     }).join("");
 
+    const esc = (str: string) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${topic.name}</title>
+    <title>${esc(topic.name)}</title>
     <link>${feedUrl}</link>
-    <description>${topic.description || `Curated news from ${topic.name}`}</description>
+    <description>${esc(topic.description || `Curated news from ${topic.name}`)}</description>
     <language>en-gb</language>
     <lastBuildDate>${buildDate}</lastBuildDate>
     <atom:link href="${supabaseUrl}/functions/v1/rss-feed/${topic.slug}" rel="self" type="application/rss+xml"/>
