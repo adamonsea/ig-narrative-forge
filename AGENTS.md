@@ -40,6 +40,8 @@
 - Editing opens in `WorkspaceDrawer` (src/components/workspace); deletes use confirm boxes; errors `InlineError`.
 - Marketing colours: `shop-*` tokens only.
 - Admin-only `/design` (`pages/design/DesignSystem.tsx`) is the workspace system; add new UI there first.
-- Events|All|News switch only via `showFeedViewToggle`; display-only.
-- Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
+- Events|All|News switch: `showFeedViewToggle` only.
+- Source photos credited (photoCredit.ts).
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
+
+- Feed/Desk/pipeline changes: run `scripts/smoke/feed_smoke.py`; health only via `feed_health`.

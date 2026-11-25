@@ -62,6 +62,26 @@ function classify(job: QueueJob): { category: string; ageMinutes: number } {
   return { category: "", ageMinutes: 0 };
 }
 
+// Feed health: one email per red incident (feed_health.emailed_at is cleared when a feed turns red).
+async function emailRedFeeds(supabase: any, resendApiKey: string | undefined) {
+  try {
+    const { data } = await supabase.from("feed_health").select("topic_id, reason, red_since, topics(name)")
+      .eq("status", "red").is("emailed_at", null);
+    if (!data?.length || !resendApiKey) return;
+    const resend = new Resend(resendApiKey);
+    for (const row of data) {
+      const name = escapeHtml(row.topics?.name ?? "A feed");
+      const reason = escapeHtml(row.reason ?? "Needs attention");
+      await resend.emails.send({
+        from: "Curatr <noreply@curatr.pro>", to: [OWNER_EMAIL],
+        subject: `Feed red: ${row.topics?.name ?? "feed"} — ${row.reason ?? ""}`,
+        html: `<p><strong>${name}</strong> turned red.</p><p>${reason}</p><p><a href="https://curatr.pro/admin">Admin → Health</a></p>`,
+      });
+      await supabase.from("feed_health").update({ emailed_at: new Date().toISOString() }).eq("topic_id", row.topic_id);
+    }
+  } catch (e) { console.error("feed health email failed", e); }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -71,6 +91,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
 
   try {
+    await emailRedFeeds(supabase, resendApiKey);
     let force = false;
     try {
       const body = await req.json();

@@ -1881,6 +1881,57 @@ export type Database = {
           },
         ]
       }
+      feed_health: {
+        Row: {
+          broken_sources: number
+          changed_at: string
+          checked_at: string
+          emailed_at: string | null
+          owner_action: string | null
+          reason: string | null
+          red_since: string | null
+          status: string
+          topic_id: string
+        }
+        Insert: {
+          broken_sources?: number
+          changed_at?: string
+          checked_at?: string
+          emailed_at?: string | null
+          owner_action?: string | null
+          reason?: string | null
+          red_since?: string | null
+          status?: string
+          topic_id: string
+        }
+        Update: {
+          broken_sources?: number
+          changed_at?: string
+          checked_at?: string
+          emailed_at?: string | null
+          owner_action?: string | null
+          reason?: string | null
+          red_since?: string | null
+          status?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_health_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_health_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_leads: {
         Row: {
           blueprint: Json | null
@@ -6810,6 +6861,18 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_feed_health: {
+        Args: never
+        Returns: {
+          changed_at: string
+          checked_at: string
+          name: string
+          reason: string
+          slug: string
+          status: string
+          topic_id: string
+        }[]
+      }
       admin_reader_consistency: {
         Args: never
         Returns: {
@@ -6891,6 +6954,7 @@ export type Database = {
         Returns: Json
       }
       cleanup_stuck_scrape_jobs: { Args: never; Returns: number }
+      compute_feed_health: { Args: never; Returns: number }
       count_topic_readers: {
         Args: { p_from: string; p_to?: string; p_topic_id: string }
         Returns: number
@@ -7171,6 +7235,14 @@ export type Database = {
       get_feed_editorial_profile: {
         Args: { p_topic_id: string }
         Returns: Json
+      }
+      get_feed_health: {
+        Args: { p_topic_id: string }
+        Returns: {
+          checked_at: string
+          owner_action: string
+          status: string
+        }[]
       }
       get_feed_sentiment_cards_enabled: {
         Args: { _topic_id: string }

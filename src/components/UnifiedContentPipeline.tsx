@@ -1,4 +1,5 @@
 import { opt } from "@/lib/optionalProps";
+import { DeskHealthNotice } from '@/components/health/DeskHealthNotice';
 import { DeskBillingNotice } from '@/components/billing/DeskBillingNotice';
 import { settingsPath } from '@/lib/settingsSections';
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -540,7 +541,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       )}
 
       {selectedTopicId && topicSlug && (
-        <DeskBillingNotice topicId={selectedTopicId} usagePath={settingsPath(topicSlug, 'usage')} />
+        <>
+          <DeskBillingNotice topicId={selectedTopicId} usagePath={settingsPath(topicSlug, 'usage')} />
+          <DeskHealthNotice topicId={selectedTopicId} />
+        </>
       )}
 
       {/* Phones: one simple three-way switch, opening on Live now */}
