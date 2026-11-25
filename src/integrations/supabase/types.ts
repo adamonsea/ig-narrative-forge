@@ -72,6 +72,8 @@ export type Database = {
           region: string | null
           service_name: string
           tokens_used: number | null
+          topic_id: string | null
+          user_id: string | null
         }
         Insert: {
           cost_usd?: number | null
@@ -82,6 +84,8 @@ export type Database = {
           region?: string | null
           service_name: string
           tokens_used?: number | null
+          topic_id?: string | null
+          user_id?: string | null
         }
         Update: {
           cost_usd?: number | null
@@ -92,6 +96,8 @@ export type Database = {
           region?: string | null
           service_name?: string
           tokens_used?: number | null
+          topic_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -5928,8 +5934,51 @@ export type Database = {
           },
         ]
       }
+      usage_events: {
+        Row: {
+          actor: string
+          created_at: string
+          credits: number
+          id: string
+          kind: string
+          outcome: string
+          payer_id: string | null
+          ref_id: string | null
+          shadow: boolean
+          stories: number
+          topic_id: string | null
+        }
+        Insert: {
+          actor: string
+          created_at?: string
+          credits?: number
+          id?: string
+          kind: string
+          outcome?: string
+          payer_id?: string | null
+          ref_id?: string | null
+          shadow?: boolean
+          stories?: number
+          topic_id?: string | null
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          credits?: number
+          id?: string
+          kind?: string
+          outcome?: string
+          payer_id?: string | null
+          ref_id?: string | null
+          shadow?: boolean
+          stories?: number
+          topic_id?: string | null
+        }
+        Relationships: []
+      }
       user_credits: {
         Row: {
+          billing_exempt: boolean
           created_at: string
           credits_balance: number
           id: string
@@ -5939,6 +5988,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_exempt?: boolean
           created_at?: string
           credits_balance?: number
           id?: string
@@ -5948,6 +5998,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_exempt?: boolean
           created_at?: string
           credits_balance?: number
           id?: string
@@ -7175,6 +7226,19 @@ export type Database = {
           region: string
           slug: string
           topic_type: string
+        }[]
+      }
+      get_shadow_usage_summary: {
+        Args: { p_days?: number }
+        Returns: {
+          actor: string
+          credits: number
+          events: number
+          kind: string
+          payer_id: string
+          stories: number
+          topic_id: string
+          topic_name: string
         }[]
       }
       get_site_stats: { Args: { _days?: number }; Returns: Json }

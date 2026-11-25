@@ -11,7 +11,7 @@ export interface PlanDef {
   annualAmountCents: number;
 }
 
-export const MONTHLY_PRO_CREDITS = 500;
+export const MONTHLY_PRO_CREDITS = 1000;
 export const WELCOME_CREDITS = 20;
 export const TOP_UP_CREDITS = 500;
 export const TOP_UP_PRICE_ID = 'price_1UHoQqEc632ZWfk7Y42qSyMy';

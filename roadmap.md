@@ -14,3 +14,9 @@
 - [ ] Clean up old per-day duplicate copies of long-running Lisbon events (pre stable-key). Never delete rows readers or owners touched (impressions, clicks, edits, approvals); no deletion by time window; tests only via zztest_ visitor IDs.
 - [ ] Phase 3: Brighton bleed + category steering — plan shown, waiting for Adam's go.
 - [ ] Feed API: stories and pins resources (same envelope)
+
+# Phase 0 — billing shadow mode
+- [x] api_usage payer/feed columns, usage_events meter, billing_exempt (Adam), flags off
+- [x] Pictures, animation, rewrite, suggestions, event copy metered; Pro 1,000 credits
+- [ ] Gate checks in schedulers, Desk pause line, Usage page, admin view, trial/Pro-only gates (before enforcement)
+- [ ] Fresh free-account test with adam@upthereeverywhere.com (check not already an account first)

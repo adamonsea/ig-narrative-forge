@@ -4,6 +4,8 @@
 // suggested Family-safe / brand-safe choices. Sources are suggested separately
 // by suggest-content-sources so the two can run side by side.
 import { getUser } from '../_shared/auth.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { meterUsage, logApiUsage } from '../_shared/allowance.ts';
 import { llmFetch } from '../_shared/llm-router.ts';
 import { fallbackSetup, normaliseSetup } from './rules.ts';
 import { FEATURES } from '../_shared/parked-features.ts';
@@ -74,6 +76,12 @@ Deno.serve(async (req) => {
       console.error('suggest-feed-setup model error', res.status, (await res.text()).slice(0, 300));
       return json({ setup: fallbackSetup(about), fallback: true });
     }
+    try {
+      const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+      const { data: sa } = await service.rpc('has_role', { _user_id: user.id, _role: 'superadmin' });
+      await meterUsage(service, { payerId: user.id, actor: 'user', kind: 'suggestion', credits: 1, chargeUser: true, bypass: sa === true, refId: 'feed-setup' });
+      await logApiUsage(service, { service_name: 'llm', operation: 'suggest-feed-setup', user_id: user.id });
+    } catch (e) { console.warn('metering failed (non-critical)', e); }
     const payload = await res.json();
     const raw = payload?.choices?.[0]?.message?.content ?? '';
     let parsed: unknown = null;

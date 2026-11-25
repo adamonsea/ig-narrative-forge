@@ -10,7 +10,7 @@ export const BILLING_COPY = {
 } as const;
 
 export const PRO_PRICE = { month: 19, year: 190 } as const;
-export const PRO_MONTHLY_CREDITS = 500;
+export const PRO_MONTHLY_CREDITS = 1000;
 export const WELCOME_CREDITS = 20;
 export const TOP_UP_CREDITS = 500;
 export const TOP_UP_PRICE_USD = 10;

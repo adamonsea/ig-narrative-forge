@@ -1,4 +1,6 @@
 import { headlinePlaceEditRule, headlinePlaceRule } from './headlinePlace.ts';
+import { topicOwner, meterUsage, logApiUsage } from '../_shared/allowance.ts';
+import { topicIdForStory } from '../_shared/auth.ts';
 import { isLiveStory } from '../_shared/illustration-gate.ts';
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -1780,6 +1782,17 @@ Return in JSON format:
       });
     }
     } // end generateIllustration else
+
+    // Count the story against the owner's story allowance (no credits). Shadow until enforcement.
+    try {
+      const bearer = (req.headers.get('Authorization') ?? '').replace('Bearer ', '');
+      const meterTopicId = storyId ? await topicIdForStory(supabase, storyId) : null;
+      await meterUsage(supabase, {
+        payerId: await topicOwner(supabase, meterTopicId), topicId: meterTopicId,
+        actor: bearer === supabaseKey ? 'system' : 'user', kind: 'rewrite', stories: 1, refId: storyId,
+      });
+      await logApiUsage(supabase, { service_name: actualProvider || 'llm', operation: 'story_rewrite', topic_id: meterTopicId, user_id: await topicOwner(supabase, meterTopicId) });
+    } catch (e) { console.warn('metering failed (non-critical)', e); }
 
     return new Response(
       JSON.stringify({ 

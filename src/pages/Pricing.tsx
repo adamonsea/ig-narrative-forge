@@ -18,7 +18,7 @@ const features = [
   'Publish public feeds',
   'RSS, email, widgets and AI assistant access',
   'All image styles and creative tools',
-  `${PRO_MONTHLY_CREDITS} creative credits each month`,
+  `${PRO_MONTHLY_CREDITS.toLocaleString("en-GB")} creative credits each month`,
 ];
 
 const freeFeatures = [

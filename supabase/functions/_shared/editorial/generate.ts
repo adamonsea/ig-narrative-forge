@@ -6,6 +6,7 @@
  * Charged 1 credit per event, once per source-facts fingerprint. dryRun: no writes, no charge.
  * Callers authorise first; `db` is a service-role client.
  */
+import { meterUsage, logApiUsage } from '../allowance.ts';
 import { z } from 'npm:zod@3';
 import { createOpenAI } from 'npm:@ai-sdk/openai@4';
 import { streamText, Output } from 'npm:ai@7';
@@ -190,6 +191,8 @@ export async function generateEventCopy(db: Db, opts: { eventId: string; dryRun?
     const capUp = Object.entries(captions).filter(([p]) => !caps.get(p)?.edited_at).map(([platform, text]) => ({ event_id, platform, language: '', text, source_hash: hash }));
     if (capUp.length) { const w3 = await db.from('event_captions').upsert(capUp, { onConflict: 'event_id,platform,language' }); if (w3.error) throw w3.error; }
     await db.rpc('settle_credit_reservation', { p_user_id: topic!.created_by, p_idempotency_key: key });
+    await meterUsage(db, { payerId: topic!.created_by, topicId: e.topic_id, actor: 'system', kind: 'event_copy', credits: EVENT_COPY_CREDITS, refId: event_id, charged: true });
+    await logApiUsage(db, { service_name: 'llm', operation: 'event_copy', user_id: topic!.created_by, topic_id: e.topic_id });
   } catch (err) {
     await db.rpc('release_credit_reservation', { p_user_id: topic!.created_by, p_idempotency_key: key });
     throw err;

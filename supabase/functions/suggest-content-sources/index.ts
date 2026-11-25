@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { meterUsage, logApiUsage } from '../_shared/allowance.ts';
 import { llmFetch } from '../_shared/llm-router.ts';
 
 const corsHeaders = {
@@ -328,6 +329,12 @@ Return ONLY a valid JSON array of suggestions, no other text or formatting.`;
     console.log(
       `✅ ${validSuggestions.length}/${candidates.length} suggestions verified (${validSuggestions.filter(s => s.feed_url).length} with live RSS)`
     );
+    try {
+      const service = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+      const { data: sa } = await service.rpc('has_role', { _user_id: userId, _role: 'superadmin' });
+      await meterUsage(service, { payerId: userId, topicId: topicId ?? null, actor: 'user', kind: 'suggestion', credits: 1, chargeUser: true, bypass: sa === true, refId: 'sources' });
+      await logApiUsage(service, { service_name: 'llm', operation: 'suggest-content-sources', user_id: userId, topic_id: topicId ?? null });
+    } catch (e) { console.warn('metering failed (non-critical)', e); }
     return new Response(JSON.stringify({ 
       success: true,
       suggestions: validSuggestions,

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
-import { getUser, unauthorized } from '../_shared/auth.ts';
+import { getUser, unauthorized, topicIdForStory } from '../_shared/auth.ts';
+import { topicOwner, isBillingEnforced, meterUsage, logApiUsage } from '../_shared/allowance.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,7 +84,10 @@ serve(async (req) => {
     console.log('🎬 Animate illustration request started');
 
     // Validate the caller before parsing or performing any paid work.
-    const user = await getUser(req);
+    // System path: service-role callers (automation) bill the feed owner, never bypass.
+    const bearer = (req.headers.get('Authorization') ?? '').replace('Bearer ', '');
+    const isSystem = !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') && bearer === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const user = isSystem ? { id: 'service-role' } : await getUser(req);
     if (!user) {
       console.warn('🚫 Unauthorized animate request (missing or invalid token)');
       return unauthorized(corsHeaders);
@@ -121,23 +125,33 @@ serve(async (req) => {
 
     console.log(`📖 Story ID: ${storyId}, Quality: ${quality} (${qualityConfig.resolution}), Image: ${staticImageUrl}`);
 
-    console.log(`👤 Authenticated user: ${user.id}`);
+    console.log(`👤 Caller: ${user.id}`);
+    const topicId = await topicIdForStory(supabase, storyId);
+    const payerId: string | null = isSystem ? await topicOwner(supabase, topicId) : user.id;
 
     // Check if user is superadmin (bypass credit check)
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const isSuperAdmin = userRole?.role === 'superadmin';
+    let isSuperAdmin = false;
+    if (!isSystem) {
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'superadmin')
+        .maybeSingle();
+      isSuperAdmin = !!userRole;
+    }
+    let systemCharge = false;
+    if (isSystem && payerId && await isBillingEnforced(supabase)) {
+      const { data: acct } = await supabase.from('user_credits').select('billing_exempt').eq('user_id', payerId).maybeSingle();
+      systemCharge = acct?.billing_exempt !== true;
+    }
 
     // Reserve credits if not superadmin. Failed renders release the reservation.
-    if (!isSuperAdmin) {
+    if ((!isSystem && !isSuperAdmin) || systemCharge) {
       reservationKey = `animation:${storyId}:${crypto.randomUUID()}`;
-      reservedUserId = user.id;
+      reservedUserId = payerId!;
       const { data: creditResult, error: creditError } = await supabase.rpc('reserve_user_credits', {
-        p_user_id: user.id,
+        p_user_id: payerId,
         p_amount: qualityConfig.creditCost,
         p_idempotency_key: reservationKey,
         p_description: `Animate story illustration (Wan 2.2 i2v ${qualityConfig.resolution})`,
@@ -341,12 +355,18 @@ serve(async (req) => {
       reservationSettled = true;
     }
 
+    await meterUsage(supabase, {
+      payerId, topicId, actor: isSystem ? 'system' : 'user', kind: 'animation',
+      credits: qualityConfig.creditCost, refId: storyId, charged: Boolean(reservedUserId && reservationKey),
+    });
+    await logApiUsage(supabase, { service_name: 'replicate-wan', operation: 'animation', user_id: payerId, topic_id: topicId });
+
     // Get updated credits balance
-    const { data: updatedCredits } = await supabase
+    const { data: updatedCredits } = payerId ? await supabase
       .from('user_credits')
       .select('credits_balance')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', payerId)
+      .maybeSingle() : { data: null };
 
     console.log('✅ Animation complete!');
 
@@ -357,7 +377,7 @@ serve(async (req) => {
         duration_seconds: FIXED_DURATION,
         quality: quality,
         resolution: qualityConfig.resolution,
-        credits_used: isSuperAdmin ? 0 : qualityConfig.creditCost,
+        credits_used: reservedUserId ? qualityConfig.creditCost : 0,
         new_balance: updatedCredits?.credits_balance || 0
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

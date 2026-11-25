@@ -1,4 +1,6 @@
 import { pickIllustrationColor } from '../_shared/illustration-color.ts'
+import { topicOwner, isBillingEnforced, meterUsage } from '../_shared/allowance.ts'
+const AUTO_PICTURE_CREDITS = 1
 import { feedAllowsAutoPictures } from '../_shared/illustration-gate.ts'
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -641,7 +643,11 @@ serve(async (req) => {
 
     // Check if user is super admin (bypass credit deduction)
     // Skip RPC call for service-role calls to avoid 'invalid UUID' errors
-    let isSuperAdmin = isServiceRole
+    // System calls never bypass credits: the feed owner pays (shadow-metered until billing_enforce is on).
+    let isSuperAdmin = false
+    const payerId: string | null = isServiceRole ? await topicOwner(supabase, topicId) : userId
+    // Automatic pictures in Autopilot/publish cost 1 credit each.
+    const chargeCredits = isServiceRole && isAutomated ? AUTO_PICTURE_CREDITS : modelConfig.credits
     if (!isServiceRole) {
       const { data: hasAdminRole } = await supabase.rpc('has_role', {
         _user_id: userId,
@@ -652,7 +658,7 @@ serve(async (req) => {
     // Regeneration cap: stop runaway repeat generations on a single story.
     const currentRegenCount = Number((story as any).illustration_regen_count ?? 0)
     const isRegeneration = Boolean((story as any).cover_illustration_url)
-    if (isRegeneration && !isSuperAdmin && currentRegenCount >= MAX_ILLUSTRATION_REGENERATIONS) {
+    if (isRegeneration && !isSuperAdmin && !isServiceRole && currentRegenCount >= MAX_ILLUSTRATION_REGENERATIONS) {
       return new Response(
         JSON.stringify({
           error: `This story has already been regenerated ${currentRegenCount} times. Edit the story or ask the product owner to lift the limit.`,
@@ -672,12 +678,20 @@ serve(async (req) => {
     let fallbackModel = ''
 
     // Reserve credits atomically; settle only after the finished image is saved.
-    if (!isSuperAdmin) {
+    let systemCharge = false
+    if (isServiceRole) {
+      if (!payerId) console.warn(`No feed owner found for story ${storyId}; metered as no_owner`)
+      else if (await isBillingEnforced(supabase)) {
+        const { data: acct } = await supabase.from('user_credits').select('billing_exempt').eq('user_id', payerId).maybeSingle()
+        systemCharge = acct?.billing_exempt !== true
+      }
+    }
+    if ((!isServiceRole && !isSuperAdmin) || systemCharge) {
       reservationKey = `image:${storyId}:${crypto.randomUUID()}`
-      reservedUserId = userId
+      reservedUserId = payerId!
       const { data: result, error: creditError } = await supabase.rpc('reserve_user_credits', {
-        p_user_id: userId,
-        p_amount: modelConfig.credits,
+        p_user_id: payerId,
+        p_amount: chargeCredits,
         p_idempotency_key: reservationKey,
         p_description: `Story illustration generation (${model})`,
         p_story_id: storyId
@@ -1128,6 +1142,10 @@ ${TRADEMARK_RULE}`;
             status: 'submitted',
           })
 
+          await meterUsage(supabase, {
+            payerId, topicId, actor: isServiceRole ? 'system' : 'user', kind: 'picture',
+            credits: chargeCredits, refId: storyId, charged: Boolean(reservedUserId && reservationKey),
+          })
           console.log(`🕒 Queued batch illustration for story ${storyId} (batch ${batchJson.id})`)
 
           if (reservedUserId && reservationKey) {
@@ -1516,6 +1534,8 @@ ${TRADEMARK_RULE}`;
           cost_usd: actualCostUsd,
           tokens_used: 0,
           region: null,
+          user_id: payerId,
+          topic_id: topicId ?? null,
         })
 
       if (usageError) {
@@ -1598,7 +1618,7 @@ ${TRADEMARK_RULE}`;
         generation_ms: generationTime,
         total_ms: prepMs + generationTime,
         output_bytes: imageData.length,
-        credits: isSuperAdmin ? 0 : modelConfig.credits,
+        credits: reservedUserId ? chargeCredits : 0,
         cost_usd: actualCostUsd,
       })
     } catch (metricsError) {
@@ -1647,12 +1667,17 @@ ${TRADEMARK_RULE}`;
       creditResult = settlement
     }
 
+    await meterUsage(supabase, {
+      payerId, topicId, actor: isServiceRole ? 'system' : 'user', kind: 'picture',
+      credits: chargeCredits, refId: storyId, charged: Boolean(reservedUserId && reservationKey),
+    })
+
     return new Response(
       JSON.stringify({
         success: true,
         illustration_url: imageUrl,
         model: model,
-        credits_used: isSuperAdmin ? 0 : modelConfig.credits,
+        credits_used: reservedUserId ? chargeCredits : 0,
         new_balance: creditResult?.new_balance || null,
         used_fallback: usedFallback,
         fallback_reason: usedFallback ? fallbackReason : undefined,

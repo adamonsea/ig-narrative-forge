@@ -11,7 +11,7 @@ export function CreditScaleTable() {
 
   return (
     <section aria-labelledby="credit-scale-heading" className="mx-auto mt-12 max-w-4xl rounded-3xl border border-white/10 bg-white/[0.035] p-6 md:p-8">
-      <h2 id="credit-scale-heading" className="font-display text-2xl tracking-tight md:text-3xl">What do {PRO_MONTHLY_CREDITS} credits get you?</h2>
+      <h2 id="credit-scale-heading" className="font-display text-2xl tracking-tight md:text-3xl">What do {fmt(PRO_MONTHLY_CREDITS)} credits get you?</h2>
       <p className="mt-3 text-white/65">Unlimited stories curated and published. Credits are only for pictures and extras.</p>
 
       <div className="mt-6 overflow-x-auto">
@@ -56,7 +56,7 @@ export function CreditScaleTable() {
               <tr className="border-b border-white/10 text-white/50">
                 <th scope="col" className="py-3 pr-4 font-normal">Use</th>
                 <th scope="col" className="py-3 pr-4 font-normal">Credits each</th>
-                <th scope="col" className="py-3 text-right font-normal">Per {PRO_MONTHLY_CREDITS} credits</th>
+                <th scope="col" className="py-3 text-right font-normal">Per {fmt(PRO_MONTHLY_CREDITS)} credits</th>
               </tr>
             </thead>
             <tbody>

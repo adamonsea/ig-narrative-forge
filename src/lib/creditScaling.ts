@@ -38,6 +38,7 @@ export function scalingRows(): ScaleRow[] {
 export const CREDIT_PRICE_LIST = [
   { use: 'Standard illustration', credits: STANDARD_ILLUSTRATION_CREDITS },
   { use: 'Quick illustration', credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'] },
+  { use: 'Autopilot picture', credits: IMAGE_CREDIT_COSTS['gpt-image-2-low'] },
   { use: 'Premium illustration', credits: IMAGE_CREDIT_COSTS['gpt-image-2-high'] },
   { use: 'Satirical cartoon', credits: SATIRICAL_IMAGE_CREDIT_COST },
   { use: 'Social reel', credits: REEL_CREDIT_COST },
