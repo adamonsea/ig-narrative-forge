@@ -65,6 +65,32 @@ def new_feeds_keep_sources():
     except Exception as e:
         check("new feed saves its news sources", False, str(e)[:120])
 
+OWNER_SQL = """do $$ declare tid uuid; u uuid; ta uuid; st uuid; r text:='';
+begin
+select t.id, t.created_by into tid, u from topics t
+ where not exists (select 1 from user_roles ur where ur.user_id=t.created_by and ur.role in ('admin','superadmin'))
+   and exists (select 1 from topic_articles x where x.topic_id=t.id and x.processing_status in ('new','pending'))
+   and exists (select 1 from stories s join topic_articles x on x.id=s.topic_article_id where x.topic_id=t.id)
+ order by t.created_at desc limit 1;
+if tid is null then raise exception 'RESULT none'; end if;
+select id into ta from topic_articles where topic_id=tid and processing_status in ('new','pending') limit 1;
+select s.id into st from stories s join topic_articles x on x.id=s.topic_article_id where x.topic_id=tid limit 1;
+perform set_config('request.jwt.claims', json_build_object('sub',u,'role','authenticated')::text, true);
+set local role authenticated;
+begin perform approve_topic_article(ta,'tabloid','conversational','journalistic','{}'); r:=r||'approve=ok '; exception when others then r:=r||'approve='||sqlerrm||' '; end;
+begin update stories set status='ready', is_published=true where id=st; if found then r:=r||'publish=ok'; else r:=r||'publish=0 rows'; end if; exception when others then r:=r||'publish='||sqlerrm; end;
+raise exception 'RESULT %', r; end $$;"""
+
+def owner_can_approve_publish():
+    """A normal (non-admin) owner can approve and publish a story on their own feed; simulated, always rolled back."""
+    if not os.environ.get("PGHOST"):
+        print("SKIP normal owner can approve and publish — no database access here"); return
+    out = subprocess.run(["psql", "-At", "-c", OWNER_SQL], capture_output=True, text=True, timeout=30)
+    msg = (out.stderr.split("RESULT", 1)[-1].strip().splitlines() or [""])[0]
+    if msg == "none":
+        print("SKIP normal owner can approve and publish — no non-admin feed with waiting stories"); return
+    check("normal owner can approve and publish a story", "approve=ok" in msg and "publish=ok" in msg, msg[:160])
+
 async def main():
     async with async_playwright() as p:
         for s in FEEDS:
@@ -75,6 +101,7 @@ async def main():
     st, body = get(f"{SUPA}/rss-feed/eastbourne")
     check("eastbourne: RSS valid", st == 200 and "<rss" in body and "<item>" in body, str(st))
     new_feeds_keep_sources()
+    owner_can_approve_publish()
     print("Desk: not checked automatically (needs owner sign-in)")
     print(f"\n{sum(results)}/{len(results)} passed")
     sys.exit(0 if all(results) else 1)

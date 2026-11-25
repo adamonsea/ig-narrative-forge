@@ -6887,6 +6887,16 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
+      approve_topic_article: {
+        Args: {
+          p_result_data?: Json
+          p_slide_type: string
+          p_tone: string
+          p_topic_article_id: string
+          p_writing_style: string
+        }
+        Returns: Json
+      }
       archive_old_article_bodies: {
         Args: { cutoff_months?: number }
         Returns: number

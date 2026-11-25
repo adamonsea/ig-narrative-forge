@@ -446,6 +446,17 @@ serve(async (req) => {
     // Determine topic_id from either architecture
     const topicId = (story as any).article?.topic_id || (story as any).topic_article?.topic_id
 
+    // Signed-in callers may only draw pictures for stories on a feed they manage (owner or admin).
+    if (!isServiceRole) {
+      const { data: canManage } = await supabaseAuth.rpc('can_manage_topic', { p_topic_id: topicId })
+      if (!topicId || canManage !== true) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden', details: 'Not your feed' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     // Editorial anonymity guard (defense-in-depth): in automated modes, never
     // attach an AI-generated image to a story about a sexual offence, since
     // victims have lifelong anonymity and an invented figure could be read as

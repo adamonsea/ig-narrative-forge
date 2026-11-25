@@ -73,150 +73,25 @@ export const useMultiTenantActions = () => {
         writingStyle
       });
 
-      // Check for existing queue entries (following legacy pattern)
-      const { data: existingQueueEntries, error: checkError } = await supabase
-        .from('content_generation_queue')
-        .select('id, status')
-        .eq('shared_content_id', article.shared_content_id!)
-        .order('created_at', { ascending: false });
-
-      if (checkError) {
-        throw new Error(`Failed to check queue: ${checkError.message}`);
-      }
-
-      const activeEntry = existingQueueEntries?.find(entry => ['pending', 'processing'].includes(entry.status));
-      if (activeEntry) {
-        toast({
-          title: "Article Queued",
-          description: "This article is already being processed - check the queue for progress",
-          variant: "default"
-        });
-        return activeEntry.id;
-      }
-
-      // Update multi-tenant article status to processed (equivalent to legacy)
-      const { error: updateError } = await withRetry(() =>
-        supabase
-          .from('topic_articles')
-          .update({ 
-            processing_status: 'processed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', article.id) as any
-      );
-
-      if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
-
-      // Create or find bridge article in legacy table for foreign key constraint
-      let bridgeArticleId: string;
-      
-      // First, try to find existing bridge article for this shared content
-      const { data: existingBridge, error: bridgeCheckError } = await supabase
-        .from('articles')
-        .select('id')
-        .eq('source_url', article.url)
-        .limit(1)
-        .single();
-
-      if (existingBridge && !bridgeCheckError) {
-        bridgeArticleId = existingBridge.id;
-        console.log('🔗 Using existing bridge article:', bridgeArticleId);
-        
-        // Update the existing article to processed status
-        await supabase
-          .from('articles')
-          .update({ processing_status: 'processed' })
-          .eq('id', bridgeArticleId);
-      } else {
-        // Create bridge article with conflict handling
-        const { data: bridgeData, error: bridgeError } = await withRetry(() =>
-          supabase
-            .from('articles')
-            .upsert({
-              title: article.title,
-              body: article.body || 'Multi-tenant bridge article',
-              source_url: article.url,
-              canonical_url: article.url,
-              ...opt("author", article.author),
-              ...opt("published_at", article.published_at),
-              processing_status: 'processed',
-              content_quality_score: article.content_quality_score,
-              regional_relevance_score: article.regional_relevance_score,
-              word_count: article.word_count,
-              import_metadata: {
-                multi_tenant_bridge: true,
-                topic_article_id: article.id,
-                shared_content_id: article.shared_content_id,
-                created_for_queue: true
-              }
-            }, {
-              onConflict: 'source_url',
-              ignoreDuplicates: false
-            })
-            .select('id')
-            .single() as any
-        );
-
-        if (bridgeError) {
-          // If still a constraint error, try to find the existing article
-          if (bridgeError.code === '23505') {
-            const { data: fallbackBridge } = await supabase
-              .from('articles')
-              .select('id')
-              .eq('source_url', article.url)
-              .limit(1)
-              .single();
-            
-            if (fallbackBridge) {
-              bridgeArticleId = fallbackBridge.id;
-              console.log('🔗 Using fallback bridge article:', bridgeArticleId);
-            } else {
-              throw new Error(`Failed to resolve bridge article conflict: ${bridgeError.message}`);
-            }
-          } else {
-            throw new Error(`Failed to create bridge article: ${bridgeError.message}`);
-          }
-        } else {
-          bridgeArticleId = (bridgeData as { id: string }).id;
-          console.log('🔗 Created/updated bridge article:', bridgeArticleId);
-        }
-      }
-
-      // Add snippet metadata to content generation queue
-      // Insert into generation queue using bridge article
-      const { data: queueData, error: queueError } = await supabase
-        .from('content_generation_queue')
-        .insert({
-          article_id: bridgeArticleId, // Use bridge article for foreign key constraint
-          topic_article_id: article.id,
-          shared_content_id: article.shared_content_id,
-          slidetype: slideType,
-          ai_provider: 'deepseek',
-          tone: tone,
-          writing_style: writingStyle,
-          audience_expertise: null,
-          status: 'pending',
-          result_data: {
-            ...(article.is_snippet ? { is_snippet: true, original_word_count: article.word_count } : {}),
-            generate_illustration: generateIllustration,
-            // The owner chose this one: once written it goes out (or joins the queue) without a second OK.
-            owner_approved: true
-          }
-        })
-        .select('id')
-        .single();
-
-      if (queueError) {
-        // Check for duplicate key constraint violation
-        if (queueError.code === '23505') {
-          toast({
-            title: "Article Queued",
-            description: "This article is already being processed. Please wait for the current job to complete.",
-            variant: "default"
-          });
-          return null;
-        }
-        throw new Error(`Failed to queue job: ${queueError.message}`);
+      // One guarded step (owner/admin of this feed only): marks it approved, prepares the
+      // article copy for this feed and queues the writing job.
+      const { data: result, error: approveError } = await supabase.rpc('approve_topic_article' as any, {
+        p_topic_article_id: article.id,
+        p_slide_type: slideType,
+        p_tone: tone,
+        p_writing_style: writingStyle,
+        p_result_data: {
+          ...(article.is_snippet ? { is_snippet: true, original_word_count: article.word_count } : {}),
+          generate_illustration: generateIllustration,
+          // The owner chose this one: once written it goes out (or joins the queue) without a second OK.
+          owner_approved: true,
+        },
+      });
+      if (approveError) throw new Error(approveError.message);
+      const queueData = { id: (result as any)?.queue_id as string };
+      if ((result as any)?.already_queued) {
+        toast({ title: "Article Queued", description: "This article is already being processed - check the queue for progress", variant: "default" });
+        return queueData.id;
       }
 
       toast({ title: "Writing it now" });
