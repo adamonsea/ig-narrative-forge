@@ -427,7 +427,8 @@ serve(async (req) => {
       .select(`
         *,
         article:article_id(topic_id),
-        topic_article:topic_article_id(topic_id)
+        topic_article:topic_article_id(topic_id),
+        slides(content)
       `)
       .eq('id', storyId)
       .single()
@@ -472,8 +473,7 @@ serve(async (req) => {
 
       const check = checkAnonymity(
         (story as any).title,
-        (story as any).summary,
-        (story as any).content,
+        ...(((story as any).slides || []).map((s: any) => s.content)),
       )
       if (check.requiresAnonymity) {
         console.log(`Anonymity guard: skipping automated illustration for story ${storyId} (matched "${check.matched}")`)
