@@ -84,7 +84,7 @@ export async function savePhotos(supabase: Db, opts: { sourceId?: string; limit?
     .not('image_source_url', 'is', null).is('image_path', null).is('image_status', null).eq('image_hidden', false)
     .in('status', ['published', 'pending']).or(`start_date.gte.${today},end_date.gte.${today}`)
     .eq('topics.event_photos_enabled', true).or(INDIVIDUAL_CARDS, { referencedTable: 'topics' })
-    .order('start_date').limit(opts.limit ?? 40);
+    .order('start_date').order('start_time', { ascending: true, nullsFirst: false }).limit(opts.limit ?? 40);
   if (opts.sourceId) q = q.eq('event_source_id', opts.sourceId);
   const { data, error } = await q;
   if (error) { console.warn('event photos: list failed', error.message); return {}; }
