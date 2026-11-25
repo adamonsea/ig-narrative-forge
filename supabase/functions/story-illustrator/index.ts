@@ -1,3 +1,4 @@
+import { pictureBrief, sceneDirection, compositionRule } from '../_shared/pictureVariety.ts'
 import { pickIllustrationColor } from '../_shared/illustration-color.ts'
 import { topicOwner, isBillingEnforced, meterUsage } from '../_shared/allowance.ts'
 const AUTO_PICTURE_CREDITS = 1
@@ -762,7 +763,8 @@ serve(async (req) => {
       slides || [],
       OPENAI_API_KEY,
       story.title,
-      locationDetails
+      locationDetails,
+      sceneDirection(pictureBrief(String(storyId)))
     )
     // Prompt title: brand-safe feeds never pass names of characters, games or brands to the artist.
     const promptTitle: string = brandSafePictures ? 'An abstract cover picture' : (story.title || '')
@@ -831,6 +833,7 @@ serve(async (req) => {
         ? buildPhotographicPrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails)
         : buildIllustrativePrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails, illustrativeVariantForQuality(modelConfig.quality)))
 
+    if (!brandSafePictures && !satiricalPrompt) illustrationPrompt += compositionRule(pictureBrief(String(storyId)))
     illustrationPrompt = `${illustrationPrompt} ${TRADEMARK_RULE}`
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')

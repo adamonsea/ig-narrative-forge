@@ -244,7 +244,8 @@ export async function extractSubjectMatter(
   slides: SlideContent[],
   openaiKey: string,
   storyTitle?: string,
-  locationContext?: string | null
+  locationContext?: string | null,
+  direction?: string
 ): Promise<string> {
   if (!openaiKey || slides.length === 0) {
     return 'local news scene';
@@ -273,24 +274,23 @@ Example: "Councillor Sarah Thompson, 50s, standing in front of the Art Deco faca
         reasoning_effort: 'none',
         messages: [{
           role: 'user',
-          content: `Extract the main visual subject from this story in 20-35 words for image generation.
+          content: `Describe the picture for this news story in 20-35 words for image generation.
 
 CRITICAL REQUIREMENTS:
-- INCLUDE SPECIFIC NAMES when mentioned (e.g., "MP Stephen Lloyd", "Chef Gordon Ramsay")
-- Include their ROLE or TITLE (MP, councillor, business owner, chef, teacher, etc.)
-- Specify gender (man/woman) and approximate age if apparent from context
-- SHOW THE STORY, not the announcement—if about flooding, show flood context; if about a new business, show the business in action
-- Focus on the PRIMARY person/people in their actual story context
+- SHOW THE STORY, not the announcement—if about flooding, show the flood; if about a new business, show the business in action
+- The subject can be a place, an object, a group, an action or a person — pick whatever tells this story best
+- INCLUDE SPECIFIC NAMES and roles only for people the story names (e.g., "MP Stephen Lloyd")
+- Give gender and age only when the story states them; never assume a man by default
 ${locationGuidance}
-VARIETY NOTE: Avoid defaulting to "speaking at podium/press conference/media scrum" unless the story is specifically about a speech or formal announcement. Prefer showing the subject engaged in the story's real-world context.
+${direction ? direction + '\n' : ''}
+VARIETY NOTE: Avoid podiums, press conferences and media scrums unless the story is about a speech.
 
-Example outputs:
-- "MP Stephen Lloyd, middle-aged man, walking through flood-damaged streets talking with affected residents"
-- "Chef Gordon Ramsay, 50s, tasting dishes in his restaurant kitchen surrounded by staff"
+Example outputs (note the range):
+- "Flood water up to car doors on a terraced street, sandbags stacked against front doors, seen from above"
+- "Close-up of weathered hands sorting donated tins into crates at a food bank"
 - "Councillor Sarah Thompson, woman in her 40s, examining architectural plans with the project team"
-- "Gallery curator Maria Santos, woman in her 40s, guiding visitors through a bright modernist gallery's exhibition space"
-- "Local farmer James Wilson, weathered man in his 60s, inspecting storm damage to his barn"
-- "Business owner David Chen in his newly renovated cafe interior, arranging furniture before opening"
+- "Empty seafront promenade at dawn, closed kiosk shutters, gulls on the railings"
+- "A mixed group of teenagers and older volunteers planting trees along a park path"
 
 ${titleContext}Story text:
 ${storyText.slice(0, 2000)}`
