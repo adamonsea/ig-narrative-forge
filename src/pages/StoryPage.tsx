@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { StoryPageSEO } from "@/components/seo/StoryPageSEO";
 import { StoryStructuredData } from "@/components/seo/StoryStructuredData";
-import { StoryRatingCard } from "@/components/swipe-mode/StoryRatingCard";
+import { StoryReadable } from "@/components/story/StoryReadable";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { startStoryPageDwell } from "@/lib/storyPageDwell";
 import { CookieConsent } from "@/components/CookieConsent";
@@ -271,16 +271,16 @@ const StoryPage = () => {
       />
 
       <div className="max-w-lg mx-auto">
-        {/* Back Button */}
-        <div className="p-4">
-          <Button variant="outline" asChild>
-            <Link to={`/feed/${slug}`}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Live {topic.name} feed
-            </Link>
-          </Button>
-        </div>
-        
+        <nav className="px-4 pt-4 pb-3">
+          <Link
+            to={`/@${slug}`}
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-foreground/80 hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {topic.name}
+          </Link>
+        </nav>
+
         <StoryCarousel 
           story={story} 
           storyUrl={`${window.location.origin}/@${slug}/story/${story.id}`}
@@ -291,11 +291,14 @@ const StoryPage = () => {
           coverStyle={resolveStoryCoverStyle((topic as any).story_cover_style)}
         />
         
-        {/* Story Rating Stats - links to Play Mode */}
-        <div className="p-4">
-          <StoryRatingCard storyId={story.id} topicSlug={slug} />
-        </div>
-        <footer className="px-4 pb-8 text-center">
+        <StoryReadable
+          title={story.title}
+          author={story.author}
+          publicationName={story.publication_name}
+          sourceUrl={story.article?.source_url || ''}
+          slides={story.slides}
+        />
+        <footer className="px-4 py-8 text-center">
           <Link to="/cookies#settings" className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground">
             Cookie settings
           </Link>
