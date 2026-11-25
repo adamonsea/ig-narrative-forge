@@ -35,3 +35,9 @@ Recommended fix: add `can_view_topic_stats` guards to the four stats functions, 
 | Fonts | 88 KB | 88 KB |
 Real visitors on feeds (last 7 days): LCP p75 2.6s (29 readings, too few to judge), CLS p75 0.10 (35).
 Biggest causes to target: Eastbourne scroll jank (story cards re-rendering/measuring while scrolling), image weight, script size.
+
+## Done — 25 Nov 2026
+- Stats guards: swipe insights, quiz stats, engagement stats and daily story counts need the feed owner/admin; readers get install count only via `get_topic_install_count`; subscriber score only for owner/admin or the signed-in subscriber; drip logger service-role only.
+- Feed speed: TopicFeed re-rendered every card ~45×/s (unstable quiz/insight/metadata values + scrolled-past counter). Fixed; dev-mode scroll on 4× CPU: Eastbourne 2.3 → 35–40 fps, Lisbon 54 unchanged. Covers sized to the card (q75), first two cards eager, rest lazy.
+- Archived to `supabase/functions/_archived` and undeployed (15): schedule-recovery, universal-platform-fix, emergency-scrape-fix, emergency-scrape-test, emergency-source-fix, reactivate-eastbourne-sources, test-beautiful-soup, test-content-generator, test-image-generator, test-processing-pipeline, test-scraper-fix, test-screenshot-minimal, phase2-verification, clean-slate-migration, r. Kept (still used): reset-stuck-processing (Desk buttons), ai-scraper-recovery (scraper fallback).
+- Merged: stuck-story recovery now runs inside queue-processor every 5th minute (auto-recover cron removed, function kept for manual use); proactive-content-monitor cron removed (4-hourly kept); proactive-source-monitoring cron removed (pointed at a missing function; daily source-health-monitor kept).

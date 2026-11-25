@@ -69,6 +69,36 @@ serve(async (req) => {
       console.log('🧹 Stale processing jobs older than 10m reset to pending');
     }
 
+    // Stuck stories (merged from auto-recover-stuck-stories' 5-minute job): a story left
+    // "processing" for 10+ minutes goes back to draft and is queued again. Runs every 5th minute.
+    if (new Date().getUTCMinutes() % 5 === 0) {
+      const { data: stuckStories, error: stuckErr } = await supabase
+        .from('stories')
+        .select('id, article_id, topic_article_id')
+        .eq('status', 'processing')
+        .lt('updated_at', staleCutoff);
+      if (stuckErr) {
+        console.warn('⚠️ Stuck-story check failed:', stuckErr);
+      } else if (stuckStories && stuckStories.length > 0) {
+        const { error: resetErr } = await supabase
+          .from('stories')
+          .update({ status: 'draft', updated_at: new Date().toISOString() })
+          .in('id', stuckStories.map((s: any) => s.id));
+        if (!resetErr) {
+          let requeued = 0;
+          for (const st of stuckStories as any[]) {
+            const { error: qErr } = await supabase.from('content_generation_queue')
+              .insert({ article_id: st.article_id, topic_article_id: st.topic_article_id, status: 'pending', created_at: new Date().toISOString() });
+            if (!qErr) requeued++;
+            else if ((qErr as any).code !== '23505') console.error('❌ Error re-queuing stuck story:', qErr);
+          }
+          console.log(`🩹 Reset ${stuckStories.length} stuck stories, re-queued ${requeued}`);
+        } else {
+          console.error('❌ Error resetting stuck stories:', resetErr);
+        }
+      }
+    }
+
     // Get pending jobs from the queue (limit to 5 at a time for better efficiency)
     const { data: pendingJobs, error: queueError } = await supabase
       .from('content_generation_queue')

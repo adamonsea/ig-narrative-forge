@@ -59,9 +59,6 @@ verify_jwt = false
 [functions.reactivate-sources]
 verify_jwt = false
 
-[functions.reactivate-eastbourne-sources]
-verify_jwt = false
-
 [functions.source-health-alerts]
 verify_jwt = false
 
@@ -287,35 +284,8 @@ verify_jwt = false
 # ADMIN/MAINTENANCE FUNCTIONS (JWT Required)
 # ========================================
 
-[functions.test-image-generator]
-verify_jwt = true
-
-[functions.test-scraper-fix]
-verify_jwt = true
-
-[functions.test-beautiful-soup]
-verify_jwt = true
-
-[functions.test-screenshot-minimal]
-verify_jwt = true
-
-[functions.test-processing-pipeline]
-verify_jwt = true
-
-[functions.test-content-generator]
-verify_jwt = true
-
 [functions.newsquest-arc-scraper]
 verify_jwt = false
-
-[functions.emergency-scrape-fix]
-verify_jwt = true
-
-[functions.emergency-scrape-test]
-verify_jwt = true
-
-[functions.emergency-source-fix]
-verify_jwt = true
 
 [functions.fix-topic-keywords]
 verify_jwt = true
@@ -342,12 +312,6 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.source-link-validator]
-verify_jwt = true
-
-[functions.universal-platform-fix]
-verify_jwt = true
-
-[functions.schedule-recovery]
 verify_jwt = true
 
 [functions.backfill-parliamentary-metadata]
@@ -446,12 +410,6 @@ verify_jwt = true
 [functions.fix-source-urls]
 verify_jwt = true
 
-[functions.clean-slate-migration]
-verify_jwt = true
-
-[functions.phase2-verification]
-verify_jwt = true
-
 [functions.waitlist-signup]
 verify_jwt = true
 
@@ -530,9 +488,6 @@ verify_jwt = false
 # ========================================
 # NATIVE URL SHORTENER
 # ========================================
-
-[functions.r]
-verify_jwt = false
 
 [functions.shorten-url]
 verify_jwt = false
