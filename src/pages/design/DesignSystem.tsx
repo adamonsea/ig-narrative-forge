@@ -17,7 +17,7 @@ import { InfoHint, InlineError, SaveIndicator, type SaveState } from "@/componen
 import { RememberedFold } from "@/components/settings/RememberedFold";
 import { PictureEditor } from "@/components/picture-edit/PictureEditor";
 import { DeskCard, DeskBadge, MetaLine, PublishSplitButton, ShelfLabel, SpikeButton } from "@/components/topic-pipeline/DeskCard";
-import { AutopilotPill } from "@/components/topic-pipeline/PoolGlance";
+import { AutopilotPill, GlanceTiles, PoolSummary } from "@/components/topic-pipeline/PoolGlance";
 import { AttentionTag } from "@/components/events/DeskEvents";
 import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
 import { LiveFeedControl } from "@/components/feed/LiveFeedControl";
@@ -271,6 +271,19 @@ export default function DesignSystem() {
           </Block>
 
           <Block id="patterns" title="Patterns">
+            <div className="grid gap-6 md:grid-cols-2">
+              {['Published', 'Events ahead'].map((title) => (
+                <Spec key={title} name={title}>
+                  <PoolSummary title={title}>
+                    <GlanceTiles items={[
+                      { label: 'Today', value: 6 },
+                      { label: 'This week', value: 28 },
+                      { label: 'This month', value: 112 },
+                    ]} />
+                  </PoolSummary>
+                </Spec>
+              ))}
+            </div>
             <Spec name="Page header">
               <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
                 <h3 className="text-2xl font-semibold">Sources</h3>

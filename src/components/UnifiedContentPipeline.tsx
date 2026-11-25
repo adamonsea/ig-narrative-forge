@@ -8,7 +8,7 @@ import { NextGatherPanel } from "@/components/topics/insight/NextGatherPanel";
 import { AlertCircle, Mail, Check, ArrowRight, ArrowLeft } from "lucide-react";
 import { InlineError } from "@/components/ui/editorial";
 import { RememberedFold } from "@/components/settings/RememberedFold";
-import { AutopilotPill, EventHorizonGlance, PublishedGlance, useAutopilotOn } from "@/components/topic-pipeline/PoolGlance";
+import { AutopilotPill, EventHorizonGlance, PoolSummary, PublishedGlance, useAutopilotOn } from "@/components/topic-pipeline/PoolGlance";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -577,6 +577,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <ArrowRight className="hidden h-4 w-4 text-muted-foreground/70 lg:block" aria-hidden="true" />
             </div>
           </div>
+          {selectedTopicId && (
+            <PoolSummary title="Published">
+              <PublishedGlance topicId={selectedTopicId} />
+            </PoolSummary>
+          )}
           {storiesToCheck.length > 0 && (
             <section aria-labelledby="stories-to-check" className="space-y-2 rounded-xl border border-attention/50 bg-attention-soft p-3">
               <h4 id="stories-to-check" className="flex items-center gap-2 text-base font-semibold text-attention-foreground">
@@ -696,11 +701,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               />
             </RememberedFold>
           )}
-          {selectedTopicId && (
-            <RememberedFold foldKey="desk-story-glance" label="Published" contentClassName="pt-2">
-              <PublishedGlance topicId={selectedTopicId} />
-            </RememberedFold>
-          )}
         </section>
 
         {/* ===== Live now: exactly what readers see, in feed order ===== */}
@@ -777,9 +777,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </div>
           </div>
           {eventsOn && (
-            <RememberedFold foldKey="desk-event-glance" label="Events ahead" contentClassName="pt-2">
+            <PoolSummary title="Events ahead">
               <EventHorizonGlance topicId={selectedTopicId} waiting={eventDesk?.waiting ?? []} />
-            </RememberedFold>
+            </PoolSummary>
           )}
           {!eventsOn ? (
             <EventsOffCard disabled={!eventDesk} onSwitchOn={() => eventActions.setEventsOn(true)} />

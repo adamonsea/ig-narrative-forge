@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Plane } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { publishedCounts, type PublishedCounts } from "@/lib/deskActivity";
@@ -7,13 +7,23 @@ import { cn } from "@/lib/utils";
 
 export interface GlanceItem { label: string; value: number | null; note?: string | undefined }
 
+/** Always-open summary band shared by both Desk pools and /design. */
+export function PoolSummary({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section aria-label={title} className="space-y-3 border-b border-border bg-background px-4 py-4">
+      <h4 className="text-base font-semibold text-foreground">{title}</h4>
+      {children}
+    </section>
+  );
+}
+
 /** Three quiet figures side by side: today / this week / this month. */
 export function GlanceTiles({ items }: { items: GlanceItem[] }) {
   return (
-    <dl className="grid grid-cols-3 gap-2">
+    <dl className="grid grid-cols-3 gap-3">
       {items.map((it) => (
-        <div key={it.label} className="rounded-lg bg-background/70 px-3 py-2">
-          <dd className="text-lg font-semibold tabular-nums text-foreground">{it.value === null ? "–" : it.value.toLocaleString()}</dd>
+        <div key={it.label} className="min-w-0 space-y-1">
+          <dd className="text-2xl font-semibold leading-tight tabular-nums text-foreground">{it.value === null ? "–" : it.value.toLocaleString()}</dd>
           <dt className="text-sm text-muted-foreground">{it.label}</dt>
           {it.note && <p className="text-sm text-muted-foreground">{it.note}</p>}
         </div>
@@ -22,7 +32,7 @@ export function GlanceTiles({ items }: { items: GlanceItem[] }) {
   );
 }
 
-/** Stories that went live today, in the last 7 days and the last 30. Fetched only when the fold is open. */
+/** Stories that went live today, in the last 7 days and the last 30. */
 export function PublishedGlance({ topicId }: { topicId: string }) {
   const [counts, setCounts] = useState<PublishedCounts | null>(null);
   useEffect(() => {
@@ -56,7 +66,7 @@ type Timed = { title: string; start_date: string; start_time: string | null };
 /**
  * Events ahead today / next 7 days / next 30, live plus waiting (Hidden never counts),
  * each event name counted once at its next date. Reads the events directly so the
- * figures aren't capped by the feed's card list. Fetched only when the fold is open.
+ * figures aren't capped by the feed's card list.
  */
 export function EventHorizonGlance({ topicId, waiting }: { topicId: string; waiting: Timed[] }) {
   const [live, setLive] = useState<Timed[] | null>(null);
