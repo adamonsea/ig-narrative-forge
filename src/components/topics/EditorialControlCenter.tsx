@@ -2,7 +2,7 @@ import { opt } from "@/lib/optionalProps";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@/lib/router-compat";
 import { SettingsSearch } from "@/components/settings/SettingsSearch";
-import { CalendarDays, ExternalLink, MapPin, Image as ImageIcon, Palette, PenLine, Plane, Settings2, Share2, Sparkles, Target, type LucideIcon } from "lucide-react";
+import { CalendarDays, ExternalLink, MapPin, Image as ImageIcon, Palette, PenLine, Plane, Settings2, Share2, Sparkles, Target, Gauge, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -45,6 +45,7 @@ import { EventCaptionsSettings } from "@/components/settings/EventCaptionsSettin
 import { FeedLookEditor } from "@/components/settings/look/FeedLookEditor";
 import { PublisherPhotosSetting } from "@/components/settings/PublisherPhotosSetting";
 import { FEATURES, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
+import { UsagePanel } from "@/components/billing/UsagePanel";
 
 export interface EditorialTopic {
   id: string;
@@ -121,7 +122,7 @@ interface EditorialControlCenterProps {
 
 const SECTION_ICONS: Record<SettingsSectionId, LucideIcon> = {
   general: Settings2, look: Palette, pictures: ImageIcon, coverage: Target, local: MapPin, writing: PenLine,
-  events: CalendarDays, autopilot: Plane, share: Share2, extras: Sparkles,
+  events: CalendarDays, autopilot: Plane, share: Share2, extras: Sparkles, usage: Gauge,
 };
 
 function Page({ title, purpose, children }: { title: string; purpose?: string | undefined; children: React.ReactNode }) {
@@ -422,6 +423,12 @@ export function EditorialControlCenter({
                 <RegionalFeaturesSettings topicId={topic.id} region={topic.region} parliamentaryEnabled={topic.parliamentary_tracking_enabled} onUpdate={onUpdate} />
               </section>
             )}
+          </Page>
+        )}
+
+        {current === "usage" && (
+          <Page title={label}>
+            <UsagePanel />
           </Page>
         )}
       </div>

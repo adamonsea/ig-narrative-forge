@@ -18,5 +18,8 @@
 # Phase 0 — billing shadow mode
 - [x] api_usage payer/feed columns, usage_events meter, billing_exempt (Adam), flags off
 - [x] Pictures, animation, rewrite, suggestions, event copy metered; Pro 1,000 credits
-- [ ] Gate checks in schedulers, Desk pause line, Usage page, admin view, trial/Pro-only gates (before enforcement)
-- [ ] Fresh free-account test with adam@upthereeverywhere.com (check not already an account first)
+- [x] Gate checks in schedulers, Desk pause line, Usage page, admin view, trial/Pro-only gates (asleep until enforcement)
+- [ ] Free-feed private preview link (needs feed reads to accept a preview token)
+- [ ] Custom domain and social automation gates (features don't exist yet)
+- [ ] Decide Autopilot picture price once real measured costs are in
+- [ ] Fresh free-account test — waiting on a new inbox (adam@upthereeverywhere.com is already an account)

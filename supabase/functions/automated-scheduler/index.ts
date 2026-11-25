@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
+import { automationGate } from '../_shared/allowance.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -121,6 +122,13 @@ serve(async (req) => {
           }
 
           console.log(`🎯 Processing: ${source.source_name} (${source.feed_url})`);
+
+          // Billing gate: skip (never fail) when the owner is paused; shadow mode only logs.
+          const { data: gateSrc } = await supabase.from('content_sources').select('topic_id').eq('id', schedule.source_id).maybeSingle();
+          if ((await automationGate(supabase, gateSrc?.topic_id, 'gather')).skip) {
+            console.log(`⏸️ Paused (billing): ${source.source_name}`);
+            continue;
+          }
 
           // Create a scrape job
           const { data: job, error: jobError } = await supabase

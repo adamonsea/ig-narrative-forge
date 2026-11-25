@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { automationGate } from '../_shared/allowance.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { checkAnonymity } from '../_shared/anonymity-guard.ts';
 
@@ -122,6 +123,9 @@ Deno.serve(async (req) => {
         .eq('brand_safe_pictures', true);
       const skip = new Set((brandSafeRows || []).map((r: { id: string }) => r.id));
       topicsToProcess = topicsToProcess.filter((t) => !skip.has(t.topic_id));
+      // Billing gate: owners out of credits/allowance skip new pictures (shadow mode only logs).
+      const gated = await Promise.all(topicsToProcess.map(async (t) => (await automationGate(supabase, t.topic_id, 'picture')).skip));
+      topicsToProcess = topicsToProcess.filter((_, i) => !gated[i]);
       if (topicsToProcess.length === 0) {
         return new Response(
           JSON.stringify({ success: true, skipped: true, message: 'Brand-safe feeds keep source pictures', topicsProcessed: 0 }),

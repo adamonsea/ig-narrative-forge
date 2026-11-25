@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
+import { automationGate } from '../_shared/allowance.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
@@ -105,6 +106,16 @@ serve(async (req) => {
       console.log(`🚀 Processing ${jobType} job ${job.id} for article ${jobIdentifier}`);
       
       try {
+        // Billing gate: leave the job pending (resumes on its own) when the owner is paused.
+        {
+          const { data: gt } = job.topic_article_id
+            ? await supabase.from('topic_articles').select('topic_id').eq('id', job.topic_article_id).maybeSingle()
+            : await supabase.from('articles').select('topic_id').eq('id', job.article_id).maybeSingle();
+          if ((await automationGate(supabase, gt?.topic_id, 'rewrite')).skip) {
+            console.log(`⏸️ Paused (billing): job ${job.id}`);
+            continue;
+          }
+        }
         // Mark job as processing
         const { error: updateError } = await supabase
           .from('content_generation_queue')

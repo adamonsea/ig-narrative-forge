@@ -1,6 +1,10 @@
 import { pickIllustrationColor } from '../_shared/illustration-color.ts'
 import { topicOwner, isBillingEnforced, meterUsage } from '../_shared/allowance.ts'
 const AUTO_PICTURE_CREDITS = 1
+/** gpt-image-2 per-1M-token rates (text in $5, image in $8, image out $30). */
+function imageTokenCostUsd(textIn: number, imageIn: number, out: number) {
+  return (textIn * 5 + imageIn * 8 + out * 30) / 1_000_000
+}
 import { feedAllowsAutoPictures } from '../_shared/illustration-gate.ts'
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -134,6 +138,8 @@ serve(async (req) => {
   }
 
   let reservedUserId: string | null = null
+  let measuredImageCostUsd: number | null = null
+  let measuredTokens = 0
   let reservationKey: string | null = null
   let reservationSettled = false
   try {
@@ -1373,6 +1379,16 @@ ${TRADEMARK_RULE}`;
       } else {
         // Success path - parse response
         const openaiData = await openaiResponse.json();
+        // True cost from token usage (prompt text + reference images in + image out).
+        const u = openaiData?.usage;
+        if (u && typeof u === 'object') {
+          const textIn = Number(u.input_tokens_details?.text_tokens ?? 0);
+          const imageIn = Number(u.input_tokens_details?.image_tokens ?? 0);
+          const out = Number(u.output_tokens ?? 0);
+          measuredImageCostUsd = imageTokenCostUsd(textIn, imageIn, out);
+          measuredTokens = textIn + imageIn + out;
+          console.log(`💵 Image tokens: text ${textIn}, ref images ${imageIn}, out ${out} → $${measuredImageCostUsd.toFixed(4)}`);
+        }
         console.log('OpenAI response received');
 
         // GPT-Image-1 returns base64 by default
@@ -1515,7 +1531,7 @@ ${TRADEMARK_RULE}`;
     
     // Calculate actual cost based on provider actually used (handles fallbacks)
     let actualServiceName: string = modelConfig.provider;
-    let actualCostUsd: number = modelConfig.cost;
+    let actualCostUsd: number = measuredImageCostUsd ?? modelConfig.cost;
 
     if (usedFallback) {
       if (fallbackModel === 'Replicate FLUX') {
@@ -1532,7 +1548,7 @@ ${TRADEMARK_RULE}`;
           service_name: actualServiceName,
           operation: 'image_generation',
           cost_usd: actualCostUsd,
-          tokens_used: 0,
+          tokens_used: measuredTokens,
           region: null,
           user_id: payerId,
           topic_id: topicId ?? null,

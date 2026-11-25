@@ -1,4 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { automationGate } from '../_shared/allowance.ts';
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
@@ -180,6 +181,11 @@ serve(async (req) => {
 
     for (const topic of topics as DripFeedTopic[]) {
       log(`\n📰 Processing topic: ${topic.name}`);
+      // Billing gate: skip (never fail) when the owner is paused; shadow mode only logs.
+      if ((await automationGate(supabase, topic.id, 'publish')).skip) {
+        results.push({ topic: topic.name, scheduled: 0, skipped: 'paused (billing)' });
+        continue;
+      }
       
       // Check if we're within release hours
       const startHour = topic.drip_start_hour ?? 6;

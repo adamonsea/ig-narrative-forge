@@ -5934,6 +5934,39 @@ export type Database = {
           },
         ]
       }
+      usage_alerts: {
+        Row: {
+          created_at: string
+          emailed_at: string | null
+          id: string
+          metric: string
+          period: string
+          seen_at: string | null
+          threshold: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emailed_at?: string | null
+          id?: string
+          metric: string
+          period: string
+          seen_at?: string | null
+          threshold: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emailed_at?: string | null
+          id?: string
+          metric?: string
+          period?: string
+          seen_at?: string | null
+          threshold?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       usage_events: {
         Row: {
           actor: string
@@ -5981,6 +6014,7 @@ export type Database = {
           billing_exempt: boolean
           created_at: string
           credits_balance: number
+          daily_credit_cap: number | null
           id: string
           total_credits_purchased: number
           total_credits_used: number
@@ -5991,6 +6025,7 @@ export type Database = {
           billing_exempt?: boolean
           created_at?: string
           credits_balance?: number
+          daily_credit_cap?: number | null
           id?: string
           total_credits_purchased?: number
           total_credits_used?: number
@@ -6001,6 +6036,7 @@ export type Database = {
           billing_exempt?: boolean
           created_at?: string
           credits_balance?: number
+          daily_credit_cap?: number | null
           id?: string
           total_credits_purchased?: number
           total_credits_used?: number
@@ -6750,6 +6786,10 @@ export type Database = {
           visits_today: number
         }[]
       }
+      _owner_published_stories: {
+        Args: { p_since: string; p_user: string }
+        Returns: number
+      }
       add_source_to_topic: {
         Args: {
           p_source_config?: Json
@@ -6784,6 +6824,12 @@ export type Database = {
       }
       article_is_public: { Args: { p_article_id: string }; Returns: boolean }
       auto_generate_missing_schedules: { Args: never; Returns: Json }
+      automation_pause_reason: {
+        Args: { p_kind: string; p_user: string }
+        Returns: string
+      }
+      billing_enforced: { Args: never; Returns: boolean }
+      billing_owner_status: { Args: { p_user: string }; Returns: Json }
       build_topic_snapshot: { Args: { p_topic_id: string }; Returns: Json }
       bulk_cleanup_topic_content: {
         Args: { p_topic_id: string }
@@ -6932,6 +6978,7 @@ export type Database = {
           variant: string
         }[]
       }
+      get_admin_billing_overview: { Args: { p_days?: number }; Returns: Json }
       get_admin_slides_for_stories: {
         Args: { p_story_ids: string[] }
         Returns: {
@@ -7106,6 +7153,7 @@ export type Database = {
       }
       get_event_editorial: { Args: { p_event_id: string }; Returns: Json }
       get_feed_api_status: { Args: { p_topic_id: string }; Returns: Json }
+      get_feed_billing_state: { Args: { p_topic_id: string }; Returns: Json }
       get_feed_editorial_profile: {
         Args: { p_topic_id: string }
         Returns: Json
@@ -7122,6 +7170,7 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: number
       }
+      get_my_usage: { Args: never; Returns: Json }
       get_popular_stories_by_period: {
         Args: { p_topic_id: string }
         Returns: {
@@ -7895,6 +7944,13 @@ export type Database = {
         Args: { p_items: Json; p_topic_id: string; p_visitor_id: string }
         Returns: number
       }
+      record_usage_alerts: {
+        Args: { p_user: string }
+        Returns: {
+          metric: string
+          threshold: number
+        }[]
+      }
       redeem_free_access_voucher: {
         Args: { p_code: string; p_email: string; p_user_id: string }
         Returns: Json
@@ -7978,6 +8034,8 @@ export type Database = {
         Args: { p_slug: string; p_topic_id: string }
         Returns: string
       }
+      set_my_daily_credit_cap: { Args: { p_cap: number }; Returns: number }
+      set_pause_free_automation: { Args: { p_on: boolean }; Returns: boolean }
       set_story_pin: {
         Args: { p_hours: number; p_story_id: string; p_topic_id: string }
         Returns: string

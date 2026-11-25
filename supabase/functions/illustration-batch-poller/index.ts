@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { automationGate } from '../_shared/allowance.ts';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 // Polls OpenAI Batch jobs created by auto-illustrate-stories for backlog
@@ -46,6 +47,9 @@ Deno.serve(async (req) => {
     let pending = 0;
 
     for (const job of jobs) {
+      // Billing gate is logged only here: a finished batch is already paid for at OpenAI,
+      // so it is always saved. New batches are stopped earlier by auto-illustrate-stories.
+      await automationGate(supabase, job.topic_id, 'picture');
       try {
         const batchRes = await fetch(`https://api.openai.com/v1/batches/${job.batch_id}`, {
           headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },

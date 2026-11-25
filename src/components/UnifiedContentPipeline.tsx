@@ -1,4 +1,6 @@
 import { opt } from "@/lib/optionalProps";
+import { DeskBillingNotice } from '@/components/billing/DeskBillingNotice';
+import { settingsPath } from '@/lib/settingsSections';
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -535,6 +537,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       {/* Quiet inline load-error banner with retry — replaces the old per-refresh error toasts */}
       {loadError && (
         <InlineError message={loadError} actionLabel="Retry" onAction={() => refreshContent()} />
+      )}
+
+      {selectedTopicId && topicSlug && (
+        <DeskBillingNotice topicId={selectedTopicId} usagePath={settingsPath(topicSlug, 'usage')} />
       )}
 
       {/* Phones: one simple three-way switch, opening on Live now */}

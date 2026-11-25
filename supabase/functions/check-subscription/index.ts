@@ -3,6 +3,8 @@
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getUser } from '../_shared/auth.ts';
+import { isBillingEnforced } from '../_shared/allowance.ts';
+import { normaliseEmail, hashEmail } from '../_shared/emailIdentity.ts';
 import { MONTHLY_PRO_CREDITS, TOP_UP_CREDITS, TOP_UP_PRICE_ID, WELCOME_CREDITS, planByPriceId } from '../_shared/plans.ts';
 
 const corsHeaders = {
@@ -30,15 +32,27 @@ Deno.serve(async (req) => {
     );
 
     const { sessionId } = await req.json().catch(() => ({}));
-    const welcome = await service.rpc('grant_user_credits', {
-      p_user_id: user.id,
-      p_amount: WELCOME_CREDITS,
-      p_grant_type: 'welcome',
-      p_source_key: 'welcome:v1',
-      p_description: 'Welcome credits',
-      p_metadata: { version: 1 },
-    });
-    if (welcome.error) console.error('Welcome credit grant failed', welcome.error);
+    // Welcome credits: once per normalised email; once billing is enforced, only after email verification.
+    const emailHash = await hashEmail(normaliseEmail(user.email));
+    let welcomeAllowed = true;
+    if (await isBillingEnforced(service)) {
+      const { data: full } = await service.auth.admin.getUserById(user.id);
+      const verified = !!full?.user?.email_confirmed_at;
+      const { count } = await service.from('credit_grants').select('id', { count: 'exact', head: true })
+        .eq('grant_type', 'welcome').eq('metadata->>email_hash', emailHash).neq('user_id', user.id);
+      welcomeAllowed = verified && !count;
+    }
+    if (welcomeAllowed) {
+      const welcome = await service.rpc('grant_user_credits', {
+        p_user_id: user.id,
+        p_amount: WELCOME_CREDITS,
+        p_grant_type: 'welcome',
+        p_source_key: 'welcome:v1',
+        p_description: 'Welcome credits',
+        p_metadata: { version: 1, email_hash: emailHash },
+      });
+      if (welcome.error) console.error('Welcome credit grant failed', welcome.error);
+    }
 
     const { data: row } = await service
       .from('subscribers')

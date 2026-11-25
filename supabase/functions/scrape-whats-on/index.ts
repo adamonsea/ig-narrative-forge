@@ -34,6 +34,7 @@ import { cleanupPhotos, removePhotosOf, savePhotos } from './eventPhotos.ts';
  */
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { automationGate } from '../_shared/allowance.ts';
 import { z } from 'npm:zod@3';
 import { getUser, userOwnsTopic, isServiceRole } from '../_shared/auth.ts';
 import { addDays, londonToday } from './extract.ts';
@@ -723,6 +724,10 @@ Deno.serve(async (req) => {
       return json({ success: true, name: body.name ?? source.name });
     }
 
+    // Billing gate for automatic gathers: skip (never fail); shadow mode only logs.
+    if (isSystem && (await automationGate(supabase, source.topic_id, 'gather')).skip) {
+      return json({ success: true, skipped: true, reason: 'paused' });
+    }
     // The daily run saves photos once at the end instead of per source
     const quiet = isSystem && 'quiet' in body && body.quiet === true;
     // System-only trial gathers can skip writing copy (no credits)

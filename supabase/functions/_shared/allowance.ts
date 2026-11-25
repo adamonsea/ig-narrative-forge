@@ -110,6 +110,7 @@ export async function meterUsage(service: any, input: MeterInput): Promise<Meter
   } catch (e) {
     console.warn('usage_events insert failed (non-critical):', e);
   }
+  if (input.payerId && (credits > 0 || (input.stories ?? 0) > 0)) await checkUsageAlerts(service, input.payerId);
   return { charge, wouldPause, exempt };
 }
 
@@ -120,5 +121,83 @@ export async function logApiUsage(service: any, row: { service_name: string; ope
     if (error) console.warn('api_usage insert failed (non-critical):', error.message);
   } catch (e) {
     console.warn('api_usage insert failed (non-critical):', e);
+  }
+}
+
+export type AutomationKind = 'gather' | 'rewrite' | 'picture' | 'publish';
+
+export interface GateResult {
+  /** Skip this feed's automatic work now (only ever true when billing_enforce is on). */
+  skip: boolean;
+  /** Why it would pause (null = runs). Logged in shadow mode as would_pause. */
+  reason: string | null;
+}
+
+const gateCache = new Map<string, GateResult>();
+
+/**
+ * Gate check for schedulers: skip, never fail. In shadow mode it only records
+ * a "would have paused" row (once per owner, kind and reason per day).
+ */
+export async function automationGate(service: any, topicId: string | null | undefined, kind: AutomationKind): Promise<GateResult> {
+  if (!topicId) return { skip: false, reason: null };
+  const cacheKey = `${topicId}:${kind}`;
+  const cached = gateCache.get(cacheKey);
+  if (cached) return cached;
+  let result: GateResult = { skip: false, reason: null };
+  try {
+    const owner = await topicOwner(service, topicId);
+    const { data: reason, error } = await service.rpc('automation_pause_reason', { p_user: owner, p_kind: kind });
+    if (error) throw error;
+    if (reason && reason !== 'no_owner') {
+      const enforce = await isBillingEnforced(service);
+      result = { skip: enforce, reason };
+      const ref = `${kind}:${reason}`;
+      const since = new Date(); since.setUTCHours(0, 0, 0, 0);
+      const { count } = await service.from('usage_events').select('id', { count: 'exact', head: true })
+        .eq('payer_id', owner).eq('kind', 'gate').eq('ref_id', ref).gte('created_at', since.toISOString());
+      if (!count) {
+        await service.from('usage_events').insert({
+          payer_id: owner, topic_id: topicId, actor: 'system', kind: 'gate',
+          shadow: !enforce, outcome: enforce ? 'paused' : 'would_pause', ref_id: ref,
+        });
+      }
+      console.log(`[billing] ${enforce ? 'paused' : 'would have paused'} ${kind} for topic ${topicId}: ${reason}`);
+    }
+  } catch (e) {
+    console.warn('automationGate failed open (non-critical):', e);
+  }
+  gateCache.set(cacheKey, result);
+  return result;
+}
+
+/** Record newly crossed 75/90/100% thresholds and email the owner once per threshold per month. */
+export async function checkUsageAlerts(service: any, userId: string | null) {
+  if (!userId) return;
+  try {
+    const { data: fresh } = await service.rpc('record_usage_alerts', { p_user: userId });
+    if (!fresh?.length) return;
+    const key = Deno.env.get('RESEND_API_KEY');
+    const { data: u } = await service.auth.admin.getUserById(userId);
+    const email = u?.user?.email;
+    if (!key || !email) return;
+    const top = fresh.reduce((a: any, b: any) => (b.threshold > a.threshold ? b : a));
+    const what = top.metric === 'stories' ? 'stories' : 'credits';
+    const subject = top.threshold >= 100 ? `You've used all your ${what} this month` : `You've used ${top.threshold}% of your ${what}`;
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Curatr <noreply@curatr.pro>', to: [email], subject,
+        html: `<p style="font:16px/1.5 sans-serif">${subject}.</p><p style="font:16px/1.5 sans-serif"><a href="https://curatr.pro/dashboard">See usage</a></p>`,
+      }),
+    });
+    if (res.ok) {
+      await service.from('usage_alerts').update({ emailed_at: new Date().toISOString() })
+        .eq('user_id', userId).eq('period', new Date().toISOString().slice(0, 7))
+        .in('threshold', fresh.map((f: any) => f.threshold)).is('emailed_at', null);
+    }
+  } catch (e) {
+    console.warn('usage alert failed (non-critical):', e);
   }
 }

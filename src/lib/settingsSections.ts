@@ -10,6 +10,7 @@ export const SETTINGS_SECTIONS = [
   { id: "autopilot", label: "Autopilot", purpose: "How much happens without you." },
   { id: "share", label: "Share", purpose: "Ways for readers to follow the feed." },
   { id: "extras", label: "Extras", purpose: "Optional cards and tools. All off unless you switch them on." },
+  { id: "usage", label: "Usage", purpose: "" },
 ] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];
