@@ -43,4 +43,3 @@
 - Events|All|News switch only via `showFeedViewToggle`; display-only.
 - Source photos always credited (photoCredit.ts), use_publisher_photos off=none new
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
-- Feed API (`/api/public/feed-api/v1/*`, `src/lib/feedApi/`) reads only via guarded `feed_api_events` (hashed token, same `topic_reader_events` as the feed); new resources reuse its envelope.

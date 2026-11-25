@@ -1,3 +1,4 @@
 - Maybe-undefined optional values go through `opt()`/`definedOnly()` (`src/lib/optionalProps.ts`); keeps strict types without changing runtime.
 - Feed look: `branding_config.top_bar_color`/`feed_background_color` hold hex or "brand"; unset means the default look, so `feedSurfaceStyles()` returns no tokens and existing feeds stay untouched.
 - Event editorial copy is generic (feed_editorial_profiles, event_copy, event_captions, event_field_edits): facts and captions by code in `_shared/editorial/caption.ts`+`rules.ts` (re-exported here), AI text only via `_shared/editorial/generate.ts` run through scrape-whats-on `editorial_copy` on approval; profile off = no change.
+- Feed API (`/api/public/feed-api/v1/*`, `src/lib/feedApi/`) reads only via guarded `feed_api_events` (hashed token, same `topic_reader_events` as the feed); new resources reuse its envelope.
