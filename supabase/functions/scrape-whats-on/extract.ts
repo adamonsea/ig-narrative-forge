@@ -326,6 +326,48 @@ export function parseDateText(text: string, today: string): string | null {
   return null;
 }
 
+/**
+ * A run written "18 Nov – 13 Dec" (or "3 November to 18 December 2026"): first and last day.
+ * The year comes from the end date (next on or after today), so a run that has already
+ * started is read as on now, not as next year. Null when the text isn't a two-date range.
+ */
+export function parseDateRange(text: string, today: string): { start: string; end: string } | null {
+  const s = dateText(text);
+  const parts = s.split(/\s+(?:-|to|until|till|ate|a)\s+|\s*-\s*(?=\d{1,2}\D*\s*[a-z])/);
+  if (parts.length !== 2) return null;
+  const [a, b] = parts as [string, string];
+  if (!new RegExp(MONTH_RE).test(b)) return null;
+  const end = parseDateText(b, today);
+  if (!end) return null;
+  // start: same text with the end's year when it has none
+  const withYear = /\b\d{4}\b/.test(a) ? a : `${a} ${end.slice(0, 4)}`;
+  let start = new RegExp(MONTH_RE).test(a) ? parseDateText(withYear, today) : null;
+  if (!start) return null;
+  if (start > end) start = `${+start.slice(0, 4) - 1}${start.slice(4)}`;
+  if (start > end || start === end) return null;
+  return { start, end };
+}
+
+/** "every Monday" / "Mondays" / "weekly on Monday" -> weekday (0 = Sunday), else null. */
+export function weeklyDay(text: string): number | null {
+  const s = dateText(text);
+  const m = s.match(new RegExp(`\\b(?:every|each)\\s+${WEEKDAY_RE}\\b`)) ||
+    s.match(new RegExp(`\\bweekly(?:\\s+on)?\\s+${WEEKDAY_RE}\\b`));
+  if (m) return WEEKDAYS[m[1]!] ?? null;
+  const plural = s.match(/^(mon|tues|wednes|thurs|fri|satur|sun)days$/);
+  return plural ? WEEKDAYS[`${plural[1]}day`] ?? null : null;
+}
+
+/** The next n dates (from today) falling on that weekday. */
+export function nextWeekdays(weekday: number, today: string, n: number): string[] {
+  const [y, m, d] = today.split('-').map(Number) as [number, number, number];
+  const offset = (weekday - weekdayOf(y, m, d) + 7) % 7;
+  return Array.from({ length: n }, (_, i) => addDays(today, offset + i * 7));
+}
+
+/** How many upcoming weeks a stated weekly event is listed for. */
+export const WEEKLY_AHEAD = 4;
+
 /** "7.30pm", "7:30 pm", "7pm", "19:30" -> "19:30:00". */
 export function parseTimeText(text: string | null | undefined): string | null {
   if (!text) return null;
@@ -733,20 +775,37 @@ export function verifyTextCandidates(
     const dateText = clean(c.date_text, 120);
     if (!title || !dateText || title.length < 3 || dateText.length < 3) continue;
     if (!appearsNear(page, normaliseForMatch(title), normaliseForMatch(dateText))) continue;
-    const date = parseDateText(dateText, today);
-    if (!date) continue;
+    // A run ("18 Nov – 13 Dec"): on now if started, listed from today, last day kept
+    const range = parseDateRange(dateText, today);
+    const weekly = range ? null : weeklyDay(dateText);
+    const dates: { start_date: string; end_date?: string; run_start?: string }[] = [];
+    if (range) {
+      if (range.end < today) continue;
+      dates.push(range.start < today
+        ? { start_date: today, end_date: range.end, run_start: range.start }
+        : { start_date: range.start, end_date: range.end });
+    } else if (weekly !== null) {
+      // stated as weekly on the page: list the next few weeks only
+      for (const d of nextWeekdays(weekly, today, WEEKLY_AHEAD)) dates.push({ start_date: d });
+    } else {
+      const date = parseDateText(dateText, today);
+      if (!date) continue;
+      dates.push({ start_date: date });
+    }
     const timeText = clean(c.time_text, 40);
     const time = timeText && page.includes(normaliseForMatch(timeText)) ? parseTimeText(timeText) : null;
     const venue = clean(c.venue, 160);
     const t = normaliseForMatch(title);
     const link = links.find((l) => l.text === t) || links.find((l) => l.text.includes(t));
-    out.push({
-      title,
-      start_date: date,
-      start_time: time,
-      venue: venue && page.includes(normaliseForMatch(venue)) ? venue : null,
-      url: link?.url ?? pageUrl,
-    });
+    for (const d of dates) {
+      out.push({
+        title,
+        ...d,
+        start_time: time,
+        venue: venue && page.includes(normaliseForMatch(venue)) ? venue : null,
+        url: link?.url ?? pageUrl,
+      });
+    }
   }
   return out;
 }

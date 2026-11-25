@@ -98,7 +98,8 @@ async function textCandidates(pageText: string, url: string): Promise<unknown[]>
         'You list the events shown in the text of a venue or "what\'s on" web page, as JSON. ' +
         'Copy title, date_text, time_text and venue EXACTLY as they appear in the text, character for character. ' +
         'Never reformat, complete, translate or guess. date_text is the date written next to that event ' +
-        '(for example "Thu 4 Dec" or "4th December 2026"). Leave out any event that has no date written in the text. ' +
+        '(for example "Thu 4 Dec", "4th December 2026", a run like "18 Nov – 13 Dec", or a weekly line like "every Monday"). ' +
+        'Leave out any event that has no date or weekly day written in the text. ' +
         'time_text and venue are null when not written. At most 60 events. If there are none, return an empty list.',
       prompt: `URL: ${url}\n\nPAGE TEXT:\n${pageText.slice(0, 24000)}`,
       output: Output.object({ schema: CandidateSchema }),

@@ -162,3 +162,25 @@ Deno.test('listing pictures are picked up from JSON-LD and JSON feeds', () => {
   const got = parseJsonFeed(feed, 'https://www.agendalx.pt/');
   assertEquals(got.map((e) => e.image ?? null), ['https://www.agendalx.pt/content/uploads/bike.jpg', null]);
 });
+
+Deno.test('a run that has already started is on now, not next year', async () => {
+  const { parseDateRange } = await import('./extract.ts');
+  assertEquals(parseDateRange('18 NOV – 13 DEC', '2026-11-25'), { start: '2026-11-18', end: '2026-12-13' });
+  assertEquals(parseDateRange('20 Dec – 4 Jan', '2026-11-25'), { start: '2026-12-20', end: '2027-01-04' });
+  assertEquals(parseDateRange('12 November', '2026-11-25'), null);
+  assertEquals(parseDateRange('4 - 6 Dec', '2026-11-25'), null);
+});
+
+Deno.test('text events: runs listed from today with the last day, weekly lines for 4 weeks, past dropped', () => {
+  const page = 'SIREN CCC LAUNCH 12 NOVEMBER WARPIGS SHOWCASE 18 NOV – 13 DEC WEEKLY QUIZ We host a weekly quiz every Monday starting at 7:30pm.';
+  const out = verifyTextCandidates([
+    { title: 'SIREN CCC LAUNCH', date_text: '12 NOVEMBER', time_text: null, venue: null },
+    { title: 'WARPIGS SHOWCASE', date_text: '18 NOV – 13 DEC', time_text: null, venue: null },
+    { title: 'WEEKLY QUIZ', date_text: 'every Monday', time_text: '7:30pm', venue: null },
+  ] as never[], page, 'https://x.test/events/', '2026-11-25');
+  const run = out.find((e) => e.title === 'WARPIGS SHOWCASE')!;
+  assertEquals([run.start_date, run.end_date, run.run_start], ['2026-11-25', '2026-12-13', '2026-11-18']);
+  assertEquals(out.filter((e) => e.title === 'WEEKLY QUIZ').map((e) => e.start_date), ['2026-11-30', '2026-12-07', '2026-12-14', '2026-12-21']);
+  assertEquals(out.find((e) => e.title === 'WEEKLY QUIZ')!.start_time, '19:30:00');
+  assertEquals(upcomingUnique(out, '2026-11-25').some((e) => e.title === 'SIREN CCC LAUNCH'), false);
+});
