@@ -36,7 +36,11 @@ async def feed(p, slug):
         check(f"{slug}: cards render", n >= 3, f"{n} cards")
     except Exception as e:
         check(f"{slug}: cards render", False, str(e)[:120])
-    await page.wait_for_timeout(3000)
+    # Pictures can arrive a few seconds after the cards (events-led feeds load them in the background): wait up to 15s.
+    try:
+        await page.wait_for_function("[...document.images].filter(i=>i.complete&&i.naturalWidth>0).length >= 1", timeout=15000)
+    except Exception:
+        pass
     imgs = await page.evaluate("[...document.images].filter(i=>i.complete&&i.naturalWidth>0).length")
     check(f"{slug}: pictures show", imgs >= 1, f"{imgs} loaded")
     body = await page.inner_text("body")

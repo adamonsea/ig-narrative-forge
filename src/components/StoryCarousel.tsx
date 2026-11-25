@@ -15,7 +15,7 @@ import { prepareStorySlides, buildReporterByline } from '@/lib/lastSlide';
 import { useStoryFontSize, FIT_TEXT_CLASS, FIT_TEXT_STYLE } from '@/lib/slideTextFit';
 import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
-import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { optimizeImageUrl, coverPixelWidth } from '@/lib/imageOptimization';
 import { isPublisherPhoto, photoCreditLabel } from '@/lib/photoCredit';
 import { usePhotoCredit } from '@/hooks/usePhotoCredit';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
@@ -191,7 +191,8 @@ export default function StoryCarousel({
     if (story.cover_illustration_url && currentSlideIndex === 0) {
       // Preload cover for first slide
       const img = new Image();
-      img.src = (optimizeImageUrl(story.cover_illustration_url, { quality: 80 }))!;
+      const px = coverPixelWidth(Math.min(window.innerWidth, 672));
+      img.src = (optimizeImageUrl(story.cover_illustration_url, { width: px, height: Math.round(px * 0.75), quality: 75 }))!;
     }
   }, [currentSlideIndex, story, isIOS]);
   
@@ -576,9 +577,15 @@ export default function StoryCarousel({
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;
     const overflows = index > 0 && !!fit?.overflow.includes(index - 1);
+    // Sized to the card (≤672px wide, 2× screens max) instead of a fixed 800×600 at q85.
+    const coverPx = coverPixelWidth(Math.min(typeof window !== 'undefined' ? window.innerWidth : 672, 672));
     const coverSrc = hasImage
-      ? optimizeImageUrl(story.cover_illustration_url!, { width: 800, height: 600, quality: 85 }) || story.cover_illustration_url!
+      ? optimizeImageUrl(story.cover_illustration_url!, { width: coverPx, height: Math.round(coverPx * 0.75), quality: 75 }) || story.cover_illustration_url!
       : '';
+    // The first two cards load straight away; everything further down waits until near the screen.
+    const eagerCover = storyIndex < 2;
+    const coverLoading = eagerCover ? 'eager' as const : 'lazy' as const;
+    const coverPriority = storyIndex === 0 ? 'high' as const : 'auto' as const;
 
     if (hasImage && coverStyle === 'full-bleed') {
       // Full-bleed cover: the picture sets the mood behind the headline, which leads.
@@ -591,7 +598,7 @@ export default function StoryCarousel({
               <source src={story.animated_illustration_url} type="video/mp4" />
             </video>
           ) : (
-            <img src={coverSrc} alt="" loading="lazy"
+            <img src={coverSrc} alt="" loading={coverLoading} fetchPriority={coverPriority} decoding="async"
               className="absolute inset-0 h-full w-full object-cover object-center brightness-90 saturate-[0.9]" />
           )}
           <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,hsl(var(--feed-cover-ink)/0.94)_0%,hsl(var(--feed-cover-ink)/0.78)_30%,hsl(var(--feed-cover-ink)/0.2)_65%,hsl(var(--feed-cover-ink)/0.25)_100%)]" />
@@ -627,25 +634,19 @@ export default function StoryCarousel({
                   <source src={story.animated_illustration_url} type="video/mp4" />
                   {/* Fallback to static image if video fails */}
                   <img
-                    src={optimizeImageUrl(story.cover_illustration_url ?? undefined, { 
-                      width: 800, 
-                      height: 600, 
-                      quality: 85 
-                    }) || story.cover_illustration_url || undefined}
+                    src={coverSrc || undefined}
                     alt={`Cover illustration for ${story.title}`}
                     className="w-full h-full object-cover"
                   />
                 </video>
               ) : (
                 <img
-                  src={optimizeImageUrl(story.cover_illustration_url ?? undefined, { 
-                    width: 800, 
-                    height: 600, 
-                    quality: 85 
-                  }) || story.cover_illustration_url || undefined}
+                  src={coverSrc || undefined}
                   alt={`Cover illustration for ${story.title}`}
                   className="w-full h-full object-cover"
-                  loading="lazy"
+                  loading={coverLoading}
+                  fetchPriority={coverPriority}
+                  decoding="async"
                 />
               )}
             </div>

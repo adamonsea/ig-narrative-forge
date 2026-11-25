@@ -7657,6 +7657,7 @@ export type Database = {
         }[]
       }
       get_topic_id_by_slug: { Args: { topic_slug: string }; Returns: string }
+      get_topic_install_count: { Args: { p_topic_id: string }; Returns: number }
       get_topic_install_stats: {
         Args: { p_topic_id: string }
         Returns: {

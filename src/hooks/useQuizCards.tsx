@@ -1,6 +1,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+
+const EMPTY_QUESTIONS: QuizQuestion[] = [];
 
 export interface QuizQuestion {
   id: string;
@@ -184,9 +186,15 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean, 
 
   // Filter out ALL answered questions (localStorage, session, and database for logged-in users)
   // This prevents the same question from appearing multiple times in the feed
-  const unansweredQuestions = query.data?.filter(q => 
+  // Memoised so the feed doesn't rebuild every card on each render.
+  const unansweredQuestions = useMemo(() => query.data?.filter(q =>
     !persistedAnswered.has(q.id) && !sessionAnswered.has(q.id) && !userAnsweredFromDb.has(q.id)
-  ) || [];
+  ) || EMPTY_QUESTIONS, [query.data, persistedAnswered, sessionAnswered, userAnsweredFromDb]);
+  const markAsAnswered = useCallback((questionId: string) => {
+    // Save to localStorage for next session, but don't filter out immediately
+    markQuestionAnswered(questionId);
+    setSessionAnswered(prev => new Set([...prev, questionId]));
+  }, []);
 
   // Combined set for checking if a question has been answered (any source)
   const allAnswered = new Set([...persistedAnswered, ...sessionAnswered, ...userAnsweredFromDb]);
@@ -198,11 +206,7 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean, 
     answeredQuestions: allAnswered,
     visitorId,
     isQuestionAnswered: (questionId: string) => allAnswered.has(questionId),
-    markAsAnswered: (questionId: string) => {
-      // Save to localStorage for next session, but don't filter out immediately
-      markQuestionAnswered(questionId);
-      setSessionAnswered(prev => new Set([...prev, questionId]));
-    }
+    markAsAnswered,
   };
 };
 

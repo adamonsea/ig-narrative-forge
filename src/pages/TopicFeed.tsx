@@ -455,13 +455,18 @@ const TopicFeed = () => {
 
   // Collections hint removed - collections now in hamburger menu
 
-  // Track when user scrolls past stories they've engaged with
-  const handleStoryScrolledPast = useCallback(() => {
-    setStoriesScrolledPast(prev => prev + 1);
-    
+  // Track when user scrolls past stories they've engaged with.
+  // Kept stable (latest values via a ref) so scrolling past a story never re-renders every card.
+  const scrolledPastCountRef = useRef(0);
+  const scrolledPastImplRef = useRef<() => void>(() => {});
+  scrolledPastImplRef.current = () => {
+    scrolledPastCountRef.current += 1;
+    // Only the in-feed install card shows this count, so only update state when it can appear.
+    if (READER_ONBOARDING_EXTRAS) setStoriesScrolledPast(scrolledPastCountRef.current);
+
     if (!shouldShowNotificationPrompt || !topic?.id) return;
     if (storiesWithSwipes.size < 2) return;
-    
+
     // User has swiped on 2+ stories and is now scrolling past them
     if (!scrollPastStoriesWithSwipes) {
       setScrollPastStoriesWithSwipes(true);
@@ -470,7 +475,8 @@ const TopicFeed = () => {
       localStorage.setItem(`notification_prompt_shown_${topic.id}`, 'true');
       setShouldShowNotificationPrompt(false);
     }
-  }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id, storiesScrolledPast, slug]);
+  };
+  const handleStoryScrolledPast = useCallback(() => scrolledPastImplRef.current(), []);
 
   // Update favicon based on topic branding (pass full branding config for optimized variants)
   const branding = topic?.branding_config as any;
@@ -507,10 +513,11 @@ const TopicFeed = () => {
   // Parked features (docs/parked-features.md) never load or show while switched off.
   const { sentimentCards } = useSentimentCards(storiesLoading || !FEATURES.sentiment ? undefined : topic?.id);
   const { data: pulseData } = useCommunityPulseKeywords(storiesLoading || !FEATURES.communityDiscussion ? '' : (topic?.id || ''));
-  const { data: insightCards = [] } = useAutomatedInsightCards(
+  const { data: insightCardsData } = useAutomatedInsightCards(
     storiesLoading ? undefined : topic?.id, 
     !storiesLoading && (topic?.automated_insights_enabled ?? true)
   );
+  const insightCards = insightCardsData ?? NO_INSIGHT_CARDS;
   
   // Optimization #5: Defer secondary hooks until main feed has rendered
   const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(
@@ -1507,5 +1514,7 @@ const TopicFeed = () => {
     </div>
   );
 };
+
+const NO_INSIGHT_CARDS: never[] = [];
 
 export default TopicFeed;

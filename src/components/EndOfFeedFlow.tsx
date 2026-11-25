@@ -26,11 +26,8 @@ export const EndOfFeedFlow = ({ topicName, topicId, topicSlug, topicIcon }: EndO
       const { supabase } = await import('@/integrations/supabase/client');
       
       // Get install count
-      const { data: engagementStats } = await supabase.rpc(
-        'get_topic_engagement_stats',
-        { p_topic_id: topicId }
-      );
-      setInstallCount(Number(engagementStats?.[0]?.pwa_installs || 0));
+      const { data: installs } = await supabase.rpc('get_topic_install_count' as never, { p_topic_id: topicId } as never);
+        setInstallCount(Number(installs || 0));
 
       // Get stories published today
       const today = new Date();

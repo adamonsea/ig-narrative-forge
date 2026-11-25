@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQueries } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -199,8 +200,8 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
   const isLoading = results.some(r => r.isLoading);
   const isError = results.some(r => r.isError);
 
-  return {
-    data: {
+  // Memoised so the feed's card list isn't rebuilt on every render.
+  const data = useMemo(() => ({
       avgDailyStories: avgDailyResult.data ?? 0,
       playModeEnabled: insightSettingsResult.data?.playModeEnabled ?? true,
       quizCardsEnabled: insightSettingsResult.data?.quizCardsEnabled ?? false,
@@ -212,7 +213,10 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
       latestDailyRoundup: roundupsResult.data?.daily ?? null,
       latestWeeklyRoundup: roundupsResult.data?.weekly ?? null,
       emailSubscriptionsEnabled: (emailSubsResult.data as boolean) ?? false,
-    },
+    }), [avgDailyResult.data, insightSettingsResult.data, roundupsResult.data, emailSubsResult.data]);
+
+  return {
+    data,
     isLoading,
     isError,
   };
