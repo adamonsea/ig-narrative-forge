@@ -208,6 +208,7 @@ export const ImprovedSourceSuggestionTool = ({
             credibility_score: credibilityScore,
             is_active: true,
             source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
+            topic_id: topicId,
             ...opt("region", topicType === 'regional' ? region : null)
           })
           .select('id')

@@ -719,7 +719,7 @@ export const UnifiedSourceManager = ({
             is_whitelisted: true,
             is_blacklisted: false,
             region: currentTopic?.region || region,
-            scraping_config: Object.keys(scrapingConfig).length > 0 ? scrapingConfig : null
+            scraping_config: Object.keys(scrapingConfig).length > 0 ? scrapingConfig : null,
             // Owners may only create sources tied to a feed they own (RLS); still linked via topic_sources.
             topic_id: topicId,
           };
