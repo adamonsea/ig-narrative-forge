@@ -27,7 +27,7 @@ function useFeedLook(topicId?: string) {
       const t = data as any;
       return {
         feedName: t?.name ?? "Curatr",
-        feedUrl: `curatr.pro/feed/${t?.slug ?? ""}`,
+        feedUrl: `curatr.pro/@${t?.slug ?? ""}`,
         brandColor: t?.branding_config?.primary_color || t?.illustration_primary_color || null,
         currency: t?.event_currency ?? null,
       };

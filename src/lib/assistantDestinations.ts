@@ -41,7 +41,7 @@ export const ASSISTANT_DESTINATIONS: AssistantDestination[] = [
   { id: "identity", label: "Open General", describes: "Name, welcome line, live or draft, About page", tab: "settings", section: "identity" },
   { id: "features", label: "Open Extras", describes: "In-feed cards, quizzes and local tools", tab: "settings", section: "features" },
   { id: "your-feeds", label: "Back to your feeds", describes: "The list of all feeds you own", path: () => "/dashboard" },
-  { id: "public-feed", label: "View the public feed", describes: "What readers see", path: (slug) => `/feed/${slug}`, external: true },
+  { id: "public-feed", label: "View the public feed", describes: "What readers see", path: (slug) => `/@${slug}`, external: true },
 ];
 
 export const destinationById = (id: string) =>

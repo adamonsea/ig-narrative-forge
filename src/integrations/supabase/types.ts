@@ -5453,6 +5453,39 @@ export type Database = {
           },
         ]
       }
+      topic_slug_history: {
+        Row: {
+          created_at: string
+          old_slug: string
+          topic_id: string
+        }
+        Insert: {
+          created_at?: string
+          old_slug: string
+          topic_id: string
+        }
+        Update: {
+          created_at?: string
+          old_slug?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_slug_history_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_slug_history_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_sources: {
         Row: {
           created_at: string
@@ -6667,6 +6700,10 @@ export type Database = {
       can_manage_topic: { Args: { p_topic_id: string }; Returns: boolean }
       can_view_topic_stats: { Args: { p_topic_id: string }; Returns: boolean }
       can_view_user_stats: { Args: { p_user_id: string }; Returns: boolean }
+      check_feed_handle: {
+        Args: { p_slug: string; p_topic_id: string }
+        Returns: string
+      }
       check_newsletter_signup_rate_limit: {
         Args: { p_email_hash: string; p_ip_hash?: string }
         Returns: boolean
@@ -7751,6 +7788,7 @@ export type Database = {
       }
       reset_stalled_processing: { Args: never; Returns: undefined }
       reset_stalled_stories: { Args: never; Returns: number }
+      resolve_feed_slug: { Args: { p_slug: string }; Returns: string }
       restore_topic_from_backup: {
         Args: { p_backup_id: string }
         Returns: Json
@@ -7788,6 +7826,10 @@ export type Database = {
       set_event_source_auto_publish: {
         Args: { p_on: boolean; p_source_id: string }
         Returns: number
+      }
+      set_feed_handle: {
+        Args: { p_slug: string; p_topic_id: string }
+        Returns: string
       }
       set_story_pin: {
         Args: { p_hours: number; p_story_id: string; p_topic_id: string }

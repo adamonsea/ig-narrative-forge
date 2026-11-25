@@ -786,7 +786,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                               topicInfo?.name || 'Your feed',
                               {
                                 storyUrl: topicInfo?.slug
-                                  ? `${window.location.origin}/feed/${topicInfo.slug}/story/${story.id}`
+                                  ? `${window.location.origin}/@${topicInfo.slug}/story/${story.id}`
                                   : null
                               }
                             )}
@@ -874,7 +874,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
             brandName={topicInfo?.name || 'Curatr'}
             feedUrl={
               topicInfo?.slug
-                ? `curatr.pro/feed/${topicInfo.slug}`
+                ? `curatr.pro/@${topicInfo.slug}`
                 : 'curatr.pro'
             }
             sourceLabel={

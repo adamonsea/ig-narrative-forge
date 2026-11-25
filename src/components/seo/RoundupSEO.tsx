@@ -46,8 +46,8 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
     : `Today's ${topicName} news digest featuring ${storyCount} stories from ${format(startDate, 'MMMM d, yyyy')}.${headlinesSummary} Stay informed with our daily briefing.`;
   
   const url = isWeekly
-    ? `${window.location.origin}/feed/${topicSlug}/weekly/${format(startDate, 'yyyy-MM-dd')}`
-    : `${window.location.origin}/feed/${topicSlug}/daily/${format(startDate, 'yyyy-MM-dd')}`;
+    ? `${window.location.origin}/@${topicSlug}/weekly/${format(startDate, 'yyyy-MM-dd')}`
+    : `${window.location.origin}/@${topicSlug}/daily/${format(startDate, 'yyyy-MM-dd')}`;
   
   // Estimated reading time (2 minutes per story)
   const estimatedReadingTime = Math.max(storyCount * 2, 5);
@@ -76,7 +76,7 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
           "position": index + 1,
           "name": slide.headline || 'News Story',
           "description": slide.summary || '',
-          "url": `${window.location.origin}/feed/${topicSlug}/story/${slide.story_id}`,
+          "url": `${window.location.origin}/@${topicSlug}/story/${slide.story_id}`,
           "image": slide.image_url || undefined
         })) || []
     },
@@ -106,7 +106,7 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
           "@type": "ListItem",
           "position": 2,
           "name": topicName,
-          "item": `${window.location.origin}/feed/${topicSlug}`
+          "item": `${window.location.origin}/@${topicSlug}`
         },
         {
           "@type": "ListItem",

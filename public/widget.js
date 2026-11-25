@@ -503,7 +503,7 @@
       `<div class="widget-panel" data-panel="${p.key}"${tabbed ? ' role="tabpanel"' : ''}${hiddenAttr(p.key)}>${p.body}</div>`
     ).join('');
     const ctaHTML = panels.map(p =>
-      `<a href="https://curatr.pro/feed/${encodeURIComponent(feed.slug)}" target="_blank" rel="noopener" class="widget-cta" data-panel="${p.key}" style="color: ${accent}"${hiddenAttr(p.key)}>${p.cta}</a>`
+      `<a href="https://curatr.pro/@${encodeURIComponent(feed.slug)}" target="_blank" rel="noopener" class="widget-cta" data-panel="${p.key}" style="color: ${accent}"${hiddenAttr(p.key)}>${p.cta}</a>`
     ).join('');
 
     return `
@@ -1470,7 +1470,7 @@
     return `
       <div class="widget-error">
         <p>Headlines temporarily unavailable</p>
-        <a href="https://curatr.pro/feed/${feedSlug}" target="_blank" rel="noopener" style="color: #3b82f6; font-size: 12px;">
+        <a href="https://curatr.pro/@${feedSlug}" target="_blank" rel="noopener" style="color: #3b82f6; font-size: 12px;">
           View feed \u2192
         </a>
       </div>

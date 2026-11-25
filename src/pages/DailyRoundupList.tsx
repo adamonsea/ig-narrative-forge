@@ -523,7 +523,7 @@ export default function DailyRoundupList() {
               variant="outline"
               size="sm"
               onClick={async () => {
-                const longUrl = buildShareUrl(`/feed/${slug}/daily/${date}`);
+                const longUrl = buildShareUrl(`/@${slug}/daily/${date}`);
                 const shareUrl = await shortenUrl(longUrl);
                 const shareText = `${topic.name} Daily Briefing - ${formattedDate}`;
                 if (navigator.share) {
@@ -592,7 +592,7 @@ export default function DailyRoundupList() {
               <div key={story.id} className="w-full max-w-2xl">
                 <StoryCarousel
                   story={story}
-                  storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
+                  storyUrl={`${window.location.origin}/@${slug}/story/${story.id}`}
                   topicId={topic.id}
                   storyIndex={index}
                   isRoundupView={true}

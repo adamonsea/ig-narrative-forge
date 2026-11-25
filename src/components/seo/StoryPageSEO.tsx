@@ -40,9 +40,9 @@ export const StoryPageSEO = ({
   // Use canonical URL for the original story if this is a duplicate
   const canonicalSlug = canonicalTopicSlug || topicSlug;
   const canonicalId = canonicalStoryId || story.id;
-  const storyUrl = `https://curatr.pro/feed/${topicSlug}/story/${story.id}`;
-  const canonicalUrl = `https://curatr.pro/feed/${canonicalSlug}/story/${canonicalId}`;
-  const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
+  const storyUrl = `https://curatr.pro/@${topicSlug}/story/${story.id}`;
+  const canonicalUrl = `https://curatr.pro/@${canonicalSlug}/story/${canonicalId}`;
+  const feedUrl = `https://curatr.pro/@${topicSlug}`;
   
   // Title: Story title + Curated TopicName, kept under 60 chars for SERP display.
   const buildTitle = () => {

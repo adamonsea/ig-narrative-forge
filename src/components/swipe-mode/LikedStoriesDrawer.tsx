@@ -90,7 +90,7 @@ export const LikedStoriesDrawer = ({
             <Button
               onClick={() => {
                 const shareText = `Check out my favourite stories from ${topicSlug}!`;
-                const shareUrl = buildShareUrl(`/feed/${topicSlug}`);
+                const shareUrl = buildShareUrl(`/@${topicSlug}`);
                 
                 if (navigator.share) {
                   navigator.share({

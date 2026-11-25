@@ -215,7 +215,7 @@ const TopicDashboard = () => {
 
       const hasAdminAccess = topicData.created_by === user?.id || isAdmin;
       if (!hasAdminAccess) {
-        window.location.href = `/feed/${slug}`;
+        window.location.href = `/@${slug}`;
         return;
       }
 

@@ -15,6 +15,7 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   e("general", "Name", "The feed's name.", ["title", "rename"]),
   e("general", "Welcome line", "A short line under the name.", ["tagline", "strapline", "intro"]),
   e("general", "Events", "Gather what's on as well as news.", ["what's on", "whats on", "turn on events", "calendar"]),
+  e("general", "Handle", "Your feed's address.", ["handle", "address", "url", "link", "slug", "@"], "handle"),
   e("general", "About page", "Who curates the feed.", ["about", "bio", "curator"], "about-page"),
 
   e("look", "Logo", "Shown in the feed's top bar.", ["brand", "branding", "image"], "logo"),

@@ -52,7 +52,7 @@ export const ReadershipPanel = ({ topicId, topicSlug }: { topicId: string; topic
   const change = readershipChange(reads, Number(data.reads_prev_week) || 0);
   const daily = (data.daily ?? []).map((d) => ({ ...d, reads: Number(d.reads) || 0 }));
   const heights = barHeights(daily.map((d) => d.reads));
-  const storyHref = (id: string) => (topicSlug ? `/feed/${topicSlug}/story/${id}` : undefined);
+  const storyHref = (id: string) => (topicSlug ? `/@${topicSlug}/story/${id}` : undefined);
   const curve = dropoffCurve(data.dropoff);
   const feedRates = feedSignal(data.feed_signal);
   const perVisit = seenPerVisit(data.feed);

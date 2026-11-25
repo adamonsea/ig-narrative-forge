@@ -117,7 +117,7 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
             lastNotifiedStoryId.current = newStory.id;
             
             const storyUrl = topicSlug 
-              ? `${window.location.origin}/feed/${topicSlug}/story/${newStory.id}`
+              ? `${window.location.origin}/@${topicSlug}/story/${newStory.id}`
               : window.location.href;
             showStoryNotification(
               `New story in ${topicName}`,
@@ -154,7 +154,7 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
             lastNotifiedStoryId.current = updatedStory.id;
             
             const storyUrl = topicSlug 
-              ? `${window.location.origin}/feed/${topicSlug}/story/${updatedStory.id}`
+              ? `${window.location.origin}/@${topicSlug}/story/${updatedStory.id}`
               : window.location.href;
             showStoryNotification(
               `New story in ${topicName}`,

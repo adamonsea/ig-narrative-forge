@@ -331,7 +331,7 @@ export function StoryDrawer({
                 <div className="flex flex-wrap items-center gap-2">
                   {topicSlug && (
                     <Button size="sm" asChild>
-                      <a href={`/feed/${topicSlug}/story/${story.id}`} target="_blank" rel="noopener noreferrer">View in feed</a>
+                      <a href={`/@${topicSlug}/story/${story.id}`} target="_blank" rel="noopener noreferrer">View in feed</a>
                     </Button>
                   )}
                   <ReelExportButton onClick={onReel} />

@@ -542,7 +542,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
                         </ul>
                       )}
                       <div className="flex w-full max-w-xs flex-col items-center gap-3">
-                        <Button size="lg" className="w-full gap-2" onClick={() => { const slug = topicSlug; handleClose(); window.open(`/feed/${slug}`, "_blank"); }}>
+                        <Button size="lg" className="w-full gap-2" onClick={() => { const slug = topicSlug; handleClose(); window.open(`/@${slug}`, "_blank"); }}>
                           <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           See your feed
                         </Button>

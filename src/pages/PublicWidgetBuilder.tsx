@@ -230,7 +230,7 @@ export default function PublicWidgetBuilder() {
   }, [slug, restored, sourcesLoaded, JSON.stringify(savedSettings)]);
 
   const handleCopySettingsLink = async () => {
-    const url = `${window.location.origin}/feed/${slug}/widget?${WIDGET_SETTINGS_PARAM}=${encodeWidgetSettings(savedSettings)}`;
+    const url = `${window.location.origin}/@${slug}/widget?${WIDGET_SETTINGS_PARAM}=${encodeWidgetSettings(savedSettings)}`;
     try {
       await navigator.clipboard.writeText(url);
       setLinkCopied(true);

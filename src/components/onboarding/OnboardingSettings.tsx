@@ -125,7 +125,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
     });
     
     // Open the feed in a new tab
-    window.open(`/feed/${slug}`, '_blank');
+    window.open(`/@${slug}`, '_blank');
   };
 
   /** Save as you go: merge into the stored branding settings so nothing else there is overwritten. */

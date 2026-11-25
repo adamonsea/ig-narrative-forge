@@ -19,7 +19,7 @@ export const TopicArchiveSEO = ({
   totalPages
 }: TopicArchiveSEOProps) => {
   const baseUrl = window.location.origin;
-  const archiveUrl = `${baseUrl}/feed/${topicSlug}/archive`;
+  const archiveUrl = `${baseUrl}/@${topicSlug}/archive`;
   const currentUrl = currentPage > 1 
     ? `${archiveUrl}?page=${currentPage}` 
     : archiveUrl;

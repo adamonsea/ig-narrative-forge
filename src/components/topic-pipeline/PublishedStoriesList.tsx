@@ -631,7 +631,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             })) || null,
           }}
           brandName={topicSlug || 'curatr'}
-          feedUrl={topicSlug ? `curatr.pro/feed/${topicSlug}` : 'curatr.pro'}
+          feedUrl={topicSlug ? `curatr.pro/@${topicSlug}` : 'curatr.pro'}
           sourceLabel={
             [
               reelStory.author,

@@ -13,7 +13,7 @@ export const BriefingsArchiveSEO = ({
   dailyCount,
   weeklyCount
 }: BriefingsArchiveSEOProps) => {
-  const archiveUrl = `https://curatr.pro/feed/${topicSlug}/briefings`;
+  const archiveUrl = `https://curatr.pro/@${topicSlug}/briefings`;
   
   const title = `${topicName} - News Briefings Archive`;
   const description = `Browse all daily and weekly news briefings for ${topicName}. ${dailyCount} daily briefings and ${weeklyCount} weekly briefings available. Stay up-to-date with comprehensive summaries.`;
@@ -40,7 +40,7 @@ export const BriefingsArchiveSEO = ({
           "@type": "ListItem",
           "position": 2,
           "name": topicName,
-          "item": `https://curatr.pro/feed/${topicSlug}`
+          "item": `https://curatr.pro/@${topicSlug}`
         },
         {
           "@type": "ListItem",

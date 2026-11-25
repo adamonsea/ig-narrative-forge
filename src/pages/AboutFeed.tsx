@@ -91,7 +91,7 @@ const AboutFeed = () => {
   const aboutDesc = (topic.description && topic.description.length >= 50)
     ? topic.description.slice(0, 200)
     : `About ${topic.name}: how this curated feed is sourced, edited, and published on Curatr.`;
-  const aboutUrl = `https://curatr.pro/feed/${slug}/about`;
+  const aboutUrl = `https://curatr.pro/@${slug}/about`;
 
   return (
     <div className="min-h-dvh bg-zinc-900 text-zinc-100">

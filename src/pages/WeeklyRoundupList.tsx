@@ -564,7 +564,7 @@ export default function WeeklyRoundupList() {
               variant="outline"
               size="sm"
               onClick={() => {
-                const shareUrl = buildShareUrl(`/feed/${slug}/weekly/${weekStart}`);
+                const shareUrl = buildShareUrl(`/@${slug}/weekly/${weekStart}`);
                 const shareText = `${topic.name} Weekly Briefing - ${formattedDateRange}`;
                 if (navigator.share) {
                   navigator.share({
@@ -632,7 +632,7 @@ export default function WeeklyRoundupList() {
               <div key={story.id} className="w-full max-w-2xl">
                 <StoryCarousel
                   story={story}
-                  storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
+                  storyUrl={`${window.location.origin}/@${slug}/story/${story.id}`}
                   topicId={topic.id}
                   storyIndex={index}
                   isRoundupView={true}

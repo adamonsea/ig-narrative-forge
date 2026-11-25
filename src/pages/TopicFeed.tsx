@@ -699,7 +699,7 @@ const TopicFeed = () => {
     // One story card (and the in-feed install card after the fifth item)
     const renderStory = (story: any, storyIndex: number, index: number, watchForMore: boolean): React.ReactNode[] => {
       const items: React.ReactNode[] = [];
-      const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
+      const storyShareUrl = buildShareUrl(`/@${slug}/story/${story.id}`);
         
         items.push(
           <div

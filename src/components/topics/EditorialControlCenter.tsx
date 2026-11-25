@@ -38,6 +38,7 @@ import { LookForPanel } from "@/components/settings/LookForPanel";
 import { AutopilotBasics } from "@/components/settings/AutopilotBasics";
 import { ShareBasics } from "@/components/settings/ShareBasics";
 import { FeedLeadSettings } from "@/components/settings/FeedLeadSettings";
+import { FeedHandleSetting } from "@/components/settings/FeedHandleSetting";
 import { ShowEventsInFeedSetting } from "@/components/settings/ShowEventsInFeedSetting";
 import { EventCaptionsSettings } from "@/components/settings/EventCaptionsSettings";
 import { FeedLookEditor } from "@/components/settings/look/FeedLookEditor";
@@ -240,6 +241,7 @@ export function EditorialControlCenter({
 
         {current === "general" && (
           <Page title={label} purpose={purpose}>
+            <FeedHandleSetting topicId={topic.id} slug={topic.slug} onChanged={(next) => { patch({ slug: next }); navigate(settingsPath(next, "general") + "#handle", { replace: true }); }} />
             <BrandBasics topicId={topic.id} name={topic.name} colour={topic.illustration_primary_color} brandingConfig={topic.branding_config} onSaved={(values) => patch(values)} />
             <SettingGroup>
               <SettingRow label="Events" hint={eventsOn ? "Gathering events. Their settings are on the Events page." : "Gather what's on as well as news. Adds an Events page here."}>
@@ -350,7 +352,7 @@ export function EditorialControlCenter({
         {current === "share" && (
           <Page title={label} purpose={purpose}>
             <SettingGroup>
-              <SettingRow label="Public link" hint={`${typeof window !== "undefined" ? window.location.host : "curatr.pro"}/feed/${topic.slug}`}>
+              <SettingRow label="Public link" hint={`${typeof window !== "undefined" ? window.location.host : "curatr.pro"}/@${topic.slug}`}>
                 <Button variant="outline" asChild><Link to={`/feed/${topic.slug}`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" />Open</Link></Button>
               </SettingRow>
             </SettingGroup>

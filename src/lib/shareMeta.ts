@@ -52,7 +52,7 @@ export async function feedShareMeta(slug: string, path = ""): Promise<ShareMeta 
     title: t.name,
     description: clip(t.description || t.branding_config?.subheader || `The latest from ${t.name}, curated on Curatr.`),
     image: t.branding_config?.logo_url || t.branding_config?.icon_url || null,
-    url: `${SITE_URL}/feed/${slug}${path}`,
+    url: `${SITE_URL}/@${slug}${path}`,
   };
 }
 
@@ -73,7 +73,7 @@ export async function storyShareMeta(slug: string, storyId: string): Promise<Sha
     title: story?.title ? `${story.title} | ${t?.name ?? "Curatr"}` : (t?.name ?? "Curatr"),
     description: clip(t?.description || `More from ${t?.name ?? "this feed"} on Curatr.`),
     image: story?.cover_illustration_url || t?.branding_config?.logo_url || null,
-    url: `${SITE_URL}/feed/${slug}/story/${storyId}`,
+    url: `${SITE_URL}/@${slug}/story/${storyId}`,
   };
 }
 
@@ -93,4 +93,24 @@ export function shareHead(meta: ShareMeta | null | undefined) {
     tags.push({ property: "og:image", content: meta.image }, { name: "twitter:image", content: meta.image });
   }
   return { meta: tags, links: [{ rel: "canonical", href: meta.url }] };
+}
+
+const renamed = new Map<string, string | null>();
+/** Current slug for a renamed feed's old handle; null for live or unknown slugs. Cached per slug. */
+export async function resolveRenamedFeed(slug: string): Promise<string | null> {
+  if (renamed.has(slug)) return renamed.get(slug) ?? null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/resolve_feed_slug`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slug: slug }),
+      signal: AbortSignal.timeout(1500),
+    });
+    const value = res.ok ? ((await res.json()) as string | null) : null;
+    // Never cache on the server: one isolate serves many requests and handles can change.
+    if (typeof window !== "undefined") renamed.set(slug, value);
+    return value;
+  } catch {
+    return null;
+  }
 }

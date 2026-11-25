@@ -32,6 +32,7 @@ import { Route as DesignIndexRouteImport } from './routes/design/index'
 import { Route as DesignEventCardsRouteImport } from './routes/design/event-cards'
 import { Route as DesignStoryCoversRouteImport } from './routes/design/story-covers'
 import { Route as ExploreSlugRouteImport } from './routes/explore/$slug'
+import { Route as FeedSlugRouteRouteImport } from './routes/feed/$slug/route'
 import { Route as ForAgenciesRouteImport } from './routes/for/agencies'
 import { Route as ForCommunitiesRouteImport } from './routes/for/communities'
 import { Route as ForOrganisationsRouteImport } from './routes/for/organisations'
@@ -170,6 +171,11 @@ const ExploreSlugRoute = ExploreSlugRouteImport.update({
   path: '/explore/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedSlugRouteRoute = FeedSlugRouteRouteImport.update({
+  id: '/feed/$slug',
+  path: '/feed/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForAgenciesRoute = ForAgenciesRouteImport.update({
   id: '/for/agencies',
   path: '/for/agencies',
@@ -216,50 +222,50 @@ const DashboardWidgetsTestRoute = DashboardWidgetsTestRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedSlugIndexRoute = FeedSlugIndexRouteImport.update({
-  id: '/feed/$slug/',
-  path: '/feed/$slug/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedSlugAboutRoute = FeedSlugAboutRouteImport.update({
-  id: '/feed/$slug/about',
-  path: '/feed/$slug/about',
-  getParentRoute: () => rootRouteImport,
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedSlugArchiveRoute = FeedSlugArchiveRouteImport.update({
-  id: '/feed/$slug/archive',
-  path: '/feed/$slug/archive',
-  getParentRoute: () => rootRouteImport,
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedSlugBriefingsRoute = FeedSlugBriefingsRouteImport.update({
-  id: '/feed/$slug/briefings',
-  path: '/feed/$slug/briefings',
-  getParentRoute: () => rootRouteImport,
+  id: '/briefings',
+  path: '/briefings',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedSlugWidgetRoute = FeedSlugWidgetRouteImport.update({
-  id: '/feed/$slug/widget',
-  path: '/feed/$slug/widget',
-  getParentRoute: () => rootRouteImport,
+  id: '/widget',
+  path: '/widget',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedSlugDailyDateRoute = FeedSlugDailyDateRouteImport.update({
-  id: '/feed/$slug/daily/$date',
-  path: '/feed/$slug/daily/$date',
-  getParentRoute: () => rootRouteImport,
+  id: '/daily/$date',
+  path: '/daily/$date',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedSlugReviewReviewSlugRoute =
   FeedSlugReviewReviewSlugRouteImport.update({
-    id: '/feed/$slug/review/$reviewSlug',
-    path: '/feed/$slug/review/$reviewSlug',
-    getParentRoute: () => rootRouteImport,
+    id: '/review/$reviewSlug',
+    path: '/review/$reviewSlug',
+    getParentRoute: () => FeedSlugRouteRoute,
   } as any)
 const FeedSlugStoryStoryIdRoute = FeedSlugStoryStoryIdRouteImport.update({
-  id: '/feed/$slug/story/$storyId',
-  path: '/feed/$slug/story/$storyId',
-  getParentRoute: () => rootRouteImport,
+  id: '/story/$storyId',
+  path: '/story/$storyId',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedSlugWeeklyWeekStartRoute = FeedSlugWeeklyWeekStartRouteImport.update({
-  id: '/feed/$slug/weekly/$weekStart',
-  path: '/feed/$slug/weekly/$weekStart',
-  getParentRoute: () => rootRouteImport,
+  id: '/weekly/$weekStart',
+  path: '/weekly/$weekStart',
+  getParentRoute: () => FeedSlugRouteRoute,
 } as any)
 const FeedTopicSlugIndexRoute = FeedTopicSlugIndexRouteImport.update({
   id: '/feed/topic/$slug/',
@@ -301,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
+  '/feed/$slug': typeof FeedSlugRouteRouteWithChildren
   '/admin/ai-costs': typeof AdminAiCostsRoute
   '/api/picture-source': typeof ApiPictureSourceRoute
   '/design/event-cards': typeof DesignEventCardsRoute
@@ -396,6 +403,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
+  '/feed/$slug': typeof FeedSlugRouteRouteWithChildren
   '/admin/ai-costs': typeof AdminAiCostsRoute
   '/api/picture-source': typeof ApiPictureSourceRoute
   '/design/event-cards': typeof DesignEventCardsRoute
@@ -445,6 +453,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/verify-subscription'
+    | '/feed/$slug'
     | '/admin/ai-costs'
     | '/api/picture-source'
     | '/design/event-cards'
@@ -539,6 +548,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/verify-subscription'
+    | '/feed/$slug'
     | '/admin/ai-costs'
     | '/api/picture-source'
     | '/design/event-cards'
@@ -587,6 +597,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   VerifySubscriptionRoute: typeof VerifySubscriptionRoute
+  FeedSlugRouteRoute: typeof FeedSlugRouteRouteWithChildren
   AdminAiCostsRoute: typeof AdminAiCostsRoute
   ApiPictureSourceRoute: typeof ApiPictureSourceRoute
   DesignEventCardsRoute: typeof DesignEventCardsRoute
@@ -603,16 +614,7 @@ export interface RootRouteChildren {
   DesignIndexRoute: typeof DesignIndexRoute
   DashboardTopicSlugRoute: typeof DashboardTopicSlugRoute
   DashboardWidgetsTestRoute: typeof DashboardWidgetsTestRoute
-  FeedSlugAboutRoute: typeof FeedSlugAboutRoute
-  FeedSlugArchiveRoute: typeof FeedSlugArchiveRoute
-  FeedSlugBriefingsRoute: typeof FeedSlugBriefingsRoute
-  FeedSlugWidgetRoute: typeof FeedSlugWidgetRoute
   DashboardWidgetsIndexRoute: typeof DashboardWidgetsIndexRoute
-  FeedSlugIndexRoute: typeof FeedSlugIndexRoute
-  FeedSlugDailyDateRoute: typeof FeedSlugDailyDateRoute
-  FeedSlugReviewReviewSlugRoute: typeof FeedSlugReviewReviewSlugRoute
-  FeedSlugStoryStoryIdRoute: typeof FeedSlugStoryStoryIdRoute
-  FeedSlugWeeklyWeekStartRoute: typeof FeedSlugWeeklyWeekStartRoute
   FeedTopicSlugIndexRoute: typeof FeedTopicSlugIndexRoute
   DashboardTopicSlugSettingsSectionRoute: typeof DashboardTopicSlugSettingsSectionRoute
   FeedTopicSlugStoryStoryIdRoute: typeof FeedTopicSlugStoryStoryIdRoute
@@ -782,6 +784,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feed/$slug': {
+      id: '/feed/$slug'
+      path: '/feed/$slug'
+      fullPath: '/feed/$slug'
+      preLoaderRoute: typeof FeedSlugRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/for/agencies': {
       id: '/for/agencies'
       path: '/for/agencies'
@@ -847,66 +856,66 @@ declare module '@tanstack/react-router' {
     }
     '/feed/$slug/': {
       id: '/feed/$slug/'
-      path: '/feed/$slug'
+      path: '/'
       fullPath: '/feed/$slug/'
       preLoaderRoute: typeof FeedSlugIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/about': {
       id: '/feed/$slug/about'
-      path: '/feed/$slug/about'
+      path: '/about'
       fullPath: '/feed/$slug/about'
       preLoaderRoute: typeof FeedSlugAboutRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/archive': {
       id: '/feed/$slug/archive'
-      path: '/feed/$slug/archive'
+      path: '/archive'
       fullPath: '/feed/$slug/archive'
       preLoaderRoute: typeof FeedSlugArchiveRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/briefings': {
       id: '/feed/$slug/briefings'
-      path: '/feed/$slug/briefings'
+      path: '/briefings'
       fullPath: '/feed/$slug/briefings'
       preLoaderRoute: typeof FeedSlugBriefingsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/widget': {
       id: '/feed/$slug/widget'
-      path: '/feed/$slug/widget'
+      path: '/widget'
       fullPath: '/feed/$slug/widget'
       preLoaderRoute: typeof FeedSlugWidgetRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/daily/$date': {
       id: '/feed/$slug/daily/$date'
-      path: '/feed/$slug/daily/$date'
+      path: '/daily/$date'
       fullPath: '/feed/$slug/daily/$date'
       preLoaderRoute: typeof FeedSlugDailyDateRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/review/$reviewSlug': {
       id: '/feed/$slug/review/$reviewSlug'
-      path: '/feed/$slug/review/$reviewSlug'
+      path: '/review/$reviewSlug'
       fullPath: '/feed/$slug/review/$reviewSlug'
       preLoaderRoute: typeof FeedSlugReviewReviewSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/story/$storyId': {
       id: '/feed/$slug/story/$storyId'
-      path: '/feed/$slug/story/$storyId'
+      path: '/story/$storyId'
       fullPath: '/feed/$slug/story/$storyId'
       preLoaderRoute: typeof FeedSlugStoryStoryIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/$slug/weekly/$weekStart': {
       id: '/feed/$slug/weekly/$weekStart'
-      path: '/feed/$slug/weekly/$weekStart'
+      path: '/weekly/$weekStart'
       fullPath: '/feed/$slug/weekly/$weekStart'
       preLoaderRoute: typeof FeedSlugWeeklyWeekStartRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FeedSlugRouteRoute
     }
     '/feed/topic/$slug/': {
       id: '/feed/topic/$slug/'
@@ -939,6 +948,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface FeedSlugRouteRouteChildren {
+  FeedSlugAboutRoute: typeof FeedSlugAboutRoute
+  FeedSlugArchiveRoute: typeof FeedSlugArchiveRoute
+  FeedSlugBriefingsRoute: typeof FeedSlugBriefingsRoute
+  FeedSlugWidgetRoute: typeof FeedSlugWidgetRoute
+  FeedSlugIndexRoute: typeof FeedSlugIndexRoute
+  FeedSlugDailyDateRoute: typeof FeedSlugDailyDateRoute
+  FeedSlugReviewReviewSlugRoute: typeof FeedSlugReviewReviewSlugRoute
+  FeedSlugStoryStoryIdRoute: typeof FeedSlugStoryStoryIdRoute
+  FeedSlugWeeklyWeekStartRoute: typeof FeedSlugWeeklyWeekStartRoute
+}
+
+const FeedSlugRouteRouteChildren: FeedSlugRouteRouteChildren = {
+  FeedSlugAboutRoute: FeedSlugAboutRoute,
+  FeedSlugArchiveRoute: FeedSlugArchiveRoute,
+  FeedSlugBriefingsRoute: FeedSlugBriefingsRoute,
+  FeedSlugWidgetRoute: FeedSlugWidgetRoute,
+  FeedSlugIndexRoute: FeedSlugIndexRoute,
+  FeedSlugDailyDateRoute: FeedSlugDailyDateRoute,
+  FeedSlugReviewReviewSlugRoute: FeedSlugReviewReviewSlugRoute,
+  FeedSlugStoryStoryIdRoute: FeedSlugStoryStoryIdRoute,
+  FeedSlugWeeklyWeekStartRoute: FeedSlugWeeklyWeekStartRoute,
+}
+
+const FeedSlugRouteRouteWithChildren = FeedSlugRouteRoute._addFileChildren(
+  FeedSlugRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
@@ -955,6 +992,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   VerifySubscriptionRoute: VerifySubscriptionRoute,
+  FeedSlugRouteRoute: FeedSlugRouteRouteWithChildren,
   AdminAiCostsRoute: AdminAiCostsRoute,
   ApiPictureSourceRoute: ApiPictureSourceRoute,
   DesignEventCardsRoute: DesignEventCardsRoute,
@@ -971,16 +1009,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignIndexRoute: DesignIndexRoute,
   DashboardTopicSlugRoute: DashboardTopicSlugRoute,
   DashboardWidgetsTestRoute: DashboardWidgetsTestRoute,
-  FeedSlugAboutRoute: FeedSlugAboutRoute,
-  FeedSlugArchiveRoute: FeedSlugArchiveRoute,
-  FeedSlugBriefingsRoute: FeedSlugBriefingsRoute,
-  FeedSlugWidgetRoute: FeedSlugWidgetRoute,
   DashboardWidgetsIndexRoute: DashboardWidgetsIndexRoute,
-  FeedSlugIndexRoute: FeedSlugIndexRoute,
-  FeedSlugDailyDateRoute: FeedSlugDailyDateRoute,
-  FeedSlugReviewReviewSlugRoute: FeedSlugReviewReviewSlugRoute,
-  FeedSlugStoryStoryIdRoute: FeedSlugStoryStoryIdRoute,
-  FeedSlugWeeklyWeekStartRoute: FeedSlugWeeklyWeekStartRoute,
   FeedTopicSlugIndexRoute: FeedTopicSlugIndexRoute,
   DashboardTopicSlugSettingsSectionRoute:
     DashboardTopicSlugSettingsSectionRoute,

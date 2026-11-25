@@ -264,7 +264,7 @@ const StoryPage = () => {
       {/* Article Structured Data for SEO */}
       <StoryStructuredData
         story={story}
-        storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
+        storyUrl={`${window.location.origin}/@${slug}/story/${story.id}`}
         topicName={topic.name}
         topicSlug={slug || ''}
         position={0}
@@ -283,7 +283,7 @@ const StoryPage = () => {
         
         <StoryCarousel 
           story={story} 
-          storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
+          storyUrl={`${window.location.origin}/@${slug}/story/${story.id}`}
           topicId={topic?.id}
           storyIndex={0}
           topicName={topic.name}

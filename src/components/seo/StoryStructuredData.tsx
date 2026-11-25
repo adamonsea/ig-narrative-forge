@@ -31,7 +31,7 @@ export const StoryStructuredData = ({
   topicSlug,
   position
 }: StoryStructuredDataProps) => {
-  const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
+  const feedUrl = `https://curatr.pro/@${topicSlug}`;
   
   // Generate full article body from all slides
   const getArticleBody = () => {

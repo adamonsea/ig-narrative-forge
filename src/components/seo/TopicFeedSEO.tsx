@@ -25,7 +25,7 @@ export const TopicFeedSEO = ({
   logoUrl,
   stories = []
 }: TopicFeedSEOProps) => {
-  const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
+  const feedUrl = `https://curatr.pro/@${topicSlug}`;
   
   // Personalized title: "Curated {TopicName}"
   const title = `Curated ${topicName}`;
@@ -62,7 +62,7 @@ export const TopicFeedSEO = ({
       "@type": "ListItem",
       "position": index + 1,
       "name": story.title,
-      "url": `https://curatr.pro/feed/${topicSlug}/story/${story.id}`,
+      "url": `https://curatr.pro/@${topicSlug}/story/${story.id}`,
       ...(story.created_at && { "datePublished": story.created_at })
     }))
   };

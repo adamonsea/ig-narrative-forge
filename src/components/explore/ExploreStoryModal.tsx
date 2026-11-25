@@ -126,7 +126,7 @@ export function ExploreStoryModal({ story, open, onOpenChange, topicSlug }: Expl
                 size="lg"
                 className="flex-1 gap-2 text-base font-semibold"
               >
-                <a href={`/feed/${topicSlug}/story/${story.id}`}>
+                <a href={`/@${topicSlug}/story/${story.id}`}>
                   Slides
                 </a>
               </Button>

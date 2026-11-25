@@ -445,7 +445,7 @@ export default function SwipeMode() {
                     size="lg"
                     className="flex-1 gap-2 text-base font-semibold"
                   >
-                    <a href={`/feed/${slug}/story/${currentStory.id}`}>
+                    <a href={`/@${slug}/story/${currentStory.id}`}>
                       Slides
                     </a>
                   </Button>
