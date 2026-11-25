@@ -13,6 +13,7 @@ import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { startStoryPageDwell } from "@/lib/storyPageDwell";
 import { CookieConsent } from "@/components/CookieConsent";
 import { resolveStoryCoverStyle } from "@/lib/storyCoverStyle";
+import { feedSurfaceStyles } from "@/lib/feedSurfaces";
 
 interface Story {
   id: string;
@@ -248,8 +249,14 @@ const StoryPage = () => {
     );
   }
 
+  const surfaces = feedSurfaceStyles({
+    topBar: (topic as any).branding_config?.top_bar_color,
+    background: (topic as any).branding_config?.feed_background_color,
+    brand: (topic as any).branding_config?.primary_color || (topic as any).illustration_primary_color,
+  });
+
   return (
-    <div className="min-h-dvh feed-background">
+    <div className="min-h-dvh feed-background" style={surfaces.root}>
       {/* SEO Meta Tags */}
       <StoryPageSEO
         story={story}
@@ -274,7 +281,7 @@ const StoryPage = () => {
         <nav className="px-4 pt-4 pb-3">
           <Link
             to={`/@${slug}`}
-            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-foreground/80 hover:text-foreground"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-feed-on-background-muted hover:text-feed-on-background"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             {topic.name}
@@ -299,7 +306,7 @@ const StoryPage = () => {
           slides={story.slides}
         />
         <footer className="px-4 py-8 text-center">
-          <Link to="/cookies#settings" className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground">
+          <Link to="/cookies#settings" className="text-sm text-feed-on-background-muted underline underline-offset-2 hover:text-feed-on-background">
             Cookie settings
           </Link>
         </footer>

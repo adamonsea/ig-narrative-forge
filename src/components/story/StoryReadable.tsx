@@ -33,13 +33,13 @@ export function StoryReadable({ title, author, publicationName, sourceUrl, slide
   const byline = buildReporterByline(author);
 
   return (
-    <article className="feed-card mx-4 mt-6 rounded-xl p-6 md:p-8">
+    <article className="mt-10 px-1 text-feed-on-background">
       {sourceUrl && (
         <a
           href={sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm opacity-80 hover:opacity-100"
+          className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-feed-on-background-muted hover:text-feed-on-background"
         >
           {domain && !logoFailed ? (
             <img
@@ -57,8 +57,8 @@ export function StoryReadable({ title, author, publicationName, sourceUrl, slide
         </a>
       )}
       <h1 className="text-2xl font-semibold leading-tight md:text-3xl">{headline}</h1>
-      {byline && <p className="mt-2 text-sm opacity-70">{byline}</p>}
-      <div className="mt-6 space-y-4 text-base leading-relaxed">
+      {byline && <p className="mt-2 text-sm text-feed-on-background-muted">{byline}</p>}
+      <div className="mt-6 space-y-4 text-lg leading-relaxed">
         {paragraphs.map((p, i) => (
           <p key={i}>{p}</p>
         ))}
@@ -68,7 +68,7 @@ export function StoryReadable({ title, author, publicationName, sourceUrl, slide
           href={sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-full border border-current/20 px-4 text-sm font-medium hover:bg-current/5"
+          className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-full border border-feed-on-background/30 px-4 text-sm font-medium hover:bg-feed-on-background/10"
         >
           Read the full story at {publisher}
           <ExternalLink className="h-4 w-4" aria-hidden="true" />
