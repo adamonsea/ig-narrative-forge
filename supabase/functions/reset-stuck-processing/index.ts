@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,6 +38,20 @@ serve(async (req) => {
     }
     
     console.log(`🔄 Reset action: ${action}`, { jobId, storyId });
+
+    // Targeted resets need the feed's owner; listing everyone's stuck items is admin/system only;
+    // the general stuck-job clean-up only needs a signed-in user (it never reveals or edits content).
+    if (!isServiceRole(req)) {
+      if (storyId) {
+        const _deny = await requireTopicManager(req, supabase, await topicIdForStory(supabase, storyId), corsHeaders); if (_deny) return _deny;
+      } else if (jobId) {
+        const { data: _q } = await supabase.from('content_generation_queue').select('topic_article_id').eq('id', jobId).maybeSingle();
+        const { data: _ta } = _q?.topic_article_id ? await supabase.from('topic_articles').select('topic_id').eq('id', _q.topic_article_id).maybeSingle() : { data: null };
+        const _deny = await requireTopicManager(req, supabase, _ta?.topic_id, corsHeaders); if (_deny) return _deny;
+      } else if (action === 'get_stuck_items') {
+        const _deny = await requireSystemOrAdmin(req, supabase, corsHeaders); if (_deny) return _deny;
+      } else if (!(await getUser(req))) return unauthorized(corsHeaders);
+    }
 
     let result: { success: boolean; message: string; data: any } = { success: false, message: '', data: null };
 

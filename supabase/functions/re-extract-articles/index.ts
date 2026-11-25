@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { UniversalContentExtractor } from '../_shared/universal-content-extractor.ts';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +21,7 @@ serve(async (req) => {
 
     const { minWordCount = 100, maxArticles = 50, topicId } = await req.json();
 
+    { const _svc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!); const _deny = topicId ? await requireTopicManager(req, _svc, topicId, corsHeaders) : await requireSystemOrAdmin(req, _svc, corsHeaders); if (_deny) return _deny; }
     console.log('🔄 Starting article re-extraction process...');
 
     // Find articles with low word count that might be snippets

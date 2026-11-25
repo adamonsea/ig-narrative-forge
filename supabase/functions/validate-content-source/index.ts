@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.192.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -453,6 +454,7 @@ serve(async (req) => {
 
   try {
     const { url, sourceType, topicType, region, topicId, existingCanonicalDomain }: ValidationRequest = await req.json();
+    if (!isServiceRole(req) && !(await getUser(req))) return unauthorized(corsHeaders);
 
     console.log('🔍 Validating source:', { url, sourceType, topicType, existingCanonicalDomain });
 

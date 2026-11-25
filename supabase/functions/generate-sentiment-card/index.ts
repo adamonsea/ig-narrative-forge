@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { FEATURES, parkedResponseBody } from '../_shared/parked-features.ts';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,6 +23,10 @@ Deno.serve(async (req) => {
 
     const { keywordId } = await req.json();
 
+    if (!isServiceRole(req)) {
+      const { data: _kw } = await supabase.from('sentiment_keyword_tracking').select('topic_id').eq('id', keywordId).maybeSingle();
+      const _deny = await requireTopicManager(req, supabase, _kw?.topic_id, corsHeaders); if (_deny) return _deny;
+    }
     if (!keywordId) {
       return new Response(
         JSON.stringify({ error: 'keywordId required' }),

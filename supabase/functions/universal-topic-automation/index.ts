@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.192.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +35,10 @@ serve(async (req) => {
   try {
     const { topicIds, dryRun = false, force = false, maxAgeDays = 7 } = await req.json() as AutomationRequest;
 
+    // Scheduled whole-system runs send no feeds; a request naming feeds must come from their owner.
+    if (Array.isArray(topicIds) && topicIds.length > 0 && !isServiceRole(req)) {
+      for (const _t of topicIds) { const _deny = await requireTopicManager(req, supabase, _t, corsHeaders); if (_deny) return _deny; }
+    }
     console.log('Universal Topic Automation - Starting automation check');
 
     // Create job run for tracking

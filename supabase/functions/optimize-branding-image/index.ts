@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,6 +50,7 @@ serve(async (req) => {
   try {
     const { topicId, imageType, base64Data, mimeType, originalFileName } = await req.json() as OptimizationRequest;
 
+    { const _deny = await requireTopicManager(req, supabase, topicId, corsHeaders); if (_deny) return _deny; }
     if (!topicId || !imageType || !base64Data) {
       throw new Error('Missing required fields: topicId, imageType, base64Data');
     }

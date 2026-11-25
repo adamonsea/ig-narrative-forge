@@ -45,3 +45,4 @@
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
 
 - Feed/Desk/pipeline changes: run `scripts/smoke/feed_smoke.py`; health only via `feed_health`.
+- Edge functions acting on one feed gate with `requireTopicManager` (service role, or the feed owner/admin) from `_shared/auth.ts`; untargeted scheduled runs stay open, requests naming a feed/story never are; keeps tenants apart.

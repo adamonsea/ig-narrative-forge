@@ -8,6 +8,7 @@ import { resolveDomainProfile } from '../_shared/domain-profiles.ts';
 // and every one of them fails soft so existing behaviour is never disrupted.
 import { attemptDeepRecovery } from '../_shared/deep-recovery.ts';
 import { recordScrapeRun } from '../_shared/scrape-run-logger.ts';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -253,6 +254,7 @@ serve(async (req) => {
       batchSize = 3 // Process 3 sources at a time by default
     } = await req.json() as UniversalScrapeRequest;
 
+    { const _deny = await requireTopicManager(req, supabase, topicId, corsHeaders); if (_deny) return _deny; }
     console.log('Universal Topic Scraper - Starting for topic:', topicId);
 
     // Initialize standardized response handler

@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { automationGate } from '../_shared/allowance.ts';
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,6 +79,10 @@ serve(async (req) => {
       // No body or invalid JSON - that's fine
     }
 
+    // Scheduled runs send no feed; a request naming a feed (or forcing publish) must come from its owner.
+    if ((targetTopicId || emergencyPublishAll) && !isServiceRole(req)) {
+      const _deny = await requireTopicManager(req, supabase, targetTopicId, corsHeaders); if (_deny) return _deny;
+    }
     log('🕐 Drip Feed Scheduler starting...');
 
     // Emergency publish all - bypass drip feed for a topic

@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +54,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { storyId, platform, scheduleAt }: PublishRequest = await req.json();
 
+    { const _deny = await requireTopicManager(req, supabase, storyId ? await topicIdForStory(supabase, storyId) : null, corsHeaders); if (_deny) return _deny; }
     console.log('Publishing story:', storyId, 'to platform:', platform);
 
     if (!storyId || !platform) {

@@ -27,7 +27,8 @@ export async function isAdmin(service: any, userId: string): Promise<boolean> {
     .from('user_roles')
     .select('role')
     .eq('user_id', userId)
-    .eq('role', 'admin')
+    .in('role', ['admin', 'superadmin'])
+    .limit(1)
     .maybeSingle();
   return !!data;
 }
@@ -104,4 +105,28 @@ export function isServiceRole(req: Request): boolean {
   if (authHeader === `Bearer ${serviceKey}`) return true;
   if (apikey === serviceKey) return true;
   return false;
+}
+
+/**
+ * Gate for owner actions on one feed: service-role callers pass; signed-in callers must own the
+ * feed (or be admin). Returns a Response to send back when refused, or null when allowed.
+ */
+export async function requireTopicManager(
+  req: Request, service: any, topicId: string | null | undefined, corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (isServiceRole(req)) return null;
+  const user = await getUser(req);
+  if (!user) return unauthorized(corsHeaders);
+  if (!topicId || !(await userOwnsTopic(service, user.id, topicId))) return forbidden(corsHeaders);
+  return null;
+}
+
+/** Gate for whole-system actions (no single feed): service role or admin only. */
+export async function requireSystemOrAdmin(
+  req: Request, service: any, corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (isServiceRole(req)) return null;
+  const user = await getUser(req);
+  if (!user) return unauthorized(corsHeaders);
+  return (await isAdmin(service, user.id)) ? null : forbidden(corsHeaders);
 }

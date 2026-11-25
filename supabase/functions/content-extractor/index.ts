@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 // Import shared utilities
 import { extractContentFromHTML, fetchWithRetry } from '../_shared/content-processor.ts';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
+import { requireTopicManager, requireSystemOrAdmin, topicIdForStory, isServiceRole, getUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +29,12 @@ serve(async (req) => {
     const dbOps = new DatabaseOperations(supabase);
     const { articleId, articleUrl, forceRefresh = false } = await req.json();
 
+    if (!isServiceRole(req)) {
+      if (articleId) {
+        const { data: _a } = await supabase.from('articles').select('topic_id').eq('id', articleId).maybeSingle();
+        const _deny = await requireTopicManager(req, supabase, _a?.topic_id, corsHeaders); if (_deny) return _deny;
+      } else if (!(await getUser(req))) return unauthorized(corsHeaders);
+    }
     if (!articleId && !articleUrl) {
       throw new Error('Article ID or URL is required');
     }
