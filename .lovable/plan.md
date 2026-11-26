@@ -1,3 +1,23 @@
+# Step 0 (do first): Add story and picture safety fixes
+
+Confirmed in the code. Each fix gets tested as the Pokémon owner in a trial that is undone afterwards. No other accounts are touched. Billing stays in shadow mode.
+
+1. **Add story overwrote shared text** (`extract-content-from-upload` → `commitDraft`, lines 244–263). If the link was already known, the code overwrote the shared title and body that other feeds use. Fix: the shared row is never modified. If the link exists and the owner's edited text differs, the code saves a feed-only copy keyed `manual://{topicId}/{uuid}` with the original link kept for credit. If the text is the same, the code reuses the shared row read-only.
+2. **File mode read any stored file** (line 384). Fix: refuse unless `storagePath` starts with `{callerUserId}/` and the bucket is the temp upload bucket. The clean-up `remove` call (line 345) gets the same check.
+3. **Link mode fetched any address** (line 368). Fix: a shared `isPublicHttpUrl()` helper blocks localhost, 127.*, 10.*, 172.16–31.*, 192.168.*, 169.254.*, 0.*, ::1, fc00::/7, fe80::, `*.internal`, `metadata.google.internal` and non-80/443 ports. It resolves the host first and checks every address. It follows redirects by hand, up to 3, and re-checks each hop.
+4. **Add story wasn't metered.** Fix: call `meterUsage` (shadow mode) after each successful AI step. Proposed price: **1 credit** for pasted text or a link, **2 credits** for a picture or PDF read. Gated by `isBillingEnforced` like the other actions, and added to the pricing tests.
+5. **Double picture charge** (`story-illustrator`, from line 677). Fix: single-flight per story.
+   - A new `claim_story_illustration(story_id, regenerate)` database step sets `illustration_claimed_at` atomically.
+   - It refuses if another claim is under 10 minutes old, or if a picture already exists and this isn't an explicit regenerate.
+   - A second job exits early with "already in progress", before any credit reserve or AI call.
+   - The credit key becomes `image:{storyId}:{claimId}`, so a repeat can never charge twice.
+   - The claim clears when the job succeeds or fails.
+   - `auto-illustrate-stories` and Autopilot skip stories with a live claim.
+
+Verification: rolled-back owner trials for 1–3 (another feed's shared row unchanged; another user's path refused; private addresses refused); two picture jobs started at once on one story give one picture and one charge; smoke test run afterwards. Report in plain words, then re-show the language plan below.
+
+---
+
 # Language audit: highlights, not "AI-first"
 
 Positioning: Curatr pulls the highlights from the stories that matter to your audience, credits every source and brings them together in one on-brand feed. It simplifies and summarises real reporting. AI is named honestly in one place, not used as a selling point.
