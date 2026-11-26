@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useId } from 'react';
 import type { CSSProperties } from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { saveSubscriptionStatus } from '@/hooks/useNotificationSubscriptions';
 import { useToast } from '@/hooks/use-toast';
@@ -37,7 +37,7 @@ const FREQUENCY_LABEL: Record<FrequencyOption, string> = {
 export const InlineEmailSignupCard = ({
   topicId,
   topicName,
-  topicLogoUrl,
+  topicLogoUrl: _topicLogoUrl,
   brandColor,
   topBarColor,
 }: InlineEmailSignupCardProps) => {
@@ -51,7 +51,6 @@ export const InlineEmailSignupCard = ({
   const [email, setEmail] = useState('');
   const [frequency, setFrequency] = useState<FrequencyOption>('daily');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [logoFailed, setLogoFailed] = useState(false);
 
   const brandVars = useMemo(() => {
     // Same surface and contrast-checked tones as the feed's own top bar.
@@ -142,28 +141,17 @@ export const InlineEmailSignupCard = ({
     );
   }
 
-  const initial = topicName.trim().charAt(0).toUpperCase() || '•';
 
   return (
     <section style={brandVars} className={cardClass} aria-labelledby={`${inputId}-title`}>
       <div className="px-6 py-7 sm:px-8 sm:py-8 space-y-5">
         <div className="flex items-center gap-3">
-          {topicLogoUrl && !logoFailed ? (
-            <img
-              src={topicLogoUrl}
-              alt=""
-              loading="lazy"
-              onError={() => setLogoFailed(true)}
-              className="h-10 w-10 rounded-lg object-contain"
-            />
-          ) : (
-            <span
-              aria-hidden
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-lg font-semibold bg-[color:var(--brand-fill)] text-[color:var(--brand-on-fill)] dark:bg-[color:var(--brand-fill-dark)] dark:text-[color:var(--brand-on-fill-dark)]"
-            >
-              {initial}
-            </span>
-          )}
+          <span
+            aria-hidden
+            className="flex h-10 w-10 items-center justify-center rounded-lg bg-[color:var(--brand-fill)] text-[color:var(--brand-on-fill)] dark:bg-[color:var(--brand-fill-dark)] dark:text-[color:var(--brand-on-fill-dark)]"
+          >
+            <Mail className="h-5 w-5" />
+          </span>
           <span className={`text-[15px] font-medium ${mutedText}`}>Free briefing</span>
         </div>
 
@@ -175,9 +163,6 @@ export const InlineEmailSignupCard = ({
             Never miss another story from{' '}
             <span className={accentText}>{topicName}</span>
           </h3>
-          <p className="text-[17px] sm:text-lg leading-relaxed">
-            The best of {topicName}, in brief. Straight to your inbox.
-          </p>
         </div>
 
         <div role="radiogroup" aria-label="How often" className="flex gap-2">
