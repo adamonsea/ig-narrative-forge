@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import TopicFeed from "@/pages/TopicFeed";
 import { feedShareMeta, shareHead } from "@/lib/shareMeta";
 import { feedFirstScreen } from "@/lib/feedFirstScreen";
+import { FeedSplash } from "@/components/feed/FeedSplash";
 
 export const Route = createFileRoute("/feed/$slug/")({
   loader: async ({ params }) => {
@@ -16,5 +17,15 @@ export const Route = createFileRoute("/feed/$slug/")({
     const media = loaderData?.firstScreen?.firstCoverMedia;
     return { ...h, links: [...(h.links ?? []), { rel: "preload", as: "image", href: cover, fetchpriority: "high", ...(media ? { media } : {}) }] };
   },
-  component: TopicFeed,
+  component: FeedPage,
 });
+
+function FeedPage() {
+  const { firstScreen } = Route.useLoaderData();
+  return (
+    <>
+      <FeedSplash firstScreen={firstScreen} />
+      <TopicFeed />
+    </>
+  );
+}

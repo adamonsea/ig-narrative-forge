@@ -41,3 +41,4 @@ Parked: audio briefings (already parked).
 - [ ] Pokémon Junior test feed still has no news sources — waiting on Adam to add them
 - [ ] auto-illustrate-stories fails on a missing stories.summary column (seen in logs)
 - [ ] Fix double picture drawing/charging when two picture jobs run on the same story at once (waiting on Adam's go-ahead)
+- [x] Feed loading screen uses the feed's own logo size and type (correction)

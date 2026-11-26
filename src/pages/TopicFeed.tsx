@@ -78,6 +78,7 @@ import { buildShareUrl } from "@/lib/urlUtils";
 import { isInAppBrowser } from "@/lib/deviceUtils";
 import { FEED_FILTERS_ENABLED, READER_ONBOARDING_EXTRAS } from "@/lib/featureFlags";
 import { FEATURES } from "@/lib/featureFlags";
+import { hideFeedSplash } from "@/components/feed/FeedSplash";
 
 // Helper functions using centralized position system
 const shouldShowSentiment = (idx: number) => shouldShowCard('sentiment', idx);
@@ -385,6 +386,10 @@ const TopicFeed = () => {
     () => feedSurfaceStyles({ topBar: topBarChoice, background: backgroundChoice, brand: feedBrand }),
     [topBarChoice, backgroundChoice, feedBrand],
   );
+  // Quiet loading screen (sent with the page): fade out once card 1 is up, or loading has ended either way.
+  const splashDone = filteredContent.length > 0 || feedEvents.length > 0 || (!loading && !eventsLoading);
+  useEffect(() => { if (splashDone) requestAnimationFrame(() => hideFeedSplash()); }, [splashDone]);
+  useEffect(() => { const t = setTimeout(hideFeedSplash, 10000); return () => clearTimeout(t); }, []);
   const viewToggleShown = showFeedViewToggle(
     eventsInFeed,
     individualCards ? feedEvents.length : whatsOn.length,
