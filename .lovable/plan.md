@@ -1,44 +1,80 @@
-# Studio MCP, Phase 1: owners connect Claude and see their feeds
+# Studio MCP, Phase 2: set up a feed by chatting
 
-## Route chosen and why
-- **Sign-in server: Supabase Auth's built-in OAuth 2.1 server** (PKCE, dynamic client registration, consent hand-off, token refresh, revocation). Checked today: this project's discovery endpoint answers `feature_disabled`. That is expected before publish; publishing with the Supabase connection healthy switches it on (OAuth 2.1 + DCR, consent path `/.lovable/oauth/consent`, Site URL synced). No home-made token store, so the smallest safe option.
-- **Server location: deviation from the brief, recommended.** Host Studio MCP inside the app at `https://curatr.pro/mcp` (TanStack server route built with `@lovable.dev/mcp-js`), not a new edge function. The SDK does Streamable HTTP, token checks (issuer, audience, `client_id` claim so copied browser sessions are refused) and the protected-resource metadata Claude needs. The old "pretty /mcp is impossible" note applied to proxying; a real app route now works. Reader `mcp-feed` stays untouched on its Supabase URL. If you'd rather keep an edge function `mcp-studio`, I'd hand-write the same checks and metadata; more code, same result.
+## Two notes from Phase 1
 
-## Endpoints
-```text
-https://curatr.pro/mcp                                  Studio MCP (POST, Streamable HTTP)
-https://curatr.pro/.well-known/oauth-protected-resource  points Claude at the sign-in server
-https://fpoywkjgdapgjtdeooak.supabase.co/auth/v1/...    authorize, token, register, revoke (Supabase)
-https://curatr.pro/.lovable/oauth/consent               consent screen
-```
+**"Not Found" at about 16:27 (cause not confirmed).** The live logs show the last Studio connector call at 16:25:17 (three calls, all 200). Nothing reached curatr.pro/studio/mcp after that, and there are no 404s from the connector address. So the error didn't come from Curatr: not a route change, and not your disconnect (a disconnect gives "sign in again", not "Not Found"). The approval list shows Claude connected four times between 16:03 and 16:24, so most likely the Claude chat was still holding an older connection after you reconnected. First step of the build: reproduce it (one connection, wait 10 minutes, call again) and tidy up the duplicate approvals.
 
-## Consent screen
-- Workspace style, one card: feed favicon-free Curatr mark, "Allow {client} to see and manage your Curatr feeds", signed-in email, **Allow** (primary) / **Cancel**.
-- Signed out: goes to the existing sign-in (password and Google) and returns to the same consent link (safe same-site return check). Errors inline, one sentence. Already-approved clients pass straight through.
+**Lisbon shows green with no stories.** The health check judges every feed by "last new story", so an events-only feed with no stories never goes red for that reason. Fix: feeds that run on events are judged on the last new event instead, and their sources are checked as event sources. Same green/amber/red rules, one health check.
 
-## Tokens
-- Issued, stored and hashed by Supabase Auth. Access token about 1 hour, refresh rotates. Nothing stored by Curatr.
-- **Account settings → Connected apps**: list of approved clients (name, date) with **Disconnect**, using Supabase's grant list/revoke calls. Revoke kills refresh; access tokens end within the hour.
+## What the owner gets
 
-## Tools (read-only, all with readOnlyHint)
-- `list_feeds()` → `[{ id, name, slug, public_url, plan, autopilot, sources_count, stories_this_week }]`, only feeds where `can_manage_topic` is true.
-- `get_account()` → `{ plan, credits_left, stories_used_this_month, story_allowance, trial: { active, ends_at, stories_left } }` from the existing allowance helpers.
-- `get_feed_health({ feed_id? })` → per feed `{ last_story_at, failing_sources[], paused_reasons[] }` from `get_feed_health` / feed_health (guarded).
-- Server instructions (draft): "Curatr brings the highlights from your chosen sources into one feed, credited and in your voice. You stay in charge: these tools let you see your feeds, their health and your account. Nothing goes live without your say." British spelling, no AI wording.
+In Claude: "Make me a Pokémon news feed for young fans" gives back a finished private feed (name, sources, look, first stories gathering) and a preview link. The owner checks it in Curatr and presses Publish there. Claude never publishes.
 
-## Safety rules
-- Every query uses a Supabase client carrying the caller's token, so RLS and `can_manage_topic` apply. No service-role key anywhere in the MCP code (avoids the isServiceRole billing bug class).
-- Rate limit: 60 calls/minute per user via existing `rate_limits` pattern (guarded RPC). Each call logged to `usage_events` with source `mcp_studio`, tool name, user, no inputs or tokens.
-- **Phase 2 Pro gate, designed now:** one helper `requirePro(ctx)` reading the plan from the guarded allowance RPC; write tools call it first and return "This needs Curatr Pro" with the upgrade link. Phase 1 tools skip it, so Free and Pro both work.
+## Tools (all need the level-2 approval and `requireAllowance`)
+
+| Tool | Input | Does | Charges |
+|---|---|---|---|
+| `draft_feed` | description, name?, area? | Runs the app's own new-feed setup: suggestion, news sources, event sources if relevant, starts the first gather. Feed is created **private**. | Same as the app (setup is free; pictures use credits) |
+| `update_sources` | feed_id, add? (links), remove? (source ids) | Checks each link first with the existing source checker (news or what's-on, name, working or not), then adds or removes it | none |
+| `set_branding` | feed_id, name?, logo_url?, colours? (top bar, background, brand) | Writes only the existing Look settings, through the same save used by Settings | none |
+| `pin_stories` | feed_id, story_ids? or add_story? { link or text } | Pins the feed's own stories (existing pin rules: one pin, 24h/2d/7d), or adds a story through the existing Add story flow | Add story: 1 credit, same as the app |
+| `get_preview` | feed_id | Private preview link, plus a short summary: sources, stories, events, look | none |
+
+No publish tool. The Phase 1 tools stay as they are.
+
+## Reusing the app, not copying it
+
+- The feed-creation steps now live inside the Create feed window. They move into one shared setup function that takes "who is calling". The Create feed window and `draft_feed` both call it, so they can't drift apart.
+- Setup still runs through the existing services (feed suggestion, source finder, what's-on finder, source checker, Add story), called as the signed-in owner. No new copy of any of them.
+- Branding and pins call the same saves as Settings and the Desk.
+
+## Private drafts and the paywall
+
+- `draft_feed` creates the feed private. Going live only happens through Curatr's existing Publish switch, which already holds the paywall.
+- The preview link only works for the signed-in owner (the feed's own page for its owner while private).
+
+## Limits, credits and plain messages
+
+- Free limits apply exactly as in the app: number of feeds, sources, pictures. The same checks run (they live in the database and the shared rules).
+- When a limit is hit, or credits run out, the tool gives one line plus a link, for example: "Free accounts have one feed. Upgrade: curatr.pro/pricing" or "Out of picture credits. Top up: curatr.pro/settings/usage".
+- Rate limits: all tools 60 a minute (as now); write tools 30 an hour; `draft_feed` 5 a day per account.
+- Every write is logged to usage_events as mcp_studio, with the feed. Every tool first checks the caller manages that feed and refuses anything else.
+
+## Approval level 2
+
+- When write tools ship, the consent page records level 2. Apps approved at level 1 get one line, "To allow changes, disconnect Curatr and connect it again", until the owner approves again.
+
+## Handing a demo feed to a prospect (simplest way)
+
+- You make the feed in your own account as normal.
+- In Curatr you press "Hand over" on that feed (admin only) and get a one-time link, valid for 7 days.
+- The prospect opens it, signs in or signs up, and the feed moves to their account (sources, look, stories, pins). The link then stops working. Their plan's limits apply from then on.
+- No email lookups and no copying data.
 
 ## Risks
-- OAuth only switches on at publish; can't fully test before. If discovery still fails after publish, you reconnect Supabase or enable OAuth 2.1/DCR in its auth settings.
-- Supabase's OAuth server is new; edge cases (client names, consent API) may shift.
-- Tokens carry no scopes, so "read vs write" is enforced by tools and the Pro gate, not by the token.
-- Google sign-in return must keep the consent link; I'll add the consent URL to Supabase redirect URLs (you add it in the dashboard if needed).
 
-## Proof, end to end
-1. Before publish: manifest extraction, unit tests for the return-path check and Pro gate, SQL check that tools as the Pokémon owner see only that feed.
-2. After you publish: discovery endpoint returns JSON with issuer.
-3. In Claude: Settings → Connectors → Add custom connector → `https://curatr.pro/mcp` → sign in as amd@lindoneast.com → Allow → ask "list my feeds" (only Pokémon), "my account", "feed health". Check usage_events rows. Cancel path and Disconnect in Account settings both tested; after Disconnect, Claude must ask to sign in again.
-4. Repeat sign-in with Adam's account to confirm multi-feed listing. After-change check run. Nothing published by me.
+- `draft_feed` takes time (finding sources can take 20 to 40 seconds). It reports progress, returns once the feed and sources exist, and leaves story gathering running in Curatr.
+- Today, feeds made in the app start public. Drafts from Claude will start private. This doesn't change how the app's Create feed works.
+- Moving the setup steps out of the Create feed window touches a key flow. It is covered by the existing "new feed saves its news sources" check.
+- Tool wording follows the language rules: you approve, sources credited, British spelling, nothing AI-first.
+
+## End-to-end test
+
+1. Reconnect Claude as amd@lindoneast.com and approve the new level.
+2. One message: "Make a Pokémon news feed for young fans." Expect a private feed, 5 or more sources and a preview link.
+3. Tweak it: add one source, remove one, set colours and logo, pin a story, add one story from a link.
+4. `get_preview` summary matches what Curatr shows.
+5. Signed out, the feed doesn't show.
+6. Limits: with credits at 0, a picture request gives the top-up line. A second feed on Free gives the upgrade line. Both happen inside a test that is undone straight after.
+7. In Curatr, press Publish: the paywall shows for a free account. As Pro, the feed goes live.
+8. Hand over: test the hand-over link on a test feed in your account.
+9. Feed check, test suite, and new tests for the limits and the hand-over rules.
+
+## Technical details
+
+- New `src/lib/feedSetup/createFeed.ts` (client-agnostic `createFeedFromDraft(db, draft, { isPublic })`); CreateTopicDialog keeps its UI and calls it with `isPublic: true`.
+- Tools in `src/lib/mcp/tools/` (one per file), each `startCall` then `requireAllowance(kind)`; feed ownership via `can_manage_topic`.
+- `mcp_studio_call` takes a per-tool limit; draft limit counted from usage_events.
+- `compute_feed_health`: events-led feeds use the latest event arrival and event-source health.
+- Hand-over: `feed_handover_tokens` (hashed token, topic_id, expires_at, used_at) + `claim_feed_handover(token)` SECURITY DEFINER that moves `topics.created_by`; the create step is admin-guarded.
+- Consent page records `STUDIO_WRITE_VERSION` (2).
