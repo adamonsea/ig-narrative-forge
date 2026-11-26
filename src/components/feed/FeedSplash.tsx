@@ -39,16 +39,33 @@ export function feedSplashHtml(fs: FeedFirstScreen | null | undefined): string {
   return `<style>#feed-splash{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:${bg};text-align:center;padding:24px;opacity:0;animation:fsIn .2s ease-out .4s forwards;transition:opacity .2s ease-out}#feed-splash.fs-out{opacity:0!important;animation:none}#feed-splash .fs-t{width:120px;height:2px;background:#E4E0D8;overflow:hidden;position:relative}#feed-splash .fs-b{position:absolute;top:0;left:0;height:100%;width:40%;background:${brand};animation:fsSweep 1.6s ease-in-out infinite}#feed-splash p{margin:0;font-family:Lexend,system-ui,sans-serif;font-weight:300;font-size:17px;line-height:1.5;color:${muted}}@keyframes fsIn{to{opacity:1}}@keyframes fsSweep{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}@media (prefers-reduced-motion:reduce){#feed-splash .fs-b{animation:none;left:30%}}</style><div id="feed-splash" role="status" aria-label="Loading ${esc(name)}">${mark}<div class="fs-t"><div class="fs-b"></div></div><div><p>${esc(date)}</p>${n > 0 ? `<p>${n} ${n === 1 ? "story" : "stories"} today</p>` : ""}</div></div>`;
 }
 
-/** Fade the splash out over 200ms, then remove it. Safe to call more than once. */
+/** Once the splash has started to appear, it stays fully shown at least this long. */
+export const SPLASH_MIN_SHOWN_MS = 1200;
+const SPLASH_DELAY_MS = 400;
+const SPLASH_FADE_IN_MS = 200;
+
+/**
+ * Hide the splash. Before it has appeared (first 0.4s) it is removed silently, so fast loads
+ * never see it. Once it has started to appear it stays for SPLASH_MIN_SHOWN_MS, then fades
+ * over 200ms, so it never flickers in and out. Safe to call more than once.
+ */
 export function hideFeedSplash() {
   if (typeof document === "undefined") return;
   const el = document.getElementById("feed-splash");
-  if (!el || el.classList.contains("fs-out")) return;
-  const op = getComputedStyle(el).opacity;
-  el.style.opacity = op;
-  void el.offsetWidth;
-  el.classList.add("fs-out");
-  setTimeout(() => el.parentElement?.remove(), 220);
+  if (!el || el.dataset["hiding"]) return;
+  el.dataset["hiding"] = "1";
+  if (Number(getComputedStyle(el).opacity) === 0) {
+    el.parentElement?.remove();
+    return;
+  }
+  const visibleAt = SPLASH_DELAY_MS + SPLASH_FADE_IN_MS;
+  const wait = Math.max(0, visibleAt + SPLASH_MIN_SHOWN_MS - performance.now());
+  setTimeout(() => {
+    el.style.opacity = getComputedStyle(el).opacity;
+    void el.offsetWidth;
+    el.classList.add("fs-out");
+    setTimeout(() => el.parentElement?.remove(), 220);
+  }, wait);
 }
 
 export function FeedSplash({ firstScreen }: { firstScreen: FeedFirstScreen | null | undefined }) {
