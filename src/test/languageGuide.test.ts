@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AI_SUMMARY_TAG, OWNER_LINE, READER_LINE } from "@/lib/howCuratrWorks";
+import { AI_SUMMARY_TAG, FIRST_PAGE_NOTE_LABEL, OWNER_LINE, READER_LINE, aiSummaryLine } from "@/lib/howCuratrWorks";
 
 const BANNED = [/AI-powered/i, /AI-written/i, /\brewritten\b/i, /auto-generated/i, /AI illustrations/i, /AI briefings/i, /\bagentic\b/i, /trusted sources/i, /AI journalism/i];
 const FILES = [
@@ -19,9 +19,12 @@ describe("language guide", () => {
     });
   }
   it("honest lines use house style (no em dashes)", () => {
-    for (const line of [READER_LINE, OWNER_LINE, AI_SUMMARY_TAG]) expect(line).not.toContain("—");
+    for (const line of [READER_LINE, OWNER_LINE, AI_SUMMARY_TAG, FIRST_PAGE_NOTE_LABEL, aiSummaryLine("X")]) expect(line).not.toContain("—");
   });
   it("reader line never claims a person checked the story", () => {
     expect(READER_LINE).not.toMatch(/checked/i);
+  });
+  it("last-slide note names the source", () => {
+    expect(aiSummaryLine("The Argus")).toBe("AI-assisted summary of reporting by The Argus.");
   });
 });

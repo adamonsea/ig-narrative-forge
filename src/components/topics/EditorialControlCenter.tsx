@@ -1,5 +1,5 @@
 import { opt } from "@/lib/optionalProps";
-import { OWNER_LINE } from '@/lib/howCuratrWorks';
+import { FIRST_PAGE_NOTE_LABEL, OWNER_LINE } from '@/lib/howCuratrWorks';
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@/lib/router-compat";
 import { SettingsSearch } from "@/components/settings/SettingsSearch";
@@ -336,9 +336,9 @@ export function EditorialControlCenter({
         {current === "writing" && (
           <Page title={label} purpose={purpose}>
             <SettingGroup>
-              <SettingRow label="AI-assisted summary tag" hint={OWNER_LINE}>
+              <SettingRow label={FIRST_PAGE_NOTE_LABEL} hint={OWNER_LINE}>
                 <SaveIndicator state={tagSaving} />
-                <Switch aria-label="AI-assisted summary tag" checked={topic.ai_summary_tag === true} onCheckedChange={(on) => void toggleTag(on)} />
+                <Switch aria-label={FIRST_PAGE_NOTE_LABEL} checked={topic.ai_summary_tag === true} onCheckedChange={(on) => void toggleTag(on)} />
               </SettingRow>
             </SettingGroup>
             <div id="voice-heading">

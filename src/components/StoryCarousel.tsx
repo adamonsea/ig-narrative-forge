@@ -17,7 +17,7 @@ import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl, coverPixelWidth } from '@/lib/imageOptimization';
 import { isPublisherPhoto, photoCreditLabel } from '@/lib/photoCredit';
-import { AI_SUMMARY_TAG } from '@/lib/howCuratrWorks';
+import { AI_SUMMARY_TAG, aiSummaryLine } from '@/lib/howCuratrWorks';
 import { usePhotoCredit } from '@/hooks/usePhotoCredit';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
@@ -127,7 +127,7 @@ interface StoryCarouselProps {
   onReactionCountsChange?: (storyId: string, counts: { thumbsUp: number; thumbsDown: number; userReaction: 'like' | 'discard' | null }) => void;
   /** First-slide cover: 'split' (picture above headline, default) or 'full-bleed' (picture behind a white headline). Slides 2+ are the same in both. */
   coverStyle?: 'split' | 'full-bleed' | undefined;
-  /** Show the small "AI-assisted summary" tag beside the source credit (feed setting). */
+  /** Also show the quiet "AI-assisted summary" note on the first slide (EU feeds on Autopilot). */
   aiSummaryTag?: boolean | undefined;
 }
 
@@ -816,6 +816,8 @@ export default function StoryCarousel({
                 if (isLastSlide && sourceUrl && sourceUrl !== '#') {
                   const palette = feedBrandPalette(brandColor);
                   return (
+                    <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">{aiSummaryLine(sourceName)}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -831,6 +833,7 @@ export default function StoryCarousel({
                       <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                       Read the full story at {sourceName}
                     </button>
+                    </div>
                   );
                 }
 
@@ -854,7 +857,7 @@ export default function StoryCarousel({
                   </span>
                 );
               })()}
-              {aiSummaryTag && <span className="text-xs text-muted-foreground">{AI_SUMMARY_TAG}</span>}
+              {aiSummaryTag && safeSlideIndex === 0 && <span className="text-xs text-muted-foreground">{AI_SUMMARY_TAG}</span>}
             </div>
 
             {/* Action buttons */}
