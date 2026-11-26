@@ -2,7 +2,15 @@ import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { llmFetch } from '../_shared/llm-router.ts';
 import { getUser, userOwnsTopic, unauthorized, forbidden } from '../_shared/auth.ts';
-import { fetchWithRetry, extractContentFromHTML } from '../_shared/content-processor.ts';
+import { extractContentFromHTML } from '../_shared/content-processor.ts';
+import { fetchPublicHtml } from '../_shared/safeUrl.ts';
+import { topicOwner, meterUsage } from '../_shared/allowance.ts';
+
+const TEMP_BUCKET = 'temp-uploads';
+// Add story prices (credits): pasted text or link = 1, picture or PDF read = 2.
+export const ADD_STORY_CREDITS = { text: 1, file_read: 2 } as const;
+const ownsUpload = (uid: string, bucket: unknown, path: unknown) =>
+  bucket === TEMP_BUCKET && typeof path === 'string' && path.startsWith(`${uid}/`) && !path.includes('..');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -247,26 +255,23 @@ async function commitDraft(draft: StoryDraft, topicId: string, meta: Record<stri
     .eq('url', stableKey)
     .maybeSingle();
 
+  // Never modify a shared row other feeds may use: reuse it read-only when the text is unchanged,
+  // otherwise save a feed-only copy (the original link is kept in import_metadata for credit).
   let sharedContentId: string;
+  let reuse = false;
   if (existing) {
+    const { data: row } = await supabase.from('shared_article_content').select('title, body').eq('id', existing.id).maybeSingle();
+    reuse = (row?.title ?? '').trim() === headline && (row?.body ?? '').trim() === body;
+  }
+  const insertKey = existing && !reuse ? `manual://${topicId}/${crypto.randomUUID()}` : stableKey;
+  if (existing && reuse) {
     sharedContentId = existing.id;
-    await supabase
-      .from('shared_article_content')
-      .update({
-        title: headline,
-        body,
-        author: draft.author || null,
-        word_count: body.split(/\s+/).length,
-        published_at: publishedAt,
-        last_seen_at: new Date().toISOString(),
-      })
-      .eq('id', sharedContentId);
   } else {
     const { data: inserted, error } = await supabase
       .from('shared_article_content')
       .insert({
-        url: stableKey,
-        normalized_url: stableKey,
+        url: insertKey,
+        normalized_url: insertKey,
         title: headline,
         body,
         author: draft.author || null,
@@ -341,7 +346,7 @@ serve(async (req) => {
         mode: mode ?? 'paste',
         original_filename: fileName ?? null,
       });
-      if (storageBucket && storagePath) {
+      if (storageBucket && storagePath && ownsUpload(user.id, storageBucket, storagePath)) {
         await supabase.storage.from(storageBucket).remove([storagePath]).catch(() => {});
       }
       return json({ success: true, ...result });
@@ -365,7 +370,7 @@ serve(async (req) => {
       if (!['http:', 'https:'].includes(parsed.protocol)) return fail('Only http(s) links are supported.', 400);
       let html: string;
       try {
-        html = await fetchWithRetry(parsed.toString(), 2);
+        html = await fetchPublicHtml(parsed.toString());
       } catch (err: any) {
         return fail(`Couldn't fetch that page (${err?.message ?? 'network error'}). Try pasting the text instead.`);
       }
@@ -381,6 +386,7 @@ serve(async (req) => {
       hints.publication = titleCaseFromDomain(domainFromUrl(parsed.toString()));
     } else if (mode === 'file') {
       if (!storageBucket || !storagePath) return fail('File location is required.', 400);
+      if (!ownsUpload(user.id, storageBucket, storagePath)) return forbidden(corsHeaders);
       const { data: blob, error: downloadError } = await supabase.storage.from(storageBucket).download(storagePath);
       if (downloadError || !blob) return fail(`Couldn't read the uploaded file: ${downloadError?.message ?? 'not found'}`);
       const buffer = await blob.arrayBuffer();
@@ -414,6 +420,12 @@ serve(async (req) => {
     }
 
     const draft = await structureContent(rawContent, hints);
+    const kindHint = `${fileType || ''} ${fileName || ''}`.toLowerCase();
+    const readFile = mode === 'file' && (kindHint.includes('image/') || kindHint.includes('pdf') || /\.(png|jpe?g|webp|gif|heic)\b/.test(kindHint));
+    await meterUsage(supabase, {
+      payerId: await topicOwner(supabase, topicId), topicId, actor: 'user', kind: 'add_story',
+      credits: readFile ? ADD_STORY_CREDITS.file_read : ADD_STORY_CREDITS.text, chargeUser: true,
+    });
     return json({ success: true, draft });
   } catch (error: any) {
     console.error('❌ Manual content error:', error);

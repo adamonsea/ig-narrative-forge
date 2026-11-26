@@ -3994,6 +3994,8 @@ export type Database = {
           duplicate_of_story_id: string | null
           duplicate_similarity: number | null
           id: string
+          illustration_claim_id: string | null
+          illustration_claimed_at: string | null
           illustration_gag: Json | null
           illustration_generated_at: string | null
           illustration_regen_count: number
@@ -4043,6 +4045,8 @@ export type Database = {
           duplicate_of_story_id?: string | null
           duplicate_similarity?: number | null
           id?: string
+          illustration_claim_id?: string | null
+          illustration_claimed_at?: string | null
           illustration_gag?: Json | null
           illustration_generated_at?: string | null
           illustration_regen_count?: number
@@ -4092,6 +4096,8 @@ export type Database = {
           duplicate_of_story_id?: string | null
           duplicate_similarity?: number | null
           id?: string
+          illustration_claim_id?: string | null
+          illustration_claimed_at?: string | null
           illustration_gag?: Json | null
           illustration_generated_at?: string | null
           illustration_regen_count?: number
@@ -6951,6 +6957,10 @@ export type Database = {
       }
       check_source_validate_rate: { Args: { p_user: string }; Returns: boolean }
       check_topic_slug_available: { Args: { p_slug: string }; Returns: boolean }
+      claim_story_illustration: {
+        Args: { p_regenerate: boolean; p_story_id: string }
+        Returns: string
+      }
       cleanup_diane_abbott_stories_eastbourne: { Args: never; Returns: Json }
       cleanup_duplicate_articles: { Args: never; Returns: Json }
       cleanup_existing_duplicates: { Args: never; Returns: Json }
@@ -8052,6 +8062,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      release_story_illustration: {
+        Args: { p_claim_id: string; p_story_id: string }
+        Returns: undefined
       }
       remove_source_from_topic: {
         Args: { p_source_id: string; p_topic_id: string }

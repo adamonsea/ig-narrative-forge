@@ -143,6 +143,9 @@ serve(async (req) => {
   let measuredTokens = 0
   let reservationKey: string | null = null
   let reservationSettled = false
+  let claimId: string | null = null
+  let claimStoryId: string | null = null
+  let keepClaim = false
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -688,6 +691,23 @@ serve(async (req) => {
       )
     }
 
+    // Single-flight: one picture job per story. A second job skips before any credit or AI call;
+    // automated jobs never redraw a story that already has a picture.
+    {
+      const { data: claim, error: claimError } = await supabase.rpc('claim_story_illustration', {
+        p_story_id: storyId, p_regenerate: !isAutomated,
+      })
+      if (claimError) throw claimError
+      if (!claim) {
+        return new Response(
+          JSON.stringify({ success: false, skipped: true, code: 'already_in_progress', error: 'A picture for this story is already being drawn.' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      claimId = claim as string
+      claimStoryId = storyId
+    }
+
     let creditResult = null
     
     // Track fallback usage to inform the user
@@ -705,7 +725,7 @@ serve(async (req) => {
       }
     }
     if ((!isServiceRole && !isSuperAdmin) || systemCharge) {
-      reservationKey = `image:${storyId}:${crypto.randomUUID()}`
+      reservationKey = `image:${storyId}:${claimId}`
       reservedUserId = payerId!
       const { data: result, error: creditError } = await supabase.rpc('reserve_user_credits', {
         p_user_id: payerId,
@@ -1177,6 +1197,7 @@ ${TRADEMARK_RULE}`;
             reservationSettled = true
           }
 
+          keepClaim = true // batch poller finishes it; the claim expires after 10 minutes
           return new Response(
             JSON.stringify({
               success: true,
@@ -1740,5 +1761,10 @@ ${TRADEMARK_RULE}`;
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
+  } finally {
+    if (claimId && claimStoryId && !keepClaim) {
+      const svc = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+      await svc.rpc('release_story_illustration', { p_story_id: claimStoryId, p_claim_id: claimId })
+    }
   }
 })
