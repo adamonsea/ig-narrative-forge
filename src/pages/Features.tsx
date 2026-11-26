@@ -18,7 +18,7 @@ const CHAPTERS: { id: FeatureSceneName; kicker: string; title: string; body: str
   { id: 'publish', kicker: 'Publish', title: 'Approve once, appear everywhere', body: 'Your feed, email briefings, website widgets and social reels, all from one tap, maximising reach and efficiency.' },
   { id: 'grow', kicker: 'Grow', title: 'Readers become subscribers', body: 'A sign-up CTAs sit in the feed. Readers become lists and your audience becomes a community' },
   { id: 'readers', kicker: 'Learn', title: 'See what lands', body: 'Reads, the headline that stops the scroll, and where readers drop off.' },
-  { id: 'ask', kicker: 'Ask', title: 'Your channel, inside your AI', body: 'Connect ChatGPT or Claude to a channel and ask what’s new. Answers come from your stories, with sources.' },
+  { id: 'ask', kicker: 'Ask', title: 'Read in ChatGPT & Claude', body: 'Connect ChatGPT or Claude to a channel and ask what’s new. Answers come from your stories, with sources.' },
 ];
 
 const EXTRAS = ['Play Mode', 'Quiz cards', 'Sentiment tracking'];

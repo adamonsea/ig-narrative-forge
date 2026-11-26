@@ -83,10 +83,10 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
       if (error) throw error;
     },
     onSuccess: (_, cardType) => {
-      toast.success(`${cardType === 'story_momentum' ? 'Story momentum' : 'Social proof'} card regenerated!`);
+      toast.success(`${cardType === 'story_momentum' ? 'Story momentum' : 'Social proof'} card updated`);
     },
     onError: (error) => {
-      toast.error(`Failed to regenerate: ${error.message}`);
+      toast.error(`Couldn't update: ${error.message}`);
     },
   });
 
@@ -216,7 +216,7 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
                 
                   <Badge variant="default" className="text-sm">Premium</Badge>
                 </div>
-              <p className="text-sm text-muted-foreground">AI-generated quiz questions based on your feed content</p>
+              <p className="text-sm text-muted-foreground">Quiz questions from your stories</p>
               </div>
               <Switch
                 id="quiz-cards"

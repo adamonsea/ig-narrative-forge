@@ -46,7 +46,7 @@ const Discover = () => {
             Discover Feeds
           </h1>
           <p className="text-lg text-muted-foreground">
-            Curated news feeds on local communities, niche topics, and more — powered by AI.
+            Curated news feeds on local communities, niche topics, and more. Every story credited.
           </p>
         </div>
 

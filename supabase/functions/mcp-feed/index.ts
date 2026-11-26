@@ -264,9 +264,9 @@ Deno.serve(async (req) => {
       .eq("is_active", true)
       .maybeSingle();
 
-    if (!topic || !topic.mcp_enabled) return json({ error: "This feed is not available to AI assistants" }, 404);
+    if (!topic || !topic.mcp_enabled) return json({ error: "This feed is not available in ChatGPT or Claude" }, 404);
     const { data: hasPro } = await supabase.rpc('has_pro_access', { p_user_id: topic.created_by });
-    if (!hasPro) return json({ error: 'This feed is not available to AI assistants' }, 404);
+    if (!hasPro) return json({ error: 'This feed is not available in ChatGPT or Claude' }, 404);
 
     if (topic.mcp_access === "key") {
       const auth = req.headers.get("authorization") || "";

@@ -137,11 +137,11 @@ export function AudienceProgressCard({ topicId }: AudienceProgressCardProps) {
       if (error) throw error;
       
       toast.dismiss();
-      toast.success("Social proof card regenerated!");
+      toast.success("Social proof card updated");
       refetchMetrics();
     } catch (error) {
       toast.dismiss();
-      toast.error("Failed to regenerate card");
+      toast.error("Couldn't update the card");
       console.error(error);
     }
   };
@@ -184,7 +184,7 @@ export function AudienceProgressCard({ topicId }: AudienceProgressCardProps) {
             className="gap-2"
           >
             <RefreshCw className="h-4 w-4" />
-            Regenerate
+            Refresh
           </Button>
         </div>
       </CardHeader>

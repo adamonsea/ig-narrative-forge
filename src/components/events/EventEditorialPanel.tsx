@@ -75,7 +75,7 @@ export function EventEditorialPanel({ eventId, topicId }: { eventId: string; top
     <section className="space-y-6 border-t pt-6" aria-labelledby={`ed-${eventId}`}>
       <div className="flex items-center justify-between gap-2">
         <h3 id={`ed-${eventId}`} className="text-lg font-semibold">Captions</h3>
-        <Button variant={empty ? "default" : "ghost"} size="sm" onClick={() => void write()} disabled={writing}>{writing ? "Writing…" : empty ? "Write" : "Rewrite"}</Button>
+        <Button variant={empty ? "default" : "ghost"} size="sm" onClick={() => void write()} disabled={writing}>{writing ? "Writing…" : empty ? "Write" : "Redraft"}</Button>
       </div>
       {error && <InlineError message={error} actionLabel="Try again" onAction={() => setError(null)} />}
       {ev?.review_flags?.length ? (

@@ -1,4 +1,5 @@
 import { opt } from "@/lib/optionalProps";
+import { OWNER_LINE } from '@/lib/howCuratrWorks';
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@/lib/router-compat";
 import { SettingsSearch } from "@/components/settings/SettingsSearch";
@@ -49,6 +50,7 @@ import { UsagePanel } from "@/components/billing/UsagePanel";
 
 export interface EditorialTopic {
   id: string;
+  ai_summary_tag?: boolean | null;
   name: string;
   slug: string;
   topic_type: "regional" | "keyword";
@@ -210,6 +212,15 @@ export function EditorialControlCenter({
     setEventsSaving("saved");
   };
 
+  const [tagSaving, setTagSaving] = useState<SaveState>(null);
+  const toggleTag = async (on: boolean) => {
+    setTagSaving("saving");
+    const { error } = await supabase.from("topics").update({ ai_summary_tag: on, updated_at: new Date().toISOString() } as never).eq("id", topic.id);
+    if (error) { setTagSaving("not-saved"); return; }
+    patch({ ai_summary_tag: on });
+    setTagSaving("saved");
+  };
+
   return (
     <div className="mx-auto max-w-6xl md:grid md:grid-cols-[216px_minmax(0,1fr)] md:gap-12">
       <nav aria-label="Settings sections" className="md:sticky md:top-24 md:self-start">
@@ -324,6 +335,12 @@ export function EditorialControlCenter({
 
         {current === "writing" && (
           <Page title={label} purpose={purpose}>
+            <SettingGroup>
+              <SettingRow label="AI-assisted summary tag" hint={OWNER_LINE}>
+                <SaveIndicator state={tagSaving} />
+                <Switch aria-label="AI-assisted summary tag" checked={topic.ai_summary_tag === true} onCheckedChange={(on) => void toggleTag(on)} />
+              </SettingRow>
+            </SettingGroup>
             <div id="voice-heading">
               <ContentVoiceSettings topicId={topic.id} topicName={topic.name} topicType={topic.topic_type} region={topic.region} currentExpertise={topic.audience_expertise} currentTone={topic.default_tone} currentWritingStyle={topic.default_writing_style} currentHouseStyleNotes={topic.house_style_notes} currentHouseStyleExamples={topic.house_style_examples} onUpdate={onUpdate} />
             </div>

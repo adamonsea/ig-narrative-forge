@@ -112,7 +112,7 @@ const LoopBriefing = ({ reduced }: { reduced: boolean }) => (
 
 /* Illustration — big version of the homepage paint loop */
 const LoopArtwork = ({ reduced }: { reduced: boolean }) => (
-  <Stage label="A story card being filled with generated artwork">
+  <Stage label="A story card being filled with a new picture">
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="w-48 overflow-hidden rounded-xl border border-white/15 bg-white/5 sm:w-56">
         <div className="relative h-24 w-full overflow-hidden sm:h-28">

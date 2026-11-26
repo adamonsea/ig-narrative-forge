@@ -1,4 +1,5 @@
 import { Link } from '@/lib/router-compat';
+import { OWNER_LINE } from '@/lib/howCuratrWorks';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
@@ -40,8 +41,8 @@ const steps = [
   },
   {
     icon: <Wand2 className="h-6 w-6" />,
-    title: 'Let AI simplify & rewrite',
-    body: 'Raw articles are transformed into readable, engaging stories. The AI preserves every source link, so readers can always click through to the original publication.',
+    title: 'Simplified and credited',
+    body: 'Each story is summarised into its key points, with a link back to the original.',
   },
   {
     icon: <CheckCircle2 className="h-6 w-6" />,
@@ -95,7 +96,7 @@ const keywords = [
   'niche news curation',
   'local news aggregation',
   'hyperlocal news feed',
-  'AI news curation',
+  'curated news feed',
   'build a news feed',
   'local newsletter monetization',
   'community news platform',
@@ -113,19 +114,19 @@ export default function LocalNewsFeedsGuide() {
   return (
     <div className="min-h-dvh bg-[hsl(214,50%,9%)]">
       <Helmet>
-        <title>How to Build & Monetize a Niche Local News Feed Using AI — Curatr</title>
+        <title>How to build and grow a local news feed | Curatr</title>
         <meta
           name="description"
-          content="A step-by-step guide for independent curators building hyperlocal news feeds with AI. Learn how to aggregate sources, simplify content, and monetize through newsletters and social carousels."
+          content="A step-by-step guide for independent curators building local news feeds. Learn how to aggregate sources, simplify content, and monetize through newsletters and social carousels."
         />
         <link rel="canonical" href="https://curatr.pro/guides/local-news-feeds" />
         <meta
           property="og:title"
-          content="How to Build & Monetize a Niche Local News Feed Using AI"
+          content="How to build and grow a local news feed"
         />
         <meta
           property="og:description"
-          content="A complete guide for curators building hyperlocal news feeds with AI-powered curation, multi-channel delivery, and monetization."
+          content="A complete guide for curators building curated, credited local news feeds, multi-channel delivery and monetisation."
         />
         <meta property="og:url" content="https://curatr.pro/guides/local-news-feeds" />
         <meta property="og:type" content="article" />
@@ -134,9 +135,9 @@ export default function LocalNewsFeedsGuide() {
           {JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: 'How to Build & Monetize a Niche Local News Feed Using AI',
+            headline: 'How to build and grow a local news feed',
             description:
-              'A step-by-step guide for independent curators building hyperlocal news feeds with AI-powered curation and multi-channel delivery.',
+              'A step-by-step guide for independent curators building curated, credited local news feeds and multi-channel delivery.',
             url: 'https://curatr.pro/guides/local-news-feeds',
             image: 'https://curatr.pro/curatr-icon.png',
             author: {
@@ -216,7 +217,7 @@ export default function LocalNewsFeedsGuide() {
                 className="text-xl text-white/60 font-light max-w-2xl mx-auto leading-relaxed"
               >
                 A complete playbook for curators who want to aggregate, simplify, and
-                monetize hyperlocal content using AI — without writing every story by hand.
+                monetise local content without writing every story by hand.
               </motion.p>
             </motion.div>
           </section>
@@ -349,11 +350,11 @@ export default function LocalNewsFeedsGuide() {
             <motion.div variants={motionReveal} className="mb-12">
               <MaskRevealHeading
                 as="h2"
-                segments={[{ text: 'What AI actually does' }, { text: 'for you', italic: true }]}
+                segments={[{ text: 'What Curatr does' }, { text: 'for you', italic: true }]}
                 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4 leading-[1.1]"
               />
               <p className="text-xl text-white/40 max-w-xl">
-                Automation that respects your editorial judgement.
+                {OWNER_LINE}
               </p>
             </motion.div>
 
@@ -361,14 +362,14 @@ export default function LocalNewsFeedsGuide() {
               {[
                 {
                   title: 'Content simplification',
-                  body: 'Long council reports and dense news articles are rewritten into punchy, readable summaries. Jargon is stripped. Key facts are preserved.',
+                  body: 'Long council reports and dense news articles are summarised into clear key points. Jargon is stripped. Key facts are preserved.',
                 },
                 {
-                  title: 'AI illustrations',
+                  title: 'Illustrations in your house style',
                   body: 'Every story gets a unique editorial image. No stock-photo fatigue, no copyright risk. The visual style matches your feed’s personality.',
                 },
                 {
-                  title: 'Auto-generated quizzes',
+                  title: 'Quick quizzes',
                   body: 'Turn stories into knowledge-check cards. Readers test what they learned, boosting engagement and time on site.',
                 },
                 {

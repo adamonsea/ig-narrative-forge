@@ -62,13 +62,13 @@ export default function Mcp() {
   return (
     <div className="min-h-dvh bg-background">
       <Helmet>
-        <title>Curatr for AI assistants — MCP server documentation</title>
+        <title>Read Curatr in ChatGPT & Claude: MCP server documentation</title>
         <meta
           name="description"
           content="Curatr feeds are available as MCP servers. ChatGPT, Claude and other MCP-compatible assistants can list, search and read published stories with full source attribution. Tools, endpoints and connection instructions."
         />
         <link rel="canonical" href="https://curatr.pro/mcp" />
-        <meta property="og:title" content="Curatr for AI assistants — MCP server documentation" />
+        <meta property="og:title" content="Read Curatr in ChatGPT & Claude: MCP server documentation" />
         <meta
           property="og:description"
           content="Every Curatr feed can be read by ChatGPT, Claude and other MCP-compatible assistants — latest stories, search, full articles and briefings, with source attribution."
@@ -89,7 +89,7 @@ export default function Mcp() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-12">
-        <h1 className="display-heading text-3xl text-foreground">Curatr for AI assistants</h1>
+        <h1 className="display-heading text-3xl text-foreground">Read Curatr in ChatGPT &amp; Claude</h1>
         <p className="mt-4 text-base leading-relaxed text-muted-foreground">
           Every Curatr feed can be published as an <strong className="text-foreground">MCP server</strong> (Model
           Context Protocol). That lets AI assistants — ChatGPT, Claude, Cursor and anything else that speaks MCP —
@@ -188,7 +188,7 @@ export default function Mcp() {
         </section>
 
         <section className="mt-10 rounded-xl border border-border bg-muted/30 p-5">
-          <h2 className="text-lg font-semibold text-foreground">Publish your own feed to AI assistants</h2>
+          <h2 className="text-lg font-semibold text-foreground">Publish your own feed to ChatGPT &amp; Claude</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Curatr Pro members can switch this on for any feed they own from the feed's Distribution settings — choose
             open access or a shareable key, and see how often assistants read the feed.

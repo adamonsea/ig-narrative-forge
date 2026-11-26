@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { OWNER_LINE } from '@/lib/howCuratrWorks';
 import { Link, useNavigate, useSearchParams } from '@/lib/router-compat';
 import { Helmet } from 'react-helmet-async';
 import { Check } from 'lucide-react';
@@ -16,7 +17,7 @@ import { CreditScaleTable } from '@/components/pricing/CreditScaleTable';
 
 const features = [
   'Publish public feeds',
-  'RSS, email, widgets and AI assistant access',
+  'RSS, email, widgets, and reading in ChatGPT & Claude',
   'All image styles and creative tools',
   `${PRO_MONTHLY_CREDITS.toLocaleString("en-GB")} creative credits each month`,
 ];
@@ -118,6 +119,11 @@ export default function Pricing() {
         </section>
 
         <CreditScaleTable />
+
+        <section className="mx-auto mt-12 max-w-2xl text-center">
+          <h2 className="font-medium">How Curatr works</h2>
+          <p className="mt-2 text-sm text-white/60">{OWNER_LINE}</p>
+        </section>
 
         {user && subscribed && <section className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:flex md:items-center md:justify-between">
           <div><h2 className="font-medium">Need more creative credits?</h2><p className="mt-1 text-sm text-white/55">Add {TOP_UP_CREDITS} credits for $10. Top-ups do not expire.</p></div>

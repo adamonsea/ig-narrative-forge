@@ -1037,7 +1037,7 @@ const SCENES: Record<FeatureSceneName, { label: string; C: (p: SceneProps) => Re
   publish: { label: 'One story approved and sent to feed, email, website widget and RSS', C: PublishScene },
   grow: { label: 'A reader signs up for daily and weekly email in the feed and confirms with one email', C: GrowScene },
   readers: { label: 'Reads counting up, the top headline stopper, and a drop-off curve across slides', C: ReadersScene },
-  ask: { label: 'An AI assistant answering a question with stories from your Curatr channel', C: AskScene },
+  ask: { label: 'ChatGPT or Claude answering a question with stories from your Curatr channel', C: AskScene },
 };
 
 export const FeatureScene = ({ name }: { name: FeatureSceneName }) => {

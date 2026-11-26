@@ -47,21 +47,21 @@ export const HEADLINE_FEATURES: HeadlineFeature[] = [
   },
   {
     id: 'briefing',
-    title: 'AI briefings',
+    title: 'Briefings in your voice',
     kicker: '03 — Writing',
     animation: 'briefing',
     body: 'Every story becomes a short, readable briefing in your own tone of voice, with an optional audio version for listeners.',
     script:
-      'Each story is rewritten as a short briefing in your voice — clear, quick to read, and always credited to the original publisher. Prefer to listen? Curatr narrates the whole thing for you.',
+      'Each story is summarised into a short briefing in your voice. Clear, quick to read, and always credited to the original publisher. Prefer to listen? Curatr narrates the whole thing for you.',
   },
   {
     id: 'artwork',
-    title: 'AI illustrations',
+    title: 'Illustrations in your house style',
     kicker: '04 — Illustrating',
     animation: 'artwork',
     body: 'Original editorial artwork for every story. No stock photography, no licensing headaches, and strict guardrails on sensitive subjects.',
     script:
-      'Every story gets its own artwork, generated to a house style you choose. No stock libraries, no licensing worries — and sensitive stories are never illustrated, automatically.',
+      'Every story gets its own artwork, illustrated in your house style. No stock libraries, no licensing worries. Sensitive stories are never illustrated.',
   },
   {
     id: 'publish',
@@ -79,7 +79,7 @@ export const HEADLINE_FEATURES: HeadlineFeature[] = [
     animation: 'control',
     body: 'Nothing publishes without you. Review, edit, reject or schedule — and see exactly where every story came from.',
     script:
-      'You are still the editor. Every story waits in your queue until you approve it, and you can rewrite a line, swap the image, or throw it out entirely. Full attribution travels with it.',
+      'You are still the editor. Every story waits in your queue until you approve it, and you can change a line, swap the image, or throw it out entirely. Full attribution travels with it.',
   },
 ];
 
@@ -95,7 +95,7 @@ export const DEPTH_FEATURES: DepthFeature[] = [
     id: 'quiz',
     title: 'Quiz cards',
     loop: 'quiz',
-    body: 'Auto-generated knowledge quizzes drawn from your own published stories.',
+    body: 'Quick quizzes drawn from your own published stories.',
     script: 'Quiz cards are written from your own coverage — a light, competitive way to keep readers coming back.',
   },
   {

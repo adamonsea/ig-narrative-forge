@@ -5730,6 +5730,7 @@ export type Database = {
       }
       topics: {
         Row: {
+          ai_summary_tag: boolean
           api_include_photos: boolean
           archived_at: string | null
           archived_by: string | null
@@ -5814,6 +5815,7 @@ export type Database = {
           weekly_email_enabled: boolean
         }
         Insert: {
+          ai_summary_tag?: boolean
           api_include_photos?: boolean
           archived_at?: string | null
           archived_by?: string | null
@@ -5898,6 +5900,7 @@ export type Database = {
           weekly_email_enabled?: boolean
         }
         Update: {
+          ai_summary_tag?: boolean
           api_include_photos?: boolean
           archived_at?: string | null
           archived_by?: string | null

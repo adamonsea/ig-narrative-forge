@@ -104,6 +104,21 @@ const Privacy = () => {
               Our primary service provider is Supabase (data processed in the EU/UK). Email delivery 
               uses GDPR-compliant providers.
             </p>
+            <h3 className="text-lg font-semibold mt-6 mb-2">Who processes content</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Highlights are summarised from the original reporting with AI help. Article text, feed
+              settings and story details (not reader data) are sent to these providers to do this:
+            </p>
+            <ul className="list-disc pl-6 text-muted-foreground space-y-1 mt-2">
+              <li>OpenAI: summaries and illustrations</li>
+              <li>Google Gemini, via Lovable's AI gateway: summaries, sorting and reading uploaded files</li>
+              <li>DeepSeek: summaries</li>
+              <li>Replicate: illustrations and short animations</li>
+              <li>MidJourney, via KIE: illustrations</li>
+              <li>Ideogram: illustrations</li>
+              <li>ElevenLabs: audio versions of briefings</li>
+              <li>Firecrawl: reading source web pages</li>
+            </ul>
           </section>
 
           <section>

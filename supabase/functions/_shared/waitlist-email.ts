@@ -131,7 +131,7 @@ export const buildWaitlistEmailHtml = ({ plan, questionnaireUrl, story }: Waitli
                   </tr>
                 </table>
                 <p style="margin:28px 0 24px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
-                  Curatr runs a live news feed on a town or a topic: it trawls the sources, rewrites the stories and illustrates them daily.${storyBlock ? " Here's one it made this week." : ''}
+                  Curatr runs a live news feed on a town or a topic: it gathers the highlights from every source, credits each one and illustrates them daily.${storyBlock ? " Here's one it made this week." : ''}
                 </p>
 ${storyBlock}
                 <p style="margin:0 0 28px 0;font-size:16px;line-height:1.65;color:#3f3f46;">
@@ -175,7 +175,7 @@ export const buildWaitlistEmailText = ({ plan, questionnaireUrl, story }: Waitli
     '',
     questionnaireUrl,
     '',
-    'Curatr runs a live news feed on a town or a topic: it trawls the sources, rewrites the',
+    'Curatr runs a live news feed on a town or a topic: it gathers the highlights from every source,',
     'stories and illustrates them daily.',
     ...(story?.title ? ['', `A story it made recently: ${story.title}`] : []),
     '',

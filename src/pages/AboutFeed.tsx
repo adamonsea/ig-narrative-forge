@@ -1,4 +1,5 @@
 import { useParams, Link } from '@/lib/router-compat';
+import { READER_LINE } from '@/lib/howCuratrWorks';
 import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
@@ -118,6 +119,7 @@ const AboutFeed = () => {
         <h1 className="text-4xl md:text-5xl font-bold text-zinc-100 mb-8">
           About
         </h1>
+        <p className="mb-8 text-zinc-400">{READER_LINE}</p>
 
         {/* About photo */}
         {branding.about_page_photo_url && (

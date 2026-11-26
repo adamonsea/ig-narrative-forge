@@ -24,8 +24,8 @@ import { onReaderConsentChange } from "@/lib/readerConsent";
 import NotFound from "@/pages/NotFound";
 import appCss from "../styles.css?url";
 
-const SITE_TITLE = "Curatr - AI-Curated News Feeds";
-const SITE_DESCRIPTION = "Create and follow curated news feeds powered by AI. Local news, niche topics, and more from trusted sources.";
+const SITE_TITLE = "Curatr - News feeds that credit every source";
+const SITE_DESCRIPTION = "Local and niche news feeds. Every story credited to the people who reported it.";
 const SITE_IMAGE = "https://storage.googleapis.com/gpt-engineer-file-uploads/87LSF84r5Je8FzK2lSkFOrSp7fI3/social-images/social-1781172040122-Curatr_header_2x.webp";
 
 // Google Consent Mode defaults (cookie-consent skill script, unchanged) plus a one-time copy of the old

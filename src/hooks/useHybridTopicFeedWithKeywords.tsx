@@ -67,6 +67,7 @@ interface Topic {
   event_cards?: string | null | undefined;
   event_currency?: string | null | undefined;
   story_cover_style?: string | null | undefined;
+  ai_summary_tag?: boolean | undefined;
   community_intelligence_enabled?: boolean | undefined;
   community_pulse_frequency?: number | undefined;
   automated_insights_enabled?: boolean | undefined;
@@ -304,7 +305,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at'),
         supabase
           .from('topics')
-          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled, feed_lead, event_cards, event_currency, story_cover_style')
+          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled, feed_lead, event_cards, event_currency, story_cover_style, ai_summary_tag')
           .ilike('slug', slug)
           .eq('is_public', true)
           .single()
@@ -357,6 +358,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         event_cards: (fullTopicData as any)?.event_cards ?? null,
         event_currency: (fullTopicData as any)?.event_currency ?? null,
         story_cover_style: (fullTopicData as any)?.story_cover_style ?? 'split',
+        ai_summary_tag: (fullTopicData as any)?.ai_summary_tag === true,
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);

@@ -86,7 +86,7 @@ export const ReelStudioModal = ({
       console.error('Reel render failed:', err);
       toast({
         title: 'Render failed',
-        description: err instanceof Error ? err.message : 'Could not generate the reel.',
+        description: err instanceof Error ? err.message : "Couldn't make the reel.",
         variant: 'destructive',
       });
     } finally {

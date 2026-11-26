@@ -180,7 +180,7 @@ const EventsListing: React.FC<EventsListingProps> = ({ topicId, onEventsCountCha
           <CardContent className="text-center py-8 text-muted-foreground">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No upcoming events found</p>
-            <p className="text-sm mt-2">Generate events from the Management → Automation section</p>
+            <p className="text-sm mt-2">Add a what's-on source to see events.</p>
           </CardContent>
         </Card>
       ) : (

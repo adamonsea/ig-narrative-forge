@@ -101,7 +101,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
     if (!isProductOwner && (!credits || credits.credits_balance < model.credits)) {
       toast({
         title: 'Insufficient Credits',
-        description: `You need ${model.credits} credits to generate with ${model.name}.`,
+        description: `You need ${model.credits} credits for ${model.name}.`,
         variant: 'destructive',
       });
       return;
@@ -115,7 +115,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       if (!result.success) {
         toast({
           title: 'Generation Failed',
-          description: result.error || 'Failed to generate illustration',
+          description: result.error || "Couldn't make the picture. Try again.",
           variant: 'destructive',
         });
         return;
@@ -127,14 +127,14 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       // Warn user if fallback was used
       if (result.used_fallback) {
         toast({
-          title: 'Image Generated with Fallback',
+          title: 'Picture ready (backup style)',
           description: `${result.fallback_reason} (Used: ${result.fallback_model})`,
           variant: 'default',
           duration: 8000,
         });
       } else {
         toast({
-          title: 'Illustration Generated Successfully',
+          title: 'Picture ready',
           description: `Used ${result.credits_used} credits with ${model.name}. Balance: ${result.new_balance}`,
         });
       }
@@ -142,7 +142,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       if (onRefresh) await onRefresh();
     } catch (error) {
       console.error('Error generating illustration:', error);
-      toast({ title: 'Error', description: 'Failed to generate story illustration', variant: 'destructive' });
+      toast({ title: 'Error', description: "Couldn't make the picture. Try again.", variant: 'destructive' });
     } finally {
       setGeneratingIllustrations(prev => { const next = new Set(prev); next.delete(story.id); return next; });
     }
@@ -356,7 +356,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         <div className="text-muted-foreground mb-4">
           <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
           <p className="text-lg font-medium">No Stories Ready</p>
-          <p className="text-sm">Generated stories will appear here for review and approval</p>
+          <p className="text-sm">New stories appear here for you to check.</p>
         </div>
       </div>
     );

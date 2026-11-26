@@ -206,11 +206,11 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
       if (error) {
         throw new Error(await edgeErrorMessage(error, 'The review service hit an unexpected problem. Please try again in a moment.'));
       }
-      toast({ title: 'Review generated', description: label });
+      toast({ title: 'Review ready', description: label });
       load();
     } catch (err) {
       toast({
-        title: 'Could not generate review',
+        title: "Couldn't make the review",
         description: err instanceof Error ? err.message : 'Unknown error',
         variant: 'destructive',
       });
@@ -364,7 +364,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
               }}
             >
               {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate review
+              New review
             </Button>
           </div>
         </div>
@@ -406,7 +406,7 @@ export const PeriodReviewPanel = ({ topicId, topicSlug }: PeriodReviewPanelProps
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete this review?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      “{r.label}” will be removed for good. You can always generate it again.
+                      “{r.label}” will be removed for good. You can always make it again.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

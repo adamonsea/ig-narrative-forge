@@ -124,8 +124,8 @@ export const AiAssistantAccess = ({ topicId, topicSlug, topicName, enabled, acce
 
   return (
     <div className="divide-y divide-border">
-      <SettingRow label="AI assistants" hint={saveError ? "Not saved. Please try again." : `People can ask ChatGPT or Claude about ${topicName}. Answers credit the original source. Pro.`}>
-        <Switch aria-label="AI assistants" checked={enabled} onCheckedChange={(checked) => persist({ mcp_enabled: checked })} />
+      <SettingRow label="Read in ChatGPT & Claude" hint={saveError ? "Not saved. Please try again." : `People can ask ChatGPT or Claude about ${topicName}. Answers credit the original source. Pro.`}>
+        <Switch aria-label="Read in ChatGPT & Claude" checked={enabled} onCheckedChange={(checked) => persist({ mcp_enabled: checked })} />
       </SettingRow>
 
       {enabled && (

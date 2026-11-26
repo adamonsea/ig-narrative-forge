@@ -1,4 +1,5 @@
 import { useParams, useNavigate, Link } from "@/lib/router-compat";
+import { READER_LINE } from '@/lib/howCuratrWorks';
 import { useEffect, useState } from "react";
 import { ArrowLeft, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ const StoryPage = () => {
         const [topicResult, storyResult] = await Promise.all([
           supabase
             .from('topics')
-            .select('id, name, slug, topic_type, branding_config, illustration_primary_color, story_cover_style')
+            .select('id, name, slug, topic_type, branding_config, illustration_primary_color, story_cover_style, ai_summary_tag')
             .eq('slug', slug.toLowerCase())
             .eq('is_public', true)
             .eq('is_active', true)
@@ -296,6 +297,7 @@ const StoryPage = () => {
           topicName={topic.name}
           brandColor={(topic.branding_config as any)?.primary_color || (topic as any).illustration_primary_color}
           coverStyle={resolveStoryCoverStyle((topic as any).story_cover_style)}
+          aiSummaryTag={(topic as any).ai_summary_tag === true}
         />
         
         <StoryReadable
@@ -306,6 +308,7 @@ const StoryPage = () => {
           slides={story.slides}
         />
         <footer className="px-4 py-8 text-center">
+          <p className="mb-3 text-sm text-feed-on-background-muted">{READER_LINE}</p>
           <Link to="/cookies#settings" className="text-sm text-feed-on-background-muted underline underline-offset-2 hover:text-feed-on-background">
             Cookie settings
           </Link>

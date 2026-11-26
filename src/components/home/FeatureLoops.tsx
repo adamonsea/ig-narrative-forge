@@ -23,7 +23,7 @@ const loop = (duration: number, delay = 0) => ({
 
 /* 1 — AI illustrations: a blank card gets painted with a gradient, over and over */
 const LoopIllustrations = ({ reduced }: { reduced: boolean }) => (
-  <Frame label="An empty story card being filled with generated artwork">
+  <Frame label="An empty story card being filled with a new picture">
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="h-16 w-24 overflow-hidden rounded-lg border border-white/15 bg-white/5 sm:h-20 sm:w-28">
         <div className="relative h-9 w-full overflow-hidden sm:h-11">

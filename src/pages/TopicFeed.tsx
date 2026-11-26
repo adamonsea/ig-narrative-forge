@@ -730,6 +730,7 @@ const TopicFeed = () => {
               topicSlug={slug}
               brandColor={topic?.branding_config?.primary_color || (topic as any)?.illustration_primary_color}
               coverStyle={resolveStoryCoverStyle(topic?.story_cover_style)}
+              aiSummaryTag={topic?.ai_summary_tag === true}
               onStorySwipe={handleStorySwipe}
               onStoryScrolledPast={handleStoryScrolledPast}
               {...opt("onMoreLikeThis", FEED_FILTERS_ENABLED ? handleMoreLikeThis : undefined)}

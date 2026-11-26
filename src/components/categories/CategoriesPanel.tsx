@@ -71,7 +71,7 @@ export const CategoriesPanel = ({ topicId, totalStories }: CategoriesPanelProps)
         if (payload?.blocked) {
           throw new Error(
             payload.error ||
-              'AI classification is blocked — the workspace AI credit limit has been reached.'
+              'Sorting paused. Out of credits.'
           );
         }
         if (error) {

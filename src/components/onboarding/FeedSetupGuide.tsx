@@ -127,7 +127,7 @@ export const FeedSetupGuide = ({
       },
       {
         title: "Pick your voice",
-        why: "Every story is rewritten in this voice — and illustrated in this style — before it reaches your readers.",
+        why: "Every story is summarised in this voice and illustrated in this style. You check it.",
       },
       {
         title: "Choose how stories publish",

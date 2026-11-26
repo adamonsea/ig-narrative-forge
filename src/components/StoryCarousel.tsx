@@ -17,6 +17,7 @@ import { feedBrandPalette, toCss } from '@/lib/feedBrandColor';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl, coverPixelWidth } from '@/lib/imageOptimization';
 import { isPublisherPhoto, photoCreditLabel } from '@/lib/photoCredit';
+import { AI_SUMMARY_TAG } from '@/lib/howCuratrWorks';
 import { usePhotoCredit } from '@/hooks/usePhotoCredit';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { HandSwipeHint } from '@/components/HandSwipeHint';
@@ -126,6 +127,8 @@ interface StoryCarouselProps {
   onReactionCountsChange?: (storyId: string, counts: { thumbsUp: number; thumbsDown: number; userReaction: 'like' | 'discard' | null }) => void;
   /** First-slide cover: 'split' (picture above headline, default) or 'full-bleed' (picture behind a white headline). Slides 2+ are the same in both. */
   coverStyle?: 'split' | 'full-bleed' | undefined;
+  /** Show the small "AI-assisted summary" tag beside the source credit (feed setting). */
+  aiSummaryTag?: boolean | undefined;
 }
 
 /** Publisher name used for credits: publication, then source name, then the article's web address. */
@@ -158,7 +161,8 @@ export default function StoryCarousel({
   onPrefetchFilter,
   prefetchedReactionCounts,
   onReactionCountsChange,
-  coverStyle = 'split'
+  coverStyle = 'split',
+  aiSummaryTag = false
 }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showMoreLikeThis, setShowMoreLikeThis] = useState(false);
@@ -850,6 +854,7 @@ export default function StoryCarousel({
                   </span>
                 );
               })()}
+              {aiSummaryTag && <span className="text-xs text-muted-foreground">{AI_SUMMARY_TAG}</span>}
             </div>
 
             {/* Action buttons */}

@@ -27,7 +27,7 @@ export const SETTINGS_INDEX: SettingEntry[] = [
 
   e("pictures", "Picture colours", "One colour, cycle or random.", ["colour mode", "color"]),
   e("pictures", "Publisher photos", "Use source photos, credited.", ["photos", "images", "credit"]),
-  e("pictures", "Illustration style", "How generated pictures look.", ["art", "artwork", "image style", "drawing"]),
+  e("pictures", "Illustration style", "How your pictures look.", ["art", "artwork", "image style", "drawing"]),
   e("pictures", "Place pictures", "Reference photos of local places.", ["landmarks", "reference photos", "buildings"], "place-pictures"),
 
   e("coverage", "More of this", "Stories that mention these belong in the feed.", ["keywords", "terms", "topics", "include"]),
@@ -69,7 +69,7 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   e("share", "Weekly roundup email", "The week's best stories.", ["newsletter", "email", "digest", "weekly"]),
   e("share", "Website widget", "Your latest headlines on any website.", ["embed", "widget"]),
   e("share", "RSS", "A live feed for reader apps.", ["feed reader", "xml"]),
-  e("share", "AI assistants", "Let ChatGPT or Claude read the feed.", ["mcp", "chatgpt", "claude"]),
+  e("share", "Read in ChatGPT & Claude", "Let ChatGPT or Claude read the feed.", ["mcp", "chatgpt", "claude"]),
   e("share", "API token", "Read-only access to your events.", ["api", "developer", "json", "token", "key"]),
   e("share", "Include photos", "Event photos in the API.", ["api", "photos", "images"]),
 

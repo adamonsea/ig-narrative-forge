@@ -43,7 +43,7 @@ export const SourceOnboardingTicker = ({ variant = 'loading' }: SourceOnboarding
     },
     {
       icon: Sparkles,
-      text: "AI discovers sources based on your keywords and topic type",
+      text: "Finding sources that fit your topic",
       color: "text-accent-purple"
     },
   ];

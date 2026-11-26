@@ -113,7 +113,7 @@ export const FeedIdeaGenerator = ({ ideas = DEFAULT_PLACEHOLDER_IDEAS }: FeedIde
       setError(
         typeof err?.message === 'string' && err.message.length < 140
           ? err.message
-          : 'We could not generate ideas just now. Please try again.',
+          : 'No ideas just now. Try again.',
       );
     } finally {
       setLoading(false);

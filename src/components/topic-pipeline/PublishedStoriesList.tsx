@@ -256,17 +256,17 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       if (result.success) {
         if (result.satirical_declined) toast({ title: "Standard style used", description: "This story looked too serious for satire, so it got the standard picture style instead.", duration: 8000 });
         if (result.used_fallback) {
-          toast({ title: 'Image Generated with Fallback', description: `${result.fallback_reason} (Used: ${result.fallback_model})`, duration: 8000 });
+          toast({ title: 'Picture ready (backup style)', description: `${result.fallback_reason} (Used: ${result.fallback_model})`, duration: 8000 });
         } else {
-          toast({ title: 'Illustration Generated', description: `Used ${result.credits_used} credits with ${model.name}.` });
+          toast({ title: 'Picture ready', description: `Used ${result.credits_used} credits with ${model.name}.` });
         }
         onRefresh();
       } else {
-        toast({ title: 'Generation Failed', description: result.error || 'Failed to generate', variant: 'destructive' });
+        toast({ title: "Couldn't make the picture", description: result.error || 'Try again.', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Error generating illustration:', error);
-      toast({ title: 'Error', description: 'Failed to generate illustration', variant: 'destructive' });
+      toast({ title: 'Error', description: "Couldn't make the picture. Try again.", variant: 'destructive' });
     } finally {
       setGeneratingIllustrations(prev => { const next = new Set(prev); next.delete(story.id); return next; });
     }

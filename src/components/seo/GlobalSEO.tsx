@@ -18,7 +18,7 @@ export const GlobalSEO = () => {
     "name": "Curatr",
     "alternateName": ["Curatr Pro"],
     "url": "https://curatr.pro",
-    "description": "AI-powered curated news feeds. Create and manage personalized topic feeds with intelligent content curation from trusted sources.",
+    "description": "Local and niche news feeds. Every story credited to the people who reported it, in the feed's own voice.",
     "inLanguage": "en-GB",
     "publisher": {
       "@id": "https://curatr.pro/#organization"
@@ -47,13 +47,12 @@ export const GlobalSEO = () => {
       "width": "512",
       "height": "512"
     },
-    "description": "Multi-tenant editorial platform for curated news feeds with AI-powered content curation and gamified engagement features.",
+    "description": "Platform for on-brand curated news feeds that credit every source.",
     "foundingDate": "2024",
     "slogan": "Curated news, your way",
     "knowsAbout": [
       "News curation",
       "Content aggregation", 
-      "AI-powered journalism",
       "Local news",
       "Regional news feeds"
     ],

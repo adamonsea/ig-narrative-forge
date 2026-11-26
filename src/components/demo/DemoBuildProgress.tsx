@@ -12,7 +12,7 @@ interface DemoBuildProgressProps {
 
 const STEPS = [
   { key: 'gather', label: 'Gathering stories from', duration: 3000 },
-  { key: 'summary', label: 'AI is summarising in your voice', duration: 4000 },
+  { key: 'summary', label: 'Summarising in your voice', duration: 4000 },
   { key: 'images', label: 'Generating cover images', duration: 3000 },
 ];
 
