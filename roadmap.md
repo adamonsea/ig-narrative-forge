@@ -42,3 +42,9 @@ Parked: audio briefings (already parked).
 - [ ] auto-illustrate-stories fails on a missing stories.summary column (seen in logs)
 - [ ] Fix double picture drawing/charging when two picture jobs run on the same story at once (waiting on Adam's go-ahead)
 - [x] Feed loading screen uses the feed's own logo size and type (correction)
+
+## Studio MCP Phase 1 (approved 26 Nov)
+- [x] /mcp Studio server with OAuth (Supabase), consent screen (quartered mark), Connected apps in Account settings
+- [x] Tools list_feeds, get_account, get_feed_health; rate limit; usage_events 'mcp_studio'
+- [x] requireAllowance(ctx) helper for Phase 2; grant version re-consent design
+- [x] Check loading screen on screen (Eastbourne, Lisbon, embed, 0.4s delay); list what the next publish includes

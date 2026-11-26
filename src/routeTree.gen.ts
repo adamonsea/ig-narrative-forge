@@ -24,10 +24,12 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as VerifySubscriptionRouteImport } from './routes/verify-subscription'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAiCostsRouteImport } from './routes/admin/ai-costs'
 import { Route as ApiPictureSourceRouteImport } from './routes/api/picture-source'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DashboardConnectedAppsRouteImport } from './routes/dashboard/connected-apps'
 import { Route as DesignIndexRouteImport } from './routes/design/index'
 import { Route as DesignEventCardsRouteImport } from './routes/design/event-cards'
 import { Route as DesignStoryCoversRouteImport } from './routes/design/story-covers'
@@ -38,7 +40,9 @@ import { Route as ForCommunitiesRouteImport } from './routes/for/communities'
 import { Route as ForOrganisationsRouteImport } from './routes/for/organisations'
 import { Route as GuidesLocalNewsFeedsRouteImport } from './routes/guides/local-news-feeds'
 import { Route as PlaySlugRouteImport } from './routes/play/$slug'
+import { Route as StudioMcpRouteImport } from './routes/studio/mcp'
 import { Route as WaitlistWelcomeRouteImport } from './routes/waitlist/welcome'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as DashboardTopicSlugRouteImport } from './routes/dashboard/topic/$slug'
 import { Route as DashboardWidgetsIndexRouteImport } from './routes/dashboard/widgets/index'
 import { Route as DashboardWidgetsTestRouteImport } from './routes/dashboard/widgets/test'
@@ -132,6 +136,12 @@ const VerifySubscriptionRoute = VerifySubscriptionRouteImport.update({
   path: '/verify-subscription',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
@@ -150,6 +160,11 @@ const ApiPictureSourceRoute = ApiPictureSourceRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardConnectedAppsRoute = DashboardConnectedAppsRouteImport.update({
+  id: '/dashboard/connected-apps',
+  path: '/dashboard/connected-apps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignIndexRoute = DesignIndexRouteImport.update({
@@ -202,9 +217,19 @@ const PlaySlugRoute = PlaySlugRouteImport.update({
   path: '/play/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudioMcpRoute = StudioMcpRouteImport.update({
+  id: '/studio/mcp',
+  path: '/studio/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WaitlistWelcomeRoute = WaitlistWelcomeRouteImport.update({
   id: '/waitlist/welcome',
   path: '/waitlist/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardTopicSlugRoute = DashboardTopicSlugRouteImport.update({
@@ -315,8 +340,10 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
   '/feed/$slug': typeof FeedSlugRouteRouteWithChildren
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/ai-costs': typeof AdminAiCostsRoute
   '/api/picture-source': typeof ApiPictureSourceRoute
+  '/dashboard/connected-apps': typeof DashboardConnectedAppsRoute
   '/design/event-cards': typeof DesignEventCardsRoute
   '/design/story-covers': typeof DesignStoryCoversRoute
   '/explore/$slug': typeof ExploreSlugRoute
@@ -325,10 +352,12 @@ export interface FileRoutesByFullPath {
   '/for/organisations': typeof ForOrganisationsRoute
   '/guides/local-news-feeds': typeof GuidesLocalNewsFeedsRoute
   '/play/$slug': typeof PlaySlugRoute
+  '/studio/mcp': typeof StudioMcpRoute
   '/waitlist/welcome': typeof WaitlistWelcomeRoute
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/design/': typeof DesignIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/topic/$slug': typeof DashboardTopicSlugRoute
   '/dashboard/widgets/test': typeof DashboardWidgetsTestRoute
   '/feed/$slug/about': typeof FeedSlugAboutRoute
@@ -363,8 +392,10 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/ai-costs': typeof AdminAiCostsRoute
   '/api/picture-source': typeof ApiPictureSourceRoute
+  '/dashboard/connected-apps': typeof DashboardConnectedAppsRoute
   '/design/event-cards': typeof DesignEventCardsRoute
   '/design/story-covers': typeof DesignStoryCoversRoute
   '/explore/$slug': typeof ExploreSlugRoute
@@ -373,10 +404,12 @@ export interface FileRoutesByTo {
   '/for/organisations': typeof ForOrganisationsRoute
   '/guides/local-news-feeds': typeof GuidesLocalNewsFeedsRoute
   '/play/$slug': typeof PlaySlugRoute
+  '/studio/mcp': typeof StudioMcpRoute
   '/waitlist/welcome': typeof WaitlistWelcomeRoute
   '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/design': typeof DesignIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/topic/$slug': typeof DashboardTopicSlugRoute
   '/dashboard/widgets/test': typeof DashboardWidgetsTestRoute
   '/feed/$slug/about': typeof FeedSlugAboutRoute
@@ -413,8 +446,10 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-subscription': typeof VerifySubscriptionRoute
   '/feed/$slug': typeof FeedSlugRouteRouteWithChildren
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/ai-costs': typeof AdminAiCostsRoute
   '/api/picture-source': typeof ApiPictureSourceRoute
+  '/dashboard/connected-apps': typeof DashboardConnectedAppsRoute
   '/design/event-cards': typeof DesignEventCardsRoute
   '/design/story-covers': typeof DesignStoryCoversRoute
   '/explore/$slug': typeof ExploreSlugRoute
@@ -423,10 +458,12 @@ export interface FileRoutesById {
   '/for/organisations': typeof ForOrganisationsRoute
   '/guides/local-news-feeds': typeof GuidesLocalNewsFeedsRoute
   '/play/$slug': typeof PlaySlugRoute
+  '/studio/mcp': typeof StudioMcpRoute
   '/waitlist/welcome': typeof WaitlistWelcomeRoute
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/design/': typeof DesignIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/topic/$slug': typeof DashboardTopicSlugRoute
   '/dashboard/widgets/test': typeof DashboardWidgetsTestRoute
   '/feed/$slug/about': typeof FeedSlugAboutRoute
@@ -464,8 +501,10 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-subscription'
     | '/feed/$slug'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/ai-costs'
     | '/api/picture-source'
+    | '/dashboard/connected-apps'
     | '/design/event-cards'
     | '/design/story-covers'
     | '/explore/$slug'
@@ -474,10 +513,12 @@ export interface FileRouteTypes {
     | '/for/organisations'
     | '/guides/local-news-feeds'
     | '/play/$slug'
+    | '/studio/mcp'
     | '/waitlist/welcome'
     | '/admin/'
     | '/dashboard/'
     | '/design/'
+    | '/.lovable/oauth/consent'
     | '/dashboard/topic/$slug'
     | '/dashboard/widgets/test'
     | '/feed/$slug/about'
@@ -512,8 +553,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/verify-subscription'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/ai-costs'
     | '/api/picture-source'
+    | '/dashboard/connected-apps'
     | '/design/event-cards'
     | '/design/story-covers'
     | '/explore/$slug'
@@ -522,10 +565,12 @@ export interface FileRouteTypes {
     | '/for/organisations'
     | '/guides/local-news-feeds'
     | '/play/$slug'
+    | '/studio/mcp'
     | '/waitlist/welcome'
     | '/admin'
     | '/dashboard'
     | '/design'
+    | '/.lovable/oauth/consent'
     | '/dashboard/topic/$slug'
     | '/dashboard/widgets/test'
     | '/feed/$slug/about'
@@ -561,8 +606,10 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-subscription'
     | '/feed/$slug'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/ai-costs'
     | '/api/picture-source'
+    | '/dashboard/connected-apps'
     | '/design/event-cards'
     | '/design/story-covers'
     | '/explore/$slug'
@@ -571,10 +618,12 @@ export interface FileRouteTypes {
     | '/for/organisations'
     | '/guides/local-news-feeds'
     | '/play/$slug'
+    | '/studio/mcp'
     | '/waitlist/welcome'
     | '/admin/'
     | '/dashboard/'
     | '/design/'
+    | '/.lovable/oauth/consent'
     | '/dashboard/topic/$slug'
     | '/dashboard/widgets/test'
     | '/feed/$slug/about'
@@ -611,8 +660,10 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   VerifySubscriptionRoute: typeof VerifySubscriptionRoute
   FeedSlugRouteRoute: typeof FeedSlugRouteRouteWithChildren
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminAiCostsRoute: typeof AdminAiCostsRoute
   ApiPictureSourceRoute: typeof ApiPictureSourceRoute
+  DashboardConnectedAppsRoute: typeof DashboardConnectedAppsRoute
   DesignEventCardsRoute: typeof DesignEventCardsRoute
   DesignStoryCoversRoute: typeof DesignStoryCoversRoute
   ExploreSlugRoute: typeof ExploreSlugRoute
@@ -621,10 +672,12 @@ export interface RootRouteChildren {
   ForOrganisationsRoute: typeof ForOrganisationsRoute
   GuidesLocalNewsFeedsRoute: typeof GuidesLocalNewsFeedsRoute
   PlaySlugRoute: typeof PlaySlugRoute
+  StudioMcpRoute: typeof StudioMcpRoute
   WaitlistWelcomeRoute: typeof WaitlistWelcomeRoute
   AdminIndexRoute: typeof AdminIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DesignIndexRoute: typeof DesignIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   DashboardTopicSlugRoute: typeof DashboardTopicSlugRoute
   DashboardWidgetsTestRoute: typeof DashboardWidgetsTestRoute
   DashboardWidgetsIndexRoute: typeof DashboardWidgetsIndexRoute
@@ -742,6 +795,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifySubscriptionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/': {
       id: '/admin/'
       path: '/admin'
@@ -768,6 +828,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/connected-apps': {
+      id: '/dashboard/connected-apps'
+      path: '/dashboard/connected-apps'
+      fullPath: '/dashboard/connected-apps'
+      preLoaderRoute: typeof DashboardConnectedAppsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/design/': {
@@ -840,11 +907,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaySlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio/mcp': {
+      id: '/studio/mcp'
+      path: '/studio/mcp'
+      fullPath: '/studio/mcp'
+      preLoaderRoute: typeof StudioMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/waitlist/welcome': {
       id: '/waitlist/welcome'
       path: '/waitlist/welcome'
       fullPath: '/waitlist/welcome'
       preLoaderRoute: typeof WaitlistWelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/topic/$slug': {
@@ -1014,8 +1095,11 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   VerifySubscriptionRoute: VerifySubscriptionRoute,
   FeedSlugRouteRoute: FeedSlugRouteRouteWithChildren,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdminAiCostsRoute: AdminAiCostsRoute,
   ApiPictureSourceRoute: ApiPictureSourceRoute,
+  DashboardConnectedAppsRoute: DashboardConnectedAppsRoute,
   DesignEventCardsRoute: DesignEventCardsRoute,
   DesignStoryCoversRoute: DesignStoryCoversRoute,
   ExploreSlugRoute: ExploreSlugRoute,
@@ -1024,10 +1108,12 @@ const rootRouteChildren: RootRouteChildren = {
   ForOrganisationsRoute: ForOrganisationsRoute,
   GuidesLocalNewsFeedsRoute: GuidesLocalNewsFeedsRoute,
   PlaySlugRoute: PlaySlugRoute,
+  StudioMcpRoute: StudioMcpRoute,
   WaitlistWelcomeRoute: WaitlistWelcomeRoute,
   AdminIndexRoute: AdminIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DesignIndexRoute: DesignIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   DashboardTopicSlugRoute: DashboardTopicSlugRoute,
   DashboardWidgetsTestRoute: DashboardWidgetsTestRoute,
   DashboardWidgetsIndexRoute: DashboardWidgetsIndexRoute,

@@ -2369,6 +2369,30 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_studio_grants: {
+        Row: {
+          approved_at: string
+          client_id: string
+          client_name: string | null
+          user_id: string
+          version: number
+        }
+        Insert: {
+          approved_at?: string
+          client_id: string
+          client_name?: string | null
+          user_id: string
+          version?: number
+        }
+        Update: {
+          approved_at?: string
+          client_id?: string
+          client_name?: string | null
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
       newsletter_signup_rate_limits: {
         Row: {
           created_at: string | null
@@ -7983,6 +8007,32 @@ export type Database = {
       }
       london_today: { Args: never; Returns: string }
       mark_desk_looked: { Args: { p_topic_id: string }; Returns: undefined }
+      mcp_studio_account: { Args: never; Returns: Json }
+      mcp_studio_call: {
+        Args: { p_client_id: string; p_tool: string }
+        Returns: boolean
+      }
+      mcp_studio_feeds: {
+        Args: never
+        Returns: {
+          autopilot: boolean
+          broken_sources: number
+          health: string
+          health_reason: string
+          id: string
+          last_story_at: string
+          name: string
+          owner_action: string
+          owner_pro: boolean
+          slug: string
+          sources_count: number
+          stories_this_week: number
+        }[]
+      }
+      mcp_studio_record_grant: {
+        Args: { p_client_id: string; p_client_name: string; p_version: number }
+        Returns: undefined
+      }
       migrate_articles_to_multi_tenant: {
         Args: { p_limit?: number }
         Returns: Json

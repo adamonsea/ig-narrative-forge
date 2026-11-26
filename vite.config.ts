@@ -8,6 +8,7 @@
 // hosting already compresses at the edge.
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 
 export default defineConfig({
   tanstackStart: {
@@ -16,6 +17,8 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    // Studio MCP for feed owners. /mcp is the existing reader connector page, so Studio lives at /studio/mcp.
+    plugins: [mcpPlugin({ path: "/studio/mcp" })],
     // react-helmet-async ships CommonJS; bundle it into the server build so
     // its named exports resolve during server rendering.
     ssr: { noExternal: ["react-helmet-async"] },

@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useLocation, Link } from "@/lib/router-compat";
-import { LogOut } from "lucide-react";
+import { LogOut, Plug } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -73,12 +73,18 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Breadcrumb>
             )}
 
+            <Button asChild variant="ghost" size="sm" className="ml-auto h-7 gap-1.5 px-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <Link to="/dashboard/connected-apps" aria-label="Connected apps">
+                <Plug className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Connected apps</span>
+              </Link>
+            </Button>
             {/* Always-visible sign out */}
             <Button
               variant="ghost"
               size="sm"
               onClick={signOut}
-              className="ml-auto h-7 gap-1.5 px-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              className="h-7 gap-1.5 px-2 text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Sign out</span>

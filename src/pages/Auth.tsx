@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, MailCheck } from 'lucide-react';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 import { CuratrLogo } from '@/components/brand/CuratrLogo';
+import { oauthReturnPath } from '@/lib/oauth-return-path';
 
 // Homepage ink palette: deep navy canvas, violet glow, mint pill action.
 const INK = 'hsl(214, 50%, 9%)';
@@ -17,7 +18,8 @@ const MINT = 'hsl(155, 100%, 67%)';
 
 const safeRedirect = () => {
   const requested = new URLSearchParams(window.location.search).get('redirect');
-  return requested && requested.startsWith('/') && !requested.startsWith('//') ? requested : '/dashboard';
+  const safe = oauthReturnPath(requested);
+  return safe === '/' ? '/dashboard' : safe;
 };
 
 const Auth = () => {
@@ -42,7 +44,7 @@ const Auth = () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-        if (data.session) navigate('/dashboard');
+        if (data.session) navigate(safeRedirect());
       } catch (err) {
         try {
           (supabase.auth as any).stopAutoRefresh?.();
@@ -74,7 +76,7 @@ const Auth = () => {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+          options: { emailRedirectTo: new URL(safeRedirect(), window.location.origin).href },
         });
         if (signUpError) throw signUpError;
         if (data.user && (data.user.identities?.length ?? 0) === 0) {

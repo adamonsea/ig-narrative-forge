@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "sdk_version": "3.6.0",
+  "path": "/studio/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://fpoywkjgdapgjtdeooak.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "curatr",
+      "version": "0.1.0",
+      "title": "Curatr"
+    },
+    "tools": [
+      {
+        "name": "list_feeds",
+        "title": "List my feeds",
+        "description": "List the Curatr feeds you manage, with plan, Autopilot status, source count and stories published this week.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_account",
+        "title": "My account",
+        "description": "Show your Curatr plan, credits left, stories used this month against your allowance, and free trial status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_feed_health",
+        "title": "Feed health",
+        "description": "Check how your feeds are running: last story, how many sources are failing, and anything that has paused a feed.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "feed_id": {
+              "description": "One feed's id from list_feeds. Leave out for all your feeds.",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
