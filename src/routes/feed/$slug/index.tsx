@@ -12,8 +12,9 @@ export const Route = createFileRoute("/feed/$slug/")({
     const h = shareHead(loaderData?.meta) as { meta?: any[]; links?: any[] };
     const cover = loaderData?.firstScreen?.firstCover;
     if (!cover) return h;
-    // Phones (2x screens up to 400px wide) ask for exactly this size, so the picture starts with the page.
-    return { ...h, links: [...(h.links ?? []), { rel: "preload", as: "image", href: cover, fetchpriority: "high", media: "(max-width: 400px) and (min-resolution: 2dppx)" }] };
+    // News covers: phones (2x, up to 400px) ask for exactly this size. Event photos: one address for every screen.
+    const media = loaderData?.firstScreen?.firstCoverMedia;
+    return { ...h, links: [...(h.links ?? []), { rel: "preload", as: "image", href: cover, fetchpriority: "high", ...(media ? { media } : {}) }] };
   },
   component: TopicFeed,
 });

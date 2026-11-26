@@ -27,7 +27,11 @@ interface UseTopicMetadataResult {
  * Hook to fetch all secondary topic metadata in parallel
  * This replaces multiple sequential useEffect queries in TopicFeed
  */
-export const useTopicMetadata = (topicId: string | undefined, slug: string | undefined): UseTopicMetadataResult => {
+/**
+ * `secondaryReady` holds back the header-only queries (story rate, roundups, email flag)
+ * until card 1 is on screen, so they don't compete with it. Insight settings load at once.
+ */
+export const useTopicMetadata = (topicId: string | undefined, slug: string | undefined, secondaryReady = true): UseTopicMetadataResult => {
   const results = useQueries({
     queries: [
       // Query 1: Average daily stories calculation
@@ -84,7 +88,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
           const totalCount = (legacyCount.count || 0) + (mtCount.count || 0);
           return totalCount > 0 ? totalCount / daysActive : 0;
         },
-        enabled: !!topicId,
+        enabled: !!topicId && secondaryReady,
         staleTime: 5 * 60 * 1000, // 5 minutes
         gcTime: 10 * 60 * 1000, // 10 minutes
       },
@@ -172,7 +176,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
             weekly: weeklyResult.data ? format(new Date(weeklyResult.data.period_start), 'yyyy-MM-dd') : null
           };
         },
-        enabled: !!topicId,
+        enabled: !!topicId && secondaryReady,
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
       },
@@ -188,7 +192,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
             .single();
           return data?.email_subscriptions_enabled ?? false;
         },
-        enabled: !!topicId,
+        enabled: !!topicId && secondaryReady,
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
       },

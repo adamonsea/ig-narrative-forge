@@ -129,6 +129,10 @@ interface FeedContent {
 export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFirstScreen | null = null) => {
   // Seed from the route loader: used once for page 0 with no filters, then normal loading takes over.
   const seedRef = useRef<FeedFirstScreen | null>(firstScreen);
+  const seedBornRef = useRef(Date.now());
+  // The seed serves page 0 for both start-up passes (the init effect runs twice), then expires.
+  const liveSeed = () => (seedRef.current && Date.now() - seedBornRef.current < 15_000 ? seedRef.current : null);
+  const topicSeedRef = useRef<{ data: FeedFirstScreen; at: number } | null>(firstScreen ? { data: firstScreen, at: Date.now() } : null);
   // Base data state
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [allContent, setAllContent] = useState<FeedContent[]>([]);
@@ -302,7 +306,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
       console.log('🔍 loadTopic: Starting optimized topic load for slug:', slug);
       
       // Combined query: Fetch both public topic data and full topic data in parallel
-      const [publicTopicsResult, fullTopicResult] = await Promise.all([
+      // First load: reuse the two topic rows the route loader already fetched (both init passes in the first 15s).
+      const seed = topicSeedRef.current;
+      const seeded = seed && Date.now() - seed.at < 15_000 && seed.data.publicTopic && seed.data.fullTopic
+        && seed.data.publicTopic.slug?.toLowerCase() === slug.toLowerCase();
+      if (!seeded) topicSeedRef.current = null;
+      const [publicTopicsResult, fullTopicResult]: [any, any] = seeded ? [
+        { data: [seed.data.publicTopic], error: null },
+        { data: seed.data.fullTopic, error: null },
+      ] : await Promise.all([
         supabase
           .from('safe_public_topics')
           .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at')
@@ -318,7 +330,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
       if (publicTopicsResult.error) throw publicTopicsResult.error;
 
       // Case-insensitive slug matching
-      const topicData = publicTopicsResult.data?.find(t => t.slug?.toLowerCase() === slug.toLowerCase());
+      const topicData = publicTopicsResult.data?.find((t: any) => t.slug?.toLowerCase() === slug.toLowerCase());
       console.log('🔍 loadTopic: Found topic data:', topicData);
       
       if (!topicData) throw new Error('Topic not found');
@@ -680,7 +692,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
 
       // Check prefetch cache before making RPC call
       const prefetchKey = [...(keywords || [])].sort().join(',') + '|' + [...(sources || [])].sort().join(',');
-      const seed = seedRef.current;
+      const seed = liveSeed();
       const seeded = !!seed && pageNum === 0 && !keywords?.length && !sources?.length && seed.topicId === topicData.id;
       if (seeded) prefetchRpcRef.current = { key: prefetchKey, data: seed!.rows, abortController: null };
       const cachedPrefetch = prefetchRpcRef.current;
@@ -936,8 +948,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
       
       if (storyIdsForPopularity.length > 0) {
         // Wrap in Promise.resolve to ensure .catch is available
-        const usedSeed = seedRef.current && pageNum === 0 && !keywords?.length && !sources?.length && seedRef.current.topicId === topicData.id ? seedRef.current : null;
-        if (usedSeed) seedRef.current = null;
+        const fresh = liveSeed();
+        const usedSeed = fresh && pageNum === 0 && !keywords?.length && !sources?.length && fresh.topicId === topicData.id ? fresh : null;
         const popularityPromise = usedSeed ? Promise.resolve(usedSeed.popularity) : Promise.resolve(
           supabase.rpc('get_popular_stories_by_period', {
             p_topic_id: topicData.id
@@ -2618,6 +2630,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
         (payload) => {
           console.log('🔄 Topic updated in real-time:', payload);
           // Reload topic data to get updated branding_config
+          topicSeedRef.current = null;
           loadTopic().then(updatedTopic => {
             setTopic((updatedTopic) as unknown as Topic | null);
           });

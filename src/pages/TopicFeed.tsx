@@ -20,10 +20,11 @@ import { effectiveFeedView, showFeedViewToggle, viewShowsEvents, type FeedView }
 import { PinnedStoriesDeck } from "@/components/feed/PinnedStoriesDeck";
 import { usePinnedStories } from "@/hooks/usePinnedStories";
 import { showEventsInFeed, whatsOnSets, londonToday, londonTime, individualEvents } from "@/lib/whatsOn";
-import { useWhatsOnEvents, useEventsFeed } from "@/hooks/useWhatsOnEvents";
-import { FilterModal } from "@/components/FilterModal";
+import { useWhatsOnEvents, useEventsFeed, eventsFeedKey } from "@/hooks/useFeedEvents";
+import { useQueryClient } from "@tanstack/react-query";
+const FilterModal = React.lazy(() => import("@/components/FilterModal").then(m => ({ default: m.FilterModal })));
 import { DonationButton } from "@/components/DonationButton";
-import { DonationModal } from "@/components/DonationModal";
+const DonationModal = React.lazy(() => import("@/components/DonationModal").then(m => ({ default: m.DonationModal })));
 import { Hash, MapPin, RefreshCw } from "lucide-react";
 import { FeedHamburgerMenu } from "@/components/feed/FeedHamburgerMenu";
 import { SubscribeMenu } from "@/components/feed/SubscribeMenu";
@@ -41,10 +42,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useStoryNotifications } from "@/hooks/useStoryNotifications";
-import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
 import { CookieConsent } from "@/components/CookieConsent";
-import { NotificationPreferencesModal } from "@/components/NotificationPreferencesModal";
-import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
+const NotificationPreferencesModal = React.lazy(() => import("@/components/NotificationPreferencesModal").then(m => ({ default: m.NotificationPreferencesModal })));
+const CommunityPulseSlides = React.lazy(() => import("@/components/CommunityPulseSlides").then(m => ({ default: m.CommunityPulseSlides })));
 import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
 import { useStoryViewTracker } from "@/hooks/useStoryViewTracker";
 import { Link } from "@/lib/router-compat";
@@ -52,7 +52,8 @@ import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAutomatedInsightCards";
 import { useQuizCards } from "@/hooks/useQuizCards";
 import { useTopicMetadata } from "@/hooks/useTopicMetadata";
-import { FeedOnboardingOrchestrator, InlinePWACard } from "@/components/onboarding";
+const FeedOnboardingOrchestrator = React.lazy(() => import("@/components/onboarding/FeedOnboardingOrchestrator").then(m => ({ default: m.FeedOnboardingOrchestrator })));
+const InlinePWACard = React.lazy(() => import("@/components/onboarding/InlinePWACard").then(m => ({ default: m.InlinePWACard })));
 import { useParliamentaryInsightCards } from "@/hooks/useParliamentaryInsightCards";
 import { useParliamentaryDigestCards } from "@/hooks/useParliamentaryDigestCards";
 import { InlineEmailSignupCard } from "@/components/feed/InlineEmailSignupCard";
@@ -65,7 +66,7 @@ const ParliamentaryInsightCard = React.lazy(() => import("@/components/Parliamen
 const ParliamentaryDigestCard = React.lazy(() => import("@/components/ParliamentaryDigestCard").then(m => ({ default: m.ParliamentaryDigestCard })));
 const FlashbackInsightsPanel = React.lazy(() => import("@/components/FlashbackInsightsPanel").then(m => ({ default: m.FlashbackInsightsPanel })));
 import { useStoriesReactionsBatch } from "@/hooks/useStoriesReactionsBatch";
-import { MobileLoadErrorOverlay } from "@/components/MobileLoadErrorOverlay";
+const MobileLoadErrorOverlay = React.lazy(() => import("@/components/MobileLoadErrorOverlay").then(m => ({ default: m.MobileLoadErrorOverlay })));
 import { 
   FEED_CARD_POSITIONS, 
   shouldShowCard, 
@@ -97,6 +98,9 @@ if (import.meta.env.DEV) {
   logCollisionReport(50);
 }
 
+// Keeps a lazily loaded pop-up mounted once it has opened, so its closing animation still plays.
+function useOnceTrue(v: boolean) { const r = useRef(false); if (v) r.current = true; return r.current; }
+
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
   // First screen fetched with the page (route loader), so card 1 needs no extra calls.
@@ -112,6 +116,8 @@ const TopicFeed = () => {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const notificationMounted = useOnceTrue(showNotificationModal);
+  const donationMounted = useOnceTrue(showDonationModal);
   const [storiesWithSwipes, setStoriesWithSwipes] = useState<Set<string>>(new Set());
   const [hasCheckedNotificationStatus, setHasCheckedNotificationStatus] = useState(false);
   const [shouldShowNotificationPrompt, setShouldShowNotificationPrompt] = useState(false);
@@ -200,7 +206,20 @@ const TopicFeed = () => {
   }, [topic?.branding_config?.logo_url]);
 
   // OPTIMIZED: Fetch all secondary metadata in parallel via cached React Query
-  const { data: topicMetadata } = useTopicMetadata(topic?.id, slug);
+  // Seed the loader's first screen into the query cache once, so settings and events don't wait for their own calls.
+  const queryClient = useQueryClient();
+  useState(() => {
+    if (!firstScreen) return null;
+    if (firstScreen.insight && !queryClient.getQueryData(['topic-insight-settings', firstScreen.topicId])) {
+      queryClient.setQueryData(['topic-insight-settings', firstScreen.topicId], firstScreen.insight);
+    }
+    if (firstScreen.events && !queryClient.getQueryData(eventsFeedKey(firstScreen.topicId))) {
+      queryClient.setQueryData(eventsFeedKey(firstScreen.topicId), { pages: [firstScreen.events], pageParams: [0] });
+    }
+    return null;
+  });
+  // Header-only figures wait until card 1 is up.
+  const { data: topicMetadata } = useTopicMetadata(topic?.id, slug, filteredStories.length > 0 || !loading);
   const avgDailyStories = topicMetadata.avgDailyStories;
   const playModeEnabled = topicMetadata.playModeEnabled;
   const siftEnabled = topicMetadata.siftEnabled;
@@ -226,6 +245,7 @@ const TopicFeed = () => {
       ensureFilterStoryIndexLoaded();
     }
   }, [isModalOpen, ensureFilterStoryIndexLoaded]);
+  const filterMounted = useOnceTrue(isModalOpen);
 
   // Extract matching keywords/landmarks/organizations from a story
   const computeStoryFilterMatches = useCallback(
@@ -748,12 +768,12 @@ const TopicFeed = () => {
         if (READER_ONBOARDING_EXTRAS && index === 4) {
           items.push(
             <div key="inline-pwa-card" className="w-full max-w-2xl">
-              <InlinePWACard
+              <Suspense fallback={null}><InlinePWACard
                 topicName={topic?.name || ''}
                 topicSlug={slug || ''}
                 topicIcon={topic?.branding_config?.icon_url || topic?.branding_config?.logo_url}
                 storiesScrolledPast={storiesScrolledPast}
-              />
+              /></Suspense>
             </div>
           );
         }
@@ -794,12 +814,12 @@ const TopicFeed = () => {
       if (shouldShowCommunityPulseCard(storyIndex) && shouldShowCommunityPulse && topic && pulseData) {
         items.push(
           <div key={`community-pulse-${storyIndex}`} className="w-full max-w-2xl">
-            <CommunityPulseSlides
+            <Suspense fallback={null}><CommunityPulseSlides
               keywords={pulseData.keywords}
               timeframe="48h"
               mostActiveThreadUrl={pulseData.mostActiveThread?.url}
               mostActiveThreadTitle={pulseData.mostActiveThread?.title}
-            />
+            /></Suspense>
           </div>
         );
       }
@@ -1001,12 +1021,12 @@ const TopicFeed = () => {
   if (loadError && !topic && !loading) {
     return (
       <div className="min-h-dvh feed-background">
-        <MobileLoadErrorOverlay 
+        <Suspense fallback={null}><MobileLoadErrorOverlay 
           error={loadError}
           onRetry={retryLoad}
           retryCount={retryCount}
           isRetrying={loading}
-        />
+        /></Suspense>
       </div>
     );
   }
@@ -1043,7 +1063,7 @@ const TopicFeed = () => {
       />
 
       {/* Onboarding Orchestrator */}
-      {READER_ONBOARDING_EXTRAS && <FeedOnboardingOrchestrator
+      {READER_ONBOARDING_EXTRAS && <Suspense fallback={null}><FeedOnboardingOrchestrator
         topicSlug={slug || ''}
         playModeEnabled={playModeEnabled}
         config={{
@@ -1053,7 +1073,7 @@ const TopicFeed = () => {
           welcomeCardAboutLink: (topic.branding_config as any)?.welcome_card_about_link,
           aboutPageEnabled: (topic.branding_config as any)?.about_page_enabled,
         }}
-      />}
+      /></Suspense>}
 
       {isScrolled && topic && (
         <div className="fixed top-0 left-0 right-0 z-50 feed-header text-foreground backdrop-blur-sm border-b border-border" style={surfaces.header}>
@@ -1347,7 +1367,7 @@ const TopicFeed = () => {
         )}
 
         {/* Filter Modal */}
-        {FEED_FILTERS_ENABLED && <FilterModal
+        {FEED_FILTERS_ENABLED && filterMounted && <Suspense fallback={null}><FilterModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           availableKeywords={availableKeywords}
@@ -1363,11 +1383,11 @@ const TopicFeed = () => {
           selectedSources={selectedSources}
           onSourceToggle={toggleSource}
           onClearAll={clearAllFilters}
-        />}
+        /></Suspense>}
 
         {/* Donation Modal */}
-        {topic && topic.donation_enabled && (
-          <DonationModal
+        {topic && topic.donation_enabled && donationMounted && (
+          <Suspense fallback={null}><DonationModal
             isOpen={showDonationModal}
             onClose={() => setShowDonationModal(false)}
             topicName={topic.name}
@@ -1375,7 +1395,7 @@ const TopicFeed = () => {
             buttonText={topic.donation_config?.button_text || "Support this feed"}
             tiers={topic.donation_config?.tiers || []}
             visitorId={`visitor_${Date.now()}`}
-          />
+          /></Suspense>
         )}
 
         {viewToggleShown && (
@@ -1508,13 +1528,13 @@ const TopicFeed = () => {
       </footer>
 
       {/* Notification Preferences Modal */}
-      <NotificationPreferencesModal
+      {notificationMounted && <Suspense fallback={null}><NotificationPreferencesModal
         isOpen={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
         topicName={topic?.name || ''}
         topicId={topic?.id || ''}
         isFirstTimePrompt={shouldShowNotificationPrompt}
-      />
+      /></Suspense>}
       <CookieConsent variant="feed" />
     </div>
   );
