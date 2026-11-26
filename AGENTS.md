@@ -45,3 +45,4 @@
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
 
 - Feed/Desk/pipeline changes: run `scripts/smoke/feed_smoke.py`; health only via `feed_health`.
+- The public feed's first page (stories, popularity, metadata) comes from the route loader via `src/lib/feedFirstScreen.ts` and seeds `useHybridTopicFeedWithKeywords` once (page 0, no filters), with a card-size cover preload in head(); the first card needs no client round trips.

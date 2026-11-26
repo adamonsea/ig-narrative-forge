@@ -1,3 +1,5 @@
+import { useMatch } from "@tanstack/react-router";
+import type { FeedFirstScreen } from "@/lib/feedFirstScreen";
 import { opt } from "@/lib/optionalProps";
 import React, { Suspense } from "react";
 import { useParams } from "@/lib/router-compat";
@@ -97,6 +99,8 @@ if (import.meta.env.DEV) {
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
+  // First screen fetched with the page (route loader), so card 1 needs no extra calls.
+  const firstScreen = (useMatch({ from: '/feed/$slug/', shouldThrow: false })?.loaderData as { firstScreen?: FeedFirstScreen | null } | undefined)?.firstScreen ?? null;
   const { user } = useAuth();
   const { toast } = useToast();
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -185,7 +189,7 @@ const TopicFeed = () => {
     filterOptionsReady,
     // Prefetch for "More like this"
     prefetchForFilter
-  } = useHybridTopicFeedWithKeywords(slug || '');
+  } = useHybridTopicFeedWithKeywords(slug || '', firstScreen);
 
   // Stable logo URL with a cache-buster computed once per logo (NOT per render).
   // Using Date.now() inline in src caused a new URL every render, triggering an

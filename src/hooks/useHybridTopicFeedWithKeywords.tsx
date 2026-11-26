@@ -1,3 +1,4 @@
+import type { FeedFirstScreen } from "@/lib/feedFirstScreen";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -125,7 +126,9 @@ interface FeedContent {
   data: Story;
 }
 
-export const useHybridTopicFeedWithKeywords = (slug: string) => {
+export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFirstScreen | null = null) => {
+  // Seed from the route loader: used once for page 0 with no filters, then normal loading takes over.
+  const seedRef = useRef<FeedFirstScreen | null>(firstScreen);
   // Base data state
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [allContent, setAllContent] = useState<FeedContent[]>([]);
@@ -302,7 +305,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const [publicTopicsResult, fullTopicResult] = await Promise.all([
         supabase
           .from('safe_public_topics')
-          .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at'),
+          .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at')
+          .ilike('slug', slug),
         supabase
           .from('topics')
           .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled, feed_lead, event_cards, event_currency, story_cover_style, ai_summary_tag')
@@ -676,6 +680,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // Check prefetch cache before making RPC call
       const prefetchKey = [...(keywords || [])].sort().join(',') + '|' + [...(sources || [])].sort().join(',');
+      const seed = seedRef.current;
+      const seeded = !!seed && pageNum === 0 && !keywords?.length && !sources?.length && seed.topicId === topicData.id;
+      if (seeded) prefetchRpcRef.current = { key: prefetchKey, data: seed!.rows, abortController: null };
       const cachedPrefetch = prefetchRpcRef.current;
       if (cachedPrefetch && cachedPrefetch.key === prefetchKey && cachedPrefetch.data && pageNum === 0) {
         console.log('⚡ Using prefetched RPC data for filter - skipping network call');
@@ -929,7 +936,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       
       if (storyIdsForPopularity.length > 0) {
         // Wrap in Promise.resolve to ensure .catch is available
-        const popularityPromise = Promise.resolve(
+        const usedSeed = seedRef.current && pageNum === 0 && !keywords?.length && !sources?.length && seedRef.current.topicId === topicData.id ? seedRef.current : null;
+        if (usedSeed) seedRef.current = null;
+        const popularityPromise = usedSeed ? Promise.resolve(usedSeed.popularity) : Promise.resolve(
           supabase.rpc('get_popular_stories_by_period', {
             p_topic_id: topicData.id
           })
@@ -944,7 +953,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           return [] as any[];
         });
         
-        const metaPromise = Promise.resolve(
+        const metaPromise = usedSeed ? Promise.resolve(usedSeed.meta) : Promise.resolve(
           supabase
             .from('stories')
             .select('id, slug, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
