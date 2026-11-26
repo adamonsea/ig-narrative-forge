@@ -1,3 +1,4 @@
+import { requireSystemOrAdmin } from '../_shared/auth.ts';
 import { serve } from 'https://deno.land/std@0.192.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -21,6 +22,12 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  // Own sign-in check (the platform pre-check is off): service role, the scheduled-job secret, or an admin.
+  {
+    const denied = await requireSystemOrAdmin(req, createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!), corsHeaders);
+    if (denied) return denied;
+  }
+
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');

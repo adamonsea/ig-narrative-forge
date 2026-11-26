@@ -135,6 +135,10 @@ async function verifyTopicOwnership(authHeader: string, topicId?: string | null)
   }
 
   const userId = claimsData.claims.sub as string;
+  // The public key also carries valid claims; only a signed-in user (with an id) may continue.
+  if (!userId || claimsData.claims.role !== 'authenticated') {
+    return { userId: null, error: 'Invalid or expired token' };
+  }
 
   // Discovery mode: the topic doesn't exist yet (create-feed wizard).
   // Any authenticated user may request suggestions.

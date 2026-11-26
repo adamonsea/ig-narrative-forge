@@ -166,19 +166,19 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.select-story-cover]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-cover-option]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-story-illustration]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-story-animation]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-story-cascade]
-verify_jwt = true
+verify_jwt = false
 
 [functions.promote-topic-article]
 verify_jwt = false
@@ -194,7 +194,7 @@ verify_jwt = false
 
 # MidJourney via KIE API (experimental)
 [functions.midjourney-image-generator]
-verify_jwt = true
+verify_jwt = false
 
 # Roundups & notifications
 [functions.generate-daily-roundup]
@@ -268,7 +268,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.openai-usage-tracker]
-verify_jwt = true
+verify_jwt = false
 
 # Cleanup (scheduled via cron)
 [functions.cleanup-temp-uploads]
@@ -288,133 +288,133 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.fix-topic-keywords]
-verify_jwt = true
+verify_jwt = false
 
 [functions.fix-future-dated-article]
-verify_jwt = true
+verify_jwt = false
 
 [functions.ai-scraper-recovery]
-verify_jwt = true
+verify_jwt = false
 
 [functions.enhanced-source-validator]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-content-source]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-and-fix-sources]
-verify_jwt = true
+verify_jwt = false
 
 [functions.update-source-feed-url]
 verify_jwt = false
 
 [functions.validate-parliamentary-completeness]
-verify_jwt = true
+verify_jwt = false
 
 [functions.source-link-validator]
-verify_jwt = true
+verify_jwt = false
 
 [functions.backfill-parliamentary-metadata]
-verify_jwt = true
+verify_jwt = false
 
 [functions.backfill-keyword-analytics]
-verify_jwt = true
+verify_jwt = false
 
 [functions.backfill-sentiment-tracking]
-verify_jwt = true
+verify_jwt = false
 
 [functions.backfill-story-linkage]
-verify_jwt = true
+verify_jwt = false
 
 [functions.backfill-discarded-articles]
-verify_jwt = true
+verify_jwt = false
 
 [functions.parliamentary-weekly-backfill]
-verify_jwt = true
+verify_jwt = false
 
 [functions.source-metrics-backfill]
-verify_jwt = true
+verify_jwt = false
 
 [functions.backfill-sentiment-card-sources]
 verify_jwt = false
 
 [functions.cleanup-invalid-parliamentary-mentions]
-verify_jwt = true
+verify_jwt = false
 
 [functions.cleanup-misplaced-articles]
-verify_jwt = true
+verify_jwt = false
 
 [functions.cleanup-offtracking-parliamentary-votes]
-verify_jwt = true
+verify_jwt = false
 
 [functions.cleanup-parliamentary-test-data]
-verify_jwt = true
+verify_jwt = false
 
 [functions.cleanup-stale-source-errors]
-verify_jwt = true
+verify_jwt = false
 
 [functions.clear-old-events]
-verify_jwt = true
+verify_jwt = false
 
 [functions.bulk-cleanup-articles]
-verify_jwt = true
+verify_jwt = false
 
 [functions.auto-cleanup-duplicates]
-verify_jwt = true
+verify_jwt = false
 
 [functions.auto-deactivate-failing-sources]
-verify_jwt = true
+verify_jwt = false
 
 [functions.dedupe-topic-stories]
-verify_jwt = true
+verify_jwt = false
 
 [functions.pipeline-cleanup]
-verify_jwt = true
+verify_jwt = false
 
 [functions.recover-orphaned-urls]
-verify_jwt = true
+verify_jwt = false
 
 [functions.mark-article-discarded]
-verify_jwt = true
+verify_jwt = false
 
 [functions.keyword-rescan-trigger]
-verify_jwt = true
+verify_jwt = false
 
 [functions.suggest-content-sources]
-verify_jwt = true
+verify_jwt = false
 
 [functions.suggest-keywords]
-verify_jwt = true
+verify_jwt = false
 
 [functions.suggest-regional-elements]
-verify_jwt = true
+verify_jwt = false
 
 [functions.suggest-regional-keywords]
-verify_jwt = true
+verify_jwt = false
 
 [functions.auto-populate-regional-keywords]
-verify_jwt = true
+verify_jwt = false
 
 [functions.re-extract-articles]
-verify_jwt = true
+verify_jwt = false
 
 [functions.extract-content-from-upload]
-verify_jwt = true
+verify_jwt = false
 
 [functions.update-source-metrics]
-verify_jwt = true
+verify_jwt = false
 
 [functions.sync-topic-source-feed-urls]
-verify_jwt = true
+verify_jwt = false
 
 [functions.fix-source-urls]
-verify_jwt = true
+verify_jwt = false
 
 [functions.waitlist-signup]
-verify_jwt = true
+verify_jwt = false
 
 [functions.social-media-publisher]
-verify_jwt = true
+verify_jwt = false
 
 [functions.sitemap-xml]
 verify_jwt = false
@@ -524,26 +524,26 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.owner-assistant]
-verify_jwt = true
+verify_jwt = false
 
 # ========================================
 # BILLING & VOUCHERS
 # ========================================
 
 [functions.create-checkout]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-subscription]
-verify_jwt = true
+verify_jwt = false
 
 [functions.customer-portal]
-verify_jwt = true
+verify_jwt = false
 
 [functions.redeem-voucher]
-verify_jwt = true
+verify_jwt = false
 
 [functions.admin-vouchers]
-verify_jwt = true
+verify_jwt = false
 
 # ========================================
 # HOMEPAGE FEED IDEA GENERATOR

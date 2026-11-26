@@ -126,6 +126,12 @@ export async function requireSystemOrAdmin(
   req: Request, service: any, corsHeaders: Record<string, string>,
 ): Promise<Response | null> {
   if (isServiceRole(req)) return null;
+  // Scheduled jobs that hold the vault-stored job secret (never the public key).
+  const jobSecret = req.headers.get('x-sync-secret');
+  if (jobSecret) {
+    const { data } = await service.rpc('verify_search_sync_secret', { p_secret: jobSecret });
+    if (data === true) return null;
+  }
   const user = await getUser(req);
   if (!user) return unauthorized(corsHeaders);
   return (await isAdmin(service, user.id)) ? null : forbidden(corsHeaders);

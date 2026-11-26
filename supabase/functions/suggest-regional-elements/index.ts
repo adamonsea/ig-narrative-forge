@@ -37,6 +37,10 @@ async function verifyTopicOwnership(authHeader: string, topicId: string): Promis
   }
 
   const userId = claimsData.claims.sub as string;
+  // The public key also carries valid claims; only a signed-in user (with an id) may continue.
+  if (!userId || claimsData.claims.role !== 'authenticated') {
+    return { userId: null, error: 'Invalid or expired token' };
+  }
 
   if (!topicId || typeof topicId !== 'string') {
     return { userId: null, error: 'A topic id is required' };
