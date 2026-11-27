@@ -13,8 +13,15 @@ export async function startCall(ctx: ToolContext, tool: string) {
 }
 
 /** Phase 2: every write tool calls this once, before doing anything. */
-export async function requireAllowance(ctx: ToolContext, db: ReturnType<typeof supabaseForUser>, kind: WriteKind, credits = 1) {
+export async function requireAllowance(ctx: ToolContext, db: ReturnType<typeof supabaseForUser>, kind: WriteKind, credits = 1, write?: { tool: string; feedId?: string }) {
   const clientId = ctx.getClientId() ?? "";
+  if (write) {
+    const { error } = await db.rpc("mcp_studio_write", {
+      p_tool: write.tool, p_client_id: clientId, p_topic_id: write.feedId ?? null, p_credits: credits,
+    });
+    if (error) throw new ToolError(error.message);
+    return;
+  }
   const { data: grant } = await db.from("mcp_studio_grants" as never).select("version").eq("client_id", clientId).maybeSingle();
   if (!grantAllowsWrites((grant as { version?: number } | null)?.version)) {
     throw new ToolError("This connection can only look at your feeds. To allow changes, disconnect Curatr and connect it again.");

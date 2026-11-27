@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { activePinId, type StoryPin } from "@/lib/storyPin";
 import { pinnedStoriesKey } from "@/hooks/usePinnedStories";
 
+import { setFeedPin } from "@/lib/feedSetup/services";
+
 const pinKey = (topicId?: string) => ["topic-pin", topicId];
 
 /** The feed's pinned story while the pin lasts (public feeds, and the owner's own). */
@@ -28,13 +30,7 @@ export function useSetStoryPin(topicId?: string) {
   const queryClient = useQueryClient();
   return useCallback(async (storyId: string | null, hours: number) => {
     if (!topicId) return;
-    const { data, error } = await (supabase.rpc as any)("set_story_pin", {
-      p_topic_id: topicId,
-      p_story_id: storyId,
-      p_hours: hours,
-    });
-    if (error) throw error;
-    void data;
+    await setFeedPin(supabase, topicId, storyId, hours);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: pinKey(topicId) }),
       queryClient.invalidateQueries({ queryKey: pinnedStoriesKey(topicId) }),

@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Upload, Plus, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { edgeErrorMessage } from '@/lib/edgeError';
+import { readOwnerStory, commitOwnerStory } from '@/lib/feedSetup/addStory';
 
 export interface StoryDraft {
   headline: string;
@@ -52,12 +52,7 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
   };
 
   const callExtract = async (body: Record<string, unknown>) => {
-    const { data, error: fnError } = await supabase.functions.invoke('extract-content-from-upload', { body });
-    if (fnError) {
-      throw new Error(await edgeErrorMessage(fnError, 'The story service hit an unexpected problem. Please try again in a moment.'));
-    }
-    if (!data?.success) throw new Error(data?.error || 'Extraction failed');
-    return data;
+    return readOwnerStory(supabase, body);
   };
 
   const runExtraction = async (body: Record<string, unknown>) => {
@@ -150,21 +145,10 @@ export const AddStoryDialog = ({ topicId, onContentProcessed }: AddStoryDialogPr
     setError(null);
     setStatus('Adding to arrivals…');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('extract-content-from-upload', {
-        body: {
-          mode,
-          topicId,
-          commit: true,
-          story: draft,
-          storageBucket: pendingFile?.bucket,
-          storagePath: pendingFile?.path,
-          fileName: pendingFile?.fileName,
-        },
+      const data = await commitOwnerStory(supabase, {
+        mode, topicId, story: draft,
+        ...(pendingFile ? { storageBucket: pendingFile.bucket, storagePath: pendingFile.path, fileName: pendingFile.fileName } : {}),
       });
-      if (fnError) {
-        throw new Error(await edgeErrorMessage(fnError, 'The story service hit an unexpected problem. Please try again in a moment.'));
-      }
-      if (!data?.success) throw new Error(data?.error || 'Could not add the story');
 
       toast({
         title: data.duplicate ? 'Already in arrivals' : 'Story added',

@@ -14,6 +14,10 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     meta: [
       { title: "Connect an app to Curatr" },
       { name: "description", content: "Allow an app to see and manage your Curatr feeds." },
+      { property: "og:title", content: "Connect an app to Curatr" },
+      { property: "og:description", content: "Allow an app to see and manage your Curatr feeds." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
     ],
   }),

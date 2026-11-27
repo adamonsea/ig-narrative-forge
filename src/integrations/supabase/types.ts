@@ -1881,12 +1881,59 @@ export type Database = {
           },
         ]
       }
+      feed_handover_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          token_hash: string
+          topic_id: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          token_hash: string
+          topic_id: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          topic_id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_handover_tokens_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_handover_tokens_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_health: {
         Row: {
           broken_sources: number
           changed_at: string
           checked_at: string
           emailed_at: string | null
+          health_basis: string
+          last_event_at: string | null
           owner_action: string | null
           reason: string | null
           red_since: string | null
@@ -1898,6 +1945,8 @@ export type Database = {
           changed_at?: string
           checked_at?: string
           emailed_at?: string | null
+          health_basis?: string
+          last_event_at?: string | null
           owner_action?: string | null
           reason?: string | null
           red_since?: string | null
@@ -1909,6 +1958,8 @@ export type Database = {
           changed_at?: string
           checked_at?: string
           emailed_at?: string | null
+          health_basis?: string
+          last_event_at?: string | null
           owner_action?: string | null
           reason?: string | null
           red_since?: string | null
@@ -6984,6 +7035,7 @@ export type Database = {
       }
       check_source_validate_rate: { Args: { p_user: string }; Returns: boolean }
       check_topic_slug_available: { Args: { p_slug: string }; Returns: boolean }
+      claim_feed_handover: { Args: { p_token: string }; Returns: string }
       claim_story_illustration: {
         Args: { p_regenerate: boolean; p_story_id: string }
         Returns: string
@@ -7012,6 +7064,7 @@ export type Database = {
         Returns: number
       }
       create_feed_api_token: { Args: { p_topic_id: string }; Returns: string }
+      create_feed_handover: { Args: { p_topic_id: string }; Returns: string }
       create_story_from_multi_tenant: {
         Args: {
           p_shared_content_id: string
@@ -8029,9 +8082,23 @@ export type Database = {
           stories_this_week: number
         }[]
       }
+      mcp_studio_health: { Args: never; Returns: Json }
       mcp_studio_record_grant: {
         Args: { p_client_id: string; p_client_name: string; p_version: number }
         Returns: undefined
+      }
+      mcp_studio_result: {
+        Args: { p_outcome: string; p_tool: string; p_topic_id: string }
+        Returns: undefined
+      }
+      mcp_studio_write: {
+        Args: {
+          p_client_id: string
+          p_credits?: number
+          p_tool: string
+          p_topic_id?: string
+        }
+        Returns: Json
       }
       migrate_articles_to_multi_tenant: {
         Args: { p_limit?: number }
@@ -8062,6 +8129,7 @@ export type Database = {
             }
             Returns: string
           }
+      reader_can_access_feed: { Args: { p_topic_id: string }; Returns: boolean }
       record_event_click: {
         Args: { p_event_id: string; p_kind?: string; p_visitor_id: string }
         Returns: undefined

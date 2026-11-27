@@ -48,3 +48,13 @@ Parked: audio briefings (already parked).
 - [x] Tools list_feeds, get_account, get_feed_health; rate limit; usage_events 'mcp_studio'
 - [x] requireAllowance(ctx) helper for Phase 2; grant version re-consent design
 - [x] Check loading screen on screen (Eastbourne, Lisbon, embed, 0.4s delay); list what the next publish includes
+
+## Studio MCP Phase 2
+- [ ] Reproduce intermittent Claude Not Found: blocked on Adam repeating the live Claude call; logs lack the failed request, transport is stateless, no connections revoked
+- [x] Events-led health uses events through feed_health
+- [x] Shared setup + five level-2 tools; private drafts, existing caps/charges, write limits and logging
+- [x] Private preview and Curatr-only Publish
+- [x] Admin demo hand-over, one-time 7-day link and recipient limits
+- [x] 83 tests, transactional owner/privacy/credit/hand-over checks and eight-tool manifest
+- [ ] Signed-in preview and Claude end-to-end: blocked on owner republish/reconnect; session minting unavailable on user-managed Supabase
+- [ ] Feed smoke picture check: 14/15, Lisbon has zero upcoming events with stored photos (31 upcoming events); no picture/settings changes made

@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "curatr",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "Curatr"
     },
     "tools": [
@@ -70,6 +70,253 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "draft_feed",
+        "title": "Draft a feed",
+        "description": "Set up a private feed from your description, with sources and its own look, for you to check in Curatr.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 1500
+            },
+            "name": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 60
+            },
+            "area": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 120
+            }
+          },
+          "required": [
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_sources",
+        "title": "Change sources",
+        "description": "Check each link as news or events before adding it to your feed, or remove a source from this feed only.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "feed_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "add": {
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2048,
+                "format": "uri"
+              }
+            },
+            "remove": {
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            }
+          },
+          "required": [
+            "feed_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_branding",
+        "title": "Set feed look",
+        "description": "Set your feed name, logo and existing Look colours. You can check the result in Curatr.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "feed_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 60
+            },
+            "logo_url": {
+              "type": "string",
+              "maxLength": 2048,
+              "format": "uri"
+            },
+            "colours": {
+              "type": "object",
+              "properties": {
+                "brand": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-f]{6}$"
+                },
+                "top_bar": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^#[0-9a-f]{6}$"
+                    },
+                    {
+                      "type": "string",
+                      "const": "brand"
+                    }
+                  ]
+                },
+                "background": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^#[0-9a-f]{6}$"
+                    },
+                    {
+                      "type": "string",
+                      "const": "brand"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "required": [
+            "feed_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "pin_stories",
+        "title": "Pin or add a story",
+        "description": "Pin a live story from your own feed, or add your text or link through Add story for review in Curatr.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "feed_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "story_ids": {
+              "minItems": 1,
+              "maxItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "add_story": {
+              "type": "object",
+              "properties": {
+                "link": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "format": "uri"
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 50,
+                  "maxLength": 100000
+                }
+              }
+            },
+            "hours": {
+              "default": 24,
+              "anyOf": [
+                {
+                  "type": "number",
+                  "const": 24
+                },
+                {
+                  "type": "number",
+                  "const": 48
+                },
+                {
+                  "type": "number",
+                  "const": 168
+                }
+              ]
+            }
+          },
+          "required": [
+            "feed_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_preview",
+        "title": "Preview your feed",
+        "description": "Return your private preview and a short summary of its sources, stories, events and look.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "feed_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "feed_id"
+          ],
           "additionalProperties": false
         },
         "outputSchema": null

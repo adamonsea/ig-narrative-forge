@@ -126,7 +126,7 @@ interface FeedContent {
   data: Story;
 }
 
-export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFirstScreen | null = null) => {
+export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFirstScreen | null = null, privatePreview = false) => {
   // Seed from the route loader: used once for page 0 with no filters, then normal loading takes over.
   const seedRef = useRef<FeedFirstScreen | null>(firstScreen);
   const seedBornRef = useRef(Date.now());
@@ -315,15 +315,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
         { data: [seed.data.publicTopic], error: null },
         { data: seed.data.fullTopic, error: null },
       ] : await Promise.all([
-        supabase
-          .from('safe_public_topics')
+        privatePreview ? supabase.from('topics')
+          .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at, created_by')
+          .ilike('slug', slug) : supabase.from('safe_public_topics')
           .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at')
           .ilike('slug', slug),
         supabase
           .from('topics')
           .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled, illustration_primary_color, events_enabled, feed_lead, event_cards, event_currency, story_cover_style, ai_summary_tag')
           .ilike('slug', slug)
-          .eq('is_public', true)
+          .eq(privatePreview ? 'is_active' : 'is_public', true)
           .single()
       ]);
 
@@ -363,7 +364,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
         landmarks: topicLandmarks,
         organizations: topicOrganizations,
         is_public: topicData.is_public,
-        created_by: '',
+        created_by: topicData.created_by ?? '',
         branding_config: brandingConfig as any,
         donation_enabled: donationEnabled,
         donation_config: donationConfig as any,
@@ -384,7 +385,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
       console.error('❌ Error loading topic:', error);
       throw error;
     }
-  }, [slug]);
+  }, [slug, privatePreview]);
 
   const loadStoriesFromPublicFeed = useCallback(
     async (
@@ -1851,7 +1852,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
     setFilteredContent(prev => prev.filter(item => item.id !== storyId));
     setFilterStoryIndex(prev => prev.filter(item => item.id !== storyId));
     setNewStoryCount(prev => Math.max(0, prev - 1));
-    removeStoryFromCachedFeed(slug, storyId);
+    if (!privatePreview) removeStoryFromCachedFeed(slug, storyId);
   }, [slug]);
 
   const normalizePublicStory = useCallback((story: any): Story | null => {
@@ -1934,7 +1935,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
     setHasNewStories(false);
     setNewStoryCount(0);
     setUsingCachedContent(false);
-    upsertStoryInCachedFeed(slug, normalizedStory);
+    if (!privatePreview) upsertStoryInCachedFeed(slug, normalizedStory);
 
     if (topic && refreshIndexDebounceRef.current) {
       clearTimeout(refreshIndexDebounceRef.current);
@@ -2286,7 +2287,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
         // PHASE 1: Try to load from cache immediately for instant display
         let cachedEntry = null;
         try {
-          cachedEntry = getCachedFeed(slug);
+          cachedEntry = privatePreview ? null : getCachedFeed(slug);
         } catch (cacheError) {
           console.warn('⚠️ Feed cache read failed:', cacheError);
         }
@@ -2377,7 +2378,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string, firstScreen: FeedFi
           .filter(item => item.type === 'story')
           .map(item => item.data);
         
-        if (topicData) {
+        if (topicData && !privatePreview) {
           setCachedFeed(slug, topicData, currentStories);
           console.log('💾 Feed cached for instant loading');
         }

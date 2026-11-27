@@ -1,7 +1,7 @@
 // Pure rules for Studio write tools (Phase 2). Kept separate so they can be tested.
 
 /** Bump when a new kind of access is added; older connections must be approved again. */
-export const STUDIO_GRANT_VERSION = 1;
+export const STUDIO_GRANT_VERSION = 2;
 /** First grant version that allows changes to feeds. */
 export const STUDIO_WRITE_VERSION = 2;
 

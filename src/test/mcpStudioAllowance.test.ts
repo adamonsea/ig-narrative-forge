@@ -11,5 +11,6 @@ describe("Studio allowance", () => {
   it("lets Free publish during the trial", () => expect(allowanceDecision(free, "publish").ok).toBe(true));
   it("lets Pro publish", () => expect(allowanceDecision({ ...free, is_pro: true, trial_over: true }, "publish").ok).toBe(true));
   it("refuses with no account", () => expect(allowanceDecision(null, "setup").ok).toBe(false));
-  it("Phase 1 connections cannot write", () => expect(grantAllowsWrites(STUDIO_GRANT_VERSION)).toBe(false));
+  it("new consent permits level-2 writes", () => expect(grantAllowsWrites(STUDIO_GRANT_VERSION)).toBe(true));
+  it("Phase 1 connections cannot write", () => expect(grantAllowsWrites(1)).toBe(false));
 });

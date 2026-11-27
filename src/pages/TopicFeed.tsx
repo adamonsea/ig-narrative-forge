@@ -102,7 +102,7 @@ if (import.meta.env.DEV) {
 // Keeps a lazily loaded pop-up mounted once it has opened, so its closing animation still plays.
 function useOnceTrue(v: boolean) { const r = useRef(false); if (v) r.current = true; return r.current; }
 
-const TopicFeed = () => {
+const TopicFeed = ({ privatePreview = false }: { privatePreview?: boolean } = {}) => {
   const { slug } = useParams<{ slug: string }>();
   // First screen fetched with the page (route loader), so card 1 needs no extra calls.
   const firstScreen = (useMatch({ from: '/feed/$slug/', shouldThrow: false })?.loaderData as { firstScreen?: FeedFirstScreen | null } | undefined)?.firstScreen ?? null;
@@ -196,7 +196,7 @@ const TopicFeed = () => {
     filterOptionsReady,
     // Prefetch for "More like this"
     prefetchForFilter
-  } = useHybridTopicFeedWithKeywords(slug || '', firstScreen);
+  } = useHybridTopicFeedWithKeywords(slug || '', firstScreen, privatePreview);
 
   // Stable logo URL with a cache-buster computed once per logo (NOT per render).
   // Using Date.now() inline in src caused a new URL every render, triggering an
@@ -356,7 +356,7 @@ const TopicFeed = () => {
   // Debug helper for resetting collections hint removed - collections now in hamburger menu
 
   // Track visitor for analytics
-  const visitorId = useVisitorTracking(topic?.id);
+  const visitorId = useVisitorTracking(privatePreview ? undefined : topic?.id);
   
   // Track story impressions when stories are viewed
   const { trackImpression } = useStoryImpressionTracking(topic?.id);

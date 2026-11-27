@@ -51,6 +51,8 @@ import { Route as FeedSlugAboutRouteImport } from './routes/feed/$slug/about'
 import { Route as FeedSlugArchiveRouteImport } from './routes/feed/$slug/archive'
 import { Route as FeedSlugBriefingsRouteImport } from './routes/feed/$slug/briefings'
 import { Route as FeedSlugWidgetRouteImport } from './routes/feed/$slug/widget'
+import { Route as StudioHandoverTokenRouteImport } from './routes/studio/handover/$token'
+import { Route as StudioPreviewSlugRouteImport } from './routes/studio/preview/$slug'
 import { Route as FeedSlugDailyDateRouteImport } from './routes/feed/$slug/daily/$date'
 import { Route as FeedSlugReviewReviewSlugRouteImport } from './routes/feed/$slug/review/$reviewSlug'
 import { Route as FeedSlugStoryStoryIdRouteImport } from './routes/feed/$slug/story/$storyId'
@@ -272,6 +274,16 @@ const FeedSlugWidgetRoute = FeedSlugWidgetRouteImport.update({
   path: '/widget',
   getParentRoute: () => FeedSlugRouteRoute,
 } as any)
+const StudioHandoverTokenRoute = StudioHandoverTokenRouteImport.update({
+  id: '/studio/handover/$token',
+  path: '/studio/handover/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioPreviewSlugRoute = StudioPreviewSlugRouteImport.update({
+  id: '/studio/preview/$slug',
+  path: '/studio/preview/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FeedSlugDailyDateRoute = FeedSlugDailyDateRouteImport.update({
   id: '/daily/$date',
   path: '/daily/$date',
@@ -364,6 +376,8 @@ export interface FileRoutesByFullPath {
   '/feed/$slug/archive': typeof FeedSlugArchiveRoute
   '/feed/$slug/briefings': typeof FeedSlugBriefingsRoute
   '/feed/$slug/widget': typeof FeedSlugWidgetRoute
+  '/studio/handover/$token': typeof StudioHandoverTokenRoute
+  '/studio/preview/$slug': typeof StudioPreviewSlugRoute
   '/dashboard/widgets/': typeof DashboardWidgetsIndexRoute
   '/feed/$slug/': typeof FeedSlugIndexRoute
   '/feed/$slug/daily/$date': typeof FeedSlugDailyDateRoute
@@ -416,6 +430,8 @@ export interface FileRoutesByTo {
   '/feed/$slug/archive': typeof FeedSlugArchiveRoute
   '/feed/$slug/briefings': typeof FeedSlugBriefingsRoute
   '/feed/$slug/widget': typeof FeedSlugWidgetRoute
+  '/studio/handover/$token': typeof StudioHandoverTokenRoute
+  '/studio/preview/$slug': typeof StudioPreviewSlugRoute
   '/dashboard/widgets': typeof DashboardWidgetsIndexRoute
   '/feed/$slug': typeof FeedSlugIndexRoute
   '/feed/$slug/daily/$date': typeof FeedSlugDailyDateRoute
@@ -470,6 +486,8 @@ export interface FileRoutesById {
   '/feed/$slug/archive': typeof FeedSlugArchiveRoute
   '/feed/$slug/briefings': typeof FeedSlugBriefingsRoute
   '/feed/$slug/widget': typeof FeedSlugWidgetRoute
+  '/studio/handover/$token': typeof StudioHandoverTokenRoute
+  '/studio/preview/$slug': typeof StudioPreviewSlugRoute
   '/dashboard/widgets/': typeof DashboardWidgetsIndexRoute
   '/feed/$slug/': typeof FeedSlugIndexRoute
   '/feed/$slug/daily/$date': typeof FeedSlugDailyDateRoute
@@ -525,6 +543,8 @@ export interface FileRouteTypes {
     | '/feed/$slug/archive'
     | '/feed/$slug/briefings'
     | '/feed/$slug/widget'
+    | '/studio/handover/$token'
+    | '/studio/preview/$slug'
     | '/dashboard/widgets/'
     | '/feed/$slug/'
     | '/feed/$slug/daily/$date'
@@ -577,6 +597,8 @@ export interface FileRouteTypes {
     | '/feed/$slug/archive'
     | '/feed/$slug/briefings'
     | '/feed/$slug/widget'
+    | '/studio/handover/$token'
+    | '/studio/preview/$slug'
     | '/dashboard/widgets'
     | '/feed/$slug'
     | '/feed/$slug/daily/$date'
@@ -630,6 +652,8 @@ export interface FileRouteTypes {
     | '/feed/$slug/archive'
     | '/feed/$slug/briefings'
     | '/feed/$slug/widget'
+    | '/studio/handover/$token'
+    | '/studio/preview/$slug'
     | '/dashboard/widgets/'
     | '/feed/$slug/'
     | '/feed/$slug/daily/$date'
@@ -680,6 +704,8 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   DashboardTopicSlugRoute: typeof DashboardTopicSlugRoute
   DashboardWidgetsTestRoute: typeof DashboardWidgetsTestRoute
+  StudioHandoverTokenRoute: typeof StudioHandoverTokenRoute
+  StudioPreviewSlugRoute: typeof StudioPreviewSlugRoute
   DashboardWidgetsIndexRoute: typeof DashboardWidgetsIndexRoute
   FeedTopicSlugIndexRoute: typeof FeedTopicSlugIndexRoute
   ApiPublicFeedApiV1EventsRoute: typeof ApiPublicFeedApiV1EventsRoute
@@ -984,6 +1010,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedSlugWidgetRouteImport
       parentRoute: typeof FeedSlugRouteRoute
     }
+    '/studio/handover/$token': {
+      id: '/studio/handover/$token'
+      path: '/studio/handover/$token'
+      fullPath: '/studio/handover/$token'
+      preLoaderRoute: typeof StudioHandoverTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio/preview/$slug': {
+      id: '/studio/preview/$slug'
+      path: '/studio/preview/$slug'
+      fullPath: '/studio/preview/$slug'
+      preLoaderRoute: typeof StudioPreviewSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/feed/$slug/daily/$date': {
       id: '/feed/$slug/daily/$date'
       path: '/daily/$date'
@@ -1116,6 +1156,8 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   DashboardTopicSlugRoute: DashboardTopicSlugRoute,
   DashboardWidgetsTestRoute: DashboardWidgetsTestRoute,
+  StudioHandoverTokenRoute: StudioHandoverTokenRoute,
+  StudioPreviewSlugRoute: StudioPreviewSlugRoute,
   DashboardWidgetsIndexRoute: DashboardWidgetsIndexRoute,
   FeedTopicSlugIndexRoute: FeedTopicSlugIndexRoute,
   ApiPublicFeedApiV1EventsRoute: ApiPublicFeedApiV1EventsRoute,

@@ -1,3 +1,4 @@
+import { createNewsSource } from "@/lib/feedSetup/newsSources";
 import { definedOnly } from "@/lib/optionalProps";
 import { useState, useEffect } from 'react';
 import { AddSourceSheet, type NewNewsSource } from '@/components/sources/AddSourceSheet';
@@ -724,14 +725,7 @@ export const UnifiedSourceManager = ({
             topic_id: topicId,
           };
 
-          const { data: newSourceData, error: createError } = await supabase
-            .from('content_sources')
-            .insert(definedOnly(sourceData))
-            .select('id')
-            .single();
-
-          if (createError) throw createError;
-          sourceId = newSourceData.id;
+          sourceId = await createNewsSource(supabase, definedOnly(sourceData), topicId);
 
           // Link new source to topic
           const { error: linkError } = await supabase.rpc('add_source_to_topic', {

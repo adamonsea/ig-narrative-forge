@@ -14,14 +14,14 @@ import { PulsingDots } from "@/components/onboarding/WaitingAnimations";
 import { FeedSetupPreview, type SetupSource } from "@/components/feed-setup/FeedSetupPreview";
 import {
   slugify,
-  nameCandidate,
   draftFromSuggestion,
-  topicInsertFromDraft,
-  automationFromDraft,
   looksLikePlace,
   type EventSourceSuggestion,
   type FeedSetupDraft,
 } from "@/lib/feedSetup";
+
+import { createFeedFromDraft } from "@/lib/feedSetup/createFeed";
+import { freeFeedName, suggestFeedSetup, findSetupNews, findSetupEvents } from "@/lib/feedSetup/prepareFeed";
 
 interface CreateTopicDialogProps {
   open: boolean;
@@ -39,21 +39,6 @@ const EXAMPLES = ["Pokémon", "Eastbourne", "Jazz in Brighton", "Life sciences",
 const MAX_NAME_LENGTH = 60;
 
 const REVEAL_MS = 520;
-
-const BLOCKED_HOSTS = ["facebook.com", "twitter.com", "instagram.com", "tiktok.com", "reddit.com", "pinterest.com", "linkedin.com", "youtube.com", "medium.com"];
-
-/** Filters and ranks suggested sources; returns them with the ones to start ticked. */
-function rankSources(raw: SetupSource[]): { list: SetupSource[]; picked: Set<string> } {
-  const list = raw
-    .filter((s) => s.confidence_score >= 40 && s.platform_reliability !== "low" && !BLOCKED_HOSTS.some((b) => s.url.toLowerCase().includes(b)))
-    .sort((a, b) => {
-      const score = (s: SetupSource) => s.confidence_score + (s.platform_reliability === "high" ? 25 : s.platform_reliability === "medium" ? 15 : 0);
-      return score(b) - score(a);
-    });
-  const picked = new Set<string>();
-  list.slice(0, 5).forEach((s) => picked.add(s.url));
-  return { list, picked };
-}
 
 export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialName, initialKeywords }: CreateTopicDialogProps) => {
   const { toast } = useToast();
@@ -172,48 +157,19 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
     return () => clearTimeout(t);
   }, [manualName, step]);
 
-  const fetchSetup = async (subject: string) => {
-    const { data, error } = await supabase.functions.invoke("suggest-feed-setup", { body: { about: subject } });
-    if (error || !data?.setup) throw new Error("We couldn't prepare suggestions just now. Please try again.");
-    return data.setup;
-  };
+  const fetchSetup = (subject: string) => suggestFeedSetup(supabase, subject);
 
   /** News and what's-on sources are searched together; events never hold up news. Returns how many were found. */
   const fetchSources = async (d: FeedSetupDraft): Promise<number> => {
     setFindingSources(true);
     const wantEvents = eventsTouched ? includeEvents : d.topic_type === "regional";
     if (!eventsTouched) setIncludeEvents(wantEvents);
-    const body = {
-      topicName: d.name,
-      description: d.description,
-      keywords: d.keywords.slice(0, 12).join(", "),
-      topicType: d.topic_type,
-      region: d.region || undefined,
-    };
-    // A failed or empty search is tried once more, so news never silently disappears.
-    const askNews = async () => {
-      const first = await supabase.functions.invoke("suggest-content-sources", { body });
-      if (!first.error && !first.data?.error && (first.data?.suggestions?.length ?? 0) > 0) return first;
-      return supabase.functions.invoke("suggest-content-sources", { body });
-    };
-    const news = askNews()
-      .then(({ data }) => {
-        const { list, picked } = rankSources((data?.suggestions || []) as SetupSource[]);
-        setSources(list);
-        setSelected(picked);
-        return list.length;
-      })
+    const news = findSetupNews(supabase, d)
+      .then(({ list, picked }) => { setSources(list as SetupSource[]); setSelected(picked); return list.length; })
       .catch(() => { setSources([]); setSelected(new Set()); return 0; });
-    const events = wantEvents
-      ? supabase.functions
-          .invoke("scrape-whats-on", { body: { action: "find", name: d.name, region: d.region, topicType: d.topic_type } })
-          .then(({ data }) => {
-            const list = (data?.suggestions || []) as EventSourceSuggestion[];
-            setEventSources(list);
-            setEventSelected(new Set((data?.ticked as string[] | undefined) ?? list.slice(0, 3).map((e) => e.url)));
-            return list.length;
-          })
-          .catch(() => { setEventSources([]); setEventSelected(new Set()); return 0; })
+    const events = wantEvents ? findSetupEvents(supabase, d)
+      .then(({ list, picked }) => { setEventSources(list); setEventSelected(picked); return list.length; })
+      .catch(() => { setEventSources([]); setEventSelected(new Set()); return 0; })
       : Promise.resolve(0).then((n) => { setEventSources([]); setEventSelected(new Set()); return n; });
     const [a, b] = await Promise.all([news, events]);
     setFindingSources(false);
@@ -221,14 +177,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
   };
 
   /** Picks the first free name: "Name", then "Name 2", "Name 3"… */
-  const freeName = async (base: string) => {
-    for (let attempt = 1; attempt <= 9; attempt++) {
-      const candidate = nameCandidate(base, attempt);
-      const { data } = await supabase.rpc("check_topic_slug_available", { p_slug: slugify(candidate) });
-      if (data !== false) return candidate;
-    }
-    return nameCandidate(base, Date.now() % 1000);
-  };
+  const freeName = (base: string) => freeFeedName(supabase, base);
 
   // Fast path: one sentence → everything suggested.
   const handleAboutContinue = async () => {
@@ -304,27 +253,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
       const finalDraft = { ...draft, name };
       setTopicSlug(slug);
 
-      const { data: topicData, error: topicError } = await supabase
-        .from("topics")
-        .insert(topicInsertFromDraft(finalDraft, slug, user.id) as any)
-        .select("id")
-        .single();
-      if (topicError) {
-        if (topicError.code === "23505") throw new Error("A feed with this name already exists.");
-        throw topicError;
-      }
-      setTopicId(topicData.id);
-
-      // The settings row is created with the feed; switch on Autopilot (or hold for review).
-      const { error: automationError } = await supabase
-        .from("topic_automation_settings")
-        .update({ ...automationFromDraft(finalDraft), updated_at: new Date().toISOString() } as any)
-        .eq("topic_id", topicData.id);
-      if (automationError) {
-        console.error("Autopilot not saved:", automationError);
-        toast({ title: "Autopilot is not on yet", description: "Switch it on in Settings once your feed opens." });
-      }
-
       const chosen = sources.filter((s) => selected.has(s.url));
       const typed = pendingSource.current.trim();
       if (typed) {
@@ -337,54 +265,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated, initialN
         } catch { /* not a website address: ignore */ }
       }
       setAttemptedSourceCount(chosen.length);
-      const sourceIds: string[] = [];
-      let failures = 0;
       const chosenEvents = eventSources.filter((e) => eventSelected.has(e.url));
-      if (chosenEvents.length > 0) {
-        const { error: eventsError } = await supabase.from("topics").update({ events_enabled: true } as any).eq("id", topicData.id);
-        if (eventsError) console.error("Events not switched on:", eventsError);
-      }
-      for (const source of chosen) {
-        try {
-          const domain = new URL(source.url).hostname.replace("www.", "");
-          const { data: existingRows } = await supabase
-            .from("content_sources")
-            .select("id")
-            .or(`feed_url.eq.${source.url},canonical_domain.eq.${domain}`)
-            .limit(1);
-          const existing = existingRows?.[0];
-          if (existing) {
-            sourceIds.push(existing.id);
-            continue;
-          }
-          let credibility = Math.round(source.confidence_score * 0.8);
-          if (source.platform_reliability === "high") credibility += 15;
-          if (source.platform_reliability === "medium") credibility += 10;
-          const { data: newSource, error: sourceError } = await supabase
-            .from("content_sources")
-            .insert({
-              source_name: source.source_name,
-              feed_url: source.url,
-              canonical_domain: domain,
-              content_type: "news",
-              credibility_score: Math.min(95, credibility),
-              is_active: true,
-              source_type: source.type === "RSS" ? "rss" : "website",
-              region: finalDraft.topic_type === "regional" ? finalDraft.region : null,
-              // Required: sources may only be added to a feed the signed-in owner owns.
-              topic_id: topicData.id,
-            })
-            .select("id")
-            .single();
-          if (sourceError) throw sourceError;
-          if (newSource) sourceIds.push(newSource.id);
-        } catch (e) {
-          failures += 1;
-          console.error("Source creation failed:", source.url, e);
-        }
-      }
-      setSourceFailures(failures);
-      setCreatedSourceIds(sourceIds);
+      const result = await createFeedFromDraft(supabase, finalDraft, {
+        ownerId: user.id, slug, isPublic: true, news: chosen, hasEvents: chosenEvents.length > 0,
+      });
+      setTopicId(result.feed.id);
+      setSourceFailures(result.failures);
+      setCreatedSourceIds(result.sourceIds);
     } catch (error) {
       console.error("Feed creation error:", error);
       const message = error instanceof Error ? error.message : "The feed could not be created";

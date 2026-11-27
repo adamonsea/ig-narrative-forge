@@ -16,6 +16,7 @@ import {
 import { resolveStoryCoverStyle, STORY_COVER_LABELS, STORY_COVER_STYLES, type StoryCoverStyle } from "@/lib/storyCoverStyle";
 import { cn } from "@/lib/utils";
 import { FeedLookPreview } from "./FeedLookPreview";
+import { saveFeedLook } from "@/lib/feedSetup/services";
 
 interface BrandConfig {
   logo_url?: string | undefined;
@@ -139,7 +140,7 @@ export function FeedLookEditor({ topicId, name, colour, brandingConfig, coverSty
 
   const save = async (values: Record<string, unknown>, local: FeedLookPatch) => {
     setState("saving");
-    const { error } = await supabase.from("topics").update({ ...values, updated_at: new Date().toISOString() } as never).eq("id", topicId);
+    const { error } = await saveFeedLook(supabase, topicId, values);
     if (error) {
       setState("not-saved");
       return false;
