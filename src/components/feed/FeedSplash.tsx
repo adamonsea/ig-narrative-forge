@@ -55,7 +55,8 @@ export function hideFeedSplash() {
   if (!el || el.dataset["hiding"]) return;
   el.dataset["hiding"] = "1";
   if (Number(getComputedStyle(el).opacity) === 0) {
-    el.parentElement?.remove();
+    // Only the injected HTML is ours to remove. React owns the outer wrapper.
+    el.remove();
     return;
   }
   const visibleAt = SPLASH_DELAY_MS + SPLASH_FADE_IN_MS;
@@ -64,7 +65,7 @@ export function hideFeedSplash() {
     el.style.opacity = getComputedStyle(el).opacity;
     void el.offsetWidth;
     el.classList.add("fs-out");
-    setTimeout(() => el.parentElement?.remove(), 220);
+    setTimeout(() => el.remove(), 220);
   }, wait);
 }
 
