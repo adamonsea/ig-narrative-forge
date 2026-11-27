@@ -4,7 +4,7 @@
  * feed's colour when there's no photo), a calendar-page date tile and the event
  * name. Everything else goes in the post caption (eventCaption.ts).
  * Still = the last frame; motion = a 5-second push-in with the tile settling
- * and the name rising, recorded with MediaRecorder. Layout in posterLayout.ts
+ * and the name rising, encoded to MP4 + silent AAC (encodeMp4.ts), else recorded with MediaRecorder. Layout in posterLayout.ts
  * keeps everything clear of Instagram's own buttons and captions.
  */
 import { createElement } from "react";
@@ -14,6 +14,7 @@ import { eventIllustrationTint, feedBrandPalette, toCss } from "@/lib/feedBrandC
 import { eventPhotoUrl } from "@/lib/eventPhotos";
 import { dateBlock } from "@/lib/whatsOn";
 import type { SocialEvent } from "./eventCaption";
+import { encodeMp4 } from "./encodeMp4";
 import { H, LINE_HEIGHT, TILE, TITLE_MAX_LINES, W, posterLayout, titleSize } from "./posterLayout";
 
 export { H, W } from "./posterLayout";
@@ -203,11 +204,13 @@ function pickMimeType(): string {
   return "video/webm";
 }
 
-/** The motion version: 5 seconds of movement plus a short hold (MP4 where the browser can, otherwise WebM). */
+/** The motion version: 5 seconds of movement plus a short hold (Instagram-ready MP4 with silent audio where the browser can encode it; otherwise recorded live as MP4 or WebM). */
 export async function renderEventMotion(e: SocialEvent, opts: RenderOpts): Promise<{ blob: Blob; ext: "mp4" | "webm" }> {
   const prep = await preparePoster(e, opts);
   const canvas = newCanvas();
   const ctx = canvas.getContext("2d")!;
+  const mp4 = await encodeMp4(canvas, (t) => drawPosterFrame(ctx, e, opts, prep, Math.min(t, MOTION_SECONDS)), MOTION_SECONDS + HOLD_SECONDS, FPS);
+  if (mp4) return { blob: mp4, ext: "mp4" };
   const mimeType = pickMimeType();
   const recorder = new MediaRecorder(canvas.captureStream(FPS), { mimeType, videoBitsPerSecond: 8_000_000 });
   const chunks: Blob[] = [];
