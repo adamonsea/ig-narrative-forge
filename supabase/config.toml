@@ -565,3 +565,6 @@ verify_jwt = false
 
 [functions.save-push-subscription]
 verify_jwt = false
+
+[functions.r]
+verify_jwt = false
