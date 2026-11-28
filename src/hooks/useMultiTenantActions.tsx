@@ -52,7 +52,7 @@ export const useMultiTenantActions = () => {
    */
   const approveMultiTenantArticle = async (
     article: MultiTenantArticle,
-    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid',
+    slideType: 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive' = 'feed',
     tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' = 'conversational',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic',
     generateIllustration: boolean = true

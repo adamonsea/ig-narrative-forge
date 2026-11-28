@@ -1,0 +1,4 @@
+ALTER TABLE public.topics ADD COLUMN IF NOT EXISTS story_length text NOT NULL DEFAULT 'standard';
+CREATE OR REPLACE FUNCTION public.validate_feed_story_length() RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$ BEGIN IF NEW.story_length NOT IN ('brief','standard','indepth','extensive') THEN RAISE EXCEPTION 'Choose a valid story length' USING ERRCODE='22023'; END IF; RETURN NEW; END $$;
+CREATE TRIGGER validate_feed_story_length BEFORE INSERT OR UPDATE OF story_length ON public.topics FOR EACH ROW EXECUTE FUNCTION public.validate_feed_story_length();
+COMMENT ON COLUMN public.topics.story_length IS 'Default length for new summaries; explicit per-story choices take precedence. Does not change existing stories.';

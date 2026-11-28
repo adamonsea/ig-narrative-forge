@@ -15,7 +15,7 @@ import { getCurrentnessTag } from "@/lib/dateUtils";
 import { highlightContentWithContext, type HighlightTerms } from "@/lib/highlightTerms";
 import { DeskBadge, MetaLine } from "./DeskCard";
 
-export type SlideLength = "short" | "tabloid" | "indepth" | "extensive";
+export type SlideLength = "feed" | "short" | "tabloid" | "indepth" | "extensive";
 export type StoryTone = "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet";
 export type WritingStyle = "journalistic" | "educational" | "listicle" | "story_driven";
 
@@ -58,12 +58,13 @@ export function WaitingStoryDrawer({
   useEffect(() => {
     if (!open || !article) return;
     setBody(article.body ?? null);
-    if (!article.shared_content_id) return;
+    const sharedContentId = article.shared_content_id;
+    if (!sharedContentId) return;
     let cancelled = false;
     setLoadingBody(true);
     (async () => {
       try {
-        const { data, error } = await supabase.from("shared_article_content").select("body").eq("id", article.shared_content_id!).single();
+        const { data, error } = await supabase.from("shared_article_content").select("body").eq("id", sharedContentId).single();
         if (!cancelled && !error && data?.body) setBody(data.body);
       } catch (err) {
         console.error("Error fetching article body:", err);
@@ -124,7 +125,8 @@ export function WaitingStoryDrawer({
                   <Select value={slideType} onValueChange={(v) => onSlideType(v as SlideLength)}>
                     <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="short">3 slides</SelectItem>
+                      <SelectItem value="feed">Feed setting</SelectItem>
+                      <SelectItem value="short">4 slides</SelectItem>
                       <SelectItem value="tabloid">6 slides</SelectItem>
                       <SelectItem value="indepth">8 slides</SelectItem>
                       <SelectItem value="extensive">12 slides</SelectItem>

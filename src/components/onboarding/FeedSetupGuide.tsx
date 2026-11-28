@@ -28,6 +28,7 @@ export interface FeedSetupGuideTopic {
   default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet" | undefined;
   default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven" | undefined;
   illustration_style?: IllustrationStyle | undefined;
+  story_length?: string | undefined;
   audience_expertise?: "beginner" | "intermediate" | "expert" | undefined;
   house_style_notes?: string | null | undefined;
   house_style_examples?: string | null | undefined;
@@ -273,6 +274,7 @@ export const FeedSetupGuide = ({
             topicName={topic.name}
             topicType={topic.topic_type}
             region={topic.region}
+            currentStoryLength={topic.story_length}
             currentExpertise={topic.audience_expertise}
             currentTone={topic.default_tone}
             currentWritingStyle={topic.default_writing_style}

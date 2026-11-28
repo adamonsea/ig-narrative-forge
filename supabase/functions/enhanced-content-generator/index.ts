@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { stripGeneratedAttribution } from '../_shared/attribution-guard.ts';
 import { llmFetch } from '../_shared/llm-router.ts';
 import { familySafeVerdict, familySafeReason } from '../_shared/family-safe.ts';
+import { storyLengthRules, withinStoryLength } from '../_shared/storyLength.ts';
 import { FEATURES } from '../_shared/parked-features.ts';
 
 const corsHeaders = {
@@ -398,7 +399,8 @@ ${samples.map((s: string, i: number) => `--- sample ${i + 1} ---\n${s}`).join('\
     supabase?: any,
     houseStyleGuidance?: string,
     placeRule = '',
-    placeEditRule = ''
+    placeEditRule = '',
+    bodyWordLimit = 40
   ): Promise<SlideContent[]> {
     try {
       // Fetch recent similar stories for context
@@ -443,8 +445,9 @@ REQUIREMENTS:
 - Tone guidance: ${getGuidance(toneGuidance, tone, `Maintain a consistent ${tone} tone.`)}
 - Writing style: ${getGuidance(writingStyleGuidance, writingStyle, `Match the ${writingStyle} style.`)}
 - Audience expertise: ${getGuidance(expertiseGuidance, expertise, `Write for a ${expertise} reader.`)}
-- Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
-- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 5-8 words ideal, 10 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
+- Create exactly ${slideCount} slides (${slideType}: including one headline)
+- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 5-8 words ideal, 10 words maximum, all other slides MUST be maximum ${bodyWordLimit} words each. This is non-negotiable.
+- Summarise the key points, not the whole article. Do not pad to fill slides or reproduce the source sentence by sentence. Leave detailed reporting for the source.
 - Include visual prompts for each slide
 - Make it shareable and engaging for web readers
 - Include alt text for accessibility
@@ -819,7 +822,7 @@ You previously returned only ${normalized.length} slides. Re-output the full car
 Constraints:
 - Exactly ${slideCount} slides.
 - Slide 1: crisp headline, 5-8 words ideal, 10 words max.
-- Slides 2-${slideCount}: max 30-40 words each.
+- Slides 2-${slideCount}: max ${bodyWordLimit} words each.
 - NEVER name the publication, domain or author in any slide (no "Source: ...", no "Read more at ...", no bylines).
 - Do not invent facts; if missing, say "Not specified in source".
 
@@ -894,7 +897,7 @@ ${JSON.stringify({ slides: normalized }, null, 2)}
 Rewrite slides: ${clippedIdx.join(', ')}
 
 Rules:
-- Keep the natural length the story needs — do not pad and do not compress. Just make sure nothing is cut off.
+- Keep each body slide within ${bodyWordLimit} words. Do not pad or cut sentences mid-thought.
 - Do not invent facts; if information is missing, say "Not specified in source".
 - NEVER name the publication, domain or author (no "Source: ...", no "Read more at ...", no bylines).
 - Return ALL ${slideCount} slides as valid JSON: { "slides": [ { "slideNumber": 1, "content": "...", "visualPrompt": "...", "altText": "..." } ] }
@@ -962,7 +965,7 @@ HARD RULES:
 - Facts, names, numbers, dates, places and quotes are FROZEN. Do not add, remove or alter a single one.
 - Do not introduce any name, figure or place that is not already in the slides or the article below.
 - Keep exactly ${normalized.length} slides, in the same order, covering the same points.
-- Slide 1: crisp news headline, 5-8 words ideal, 10 words maximum. Other slides: 40 words maximum.
+- Slide 1: crisp news headline, 5-8 words ideal, 10 words maximum. Other slides: ${bodyWordLimit} words maximum.
 ${placeEditRule ? `${placeEditRule}
 ` : ''}- Keep attribution rules: opinions and claims stay attributed to whoever said them.
 - NEVER name the publication, website, domain or author.
@@ -997,7 +1000,7 @@ Return valid JSON only: { "slides": [ { "slideNumber": 1, "content": "...", "vis
 
           const sameShape = rewritten.length === normalized.length;
           const withinLimits = sameShape && rewritten.every((s, i) =>
-            wordCount(s.content || '') <= (i === 0 ? (tone === 'rhyming_couplet' ? 30 : 10) : 45) && (s.content || '').trim().length > 0
+            wordCount(s.content || '') <= (i === 0 ? (tone === 'rhyming_couplet' ? 30 : 10) : bodyWordLimit) && (s.content || '').trim().length > 0
           );
           const noNewFacts = sameShape && rewritten.every((s) =>
             factTokens(s.content || '').every((tok) => {
@@ -1022,6 +1025,26 @@ Return valid JSON only: { "slides": [ { "slideNumber": 1, "content": "...", "vis
         console.warn('⚠️ Humanising pass failed, keeping original draft.', e);
       }
 
+
+      if (!withinStoryLength(normalized, slideCount, bodyWordLimit)) {
+        const shorten = await deepseekChatWithFallback(apiKey, {
+          model: 'deepseek-v4-flash',
+          messages: [
+            { role: 'system', content: 'You are a concise, accurate summary editor. Return valid JSON only. Never invent facts or cut a sentence mid-thought.' },
+            { role: 'user', content: `Shorten this summary to exactly ${slideCount} slides including a headline. Each body slide must be at most ${bodyWordLimit} words. Keep the key points, not every detail. Keep names, dates, numbers and claims accurate to the source. Do not copy the original sentences. Keep visualPrompt and altText. Never name the publication or add reader prompts. Use the same JSON schema.\n${houseStyleGuidance || ''}\nSOURCE:\n${article.body}\nSUMMARY:\n${JSON.stringify({ slides: normalized })}` },
+          ],
+          max_tokens: slideCount >= 12 ? 4000 : 2400,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+        }, 'slide-length-repair');
+        if (shorten.ok) {
+          const repaired = normalizeSlides(tryExtractSlides(readContent(await shorten.json(), 'slide-length-repair')));
+          if (repaired.length === slideCount && withinStoryLength(repaired, slideCount, bodyWordLimit) && repaired.every((slide, i) => !isClipped(slide, i))) normalized = repaired;
+        }
+      }
+      if (!withinStoryLength(normalized, slideCount, bodyWordLimit)) {
+        throw new Error('The summary exceeded the chosen story length. Try again.');
+      }
 
       return normalized.slice(0, slideCount).map((s: any) => ({
         ...s,
@@ -1110,7 +1133,7 @@ Return in JSON format:
       articleId, 
       topicArticleId,
       sharedContentId,
-      slideType = 'tabloid', 
+      slideType = 'feed',
       aiProvider = 'deepseek',
       tone,
       writingStyle,
@@ -1191,6 +1214,7 @@ Return in JSON format:
     }
 
     // Get topic details for audience expertise, default tone, and drip feed settings
+    let feedStoryLength = 'standard';
     let topicExpertise = audienceExpertise || 'intermediate';
     let effectiveTone = tone || 'conversational';
     let effectiveWritingStyle = writingStyle || 'journalistic';
@@ -1205,7 +1229,7 @@ Return in JSON format:
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples, family_safe, brand_safe_pictures, topic_type, region, use_publisher_photos')
+        .select('story_length, audience_expertise, default_tone, default_writing_style, drip_feed_enabled, auto_simplify_enabled, house_style_notes, house_style_examples, family_safe, brand_safe_pictures, topic_type, region, use_publisher_photos')
         .eq('id', article.topic_id)
         .maybeSingle();
 
@@ -1236,6 +1260,7 @@ Return in JSON format:
       }
       
       if (topicData) {
+        feedStoryLength = topicData.story_length ?? 'standard';
         topicExpertise = audienceExpertise ?? topicData.audience_expertise ?? 'intermediate';
         effectiveTone = tone ?? topicData.default_tone ?? 'conversational';
         effectiveWritingStyle = writingStyle ?? topicData.default_writing_style ?? 'journalistic';
@@ -1263,8 +1288,11 @@ Return in JSON format:
       }
     }
 
+    const isSnippet = article.word_count > 0 && article.word_count < 150;
+    const lengthRules = storyLengthRules(feedStoryLength, slideType, isSnippet);
+
     // Build enhanced prompt system
-    const promptSystem = await buildPromptSystem(supabase, effectiveTone, topicExpertise, slideType);
+    const promptSystem = await buildPromptSystem(supabase, effectiveTone, topicExpertise, lengthRules.slideType);
     const templateGuidance = [
       ...(promptSystem?.systemPrompts || []).map((prompt: PromptTemplate) => prompt.prompt_content?.trim()).filter(Boolean),
       ...(promptSystem?.contentPrompts || []).map((prompt: PromptTemplate) => prompt.prompt_content?.trim()).filter(Boolean)
@@ -1316,25 +1344,9 @@ Return in JSON format:
     
     console.log(`Attribution: publication="${publicationName}", topic="${topicName}"`);
 
-    // Snippet handling logic
-    const isSnippet = article.word_count > 0 && article.word_count < 150;
-    let finalSlideType = slideType;
-    
-    if (isSnippet) {
-      console.log(`🔍 Snippet detected (${article.word_count} words), forcing slideType to 'short'`);
-      finalSlideType = 'short';
-    }
+    const finalSlideType = lengthRules.slideType;
+    const targetSlideCount = lengthRules.slides;
 
-    // Create slides with correct slide count mapping
-    const slideTypeMapping = {
-      'short': 4,
-      'tabloid': 6, 
-      'indepth': 8,
-      'extensive': 12
-    };
-    
-    const targetSlideCount = slideTypeMapping[finalSlideType as keyof typeof slideTypeMapping] || 6;
-    
     // Safety filter for satirical tone only - rhyming_couplet can handle most topics
     // Only block satirical/humorous tones for truly tragic content
     if (effectiveTone === 'satirical') {
@@ -1385,7 +1397,8 @@ Return in JSON format:
         supabase,
         houseStyleGuidance,
         placeRule,
-        placeEditRule
+        placeEditRule,
+        lengthRules.bodyWords
       );
 
       console.log(`✅ Generated ${slides.length}/${targetSlideCount} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);

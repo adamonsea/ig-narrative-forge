@@ -22,6 +22,7 @@ import { AttentionTag } from "@/components/events/DeskEvents";
 import { HEALTH_DOT, HEALTH_FILL, HEALTH_TEXT, SourceFigures } from "@/components/sources/SourceCard";
 import { LiveFeedControl } from "@/components/feed/LiveFeedControl";
 import { ReadershipLines } from "@/components/readership/ReadershipLines";
+import { StoryLengthSelect } from "@/components/settings/StoryLengthSelect";
 import { FeedLookPreview } from "@/components/settings/look/FeedLookPreview";
 
 /**
@@ -320,6 +321,7 @@ export default function DesignSystem() {
                 </RememberedFold>
               </Spec>
             </div>
+            <Spec name="Story length"><StoryLengthSelect value="standard" onChange={() => {}} /></Spec>
             <Spec name="Edit picture · replace or move within the frame (event: square with Card and Poster guides)">
               <div className="max-w-sm">
                 <PictureEditor aspect={1} guides={[{ aspect: 2, label: "Card" }, { aspect: 9 / 16, label: "Poster" }]}

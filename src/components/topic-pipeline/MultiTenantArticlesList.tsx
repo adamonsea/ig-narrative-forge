@@ -22,21 +22,21 @@ interface MultiTenantArticlesListProps {
   deletingArticles: Set<string>;
   animatingArticles: Set<string>;
   
-  defaultSlideQuantity?: 'short' | 'tabloid' | 'indepth' | 'extensive' | undefined;
+  defaultSlideQuantity?: 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive' | undefined;
   defaultTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined;
   defaultWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined;
   
-  slideQuantityOverrides?: Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'> | undefined;
+  slideQuantityOverrides?: Record<string, 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive'> | undefined;
   toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined> | undefined;  
   writingStyleOverrides?: Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined> | undefined;
   
-  onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
+  onSlideQuantityChange: (articleId: string, quantity: 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
   onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet') => void;
   onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   
   /** The feed's region, landmarks, keywords and organisations, highlighted in the drawer's article preview. */
   highlightTerms?: HighlightTerms | undefined;
-  onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven', generateIllustration?: boolean) => void;
+  onApprove: (article: MultiTenantArticle, slideType?: 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven', generateIllustration?: boolean) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete?: (articleIds: string[]) => void;
@@ -60,7 +60,7 @@ export default function MultiTenantArticlesList({
   processingArticle,
   deletingArticles,
   animatingArticles,
-  defaultSlideQuantity = 'tabloid',
+  defaultSlideQuantity = 'feed',
   defaultTone = 'conversational',
   defaultWritingStyle = 'journalistic',
   slideQuantityOverrides = {},
@@ -156,12 +156,12 @@ export default function MultiTenantArticlesList({
   };
 
   const slideTypeFor = (article: MultiTenantArticle) =>
-    slideQuantityOverrides[article.id] || (article.is_snippet ? 'short' : defaultSlideQuantity);
+    slideQuantityOverrides[article.id] || defaultSlideQuantity;
 
   /** Publish = write it now with the feed's defaults (or the drawer's choices); warns on a second version of a covered story. */
   const publishArticle = (
     article: MultiTenantArticle,
-    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive',
+    slideType: 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive',
     tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven',
     withPicture?: boolean,

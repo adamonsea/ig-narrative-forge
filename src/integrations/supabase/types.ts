@@ -5884,6 +5884,7 @@ export type Database = {
           rss_enabled: boolean | null
           slug: string | null
           story_cover_style: string
+          story_length: string
           topic_type: string
           updated_at: string | null
           use_publisher_photos: boolean
@@ -5969,6 +5970,7 @@ export type Database = {
           rss_enabled?: boolean | null
           slug?: string | null
           story_cover_style?: string
+          story_length?: string
           topic_type?: string
           updated_at?: string | null
           use_publisher_photos?: boolean
@@ -6054,6 +6056,7 @@ export type Database = {
           rss_enabled?: boolean | null
           slug?: string | null
           story_cover_style?: string
+          story_length?: string
           topic_type?: string
           updated_at?: string | null
           use_publisher_photos?: boolean

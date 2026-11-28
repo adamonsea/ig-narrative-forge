@@ -1,7 +1,10 @@
+import { StoryLengthSelect } from "@/components/settings/StoryLengthSelect";
+import { useAuth } from "@/hooks/useAuth";
+import { RememberedFold, openFold } from "@/components/settings/RememberedFold";
+import type { FeedStoryLength } from "@/lib/storyLength";
 import { SettingRow } from "@/components/settings/SettingRow";
 import { SaveIndicator } from "@/components/ui/editorial";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +18,7 @@ interface ContentVoiceSettingsProps {
   topicName?: string | undefined;
   topicType?: 'regional' | 'keyword' | string | undefined;
   region?: string | null | undefined;
+  currentStoryLength?: FeedStoryLength | string | undefined;
   currentExpertise?: 'beginner' | 'intermediate' | 'expert' | undefined;
   currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined;
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined;
@@ -34,6 +38,7 @@ export const ContentVoiceSettings = ({
   topicName,
   topicType,
   region,
+  currentStoryLength,
   currentExpertise,
   currentTone,
   currentWritingStyle,
@@ -42,6 +47,19 @@ export const ContentVoiceSettings = ({
   onUpdate
 }: ContentVoiceSettingsProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  useEffect(() => {
+    const reveal = () => {
+      if (['audience', 'tone', 'writing-style', 'example-sentences', 'longer-stories'].includes(window.location.hash.slice(1))) {
+        openFold(user?.id, `writing-advanced-${topicId}`);
+      }
+    };
+    reveal();
+    window.addEventListener('hashchange', reveal);
+    return () => window.removeEventListener('hashchange', reveal);
+  }, [topicId, user?.id]);
+  const [storyLength, setStoryLength] = useState(currentStoryLength ?? 'standard');
+  useEffect(() => { setStoryLength(currentStoryLength ?? 'standard'); }, [currentStoryLength, topicId]);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const [houseStyleNotes, setHouseStyleNotes] = useState(currentHouseStyleNotes ?? '');
   const presets = useMemo(
@@ -70,17 +88,18 @@ export const ContentVoiceSettings = ({
       const { error } = await supabase
         .from('topics')
         .update({ [field]: value, updated_at: new Date().toISOString() } as any)
-        .eq('id', topicId);
+        .eq('id', topicId).select('id').single();
 
       if (error) throw error;
       setSaveState('saved');
       onUpdate?.();
     } catch (error) {
       console.error('Error updating setting:', error);
+      if (field === 'story_length') setStoryLength(currentStoryLength ?? 'standard');
       setSaveState('error');
       toast({ title: "Error", description: "Failed to save", variant: "destructive" });
     }
-  }, [topicId, onUpdate, toast]);
+  }, [topicId, onUpdate, toast, currentStoryLength]);
 
   const saveExamples = (next: string[]) => {
     setExamples(next);
@@ -106,53 +125,11 @@ export const ContentVoiceSettings = ({
 
   return (
     <div className="divide-y divide-border border-y border-border">
-        <SettingRow label="Audience" hint="How much readers already know.">
-          <SaveIndicator state={saveState === 'saving' ? 'saving' : saveState === 'error' ? 'not-saved' : saveState === 'saved' ? 'saved' : null} />
-          <Select
-            value={currentExpertise || 'intermediate'}
-            onValueChange={(v) => autoSave('audience_expertise', v)}
-          >
-            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="beginner">Beginner</SelectItem>
-              <SelectItem value="intermediate">Intermediate</SelectItem>
-              <SelectItem value="expert">Expert</SelectItem>
-            </SelectContent>
-          </Select>
+        <SettingRow label="Story length" hint="For new stories. Existing stories stay unchanged." className="flex-col gap-4 sm:flex-row">
+          <SaveIndicator state={saveState === 'saving' ? 'saving' : saveState === 'error' ? 'not-saved' : 'saved'} />
+          <StoryLengthSelect value={storyLength} onChange={(value) => { setStoryLength(value); void autoSave('story_length', value); }} />
         </SettingRow>
-
-        <SettingRow label="Tone" hint="How stories sound.">
-          <Select
-            value={currentTone || 'conversational'}
-            onValueChange={(v) => autoSave('default_tone', v)}
-          >
-            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="formal">Formal</SelectItem>
-              <SelectItem value="conversational">Conversational</SelectItem>
-              <SelectItem value="engaging">Engaging</SelectItem>
-              <SelectItem value="satirical">Satirical</SelectItem>
-              <SelectItem value="rhyming_couplet">Rhyming couplet</SelectItem>
-            </SelectContent>
-          </Select>
-        </SettingRow>
-
-        <SettingRow label="Writing style" hint="How stories are shaped.">
-          <Select
-            value={currentWritingStyle || 'journalistic'}
-            onValueChange={(v) => autoSave('default_writing_style', v)}
-          >
-            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="journalistic">Journalistic</SelectItem>
-              <SelectItem value="educational">Educational</SelectItem>
-              <SelectItem value="listicle">Listicle</SelectItem>
-              <SelectItem value="story_driven">Story-driven</SelectItem>
-            </SelectContent>
-          </Select>
-        </SettingRow>
-
-        <SettingRow label="House style" hint="Applied to every story, including automated ones." stack>
+        <SettingRow label="House style" hint="How this feed sounds." stack>
           <div className="space-y-3">
           <Select
             value={presetChoice || undefined}
@@ -178,7 +155,7 @@ export const ContentVoiceSettings = ({
           </Select>
 
         {presetChoice && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {presetChoice === CUSTOM_HOUSE_STYLE ? (
               <Textarea
                 id="house-style-notes"
@@ -199,6 +176,56 @@ export const ContentVoiceSettings = ({
           </div>
         )}
           </div>
+        </SettingRow>
+
+        <RememberedFold foldKey={`writing-advanced-${topicId}`} label="Advanced" className="py-4">
+          <div className="divide-y divide-border">
+        <SettingRow label="Longer stories" hint="Extended allows up to 12 slides." className="flex-col gap-4 sm:flex-row">
+          <StoryLengthSelect extended value={storyLength} onChange={(value) => { setStoryLength(value); void autoSave('story_length', value); }} />
+        </SettingRow>
+        <SettingRow label="Audience" hint="How much readers already know." className="flex-col gap-4 sm:flex-row">
+          <Select
+            value={currentExpertise || 'intermediate'}
+            onValueChange={(v) => autoSave('audience_expertise', v)}
+          >
+            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="beginner">Beginner</SelectItem>
+              <SelectItem value="intermediate">Intermediate</SelectItem>
+              <SelectItem value="expert">Expert</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
+
+        <SettingRow label="Tone" hint="How stories sound." className="flex-col gap-4 sm:flex-row">
+          <Select
+            value={currentTone || 'conversational'}
+            onValueChange={(v) => autoSave('default_tone', v)}
+          >
+            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="formal">Formal</SelectItem>
+              <SelectItem value="conversational">Conversational</SelectItem>
+              <SelectItem value="engaging">Engaging</SelectItem>
+              <SelectItem value="satirical">Satirical</SelectItem>
+              <SelectItem value="rhyming_couplet">Rhyming couplet</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
+
+        <SettingRow label="Writing style" hint="How stories are shaped." className="flex-col gap-4 sm:flex-row">
+          <Select
+            value={currentWritingStyle || 'journalistic'}
+            onValueChange={(v) => autoSave('default_writing_style', v)}
+          >
+            <SelectTrigger className="h-11 w-48 text-base"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="journalistic">Journalistic</SelectItem>
+              <SelectItem value="educational">Educational</SelectItem>
+              <SelectItem value="listicle">Listicle</SelectItem>
+              <SelectItem value="story_driven">Story-driven</SelectItem>
+            </SelectContent>
+          </Select>
         </SettingRow>
 
         <SettingRow label="Example sentences" hint="Sentences you'd publish. Their rhythm is copied, not their content." stack>
@@ -265,6 +292,8 @@ export const ContentVoiceSettings = ({
             )}
           </div>
         </SettingRow>
+          </div>
+        </RememberedFold>
     </div>
   );
 };

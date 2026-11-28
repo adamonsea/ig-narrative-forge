@@ -497,6 +497,7 @@ Deno.serve(async (req) => {
         const { error: insertError } = await supabase
           .from('content_generation_queue')
           .insert({
+            slidetype: 'feed',
             topic_article_id: article.id,
             shared_content_id: article.shared_content_id,
             status: 'pending',

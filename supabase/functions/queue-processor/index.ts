@@ -282,7 +282,8 @@ serve(async (req) => {
 
         // Prepare generator body with multi-tenant support
         const generatorBody: any = {
-          slideType: job.slidetype,
+          // A feed sentinel inherits the saved length; existing explicit choices stay intact.
+          slideType: job.slidetype || 'feed',
           aiProvider: job.ai_provider || 'deepseek',
           tone: job.tone || undefined,
           writingStyle: job.writing_style || undefined,

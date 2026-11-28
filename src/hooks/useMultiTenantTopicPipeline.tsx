@@ -833,13 +833,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   // Action handlers with proper callbacks
   const handleMultiTenantApprove = useCallback(async (
     article: MultiTenantArticle,
-    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid',
+    slideType: 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive' = 'feed',
     tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' = 'conversational',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic',
     generateIllustration: boolean = true
   ) => {
     // Auto-detect snippets and default to 'short' (3 slides) for better experience
-    const finalSlideType = article.is_snippet && slideType === 'tabloid' ? 'short' : slideType;
+    const finalSlideType = slideType;
 
     // Optimistically hide the article from Arrivals immediately (exit animation handled by the list)
     tombstone(removedArticlesRef.current, article.id);

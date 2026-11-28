@@ -45,3 +45,5 @@
 - Feed top bar/background: owners pick only those two; all colours on them come from `feedSurfaces.ts`, shared by feed and Settings Look preview; keeps both identical and readable.
 
 - Feed/Desk/pipeline changes: run `scripts/smoke/feed_smoke.py`; health only via `feed_health`.
+
+- New summary lengths resolve only through `_shared/storyLength.ts` (re-exported in `src/lib`): feed defaults for background/import jobs and Desk `feed` choices, explicit legacy per-story lengths take precedence; stored stories are never resized, so editorial control and attribution survive setting changes.

@@ -58,3 +58,9 @@ Parked: audio briefings (already parked).
 - [x] 83 tests, transactional owner/privacy/credit/hand-over checks and eight-tool manifest
 - [ ] Signed-in preview and Claude end-to-end: blocked on owner republish/reconnect; session minting unavailable on user-managed Supabase
 - [ ] Feed smoke picture check: 14/15, Lisbon has zero upcoming events with stored photos (31 upcoming events); no picture/settings changes made
+
+## Writing settings simplification
+- [x] Shared feed length: Brief (3), Standard (5), In-depth (7); retain extended and per-story overrides
+- [x] Writing page: length + house style; existing audience, tone, format and examples in Advanced
+- [x] Wire Autopilot, Add story and Desk; 98 tests passed, feed smoke 14/15 (existing Lisbon picture gap); not published
+- [ ] Signed-in Writing save/read-back and live new-summary check: blocked on unavailable sandbox owner session; settings-save tests use a scoped mock, not a live account

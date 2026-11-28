@@ -58,7 +58,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
   const [topics, setTopics] = useState<Topic[]>([]);
   const [topicSlug, setTopicSlug] = useState<string>('');
-  const [slideQuantities, setSlideQuantities] = useState<Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>>({});
+  const [slideQuantities, setSlideQuantities] = useState<Record<string, 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive'>>({});
   const [toneOverrides, setToneOverrides] = useState<Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical' | 'rhyming_couplet' | undefined>>({});
   const [writingStyleOverrides, setWritingStyleOverrides] = useState<Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined>>({});
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
@@ -218,7 +218,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     q.error_message
   ).length;
 
-  const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
+  const handleSlideQuantityChange = (articleId: string, quantity: 'feed' | 'short' | 'tabloid' | 'indepth' | 'extensive') => {
     setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
   };
 

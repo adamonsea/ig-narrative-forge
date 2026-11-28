@@ -63,6 +63,7 @@ export interface EditorialTopic {
   coverage_setup_state?: Record<string, any> | undefined;
   postcodes?: string[] | undefined;
   organizations?: string[] | undefined;
+  story_length?: string | undefined;
   audience_expertise?: "beginner" | "intermediate" | "expert" | undefined;
   default_tone?: "formal" | "conversational" | "engaging" | "satirical" | "rhyming_couplet" | undefined;
   default_writing_style?: "journalistic" | "educational" | "listicle" | "story_driven" | undefined;
@@ -342,7 +343,7 @@ export function EditorialControlCenter({
               </SettingRow>
             </SettingGroup>
             <div id="voice-heading">
-              <ContentVoiceSettings topicId={topic.id} topicName={topic.name} topicType={topic.topic_type} region={topic.region} currentExpertise={topic.audience_expertise} currentTone={topic.default_tone} currentWritingStyle={topic.default_writing_style} currentHouseStyleNotes={topic.house_style_notes} currentHouseStyleExamples={topic.house_style_examples} onUpdate={onUpdate} />
+              <ContentVoiceSettings topicId={topic.id} topicName={topic.name} topicType={topic.topic_type} region={topic.region} currentStoryLength={topic.story_length} currentExpertise={topic.audience_expertise} currentTone={topic.default_tone} currentWritingStyle={topic.default_writing_style} currentHouseStyleNotes={topic.house_style_notes} currentHouseStyleExamples={topic.house_style_examples} onUpdate={onUpdate} />
             </div>
           </Page>
         )}
