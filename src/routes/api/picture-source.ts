@@ -72,8 +72,17 @@ export const Route = createFileRoute("/api/picture-source")({
           topicId = (data as { topic_id?: string } | null)?.topic_id ?? null;
         }
         if (!topicId) return fail(403, "Forbidden");
-        const { data: canManage } = await supabase.rpc("can_manage_topic", { p_topic_id: topicId });
-        if ((canManage as unknown) !== true) return fail(403, "Forbidden");
+        // can_manage_topic is revoked from browser roles: owner of the feed, or admin.
+        const sub = String(claims.claims.sub);
+        const { data: topicRow } = await supabase.from("topics").select("created_by").eq("id", topicId).maybeSingle();
+        let allowed = (topicRow as { created_by?: string } | null)?.created_by === sub;
+        if (!allowed) {
+          for (const role of ["admin", "superadmin"]) {
+            const { data: hasRole } = await supabase.rpc("has_role", { _user_id: sub, _role: role } as never);
+            if ((hasRole as unknown) === true) { allowed = true; break; }
+          }
+        }
+        if (!allowed) return fail(403, "Forbidden");
 
         const cover = story.cover_illustration_url;
         const source = cover && FRAMED.test(cover) && story.cover_original_url ? story.cover_original_url : cover;

@@ -1,4 +1,5 @@
 import { pictureBrief, sceneDirection, compositionRule } from '../_shared/pictureVariety.ts'
+import { userOwnsTopic } from '../_shared/auth.ts'
 import { pickIllustrationColours } from '../_shared/illustration-color.ts'
 import { colourSetRule, type ColourSet } from '../_shared/illustrationColourSets.ts'
 import { topicOwner, isBillingEnforced, meterUsage } from '../_shared/allowance.ts'
@@ -452,8 +453,8 @@ serve(async (req) => {
 
     // Signed-in callers may only draw pictures for stories on a feed they manage (owner or admin).
     if (!isServiceRole) {
-      const { data: canManage } = await supabaseAuth.rpc('can_manage_topic', { p_topic_id: topicId })
-      if (!topicId || canManage !== true) {
+      // can_manage_topic is revoked from browser roles, so check with the service client.
+      if (!topicId || !userId || !(await userOwnsTopic(supabase, userId, topicId))) {
         return new Response(
           JSON.stringify({ error: 'Forbidden', details: 'Not your feed' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
