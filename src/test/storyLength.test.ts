@@ -38,4 +38,17 @@ describe('Feed story lengths', () => {
     expect(withinStoryLength([{content:'Headline'}, {content:'word '.repeat(40)}],3,40)).toBe(true);
     expect(withinStoryLength(Array.from({length:4},()=>({content:'A fact.'})),3,40)).toBe(false);
   });
+  it('Adaptive picks Snapshot for short reporting', () => {
+    expect(storyLengthRules('adaptive', null, false, { wordCount: 200, relevance: 90, quality: 90 }).slides).toBe(2);
+  });
+  it('Adaptive picks Rich for long, relevant, well-reported stories', () => {
+    expect(storyLengthRules('adaptive', null, false, { wordCount: 800, relevance: 80, quality: 75 }).slides).toBe(5);
+  });
+  it('Adaptive picks Brief for everyday reporting', () => {
+    expect(storyLengthRules('adaptive', null, false, { wordCount: 400, relevance: 90, quality: 90 }).slides).toBe(3);
+    expect(storyLengthRules('adaptive', null, false, { wordCount: 800, relevance: 40, quality: 90 }).slides).toBe(3);
+  });
+  it('Adaptive still respects a manual Desk length', () => {
+    expect(storyLengthRules('adaptive', 'short', false, { wordCount: 800, relevance: 90, quality: 90 }).slides).toBe(4);
+  });
 });

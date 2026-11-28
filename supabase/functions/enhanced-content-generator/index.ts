@@ -1289,7 +1289,7 @@ Return in JSON format:
     }
 
     const isSnippet = article.word_count > 0 && article.word_count < 150;
-    const lengthRules = storyLengthRules(feedStoryLength, slideType, isSnippet);
+    const lengthRules = storyLengthRules(feedStoryLength, slideType, isSnippet, { wordCount: article.word_count, relevance: article.regional_relevance_score, quality: article.content_quality_score });
 
     // Build enhanced prompt system
     const promptSystem = await buildPromptSystem(supabase, effectiveTone, topicExpertise, lengthRules.slideType);
