@@ -300,6 +300,22 @@ export default function StoryCarousel({
     return badges;
   }, [isRoundupView, storyIndex, story.popularity_data, story.article?.published_at, story.created_at, story.tone]);
 
+  // Full-bleed covers carry the same labels as quiet translucent pills on the picture itself.
+  const coverPillLabels = useMemo<string[]>(() => {
+    const labels: string[] = [];
+    if (story.is_teaser) labels.push('Teaser');
+    if (isRoundupView && storyIndex !== undefined && storyIndex < 2) return [...labels, 'Most Popular'];
+    if (story.tone === 'satirical') labels.push('🤔');
+    if (story.tone === 'rhyming_couplet') labels.push('✒️');
+    if (isNewStory(storyIndex)) return [...labels, 'New'];
+    if (story.popularity_data && isPopularStory(story.popularity_data)) labels.push('Popular');
+    const publishDate = story.article?.published_at || story.created_at;
+    const timeLabel = publishDate ? getRelativeTimeLabel(publishDate) : null;
+    if (timeLabel) labels.push(timeLabel);
+    return labels;
+  }, [story.is_teaser, isRoundupView, storyIndex, story.popularity_data, story.article?.published_at, story.created_at, story.tone]);
+  const fullBleedCover = coverStyle === 'full-bleed' && !!story.cover_illustration_url;
+
   const teaserBadge = story.is_teaser ? (
     <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
       Teaser
@@ -605,6 +621,16 @@ export default function StoryCarousel({
             <img src={coverSrc} alt="" loading={coverLoading} fetchPriority={coverPriority} decoding="async"
               className="absolute inset-0 h-full w-full object-cover object-center brightness-90 saturate-[0.9]" />
           )}
+          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(to_bottom,hsl(var(--feed-cover-ink)/0.35),transparent)]" />
+          {coverPillLabels.length > 0 && (
+            <div className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center gap-2 p-4">
+              {coverPillLabels.map((label) => (
+                <span key={label} className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                  {label}
+                </span>
+              ))}
+            </div>
+          )}
           <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,hsl(var(--feed-cover-ink)/0.94)_0%,hsl(var(--feed-cover-ink)/0.78)_30%,hsl(var(--feed-cover-ink)/0.2)_65%,hsl(var(--feed-cover-ink)/0.25)_100%)]" />
           <div className="absolute inset-x-0 bottom-0 px-5 pb-12 pt-6 md:px-8 md:pb-14">
             <div className={`w-full max-w-xl leading-[1.08] ${getTextSize(slide?.content || '', true)} font-lexend font-semibold uppercase text-pretty text-feed-cover-text [text-shadow:0_1px_16px_hsl(var(--feed-cover-ink)/0.55)]`}>
@@ -696,7 +722,7 @@ export default function StoryCarousel({
         )}
       </div>
     );
-  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001'), coverStyle, photoCredit]);
+  }), [sortedSlides, story, validSlides.length, isFastConnection, fit, laterSlideHtml.join('\u0001'), coverStyle, photoCredit, coverPillLabels]);
 
   const slidesForEmbla = slideComponents.length
     ? slideComponents
@@ -727,10 +753,10 @@ export default function StoryCarousel({
         style={{} as React.CSSProperties}
       >
         <div className="relative min-h-[600px] flex flex-col">
-          {/* Header with subtle grey background */}
-          <div className="p-4 border-b feed-card-header bg-slate-50/50 dark:bg-slate-900/50">
+          {/* Header with subtle grey background; full-bleed covers drop it and float the button over the slides */}
+          <div className={fullBleedCover ? 'absolute right-3 top-3 z-20' : 'p-4 border-b feed-card-header bg-slate-50/50 dark:bg-slate-900/50'}>
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+              <div className={fullBleedCover ? 'hidden' : 'flex items-center gap-2 flex-wrap flex-1 min-w-0'}>
                 {teaserBadge}
                 {storyBadges}
               </div>
@@ -746,7 +772,7 @@ export default function StoryCarousel({
                       e.stopPropagation();
                       onMoreLikeThis(story);
                     }}
-                    className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors"
+                    className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full text-primary transition-colors ${fullBleedCover ? 'bg-background/90 shadow-sm hover:bg-background' : 'hover:bg-primary/10'}`}
                   >
                     More like this
                   </motion.button>
