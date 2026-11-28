@@ -65,3 +65,6 @@ Parked: audio briefings (already parked).
 - [x] Writing page: length + house style; existing audience, tone, format and examples in Advanced
 - [x] Wire Autopilot, Add story and Desk; 98 tests passed, feed smoke 14/15 (existing Lisbon picture gap); not published
 - [ ] Signed-in Writing save/read-back and live new-summary check: blocked on unavailable sandbox owner session; settings-save tests use a scoped mock, not a live account
+
+## Later: owner sources
+- [ ] Owner sources (claimed or verified): let a feed's own blog, press releases or original reporting run longer (In-depth/Extended) and carry its own closing call to action. Guide with nudges and where settings sit, not hard locks. Not building yet.

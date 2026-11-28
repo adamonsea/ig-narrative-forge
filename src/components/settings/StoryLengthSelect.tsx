@@ -9,7 +9,7 @@ export function StoryLengthSelect({ value, onChange, extended = false }: {
   }}>
     <SelectTrigger aria-label="Story length" className="h-11 w-full text-base sm:w-48"><SelectValue /></SelectTrigger>
     <SelectContent>
-      {STORY_LENGTHS.filter(p => extended || p.value !== 'extensive' || value === 'extensive').map(p =>
+      {STORY_LENGTHS.filter(p => extended || !['indepth', 'extensive'].includes(p.value) || p.value === value).map(p =>
         <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
     </SelectContent>
   </Select>;

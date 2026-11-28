@@ -180,7 +180,7 @@ export const ContentVoiceSettings = ({
 
         <RememberedFold foldKey={`writing-advanced-${topicId}`} label="Advanced" className="py-4">
           <div className="divide-y divide-border">
-        <SettingRow label="Longer stories" hint="Extended allows up to 12 slides." className="flex-col gap-4 sm:flex-row">
+        <SettingRow label="Longer stories" hint="In-depth and Extended allow up to 12 slides." className="flex-col gap-4 sm:flex-row">
           <StoryLengthSelect extended value={storyLength} onChange={(value) => { setStoryLength(value); void autoSave('story_length', value); }} />
         </SettingRow>
         <SettingRow label="Audience" hint="How much readers already know." className="flex-col gap-4 sm:flex-row">

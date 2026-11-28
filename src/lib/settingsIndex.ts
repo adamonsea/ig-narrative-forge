@@ -39,7 +39,7 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   e("local", "Big stories", "Let major regional stories through.", ["regional", "national"]),
 
   e("writing", "Story length", "Length of new summaries.", ["brief", "standard", "in-depth", "slides", "shorter"]),
-  e("writing", "Longer stories", "Extended story length.", ["extended", "12 slides"]),
+  e("writing", "Longer stories", "In-depth and Extended story lengths.", ["in-depth", "extended", "12 slides"]),
   e("writing", "Audience", "Who the stories are written for.", ["readers", "expertise", "level"]),
   e("writing", "Tone", "How the stories sound.", ["voice", "style"]),
   e("writing", "Writing style", "The shape of each story.", ["format", "voice"]),

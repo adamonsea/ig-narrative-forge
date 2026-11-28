@@ -1,0 +1,1 @@
+CREATE OR REPLACE FUNCTION public.validate_feed_story_length() RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$ BEGIN IF NEW.story_length NOT IN ('snapshot','brief','standard','indepth','extensive') THEN RAISE EXCEPTION 'Choose a valid story length' USING ERRCODE='22023'; END IF; RETURN NEW; END $$;

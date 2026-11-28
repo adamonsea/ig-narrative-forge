@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { storyLengthRules, withinStoryLength } from '@/lib/storyLength';
 describe('Feed story lengths', () => {
+  it('Snapshot is a headline and one summary slide', () => {
+    expect(storyLengthRules('snapshot')).toMatchObject({ slides: 2, bodyWords: 45 });
+  });
+  it('unknown feed lengths fall back to the five-slide default', () => {
+    expect(storyLengthRules('nonsense').slides).toBe(5);
+  });
   it('Brief is a headline and two takeaways, at most 80 body words', () => {
     expect(storyLengthRules('brief')).toMatchObject({ slides: 3, bodyWords: 40 });
   });
