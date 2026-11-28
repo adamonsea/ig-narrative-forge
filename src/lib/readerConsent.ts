@@ -160,6 +160,12 @@ export function saveAnalyticsChoice(choice: Choice): void {
   saveChoices({ analytics: choice });
 }
 
+/** One-tap choices also update the separate UK anonymous-counting opt-out. */
+export function saveReaderChoices(analytics: boolean, anonymous = analytics): void {
+  setReaderOptOut(!anonymous && !analytics);
+  saveAnalyticsChoice(analytics ? 'granted' : 'denied');
+}
+
 /** Fires on any change to the reader's choices (this tab or others) and when the region resolves. */
 export function onReaderConsentChange(listener: () => void): () => void {
   const onStorage = (e: StorageEvent) => { if (e.key === null || e.key === OPT_OUT_KEY || e.key === NOTICE_KEY) listener(); };

@@ -89,7 +89,7 @@ const Cookies = () => {
             <h3 className="text-xl font-medium mt-6 mb-3">3.3 EU, Switzerland, Canada and unknown locations</h3>
             <p className="text-muted-foreground leading-relaxed">
               Until you answer the banner, we count the same reading signals for your current visit only: nothing is stored
-              on your device and nothing links one visit to the next. Choosing Reject all stops this.
+              on your device and nothing links one visit to the next. Choosing Essential only stops this.
             </p>
 
             <h3 className="text-xl font-medium mt-6 mb-3">3.4 Analytics (with your consent)</h3>
@@ -136,9 +136,9 @@ const Cookies = () => {
           <section>
             <h2 className="text-2xl font-semibold mb-4">5. Managing Cookies</h2>
             <p className="text-muted-foreground leading-relaxed">
-              In the EU, Switzerland and Canada you'll be asked before anything is counted. In the UK you'll
-              see a short notice about anonymous read counts, with a one-tap opt-out. If your browser sends a
-              Global Privacy Control signal, nothing is counted. You can change your choice here at any time:
+              In the EU, Switzerland and Canada, reader counts stay within your current visit until you answer.
+              In the UK, anonymous reader counts start with a notice. Essential only stops reader counts and
+              keeps analytics cookies off. Accept all enables them. You can change your choice here at any time:
             </p>
             <div id="settings" className="bg-muted/30 rounded-lg p-4 mt-4 scroll-mt-24">
               <h3 className="text-xl font-medium mb-2">Cookie settings</h3>

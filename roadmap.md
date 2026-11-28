@@ -1,4 +1,5 @@
 # Roadmap — Editorial profile / Lisboa List
+- [x] Lightweight cookie choices: balanced one-tap actions, inline Customise, existing regional tracking gates retained.
 - [x] Phase 1 storage (profiles, event copy, captions, field locks, new event fields)
 - [x] Caption assembler + fact conversions + lock merge (pure, tested)
 - [x] Editorial profile fold in Feed Settings + Lisbon seed

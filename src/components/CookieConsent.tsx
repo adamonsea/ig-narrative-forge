@@ -2,11 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Link } from '@/lib/router-compat';
-import { Cookie } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ensureReaderRegion, readerConsentInput, readerBanner, regionFor, markUkNoticeSeen,
-  setReaderOptOut, saveAnalyticsChoice, onReaderConsentChange,
+  saveReaderChoices, onReaderConsentChange,
   type ReaderBanner, type ReaderConsentInput,
 } from '@/lib/readerConsent';
 
@@ -45,13 +43,8 @@ export const CookieSettingsPanel = ({ onSaved }: { onSaved?: (() => void) | unde
   const locked = input.gpc;
 
   const save = () => {
-    if (region === 'uk') {
-      markUkNoticeSeen();
-      setReaderOptOut(!anon);
-    } else if (region === 'open') {
-      setReaderOptOut(!analytics);
-    }
-    saveAnalyticsChoice(analytics ? 'granted' : 'denied');
+    if (region === 'uk') markUkNoticeSeen();
+    saveReaderChoices(analytics, region === 'uk' ? anon : analytics);
     setSaved(true);
     onSaved?.();
   };
@@ -69,7 +62,7 @@ export const CookieSettingsPanel = ({ onSaved }: { onSaved?: (() => void) | unde
   return (
     <div className="space-y-1">
       {locked && (
-        <p className="text-sm text-muted-foreground pb-2">Your browser's privacy signal is on, so nothing is counted.</p>
+        <p className="text-sm text-muted-foreground pb-2">Your browser's privacy signal keeps optional tracking off.</p>
       )}
       {row('Necessary', 'Sign-in and your choices', <span className="text-sm text-muted-foreground">Always on</span>)}
       {region === 'uk' && row(
@@ -78,8 +71,8 @@ export const CookieSettingsPanel = ({ onSaved }: { onSaved?: (() => void) | unde
         <Switch checked={!locked && anon} disabled={locked} onCheckedChange={setAnon} aria-label="Anonymous read counts" />,
       )}
       {row(
-        region === 'uk' ? 'Analytics' : 'Reader counts and analytics',
-        'Provided by Curatr and Google',
+        region === 'uk' ? 'Analytics cookies' : 'Reader counts and analytics',
+        'Provided by Curatr, Lovable and Google',
         <Switch checked={!locked && analytics} disabled={locked} onCheckedChange={setAnalytics} aria-label="Analytics" />,
       )}
       <div className="flex items-center gap-3 pt-2">
@@ -115,42 +108,37 @@ export const CookieConsent = ({ variant = 'feed' }: CookieConsentProps) => {
 
   useEffect(() => { if (open) panelRef.current?.focus(); }, [open]);
 
+  useEffect(() => onReaderConsentChange(() => {
+    const input = readerConsentInput();
+    if (input && (input.gpc || input.choice !== null)) setOpen(false);
+  }), []);
+
   const close = () => setOpen(false);
-  const place = variant === 'feed' ? 'feed' : 'site';
   const isUk = banner === 'uk-notice';
   const message = isUk
-    ? `We count reads anonymously to improve this ${place}.`
-    : `We count visits anonymously, with nothing stored. Accept to also count return visits and use analytics cookies.`;
+    ? 'We count reads anonymously. Accept for analytics cookies, or choose Essential only to stop reader counting. Anonymous page visits still count.'
+    : 'Accept for reader counts and analytics cookies. Essential only keeps these off. Anonymous page visits still count.';
 
-  const actions = isUk ? (
+  const actions = (
     <>
-      <Button variant="outline" size="sm" onClick={() => { setReaderOptOut(true); close(); }}>Opt out</Button>
-      <Button size="sm" onClick={close}>OK</Button>
-    </>
-  ) : (
-    <>
-      <Button variant="outline" size="sm" onClick={() => { saveAnalyticsChoice('denied'); close(); }}>Reject all</Button>
-      <Button variant="outline" size="sm" onClick={() => { saveAnalyticsChoice('granted'); close(); }}>Accept all</Button>
+      <Button variant="outline" className="flex-1 text-sm" onClick={() => { saveReaderChoices(false); close(); }}>Essential only</Button>
+      <Button variant="outline" className="flex-1 text-sm" onClick={() => { saveReaderChoices(true); close(); }}>Accept all</Button>
     </>
   );
 
   const links = (
-    <span className="text-sm text-muted-foreground">
-      <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={() => setShowSettings((v) => !v)}>
-        Cookie settings
-      </button>
-      {' · '}
-      <Link to="/cookies" className="underline underline-offset-2 hover:text-foreground">Learn more</Link>
-    </span>
+    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <Button variant="link" className="h-11 px-0 text-sm text-muted-foreground" aria-expanded={showSettings} aria-controls="banner-cookie-settings" onClick={() => setShowSettings((v) => !v)}>
+        Customise
+      </Button>
+      <Link to="/privacy" className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-foreground">Privacy policy</Link>
+    </div>
   );
 
   return (
-    <AnimatePresence>
+    <>
       {open && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
+        <div
           className={variant === 'feed'
             ? 'fixed bottom-3 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-50'
             : 'fixed bottom-0 left-0 right-0 z-50 p-4'}
@@ -159,31 +147,24 @@ export const CookieConsent = ({ variant = 'feed' }: CookieConsentProps) => {
             ref={panelRef}
             tabIndex={-1}
             role="region"
-            aria-label={isUk ? 'Reader counting' : 'Cookie choices'}
-            className={variant === 'feed'
-              ? 'bg-card border border-border rounded-xl shadow-md p-3 space-y-2 outline-none'
-              : 'max-w-4xl mx-auto bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-3 outline-none'}
+            aria-label="Cookie choices"
+            className="max-w-4xl mx-auto bg-card text-foreground border border-border rounded-lg shadow-md p-4 space-y-2 outline-none max-h-[calc(100dvh-2rem)] overflow-y-auto"
           >
-            <div className={variant === 'feed' ? 'flex items-center gap-3' : 'flex flex-col md:flex-row md:items-center gap-4'}>
-              {variant === 'home' && (
-                <div className="bg-primary/10 rounded-full p-3 shrink-0 hidden md:block">
-                  <Cookie className="h-6 w-6 text-primary" />
-                </div>
-              )}
+            <div className={variant === 'feed' ? 'space-y-2' : 'flex flex-col md:flex-row md:items-center gap-4'}>
               <div className="flex-1 min-w-0 space-y-1">
                 <p className="text-sm text-foreground">{message}</p>
                 {links}
               </div>
-              <div className="flex gap-2 shrink-0">{actions}</div>
+              <div className="grid grid-cols-2 gap-2 shrink-0 md:min-w-72">{actions}</div>
             </div>
             {showSettings && (
-              <div className="border-t border-border pt-2">
+              <div id="banner-cookie-settings" className="border-t border-border pt-2">
                 <CookieSettingsPanel onSaved={close} />
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 };

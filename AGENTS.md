@@ -8,6 +8,7 @@
 - The /dashboard feed card reads all its figures from the single `get_dashboard_feed_cards` call; one guarded query keeps the card fast and tenant-safe.
 - Feed-card highlights and nudges are picked by pure rules in `src/lib/feedHighlights.ts` from the single card call (no AI); keeps every positive true and testable.
 - Reader trackers and GA obey only `readerTrackingMode()` (`src/lib/readerConsent.ts`, regional rules; modes full / anonymous = UK 7-day ID / visit = in-memory only / off; IDs from `getVisitorId`) via `canTrackReader`/`getVisitorId`/`onReaderTrackable` in `visitorIdentity.ts`, after a human signal; one gate keeps regions consistent and bots out.
+- Banner and settings save through `saveReaderChoices()`; one shared action keeps the UK reader opt-out and analytics consent consistent without changing regional defaults.
 - Reaction identities must preserve an existing `curatr_visitor_id` verbatim; stored anonymous reactions use exact ID matching, while new readers use the shared visitor identity.
 - Headline stop data is written only via the `record_story_views` batch RPC (insert or upgrade seen→paused, today only), from an IntersectionObserver-only tracker that sends on pagehide/hide; keeps the feed fast and rows tamper-safe.
 - Reader-facing feed filtering (Curate menu, More like this, filter banner, filter index download) is gated by `FEED_FILTERS_ENABLED` in `src/lib/featureFlags.ts`; one switch pauses or restores it without touching topic keyword data.

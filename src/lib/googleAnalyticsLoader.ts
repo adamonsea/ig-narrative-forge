@@ -3,7 +3,7 @@
  * after Accept in the UK and EU, by default elsewhere. Never for bots or Global Privacy Control.
  * The Consent Mode defaults script in __root.tsx defines window.gtag/dataLayer before this runs.
  */
-import { whenReaderMode } from './readerConsent';
+import { whenReaderMode, currentReaderMode } from './readerConsent';
 import { isLikelyBot } from './visitorIdentity';
 
 const GA_ID = 'G-C9VCW1ZPGR';
@@ -13,6 +13,8 @@ let scheduled = false;
 export const isGoogleAnalyticsLoaded = (): boolean => loaded;
 
 function inject() {
+  // A reader may withdraw while the delayed download is waiting.
+  if (currentReaderMode() !== 'full') { scheduled = false; return; }
   if (loaded || document.visibilityState !== 'visible') return;
   loaded = true;
   const gtag = (window as unknown as { gtag?: (...a: unknown[]) => void }).gtag;

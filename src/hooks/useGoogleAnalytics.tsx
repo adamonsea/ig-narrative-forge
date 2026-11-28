@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from '@/lib/router-compat';
 import { isGoogleAnalyticsLoaded } from '@/lib/googleAnalyticsLoader';
+import { currentReaderMode } from '@/lib/readerConsent';
 
 declare global {
   interface Window {
@@ -21,6 +22,7 @@ export const useGoogleAnalytics = () => {
 
     // Wait for React Helmet to update the document title before sending to GA
     const timeoutId = setTimeout(() => {
+      if (currentReaderMode() !== 'full') return;
       window.gtag('config', GA_MEASUREMENT_ID, {
         page_path: location.pathname + location.search,
         page_title: document.title, // Explicitly pass the updated title
@@ -38,7 +40,7 @@ export const trackEvent = (
   eventName: string,
   parameters?: Record<string, unknown> | undefined
 ) => {
-  if (typeof window.gtag !== 'function' || !isGoogleAnalyticsLoaded()) return;
+  if (typeof window.gtag !== 'function' || !isGoogleAnalyticsLoaded() || currentReaderMode() !== 'full') return;
   
   window.gtag('event', eventName, parameters);
 };
