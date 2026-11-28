@@ -16,6 +16,20 @@ export const COLOUR_SETS: ColourSet[] = [
   { id: 'watermelon-mint', name: 'Watermelon', colours: ['#FF7CAC', '#A7E1C1'] },
   { id: 'raspberry-marigold', name: 'Marigold', colours: ['#7B384B', '#D6A53C'] },
   { id: 'pink-sunset', name: 'Sunset', colours: ['#FF9DB1', '#F0563A', '#FAD3A8'] },
+  { id: 'lagoon-red', name: 'Lagoon', colours: ['#5DB1B5', '#FEFAC9', '#080302', '#FA0200'] },
+  { id: 'sand-navy', name: 'Sand', colours: ['#F3BD75', '#184E78', '#FFFFFF', '#C71936'] },
+  { id: 'flame-aqua', name: 'Flame', colours: ['#EA482F', '#FBEEDF', '#37B1B6', '#0B0B0B'] },
+  { id: 'candy-cobalt', name: 'Cobalt', colours: ['#F48CB5', '#F5E7C4', '#0528C6', '#111111'] },
+  { id: 'olive-ember', name: 'Olive', colours: ['#696727', '#A9C4C3', '#F7DBBB', '#EC6528'] },
+  { id: 'coral-ink', name: 'Coral', colours: ['#DE5C54', '#E6D9C7', '#060404'] },
+  { id: 'street-bronze', name: 'Street', colours: ['#171717', '#775E38', '#525453', '#FCFAF3', '#D92B1F'] },
+  { id: 'salmon-azure', name: 'Azure', colours: ['#FEFDED', '#FD8673', '#2B7EDC', '#8C371D', '#A1ACE8'] },
+  { id: 'meadow-lilac', name: 'Lilac', colours: ['#A3D38C', '#B9A5CC', '#D7EACD', '#8F8EAB'] },
+  { id: 'royal-rose', name: 'Royal', colours: ['#102E8F', '#E96E93', '#F28C28', '#6F6FB2'] },
+  { id: 'lemon-night', name: 'Lemon', colours: ['#FBD614', '#192735', '#F57A1F', '#8B8F94'] },
+  { id: 'rust-sage', name: 'Rust', colours: ['#D56734', '#5A4432', '#FBECD6', '#5FA88F', '#2B2B2B'] },
+  { id: 'blush-slate', name: 'Blush', colours: ['#F09A8E', '#2F5D6B', '#F7E8D8', '#D92B1F'] },
+  { id: 'sky-ochre', name: 'Ochre', colours: ['#A8C3D1', '#D9B84C', '#F2EAD8', '#8B5A2B', '#B03A2E', '#A8C686'] },
 ];
 
 export const RANDOM_SET = 'random';
