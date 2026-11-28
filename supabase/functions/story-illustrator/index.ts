@@ -1,5 +1,6 @@
 import { pictureBrief, sceneDirection, compositionRule } from '../_shared/pictureVariety.ts'
-import { pickIllustrationColor } from '../_shared/illustration-color.ts'
+import { pickIllustrationColours } from '../_shared/illustration-color.ts'
+import { colourSetRule, type ColourSet } from '../_shared/illustrationColourSets.ts'
 import { topicOwner, isBillingEnforced, meterUsage } from '../_shared/allowance.ts'
 const AUTO_PICTURE_CREDITS = 1
 /** gpt-image-2 per-1M-token rates (text in $5, image in $8, image out $30). */
@@ -506,6 +507,7 @@ serve(async (req) => {
     // Fetch topic's illustration_style, primary color, and landmarks
     let illustrationStyle: IllustrationStyle = 'editorial_illustrative' // default
     let primaryColor: string = '#10B981' // default mint green
+    let colourSet: ColourSet | null = null
     let topicRegion: string | undefined = undefined // for place-accurate prompts
     let topicLandmarks: string[] | undefined = undefined // for landmark-accurate rendering
     let topicLandmarkDescriptions: Record<string, string> | null = null // owner-written appearance notes
@@ -537,7 +539,10 @@ serve(async (req) => {
         primaryColor = topicData.illustration_primary_color
         console.log(`Using topic primary color: ${primaryColor}`)
       }
-      primaryColor = await pickIllustrationColor(supabase, topicId, primaryColor)
+      const picked = await pickIllustrationColours(supabase, topicId, primaryColor)
+      primaryColor = picked.color
+      colourSet = picked.set
+      if (colourSet) console.log(`Colour set: ${colourSet.id}`)
       console.log(`Illustration colour for this story: ${primaryColor}`)
       
       // Capture region for place-accurate image prompts
@@ -865,6 +870,7 @@ serve(async (req) => {
         : buildIllustrativePrompt(storyTone, subjectMatter, promptTitle, primaryColor, topicRegion, locationDetails, illustrativeVariantForQuality(modelConfig.quality)))
 
     if (!brandSafePictures && !satiricalPrompt) illustrationPrompt += compositionRule(pictureBrief(String(storyId)))
+    if (colourSet && illustrationStyle !== 'editorial_photographic') illustrationPrompt += colourSetRule(colourSet)
     illustrationPrompt = `${illustrationPrompt} ${TRADEMARK_RULE}`
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')

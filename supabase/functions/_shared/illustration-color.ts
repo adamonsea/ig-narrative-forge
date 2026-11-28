@@ -2,8 +2,10 @@
 // Modes (stored in topics.branding_config):
 //  - single (default): always illustration_primary_color
 //  - cycle: rotates through illustration_color_palette in order
-//  - random: any vivid colour, chosen fresh each time
-export type IllustrationColorMode = 'single' | 'cycle' | 'random';
+//  - random: one whole curated colour set at random each time
+//  - set: always the curated set named in illustration_color_set
+import { pickColourSet, inkRoles, type ColourSet } from './illustrationColourSets.ts';
+export type IllustrationColorMode = 'single' | 'cycle' | 'random' | 'set';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -25,24 +27,34 @@ export function randomIllustrationColor(): string {
 
 // deno-lint-ignore no-explicit-any
 export async function pickIllustrationColor(supabase: any, topicId: string, fallback: string): Promise<string> {
+  return (await pickIllustrationColours(supabase, topicId, fallback)).color;
+}
+
+/** Colour for the next picture; `set` is the whole curated set when the feed uses sets. */
+// deno-lint-ignore no-explicit-any
+export async function pickIllustrationColours(supabase: any, topicId: string, fallback: string): Promise<{ color: string; set: ColourSet | null }> {
+  const one = (color: string) => ({ color, set: null });
   try {
     const { data } = await supabase.from('topics').select('branding_config').eq('id', topicId).single();
     const cfg = (data?.branding_config ?? {}) as Record<string, unknown>;
     const mode = cfg.illustration_color_mode as IllustrationColorMode | undefined;
-    if (mode === 'random') return randomIllustrationColor();
+    if (mode === 'random' || mode === 'set') {
+      const set = pickColourSet(mode === 'set' ? cfg.illustration_color_set : 'random');
+      return { color: inkRoles(set).accent, set };
+    }
     if (mode === 'cycle') {
       const palette = (Array.isArray(cfg.illustration_color_palette) ? cfg.illustration_color_palette : [])
         .filter((c): c is string => typeof c === 'string' && HEX.test(c));
-      if (palette.length === 0) return fallback;
+      if (palette.length === 0) return one(fallback);
       const cursor = Number(cfg.illustration_color_cursor) || 0;
       const color = palette[cursor % palette.length];
       await supabase.from('topics')
         .update({ branding_config: { ...cfg, illustration_color_cursor: (cursor + 1) % palette.length } })
         .eq('id', topicId);
-      return color;
+      return one(color);
     }
   } catch (e) {
     console.warn('pickIllustrationColor failed, using primary colour', e);
   }
-  return fallback;
+  return one(fallback);
 }
